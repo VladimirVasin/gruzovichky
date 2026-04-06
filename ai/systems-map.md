@@ -8,7 +8,7 @@ Purpose: map the current active systems and note which areas are high impact.
 
 ### Scene bootstrap and world setup
 
-- Files: `Assets/Scripts/TransportPrototypeBootstrap.cs`, `Assets/Scenes/SampleScene.unity`
+- Files: `Assets/Scripts/Runtime/Core/GameBootstrap.cs`, `Assets/Scripts/Runtime/World/GameBootstrap.World.cs`, `Assets/Scenes/SampleScene.unity`
 - Includes:
   - camera framing
   - directional light setup
@@ -18,7 +18,7 @@ Purpose: map the current active systems and note which areas are high impact.
 
 ### Road placement and grid occupancy
 
-- Files: `Assets/Scripts/TransportPrototypeBootstrap.cs`
+- Files: `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.cs`, `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs`, `Assets/Scripts/Runtime/Transport/Services/GridPathService.cs`, `Assets/Scripts/Runtime/Transport/Services/RoadLanternPlanner.cs`
 - Includes:
   - click-to-place roads
   - grid snapping
@@ -27,31 +27,33 @@ Purpose: map the current active systems and note which areas are high impact.
 
 ### Truck movement and resource flow
 
-- Files: `Assets/Scripts/TransportPrototypeBootstrap.cs`
+- Files: `Assets/Scripts/Runtime/Actors/GameBootstrap.Actors.cs`, `Assets/Scripts/Runtime/Actors/GameBootstrap.TruckState.cs`, `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs`, `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`, `Assets/Scripts/Runtime/UI/GameBootstrap.Orders.cs`, `Assets/Scripts/Runtime/Transport/Services/GridPathService.cs`, `Assets/Scripts/Runtime/Transport/Services/TruckAutoPlanner.cs`, `Assets/Scripts/Runtime/Transport/Services/TripRewardCalculator.cs`
 - Includes:
   - BFS pathfinding over road cells and anchors
   - smooth cell-to-cell truck motion
+  - multi-truck route and refuel flow
   - automatic `wood` production at Forest
   - automatic delivery chain `Forest -> Warehouse -> Town`
 
 ### Minimal runtime UI
 
-- Files: `Assets/Scripts/TransportPrototypeBootstrap.cs`
+- Files: `Assets/Scripts/Runtime/UI/GameBootstrap.UI.cs`, `Assets/Scripts/Runtime/UI/GameBootstrap.Selection.cs`, `Assets/Scripts/Runtime/UI/GameBootstrap.Fleet.cs`, `Assets/Scripts/Runtime/UI/SelectionVisualService.cs`
 - Includes:
-  - current mode display
-  - per-location wood counts
-  - basic controls hint
+  - fleet list and truck details
+  - building info cards
+  - money / time / speed panels
+  - route assignment and command feedback
 
 ## Impact Hints
 
 - Change to road placement or path validity:
-  read the placement and `FindPath()` flow first.
+  read `GameBootstrap.Input` and `GameBootstrap.Transport` together.
 - Change to truck behavior:
-  read `DetermineNextTask()`, `StartMoveTo()`, and `UpdateTruckMovement()` together.
+  read `GameBootstrap.Actors`, `GameBootstrap.Transport`, and `GameBootstrap.Fleet` together.
 - Change to scene readability:
-  read camera, lighting, grid, and location setup together.
+  read `GameBootstrap`, `GameBootstrap.World`, `GameBootstrap.Selection`, and `GameBootstrap.UI` together.
 
 ## Current Cleanup Reality
 
-- The whole vertical slice is centralized in one script.
-- The first likely future seam is splitting setup, grid/pathfinding, and transport simulation into separate files.
+- The vertical slice still runs through one `GameBootstrap` class.
+- The code is now split into partial scripts by concern under `Assets/Scripts/Runtime/`.

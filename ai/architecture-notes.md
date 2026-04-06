@@ -7,27 +7,65 @@ Purpose: describe the real implemented architecture and current hotspots.
 ## Current Architecture
 
 - The project currently uses a scene-local bootstrap architecture.
-- One `MonoBehaviour` constructs and runs nearly the full prototype:
+- One partial `MonoBehaviour` (`GameBootstrap`) constructs and runs nearly the full prototype:
   - environment setup
   - low-poly placeholder visuals
   - grid and road state
   - input handling
   - pathfinding
   - truck simulation
-  - minimal UI
+  - UI and audio
 
 ## Practical Consequences
 
-- This is fast for prototype iteration.
-- It also tightly couples presentation and simulation in one place.
+- This is still fast for prototype iteration.
+- It still couples presentation and simulation, but the runtime is now split into concern-based partial scripts under `Assets/Scripts/Runtime/`.
 - Small changes are easy; larger feature growth will increase risk quickly.
 
 ## Current Hotspots
 
-### `Assets/Scripts/TransportPrototypeBootstrap.cs`
+### `Assets/Scripts/Runtime/Core/GameBootstrap.cs`
 
-- Central gameplay script.
-- Owns most runtime behavior and scene construction.
+- Central runtime entrypoint and owner of shared state.
+
+### `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs`
+
+- Highest-risk gameplay file after the refactor.
+- Owns pathfinding, road connectivity, and truck movement.
+
+### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
+
+- Owns the active trip/refuel state machine.
+
+### `Assets/Scripts/Runtime/UI/GameBootstrap.Orders.cs`
+
+- Owns truck order assignment and auto-mode wiring.
+
+### `Assets/Scripts/Runtime/Actors/GameBootstrap.TruckState.cs`
+
+- Owns `TruckAgent` <-> active-runtime state synchronization.
+- Also owns fleet lookup and parking-slot helpers.
+
+### `Assets/Scripts/Runtime/Transport/Services/GridPathService.cs`
+
+- Shared grid BFS helper.
+- Used by truck routing, starter road generation, and driver rescue walking.
+
+### `Assets/Scripts/Runtime/Transport/GameBootstrap.Interaction.cs`
+
+- Owns truck cargo/refuel interaction state and completion flow.
+
+### `Assets/Scripts/Runtime/UI/GameBootstrap.Selection.cs`
+
+- Owns selected-building highlight and label presentation orchestration.
+
+### `Assets/Scripts/Runtime/World/WorldLayoutGenerator.cs`
+
+- Owns random map placement rules.
+
+### `Assets/Scripts/Runtime/World/TerrainHeightGenerator.cs`
+
+- Owns terrain height generation and flat building pads.
 
 ### `Assets/Scenes/SampleScene.unity`
 
@@ -44,5 +82,5 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 ## Cleanup Reality
 
-- The current architecture is appropriate for a first playable prototype.
-- If more vehicles, resources, or UI are added, the bootstrap should be split early.
+- The project is now in an intermediate refactor state: one runtime owner, several partial scripts.
+- The next healthy seam after this is moving trucks, world generation, and HUD into fully separate classes/services rather than only partial-class slices.
