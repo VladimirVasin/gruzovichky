@@ -1,0 +1,47 @@
+# Default text normalization
+* text=auto
+
+# Keep Unity assets as text for readable diffs
+*.cs text diff=csharp
+*.shader text
+*.compute text
+*.hlsl text
+*.cginc text
+*.json text
+*.md text
+*.txt text
+*.yml text
+*.yaml text
+*.asmdef text
+*.asmref text
+*.inputactions text
+*.uxml text
+*.uss text
+*.meta text
+*.unity text
+*.prefab text
+*.mat text
+*.anim text
+*.controller text
+*.playable text
+*.asset text
+
+# Common binary Unity/media assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.tga binary
+*.psd binary
+*.fbx binary
+*.blend binary
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.mp4 binary
+*.mov binary
+*.ttf binary
+*.otf binary
+
+# Better diffs for C#
+*.cs diff=csharp
