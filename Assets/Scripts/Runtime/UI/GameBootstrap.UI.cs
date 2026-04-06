@@ -680,7 +680,7 @@ public partial class GameBootstrap
         {
             LocationType.Parking => $"Trucks parked: {GetParkingTruckCount()}/{MaxTruckCount}",
             LocationType.GasStation => "Fuel service: Ready",
-            LocationType.Forest => $"Logs stored: {locations[LocationType.Forest].WoodStored}",
+            LocationType.Forest => $"Logs stored: {locations[LocationType.Forest].WoodStored}/{ForestMaxLogsStorage}",
             LocationType.Warehouse => $"Logs stored: {locations[LocationType.Warehouse].WoodStored}",
             LocationType.Town => $"Logs received: {locations[LocationType.Town].WoodStored}",
             _ => string.Empty

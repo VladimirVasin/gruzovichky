@@ -405,27 +405,68 @@ public partial class GameBootstrap
         uiPanelOpenClip = CreateUiPulseClip("UI_Open", 420f, 0.12f, 0.025f);
         uiPanelCloseClip = CreateUiPulseClip("UI_Close", 220f, 0.1f, 0.02f);
         ambientWindClip = CreateWindClip("Ambient_Wind", 6f, 0.022f);
+        dayBirdsClip = CreateDayBirdsClip("Day_Birds", 6.5f, 0.03f);
         forestRustleClip = CreateRustleClip("Forest_Rustle", 5.5f, 0.03f);
+        forestChopClip = CreateForestChopClip("Forest_Chop", 0.22f, 0.075f);
+        nightWindClip = CreateNightWindClip("Night_Wind", 6.8f, 0.026f);
+        nightCricketsClip = CreateNightCricketsClip("Night_Crickets", 5.8f, 0.024f);
+        gasStationHumClip = CreateGasStationHumClip("GasStation_Hum", 4.8f, 0.018f);
         townHumClip = CreateTownHumClip("Town_Hum", 5f, 0.018f);
+        warehouseCreakClip = CreateWarehouseCreakClip("Warehouse_Creak", 0.48f, 0.065f);
+        owlClip = CreateOwlClip("Night_Owl", 0.95f, 0.05f);
+        lanternBuzzClip = CreateLanternBuzzClip("Lantern_Buzz", 0.36f, 0.03f);
         truckIdleClip = CreateTruckIdleClip("Truck_Idle", 2.6f, 0.032f);
         truckRollClip = CreateTruckRollClip("Truck_Roll", 1.6f, 0.03f);
         cargoPickupClip = CreateCargoThunkClip("Cargo_Pickup", 0.42f, 0.06f, 0.05f);
         cargoDropClip = CreateCargoThunkClip("Cargo_Drop", 0.46f, 0.085f, 0.08f);
+        routeAssignForestWarehouseClip = CreatePentatonicMotifClip("Route_ForestToWarehouse", 0.42f, 0.06f, new[] { PentatonicD4, PentatonicE4 }, new[] { 0f, 0.12f });
+        routeAssignWarehouseTownClip = CreatePentatonicMotifClip("Route_WarehouseToTown", 0.46f, 0.065f, new[] { PentatonicE4, PentatonicA4 }, new[] { 0f, 0.12f });
+        routeAssignRefuelClip = CreatePentatonicMotifClip("Route_Refuel", 0.44f, 0.062f, new[] { PentatonicC4, PentatonicG4 }, new[] { 0f, 0.13f });
+        forestLoadCueClip = CreatePentatonicMotifClip("Forest_Load", 0.28f, 0.05f, new[] { PentatonicD4 }, new[] { 0f });
+        warehouseUnloadCueClip = CreatePentatonicMotifClip("Warehouse_Unload", 0.34f, 0.052f, new[] { PentatonicE4, PentatonicG4 }, new[] { 0f, 0.09f });
+        warehouseLoadCueClip = CreatePentatonicMotifClip("Warehouse_Load", 0.3f, 0.05f, new[] { PentatonicE4 }, new[] { 0f });
+        townUnloadCueClip = CreatePentatonicMotifClip("Town_Unload", 0.48f, 0.064f, new[] { PentatonicA4, PentatonicC5, PentatonicE5 }, new[] { 0f, 0.08f, 0.16f });
+        gasStationRefuelCueClip = CreatePentatonicMotifClip("GasStation_Refuel", 0.38f, 0.056f, new[] { PentatonicG4, PentatonicC5 }, new[] { 0f, 0.12f });
+        parkingReturnCueClip = CreatePentatonicMotifClip("Parking_Return", 0.36f, 0.05f, new[] { PentatonicC4, PentatonicE4 }, new[] { 0f, 0.1f });
         moneyRewardClip = CreateMoneyRewardClip("Money_Reward", 0.6f, 0.08f);
 
-        uiAudioSource = CreateAudioSource("UIAudio", null, false, 0.65f, 1f, false);
-        ambientAudioSource = CreateAudioSource("AmbientWind", worldRoot, true, 0.24f, 0f, false);
-        forestAudioSource = CreateAudioSource("ForestAmbience", locations[LocationType.Forest].RootObject.transform, true, 0.28f, 0.82f, false);
-        townAudioSource = CreateAudioSource("TownAmbience", locations[LocationType.Town].RootObject.transform, true, 0.22f, 0.9f, false);
+        uiAudioSource = CreateAudioSource("UIAudio", null, false, 0.82f, 1f, false);
+        ambientAudioSource = CreateAudioSource("AmbientWind", worldRoot, true, 0.34f, 0f, false);
+        dayBirdsAudioSource = CreateAudioSource("DayBirds", worldRoot, true, 0.26f, 0f, false);
+        forestAudioSource = CreateAudioSource("ForestAmbience", locations[LocationType.Forest].RootObject.transform, true, 0.42f, 0.82f, false);
+        forestWorkerAudioSource = CreateAudioSource("ForestWorkers", locations[LocationType.Forest].RootObject.transform, false, 0.32f, 0.9f, false);
+        nightWindAudioSource = CreateAudioSource("NightWind", worldRoot, true, 0.26f, 0f, false);
+        nightCricketsAudioSource = CreateAudioSource("NightCrickets", locations[LocationType.Forest].RootObject.transform, true, 0.24f, 0.82f, false);
+        gasStationAudioSource = CreateAudioSource("GasStationHum", locations[LocationType.GasStation].RootObject.transform, true, 0.2f, 0.84f, false);
+        townAudioSource = CreateAudioSource("TownAmbience", locations[LocationType.Town].RootObject.transform, true, 0.34f, 0.9f, false);
+        warehouseAudioSource = CreateAudioSource("WarehouseAmbience", locations[LocationType.Warehouse].RootObject.transform, false, 0.18f, 0.88f, false);
+        ambienceFxAudioSource = CreateAudioSource("AmbienceFX", worldRoot, false, 0.24f, 0f, false);
 
         ambientAudioSource.clip = ambientWindClip;
         ambientAudioSource.Play();
 
+        dayBirdsAudioSource.clip = dayBirdsClip;
+        dayBirdsAudioSource.Play();
+
         forestAudioSource.clip = forestRustleClip;
         forestAudioSource.Play();
 
+        nightWindAudioSource.clip = nightWindClip;
+        nightWindAudioSource.Play();
+
+        nightCricketsAudioSource.clip = nightCricketsClip;
+        nightCricketsAudioSource.Play();
+
+        gasStationAudioSource.clip = gasStationHumClip;
+        gasStationAudioSource.Play();
+
         townAudioSource.clip = townHumClip;
         townAudioSource.Play();
+
+        dayBirdTimer = Random.Range(4.5f, 8f);
+        nightOwlTimer = Random.Range(8f, 14f);
+        lanternBuzzTimer = Random.Range(5f, 9f);
+        warehouseCreakTimer = Random.Range(6f, 10f);
 
         foreach (TruckAgent truckAgent in truckAgents)
         {
@@ -440,8 +481,8 @@ public partial class GameBootstrap
             return;
         }
 
-        truckAgent.TruckLoopAudioSource = CreateAudioSource($"TruckLoop_{truckAgent.TruckNumber}", truckAgent.TruckObject.transform, true, 0.18f, 0.65f, false);
-        truckAgent.TruckFxAudioSource = CreateAudioSource($"TruckFX_{truckAgent.TruckNumber}", truckAgent.TruckObject.transform, false, 0.42f, 0.8f, false);
+        truckAgent.TruckLoopAudioSource = CreateAudioSource($"TruckLoop_{truckAgent.TruckNumber}", truckAgent.TruckObject.transform, true, 0.28f, 0.65f, false);
+        truckAgent.TruckFxAudioSource = CreateAudioSource($"TruckFX_{truckAgent.TruckNumber}", truckAgent.TruckObject.transform, false, 0.58f, 0.8f, false);
         truckAgent.TruckLoopAudioSource.clip = truckIdleClip;
         truckAgent.TruckLoopAudioSource.Play();
     }

@@ -34,7 +34,7 @@ public static class WorldLayoutGenerator
             int forestMaxX = parkingOnLeft ? 17 : 11;
             int forestMinY = parkingOnBottom ? 10 : 8;
             int forestMaxY = 17;
-            if (!TryPlaceInteriorLocation(candidate, "Forest", 2, 2, forestMinX, forestMaxX, forestMinY, forestMaxY, true, gridWidth, gridHeight, parkingAnchor))
+            if (!TryPlaceInteriorLocation(candidate, "Forest", 3, 3, forestMinX, forestMaxX, forestMinY, forestMaxY, true, gridWidth, gridHeight, parkingAnchor))
             {
                 continue;
             }
@@ -314,7 +314,7 @@ public static class WorldLayoutGenerator
         {
             Parking = new WorldLocationPlacement { Min = new Vector2Int(2, 2), Max = new Vector2Int(4, 3), Anchor = new Vector2Int(3, 4) },
             GasStation = new WorldLocationPlacement { Min = new Vector2Int(6, 4), Max = new Vector2Int(7, 5), Anchor = new Vector2Int(6, 6) },
-            Forest = new WorldLocationPlacement { Min = new Vector2Int(3, 15), Max = new Vector2Int(4, 16), Anchor = new Vector2Int(4, 14) },
+            Forest = new WorldLocationPlacement { Min = new Vector2Int(3, 14), Max = new Vector2Int(5, 16), Anchor = new Vector2Int(4, 13) },
             Warehouse = new WorldLocationPlacement { Min = new Vector2Int(9, 9), Max = new Vector2Int(10, 10), Anchor = new Vector2Int(9, 8) },
             Town = new WorldLocationPlacement { Min = new Vector2Int(14, 2), Max = new Vector2Int(15, 3), Anchor = new Vector2Int(13, 3) }
         };

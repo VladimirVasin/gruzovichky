@@ -11,7 +11,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const float CellSize = 1f;
     private const float RoadHeight = 0.12f;
     private const float TruckCruiseSpeed = 1.9f;
-    private const float ForestProductionInterval = 2.5f;
+    private const int ForestMaxLogsStorage = 10;
+    private const float ForestLogProgressPerChop = 0.08f;
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
     private const float CameraZoomSpeed = 8f;
@@ -49,6 +50,10 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<Renderer> locationNightLightRenderers = new();
     private readonly List<RoadLanternData> roadLanterns = new();
     private readonly List<TruckAgent> truckAgents = new();
+    private readonly List<ForestWorkerAmbient> forestWorkers = new();
+    private readonly List<Vector3> forestWorkPoints = new();
+    private readonly List<Transform> forestWorkTargetTrees = new();
+    private readonly List<ForestTreeWobble> forestTreeWobbles = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
     private readonly Dictionary<LocationType, GameObject> locationSelectionHighlights = new();
     private float[,] terrainHeights = new float[GridWidth, GridHeight];
@@ -81,6 +86,13 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioSource uiAudioSource;
     private AudioSource ambientAudioSource;
     private AudioSource forestAudioSource;
+    private AudioSource forestWorkerAudioSource;
+    private AudioSource dayBirdsAudioSource;
+    private AudioSource nightWindAudioSource;
+    private AudioSource nightCricketsAudioSource;
+    private AudioSource gasStationAudioSource;
+    private AudioSource warehouseAudioSource;
+    private AudioSource ambienceFxAudioSource;
     private AudioSource townAudioSource;
     private AudioSource truckLoopAudioSource;
     private AudioSource truckFxAudioSource;
@@ -115,7 +127,13 @@ public partial class GameBootstrap : MonoBehaviour
     private float moneyPopupTimer;
     private float truckFuel = TruckFuelCapacity;
     private float dayNightCycleTimer = DayNightCycleDuration * 0.3f;
+    private float currentStylizedDaylight = 1f;
     private float driverWalkAnimationTime;
+    private float forestProductionProgress;
+    private float dayBirdTimer;
+    private float nightOwlTimer;
+    private float lanternBuzzTimer;
+    private float warehouseCreakTimer;
     private float terrainNoiseOffsetX;
     private float terrainNoiseOffsetY;
     private LocationType? selectedLocation;
@@ -156,12 +174,29 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip uiPanelOpenClip;
     private AudioClip uiPanelCloseClip;
     private AudioClip ambientWindClip;
+    private AudioClip dayBirdsClip;
     private AudioClip forestRustleClip;
+    private AudioClip forestChopClip;
+    private AudioClip nightWindClip;
+    private AudioClip nightCricketsClip;
+    private AudioClip gasStationHumClip;
     private AudioClip townHumClip;
+    private AudioClip warehouseCreakClip;
+    private AudioClip owlClip;
+    private AudioClip lanternBuzzClip;
     private AudioClip truckIdleClip;
     private AudioClip truckRollClip;
     private AudioClip cargoPickupClip;
     private AudioClip cargoDropClip;
+    private AudioClip routeAssignForestWarehouseClip;
+    private AudioClip routeAssignWarehouseTownClip;
+    private AudioClip routeAssignRefuelClip;
+    private AudioClip forestLoadCueClip;
+    private AudioClip warehouseUnloadCueClip;
+    private AudioClip warehouseLoadCueClip;
+    private AudioClip townUnloadCueClip;
+    private AudioClip gasStationRefuelCueClip;
+    private AudioClip parkingReturnCueClip;
     private AudioClip moneyRewardClip;
 
     private enum LocationType
@@ -242,6 +277,7 @@ public partial class GameBootstrap : MonoBehaviour
         public int WoodStored;
         public GameObject RootObject;
         public Renderer BaseRenderer;
+        public readonly List<GameObject> StoredLogVisuals = new();
 
         public bool Contains(Vector2Int cell)
         {
@@ -255,6 +291,49 @@ public partial class GameBootstrap : MonoBehaviour
         public string Title;
         public string Description;
         public int Reward;
+    }
+
+    private enum ForestWorkerState
+    {
+        Walking,
+        Chopping,
+        Pausing
+    }
+
+    private sealed class ForestWorkerAmbient
+    {
+        public string Name;
+        public GameObject RootObject;
+        public Transform VisualRoot;
+        public Transform BodyTransform;
+        public Transform HeadTransform;
+        public Transform CapTransform;
+        public Transform LeftArmTransform;
+        public Transform RightArmTransform;
+        public Transform LeftLegTransform;
+        public Transform RightLegTransform;
+        public Transform AxeTransform;
+        public Transform FlashlightTransform;
+        public Light FlashlightLight;
+        public Renderer FlashlightRenderer;
+        public Vector3 TargetWorldPosition;
+        public ForestWorkerState State;
+        public float MoveSpeed;
+        public float StateTimer;
+        public float AnimationTime;
+        public float ChopSoundCooldown;
+        public float PauseYaw;
+        public int WorkPointIndex;
+    }
+
+    private sealed class ForestTreeWobble
+    {
+        public Transform TreeTransform;
+        public Quaternion BaseRotation;
+        public Vector3 Axis;
+        public float Timer;
+        public float Duration;
+        public float Amplitude;
     }
 
     private sealed class TruckAgent
@@ -351,6 +430,8 @@ public partial class GameBootstrap : MonoBehaviour
         ProduceForestWood();
         UpdateDayNightCycle();
         UpdateSelectedLocationLabel();
+        UpdateForestTreeWobbles();
+        UpdateForestWorkers();
         for (int i = 0; i < truckAgents.Count; i++)
         {
             LoadTruckState(truckAgents[i]);
@@ -427,6 +508,7 @@ public partial class GameBootstrap : MonoBehaviour
         SetupGrid();
         RebuildRoadLanterns();
         PopulateMiscTrees();
+        SetupForestWorkers();
         SetupSelectionVisuals();
         SetupTruck();
         SetupCargoTransferVisual();
@@ -498,6 +580,7 @@ public partial class GameBootstrap : MonoBehaviour
         float sunArc = Mathf.Sin(normalizedTime * Mathf.PI * 2f - Mathf.PI * 0.5f);
         float daylight = Mathf.Clamp01((sunArc + 1f) * 0.5f);
         float stylizedDaylight = Mathf.SmoothStep(0.06f, 1f, daylight);
+        currentStylizedDaylight = stylizedDaylight;
 
         float sunPitch = Mathf.Lerp(205f, 335f, normalizedTime);
         mainDirectionalLight.transform.rotation = Quaternion.Euler(sunPitch, -34f, 0f);

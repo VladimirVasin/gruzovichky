@@ -6,6 +6,8 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
+    private const float TreeHeightScale = 1.1f;
+
     private void SetupLocations()
     {
         locations.Clear();
@@ -113,17 +115,21 @@ public partial class GameBootstrap
         treeRoot.transform.position = GetCellCenter(cell);
         treeRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
         treeRoot.transform.localScale = Vector3.one * Random.Range(0.86f, 1.14f);
+        CreateTreeVariant(treeRoot.transform, variantIndex);
+    }
 
-        switch (variantIndex % 3)
+    private void CreateTreeVariant(Transform parent, int variantIndex)
+    {
+        switch (Mathf.Abs(variantIndex) % 3)
         {
             case 0:
-                CreateMiscTreeTall(treeRoot.transform);
+                CreateMiscTreeTall(parent);
                 break;
             case 1:
-                CreateMiscTreeRound(treeRoot.transform);
+                CreateMiscTreeRound(parent);
                 break;
             default:
-                CreateMiscTreePine(treeRoot.transform);
+                CreateMiscTreePine(parent);
                 break;
         }
     }
@@ -132,22 +138,22 @@ public partial class GameBootstrap
     {
         GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         trunk.transform.SetParent(parent, false);
-        trunk.transform.localPosition = new Vector3(0f, 0.34f, 0f);
-        trunk.transform.localScale = new Vector3(0.12f, 0.34f, 0.12f);
+        trunk.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.34f, 0f));
+        trunk.transform.localScale = ScaleTreeLocalScale(new Vector3(0.12f, 0.34f, 0.12f));
         ApplyColor(trunk, new Color(0.44f, 0.28f, 0.16f));
         ConfigureStaticVisual(trunk);
 
         GameObject crownBottom = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         crownBottom.transform.SetParent(parent, false);
-        crownBottom.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-        crownBottom.transform.localScale = new Vector3(0.62f, 0.42f, 0.62f);
+        crownBottom.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.9f, 0f));
+        crownBottom.transform.localScale = ScaleTreeLocalScale(new Vector3(0.62f, 0.42f, 0.62f));
         ApplyColor(crownBottom, new Color(0.22f, 0.56f, 0.27f));
         ConfigureStaticVisual(crownBottom);
 
         GameObject crownTop = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         crownTop.transform.SetParent(parent, false);
-        crownTop.transform.localPosition = new Vector3(0f, 1.16f, 0f);
-        crownTop.transform.localScale = new Vector3(0.44f, 0.34f, 0.44f);
+        crownTop.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 1.16f, 0f));
+        crownTop.transform.localScale = ScaleTreeLocalScale(new Vector3(0.44f, 0.34f, 0.44f));
         ApplyColor(crownTop, new Color(0.18f, 0.5f, 0.24f));
         ConfigureStaticVisual(crownTop);
     }
@@ -156,22 +162,22 @@ public partial class GameBootstrap
     {
         GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         trunk.transform.SetParent(parent, false);
-        trunk.transform.localPosition = new Vector3(0f, 0.28f, 0f);
-        trunk.transform.localScale = new Vector3(0.11f, 0.28f, 0.11f);
+        trunk.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.28f, 0f));
+        trunk.transform.localScale = ScaleTreeLocalScale(new Vector3(0.11f, 0.28f, 0.11f));
         ApplyColor(trunk, new Color(0.42f, 0.25f, 0.15f));
         ConfigureStaticVisual(trunk);
 
         GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         canopy.transform.SetParent(parent, false);
-        canopy.transform.localPosition = new Vector3(0f, 0.84f, 0f);
-        canopy.transform.localScale = new Vector3(0.72f, 0.66f, 0.72f);
+        canopy.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.84f, 0f));
+        canopy.transform.localScale = ScaleTreeLocalScale(new Vector3(0.72f, 0.66f, 0.72f));
         ApplyColor(canopy, new Color(0.3f, 0.62f, 0.31f));
         ConfigureStaticVisual(canopy);
 
         GameObject sideBlob = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         sideBlob.transform.SetParent(parent, false);
-        sideBlob.transform.localPosition = new Vector3(0.18f, 0.78f, -0.1f);
-        sideBlob.transform.localScale = new Vector3(0.34f, 0.28f, 0.34f);
+        sideBlob.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0.18f, 0.78f, -0.1f));
+        sideBlob.transform.localScale = ScaleTreeLocalScale(new Vector3(0.34f, 0.28f, 0.34f));
         ApplyColor(sideBlob, new Color(0.24f, 0.56f, 0.28f));
         ConfigureStaticVisual(sideBlob);
     }
@@ -180,23 +186,35 @@ public partial class GameBootstrap
     {
         GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         trunk.transform.SetParent(parent, false);
-        trunk.transform.localPosition = new Vector3(0f, 0.24f, 0f);
-        trunk.transform.localScale = new Vector3(0.1f, 0.24f, 0.1f);
+        trunk.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.24f, 0f));
+        trunk.transform.localScale = ScaleTreeLocalScale(new Vector3(0.1f, 0.24f, 0.1f));
         ApplyColor(trunk, new Color(0.4f, 0.24f, 0.14f));
         ConfigureStaticVisual(trunk);
 
         GameObject lower = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         lower.transform.SetParent(parent, false);
-        lower.transform.localPosition = new Vector3(0f, 0.7f, 0f);
-        lower.transform.localScale = new Vector3(0.36f, 0.24f, 0.36f);
+        lower.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.7f, 0f));
+        lower.transform.localScale = ScaleTreeLocalScale(new Vector3(0.36f, 0.24f, 0.36f));
         ApplyColor(lower, new Color(0.16f, 0.44f, 0.23f));
         ConfigureStaticVisual(lower);
 
         GameObject upper = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         upper.transform.SetParent(parent, false);
-        upper.transform.localPosition = new Vector3(0f, 1.05f, 0f);
-        upper.transform.localScale = new Vector3(0.24f, 0.22f, 0.24f);
+        upper.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 1.05f, 0f));
+        upper.transform.localScale = ScaleTreeLocalScale(new Vector3(0.24f, 0.22f, 0.24f));
         ApplyColor(upper, new Color(0.12f, 0.36f, 0.2f));
         ConfigureStaticVisual(upper);
+    }
+
+    private static Vector3 ScaleTreeLocalPosition(Vector3 source)
+    {
+        source.y *= TreeHeightScale;
+        return source;
+    }
+
+    private static Vector3 ScaleTreeLocalScale(Vector3 source)
+    {
+        source.y *= TreeHeightScale;
+        return source;
     }
 }

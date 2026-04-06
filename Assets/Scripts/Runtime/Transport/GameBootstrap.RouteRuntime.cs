@@ -86,6 +86,7 @@ public partial class GameBootstrap
                     return;
                 }
 
+                PlayTruckFx(parkingReturnCueClip, 0.64f);
                 AwardMoney(currentAssignedTripReward);
                 SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} completed trip {GetTripTitle(currentAssignedTrip)} and earned ${currentAssignedTripReward}.");
                 currentAssignedTrip = TripType.None;
@@ -140,6 +141,7 @@ public partial class GameBootstrap
                     return;
                 }
 
+                PlayTruckFx(parkingReturnCueClip, 0.58f);
                 SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} finished refuel order and returned to parking.");
                 currentRefuelPhase = RefuelPhase.None;
                 return;

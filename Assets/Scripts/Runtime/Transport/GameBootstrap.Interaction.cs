@@ -129,7 +129,8 @@ public partial class GameBootstrap
         switch (activeTruckInteraction)
         {
             case TruckInteractionType.LoadAtForest:
-                locations[LocationType.Forest].WoodStored -= 1;
+                locations[LocationType.Forest].WoodStored = Mathf.Max(0, locations[LocationType.Forest].WoodStored - 1);
+                RefreshForestStoredLogsVisual();
                 truckCargoWood = 1;
                 truckCargoSource = CargoSource.Forest;
                 break;
@@ -176,11 +177,26 @@ public partial class GameBootstrap
 
         if (completedInteraction == TruckInteractionType.RefuelAtGasStation)
         {
-            PlayTruckFx(uiPanelOpenClip, 0.55f);
+            PlayTruckFx(gasStationRefuelCueClip, 0.72f);
         }
         else
         {
             PlayTruckFx(completedLoad ? cargoDropClip : cargoPickupClip, 0.55f);
+            switch (completedInteraction)
+            {
+                case TruckInteractionType.LoadAtForest:
+                    PlayTruckFx(forestLoadCueClip, 0.68f);
+                    break;
+                case TruckInteractionType.UnloadAtWarehouse:
+                    PlayTruckFx(warehouseUnloadCueClip, 0.72f);
+                    break;
+                case TruckInteractionType.LoadAtWarehouse:
+                    PlayTruckFx(warehouseLoadCueClip, 0.68f);
+                    break;
+                case TruckInteractionType.UnloadAtTown:
+                    PlayTruckFx(townUnloadCueClip, 0.78f);
+                    break;
+            }
         }
     }
 }

@@ -107,6 +107,7 @@ public partial class GameBootstrap
         }
 
         truckAgent.CurrentRefuelPhase = RefuelPhase.ToGasStation;
+        PlayUiSound(routeAssignRefuelClip, 0.94f);
         SessionDebugLogger.Log("ORDER", $"{truckAgent.DisplayName} received manual refuel order.");
         KickTruckDecision(truckAgent);
     }
@@ -125,6 +126,7 @@ public partial class GameBootstrap
         truckAgent.CurrentAssignedTrip = trip.Type;
         truckAgent.CurrentTripPhase = TripPhase.ToPickup;
         truckAgent.CurrentAssignedTripReward = trip.Reward;
+        PlayAssignedTripCue(trip.Type, 0.94f);
         SessionDebugLogger.Log("ORDER", $"{truckAgent.DisplayName} assigned trip '{trip.Title}' with reward ${trip.Reward}.");
         KickTruckDecision(truckAgent);
     }

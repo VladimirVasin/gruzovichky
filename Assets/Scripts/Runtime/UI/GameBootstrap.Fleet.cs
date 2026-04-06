@@ -86,7 +86,7 @@ public partial class GameBootstrap
         currentAssignedTrip = trip.Type;
         currentTripPhase = TripPhase.ToPickup;
         currentAssignedTripReward = trip.Reward;
-        PlayUiSound(uiSelectClip, 1f);
+        PlayAssignedTripCue(trip.Type, 0.92f);
     }
 
     private void StartRefuelOrder()
@@ -97,7 +97,7 @@ public partial class GameBootstrap
         }
 
         currentRefuelPhase = RefuelPhase.ToGasStation;
-        PlayUiSound(uiSelectClip, 1f);
+        PlayUiSound(routeAssignRefuelClip, 0.94f);
     }
 
     private string GetTripTitle(TripType tripType)
@@ -207,6 +207,18 @@ public partial class GameBootstrap
         moneyPopupAmount = amount;
         moneyPopupTimer = MoneyPopupDuration;
         PlayUiSound(moneyRewardClip, 0.95f);
+    }
+
+    private void PlayAssignedTripCue(TripType tripType, float volumeScale = 0.94f)
+    {
+        AudioClip clip = tripType switch
+        {
+            TripType.ForestToWarehouse => routeAssignForestWarehouseClip,
+            TripType.WarehouseToTown => routeAssignWarehouseTownClip,
+            _ => null
+        };
+
+        PlayUiSound(clip, volumeScale);
     }
 
 }
