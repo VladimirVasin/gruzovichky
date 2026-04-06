@@ -34,7 +34,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private const int MaxTruckCount = 5;
     private const int HireTruckCost = 300;
     private const float DayNightCycleDuration = 180f;
-    private static readonly Vector3 DioramaCameraRotation = new(42f, 45f, 0f);
+    private const float DioramaCameraPitch = 42f;
     private static readonly Vector3 DioramaCameraOffset = new(-11.5f, 15f, -11.5f);
 
     private readonly HashSet<Vector2Int> roadCells = new();
@@ -50,6 +50,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private readonly List<RoadLanternData> roadLanterns = new();
     private readonly List<TruckAgent> truckAgents = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
+    private readonly Dictionary<LocationType, GameObject> locationSelectionHighlights = new();
 
     private Camera mainCamera;
     private GameObject truckObject;
@@ -81,7 +82,9 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private AudioSource truckLoopAudioSource;
     private AudioSource truckFxAudioSource;
     private Light mainDirectionalLight;
-    private GameObject parkingSelectionHighlight;
+    private GameObject selectedLocationLabelRoot;
+    private TextMesh selectedLocationLabelText;
+    private readonly List<TextMesh> selectedLocationLabelOutlines = new();
     private GameObject cargoTransferCrate;
     private Vector2Int truckCell;
     private Vector3 truckTargetWorld;
@@ -96,6 +99,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private float productionTimer;
     private Vector3 cameraFocusPoint;
     private Vector3 cameraOffset;
+    private Vector3 cameraTargetOffset;
     private Vector2 lastMousePosition;
     private Vector2 rightMousePressPosition;
     private Vector3 driverRescueTargetWorld;
@@ -113,6 +117,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private bool isTruckDetailsOpen;
     private bool isRightMouseDragging;
     private bool isCameraReturningToDiorama;
+    private bool isCameraRotatingToTarget;
     private bool isTruckCameraFocused;
     private bool isTruckAutoModeEnabled;
     private int selectedTruckNumber = 1;
@@ -239,6 +244,26 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         }
     }
 
+    private enum PlacementFacing
+    {
+        North,
+        South,
+        East,
+        West
+    }
+
+    private sealed class LocationPlacementData
+    {
+        public Vector2Int Min;
+        public Vector2Int Max;
+        public Vector2Int Anchor;
+
+        public bool Contains(Vector2Int cell)
+        {
+            return cell.x >= Min.x && cell.x <= Max.x && cell.y >= Min.y && cell.y <= Max.y;
+        }
+    }
+
     private sealed class TripOption
     {
         public TripType Type;
@@ -327,6 +352,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         HandleRoadPlacementInput();
         ProduceForestWood();
         UpdateDayNightCycle();
+        UpdateSelectedLocationLabel();
         for (int i = 0; i < truckAgents.Count; i++)
         {
             LoadTruckState(truckAgents[i]);
@@ -363,6 +389,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         DrawTimeHud();
         DrawSpeedHud();
         DrawTruckFleetHud();
+        DrawCameraLegendHud();
 
         if (selectedLocation.HasValue && selectedLocation != LocationType.Parking)
         {
@@ -415,7 +442,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         }
 
         mainCamera.transform.position = DioramaCameraOffset;
-        mainCamera.transform.rotation = Quaternion.Euler(DioramaCameraRotation);
+        mainCamera.transform.rotation = GetDioramaCameraRotation();
         mainCamera.fieldOfView = 30f;
         mainCamera.nearClipPlane = 0.1f;
         mainCamera.farClipPlane = 120f;
@@ -423,6 +450,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         mainCamera.clearFlags = CameraClearFlags.SolidColor;
         cameraFocusPoint = new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
         cameraOffset = DioramaCameraOffset;
+        cameraTargetOffset = DioramaCameraOffset;
     }
 
     private void SetupLighting()
@@ -601,11 +629,361 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private void SetupLocations()
     {
-        CreateLocation(LocationType.Parking, "Parking", new Vector2Int(2, 2), new Vector2Int(4, 3), new Vector2Int(3, 3), new Color(0.46f, 0.46f, 0.52f));
-        CreateLocation(LocationType.GasStation, "Gas Station", new Vector2Int(6, 1), new Vector2Int(7, 2), new Vector2Int(6, 3), new Color(0.84f, 0.68f, 0.26f));
-        CreateLocation(LocationType.Forest, "Forest", new Vector2Int(3, 15), new Vector2Int(4, 16), new Vector2Int(4, 14), new Color(0.22f, 0.55f, 0.24f));
-        CreateLocation(LocationType.Warehouse, "Warehouse", new Vector2Int(9, 9), new Vector2Int(10, 10), new Vector2Int(9, 8), new Color(0.7f, 0.52f, 0.3f));
-        CreateLocation(LocationType.Town, "Town", new Vector2Int(14, 2), new Vector2Int(15, 3), new Vector2Int(13, 3), new Color(0.3f, 0.52f, 0.8f));
+        locations.Clear();
+        Dictionary<LocationType, LocationPlacementData> layout = GenerateRandomLocationLayout();
+        CreateLocation(LocationType.Parking, "Parking", layout[LocationType.Parking].Min, layout[LocationType.Parking].Max, layout[LocationType.Parking].Anchor, new Color(0.46f, 0.46f, 0.52f));
+        CreateLocation(LocationType.GasStation, "Gas Station", layout[LocationType.GasStation].Min, layout[LocationType.GasStation].Max, layout[LocationType.GasStation].Anchor, new Color(0.84f, 0.68f, 0.26f));
+        CreateLocation(LocationType.Forest, "Forest", layout[LocationType.Forest].Min, layout[LocationType.Forest].Max, layout[LocationType.Forest].Anchor, new Color(0.22f, 0.55f, 0.24f));
+        CreateLocation(LocationType.Warehouse, "Warehouse", layout[LocationType.Warehouse].Min, layout[LocationType.Warehouse].Max, layout[LocationType.Warehouse].Anchor, new Color(0.7f, 0.52f, 0.3f));
+        CreateLocation(LocationType.Town, "Town", layout[LocationType.Town].Min, layout[LocationType.Town].Max, layout[LocationType.Town].Anchor, new Color(0.3f, 0.52f, 0.8f));
+    }
+
+    private Dictionary<LocationType, LocationPlacementData> GenerateRandomLocationLayout()
+    {
+        Dictionary<LocationType, LocationPlacementData> bestCandidate = null;
+        int bestScore = int.MinValue;
+
+        for (int attempt = 0; attempt < 160; attempt++)
+        {
+            Dictionary<LocationType, LocationPlacementData> candidate = new();
+            if (!TryPlaceParking(candidate))
+            {
+                continue;
+            }
+
+            if (!TryPlaceGasStation(candidate))
+            {
+                continue;
+            }
+
+            Vector2Int parkingAnchor = candidate[LocationType.Parking].Anchor;
+            bool parkingOnLeft = parkingAnchor.x < GridWidth * 0.5f;
+            bool parkingOnBottom = parkingAnchor.y < GridHeight * 0.5f;
+
+            if (!TryPlaceInteriorLocation(candidate, LocationType.Warehouse, 2, 2, 7, 12, 7, 12, requireFarFromParking: true))
+            {
+                continue;
+            }
+
+            int forestMinX = parkingOnLeft ? 9 : 2;
+            int forestMaxX = parkingOnLeft ? 17 : 11;
+            int forestMinY = parkingOnBottom ? 10 : 8;
+            int forestMaxY = 17;
+            if (!TryPlaceInteriorLocation(candidate, LocationType.Forest, 2, 2, forestMinX, forestMaxX, forestMinY, forestMaxY, requireFarFromParking: true))
+            {
+                continue;
+            }
+
+            int townMinX = parkingOnLeft ? 9 : 2;
+            int townMaxX = parkingOnLeft ? 17 : 11;
+            int townMinY = parkingOnBottom ? 2 : 3;
+            int townMaxY = parkingOnBottom ? 10 : 11;
+            if (!TryPlaceInteriorLocation(candidate, LocationType.Town, 2, 2, townMinX, townMaxX, townMinY, townMaxY, requireFarFromParking: true))
+            {
+                continue;
+            }
+
+            int layoutScore = ScoreLayoutDistribution(candidate);
+            if (layoutScore > bestScore)
+            {
+                bestScore = layoutScore;
+                bestCandidate = candidate;
+            }
+
+            if (layoutScore >= 34 && HasRequiredLayoutRoads(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        if (bestCandidate != null && HasRequiredLayoutRoads(bestCandidate))
+        {
+            return bestCandidate;
+        }
+
+        return CreateFallbackLocationLayout();
+    }
+
+    private bool TryPlaceParking(Dictionary<LocationType, LocationPlacementData> placements)
+    {
+        int corner = Random.Range(0, 4);
+        PlacementFacing facing = corner <= 1 ? PlacementFacing.North : PlacementFacing.South;
+
+        for (int attempt = 0; attempt < 24; attempt++)
+        {
+            Vector2Int anchor = corner switch
+            {
+                0 => new Vector2Int(Random.Range(2, 5), Random.Range(4, 6)),
+                1 => new Vector2Int(Random.Range(15, 18), Random.Range(4, 6)),
+                2 => new Vector2Int(Random.Range(2, 5), Random.Range(14, 17)),
+                _ => new Vector2Int(Random.Range(15, 18), Random.Range(14, 17))
+            };
+
+            if (!TryCreatePlacementFromAnchor(anchor, 3, 2, facing, out LocationPlacementData parking) ||
+                !PlacementFits(parking, placements, 1))
+            {
+                continue;
+            }
+
+            placements[LocationType.Parking] = parking;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryPlaceGasStation(Dictionary<LocationType, LocationPlacementData> placements)
+    {
+        LocationPlacementData parking = placements[LocationType.Parking];
+        bool lowerHalf = parking.Anchor.y < GridHeight * 0.5f;
+        int xDirection = parking.Anchor.x < GridWidth * 0.5f ? 1 : -1;
+        int yDirection = lowerHalf ? 1 : -1;
+        PlacementFacing facing = lowerHalf ? PlacementFacing.North : PlacementFacing.South;
+
+        for (int attempt = 0; attempt < 48; attempt++)
+        {
+            Vector2Int anchor = parking.Anchor + new Vector2Int(
+                xDirection * Random.Range(1, 5),
+                yDirection * Random.Range(2, 5));
+
+            if (!TryCreatePlacementFromAnchor(anchor, 2, 2, facing, out LocationPlacementData gasStation) ||
+                !PlacementFits(gasStation, placements, 1))
+            {
+                continue;
+            }
+
+            if (ManhattanDistance(parking.Anchor, gasStation.Anchor) > 7)
+            {
+                continue;
+            }
+
+            placements[LocationType.GasStation] = gasStation;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryPlaceInteriorLocation(
+        Dictionary<LocationType, LocationPlacementData> placements,
+        LocationType locationType,
+        int width,
+        int height,
+        int minAnchorX,
+        int maxAnchorX,
+        int minAnchorY,
+        int maxAnchorY,
+        bool requireFarFromParking)
+    {
+        for (int attempt = 0; attempt < 80; attempt++)
+        {
+            PlacementFacing facing = (PlacementFacing)Random.Range(0, 4);
+            Vector2Int anchor = new Vector2Int(Random.Range(minAnchorX, maxAnchorX + 1), Random.Range(minAnchorY, maxAnchorY + 1));
+            if (!TryCreatePlacementFromAnchor(anchor, width, height, facing, out LocationPlacementData placement) ||
+                !PlacementFits(placement, placements, 1))
+            {
+                continue;
+            }
+
+            if (requireFarFromParking && ManhattanDistance(anchor, placements[LocationType.Parking].Anchor) < 6)
+            {
+                continue;
+            }
+
+            placements[locationType] = placement;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static int ManhattanDistance(Vector2Int a, Vector2Int b)
+    {
+        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
+    }
+
+    private bool TryCreatePlacementFromAnchor(Vector2Int anchor, int width, int height, PlacementFacing facing, out LocationPlacementData placement)
+    {
+        placement = new LocationPlacementData
+        {
+            Anchor = anchor
+        };
+
+        switch (facing)
+        {
+            case PlacementFacing.North:
+                placement.Min = new Vector2Int(anchor.x - width / 2, anchor.y - height);
+                placement.Max = new Vector2Int(placement.Min.x + width - 1, anchor.y - 1);
+                break;
+            case PlacementFacing.South:
+                placement.Min = new Vector2Int(anchor.x - width / 2, anchor.y + 1);
+                placement.Max = new Vector2Int(placement.Min.x + width - 1, placement.Min.y + height - 1);
+                break;
+            case PlacementFacing.East:
+                placement.Min = new Vector2Int(anchor.x - width, anchor.y - height / 2);
+                placement.Max = new Vector2Int(anchor.x - 1, placement.Min.y + height - 1);
+                break;
+            default:
+                placement.Min = new Vector2Int(anchor.x + 1, anchor.y - height / 2);
+                placement.Max = new Vector2Int(placement.Min.x + width - 1, placement.Min.y + height - 1);
+                break;
+        }
+
+        return IsPlacementInsideGrid(placement) && !placement.Contains(anchor);
+    }
+
+    private bool PlacementFits(LocationPlacementData placement, Dictionary<LocationType, LocationPlacementData> placements, int padding)
+    {
+        if (!IsPlacementInsideGrid(placement))
+        {
+            return false;
+        }
+
+        foreach (LocationPlacementData existing in placements.Values)
+        {
+            if (RectanglesOverlapExpanded(placement, existing, padding) ||
+                existing.Contains(placement.Anchor) ||
+                placement.Contains(existing.Anchor) ||
+                placement.Anchor == existing.Anchor)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool IsPlacementInsideGrid(LocationPlacementData placement)
+    {
+        return IsInsideGrid(placement.Min) &&
+               IsInsideGrid(placement.Max) &&
+               IsInsideGrid(placement.Anchor);
+    }
+
+    private static bool RectanglesOverlapExpanded(LocationPlacementData a, LocationPlacementData b, int padding)
+    {
+        return a.Min.x - padding <= b.Max.x + padding &&
+               a.Max.x + padding >= b.Min.x - padding &&
+               a.Min.y - padding <= b.Max.y + padding &&
+               a.Max.y + padding >= b.Min.y - padding;
+    }
+
+    private bool HasRequiredLayoutRoads(Dictionary<LocationType, LocationPlacementData> placements)
+    {
+        return FindRoadBuildPath(placements[LocationType.Parking].Anchor, placements[LocationType.GasStation].Anchor, cell => IsPlacementCell(placements, cell)) != null &&
+               FindRoadBuildPath(placements[LocationType.GasStation].Anchor, placements[LocationType.Warehouse].Anchor, cell => IsPlacementCell(placements, cell)) != null &&
+               FindRoadBuildPath(placements[LocationType.Warehouse].Anchor, placements[LocationType.Forest].Anchor, cell => IsPlacementCell(placements, cell)) != null &&
+               FindRoadBuildPath(placements[LocationType.Warehouse].Anchor, placements[LocationType.Town].Anchor, cell => IsPlacementCell(placements, cell)) != null;
+    }
+
+    private int ScoreLayoutDistribution(Dictionary<LocationType, LocationPlacementData> placements)
+    {
+        Vector2Int[] anchors =
+        {
+            placements[LocationType.Parking].Anchor,
+            placements[LocationType.GasStation].Anchor,
+            placements[LocationType.Warehouse].Anchor,
+            placements[LocationType.Forest].Anchor,
+            placements[LocationType.Town].Anchor
+        };
+
+        int minPairDistance = int.MaxValue;
+        for (int i = 0; i < anchors.Length; i++)
+        {
+            for (int j = i + 1; j < anchors.Length; j++)
+            {
+                minPairDistance = Mathf.Min(minPairDistance, ManhattanDistance(anchors[i], anchors[j]));
+            }
+        }
+
+        int minX = anchors[0].x;
+        int maxX = anchors[0].x;
+        int minY = anchors[0].y;
+        int maxY = anchors[0].y;
+        foreach (Vector2Int anchor in anchors)
+        {
+            minX = Mathf.Min(minX, anchor.x);
+            maxX = Mathf.Max(maxX, anchor.x);
+            minY = Mathf.Min(minY, anchor.y);
+            maxY = Mathf.Max(maxY, anchor.y);
+        }
+
+        int spanX = maxX - minX;
+        int spanY = maxY - minY;
+
+        HashSet<Vector2Int> macroCells = new();
+        foreach (Vector2Int anchor in anchors)
+        {
+            macroCells.Add(new Vector2Int(Mathf.Clamp(anchor.x / 7, 0, 2), Mathf.Clamp(anchor.y / 7, 0, 2)));
+        }
+
+        int score = minPairDistance + spanX + spanY + macroCells.Count * 4;
+        if (ManhattanDistance(placements[LocationType.Parking].Anchor, placements[LocationType.GasStation].Anchor) > 8)
+        {
+            score -= 6;
+        }
+
+        if (spanX < 8 || spanY < 8)
+        {
+            score -= 10;
+        }
+
+        if (macroCells.Count < 4)
+        {
+            score -= 8;
+        }
+
+        return score;
+    }
+
+    private bool IsPlacementCell(Dictionary<LocationType, LocationPlacementData> placements, Vector2Int cell)
+    {
+        foreach (LocationPlacementData placement in placements.Values)
+        {
+            if (placement.Anchor == cell || placement.Contains(cell))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private Dictionary<LocationType, LocationPlacementData> CreateFallbackLocationLayout()
+    {
+        return new Dictionary<LocationType, LocationPlacementData>
+        {
+            [LocationType.Parking] = new LocationPlacementData
+            {
+                Min = new Vector2Int(2, 2),
+                Max = new Vector2Int(4, 3),
+                Anchor = new Vector2Int(3, 4)
+            },
+            [LocationType.GasStation] = new LocationPlacementData
+            {
+                Min = new Vector2Int(6, 4),
+                Max = new Vector2Int(7, 5),
+                Anchor = new Vector2Int(6, 6)
+            },
+            [LocationType.Forest] = new LocationPlacementData
+            {
+                Min = new Vector2Int(3, 15),
+                Max = new Vector2Int(4, 16),
+                Anchor = new Vector2Int(4, 14)
+            },
+            [LocationType.Warehouse] = new LocationPlacementData
+            {
+                Min = new Vector2Int(9, 9),
+                Max = new Vector2Int(10, 10),
+                Anchor = new Vector2Int(9, 8)
+            },
+            [LocationType.Town] = new LocationPlacementData
+            {
+                Min = new Vector2Int(14, 2),
+                Max = new Vector2Int(15, 3),
+                Anchor = new Vector2Int(13, 3)
+            }
+        };
     }
 
     private void SetupTruck()
@@ -1185,6 +1563,27 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             return;
         }
 
+        if (Keyboard.current.fKey.wasPressedThisFrame && isTruckDetailsOpen && IsTruckNumberOwned(selectedTruckNumber))
+        {
+            ToggleTruckCameraFocus();
+            return;
+        }
+
+        if (!isTruckCameraFocused)
+        {
+            if (Keyboard.current.qKey.wasPressedThisFrame)
+            {
+                RotateDioramaCamera(-1);
+                return;
+            }
+
+            if (Keyboard.current.eKey.wasPressedThisFrame)
+            {
+                RotateDioramaCamera(1);
+                return;
+            }
+        }
+
         if (Keyboard.current.f1Key.wasPressedThisFrame)
         {
             SetGameSpeed(1);
@@ -1252,11 +1651,13 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             return;
         }
 
+        bool wasTruckCameraFocused = isTruckCameraFocused;
+
         selectedTruckNumber = truckNumber;
         selectedLocation = null;
         isTruckDetailsOpen = true;
-        isTruckCameraFocused = true;
-        isCameraReturningToDiorama = false;
+        isTruckCameraFocused = false;
+        isCameraReturningToDiorama = wasTruckCameraFocused;
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelOpenClip, 0.9f);
     }
@@ -1274,15 +1675,26 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             return;
         }
 
-        if (isCameraReturningToDiorama)
+        if (isCameraReturningToDiorama || isCameraRotatingToTarget)
         {
+            if (isCameraRotatingToTarget)
+            {
+                cameraOffset = Vector3.Lerp(cameraOffset, cameraTargetOffset, 6.5f * Time.deltaTime);
+                if ((cameraOffset - cameraTargetOffset).sqrMagnitude < 0.0025f)
+                {
+                    cameraOffset = cameraTargetOffset;
+                    isCameraRotatingToTarget = false;
+                }
+            }
+
             Vector3 defaultPosition = cameraFocusPoint + cameraOffset;
-            Quaternion defaultRotation = Quaternion.Euler(DioramaCameraRotation);
+            Quaternion defaultRotation = GetDioramaCameraRotation();
             mainCamera.transform.position = Vector3.Lerp(mainCamera.transform.position, defaultPosition, 5.5f * Time.deltaTime);
             mainCamera.transform.rotation = Quaternion.Slerp(mainCamera.transform.rotation, defaultRotation, 6.5f * Time.deltaTime);
 
             if ((mainCamera.transform.position - defaultPosition).sqrMagnitude < 0.01f &&
-                Quaternion.Angle(mainCamera.transform.rotation, defaultRotation) < 0.75f)
+                Quaternion.Angle(mainCamera.transform.rotation, defaultRotation) < 0.75f &&
+                !isCameraRotatingToTarget)
             {
                 mainCamera.transform.position = defaultPosition;
                 mainCamera.transform.rotation = defaultRotation;
@@ -1319,6 +1731,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         if (pan.sqrMagnitude > 0.0001f)
         {
             cameraFocusPoint += pan.normalized * (CameraPanSpeed * Time.deltaTime);
+            isCameraRotatingToTarget = false;
         }
 
         if (Mouse.current != null)
@@ -1343,6 +1756,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 {
                     cameraFocusPoint -= right * (mouseDelta.x * CameraDragPanMultiplier);
                     cameraFocusPoint -= forward * (mouseDelta.y * CameraDragPanMultiplier);
+                    isCameraRotatingToTarget = false;
                 }
 
                 lastMousePosition = mousePosition;
@@ -1362,6 +1776,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 }
 
                 cameraOffset = nextOffset;
+                cameraTargetOffset = cameraOffset;
+                isCameraRotatingToTarget = false;
             }
         }
 
@@ -1372,7 +1788,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         }
 
         mainCamera.transform.position = cameraFocusPoint + cameraOffset;
-        mainCamera.transform.rotation = Quaternion.Euler(DioramaCameraRotation);
+        mainCamera.transform.rotation = GetDioramaCameraRotation();
     }
 
     private void UpdateTruckFollowCamera()
@@ -1399,14 +1815,76 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         mainCamera.transform.rotation = Quaternion.Slerp(mainCamera.transform.rotation, desiredRotation, 10f * Time.deltaTime);
     }
 
+    private void ToggleTruckCameraFocus()
+    {
+        if (isTruckCameraFocused)
+        {
+            DisableTruckCameraFocus();
+            PlayUiSound(uiPanelCloseClip, 0.82f);
+            return;
+        }
+
+        if (!isTruckDetailsOpen || !IsTruckNumberOwned(selectedTruckNumber))
+        {
+            return;
+        }
+
+        isTruckCameraFocused = true;
+        isCameraReturningToDiorama = false;
+        isCameraRotatingToTarget = false;
+        PlayUiSound(uiPanelOpenClip, 0.82f);
+    }
+
+    private void DisableTruckCameraFocus()
+    {
+        if (!isTruckCameraFocused)
+        {
+            return;
+        }
+
+        isTruckCameraFocused = false;
+        isCameraReturningToDiorama = true;
+        isCameraRotatingToTarget = false;
+    }
+
+    private void RotateDioramaCamera(int direction)
+    {
+        Vector3 horizontalOffset = new Vector3(cameraOffset.x, 0f, cameraOffset.z);
+        if (horizontalOffset.sqrMagnitude < 0.0001f)
+        {
+            horizontalOffset = new Vector3(DioramaCameraOffset.x, 0f, DioramaCameraOffset.z);
+        }
+
+        horizontalOffset = Quaternion.Euler(0f, 90f * Mathf.Clamp(direction, -1, 1), 0f) * horizontalOffset;
+        cameraTargetOffset = new Vector3(horizontalOffset.x, cameraOffset.y, horizontalOffset.z);
+        isCameraRotatingToTarget = true;
+        isCameraReturningToDiorama = true;
+        PlayUiSound(uiSelectClip, 0.75f);
+    }
+
+    private Quaternion GetDioramaCameraRotation()
+    {
+        Vector3 lookDirection = new Vector3(-cameraOffset.x, 0f, -cameraOffset.z);
+        if (lookDirection.sqrMagnitude < 0.0001f)
+        {
+            lookDirection = new Vector3(-DioramaCameraOffset.x, 0f, -DioramaCameraOffset.z);
+        }
+
+        float yaw = Mathf.Atan2(lookDirection.x, lookDirection.z) * Mathf.Rad2Deg;
+        return Quaternion.Euler(DioramaCameraPitch, yaw, 0f);
+    }
+
     private void ClearTruckFocus()
     {
-        isTruckCameraFocused = false;
         isTruckDetailsOpen = false;
         selectedLocation = null;
+        DisableTruckCameraFocus();
         cameraFocusPoint = new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
-        cameraOffset = DioramaCameraOffset;
-        isCameraReturningToDiorama = true;
+        if (cameraOffset.sqrMagnitude < 0.0001f)
+        {
+            cameraOffset = DioramaCameraOffset;
+        }
+        cameraTargetOffset = cameraOffset;
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelCloseClip, 0.82f);
     }
@@ -1442,7 +1920,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
         selectedLocation = null;
         isTruckDetailsOpen = false;
-        isTruckCameraFocused = false;
+        DisableTruckCameraFocus();
         RefreshSelectionVisuals();
         RemoveRoad(cell);
     }
@@ -1485,14 +1963,14 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         {
             selectedLocation = null;
             isTruckDetailsOpen = false;
-            isTruckCameraFocused = false;
+            DisableTruckCameraFocus();
             RefreshSelectionVisuals();
             return;
         }
 
         selectedLocation = null;
         isTruckDetailsOpen = false;
-        isTruckCameraFocused = false;
+        DisableTruckCameraFocus();
         RefreshSelectionVisuals();
         AddRoad(cell);
     }
@@ -1955,6 +2433,41 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         return null;
     }
 
+    private List<Vector2Int> FindRoadBuildPath(Vector2Int start, Vector2Int goal, System.Func<Vector2Int, bool> isBlockedLocationCell)
+    {
+        if (start == goal)
+        {
+            return new List<Vector2Int> { start };
+        }
+
+        Queue<Vector2Int> frontier = new();
+        Dictionary<Vector2Int, Vector2Int> cameFrom = new();
+        frontier.Enqueue(start);
+        cameFrom[start] = start;
+
+        while (frontier.Count > 0)
+        {
+            Vector2Int current = frontier.Dequeue();
+            foreach (Vector2Int neighbor in GetNeighbors(current))
+            {
+                if (cameFrom.ContainsKey(neighbor) || !CanBuildRoadThroughCell(neighbor, start, goal, isBlockedLocationCell))
+                {
+                    continue;
+                }
+
+                cameFrom[neighbor] = current;
+                if (neighbor == goal)
+                {
+                    return ReconstructPath(cameFrom, start, goal);
+                }
+
+                frontier.Enqueue(neighbor);
+            }
+        }
+
+        return null;
+    }
+
     private static List<Vector2Int> ReconstructPath(Dictionary<Vector2Int, Vector2Int> cameFrom, Vector2Int start, Vector2Int goal)
     {
         List<Vector2Int> path = new() { goal };
@@ -1980,6 +2493,21 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private bool IsDriveable(Vector2Int cell)
     {
         return IsInsideGrid(cell) && (roadCells.Contains(cell) || IsAnchorCell(cell));
+    }
+
+    private bool CanBuildRoadThroughCell(Vector2Int cell, Vector2Int start, Vector2Int goal, System.Func<Vector2Int, bool> isBlockedLocationCell)
+    {
+        if (!IsInsideGrid(cell))
+        {
+            return false;
+        }
+
+        if (cell == start || cell == goal || roadCells.Contains(cell))
+        {
+            return true;
+        }
+
+        return !isBlockedLocationCell(cell);
     }
 
     private bool IsDriveableForPath(Vector2Int cell, LocationType? startLocation, LocationType? goalLocation)
@@ -2101,30 +2629,23 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private void GenerateInitialRoadNetwork()
     {
-        Vector2Int parkingExit = new Vector2Int(4, 4);
-        Vector2Int gasStationApproach = new Vector2Int(5, 3);
-        AddRoad(parkingExit);
-        CreateStarterRoadPath(parkingExit, gasStationApproach);
-        CreateStarterRoadPath(gasStationApproach, locations[LocationType.GasStation].Anchor);
-        CreateStarterRoadPath(locations[LocationType.GasStation].Anchor, locations[LocationType.Warehouse].Anchor);
-        CreateStarterRoadPath(locations[LocationType.Warehouse].Anchor, locations[LocationType.Forest].Anchor);
-        CreateStarterRoadPath(locations[LocationType.Warehouse].Anchor, locations[LocationType.Town].Anchor);
+        CreateGuaranteedRoadConnection(locations[LocationType.Parking].Anchor, locations[LocationType.GasStation].Anchor);
+        CreateGuaranteedRoadConnection(locations[LocationType.GasStation].Anchor, locations[LocationType.Warehouse].Anchor);
+        CreateGuaranteedRoadConnection(locations[LocationType.Warehouse].Anchor, locations[LocationType.Forest].Anchor);
+        CreateGuaranteedRoadConnection(locations[LocationType.Warehouse].Anchor, locations[LocationType.Town].Anchor);
     }
 
-    private void CreateStarterRoadPath(Vector2Int start, Vector2Int end)
+    private void CreateGuaranteedRoadConnection(Vector2Int start, Vector2Int end)
     {
-        Vector2Int current = start;
-
-        while (current.x != end.x)
+        List<Vector2Int> path = FindRoadBuildPath(start, end, IsLocationCell);
+        if (path == null)
         {
-            current = new Vector2Int(current.x + (end.x > current.x ? 1 : -1), current.y);
-            TryAddStarterRoadCell(current, start, end);
+            return;
         }
 
-        while (current.y != end.y)
+        foreach (Vector2Int cell in path)
         {
-            current = new Vector2Int(current.x, current.y + (end.y > current.y ? 1 : -1));
-            TryAddStarterRoadCell(current, start, end);
+            TryAddStarterRoadCell(cell, start, end);
         }
     }
 
@@ -2363,18 +2884,6 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         anchorMarker.transform.position = GetCellCenter(anchor) + new Vector3(0f, 0.05f, 0f);
         anchorMarker.transform.localScale = new Vector3(0.22f, 0.02f, 0.22f);
         ApplyColor(anchorMarker, new Color(1f, 0.9f, 0.35f));
-
-        GameObject labelObject = new($"{label}_Label");
-        labelObject.transform.SetParent(root.transform, false);
-        labelObject.transform.position = center + new Vector3(0f, 0.8f, 0f);
-        labelObject.transform.rotation = Quaternion.Euler(60f, 45f, 0f);
-        TextMesh textMesh = labelObject.AddComponent<TextMesh>();
-        textMesh.text = data.Label;
-        textMesh.characterSize = 0.22f;
-        textMesh.fontSize = 36;
-        textMesh.anchor = TextAnchor.MiddleCenter;
-        textMesh.alignment = TextAlignment.Center;
-        textMesh.color = Color.black;
 
         locations[type] = data;
     }
@@ -2680,12 +3189,50 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private void SetupSelectionVisuals()
     {
-        parkingSelectionHighlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        parkingSelectionHighlight.name = "ParkingSelectionHighlight";
-        parkingSelectionHighlight.transform.SetParent(worldRoot, false);
-        parkingSelectionHighlight.GetComponent<Collider>().enabled = false;
-        ApplyColor(parkingSelectionHighlight, new Color(1f, 0.86f, 0.28f));
-        parkingSelectionHighlight.SetActive(false);
+        foreach (KeyValuePair<LocationType, LocationData> pair in locations)
+        {
+            GameObject highlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            highlight.name = $"{pair.Value.Label}_SelectionHighlight";
+            highlight.transform.SetParent(worldRoot, false);
+            highlight.GetComponent<Collider>().enabled = false;
+            ApplyColor(highlight, new Color(1f, 0.86f, 0.28f));
+            ConfigureStaticVisual(highlight);
+            highlight.SetActive(false);
+            locationSelectionHighlights[pair.Key] = highlight;
+        }
+
+        selectedLocationLabelRoot = new GameObject("SelectedLocationLabel");
+        selectedLocationLabelRoot.transform.SetParent(worldRoot, false);
+        selectedLocationLabelText = selectedLocationLabelRoot.AddComponent<TextMesh>();
+        selectedLocationLabelText.characterSize = 0.16f;
+        selectedLocationLabelText.fontSize = 48;
+        selectedLocationLabelText.anchor = TextAnchor.MiddleCenter;
+        selectedLocationLabelText.alignment = TextAlignment.Center;
+        selectedLocationLabelText.color = new Color(0.98f, 0.95f, 0.82f);
+
+        Vector3[] outlineOffsets =
+        {
+            new Vector3(-0.045f, 0f, 0f),
+            new Vector3(0.045f, 0f, 0f),
+            new Vector3(0f, 0.045f, 0f),
+            new Vector3(0f, -0.045f, 0f)
+        };
+
+        foreach (Vector3 outlineOffset in outlineOffsets)
+        {
+            GameObject outlineObject = new GameObject("Outline");
+            outlineObject.transform.SetParent(selectedLocationLabelRoot.transform, false);
+            outlineObject.transform.localPosition = outlineOffset;
+            TextMesh outlineText = outlineObject.AddComponent<TextMesh>();
+            outlineText.characterSize = selectedLocationLabelText.characterSize;
+            outlineText.fontSize = selectedLocationLabelText.fontSize;
+            outlineText.anchor = TextAnchor.MiddleCenter;
+            outlineText.alignment = TextAlignment.Center;
+            outlineText.color = new Color(0.08f, 0.08f, 0.09f);
+            selectedLocationLabelOutlines.Add(outlineText);
+        }
+
+        selectedLocationLabelRoot.SetActive(false);
     }
 
     private void ClampCameraFocus()
@@ -3142,6 +3689,64 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         return "Truck is awaiting manual orders.";
     }
 
+    private void UpdateSelectedLocationLabel()
+    {
+        if (selectedLocationLabelRoot == null || selectedLocationLabelText == null)
+        {
+            return;
+        }
+
+        if (!selectedLocation.HasValue || mainCamera == null)
+        {
+            selectedLocationLabelRoot.SetActive(false);
+            return;
+        }
+
+        LocationType locationType = selectedLocation.Value;
+        string label = GetSelectedLocationDisplayName(locationType);
+        selectedLocationLabelText.text = label;
+        foreach (TextMesh outlineText in selectedLocationLabelOutlines)
+        {
+            if (outlineText != null)
+            {
+                outlineText.text = label;
+            }
+        }
+
+        LocationData location = locations[locationType];
+        float buildingHeight = 0.7f;
+        float labelHeight = buildingHeight + 1.15f + (location.Max.y - location.Min.y) * 0.08f;
+        Vector3 labelPosition = GetLocationCenter(locationType) + new Vector3(0f, labelHeight, 0f);
+        selectedLocationLabelRoot.transform.position = labelPosition;
+
+        Vector3 facingDirection = labelPosition - mainCamera.transform.position;
+        if (facingDirection.sqrMagnitude < 0.0001f)
+        {
+            facingDirection = mainCamera.transform.forward;
+        }
+
+        selectedLocationLabelRoot.transform.rotation = Quaternion.LookRotation(facingDirection.normalized, Vector3.up);
+
+        float cameraDistance = Vector3.Distance(mainCamera.transform.position, labelPosition);
+        float fadeAlpha = 1f - Mathf.InverseLerp(18f, 27f, cameraDistance);
+        if (fadeAlpha <= 0.02f)
+        {
+            selectedLocationLabelRoot.SetActive(false);
+            return;
+        }
+
+        selectedLocationLabelText.color = new Color(0.98f, 0.95f, 0.82f, fadeAlpha);
+        foreach (TextMesh outlineText in selectedLocationLabelOutlines)
+        {
+            if (outlineText != null)
+            {
+                outlineText.color = new Color(0.08f, 0.08f, 0.09f, fadeAlpha);
+            }
+        }
+
+        selectedLocationLabelRoot.SetActive(true);
+    }
+
     private bool TryHandleLocationSelection(Vector2Int cell)
     {
         foreach (KeyValuePair<LocationType, LocationData> pair in locations)
@@ -3153,7 +3758,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
             selectedLocation = pair.Key;
             isTruckDetailsOpen = false;
-            isTruckCameraFocused = false;
+            DisableTruckCameraFocus();
             RefreshSelectionVisuals();
             PlayUiSound(uiSelectClip, 0.9f);
             return true;
@@ -3164,23 +3769,41 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private void RefreshSelectionVisuals()
     {
-        if (parkingSelectionHighlight == null)
+        foreach (GameObject highlight in locationSelectionHighlights.Values)
         {
+            if (highlight != null)
+            {
+                highlight.SetActive(false);
+            }
+        }
+
+        if (!selectedLocation.HasValue)
+        {
+            if (selectedLocationLabelRoot != null)
+            {
+                selectedLocationLabelRoot.SetActive(false);
+            }
+
             return;
         }
 
-        if (selectedLocation != LocationType.Parking)
+        LocationType locationType = selectedLocation.Value;
+        LocationData location = locations[locationType];
+        if (locationSelectionHighlights.TryGetValue(locationType, out GameObject selectionHighlight) && selectionHighlight != null)
         {
-            parkingSelectionHighlight.SetActive(false);
-            return;
+            Vector3 center = new Vector3((location.Min.x + location.Max.x + 1) * 0.5f, 0.035f, (location.Min.y + location.Max.y + 1) * 0.5f);
+            Vector3 size = new Vector3(location.Max.x - location.Min.x + 1.18f, 0.09f, location.Max.y - location.Min.y + 1.18f);
+            selectionHighlight.transform.position = center;
+            selectionHighlight.transform.localScale = size;
+            selectionHighlight.SetActive(true);
         }
 
-        LocationData parking = locations[LocationType.Parking];
-        Vector3 center = new Vector3((parking.Min.x + parking.Max.x + 1) * 0.5f, 0.03f, (parking.Min.y + parking.Max.y + 1) * 0.5f);
-        Vector3 size = new Vector3(parking.Max.x - parking.Min.x + 1.16f, 0.08f, parking.Max.y - parking.Min.y + 1.16f);
-        parkingSelectionHighlight.transform.position = center;
-        parkingSelectionHighlight.transform.localScale = size;
-        parkingSelectionHighlight.SetActive(true);
+        if (selectedLocationLabelRoot != null && selectedLocationLabelText != null)
+        {
+            selectedLocationLabelText.text = location.Label;
+            selectedLocationLabelRoot.transform.position = GetLocationCenter(locationType) + new Vector3(0f, 1.45f, 0f);
+            selectedLocationLabelRoot.SetActive(true);
+        }
     }
 
     private void DrawParkingHud()
@@ -3301,13 +3924,21 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private Vector3 GetParkingSlotWorldPosition(int parkingSlotIndex)
     {
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 center = GetLocationCenter(LocationType.Parking);
+        float halfWidth = Mathf.Max(0.35f, ((parking.Max.x - parking.Min.x + 1) * 0.5f) - 0.45f);
+        float halfDepth = Mathf.Max(0.28f, ((parking.Max.y - parking.Min.y + 1) * 0.5f) - 0.38f);
         Vector3[] parkingSlots =
         {
-            new Vector3(3.15f, 0f, 3.08f),
-            new Vector3(2.55f, 0f, 2.55f),
-            new Vector3(3.45f, 0f, 2.55f),
-            new Vector3(4.25f, 0f, 2.55f),
-            new Vector3(2.7f, 0f, 3.18f)
+            center + new Vector3(0f, 0f, -halfDepth * 0.1f),
+            center + new Vector3(-halfWidth * 0.55f, 0f, -halfDepth * 0.72f),
+            center + new Vector3(0f, 0f, -halfDepth * 0.72f),
+            center + new Vector3(halfWidth * 0.55f, 0f, -halfDepth * 0.72f),
+            center + new Vector3(-halfWidth * 0.7f, 0f, halfDepth * 0.18f)
         };
 
         int slotIndex = Mathf.Clamp(parkingSlotIndex, 0, parkingSlots.Length - 1);
@@ -3382,7 +4013,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         if (selectedTruck == null)
         {
             isTruckDetailsOpen = false;
-            isTruckCameraFocused = false;
+            DisableTruckCameraFocus();
             return;
         }
 
@@ -3630,6 +4261,17 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         }
     }
 
+    private void DrawCameraLegendHud()
+    {
+        Rect panelRect = GetCameraLegendHudRect();
+        GUI.Box(panelRect, "Camera");
+        string focusLabel = isTruckDetailsOpen
+            ? (isTruckCameraFocused ? "F: Exit truck camera" : "F: Follow selected truck")
+            : "F: Select a truck first";
+        GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 22f, panelRect.width - 24f, 20f), "Q/E: Rotate map view");
+        GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 42f, panelRect.width - 24f, 20f), focusLabel);
+    }
+
     private void DrawSelectedBuildingHud(LocationType locationType)
     {
         Rect panelRect = GetSelectedBuildingHudRect();
@@ -3648,6 +4290,19 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             LocationType.Warehouse => $"Logs stored: {locations[LocationType.Warehouse].WoodStored}",
             LocationType.Town => $"Logs received: {locations[LocationType.Town].WoodStored}",
             _ => string.Empty
+        };
+    }
+
+    private static string GetSelectedLocationDisplayName(LocationType locationType)
+    {
+        return locationType switch
+        {
+            LocationType.Parking => "Parking",
+            LocationType.GasStation => "Fuel Stop",
+            LocationType.Forest => "Forest",
+            LocationType.Warehouse => "Warehouse",
+            LocationType.Town => "Town Hall",
+            _ => "Location"
         };
     }
 
@@ -3985,7 +4640,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     {
         Vector2 guiPosition = new Vector2(screenPosition.x, Screen.height - screenPosition.y);
 
-        if (GetMoneyHudRect().Contains(guiPosition) || GetTimeHudRect().Contains(guiPosition) || GetSpeedHudRect().Contains(guiPosition) || GetTruckFleetHudRect().Contains(guiPosition))
+        if (GetMoneyHudRect().Contains(guiPosition) || GetTimeHudRect().Contains(guiPosition) || GetSpeedHudRect().Contains(guiPosition) || GetTruckFleetHudRect().Contains(guiPosition) || GetCameraLegendHudRect().Contains(guiPosition))
         {
             return true;
         }
@@ -4041,6 +4696,11 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private Rect GetTruckFleetHudRect()
     {
         return new Rect(12f, 12f, 220f, 324f);
+    }
+
+    private Rect GetCameraLegendHudRect()
+    {
+        return new Rect(Screen.width * 0.5f - 160f, Screen.height - 78f, 320f, 72f);
     }
 
     private Rect GetSelectedBuildingHudRect()
