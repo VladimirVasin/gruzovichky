@@ -51,6 +51,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private readonly List<TruckAgent> truckAgents = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
     private readonly Dictionary<LocationType, GameObject> locationSelectionHighlights = new();
+    private readonly float[,] terrainHeights = new float[GridWidth, GridHeight];
 
     private Camera mainCamera;
     private GameObject truckObject;
@@ -73,8 +74,10 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private Light driverFlashlightLight;
     private Renderer driverFlashlightRenderer;
     private Transform worldRoot;
+    private Transform groundRoot;
     private Transform roadsRoot;
     private Transform lanternsRoot;
+    private Transform miscRoot;
     private AudioSource uiAudioSource;
     private AudioSource ambientAudioSource;
     private AudioSource forestAudioSource;
@@ -113,6 +116,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private float truckFuel = TruckFuelCapacity;
     private float dayNightCycleTimer = DayNightCycleDuration * 0.3f;
     private float driverWalkAnimationTime;
+    private float terrainNoiseOffsetX;
+    private float terrainNoiseOffsetY;
     private LocationType? selectedLocation;
     private bool isTruckDetailsOpen;
     private bool isRightMouseDragging;
@@ -415,15 +420,20 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         roadsRoot.SetParent(worldRoot, false);
         lanternsRoot = new GameObject("RoadLanterns").transform;
         lanternsRoot.SetParent(worldRoot, false);
+        miscRoot = new GameObject("Misc").transform;
+        miscRoot.SetParent(worldRoot, false);
 
         SetupCamera();
         SetupLighting();
-        SetupGround();
         SetupDioramaPostProcessing();
-        SetupGrid();
         SetupLocations();
         GenerateInitialRoadNetwork();
+        GenerateTerrainHeights();
+        ApplyTerrainHeightsToWorld();
+        SetupGround();
+        SetupGrid();
         RebuildRoadLanterns();
+        PopulateMiscTrees();
         SetupSelectionVisuals();
         SetupTruck();
         SetupCargoTransferVisual();
@@ -524,12 +534,26 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private void SetupGround()
     {
-        GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
-        ground.name = "Ground";
-        ground.transform.SetParent(worldRoot, false);
-        ground.transform.position = new Vector3(GridWidth / 2f, -0.01f, GridHeight / 2f);
-        ground.transform.localScale = new Vector3((GridWidth - 2f) / 10f, 1f, (GridHeight - 2f) / 10f);
-        ApplyColor(ground, new Color(0.72f, 0.67f, 0.55f));
+        groundRoot = new GameObject("Ground").transform;
+        groundRoot.SetParent(worldRoot, false);
+
+        for (int x = 0; x < GridWidth; x++)
+        {
+            for (int y = 0; y < GridHeight; y++)
+            {
+                float terrainHeight = terrainHeights[x, y];
+                float thickness = 0.28f + terrainHeight;
+
+                GameObject groundTile = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                groundTile.name = $"Ground_{x}_{y}";
+                groundTile.transform.SetParent(groundRoot, false);
+                groundTile.transform.position = new Vector3(x + 0.5f, terrainHeight - thickness * 0.5f - 0.02f, y + 0.5f);
+                groundTile.transform.localScale = new Vector3(1.02f, thickness, 1.02f);
+                ApplyColor(groundTile, new Color(0.72f, 0.67f, 0.55f));
+                ConfigureStaticVisual(groundTile);
+            }
+        }
+
         CreateDioramaBase();
     }
 
@@ -618,12 +642,20 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
         for (int x = 0; x <= GridWidth; x++)
         {
-            CreateGridLine(gridRoot.transform, lineMaterial, new Vector3(x, 0.01f, 0f), new Vector3(x, 0.01f, GridHeight));
+            for (int y = 0; y < GridHeight; y++)
+            {
+                float edgeHeight = GetVerticalEdgeHeight(x, y) + 0.025f;
+                CreateGridLine(gridRoot.transform, lineMaterial, new Vector3(x, edgeHeight, y), new Vector3(x, edgeHeight, y + 1f));
+            }
         }
 
         for (int y = 0; y <= GridHeight; y++)
         {
-            CreateGridLine(gridRoot.transform, lineMaterial, new Vector3(0f, 0.01f, y), new Vector3(GridWidth, 0.01f, y));
+            for (int x = 0; x < GridWidth; x++)
+            {
+                float edgeHeight = GetHorizontalEdgeHeight(x, y) + 0.025f;
+                CreateGridLine(gridRoot.transform, lineMaterial, new Vector3(x, edgeHeight, y), new Vector3(x + 1f, edgeHeight, y));
+            }
         }
     }
 
@@ -984,6 +1016,291 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 Anchor = new Vector2Int(13, 3)
             }
         };
+    }
+
+    private void GenerateTerrainHeights()
+    {
+        terrainNoiseOffsetX = Random.Range(0f, 1000f);
+        terrainNoiseOffsetY = Random.Range(0f, 1000f);
+
+        for (int x = 0; x < GridWidth; x++)
+        {
+            for (int y = 0; y < GridHeight; y++)
+            {
+                float primaryNoise = Mathf.PerlinNoise(terrainNoiseOffsetX + x * 0.19f, terrainNoiseOffsetY + y * 0.19f);
+                float secondaryNoise = Mathf.PerlinNoise(terrainNoiseOffsetX * 0.37f + x * 0.41f, terrainNoiseOffsetY * 0.37f + y * 0.41f);
+                float height = Mathf.Lerp(0.04f, 0.62f, primaryNoise * 0.72f + secondaryNoise * 0.28f);
+                terrainHeights[x, y] = height;
+            }
+        }
+
+        SmoothTerrainHeights(3);
+        FlattenLocationPads();
+    }
+
+    private void SmoothTerrainHeights(int passes)
+    {
+        float[,] buffer = new float[GridWidth, GridHeight];
+        for (int pass = 0; pass < passes; pass++)
+        {
+            for (int x = 0; x < GridWidth; x++)
+            {
+                for (int y = 0; y < GridHeight; y++)
+                {
+                    float total = terrainHeights[x, y] * 2f;
+                    float weight = 2f;
+                    foreach (Vector2Int neighbor in GetNeighbors(new Vector2Int(x, y)))
+                    {
+                        if (!IsInsideGrid(neighbor))
+                        {
+                            continue;
+                        }
+
+                        total += terrainHeights[neighbor.x, neighbor.y];
+                        weight += 1f;
+                    }
+
+                    buffer[x, y] = total / weight;
+                }
+            }
+
+            for (int x = 0; x < GridWidth; x++)
+            {
+                for (int y = 0; y < GridHeight; y++)
+                {
+                    terrainHeights[x, y] = buffer[x, y];
+                }
+            }
+        }
+    }
+
+    private void FlattenLocationPads()
+    {
+        foreach (LocationData location in locations.Values)
+        {
+            float total = 0f;
+            int count = 0;
+            for (int x = location.Min.x; x <= location.Max.x; x++)
+            {
+                for (int y = location.Min.y; y <= location.Max.y; y++)
+                {
+                    total += terrainHeights[x, y];
+                    count++;
+                }
+            }
+
+            total += terrainHeights[location.Anchor.x, location.Anchor.y];
+            count++;
+            float flatHeight = total / Mathf.Max(1, count);
+
+            for (int x = Mathf.Max(0, location.Min.x - 1); x <= Mathf.Min(GridWidth - 1, location.Max.x + 1); x++)
+            {
+                for (int y = Mathf.Max(0, location.Min.y - 1); y <= Mathf.Min(GridHeight - 1, location.Max.y + 1); y++)
+                {
+                    bool onPad = x >= location.Min.x && x <= location.Max.x && y >= location.Min.y && y <= location.Max.y;
+                    bool isAnchor = x == location.Anchor.x && y == location.Anchor.y;
+                    float blend = (onPad || isAnchor) ? 1f : 0.45f;
+                    terrainHeights[x, y] = Mathf.Lerp(terrainHeights[x, y], flatHeight, blend);
+                }
+            }
+        }
+    }
+
+    private void ApplyTerrainHeightsToWorld()
+    {
+        foreach (KeyValuePair<LocationType, LocationData> pair in locations)
+        {
+            if (pair.Value.RootObject != null)
+            {
+                pair.Value.RootObject.transform.position = new Vector3(0f, GetLocationBaseHeight(pair.Key), 0f);
+            }
+        }
+
+        foreach (KeyValuePair<Vector2Int, GameObject> pair in roadVisuals)
+        {
+            if (pair.Value != null)
+            {
+                pair.Value.transform.position = GetCellCenter(pair.Key) + new Vector3(0f, RoadHeight, 0f);
+            }
+        }
+    }
+
+    private void PopulateMiscTrees()
+    {
+        if (miscRoot == null)
+        {
+            return;
+        }
+
+        List<Vector2Int> candidates = new();
+        for (int x = 0; x < GridWidth; x++)
+        {
+            for (int y = 0; y < GridHeight; y++)
+            {
+                Vector2Int cell = new Vector2Int(x, y);
+                if (IsCellAvailableForMisc(cell))
+                {
+                    candidates.Add(cell);
+                }
+            }
+        }
+
+        ShuffleCells(candidates);
+        List<Vector2Int> occupiedMiscCells = new();
+        int targetCount = Mathf.Clamp(Mathf.RoundToInt(candidates.Count * 0.18f), 12, 34);
+
+        foreach (Vector2Int cell in candidates)
+        {
+            if (occupiedMiscCells.Count >= targetCount)
+            {
+                break;
+            }
+
+            bool tooClose = false;
+            foreach (Vector2Int occupiedCell in occupiedMiscCells)
+            {
+                if (Mathf.Abs(occupiedCell.x - cell.x) <= 1 && Mathf.Abs(occupiedCell.y - cell.y) <= 1)
+                {
+                    tooClose = true;
+                    break;
+                }
+            }
+
+            if (tooClose)
+            {
+                continue;
+            }
+
+            CreateMiscTree(cell, occupiedMiscCells.Count % 3);
+            occupiedMiscCells.Add(cell);
+        }
+    }
+
+    private bool IsCellAvailableForMisc(Vector2Int cell)
+    {
+        if (!IsInsideGrid(cell) || roadCells.Contains(cell) || IsLocationCell(cell))
+        {
+            return false;
+        }
+
+        foreach (Vector2Int neighbor in GetNeighbors(cell))
+        {
+            if (roadCells.Contains(neighbor) || IsLocationCell(neighbor))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void ShuffleCells(List<Vector2Int> cells)
+    {
+        for (int i = cells.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (cells[i], cells[j]) = (cells[j], cells[i]);
+        }
+    }
+
+    private void CreateMiscTree(Vector2Int cell, int variantIndex)
+    {
+        if (miscRoot == null)
+        {
+            return;
+        }
+
+        GameObject treeRoot = new GameObject($"MiscTree_{cell.x}_{cell.y}");
+        treeRoot.transform.SetParent(miscRoot, false);
+        treeRoot.transform.position = GetCellCenter(cell);
+        treeRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+        float scale = Random.Range(0.86f, 1.14f);
+        treeRoot.transform.localScale = Vector3.one * scale;
+
+        switch (variantIndex % 3)
+        {
+            case 0:
+                CreateMiscTreeTall(treeRoot.transform);
+                break;
+            case 1:
+                CreateMiscTreeRound(treeRoot.transform);
+                break;
+            default:
+                CreateMiscTreePine(treeRoot.transform);
+                break;
+        }
+    }
+
+    private void CreateMiscTreeTall(Transform parent)
+    {
+        GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        trunk.transform.SetParent(parent, false);
+        trunk.transform.localPosition = new Vector3(0f, 0.34f, 0f);
+        trunk.transform.localScale = new Vector3(0.12f, 0.34f, 0.12f);
+        ApplyColor(trunk, new Color(0.44f, 0.28f, 0.16f));
+        ConfigureStaticVisual(trunk);
+
+        GameObject crownBottom = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        crownBottom.transform.SetParent(parent, false);
+        crownBottom.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+        crownBottom.transform.localScale = new Vector3(0.62f, 0.42f, 0.62f);
+        ApplyColor(crownBottom, new Color(0.22f, 0.56f, 0.27f));
+        ConfigureStaticVisual(crownBottom);
+
+        GameObject crownTop = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        crownTop.transform.SetParent(parent, false);
+        crownTop.transform.localPosition = new Vector3(0f, 1.16f, 0f);
+        crownTop.transform.localScale = new Vector3(0.44f, 0.34f, 0.44f);
+        ApplyColor(crownTop, new Color(0.18f, 0.5f, 0.24f));
+        ConfigureStaticVisual(crownTop);
+    }
+
+    private void CreateMiscTreeRound(Transform parent)
+    {
+        GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        trunk.transform.SetParent(parent, false);
+        trunk.transform.localPosition = new Vector3(0f, 0.28f, 0f);
+        trunk.transform.localScale = new Vector3(0.11f, 0.28f, 0.11f);
+        ApplyColor(trunk, new Color(0.42f, 0.25f, 0.15f));
+        ConfigureStaticVisual(trunk);
+
+        GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        canopy.transform.SetParent(parent, false);
+        canopy.transform.localPosition = new Vector3(0f, 0.84f, 0f);
+        canopy.transform.localScale = new Vector3(0.72f, 0.66f, 0.72f);
+        ApplyColor(canopy, new Color(0.3f, 0.62f, 0.31f));
+        ConfigureStaticVisual(canopy);
+
+        GameObject sideBlob = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        sideBlob.transform.SetParent(parent, false);
+        sideBlob.transform.localPosition = new Vector3(0.18f, 0.78f, -0.1f);
+        sideBlob.transform.localScale = new Vector3(0.34f, 0.28f, 0.34f);
+        ApplyColor(sideBlob, new Color(0.24f, 0.56f, 0.28f));
+        ConfigureStaticVisual(sideBlob);
+    }
+
+    private void CreateMiscTreePine(Transform parent)
+    {
+        GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        trunk.transform.SetParent(parent, false);
+        trunk.transform.localPosition = new Vector3(0f, 0.24f, 0f);
+        trunk.transform.localScale = new Vector3(0.1f, 0.24f, 0.1f);
+        ApplyColor(trunk, new Color(0.4f, 0.24f, 0.14f));
+        ConfigureStaticVisual(trunk);
+
+        GameObject lower = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        lower.transform.SetParent(parent, false);
+        lower.transform.localPosition = new Vector3(0f, 0.7f, 0f);
+        lower.transform.localScale = new Vector3(0.36f, 0.24f, 0.36f);
+        ApplyColor(lower, new Color(0.16f, 0.44f, 0.23f));
+        ConfigureStaticVisual(lower);
+
+        GameObject upper = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        upper.transform.SetParent(parent, false);
+        upper.transform.localPosition = new Vector3(0f, 1.05f, 0f);
+        upper.transform.localScale = new Vector3(0.24f, 0.22f, 0.24f);
+        ApplyColor(upper, new Color(0.12f, 0.36f, 0.2f));
+        ConfigureStaticVisual(upper);
     }
 
     private void SetupTruck()
@@ -2512,18 +2829,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private bool IsDriveableForPath(Vector2Int cell, LocationType? startLocation, LocationType? goalLocation)
     {
-        if (IsDriveable(cell))
-        {
-            return true;
-        }
-
-        LocationType? containingLocation = GetContainingLocation(cell);
-        if (!containingLocation.HasValue)
-        {
-            return false;
-        }
-
-        return containingLocation == startLocation || containingLocation == goalLocation;
+        return IsDriveable(cell);
     }
 
     private bool IsAnchorCell(Vector2Int cell)
@@ -2858,11 +3164,11 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
         if (type == LocationType.Parking)
         {
-            CreateParkingDecoration(root.transform, center);
+            CreateParkingDecoration(root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.GasStation)
         {
-            CreateGasStationDecoration(root.transform, center);
+            CreateGasStationDecoration(root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.Forest)
         {
@@ -2888,7 +3194,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         locations[type] = data;
     }
 
-    private void CreateParkingDecoration(Transform parent, Vector3 center)
+    private void CreateParkingDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Cube);
         canopy.transform.SetParent(parent, false);
@@ -2913,7 +3219,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             ApplyColor(post, new Color(0.3f, 0.32f, 0.36f));
         }
 
-        CreateDriveway(parent, new Vector3(4.02f, 0.11f, 3.56f), GetCellCenter(new Vector2Int(4, 4)) + new Vector3(0f, 0.11f, 0f), 0.62f);
+        CreateDrivewayToAnchor(parent, min, max, anchor, 0.62f);
     }
 
     private void CreateForestDecoration(Transform parent, Vector2Int min, Vector2Int max)
@@ -2942,7 +3248,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         }
     }
 
-    private void CreateGasStationDecoration(Transform parent, Vector3 center)
+    private void CreateGasStationDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(parent, false);
@@ -2979,7 +3285,58 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         pump.transform.localScale = new Vector3(0.24f, 0.42f, 0.24f);
         ApplyColor(pump, new Color(0.2f, 0.22f, 0.26f));
 
-        CreateDriveway(parent, new Vector3(6.55f, 0.11f, 2.96f), GetCellCenter(new Vector2Int(5, 3)) + new Vector3(0f, 0.11f, 0f), 0.58f);
+        CreateDrivewayToAnchor(parent, min, max, anchor, 0.58f);
+    }
+
+    private void CreateDrivewayToAnchor(Transform parent, Vector2Int min, Vector2Int max, Vector2Int anchor, float width)
+    {
+        Vector3 end = GetCellCenter(anchor) + new Vector3(0f, 0.11f, 0f);
+        Vector3 start = GetDrivewayStartPoint(min, max, anchor) + new Vector3(0f, 0.11f, 0f);
+        CreateDriveway(parent, start, end, width);
+    }
+
+    private Vector3 GetDrivewayStartPoint(Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        float centerX = (min.x + max.x + 1) * 0.5f;
+        float centerZ = (min.y + max.y + 1) * 0.5f;
+
+        if (anchor.y < min.y)
+        {
+            return new Vector3(Mathf.Clamp(anchor.x + 0.5f, min.x + 0.25f, max.x + 0.75f), GetLocationPadHeight(min, max, anchor), min.y - 0.02f);
+        }
+
+        if (anchor.y > max.y)
+        {
+            return new Vector3(Mathf.Clamp(anchor.x + 0.5f, min.x + 0.25f, max.x + 0.75f), GetLocationPadHeight(min, max, anchor), max.y + 1.02f);
+        }
+
+        if (anchor.x < min.x)
+        {
+            return new Vector3(min.x - 0.02f, GetLocationPadHeight(min, max, anchor), Mathf.Clamp(anchor.y + 0.5f, min.y + 0.25f, max.y + 0.75f));
+        }
+
+        if (anchor.x > max.x)
+        {
+            return new Vector3(max.x + 1.02f, GetLocationPadHeight(min, max, anchor), Mathf.Clamp(anchor.y + 0.5f, min.y + 0.25f, max.y + 0.75f));
+        }
+
+        return new Vector3(centerX, GetLocationPadHeight(min, max, anchor), centerZ);
+    }
+
+    private float GetLocationPadHeight(Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        float total = terrainHeights[anchor.x, anchor.y];
+        int count = 1;
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                total += terrainHeights[x, y];
+                count++;
+            }
+        }
+
+        return total / Mathf.Max(1, count);
     }
 
     private void CreateDriveway(Transform parent, Vector3 worldStart, Vector3 worldEnd, float width)
@@ -3087,7 +3444,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private Vector3 GetCellCenter(Vector2Int cell)
     {
-        return new Vector3(cell.x + 0.5f, 0f, cell.y + 0.5f);
+        return new Vector3(cell.x + 0.5f, GetTerrainHeight(cell), cell.y + 0.5f);
     }
 
     private Vector3 GetTruckWorldPosition(Vector2Int cell)
@@ -3098,6 +3455,90 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private static Vector2Int WorldToCell(Vector3 point)
     {
         return new Vector2Int(Mathf.FloorToInt(point.x), Mathf.FloorToInt(point.z));
+    }
+
+    private float GetTerrainHeight(Vector2Int cell)
+    {
+        if (!IsInsideGrid(cell))
+        {
+            return 0f;
+        }
+
+        return terrainHeights[cell.x, cell.y];
+    }
+
+    private float GetLocationBaseHeight(LocationType locationType)
+    {
+        if (!locations.TryGetValue(locationType, out LocationData location))
+        {
+            return 0f;
+        }
+
+        float total = 0f;
+        int count = 0;
+        for (int x = location.Min.x; x <= location.Max.x; x++)
+        {
+            for (int y = location.Min.y; y <= location.Max.y; y++)
+            {
+                total += terrainHeights[x, y];
+                count++;
+            }
+        }
+
+        total += terrainHeights[location.Anchor.x, location.Anchor.y];
+        count++;
+        return total / Mathf.Max(1, count);
+    }
+
+    private float SampleTerrainHeight(float worldX, float worldZ)
+    {
+        float clampedX = Mathf.Clamp(worldX - 0.5f, 0f, GridWidth - 1.001f);
+        float clampedZ = Mathf.Clamp(worldZ - 0.5f, 0f, GridHeight - 1.001f);
+        int x0 = Mathf.Clamp(Mathf.FloorToInt(clampedX), 0, GridWidth - 1);
+        int z0 = Mathf.Clamp(Mathf.FloorToInt(clampedZ), 0, GridHeight - 1);
+        int x1 = Mathf.Min(GridWidth - 1, x0 + 1);
+        int z1 = Mathf.Min(GridHeight - 1, z0 + 1);
+        float tx = clampedX - x0;
+        float tz = clampedZ - z0;
+        float h00 = terrainHeights[x0, z0];
+        float h10 = terrainHeights[x1, z0];
+        float h01 = terrainHeights[x0, z1];
+        float h11 = terrainHeights[x1, z1];
+        float hx0 = Mathf.Lerp(h00, h10, tx);
+        float hx1 = Mathf.Lerp(h01, h11, tx);
+        return Mathf.Lerp(hx0, hx1, tz);
+    }
+
+    private float GetVerticalEdgeHeight(int x, int y)
+    {
+        if (x <= 0)
+        {
+            return terrainHeights[0, Mathf.Clamp(y, 0, GridHeight - 1)];
+        }
+
+        if (x >= GridWidth)
+        {
+            return terrainHeights[GridWidth - 1, Mathf.Clamp(y, 0, GridHeight - 1)];
+        }
+
+        int clampedY = Mathf.Clamp(y, 0, GridHeight - 1);
+        return (terrainHeights[x - 1, clampedY] + terrainHeights[x, clampedY]) * 0.5f;
+    }
+
+    private float GetHorizontalEdgeHeight(int x, int y)
+    {
+        if (y <= 0)
+        {
+            return terrainHeights[Mathf.Clamp(x, 0, GridWidth - 1), 0];
+        }
+
+        if (y >= GridHeight)
+        {
+            return terrainHeights[Mathf.Clamp(x, 0, GridWidth - 1), GridHeight - 1];
+        }
+
+        int clampedX = Mathf.Clamp(x, 0, GridWidth - 1);
+        return (terrainHeights[clampedX, y - 1] + terrainHeights[clampedX, y]) * 0.5f;
     }
 
     private static void ApplyColor(GameObject target, Color color)
@@ -3388,13 +3829,17 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private Vector3 GetDriverStandPointNearTruck()
     {
         Vector3 truckPosition = truckObject.transform.position;
-        return new Vector3(truckPosition.x + 0.32f, 0f, truckPosition.z - 0.32f);
+        Vector3 standPoint = new Vector3(truckPosition.x + 0.32f, 0f, truckPosition.z - 0.32f);
+        standPoint.y = SampleTerrainHeight(standPoint.x, standPoint.z);
+        return standPoint;
     }
 
     private Vector3 GetDriverStandPointNearLocation(LocationType locationType)
     {
         Vector3 center = GetLocationCenter(locationType);
-        return new Vector3(center.x - 0.45f, 0f, center.z + 0.45f);
+        Vector3 standPoint = new Vector3(center.x - 0.45f, 0f, center.z + 0.45f);
+        standPoint.y = SampleTerrainHeight(standPoint.x, standPoint.z);
+        return standPoint;
     }
 
     private void UpdateTruckVisuals(float speed, bool moving)
@@ -3636,7 +4081,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private Vector3 GetLocationCenter(LocationType locationType)
     {
         LocationData location = locations[locationType];
-        return new Vector3((location.Min.x + location.Max.x + 1) * 0.5f, 0f, (location.Min.y + location.Max.y + 1) * 0.5f);
+        return new Vector3((location.Min.x + location.Max.x + 1) * 0.5f, GetLocationBaseHeight(locationType), (location.Min.y + location.Max.y + 1) * 0.5f);
     }
 
     private string GetTruckStatusLabel()
