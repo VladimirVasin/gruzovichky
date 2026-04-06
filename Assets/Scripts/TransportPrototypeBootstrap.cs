@@ -15,7 +15,6 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
     private const float CameraZoomSpeed = 8f;
-    private const string TruckDisplayName = "Truck #1";
     private const float CameraMinHeight = 6f;
     private const float CameraMaxHeight = 18f;
     private const float CameraMinDistance = 6f;
@@ -29,9 +28,9 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private const float DriverWalkSpeed = 2.2f;
     private const float MoneyPopupDuration = 1.4f;
     private const int AudioSampleRate = 22050;
+    private const int MaxTruckCount = 5;
+    private const int HireTruckCost = 300;
     private const float DayNightCycleDuration = 180f;
-    private static readonly Rect MainHudRect = new Rect(12f, 12f, 280f, 212f);
-    private static readonly Rect HelpHudRect = new Rect(12f, 232f, 380f, 152f);
     private static readonly Vector3 DioramaCameraRotation = new(42f, 45f, 0f);
     private static readonly Vector3 DioramaCameraOffset = new(-11.5f, 15f, -11.5f);
 
@@ -39,11 +38,14 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private readonly Dictionary<Vector2Int, GameObject> roadVisuals = new();
     private readonly Dictionary<LocationType, LocationData> locations = new();
     private readonly List<Vector2Int> activePath = new();
+    private readonly List<Vector3> driverRescuePath = new();
     private readonly List<Transform> truckWheels = new();
     private readonly List<Transform> truckFrontWheels = new();
     private readonly List<Light> truckHeadlights = new();
     private readonly List<Light> locationNightLights = new();
     private readonly List<Renderer> locationNightLightRenderers = new();
+    private readonly List<TruckAgent> truckAgents = new();
+    private readonly HashSet<LocationType> occupiedServiceLocations = new();
 
     private Camera mainCamera;
     private GameObject truckObject;
@@ -82,6 +84,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private Vector3 truckSmoothedForward = Vector3.forward;
     private bool isTruckMoving;
     private bool isTruckInteracting;
+    private bool isTruckWaitingForService;
     private bool isDriverRescueActive;
     private CargoSource truckCargoSource = CargoSource.None;
     private int truckCargoWood;
@@ -91,6 +94,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private Vector2 lastMousePosition;
     private Vector2 rightMousePressPosition;
     private Vector3 driverRescueTargetWorld;
+    private int driverRescueWaypointIndex;
     private float truckSegmentProgress;
     private float truckSegmentDuration;
     private float truckWheelSpinAngle;
@@ -104,17 +108,22 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private bool isTruckDetailsOpen;
     private bool isRightMouseDragging;
     private bool isTruckAutoModeEnabled;
+    private int selectedTruckNumber = 1;
     private int money;
     private int currentAssignedTripReward;
     private int moneyPopupAmount;
     private int gameSpeedMultiplier = 1;
+    private int nextHireTruckNumber = 2;
     private TripType currentAssignedTrip = TripType.None;
     private TripPhase currentTripPhase = TripPhase.None;
     private RefuelPhase currentRefuelPhase = RefuelPhase.None;
     private DriverRescuePhase currentDriverRescuePhase = DriverRescuePhase.None;
     private TruckInteractionType activeTruckInteraction = TruckInteractionType.None;
+    private TruckInteractionType queuedTruckInteraction = TruckInteractionType.None;
     private Quaternion truckInteractionTargetRotation;
     private Vector3 truckInteractionBuildingPoint;
+    private LocationType? activeServiceLocation;
+    private LocationType? queuedServiceLocation;
     private AudioClip uiSelectClip;
     private AudioClip uiPanelOpenClip;
     private AudioClip uiPanelCloseClip;
@@ -220,6 +229,70 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         public int Reward;
     }
 
+    private sealed class TruckAgent
+    {
+        public int TruckNumber;
+        public string DisplayName;
+        public GameObject TruckObject;
+        public Transform TruckVisualRoot;
+        public Transform TruckBodyTransform;
+        public Transform TruckCabinTransform;
+        public Renderer TruckHeadlightLeftRenderer;
+        public Renderer TruckHeadlightRightRenderer;
+        public readonly List<Transform> TruckWheels = new();
+        public readonly List<Transform> TruckFrontWheels = new();
+        public readonly List<Light> TruckHeadlights = new();
+        public GameObject DriverObject;
+        public Transform DriverVisualRoot;
+        public Transform DriverBodyTransform;
+        public Transform DriverHeadTransform;
+        public Transform DriverCapTransform;
+        public Transform DriverLeftArmTransform;
+        public Transform DriverRightArmTransform;
+        public Transform DriverLeftLegTransform;
+        public Transform DriverRightLegTransform;
+        public Transform DriverFuelCanTransform;
+        public Transform DriverFlashlightTransform;
+        public Light DriverFlashlightLight;
+        public Renderer DriverFlashlightRenderer;
+        public AudioSource TruckLoopAudioSource;
+        public AudioSource TruckFxAudioSource;
+        public readonly List<Vector2Int> ActivePath = new();
+        public Vector2Int TruckCell;
+        public Vector3 TruckTargetWorld;
+        public Vector3 TruckSegmentStartWorld;
+        public Vector3 TruckSmoothedForward = Vector3.forward;
+        public bool IsTruckMoving;
+        public bool IsTruckInteracting;
+        public bool IsTruckWaitingForService;
+        public bool IsDriverRescueActive;
+        public bool IsTruckAutoModeEnabled;
+        public CargoSource TruckCargoSource = CargoSource.None;
+        public int TruckCargoWood;
+        public Vector3 DriverRescueTargetWorld;
+        public readonly List<Vector3> DriverRescuePath = new();
+        public int DriverRescueWaypointIndex;
+        public float TruckSegmentProgress;
+        public float TruckSegmentDuration;
+        public float TruckWheelSpinAngle;
+        public float TruckSteerAngle;
+        public float TruckInteractionTimer;
+        public float TruckFuel = TruckFuelCapacity;
+        public float DriverWalkAnimationTime;
+        public int CurrentAssignedTripReward;
+        public TripType CurrentAssignedTrip = TripType.None;
+        public TripPhase CurrentTripPhase = TripPhase.None;
+        public RefuelPhase CurrentRefuelPhase = RefuelPhase.None;
+        public DriverRescuePhase CurrentDriverRescuePhase = DriverRescuePhase.None;
+        public TruckInteractionType ActiveTruckInteraction = TruckInteractionType.None;
+        public TruckInteractionType QueuedTruckInteraction = TruckInteractionType.None;
+        public Quaternion TruckInteractionTargetRotation;
+        public Vector3 TruckInteractionBuildingPoint;
+        public LocationType? ActiveServiceLocation;
+        public LocationType? QueuedServiceLocation;
+        public int ParkingSlotIndex;
+    }
+
     private void Awake()
     {
         Time.timeScale = 1f;
@@ -236,36 +309,47 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         HandleRoadPlacementInput();
         ProduceForestWood();
         UpdateDayNightCycle();
-        UpdateTruckMovement();
-        UpdateTruckInteraction();
-        UpdateAssignedTrip();
-        UpdateRefuelOrder();
-        UpdateDriverRescue();
-        UpdateDriverVisualAnimation();
-        UpdateTruckAutoMode();
+        for (int i = 0; i < truckAgents.Count; i++)
+        {
+            LoadTruckState(truckAgents[i]);
+            UpdateTruckMovement();
+            UpdateTruckInteraction();
+            UpdateAssignedTrip();
+            UpdateRefuelOrder();
+            UpdateDriverRescue();
+            UpdateDriverVisualAnimation();
+            UpdateTruckAutoMode();
+            UpdateAudio();
+
+            if (!isTruckMoving &&
+                !isTruckInteracting &&
+                !isDriverRescueActive &&
+                truckCell == locations[LocationType.Parking].Anchor)
+            {
+                Vector3 parkedPosition = GetParkingSlotWorldPosition(truckAgents[i].ParkingSlotIndex);
+                truckObject.transform.position = parkedPosition;
+                truckTargetWorld = parkedPosition;
+                truckSegmentStartWorld = parkedPosition;
+                truckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            }
+
+            SaveTruckState(truckAgents[i]);
+        }
+
         UpdateMoneyPopup();
-        UpdateAudio();
     }
 
     private void OnGUI()
     {
         DrawMoneyHud();
-        GUI.Box(MainHudRect, "Transport Prototype");
-        GUI.Label(new Rect(24, 42, 240, 24), "Mode: Road placement");
-        GUI.Label(new Rect(24, 66, 240, 24), $"Parking: {locations[LocationType.Parking].Label}");
-        GUI.Label(new Rect(24, 90, 240, 24), $"Forest logs: {locations[LocationType.Forest].WoodStored}");
-        GUI.Label(new Rect(24, 114, 240, 24), $"Warehouse logs: {locations[LocationType.Warehouse].WoodStored}");
-        GUI.Label(new Rect(24, 138, 240, 24), $"Town logs received: {locations[LocationType.Town].WoodStored}");
-        GUI.Label(new Rect(24, 162, 240, 24), $"Speed: {gameSpeedMultiplier}x");
-        GUI.Label(new Rect(24, 186, 240, 24), $"Time: {GetDayNightClockLabel()} ({GetTimeOfDayLabel()})");
+        DrawTimeHud();
+        DrawSpeedHud();
+        DrawTruckFleetHud();
 
-        GUI.Box(HelpHudRect, "How To Play");
-        GUI.Label(new Rect(24, 214, 340, 24), "Left click empty cells to place roads.");
-        GUI.Label(new Rect(24, 238, 340, 24), "Right click road to remove, RMB drag to move camera.");
-        GUI.Label(new Rect(24, 262, 340, 24), "F1/F2/F3 change speed, key 1 selects Truck #1.");
-        GUI.Label(new Rect(24, 286, 340, 24), $"Truck fuel: {Mathf.CeilToInt(truckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)}");
-        GUI.Label(new Rect(24, 310, 340, 24), $"Truck cargo: {truckCargoWood}/1 ({truckCargoSource})");
-        GUI.Label(new Rect(24, 334, 340, 24), GetTruckStatusLabel());
+        if (selectedLocation.HasValue && selectedLocation != LocationType.Parking)
+        {
+            DrawSelectedBuildingHud(selectedLocation.Value);
+        }
 
         if (selectedLocation == LocationType.Parking)
         {
@@ -294,7 +378,6 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         GenerateInitialRoadNetwork();
         SetupSelectionVisuals();
         SetupTruck();
-        SetupDriver();
         SetupCargoTransferVisual();
         SetupAudio();
     }
@@ -335,7 +418,11 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         keyLight.color = new Color(1f, 0.95f, 0.86f);
         keyLight.intensity = 1.15f;
         keyLight.shadows = LightShadows.Soft;
-        keyLight.shadowStrength = 0.78f;
+        keyLight.shadowStrength = 0.9f;
+        keyLight.shadowBias = 0.04f;
+        keyLight.shadowNormalBias = 0.32f;
+        keyLight.shadowNearPlane = 0.2f;
+        keyLight.shadowResolution = UnityEngine.Rendering.LightShadowResolution.VeryHigh;
 
         Light[] allLights = FindObjectsByType<Light>(FindObjectsSortMode.None);
         foreach (Light lightComponent in allLights)
@@ -378,7 +465,12 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             new Color(0.82f, 0.9f, 0.97f),
             stylizedDaylight);
 
-        UpdateTruckHeadlights(stylizedDaylight);
+        for (int i = 0; i < truckAgents.Count; i++)
+        {
+            LoadTruckState(truckAgents[i]);
+            UpdateTruckHeadlights(stylizedDaylight);
+            SaveTruckState(truckAgents[i]);
+        }
     }
 
     private void SetupGround()
@@ -388,7 +480,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         ground.transform.SetParent(worldRoot, false);
         ground.transform.position = new Vector3(GridWidth / 2f, -0.01f, GridHeight / 2f);
         ground.transform.localScale = new Vector3((GridWidth - 2f) / 10f, 1f, (GridHeight - 2f) / 10f);
-        ApplyColor(ground, new Color(0.79f, 0.74f, 0.61f));
+        ApplyColor(ground, new Color(0.72f, 0.67f, 0.55f));
         CreateDioramaBase();
     }
 
@@ -497,11 +589,45 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private void SetupTruck()
     {
-        truckCell = locations[LocationType.Parking].Anchor;
-        truckTargetWorld = GetTruckWorldPosition(truckCell);
-        truckSegmentStartWorld = truckTargetWorld;
+        TruckAgent firstTruck = CreateAndRegisterTruckAgent(1, 0);
+        LoadTruckState(firstTruck);
+    }
 
-        truckObject = new GameObject("Truck");
+    private TruckAgent CreateAndRegisterTruckAgent(int truckNumber, int parkingSlotIndex)
+    {
+        truckCell = locations[LocationType.Parking].Anchor;
+        truckTargetWorld = GetParkingSlotWorldPosition(parkingSlotIndex);
+        truckSegmentStartWorld = truckTargetWorld;
+        truckSmoothedForward = Vector3.forward;
+        truckFuel = TruckFuelCapacity;
+        truckCargoSource = CargoSource.None;
+        truckCargoWood = 0;
+        isTruckMoving = false;
+        isTruckInteracting = false;
+        isTruckWaitingForService = false;
+        isDriverRescueActive = false;
+        isTruckAutoModeEnabled = false;
+        currentAssignedTrip = TripType.None;
+        currentTripPhase = TripPhase.None;
+        currentRefuelPhase = RefuelPhase.None;
+        currentDriverRescuePhase = DriverRescuePhase.None;
+        activeTruckInteraction = TruckInteractionType.None;
+        queuedTruckInteraction = TruckInteractionType.None;
+        activeServiceLocation = null;
+        queuedServiceLocation = null;
+        currentAssignedTripReward = 0;
+        truckSegmentProgress = 0f;
+        truckSegmentDuration = 0f;
+        truckWheelSpinAngle = 0f;
+        truckSteerAngle = 0f;
+        truckInteractionTimer = 0f;
+        driverWalkAnimationTime = 0f;
+        activePath.Clear();
+        truckWheels.Clear();
+        truckFrontWheels.Clear();
+        truckHeadlights.Clear();
+
+        truckObject = new GameObject($"Truck_{truckNumber}");
         truckObject.transform.SetParent(worldRoot, false);
         truckVisualRoot = new GameObject("VisualRoot").transform;
         truckVisualRoot.SetParent(truckObject.transform, false);
@@ -511,6 +637,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         body.transform.localPosition = new Vector3(0f, 0.25f, 0f);
         body.transform.localScale = new Vector3(0.7f, 0.35f, 1f);
         ApplyColor(body, new Color(0.85f, 0.2f, 0.18f));
+        ConfigureShadowVisual(body);
         truckBodyTransform = body.transform;
 
         GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -518,6 +645,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         cabin.transform.localPosition = new Vector3(0f, 0.4f, 0.2f);
         cabin.transform.localScale = new Vector3(0.55f, 0.4f, 0.45f);
         ApplyColor(cabin, new Color(0.95f, 0.82f, 0.28f));
+        ConfigureShadowVisual(cabin);
         truckCabinTransform = cabin.transform;
 
         CreateTruckHeadlightVisual(new Vector3(-0.18f, 0.39f, 0.46f), true);
@@ -541,6 +669,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             wheel.transform.localScale = new Vector3(0.12f, 0.05f, 0.12f);
             ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f));
+            ConfigureShadowVisual(wheel);
             truckWheels.Add(wheel.transform);
             if (i < 2)
             {
@@ -551,6 +680,18 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         truckObject.transform.position = truckTargetWorld;
         truckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         truckInteractionTargetRotation = truckObject.transform.rotation;
+        SetupDriver();
+
+        TruckAgent truckAgent = new()
+        {
+            TruckNumber = truckNumber,
+            DisplayName = GetTruckDisplayName(truckNumber),
+            ParkingSlotIndex = parkingSlotIndex
+        };
+
+        SaveTruckState(truckAgent);
+        truckAgents.Add(truckAgent);
+        return truckAgent;
     }
 
     private void CreateTruckHeadlightVisual(Vector3 localPosition, bool isLeft)
@@ -589,6 +730,138 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         headlight.shadows = LightShadows.None;
         headlight.enabled = false;
         truckHeadlights.Add(headlight);
+    }
+
+    private void LoadTruckState(TruckAgent truckAgent)
+    {
+        truckObject = truckAgent.TruckObject;
+        truckVisualRoot = truckAgent.TruckVisualRoot;
+        truckBodyTransform = truckAgent.TruckBodyTransform;
+        truckCabinTransform = truckAgent.TruckCabinTransform;
+        truckHeadlightLeftRenderer = truckAgent.TruckHeadlightLeftRenderer;
+        truckHeadlightRightRenderer = truckAgent.TruckHeadlightRightRenderer;
+        driverObject = truckAgent.DriverObject;
+        driverVisualRoot = truckAgent.DriverVisualRoot;
+        driverBodyTransform = truckAgent.DriverBodyTransform;
+        driverHeadTransform = truckAgent.DriverHeadTransform;
+        driverCapTransform = truckAgent.DriverCapTransform;
+        driverLeftArmTransform = truckAgent.DriverLeftArmTransform;
+        driverRightArmTransform = truckAgent.DriverRightArmTransform;
+        driverLeftLegTransform = truckAgent.DriverLeftLegTransform;
+        driverRightLegTransform = truckAgent.DriverRightLegTransform;
+        driverFuelCanTransform = truckAgent.DriverFuelCanTransform;
+        driverFlashlightTransform = truckAgent.DriverFlashlightTransform;
+        driverFlashlightLight = truckAgent.DriverFlashlightLight;
+        driverFlashlightRenderer = truckAgent.DriverFlashlightRenderer;
+        truckLoopAudioSource = truckAgent.TruckLoopAudioSource;
+        truckFxAudioSource = truckAgent.TruckFxAudioSource;
+        truckCell = truckAgent.TruckCell;
+        truckTargetWorld = truckAgent.TruckTargetWorld;
+        truckSegmentStartWorld = truckAgent.TruckSegmentStartWorld;
+        truckSmoothedForward = truckAgent.TruckSmoothedForward;
+        isTruckMoving = truckAgent.IsTruckMoving;
+        isTruckInteracting = truckAgent.IsTruckInteracting;
+        isTruckWaitingForService = truckAgent.IsTruckWaitingForService;
+        isDriverRescueActive = truckAgent.IsDriverRescueActive;
+        isTruckAutoModeEnabled = truckAgent.IsTruckAutoModeEnabled;
+        truckCargoSource = truckAgent.TruckCargoSource;
+        truckCargoWood = truckAgent.TruckCargoWood;
+        driverRescueTargetWorld = truckAgent.DriverRescueTargetWorld;
+        driverRescueWaypointIndex = truckAgent.DriverRescueWaypointIndex;
+        truckSegmentProgress = truckAgent.TruckSegmentProgress;
+        truckSegmentDuration = truckAgent.TruckSegmentDuration;
+        truckWheelSpinAngle = truckAgent.TruckWheelSpinAngle;
+        truckSteerAngle = truckAgent.TruckSteerAngle;
+        truckInteractionTimer = truckAgent.TruckInteractionTimer;
+        truckFuel = truckAgent.TruckFuel;
+        driverWalkAnimationTime = truckAgent.DriverWalkAnimationTime;
+        currentAssignedTripReward = truckAgent.CurrentAssignedTripReward;
+        currentAssignedTrip = truckAgent.CurrentAssignedTrip;
+        currentTripPhase = truckAgent.CurrentTripPhase;
+        currentRefuelPhase = truckAgent.CurrentRefuelPhase;
+        currentDriverRescuePhase = truckAgent.CurrentDriverRescuePhase;
+        activeTruckInteraction = truckAgent.ActiveTruckInteraction;
+        queuedTruckInteraction = truckAgent.QueuedTruckInteraction;
+        truckInteractionTargetRotation = truckAgent.TruckInteractionTargetRotation;
+        truckInteractionBuildingPoint = truckAgent.TruckInteractionBuildingPoint;
+        activeServiceLocation = truckAgent.ActiveServiceLocation;
+        queuedServiceLocation = truckAgent.QueuedServiceLocation;
+        activePath.Clear();
+        activePath.AddRange(truckAgent.ActivePath);
+        driverRescuePath.Clear();
+        driverRescuePath.AddRange(truckAgent.DriverRescuePath);
+        truckWheels.Clear();
+        truckWheels.AddRange(truckAgent.TruckWheels);
+        truckFrontWheels.Clear();
+        truckFrontWheels.AddRange(truckAgent.TruckFrontWheels);
+        truckHeadlights.Clear();
+        truckHeadlights.AddRange(truckAgent.TruckHeadlights);
+    }
+
+    private void SaveTruckState(TruckAgent truckAgent)
+    {
+        truckAgent.TruckObject = truckObject;
+        truckAgent.TruckVisualRoot = truckVisualRoot;
+        truckAgent.TruckBodyTransform = truckBodyTransform;
+        truckAgent.TruckCabinTransform = truckCabinTransform;
+        truckAgent.TruckHeadlightLeftRenderer = truckHeadlightLeftRenderer;
+        truckAgent.TruckHeadlightRightRenderer = truckHeadlightRightRenderer;
+        truckAgent.TruckWheels.Clear();
+        truckAgent.TruckWheels.AddRange(truckWheels);
+        truckAgent.TruckFrontWheels.Clear();
+        truckAgent.TruckFrontWheels.AddRange(truckFrontWheels);
+        truckAgent.TruckHeadlights.Clear();
+        truckAgent.TruckHeadlights.AddRange(truckHeadlights);
+        truckAgent.DriverObject = driverObject;
+        truckAgent.DriverVisualRoot = driverVisualRoot;
+        truckAgent.DriverBodyTransform = driverBodyTransform;
+        truckAgent.DriverHeadTransform = driverHeadTransform;
+        truckAgent.DriverCapTransform = driverCapTransform;
+        truckAgent.DriverLeftArmTransform = driverLeftArmTransform;
+        truckAgent.DriverRightArmTransform = driverRightArmTransform;
+        truckAgent.DriverLeftLegTransform = driverLeftLegTransform;
+        truckAgent.DriverRightLegTransform = driverRightLegTransform;
+        truckAgent.DriverFuelCanTransform = driverFuelCanTransform;
+        truckAgent.DriverFlashlightTransform = driverFlashlightTransform;
+        truckAgent.DriverFlashlightLight = driverFlashlightLight;
+        truckAgent.DriverFlashlightRenderer = driverFlashlightRenderer;
+        truckAgent.TruckLoopAudioSource = truckLoopAudioSource;
+        truckAgent.TruckFxAudioSource = truckFxAudioSource;
+        truckAgent.TruckCell = truckCell;
+        truckAgent.TruckTargetWorld = truckTargetWorld;
+        truckAgent.TruckSegmentStartWorld = truckSegmentStartWorld;
+        truckAgent.TruckSmoothedForward = truckSmoothedForward;
+        truckAgent.IsTruckMoving = isTruckMoving;
+        truckAgent.IsTruckInteracting = isTruckInteracting;
+        truckAgent.IsTruckWaitingForService = isTruckWaitingForService;
+        truckAgent.IsDriverRescueActive = isDriverRescueActive;
+        truckAgent.IsTruckAutoModeEnabled = isTruckAutoModeEnabled;
+        truckAgent.TruckCargoSource = truckCargoSource;
+        truckAgent.TruckCargoWood = truckCargoWood;
+        truckAgent.DriverRescueTargetWorld = driverRescueTargetWorld;
+        truckAgent.DriverRescueWaypointIndex = driverRescueWaypointIndex;
+        truckAgent.TruckSegmentProgress = truckSegmentProgress;
+        truckAgent.TruckSegmentDuration = truckSegmentDuration;
+        truckAgent.TruckWheelSpinAngle = truckWheelSpinAngle;
+        truckAgent.TruckSteerAngle = truckSteerAngle;
+        truckAgent.TruckInteractionTimer = truckInteractionTimer;
+        truckAgent.TruckFuel = truckFuel;
+        truckAgent.DriverWalkAnimationTime = driverWalkAnimationTime;
+        truckAgent.CurrentAssignedTripReward = currentAssignedTripReward;
+        truckAgent.CurrentAssignedTrip = currentAssignedTrip;
+        truckAgent.CurrentTripPhase = currentTripPhase;
+        truckAgent.CurrentRefuelPhase = currentRefuelPhase;
+        truckAgent.CurrentDriverRescuePhase = currentDriverRescuePhase;
+        truckAgent.ActiveTruckInteraction = activeTruckInteraction;
+        truckAgent.QueuedTruckInteraction = queuedTruckInteraction;
+        truckAgent.TruckInteractionTargetRotation = truckInteractionTargetRotation;
+        truckAgent.TruckInteractionBuildingPoint = truckInteractionBuildingPoint;
+        truckAgent.ActiveServiceLocation = activeServiceLocation;
+        truckAgent.QueuedServiceLocation = queuedServiceLocation;
+        truckAgent.ActivePath.Clear();
+        truckAgent.ActivePath.AddRange(activePath);
+        truckAgent.DriverRescuePath.Clear();
+        truckAgent.DriverRescuePath.AddRange(driverRescuePath);
     }
 
     private void UpdateTruckHeadlights(float stylizedDaylight)
@@ -695,6 +968,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         body.transform.localPosition = new Vector3(0f, 0.38f, 0f);
         body.transform.localScale = new Vector3(0.22f, 0.34f, 0.22f);
         ApplyColor(body, new Color(0.22f, 0.44f, 0.88f));
+        ConfigureShadowVisual(body);
         driverBodyTransform = body.transform;
 
         GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -702,6 +976,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         head.transform.localPosition = new Vector3(0f, 0.88f, 0f);
         head.transform.localScale = new Vector3(0.24f, 0.24f, 0.24f);
         ApplyColor(head, new Color(0.96f, 0.82f, 0.68f));
+        ConfigureShadowVisual(head);
         driverHeadTransform = head.transform;
 
         GameObject cap = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -709,6 +984,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         cap.transform.localPosition = new Vector3(0f, 1.02f, 0f);
         cap.transform.localScale = new Vector3(0.26f, 0.08f, 0.26f);
         ApplyColor(cap, new Color(0.84f, 0.22f, 0.18f));
+        ConfigureShadowVisual(cap);
         driverCapTransform = cap.transform;
 
         driverLeftArmTransform = CreateDriverLimb("DriverLeftArm", new Vector3(-0.2f, 0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), new Color(0.22f, 0.44f, 0.88f));
@@ -721,6 +997,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         fuelCan.transform.localPosition = new Vector3(0.18f, 0.42f, 0f);
         fuelCan.transform.localScale = new Vector3(0.14f, 0.2f, 0.1f);
         ApplyColor(fuelCan, new Color(0.9f, 0.76f, 0.18f));
+        ConfigureShadowVisual(fuelCan);
         driverFuelCanTransform = fuelCan.transform;
         driverFuelCanTransform.gameObject.SetActive(false);
 
@@ -730,6 +1007,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         flashlight.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
         flashlight.transform.localScale = new Vector3(0.06f, 0.06f, 0.18f);
         ApplyColor(flashlight, new Color(0.24f, 0.24f, 0.26f));
+        ConfigureShadowVisual(flashlight);
         driverFlashlightTransform = flashlight.transform;
         driverFlashlightRenderer = flashlight.GetComponent<Renderer>();
 
@@ -790,8 +1068,6 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         ambientAudioSource = CreateAudioSource("AmbientWind", worldRoot, true, 0.24f, 0f, false);
         forestAudioSource = CreateAudioSource("ForestAmbience", locations[LocationType.Forest].RootObject.transform, true, 0.28f, 0.82f, false);
         townAudioSource = CreateAudioSource("TownAmbience", locations[LocationType.Town].RootObject.transform, true, 0.22f, 0.9f, false);
-        truckLoopAudioSource = CreateAudioSource("TruckLoop", truckObject.transform, true, 0.18f, 0.65f, false);
-        truckFxAudioSource = CreateAudioSource("TruckFX", truckObject.transform, false, 0.42f, 0.8f, false);
 
         ambientAudioSource.clip = ambientWindClip;
         ambientAudioSource.Play();
@@ -802,8 +1078,23 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         townAudioSource.clip = townHumClip;
         townAudioSource.Play();
 
-        truckLoopAudioSource.clip = truckIdleClip;
-        truckLoopAudioSource.Play();
+        foreach (TruckAgent truckAgent in truckAgents)
+        {
+            SetupTruckAudio(truckAgent);
+        }
+    }
+
+    private void SetupTruckAudio(TruckAgent truckAgent)
+    {
+        if (truckAgent == null || truckAgent.TruckObject == null)
+        {
+            return;
+        }
+
+        truckAgent.TruckLoopAudioSource = CreateAudioSource($"TruckLoop_{truckAgent.TruckNumber}", truckAgent.TruckObject.transform, true, 0.18f, 0.65f, false);
+        truckAgent.TruckFxAudioSource = CreateAudioSource($"TruckFX_{truckAgent.TruckNumber}", truckAgent.TruckObject.transform, false, 0.42f, 0.8f, false);
+        truckAgent.TruckLoopAudioSource.clip = truckIdleClip;
+        truckAgent.TruckLoopAudioSource.Play();
     }
 
     private void HandleHotkeys()
@@ -826,10 +1117,13 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             SetGameSpeed(3);
         }
 
-        if ((Keyboard.current.digit1Key != null && Keyboard.current.digit1Key.wasPressedThisFrame) ||
-            (Keyboard.current.numpad1Key != null && Keyboard.current.numpad1Key.wasPressedThisFrame))
+        for (int truckNumber = 1; truckNumber <= MaxTruckCount; truckNumber++)
         {
-            FocusTruck();
+            if (WasTruckHotkeyPressed(truckNumber))
+            {
+                FocusTruck(truckNumber);
+                return;
+            }
         }
     }
 
@@ -841,8 +1135,37 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         PlayUiSound(uiSelectClip, 0.8f);
     }
 
-    private void FocusTruck()
+    private bool WasTruckHotkeyPressed(int truckNumber)
     {
+        if (Keyboard.current == null)
+        {
+            return false;
+        }
+
+        return truckNumber switch
+        {
+            1 => (Keyboard.current.digit1Key != null && Keyboard.current.digit1Key.wasPressedThisFrame) ||
+                 (Keyboard.current.numpad1Key != null && Keyboard.current.numpad1Key.wasPressedThisFrame),
+            2 => (Keyboard.current.digit2Key != null && Keyboard.current.digit2Key.wasPressedThisFrame) ||
+                 (Keyboard.current.numpad2Key != null && Keyboard.current.numpad2Key.wasPressedThisFrame),
+            3 => (Keyboard.current.digit3Key != null && Keyboard.current.digit3Key.wasPressedThisFrame) ||
+                 (Keyboard.current.numpad3Key != null && Keyboard.current.numpad3Key.wasPressedThisFrame),
+            4 => (Keyboard.current.digit4Key != null && Keyboard.current.digit4Key.wasPressedThisFrame) ||
+                 (Keyboard.current.numpad4Key != null && Keyboard.current.numpad4Key.wasPressedThisFrame),
+            5 => (Keyboard.current.digit5Key != null && Keyboard.current.digit5Key.wasPressedThisFrame) ||
+                 (Keyboard.current.numpad5Key != null && Keyboard.current.numpad5Key.wasPressedThisFrame),
+            _ => false
+        };
+    }
+
+    private void FocusTruck(int truckNumber)
+    {
+        if (!IsTruckNumberOwned(truckNumber))
+        {
+            return;
+        }
+
+        selectedTruckNumber = truckNumber;
         selectedLocation = null;
         isTruckDetailsOpen = true;
         RefreshSelectionVisuals();
@@ -1029,16 +1352,21 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             return false;
         }
 
-        if (truckObject == null || hit.transform == null || !hit.transform.IsChildOf(truckObject.transform))
+        if (hit.transform == null)
         {
             return false;
         }
 
-        selectedLocation = null;
-        isTruckDetailsOpen = true;
-        RefreshSelectionVisuals();
-        PlayUiSound(uiPanelOpenClip, 0.9f);
-        return true;
+        foreach (TruckAgent truckAgent in truckAgents)
+        {
+            if (truckAgent.TruckObject != null && hit.transform.IsChildOf(truckAgent.TruckObject.transform))
+            {
+                FocusTruck(truckAgent.TruckNumber);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ProduceForestWood()
@@ -1124,12 +1452,25 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                     return;
                 }
 
-                currentTripPhase = TripPhase.Loading;
-                StartTruckInteraction(GetLoadInteraction(currentAssignedTrip), pickupLocation);
+                if (TryStartTruckInteraction(GetLoadInteraction(currentAssignedTrip), pickupLocation))
+                {
+                    currentTripPhase = TripPhase.Loading;
+                }
+
                 return;
             }
 
             case TripPhase.Loading:
+                if (isTruckInteracting)
+                {
+                    return;
+                }
+
+                if (TryResumeQueuedTruckInteraction())
+                {
+                    return;
+                }
+
                 currentTripPhase = TripPhase.ToDropoff;
                 return;
 
@@ -1142,12 +1483,25 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                     return;
                 }
 
-                currentTripPhase = TripPhase.Unloading;
-                StartTruckInteraction(GetUnloadInteraction(currentAssignedTrip), dropoffLocation);
+                if (TryStartTruckInteraction(GetUnloadInteraction(currentAssignedTrip), dropoffLocation))
+                {
+                    currentTripPhase = TripPhase.Unloading;
+                }
+
                 return;
             }
 
             case TripPhase.Unloading:
+                if (isTruckInteracting)
+                {
+                    return;
+                }
+
+                if (TryResumeQueuedTruckInteraction())
+                {
+                    return;
+                }
+
                 currentTripPhase = TripPhase.ReturnToParking;
                 return;
 
@@ -1182,11 +1536,24 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                     return;
                 }
 
-                currentRefuelPhase = RefuelPhase.Refueling;
-                StartTruckInteraction(TruckInteractionType.RefuelAtGasStation, LocationType.GasStation);
+                if (TryStartTruckInteraction(TruckInteractionType.RefuelAtGasStation, LocationType.GasStation))
+                {
+                    currentRefuelPhase = RefuelPhase.Refueling;
+                }
+
                 return;
 
             case RefuelPhase.Refueling:
+                if (isTruckInteracting)
+                {
+                    return;
+                }
+
+                if (TryResumeQueuedTruckInteraction())
+                {
+                    return;
+                }
+
                 currentRefuelPhase = RefuelPhase.ReturnToParking;
                 return;
 
@@ -1211,6 +1578,11 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
         Vector3 currentPosition = driverObject.transform.position;
         Vector3 targetPosition = driverRescueTargetWorld;
+        if (driverRescuePath.Count > 0)
+        {
+            targetPosition = driverRescuePath[Mathf.Clamp(driverRescueWaypointIndex, 0, driverRescuePath.Count - 1)];
+        }
+
         Vector3 flatDirection = targetPosition - currentPosition;
         flatDirection.y = 0f;
 
@@ -1238,6 +1610,12 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             return;
         }
 
+        if (driverRescuePath.Count > 0 && driverRescueWaypointIndex < driverRescuePath.Count - 1)
+        {
+            driverRescueWaypointIndex++;
+            return;
+        }
+
         switch (currentDriverRescuePhase)
         {
             case DriverRescuePhase.ToGasStation:
@@ -1248,6 +1626,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 }
 
                 driverRescueTargetWorld = GetDriverStandPointNearTruck();
+                BuildDriverRescuePath(currentPosition, driverRescueTargetWorld);
                 return;
 
             case DriverRescuePhase.ToTruck:
@@ -1260,6 +1639,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 }
 
                 driverObject.SetActive(false);
+                driverRescuePath.Clear();
+                driverRescueWaypointIndex = 0;
                 driverWalkAnimationTime = 0f;
                 if (activePath.Count > 0)
                 {
@@ -1656,6 +2037,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         baseBlock.transform.position = center;
         baseBlock.transform.localScale = new Vector3(size.x * 0.95f, 0.7f, size.y * 0.95f);
         ApplyColor(baseBlock, baseColor);
+        ConfigureShadowVisual(baseBlock);
         data.BaseRenderer = baseBlock.GetComponent<Renderer>();
 
         if (type == LocationType.Parking)
@@ -1985,6 +2367,17 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         renderer.receiveShadows = false;
     }
 
+    private static void ConfigureShadowVisual(GameObject target)
+    {
+        if (!target.TryGetComponent(out Renderer renderer))
+        {
+            return;
+        }
+
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        renderer.receiveShadows = true;
+    }
+
     private bool IsInsideGrid(Vector2Int cell)
     {
         return cell.x >= 0 && cell.x < GridWidth && cell.y >= 0 && cell.y < GridHeight;
@@ -2070,7 +2463,84 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         driverWalkAnimationTime = 0f;
         ApplyDriverPose(0f, 0f);
         driverRescueTargetWorld = GetDriverStandPointNearLocation(LocationType.GasStation);
+        BuildDriverRescuePath(driverObject.transform.position, driverRescueTargetWorld);
         PlayUiSound(uiSelectClip, 0.9f);
+    }
+
+    private void BuildDriverRescuePath(Vector3 startWorld, Vector3 targetWorld)
+    {
+        driverRescuePath.Clear();
+        driverRescueWaypointIndex = 0;
+
+        Vector2Int startCell = WorldToCell(startWorld);
+        Vector2Int goalCell = WorldToCell(targetWorld);
+        List<Vector2Int> cellPath = FindDriverWalkPath(startCell, goalCell);
+        if (cellPath == null || cellPath.Count == 0)
+        {
+            driverRescueTargetWorld = targetWorld;
+            return;
+        }
+
+        for (int i = 1; i < cellPath.Count; i++)
+        {
+            driverRescuePath.Add(GetCellCenter(cellPath[i]));
+        }
+
+        driverRescuePath.Add(targetWorld);
+        driverRescueTargetWorld = targetWorld;
+    }
+
+    private List<Vector2Int> FindDriverWalkPath(Vector2Int start, Vector2Int goal)
+    {
+        if (start == goal)
+        {
+            return new List<Vector2Int> { start };
+        }
+
+        LocationType? startLocation = GetContainingLocation(start);
+        LocationType? goalLocation = GetContainingLocation(goal);
+        Queue<Vector2Int> frontier = new();
+        Dictionary<Vector2Int, Vector2Int> cameFrom = new();
+        frontier.Enqueue(start);
+        cameFrom[start] = start;
+
+        while (frontier.Count > 0)
+        {
+            Vector2Int current = frontier.Dequeue();
+            foreach (Vector2Int neighbor in GetNeighbors(current))
+            {
+                if (cameFrom.ContainsKey(neighbor) || !IsWalkableDriverCell(neighbor, startLocation, goalLocation))
+                {
+                    continue;
+                }
+
+                cameFrom[neighbor] = current;
+                if (neighbor == goal)
+                {
+                    return ReconstructPath(cameFrom, start, goal);
+                }
+
+                frontier.Enqueue(neighbor);
+            }
+        }
+
+        return new List<Vector2Int> { start, goal };
+    }
+
+    private bool IsWalkableDriverCell(Vector2Int cell, LocationType? startLocation, LocationType? goalLocation)
+    {
+        if (!IsInsideGrid(cell))
+        {
+            return false;
+        }
+
+        LocationType? containingLocation = GetContainingLocation(cell);
+        if (!containingLocation.HasValue)
+        {
+            return true;
+        }
+
+        return containingLocation == startLocation || containingLocation == goalLocation;
     }
 
     private Vector3 GetDriverStandPointNearTruck()
@@ -2152,6 +2622,54 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         CompleteTruckInteraction();
     }
 
+    private bool TryStartTruckInteraction(TruckInteractionType interactionType, LocationType locationType)
+    {
+        if (interactionType == TruckInteractionType.None)
+        {
+            return false;
+        }
+
+        if (!TryAcquireServiceLocation(locationType))
+        {
+            isTruckWaitingForService = true;
+            queuedTruckInteraction = interactionType;
+            queuedServiceLocation = locationType;
+            return false;
+        }
+
+        isTruckWaitingForService = false;
+        queuedTruckInteraction = TruckInteractionType.None;
+        queuedServiceLocation = null;
+        StartTruckInteraction(interactionType, locationType);
+        return true;
+    }
+
+    private bool TryResumeQueuedTruckInteraction()
+    {
+        if (!isTruckWaitingForService || !queuedServiceLocation.HasValue || queuedTruckInteraction == TruckInteractionType.None)
+        {
+            return false;
+        }
+
+        return TryStartTruckInteraction(queuedTruckInteraction, queuedServiceLocation.Value);
+    }
+
+    private bool TryAcquireServiceLocation(LocationType locationType)
+    {
+        if (occupiedServiceLocations.Count > 0)
+        {
+            return false;
+        }
+
+        occupiedServiceLocations.Add(locationType);
+        return true;
+    }
+
+    private void ReleaseServiceLocation(LocationType locationType)
+    {
+        occupiedServiceLocations.Remove(locationType);
+    }
+
     private void StartTruckInteraction(TruckInteractionType interactionType, LocationType locationType)
     {
         if (isTruckInteracting)
@@ -2162,6 +2680,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         isTruckMoving = false;
         isTruckInteracting = true;
         activeTruckInteraction = interactionType;
+        activeServiceLocation = locationType;
         truckInteractionTimer = 0f;
 
         Vector3 buildingCenter = GetLocationCenter(locationType);
@@ -2231,9 +2750,18 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         isTruckInteracting = false;
         activeTruckInteraction = TruckInteractionType.None;
         truckInteractionTimer = 0f;
+        isTruckWaitingForService = false;
+        queuedTruckInteraction = TruckInteractionType.None;
+        queuedServiceLocation = null;
         if (cargoTransferCrate != null)
         {
             cargoTransferCrate.SetActive(false);
+        }
+
+        if (activeServiceLocation.HasValue)
+        {
+            ReleaseServiceLocation(activeServiceLocation.Value);
+            activeServiceLocation = null;
         }
 
         if (completedInteraction == TruckInteractionType.RefuelAtGasStation)
@@ -2282,6 +2810,11 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 TruckInteractionType.RefuelAtGasStation => "Refueling at Gas Station...",
                 _ => "Truck servicing cargo..."
             };
+        }
+
+        if (isTruckWaitingForService && queuedServiceLocation.HasValue)
+        {
+            return $"Waiting for service slot at {locations[queuedServiceLocation.Value].Label}.";
         }
 
         if (isTruckMoving)
@@ -2359,14 +2892,16 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         Rect panelRect = GetParkingHudRect();
         GUI.Box(panelRect, "Parking HUD");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 30, 250, 22), "Selected building: Parking");
-        int trucksInsideCount = IsTruckInsideParking() ? 1 : 0;
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 54, 250, 22), $"Trucks inside parking: {trucksInsideCount}/1");
+        int trucksInsideCount = GetParkingTruckCount();
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 54, 250, 22), $"Trucks inside parking: {trucksInsideCount}/{MaxTruckCount}");
 
-        if (trucksInsideCount > 0)
+        float y = panelRect.y + 82f;
+        TruckAgent firstTruck = GetTruckAgent(1);
+        if (IsTruckInsideParking(firstTruck))
         {
-            GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 82, 250, 22), "Click the truck icon to inspect it:");
+            GUI.Label(new Rect(panelRect.x + 12, y, 250, 22), "Fleet in parking:");
 
-            Rect iconRect = new Rect(panelRect.x + 16, panelRect.y + 110, 76, 60);
+            Rect iconRect = new Rect(panelRect.x + 16, y + 28f, 76, 60);
             bool iconPressed = GUI.Button(iconRect, "TRUCK");
 
             if (iconPressed)
@@ -2375,16 +2910,143 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 PlayUiSound(isTruckDetailsOpen ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
             }
 
-            GUI.Label(new Rect(panelRect.x + 106, panelRect.y + 114, 150, 22), TruckDisplayName);
-            GUI.Label(new Rect(panelRect.x + 106, panelRect.y + 136, 150, 22), "Status: Parked");
-            GUI.Label(new Rect(panelRect.x + 106, panelRect.y + 158, 150, 22), "Open detail card");
+            GUI.Label(new Rect(panelRect.x + 106, y + 32f, 150, 22), GetTruckDisplayName(1));
+            GUI.Label(new Rect(panelRect.x + 106, y + 54f, 150, 22), "Status: Parked");
+            GUI.Label(new Rect(panelRect.x + 106, y + 76f, 150, 22), "Operational truck");
+            y += 96f;
         }
-        else
+
+        foreach (TruckAgent truckAgent in truckAgents)
         {
-            GUI.Box(new Rect(panelRect.x + 12, panelRect.y + 82, 252, 86), "No trucks inside");
-            GUI.Label(new Rect(panelRect.x + 24, panelRect.y + 114, 220, 22), "The truck is currently out on route.");
+            if (truckAgent.TruckNumber == 1)
+            {
+                continue;
+            }
+
+            if (!IsTruckInsideParking(truckAgent))
+            {
+                continue;
+            }
+
+            GUI.Box(new Rect(panelRect.x + 12, y, panelRect.width - 24, 32), string.Empty);
+            if (GUI.Button(new Rect(panelRect.x + 16, y + 4f, 82, 24), truckAgent.DisplayName))
+            {
+                FocusTruck(truckAgent.TruckNumber);
+            }
+
+            GUI.Label(new Rect(panelRect.x + 106, y + 6f, 90, 20), "Parked");
+            y += 36f;
+        }
+
+        if (GetParkingTruckCount() == 0)
+        {
+            GUI.Box(new Rect(panelRect.x + 12, y, 252, 58), "No trucks inside");
+            GUI.Label(new Rect(panelRect.x + 24, y + 24f, 220, 22), "The fleet is currently out on routes.");
+            y += 66f;
             isTruckDetailsOpen = false;
         }
+
+        bool canHireTruck = GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
+        GUI.enabled = canHireTruck;
+        if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + panelRect.height - 42f, panelRect.width - 24, 28), $"Hire New Truck  ${HireTruckCost}"))
+        {
+            HireNewTruck();
+        }
+
+        GUI.enabled = true;
+        if (GetOwnedTruckCount() >= MaxTruckCount)
+        {
+            GUI.Label(new Rect(panelRect.x + 12, panelRect.y + panelRect.height - 66f, 240, 20), "Parking is full.");
+        }
+        else if (money < HireTruckCost)
+        {
+            GUI.Label(new Rect(panelRect.x + 12, panelRect.y + panelRect.height - 66f, 240, 20), $"Need ${HireTruckCost} to hire a truck.");
+        }
+    }
+
+    private void HireNewTruck()
+    {
+        if (GetOwnedTruckCount() >= MaxTruckCount || money < HireTruckCost)
+        {
+            return;
+        }
+
+        TruckAgent hiredTruck = CreateAndRegisterTruckAgent(nextHireTruckNumber, truckAgents.Count);
+        SetupTruckAudio(hiredTruck);
+        nextHireTruckNumber++;
+        money -= HireTruckCost;
+        TruckAgent selectedTruck = GetTruckAgent(selectedTruckNumber) ?? GetTruckAgent(1);
+        if (selectedTruck != null)
+        {
+            LoadTruckState(selectedTruck);
+        }
+
+        PlayUiSound(uiSelectClip, 1f);
+    }
+
+    private int GetOwnedTruckCount()
+    {
+        return truckAgents.Count;
+    }
+
+    private int GetParkingTruckCount()
+    {
+        int count = 0;
+        foreach (TruckAgent truckAgent in truckAgents)
+        {
+            if (IsTruckInsideParking(truckAgent))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private Vector3 GetParkingSlotWorldPosition(int parkingSlotIndex)
+    {
+        Vector3[] parkingSlots =
+        {
+            new Vector3(3.15f, 0f, 3.08f),
+            new Vector3(2.55f, 0f, 2.55f),
+            new Vector3(3.45f, 0f, 2.55f),
+            new Vector3(4.25f, 0f, 2.55f),
+            new Vector3(2.7f, 0f, 3.18f)
+        };
+
+        int slotIndex = Mathf.Clamp(parkingSlotIndex, 0, parkingSlots.Length - 1);
+        return parkingSlots[slotIndex];
+    }
+
+    private string GetTruckDisplayName(int truckNumber)
+    {
+        return $"Truck #{truckNumber}";
+    }
+
+    private bool IsTruckNumberOwned(int truckNumber)
+    {
+        foreach (TruckAgent truckAgent in truckAgents)
+        {
+            if (truckAgent.TruckNumber == truckNumber)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private TruckAgent GetTruckAgent(int truckNumber)
+    {
+        foreach (TruckAgent truckAgent in truckAgents)
+        {
+            if (truckAgent.TruckNumber == truckNumber)
+            {
+                return truckAgent;
+            }
+        }
+
+        return null;
     }
 
     private void DrawAvailableTripsHud()
@@ -2420,9 +3082,17 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private void DrawTruckDetailsHud()
     {
+        TruckAgent selectedTruck = GetTruckAgent(selectedTruckNumber);
+        if (selectedTruck == null)
+        {
+            isTruckDetailsOpen = false;
+            return;
+        }
+
+        LoadTruckState(selectedTruck);
         Rect panelRect = GetTruckDetailsHudRect();
         GUI.Box(panelRect, "Truck HUD");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 30, 220, 22), $"Truck: {TruckDisplayName}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 30, 220, 22), $"Truck: {GetTruckDisplayName(selectedTruck.TruckNumber)}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 56, 220, 22), $"State: {GetTruckDetailStatus()}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 82, 220, 22), $"Fuel: {Mathf.CeilToInt(truckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 108, 220, 22), $"Cargo: {truckCargoWood}/1 ({truckCargoSource})");
@@ -2430,23 +3100,27 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 160, 240, 22), $"Assigned route: {GetTripTitle(currentAssignedTrip)}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 182, 240, 22), $"Trip payout: ${currentAssignedTripReward}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 204, 240, 22), isDriverRescueActive ? "Driver: On foot fuel rescue" : "Driver: In truck");
-        if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + 230, panelRect.width - 24, 26), isTruckAutoModeEnabled ? "Auto Mode: ON" : "Auto Mode: OFF"))
+        if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + 230, panelRect.width - 24, 26), selectedTruck.IsTruckAutoModeEnabled ? "Auto Mode: ON" : "Auto Mode: OFF"))
         {
-            isTruckAutoModeEnabled = !isTruckAutoModeEnabled;
+            SetTruckAutoMode(selectedTruck, !selectedTruck.IsTruckAutoModeEnabled);
+            LoadTruckState(selectedTruck);
             PlayUiSound(uiSelectClip, 0.9f);
         }
 
         List<TripOption> trips = GetAvailableTrips();
-        bool truckAvailable = currentAssignedTrip == TripType.None && currentRefuelPhase == RefuelPhase.None && !isTruckMoving && !isTruckInteracting && IsTruckInsideParking();
+        bool truckAvailable = CanIssueOrdersToTruck(selectedTruck);
         float y = panelRect.y + 266f;
-
-        GUI.enabled = truckAvailable;
-        if (GUI.Button(new Rect(panelRect.x + 12, y, panelRect.width - 24, 26), "Refuel At Gas Station"))
+        if (!truckAvailable)
         {
-            StartRefuelOrder();
+            GUI.Label(new Rect(panelRect.x + 12, y - 18f, panelRect.width - 24, 18), GetTruckCommandBlockReason(selectedTruck));
         }
 
-        GUI.enabled = true;
+        if (GUI.Button(new Rect(panelRect.x + 12, y, panelRect.width - 24, 26), "Refuel At Gas Station"))
+        {
+            StartRefuelOrderForTruck(selectedTruck);
+            LoadTruckState(selectedTruck);
+        }
+
         y += 32f;
 
         GUI.Label(new Rect(panelRect.x + 12, y, 220, 20), "Assign route:");
@@ -2461,13 +3135,12 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         {
             foreach (TripOption trip in trips)
             {
-                GUI.enabled = truckAvailable;
                 if (GUI.Button(new Rect(panelRect.x + 12, y, panelRect.width - 24, 26), $"{trip.Title}  ${trip.Reward}"))
                 {
-                    AssignTrip(trip);
+                    AssignTripToTruck(selectedTruck, trip);
+                    LoadTruckState(selectedTruck);
                 }
 
-                GUI.enabled = true;
                 y += 30f;
             }
         }
@@ -2477,6 +3150,63 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             isTruckDetailsOpen = false;
             PlayUiSound(uiPanelCloseClip, 0.8f);
         }
+
+        SaveTruckState(selectedTruck);
+    }
+
+    private bool CanIssueOrdersToTruck(TruckAgent truckAgent)
+    {
+        if (truckAgent == null)
+        {
+            return false;
+        }
+
+        return truckAgent.CurrentAssignedTrip == TripType.None &&
+               truckAgent.CurrentRefuelPhase == RefuelPhase.None &&
+               !truckAgent.IsTruckMoving &&
+               !truckAgent.IsTruckInteracting &&
+               !truckAgent.IsDriverRescueActive &&
+               IsTruckInsideParking(truckAgent);
+    }
+
+    private string GetTruckCommandBlockReason(TruckAgent truckAgent)
+    {
+        if (truckAgent == null)
+        {
+            return "No truck selected.";
+        }
+
+        if (truckAgent.IsDriverRescueActive)
+        {
+            return "Commands blocked: driver is on fuel rescue.";
+        }
+
+        if (truckAgent.IsTruckInteracting)
+        {
+            return "Commands blocked: truck is servicing.";
+        }
+
+        if (truckAgent.IsTruckMoving)
+        {
+            return "Commands blocked: truck is moving.";
+        }
+
+        if (truckAgent.CurrentRefuelPhase != RefuelPhase.None)
+        {
+            return "Commands blocked: refuel order already active.";
+        }
+
+        if (truckAgent.CurrentAssignedTrip != TripType.None)
+        {
+            return "Commands blocked: route already assigned.";
+        }
+
+        if (!IsTruckInsideParking(truckAgent))
+        {
+            return "Commands blocked: truck must be in parking.";
+        }
+
+        return string.Empty;
     }
 
     private string GetTruckDetailStatus()
@@ -2484,6 +3214,11 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         if (isTruckInteracting)
         {
             return "Servicing cargo";
+        }
+
+        if (isTruckWaitingForService && queuedServiceLocation.HasValue)
+        {
+            return $"Waiting at {locations[queuedServiceLocation.Value].Label}";
         }
 
         if (isTruckMoving)
@@ -2557,6 +3292,102 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         GUI.color = new Color(1f, 0.95f, 0.55f, alpha);
         GUI.Label(new Rect(panelRect.x + 92, panelRect.y - 8f - rise, 120, 24), $"+${moneyPopupAmount}");
         GUI.color = previousColor;
+    }
+
+    private void DrawTimeHud()
+    {
+        Rect panelRect = GetTimeHudRect();
+        GUI.Box(panelRect, "Time");
+        GUI.Label(new Rect(panelRect.x + 14, panelRect.y + 22, 160, 26), $"{GetDayNightClockLabel()}  {GetTimeOfDayLabel()}");
+    }
+
+    private void DrawSpeedHud()
+    {
+        Rect panelRect = GetSpeedHudRect();
+        GUI.Box(panelRect, "Speed");
+        GUI.Label(new Rect(panelRect.x + 14, panelRect.y + 22, 120, 26), $"{gameSpeedMultiplier}x");
+    }
+
+    private void DrawTruckFleetHud()
+    {
+        Rect panelRect = GetTruckFleetHudRect();
+        GUI.Box(panelRect, "Fleet");
+
+        float y = panelRect.y + 30f;
+        foreach (TruckAgent truckAgent in truckAgents)
+        {
+            LoadTruckState(truckAgent);
+            bool isSelected = selectedTruckNumber == truckAgent.TruckNumber && isTruckDetailsOpen;
+            Rect cardRect = new Rect(panelRect.x + 10f, y, panelRect.width - 20f, 54f);
+            GUI.Box(cardRect, string.Empty);
+
+            string iconLabel = isSelected ? "[TRUCK]" : "TRUCK";
+            if (GUI.Button(new Rect(cardRect.x + 8f, cardRect.y + 10f, 66f, 34f), iconLabel))
+            {
+                FocusTruck(truckAgent.TruckNumber);
+            }
+
+            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 8f, 120f, 20f), truckAgent.DisplayName);
+            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 28f, 120f, 18f), GetTruckFleetStatusLabel());
+            SaveTruckState(truckAgent);
+            y += 60f;
+        }
+    }
+
+    private void DrawSelectedBuildingHud(LocationType locationType)
+    {
+        Rect panelRect = GetSelectedBuildingHudRect();
+        GUI.Box(panelRect, $"{locations[locationType].Label} HUD");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 32, 220, 22), $"Selected building: {locations[locationType].Label}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 58, 220, 22), GetBuildingResourceLabel(locationType));
+    }
+
+    private string GetBuildingResourceLabel(LocationType locationType)
+    {
+        return locationType switch
+        {
+            LocationType.Parking => $"Trucks parked: {GetParkingTruckCount()}/{MaxTruckCount}",
+            LocationType.GasStation => "Fuel service: Ready",
+            LocationType.Forest => $"Logs stored: {locations[LocationType.Forest].WoodStored}",
+            LocationType.Warehouse => $"Logs stored: {locations[LocationType.Warehouse].WoodStored}",
+            LocationType.Town => $"Logs received: {locations[LocationType.Town].WoodStored}",
+            _ => string.Empty
+        };
+    }
+
+    private string GetTruckFleetStatusLabel()
+    {
+        if (isTruckInteracting)
+        {
+            return "Busy";
+        }
+
+        if (isTruckWaitingForService)
+        {
+            return "Queue";
+        }
+
+        if (isDriverRescueActive)
+        {
+            return "Rescue";
+        }
+
+        if (isTruckMoving)
+        {
+            return "Moving";
+        }
+
+        if (currentRefuelPhase != RefuelPhase.None)
+        {
+            return "Refuel";
+        }
+
+        if (currentAssignedTrip != TripType.None)
+        {
+            return "Assigned";
+        }
+
+        return IsTruckInsideParking() ? "Parked" : "Idle";
     }
 
     private List<TripOption> GetAvailableTrips()
@@ -2645,6 +3476,108 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
         TripOption selectedTrip = trips[Random.Range(0, trips.Count)];
         AssignTrip(selectedTrip);
+    }
+
+    private void EvaluateTruckAutoModeNow(TruckAgent truckAgent)
+    {
+        if (truckAgent == null)
+        {
+            return;
+        }
+
+        LoadTruckState(truckAgent);
+        UpdateTruckAutoMode();
+        SaveTruckState(truckAgent);
+    }
+
+    private void SetTruckAutoMode(TruckAgent truckAgent, bool enabled)
+    {
+        if (truckAgent == null)
+        {
+            return;
+        }
+
+        truckAgent.IsTruckAutoModeEnabled = enabled;
+        if (enabled)
+        {
+            if (truckAgent.CurrentAssignedTrip == TripType.None &&
+                truckAgent.CurrentRefuelPhase == RefuelPhase.None &&
+                !truckAgent.IsTruckMoving &&
+                !truckAgent.IsTruckInteracting &&
+                !truckAgent.IsDriverRescueActive &&
+                IsTruckInsideParking(truckAgent))
+            {
+                if (truckAgent.TruckFuel < 30f)
+                {
+                    truckAgent.CurrentRefuelPhase = RefuelPhase.ToGasStation;
+                }
+                else
+                {
+                    LoadTruckState(truckAgent);
+                    List<TripOption> trips = GetAvailableTrips();
+                    SaveTruckState(truckAgent);
+                    if (trips.Count > 0)
+                    {
+                        TripOption selectedTrip = trips[Random.Range(0, trips.Count)];
+                        truckAgent.CurrentAssignedTrip = selectedTrip.Type;
+                        truckAgent.CurrentTripPhase = TripPhase.ToPickup;
+                        truckAgent.CurrentAssignedTripReward = selectedTrip.Reward;
+                    }
+                }
+            }
+
+            KickTruckDecision(truckAgent);
+        }
+    }
+
+    private void StartRefuelOrderForTruck(TruckAgent truckAgent)
+    {
+        if (truckAgent == null ||
+            truckAgent.CurrentAssignedTrip != TripType.None ||
+            truckAgent.CurrentRefuelPhase != RefuelPhase.None)
+        {
+            return;
+        }
+
+        truckAgent.CurrentRefuelPhase = RefuelPhase.ToGasStation;
+        KickTruckDecision(truckAgent);
+    }
+
+    private void AssignTripToTruck(TruckAgent truckAgent, TripOption trip)
+    {
+        if (truckAgent == null ||
+            trip == null ||
+            trip.Type == TripType.None ||
+            truckAgent.CurrentAssignedTrip != TripType.None ||
+            truckAgent.CurrentRefuelPhase != RefuelPhase.None)
+        {
+            return;
+        }
+
+        truckAgent.CurrentAssignedTrip = trip.Type;
+        truckAgent.CurrentTripPhase = TripPhase.ToPickup;
+        truckAgent.CurrentAssignedTripReward = trip.Reward;
+        KickTruckDecision(truckAgent);
+    }
+
+    private void KickTruckDecision(TruckAgent truckAgent)
+    {
+        if (truckAgent == null)
+        {
+            return;
+        }
+
+        LoadTruckState(truckAgent);
+        UpdateAssignedTrip();
+        UpdateRefuelOrder();
+        UpdateTruckAutoMode();
+        if (truckAgent.TruckObject != null)
+        {
+            truckAgent.TruckObject.transform.position = truckObject.transform.position;
+            truckAgent.TruckObject.transform.rotation = truckObject.transform.rotation;
+        }
+
+        SaveTruckState(truckAgent);
     }
 
     private int GetTripReward(TripType tripType)
@@ -2739,11 +3672,24 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         return insideParkingBounds && !isTruckMoving;
     }
 
+    private bool IsTruckInsideParking(TruckAgent truckAgent)
+    {
+        if (truckAgent == null)
+        {
+            return false;
+        }
+
+        LoadTruckState(truckAgent);
+        bool result = IsTruckInsideParking();
+        SaveTruckState(truckAgent);
+        return result;
+    }
+
     private bool IsPointerOverHud(Vector2 screenPosition)
     {
         Vector2 guiPosition = new Vector2(screenPosition.x, Screen.height - screenPosition.y);
 
-        if (MainHudRect.Contains(guiPosition) || HelpHudRect.Contains(guiPosition) || GetMoneyHudRect().Contains(guiPosition))
+        if (GetMoneyHudRect().Contains(guiPosition) || GetTimeHudRect().Contains(guiPosition) || GetSpeedHudRect().Contains(guiPosition) || GetTruckFleetHudRect().Contains(guiPosition))
         {
             return true;
         }
@@ -2753,32 +3699,57 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             return true;
         }
 
+        if (selectedLocation.HasValue && selectedLocation != LocationType.Parking && GetSelectedBuildingHudRect().Contains(guiPosition))
+        {
+            return true;
+        }
+
         if (selectedLocation == LocationType.Parking && GetAvailableTripsHudRect().Contains(guiPosition))
         {
             return true;
         }
 
-        return selectedLocation == LocationType.Parking && isTruckDetailsOpen && GetTruckDetailsHudRect().Contains(guiPosition);
+        return isTruckDetailsOpen && GetTruckDetailsHudRect().Contains(guiPosition);
     }
 
     private Rect GetParkingHudRect()
     {
-        return new Rect(Screen.width - 290, 12, 278, 190);
+        return new Rect(Screen.width - 290, 12, 278, 286);
     }
 
     private Rect GetTruckDetailsHudRect()
     {
-        return new Rect(Screen.width - 290, 392, 278, 388);
+        return new Rect(Screen.width - 290, 488, 278, 388);
     }
 
     private Rect GetAvailableTripsHudRect()
     {
-        return new Rect(Screen.width - 290, 212, 278, 170);
+        return new Rect(Screen.width - 290, 308, 278, 170);
     }
 
     private Rect GetMoneyHudRect()
     {
         return new Rect(Screen.width * 0.5f - 90f, 12f, 180f, 54f);
+    }
+
+    private Rect GetTimeHudRect()
+    {
+        return new Rect(Screen.width * 0.5f + 100f, 12f, 190f, 54f);
+    }
+
+    private Rect GetSpeedHudRect()
+    {
+        return new Rect(Screen.width * 0.5f + 300f, 12f, 120f, 54f);
+    }
+
+    private Rect GetTruckFleetHudRect()
+    {
+        return new Rect(12f, 12f, 220f, 324f);
+    }
+
+    private Rect GetSelectedBuildingHudRect()
+    {
+        return new Rect(Screen.width - 290, 12, 278, 96);
     }
 
     private void UpdateMoneyPopup()
