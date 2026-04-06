@@ -19,6 +19,9 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private const float CameraMaxHeight = 18f;
     private const float CameraMinDistance = 6f;
     private const float CameraMaxDistance = 18f;
+    private const float TruckFollowDistance = 4.4f;
+    private const float TruckFollowHeight = 2.05f;
+    private const float TruckFollowLookHeight = 1.05f;
     private const float TruckSegmentStartLift = 0.24f;
     private const float TruckSuspensionBobAmount = 0.045f;
     private const float TruckWheelRadius = 0.12f;
@@ -44,6 +47,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private readonly List<Light> truckHeadlights = new();
     private readonly List<Light> locationNightLights = new();
     private readonly List<Renderer> locationNightLightRenderers = new();
+    private readonly List<RoadLanternData> roadLanterns = new();
     private readonly List<TruckAgent> truckAgents = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
 
@@ -69,6 +73,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private Renderer driverFlashlightRenderer;
     private Transform worldRoot;
     private Transform roadsRoot;
+    private Transform lanternsRoot;
     private AudioSource uiAudioSource;
     private AudioSource ambientAudioSource;
     private AudioSource forestAudioSource;
@@ -107,6 +112,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private LocationType? selectedLocation;
     private bool isTruckDetailsOpen;
     private bool isRightMouseDragging;
+    private bool isCameraReturningToDiorama;
+    private bool isTruckCameraFocused;
     private bool isTruckAutoModeEnabled;
     private int selectedTruckNumber = 1;
     private int money;
@@ -115,6 +122,17 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private int gameSpeedMultiplier = 1;
     private int nextHireTruckNumber = 2;
     private TripType currentAssignedTrip = TripType.None;
+
+    private sealed class RoadLanternData
+    {
+        public Light Light;
+        public Renderer GlowRenderer;
+        public float ActivationOffset;
+        public float FlickerSeed;
+        public float FlickerSpeed;
+        public float FlickerStrength;
+        public float FlickerThreshold;
+    }
     private TripPhase currentTripPhase = TripPhase.None;
     private RefuelPhase currentRefuelPhase = RefuelPhase.None;
     private DriverRescuePhase currentDriverRescuePhase = DriverRescuePhase.None;
@@ -368,6 +386,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         worldRoot = new GameObject("PrototypeWorld").transform;
         roadsRoot = new GameObject("Roads").transform;
         roadsRoot.SetParent(worldRoot, false);
+        lanternsRoot = new GameObject("RoadLanterns").transform;
+        lanternsRoot.SetParent(worldRoot, false);
 
         SetupCamera();
         SetupLighting();
@@ -376,6 +396,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         SetupGrid();
         SetupLocations();
         GenerateInitialRoadNetwork();
+        RebuildRoadLanterns();
         SetupSelectionVisuals();
         SetupTruck();
         SetupCargoTransferVisual();
@@ -445,23 +466,23 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
         float sunArc = Mathf.Sin(normalizedTime * Mathf.PI * 2f - Mathf.PI * 0.5f);
         float daylight = Mathf.Clamp01((sunArc + 1f) * 0.5f);
-        float stylizedDaylight = Mathf.SmoothStep(0.08f, 1f, daylight);
+        float stylizedDaylight = Mathf.SmoothStep(0.06f, 1f, daylight);
 
         float sunPitch = Mathf.Lerp(205f, 335f, normalizedTime);
         mainDirectionalLight.transform.rotation = Quaternion.Euler(sunPitch, -34f, 0f);
-        mainDirectionalLight.intensity = Mathf.Lerp(0.2f, 1.18f, stylizedDaylight);
+        mainDirectionalLight.intensity = Mathf.Lerp(0.1f, 1.18f, stylizedDaylight);
         mainDirectionalLight.color = Color.Lerp(
             new Color(0.34f, 0.41f, 0.68f),
             new Color(1f, 0.95f, 0.86f),
             stylizedDaylight);
 
         RenderSettings.ambientLight = Color.Lerp(
-            new Color(0.12f, 0.15f, 0.22f),
+            new Color(0.055f, 0.07f, 0.12f),
             new Color(0.78f, 0.82f, 0.88f),
             stylizedDaylight);
 
         mainCamera.backgroundColor = Color.Lerp(
-            new Color(0.03f, 0.05f, 0.11f),
+            new Color(0.012f, 0.02f, 0.055f),
             new Color(0.82f, 0.9f, 0.97f),
             stylizedDaylight);
 
@@ -929,6 +950,66 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
             rendererComponent.material.color = lampColor;
         }
+
+        UpdateRoadLanternLights(darkness);
+    }
+
+    private void UpdateRoadLanternLights(float darkness)
+    {
+        float time = Time.time;
+        foreach (RoadLanternData roadLantern in roadLanterns)
+        {
+            if (roadLantern.Light == null || roadLantern.GlowRenderer == null)
+            {
+                continue;
+            }
+
+            float activationThreshold = 0.43f + roadLantern.ActivationOffset;
+            float baseActivation = Mathf.InverseLerp(activationThreshold, activationThreshold + 0.18f, darkness);
+            baseActivation = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(baseActivation));
+
+            bool lightsOn = baseActivation > 0.01f;
+            float flickerBlend = 1f;
+            if (lightsOn)
+            {
+                float softPulse = Mathf.Lerp(
+                    0.84f,
+                    1f,
+                    Mathf.PerlinNoise(roadLantern.FlickerSeed, time * roadLantern.FlickerSpeed));
+                float irregularNoise = Mathf.PerlinNoise(
+                    roadLantern.FlickerSeed * 2.31f,
+                    17.5f + time * (roadLantern.FlickerSpeed * 2.2f));
+                float randomPulse = 1f;
+                if (irregularNoise > roadLantern.FlickerThreshold)
+                {
+                    randomPulse = Mathf.Lerp(
+                        1f - roadLantern.FlickerStrength,
+                        1f,
+                        Mathf.PerlinNoise(31.2f + time * 14.5f, roadLantern.FlickerSeed * 0.7f));
+                }
+
+                float blinkNoise = Mathf.PerlinNoise(
+                    51.8f + roadLantern.FlickerSeed * 0.19f,
+                    time * (roadLantern.FlickerSpeed * 5.5f));
+                float blinkPulse = blinkNoise > 0.88f
+                    ? Mathf.Lerp(0.5f, 1f, Mathf.PerlinNoise(72.4f + time * 19f, roadLantern.FlickerSeed * 1.17f))
+                    : 1f;
+
+                flickerBlend = softPulse * randomPulse * blinkPulse;
+            }
+
+            float lightIntensity = Mathf.Lerp(0.18f, 1.42f, baseActivation) * flickerBlend;
+            float glowStrength = Mathf.Lerp(0.14f, 1f, baseActivation) * Mathf.Lerp(0.92f, 1f, flickerBlend);
+            Color lanternColor = Color.Lerp(
+                new Color(0.22f, 0.19f, 0.15f),
+                new Color(1f, 0.9f, 0.72f),
+                Mathf.Clamp01(glowStrength));
+
+            roadLantern.Light.enabled = lightsOn;
+            roadLantern.Light.intensity = lightIntensity;
+            roadLantern.Light.color = lanternColor;
+            roadLantern.GlowRenderer.material.color = lanternColor;
+        }
     }
 
     private void UpdateDriverFlashlight(float stylizedDaylight)
@@ -1121,6 +1202,12 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         {
             if (WasTruckHotkeyPressed(truckNumber))
             {
+                if (isTruckCameraFocused && isTruckDetailsOpen && selectedTruckNumber == truckNumber)
+                {
+                    ClearTruckFocus();
+                    return;
+                }
+
                 FocusTruck(truckNumber);
                 return;
             }
@@ -1168,6 +1255,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         selectedTruckNumber = truckNumber;
         selectedLocation = null;
         isTruckDetailsOpen = true;
+        isTruckCameraFocused = true;
+        isCameraReturningToDiorama = false;
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelOpenClip, 0.9f);
     }
@@ -1176,6 +1265,30 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     {
         if (mainCamera == null || Keyboard.current == null)
         {
+            return;
+        }
+
+        if (isTruckCameraFocused)
+        {
+            UpdateTruckFollowCamera();
+            return;
+        }
+
+        if (isCameraReturningToDiorama)
+        {
+            Vector3 defaultPosition = cameraFocusPoint + cameraOffset;
+            Quaternion defaultRotation = Quaternion.Euler(DioramaCameraRotation);
+            mainCamera.transform.position = Vector3.Lerp(mainCamera.transform.position, defaultPosition, 5.5f * Time.deltaTime);
+            mainCamera.transform.rotation = Quaternion.Slerp(mainCamera.transform.rotation, defaultRotation, 6.5f * Time.deltaTime);
+
+            if ((mainCamera.transform.position - defaultPosition).sqrMagnitude < 0.01f &&
+                Quaternion.Angle(mainCamera.transform.rotation, defaultRotation) < 0.75f)
+            {
+                mainCamera.transform.position = defaultPosition;
+                mainCamera.transform.rotation = defaultRotation;
+                isCameraReturningToDiorama = false;
+            }
+
             return;
         }
 
@@ -1262,6 +1375,42 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         mainCamera.transform.rotation = Quaternion.Euler(DioramaCameraRotation);
     }
 
+    private void UpdateTruckFollowCamera()
+    {
+        TruckAgent focusedTruck = GetTruckAgent(selectedTruckNumber);
+        if (focusedTruck?.TruckObject == null)
+        {
+            ClearTruckFocus();
+            return;
+        }
+
+        Vector3 truckPosition = focusedTruck.TruckObject.transform.position;
+        Vector3 truckForward = Vector3.ProjectOnPlane(focusedTruck.TruckObject.transform.forward, Vector3.up).normalized;
+        if (truckForward.sqrMagnitude < 0.0001f)
+        {
+            truckForward = Vector3.forward;
+        }
+
+        Vector3 desiredPosition = truckPosition - truckForward * TruckFollowDistance + Vector3.up * TruckFollowHeight;
+        Vector3 lookTarget = truckPosition + Vector3.up * TruckFollowLookHeight + truckForward * 1.2f;
+
+        mainCamera.transform.position = Vector3.Lerp(mainCamera.transform.position, desiredPosition, 8f * Time.deltaTime);
+        Quaternion desiredRotation = Quaternion.LookRotation((lookTarget - mainCamera.transform.position).normalized, Vector3.up);
+        mainCamera.transform.rotation = Quaternion.Slerp(mainCamera.transform.rotation, desiredRotation, 10f * Time.deltaTime);
+    }
+
+    private void ClearTruckFocus()
+    {
+        isTruckCameraFocused = false;
+        isTruckDetailsOpen = false;
+        selectedLocation = null;
+        cameraFocusPoint = new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
+        cameraOffset = DioramaCameraOffset;
+        isCameraReturningToDiorama = true;
+        RefreshSelectionVisuals();
+        PlayUiSound(uiPanelCloseClip, 0.82f);
+    }
+
     private void HandleRoadRemovalInput()
     {
         if (mainCamera == null ||
@@ -1293,6 +1442,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
         selectedLocation = null;
         isTruckDetailsOpen = false;
+        isTruckCameraFocused = false;
         RefreshSelectionVisuals();
         RemoveRoad(cell);
     }
@@ -1335,12 +1485,14 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         {
             selectedLocation = null;
             isTruckDetailsOpen = false;
+            isTruckCameraFocused = false;
             RefreshSelectionVisuals();
             return;
         }
 
         selectedLocation = null;
         isTruckDetailsOpen = false;
+        isTruckCameraFocused = false;
         RefreshSelectionVisuals();
         AddRoad(cell);
     }
@@ -1919,6 +2071,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 RefreshRoadVisual(neighbor);
             }
         }
+
+        RebuildRoadLanterns();
     }
 
     private void RemoveRoad(Vector2Int cell)
@@ -1941,6 +2095,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 RefreshRoadVisual(neighbor);
             }
         }
+
+        RebuildRoadLanterns();
     }
 
     private void GenerateInitialRoadNetwork()
@@ -2005,6 +2161,145 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             topScale.z = vertical ? 0.92f : 0.62f;
             roadTop.localScale = topScale;
         }
+    }
+
+    private void RebuildRoadLanterns()
+    {
+        if (lanternsRoot == null)
+        {
+            return;
+        }
+
+        for (int i = lanternsRoot.childCount - 1; i >= 0; i--)
+        {
+            Destroy(lanternsRoot.GetChild(i).gameObject);
+        }
+
+        roadLanterns.Clear();
+
+        foreach (Vector2Int roadCell in roadCells)
+        {
+            if (!TryGetRoadLanternPlacement(roadCell, out Vector3 worldPosition, out Quaternion worldRotation))
+            {
+                continue;
+            }
+
+            CreateRoadLantern(worldPosition, worldRotation);
+        }
+    }
+
+    private bool TryGetRoadLanternPlacement(Vector2Int cell, out Vector3 worldPosition, out Quaternion worldRotation)
+    {
+        worldPosition = Vector3.zero;
+        worldRotation = Quaternion.identity;
+
+        bool connectLeft = ConnectsToRoadOrAnchor(cell, new Vector2Int(-1, 0));
+        bool connectRight = ConnectsToRoadOrAnchor(cell, new Vector2Int(1, 0));
+        bool connectDown = ConnectsToRoadOrAnchor(cell, new Vector2Int(0, -1));
+        bool connectUp = ConnectsToRoadOrAnchor(cell, new Vector2Int(0, 1));
+
+        bool horizontalStraight = connectLeft && connectRight && !connectDown && !connectUp;
+        bool verticalStraight = connectUp && connectDown && !connectLeft && !connectRight;
+        if (!horizontalStraight && !verticalStraight)
+        {
+            return false;
+        }
+
+        if (horizontalStraight && cell.x % 2 != 0)
+        {
+            return false;
+        }
+
+        if (verticalStraight && cell.y % 2 != 0)
+        {
+            return false;
+        }
+
+        Vector3 baseCenter = GetCellCenter(cell);
+        Vector3 sideOffset = horizontalStraight
+            ? new Vector3(0f, 0f, cell.x % 4 == 0 ? 0.44f : -0.44f)
+            : new Vector3(cell.y % 4 == 0 ? 0.44f : -0.44f, 0f, 0f);
+
+        Vector2Int sideCell = horizontalStraight
+            ? new Vector2Int(cell.x, cell.y + (sideOffset.z > 0f ? 1 : -1))
+            : new Vector2Int(cell.x + (sideOffset.x > 0f ? 1 : -1), cell.y);
+
+        if (IsLocationCell(sideCell))
+        {
+            sideOffset *= -1f;
+            sideCell = horizontalStraight
+                ? new Vector2Int(cell.x, cell.y + (sideOffset.z > 0f ? 1 : -1))
+                : new Vector2Int(cell.x + (sideOffset.x > 0f ? 1 : -1), cell.y);
+
+            if (IsLocationCell(sideCell))
+            {
+                return false;
+            }
+        }
+
+        worldPosition = baseCenter + sideOffset + new Vector3(0f, 0.04f, 0f);
+        worldRotation = horizontalStraight ? Quaternion.identity : Quaternion.Euler(0f, 90f, 0f);
+        return true;
+    }
+
+    private void CreateRoadLantern(Vector3 worldPosition, Quaternion worldRotation)
+    {
+        GameObject lanternRoot = new("RoadLantern");
+        lanternRoot.transform.SetParent(lanternsRoot, false);
+        lanternRoot.transform.position = worldPosition;
+        lanternRoot.transform.rotation = worldRotation;
+
+        GameObject pole = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        pole.transform.SetParent(lanternRoot.transform, false);
+        pole.transform.localPosition = new Vector3(0f, 0.72f, 0f);
+        pole.transform.localScale = new Vector3(0.08f, 1.42f, 0.08f);
+        ApplyColor(pole, new Color(0.22f, 0.23f, 0.27f));
+        ConfigureShadowVisual(pole);
+
+        GameObject arm = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        arm.transform.SetParent(lanternRoot.transform, false);
+        arm.transform.localPosition = new Vector3(0.14f, 1.34f, 0f);
+        arm.transform.localScale = new Vector3(0.3f, 0.06f, 0.06f);
+        ApplyColor(arm, new Color(0.22f, 0.23f, 0.27f));
+        ConfigureShadowVisual(arm);
+
+        GameObject lampHead = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        lampHead.transform.SetParent(lanternRoot.transform, false);
+        lampHead.transform.localPosition = new Vector3(0.26f, 1.16f, 0f);
+        lampHead.transform.localScale = new Vector3(0.16f, 0.22f, 0.16f);
+        ApplyColor(lampHead, new Color(0.3f, 0.28f, 0.2f));
+        ConfigureShadowVisual(lampHead);
+
+        GameObject lampGlow = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        lampGlow.transform.SetParent(lanternRoot.transform, false);
+        lampGlow.transform.localPosition = new Vector3(0.26f, 1.05f, 0f);
+        lampGlow.transform.localScale = new Vector3(0.12f, 0.12f, 0.12f);
+        ApplyColor(lampGlow, new Color(0.26f, 0.22f, 0.18f));
+        ConfigureStaticVisual(lampGlow);
+        Renderer lampGlowRenderer = lampGlow.GetComponent<Renderer>();
+
+        GameObject lightObject = new("LanternLight");
+        lightObject.transform.SetParent(lanternRoot.transform, false);
+        lightObject.transform.localPosition = new Vector3(0.26f, 1.02f, 0f);
+
+        Light lanternLight = lightObject.AddComponent<Light>();
+        lanternLight.type = LightType.Point;
+        lanternLight.color = new Color(1f, 0.9f, 0.72f);
+        lanternLight.range = 4.4f;
+        lanternLight.intensity = 0f;
+        lanternLight.shadows = LightShadows.None;
+        lanternLight.enabled = false;
+
+        roadLanterns.Add(new RoadLanternData
+        {
+            Light = lanternLight,
+            GlowRenderer = lampGlowRenderer,
+            ActivationOffset = Random.Range(-0.14f, 0.2f),
+            FlickerSeed = Random.Range(0.1f, 100f),
+            FlickerSpeed = Random.Range(0.7f, 1.35f),
+            FlickerStrength = Random.Range(0.18f, 0.42f),
+            FlickerThreshold = Random.Range(0.72f, 0.9f)
+        });
     }
 
     private bool ConnectsToRoadOrAnchor(Vector2Int cell, Vector2Int offset)
@@ -2858,6 +3153,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
             selectedLocation = pair.Key;
             isTruckDetailsOpen = false;
+            isTruckCameraFocused = false;
             RefreshSelectionVisuals();
             PlayUiSound(uiSelectClip, 0.9f);
             return true;
@@ -3086,6 +3382,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         if (selectedTruck == null)
         {
             isTruckDetailsOpen = false;
+            isTruckCameraFocused = false;
             return;
         }
 
@@ -3147,8 +3444,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
         if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + panelRect.height - 32, 120, 24), "Close"))
         {
-            isTruckDetailsOpen = false;
-            PlayUiSound(uiPanelCloseClip, 0.8f);
+            ClearTruckFocus();
         }
 
         SaveTruckState(selectedTruck);
