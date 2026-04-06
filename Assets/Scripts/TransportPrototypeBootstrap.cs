@@ -53,7 +53,18 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private Renderer truckHeadlightLeftRenderer;
     private Renderer truckHeadlightRightRenderer;
     private GameObject driverObject;
+    private Transform driverVisualRoot;
+    private Transform driverBodyTransform;
+    private Transform driverHeadTransform;
+    private Transform driverCapTransform;
+    private Transform driverLeftArmTransform;
+    private Transform driverRightArmTransform;
+    private Transform driverLeftLegTransform;
+    private Transform driverRightLegTransform;
     private Transform driverFuelCanTransform;
+    private Transform driverFlashlightTransform;
+    private Light driverFlashlightLight;
+    private Renderer driverFlashlightRenderer;
     private Transform worldRoot;
     private Transform roadsRoot;
     private AudioSource uiAudioSource;
@@ -88,9 +99,11 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private float moneyPopupTimer;
     private float truckFuel = TruckFuelCapacity;
     private float dayNightCycleTimer = DayNightCycleDuration * 0.3f;
+    private float driverWalkAnimationTime;
     private LocationType? selectedLocation;
     private bool isTruckDetailsOpen;
     private bool isRightMouseDragging;
+    private bool isTruckAutoModeEnabled;
     private int money;
     private int currentAssignedTripReward;
     private int moneyPopupAmount;
@@ -228,6 +241,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         UpdateAssignedTrip();
         UpdateRefuelOrder();
         UpdateDriverRescue();
+        UpdateDriverVisualAnimation();
+        UpdateTruckAutoMode();
         UpdateMoneyPopup();
         UpdateAudio();
     }
@@ -608,6 +623,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         }
 
         UpdateLocationNightLights(stylizedDaylight);
+        UpdateDriverFlashlight(stylizedDaylight);
     }
 
     private void UpdateLocationNightLights(float stylizedDaylight)
@@ -642,38 +658,107 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         }
     }
 
+    private void UpdateDriverFlashlight(float stylizedDaylight)
+    {
+        if (driverFlashlightLight == null)
+        {
+            return;
+        }
+
+        float darkness = 1f - stylizedDaylight;
+        bool flashlightOn = isDriverRescueActive && driverObject != null && driverObject.activeSelf && darkness > 0.55f;
+        float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.65f, 2.2f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+        Color flashlightColor = Color.Lerp(
+            new Color(0.24f, 0.22f, 0.18f),
+            new Color(1f, 0.92f, 0.74f),
+            Mathf.Clamp01(flashlightIntensity / 2.2f));
+
+        driverFlashlightLight.enabled = flashlightOn;
+        driverFlashlightLight.intensity = flashlightIntensity;
+        driverFlashlightLight.color = flashlightColor;
+
+        if (driverFlashlightRenderer != null)
+        {
+            driverFlashlightRenderer.material.color = flashlightColor;
+        }
+    }
+
     private void SetupDriver()
     {
         driverObject = new GameObject("Driver");
         driverObject.transform.SetParent(worldRoot, false);
+        driverVisualRoot = new GameObject("DriverVisualRoot").transform;
+        driverVisualRoot.SetParent(driverObject.transform, false);
 
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        body.transform.SetParent(driverObject.transform, false);
+        body.transform.SetParent(driverVisualRoot, false);
         body.transform.localPosition = new Vector3(0f, 0.38f, 0f);
         body.transform.localScale = new Vector3(0.22f, 0.34f, 0.22f);
         ApplyColor(body, new Color(0.22f, 0.44f, 0.88f));
+        driverBodyTransform = body.transform;
 
         GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        head.transform.SetParent(driverObject.transform, false);
+        head.transform.SetParent(driverVisualRoot, false);
         head.transform.localPosition = new Vector3(0f, 0.88f, 0f);
         head.transform.localScale = new Vector3(0.24f, 0.24f, 0.24f);
         ApplyColor(head, new Color(0.96f, 0.82f, 0.68f));
+        driverHeadTransform = head.transform;
 
         GameObject cap = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        cap.transform.SetParent(driverObject.transform, false);
+        cap.transform.SetParent(driverVisualRoot, false);
         cap.transform.localPosition = new Vector3(0f, 1.02f, 0f);
         cap.transform.localScale = new Vector3(0.26f, 0.08f, 0.26f);
         ApplyColor(cap, new Color(0.84f, 0.22f, 0.18f));
+        driverCapTransform = cap.transform;
+
+        driverLeftArmTransform = CreateDriverLimb("DriverLeftArm", new Vector3(-0.2f, 0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), new Color(0.22f, 0.44f, 0.88f));
+        driverRightArmTransform = CreateDriverLimb("DriverRightArm", new Vector3(0.2f, 0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), new Color(0.22f, 0.44f, 0.88f));
+        driverLeftLegTransform = CreateDriverLimb("DriverLeftLeg", new Vector3(-0.09f, 0.15f, 0f), new Vector3(0.1f, 0.42f, 0.1f), new Color(0.18f, 0.22f, 0.36f));
+        driverRightLegTransform = CreateDriverLimb("DriverRightLeg", new Vector3(0.09f, 0.15f, 0f), new Vector3(0.1f, 0.42f, 0.1f), new Color(0.18f, 0.22f, 0.36f));
 
         GameObject fuelCan = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        fuelCan.transform.SetParent(driverObject.transform, false);
+        fuelCan.transform.SetParent(driverVisualRoot, false);
         fuelCan.transform.localPosition = new Vector3(0.18f, 0.42f, 0f);
         fuelCan.transform.localScale = new Vector3(0.14f, 0.2f, 0.1f);
         ApplyColor(fuelCan, new Color(0.9f, 0.76f, 0.18f));
         driverFuelCanTransform = fuelCan.transform;
         driverFuelCanTransform.gameObject.SetActive(false);
 
+        GameObject flashlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        flashlight.transform.SetParent(driverVisualRoot, false);
+        flashlight.transform.localPosition = new Vector3(0.24f, 0.57f, 0.1f);
+        flashlight.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
+        flashlight.transform.localScale = new Vector3(0.06f, 0.06f, 0.18f);
+        ApplyColor(flashlight, new Color(0.24f, 0.24f, 0.26f));
+        driverFlashlightTransform = flashlight.transform;
+        driverFlashlightRenderer = flashlight.GetComponent<Renderer>();
+
+        GameObject flashlightBeamObject = new("DriverFlashlight");
+        flashlightBeamObject.transform.SetParent(driverFlashlightTransform, false);
+        flashlightBeamObject.transform.localPosition = new Vector3(0f, 0f, 0.14f);
+        flashlightBeamObject.transform.localRotation = Quaternion.Euler(10f, 0f, 0f);
+        driverFlashlightLight = flashlightBeamObject.AddComponent<Light>();
+        driverFlashlightLight.type = LightType.Spot;
+        driverFlashlightLight.color = new Color(1f, 0.88f, 0.66f);
+        driverFlashlightLight.range = 4.2f;
+        driverFlashlightLight.spotAngle = 40f;
+        driverFlashlightLight.innerSpotAngle = 18f;
+        driverFlashlightLight.shadows = LightShadows.None;
+        driverFlashlightLight.intensity = 0f;
+        driverFlashlightLight.enabled = false;
+
         driverObject.SetActive(false);
+    }
+
+    private Transform CreateDriverLimb(string name, Vector3 localPosition, Vector3 localScale, Color color)
+    {
+        GameObject limb = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        limb.name = name;
+        limb.transform.SetParent(driverVisualRoot, false);
+        limb.transform.localPosition = localPosition;
+        limb.transform.localScale = localScale;
+        ApplyColor(limb, color);
+        return limb.transform;
     }
 
     private void SetupCargoTransferVisual()
@@ -1175,6 +1260,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 }
 
                 driverObject.SetActive(false);
+                driverWalkAnimationTime = 0f;
                 if (activePath.Count > 0)
                 {
                     isTruckMoving = true;
@@ -1182,6 +1268,96 @@ public class TransportPrototypeBootstrap : MonoBehaviour
                 }
 
                 return;
+        }
+    }
+
+    private void UpdateDriverVisualAnimation()
+    {
+        if (driverObject == null || driverVisualRoot == null)
+        {
+            return;
+        }
+
+        if (!driverObject.activeSelf)
+        {
+            driverWalkAnimationTime = 0f;
+            ApplyDriverPose(0f, 0f);
+            return;
+        }
+
+        Vector3 toTarget = driverRescueTargetWorld - driverObject.transform.position;
+        toTarget.y = 0f;
+        bool isWalking = isDriverRescueActive && toTarget.sqrMagnitude > 0.012f;
+        if (isWalking)
+        {
+            driverWalkAnimationTime += Time.deltaTime * 8.2f;
+        }
+        else
+        {
+            driverWalkAnimationTime = Mathf.MoveTowards(driverWalkAnimationTime, 0f, Time.deltaTime * 6f);
+        }
+
+        float swing = isWalking ? Mathf.Sin(driverWalkAnimationTime) : 0f;
+        float bob = isWalking ? Mathf.Abs(Mathf.Sin(driverWalkAnimationTime * 2f)) * 0.06f : 0f;
+        ApplyDriverPose(swing, bob);
+    }
+
+    private void ApplyDriverPose(float swing, float bob)
+    {
+        driverVisualRoot.localPosition = new Vector3(0f, bob, 0f);
+        driverVisualRoot.localRotation = Quaternion.Euler(0f, 0f, swing * 2.5f);
+
+        if (driverBodyTransform != null)
+        {
+            driverBodyTransform.localRotation = Quaternion.Euler(swing * 4f, 0f, 0f);
+        }
+
+        if (driverHeadTransform != null)
+        {
+            driverHeadTransform.localRotation = Quaternion.Euler(-swing * 2f, 0f, 0f);
+        }
+
+        if (driverCapTransform != null)
+        {
+            driverCapTransform.localRotation = Quaternion.Euler(-swing * 1.5f, 0f, 0f);
+        }
+
+        if (driverLeftArmTransform != null)
+        {
+            driverLeftArmTransform.localRotation = Quaternion.Euler(swing * 28f, 0f, 0f);
+        }
+
+        if (driverRightArmTransform != null)
+        {
+            float carryOffset = driverFuelCanTransform != null && driverFuelCanTransform.gameObject.activeSelf ? 18f : 0f;
+            driverRightArmTransform.localRotation = Quaternion.Euler(-swing * 28f - carryOffset, 0f, 0f);
+        }
+
+        if (driverLeftLegTransform != null)
+        {
+            driverLeftLegTransform.localRotation = Quaternion.Euler(-swing * 24f, 0f, 0f);
+        }
+
+        if (driverRightLegTransform != null)
+        {
+            driverRightLegTransform.localRotation = Quaternion.Euler(swing * 24f, 0f, 0f);
+        }
+
+        if (driverFuelCanTransform != null && driverFuelCanTransform.gameObject.activeSelf)
+        {
+            driverFuelCanTransform.localPosition = new Vector3(0.2f, 0.4f - bob * 0.2f, 0.04f);
+            driverFuelCanTransform.localRotation = Quaternion.Euler(0f, 0f, -10f + swing * 6f);
+        }
+        else if (driverFuelCanTransform != null)
+        {
+            driverFuelCanTransform.localPosition = new Vector3(0.18f, 0.42f, 0f);
+            driverFuelCanTransform.localRotation = Quaternion.identity;
+        }
+
+        if (driverFlashlightTransform != null)
+        {
+            driverFlashlightTransform.localPosition = new Vector3(0.24f, 0.57f - bob * 0.12f, 0.1f);
+            driverFlashlightTransform.localRotation = Quaternion.Euler(16f + swing * 10f, swing * 5f, 0f);
         }
     }
 
@@ -1342,7 +1518,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         road.transform.SetParent(roadsRoot, false);
         road.transform.position = GetCellCenter(cell) + new Vector3(0f, RoadHeight, 0f);
         road.transform.localScale = new Vector3(1.04f, 0.18f, 1.04f);
-        ApplyUnlitColor(road, new Color(0.18f, 0.19f, 0.21f));
+        ApplyColor(road, new Color(0.18f, 0.19f, 0.21f));
         ConfigureStaticVisual(road);
 
         GameObject roadTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1350,7 +1526,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         roadTop.transform.SetParent(road.transform, false);
         roadTop.transform.localPosition = new Vector3(0f, 0.28f, 0f);
         roadTop.transform.localScale = new Vector3(0.84f, 0.16f, 0.84f);
-        ApplyUnlitColor(roadTop, new Color(0.76f, 0.71f, 0.58f));
+        ApplyColor(roadTop, new Color(0.76f, 0.71f, 0.58f));
         ConfigureStaticVisual(roadTop);
         roadVisuals[cell] = road;
 
@@ -1632,7 +1808,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         driveway.transform.rotation = Quaternion.LookRotation(delta.normalized, Vector3.up);
         driveway.transform.localScale = new Vector3(width, 0.1f, length);
 
-        ApplyUnlitColor(driveway, new Color(0.2f, 0.21f, 0.23f));
+        ApplyColor(driveway, new Color(0.2f, 0.21f, 0.23f));
         ConfigureStaticVisual(driveway);
 
         GameObject drivewayTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1640,7 +1816,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         drivewayTop.transform.SetParent(driveway.transform, false);
         drivewayTop.transform.localPosition = new Vector3(0f, 0.58f, 0f);
         drivewayTop.transform.localScale = new Vector3(0.72f, 0.18f, 0.88f);
-        ApplyUnlitColor(drivewayTop, new Color(0.76f, 0.71f, 0.58f));
+        ApplyColor(drivewayTop, new Color(0.76f, 0.71f, 0.58f));
         ConfigureStaticVisual(drivewayTop);
     }
 
@@ -1891,6 +2067,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
         driverObject.transform.position = GetDriverStandPointNearTruck();
         driverObject.transform.rotation = truckObject.transform.rotation;
+        driverWalkAnimationTime = 0f;
+        ApplyDriverPose(0f, 0f);
         driverRescueTargetWorld = GetDriverStandPointNearLocation(LocationType.GasStation);
         PlayUiSound(uiSelectClip, 0.9f);
     }
@@ -2128,6 +2306,11 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             return "Refuel order in progress.";
         }
 
+        if (isTruckAutoModeEnabled)
+        {
+            return "Auto mode is waiting for the next task.";
+        }
+
         return "Truck is awaiting manual orders.";
     }
 
@@ -2247,10 +2430,15 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 160, 240, 22), $"Assigned route: {GetTripTitle(currentAssignedTrip)}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 182, 240, 22), $"Trip payout: ${currentAssignedTripReward}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 204, 240, 22), isDriverRescueActive ? "Driver: On foot fuel rescue" : "Driver: In truck");
+        if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + 230, panelRect.width - 24, 26), isTruckAutoModeEnabled ? "Auto Mode: ON" : "Auto Mode: OFF"))
+        {
+            isTruckAutoModeEnabled = !isTruckAutoModeEnabled;
+            PlayUiSound(uiSelectClip, 0.9f);
+        }
 
         List<TripOption> trips = GetAvailableTrips();
         bool truckAvailable = currentAssignedTrip == TripType.None && currentRefuelPhase == RefuelPhase.None && !isTruckMoving && !isTruckInteracting && IsTruckInsideParking();
-        float y = panelRect.y + 234f;
+        float y = panelRect.y + 266f;
 
         GUI.enabled = truckAvailable;
         if (GUI.Button(new Rect(panelRect.x + 12, y, panelRect.width - 24, 26), "Refuel At Gas Station"))
@@ -2430,6 +2618,35 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         PlayUiSound(uiSelectClip, 1f);
     }
 
+    private void UpdateTruckAutoMode()
+    {
+        if (!isTruckAutoModeEnabled ||
+            currentAssignedTrip != TripType.None ||
+            currentRefuelPhase != RefuelPhase.None ||
+            isTruckMoving ||
+            isTruckInteracting ||
+            isDriverRescueActive ||
+            !IsTruckInsideParking())
+        {
+            return;
+        }
+
+        if (truckFuel < 30f)
+        {
+            StartRefuelOrder();
+            return;
+        }
+
+        List<TripOption> trips = GetAvailableTrips();
+        if (trips.Count == 0)
+        {
+            return;
+        }
+
+        TripOption selectedTrip = trips[Random.Range(0, trips.Count)];
+        AssignTrip(selectedTrip);
+    }
+
     private int GetTripReward(TripType tripType)
     {
         if (tripType == TripType.None)
@@ -2551,7 +2768,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
     private Rect GetTruckDetailsHudRect()
     {
-        return new Rect(Screen.width - 290, 392, 278, 356);
+        return new Rect(Screen.width - 290, 392, 278, 388);
     }
 
     private Rect GetAvailableTripsHudRect()
