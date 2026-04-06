@@ -29,8 +29,9 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private const float DriverWalkSpeed = 2.2f;
     private const float MoneyPopupDuration = 1.4f;
     private const int AudioSampleRate = 22050;
-    private static readonly Rect MainHudRect = new Rect(12f, 12f, 280f, 188f);
-    private static readonly Rect HelpHudRect = new Rect(12f, 208f, 380f, 152f);
+    private const float DayNightCycleDuration = 180f;
+    private static readonly Rect MainHudRect = new Rect(12f, 12f, 280f, 212f);
+    private static readonly Rect HelpHudRect = new Rect(12f, 232f, 380f, 152f);
     private static readonly Vector3 DioramaCameraRotation = new(42f, 45f, 0f);
     private static readonly Vector3 DioramaCameraOffset = new(-11.5f, 15f, -11.5f);
 
@@ -40,12 +41,17 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private readonly List<Vector2Int> activePath = new();
     private readonly List<Transform> truckWheels = new();
     private readonly List<Transform> truckFrontWheels = new();
+    private readonly List<Light> truckHeadlights = new();
+    private readonly List<Light> locationNightLights = new();
+    private readonly List<Renderer> locationNightLightRenderers = new();
 
     private Camera mainCamera;
     private GameObject truckObject;
     private Transform truckVisualRoot;
     private Transform truckBodyTransform;
     private Transform truckCabinTransform;
+    private Renderer truckHeadlightLeftRenderer;
+    private Renderer truckHeadlightRightRenderer;
     private GameObject driverObject;
     private Transform driverFuelCanTransform;
     private Transform worldRoot;
@@ -56,6 +62,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private AudioSource townAudioSource;
     private AudioSource truckLoopAudioSource;
     private AudioSource truckFxAudioSource;
+    private Light mainDirectionalLight;
     private GameObject parkingSelectionHighlight;
     private GameObject cargoTransferCrate;
     private Vector2Int truckCell;
@@ -80,6 +87,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
     private float truckInteractionTimer;
     private float moneyPopupTimer;
     private float truckFuel = TruckFuelCapacity;
+    private float dayNightCycleTimer = DayNightCycleDuration * 0.3f;
     private LocationType? selectedLocation;
     private bool isTruckDetailsOpen;
     private bool isRightMouseDragging;
@@ -214,6 +222,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         HandleRoadRemovalInput();
         HandleRoadPlacementInput();
         ProduceForestWood();
+        UpdateDayNightCycle();
         UpdateTruckMovement();
         UpdateTruckInteraction();
         UpdateAssignedTrip();
@@ -233,6 +242,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         GUI.Label(new Rect(24, 114, 240, 24), $"Warehouse logs: {locations[LocationType.Warehouse].WoodStored}");
         GUI.Label(new Rect(24, 138, 240, 24), $"Town logs received: {locations[LocationType.Town].WoodStored}");
         GUI.Label(new Rect(24, 162, 240, 24), $"Speed: {gameSpeedMultiplier}x");
+        GUI.Label(new Rect(24, 186, 240, 24), $"Time: {GetDayNightClockLabel()} ({GetTimeOfDayLabel()})");
 
         GUI.Box(HelpHudRect, "How To Play");
         GUI.Label(new Rect(24, 214, 340, 24), "Left click empty cells to place roads.");
@@ -304,6 +314,7 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             keyLight = new GameObject("Directional Light").AddComponent<Light>();
         }
 
+        mainDirectionalLight = keyLight;
         keyLight.type = LightType.Directional;
         keyLight.transform.rotation = Quaternion.Euler(48f, -34f, 0f);
         keyLight.color = new Color(1f, 0.95f, 0.86f);
@@ -319,6 +330,40 @@ public class TransportPrototypeBootstrap : MonoBehaviour
 
         RenderSettings.ambientMode = AmbientMode.Flat;
         RenderSettings.ambientLight = new Color(0.78f, 0.82f, 0.88f);
+    }
+
+    private void UpdateDayNightCycle()
+    {
+        if (mainDirectionalLight == null || mainCamera == null)
+        {
+            return;
+        }
+
+        dayNightCycleTimer = Mathf.Repeat(dayNightCycleTimer + Time.deltaTime, DayNightCycleDuration);
+        float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
+        float sunArc = Mathf.Sin(normalizedTime * Mathf.PI * 2f - Mathf.PI * 0.5f);
+        float daylight = Mathf.Clamp01((sunArc + 1f) * 0.5f);
+        float stylizedDaylight = Mathf.SmoothStep(0.08f, 1f, daylight);
+
+        float sunPitch = Mathf.Lerp(205f, 335f, normalizedTime);
+        mainDirectionalLight.transform.rotation = Quaternion.Euler(sunPitch, -34f, 0f);
+        mainDirectionalLight.intensity = Mathf.Lerp(0.2f, 1.18f, stylizedDaylight);
+        mainDirectionalLight.color = Color.Lerp(
+            new Color(0.34f, 0.41f, 0.68f),
+            new Color(1f, 0.95f, 0.86f),
+            stylizedDaylight);
+
+        RenderSettings.ambientLight = Color.Lerp(
+            new Color(0.12f, 0.15f, 0.22f),
+            new Color(0.78f, 0.82f, 0.88f),
+            stylizedDaylight);
+
+        mainCamera.backgroundColor = Color.Lerp(
+            new Color(0.03f, 0.05f, 0.11f),
+            new Color(0.82f, 0.9f, 0.97f),
+            stylizedDaylight);
+
+        UpdateTruckHeadlights(stylizedDaylight);
     }
 
     private void SetupGround()
@@ -460,6 +505,11 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         ApplyColor(cabin, new Color(0.95f, 0.82f, 0.28f));
         truckCabinTransform = cabin.transform;
 
+        CreateTruckHeadlightVisual(new Vector3(-0.18f, 0.39f, 0.46f), true);
+        CreateTruckHeadlightVisual(new Vector3(0.18f, 0.39f, 0.46f), false);
+        CreateTruckHeadlightBeam(new Vector3(-0.18f, 0.39f, 0.5f));
+        CreateTruckHeadlightBeam(new Vector3(0.18f, 0.39f, 0.5f));
+
         Vector3[] wheelOffsets =
         {
             new(-0.28f, 0.08f, 0.32f),
@@ -486,6 +536,110 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         truckObject.transform.position = truckTargetWorld;
         truckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         truckInteractionTargetRotation = truckObject.transform.rotation;
+    }
+
+    private void CreateTruckHeadlightVisual(Vector3 localPosition, bool isLeft)
+    {
+        GameObject headlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        headlight.transform.SetParent(truckVisualRoot, false);
+        headlight.transform.localPosition = localPosition;
+        headlight.transform.localScale = new Vector3(0.12f, 0.08f, 0.04f);
+        ApplyColor(headlight, new Color(1f, 0.93f, 0.75f));
+
+        Renderer rendererComponent = headlight.GetComponent<Renderer>();
+        if (isLeft)
+        {
+            truckHeadlightLeftRenderer = rendererComponent;
+        }
+        else
+        {
+            truckHeadlightRightRenderer = rendererComponent;
+        }
+    }
+
+    private void CreateTruckHeadlightBeam(Vector3 localPosition)
+    {
+        GameObject lightObject = new("Headlight");
+        lightObject.transform.SetParent(truckVisualRoot, false);
+        lightObject.transform.localPosition = localPosition;
+        lightObject.transform.localRotation = Quaternion.Euler(14f, 0f, 0f);
+
+        Light headlight = lightObject.AddComponent<Light>();
+        headlight.type = LightType.Spot;
+        headlight.color = new Color(1f, 0.86f, 0.62f);
+        headlight.intensity = 0f;
+        headlight.range = 5.4f;
+        headlight.spotAngle = 44f;
+        headlight.innerSpotAngle = 22f;
+        headlight.shadows = LightShadows.None;
+        headlight.enabled = false;
+        truckHeadlights.Add(headlight);
+    }
+
+    private void UpdateTruckHeadlights(float stylizedDaylight)
+    {
+        float darkness = 1f - stylizedDaylight;
+        bool headlightsOn = darkness > 0.55f;
+        float headlightIntensity = headlightsOn ? Mathf.Lerp(0.7f, 3.1f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+        Color lampColor = Color.Lerp(
+            new Color(0.3f, 0.26f, 0.2f),
+            new Color(1f, 0.94f, 0.78f),
+            Mathf.Clamp01(headlightIntensity / 3.1f));
+
+        foreach (Light headlight in truckHeadlights)
+        {
+            if (headlight == null)
+            {
+                continue;
+            }
+
+            headlight.enabled = headlightsOn;
+            headlight.intensity = headlightIntensity;
+        }
+
+        if (truckHeadlightLeftRenderer != null)
+        {
+            truckHeadlightLeftRenderer.material.color = lampColor;
+        }
+
+        if (truckHeadlightRightRenderer != null)
+        {
+            truckHeadlightRightRenderer.material.color = lampColor;
+        }
+
+        UpdateLocationNightLights(stylizedDaylight);
+    }
+
+    private void UpdateLocationNightLights(float stylizedDaylight)
+    {
+        float darkness = 1f - stylizedDaylight;
+        bool lightsOn = darkness > 0.5f;
+        float lightIntensity = lightsOn ? Mathf.Lerp(0.18f, 1.15f, Mathf.InverseLerp(0.5f, 1f, darkness)) : 0f;
+        Color lampColor = Color.Lerp(
+            new Color(0.28f, 0.24f, 0.18f),
+            new Color(1f, 0.9f, 0.72f),
+            Mathf.Clamp01(lightIntensity / 1.15f));
+
+        foreach (Light lightComponent in locationNightLights)
+        {
+            if (lightComponent == null)
+            {
+                continue;
+            }
+
+            lightComponent.enabled = lightsOn;
+            lightComponent.intensity = lightIntensity;
+        }
+
+        foreach (Renderer rendererComponent in locationNightLightRenderers)
+        {
+            if (rendererComponent == null)
+            {
+                continue;
+            }
+
+            rendererComponent.material.color = lampColor;
+        }
     }
 
     private void SetupDriver()
@@ -1349,6 +1503,8 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             CreateTownDecoration(root.transform, center);
         }
 
+        CreateLocationNightLights(type, root.transform, center, size);
+
         GameObject anchorMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         anchorMarker.transform.SetParent(root.transform, false);
         anchorMarker.transform.position = GetCellCenter(anchor) + new Vector3(0f, 0.05f, 0f);
@@ -1507,6 +1663,49 @@ public class TransportPrototypeBootstrap : MonoBehaviour
             house.transform.localScale = new Vector3(0.45f, 0.5f, 0.45f);
             ApplyColor(house, new Color(0.92f, 0.84f, 0.66f));
         }
+    }
+
+    private void CreateLocationNightLights(LocationType type, Transform parent, Vector3 center, Vector2Int size)
+    {
+        if (type == LocationType.Forest)
+        {
+            CreateLocationNightLight(parent, center + new Vector3(0f, 1.15f, -0.95f));
+            return;
+        }
+
+        float xOffset = Mathf.Max(0.45f, size.x * 0.28f);
+        float zOffset = Mathf.Max(0.38f, size.y * 0.28f);
+        CreateLocationNightLight(parent, center + new Vector3(-xOffset, 0.92f, -zOffset));
+        CreateLocationNightLight(parent, center + new Vector3(xOffset, 0.92f, -zOffset));
+
+        if (type == LocationType.Town)
+        {
+            CreateLocationNightLight(parent, center + new Vector3(0f, 0.86f, zOffset));
+        }
+    }
+
+    private void CreateLocationNightLight(Transform parent, Vector3 localPosition)
+    {
+        GameObject lampVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        lampVisual.transform.SetParent(parent, false);
+        lampVisual.transform.localPosition = localPosition;
+        lampVisual.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
+        ApplyColor(lampVisual, new Color(0.28f, 0.24f, 0.18f));
+        ConfigureStaticVisual(lampVisual);
+        locationNightLightRenderers.Add(lampVisual.GetComponent<Renderer>());
+
+        GameObject lightObject = new("NightLamp");
+        lightObject.transform.SetParent(parent, false);
+        lightObject.transform.localPosition = localPosition + new Vector3(0f, 0.06f, 0f);
+
+        Light lamp = lightObject.AddComponent<Light>();
+        lamp.type = LightType.Point;
+        lamp.color = new Color(1f, 0.9f, 0.72f);
+        lamp.range = 3.2f;
+        lamp.intensity = 0f;
+        lamp.shadows = LightShadows.None;
+        lamp.enabled = false;
+        locationNightLights.Add(lamp);
     }
 
     private void CreateGridLine(Transform parent, Material lineMaterial, Vector3 start, Vector3 end)
@@ -2120,6 +2319,36 @@ public class TransportPrototypeBootstrap : MonoBehaviour
         }
 
         return IsTruckInsideParking() ? "Parked in parking" : "Idle in world";
+    }
+
+    private string GetTimeOfDayLabel()
+    {
+        float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
+        if (normalizedTime < 0.25f)
+        {
+            return "Night";
+        }
+
+        if (normalizedTime < 0.5f)
+        {
+            return "Morning";
+        }
+
+        if (normalizedTime < 0.75f)
+        {
+            return "Day";
+        }
+
+        return "Evening";
+    }
+
+    private string GetDayNightClockLabel()
+    {
+        float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
+        int totalMinutes = Mathf.FloorToInt(normalizedTime * 24f * 60f);
+        int hours = (totalMinutes / 60) % 24;
+        int minutes = totalMinutes % 60;
+        return $"{hours:00}:{minutes:00}";
     }
 
     private void DrawMoneyHud()
