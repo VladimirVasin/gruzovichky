@@ -66,6 +66,7 @@ public partial class GameBootstrap
             bool canTakeOrdersNow =
                 truckAgent.CurrentAssignedTrip == TripType.None &&
                 truckAgent.CurrentRefuelPhase == RefuelPhase.None &&
+                truckAgent.CurrentDriverRestPhase == DriverRestPhase.None &&
                 !truckAgent.IsTruckMoving &&
                 !truckAgent.IsTruckInteracting &&
                 !truckAgent.IsDriverRescueActive &&
@@ -101,7 +102,8 @@ public partial class GameBootstrap
     {
         if (truckAgent == null ||
             truckAgent.CurrentAssignedTrip != TripType.None ||
-            truckAgent.CurrentRefuelPhase != RefuelPhase.None)
+            truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
+            truckAgent.CurrentDriverRestPhase != DriverRestPhase.None)
         {
             return;
         }
@@ -118,7 +120,8 @@ public partial class GameBootstrap
             trip == null ||
             trip.Type == TripType.None ||
             truckAgent.CurrentAssignedTrip != TripType.None ||
-            truckAgent.CurrentRefuelPhase != RefuelPhase.None)
+            truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
+            truckAgent.CurrentDriverRestPhase != DriverRestPhase.None)
         {
             return;
         }

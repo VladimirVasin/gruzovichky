@@ -48,6 +48,12 @@ public partial class GameBootstrap
         truckSteerAngle = truckAgent.TruckSteerAngle;
         truckInteractionTimer = truckAgent.TruckInteractionTimer;
         truckFuel = truckAgent.TruckFuel;
+        driverEnergy = truckAgent.DriverEnergy;
+        needsRestAfterTrip = truckAgent.NeedsRestAfterTrip;
+        currentDriverRestPhase = truckAgent.CurrentDriverRestPhase;
+        driverSleepTimer = truckAgent.DriverSleepTimer;
+        motelParkingSlotIndex = truckAgent.MotelParkingSlotIndex;
+        motelParkedPosition = truckAgent.MotelParkedPosition;
         driverWalkAnimationTime = truckAgent.DriverWalkAnimationTime;
         currentAssignedTripReward = truckAgent.CurrentAssignedTripReward;
         currentAssignedTrip = truckAgent.CurrentAssignedTrip;
@@ -120,6 +126,12 @@ public partial class GameBootstrap
         truckAgent.TruckSteerAngle = truckSteerAngle;
         truckAgent.TruckInteractionTimer = truckInteractionTimer;
         truckAgent.TruckFuel = truckFuel;
+        truckAgent.DriverEnergy = driverEnergy;
+        truckAgent.NeedsRestAfterTrip = needsRestAfterTrip;
+        truckAgent.CurrentDriverRestPhase = currentDriverRestPhase;
+        truckAgent.DriverSleepTimer = driverSleepTimer;
+        truckAgent.MotelParkingSlotIndex = motelParkingSlotIndex;
+        truckAgent.MotelParkedPosition = motelParkedPosition;
         truckAgent.DriverWalkAnimationTime = driverWalkAnimationTime;
         truckAgent.CurrentAssignedTripReward = currentAssignedTripReward;
         truckAgent.CurrentAssignedTrip = currentAssignedTrip;
@@ -206,6 +218,19 @@ public partial class GameBootstrap
         float sideOffset = 0.27f;
         float xSign = slotIndex == 0 ? -1f : 1f;
         return center + toAnchor * forwardOffset + right * (xSign * sideOffset);
+    }
+
+    private int PickFreeMotelSlot()
+    {
+        HashSet<int> occupied = new();
+        foreach (TruckAgent agent in truckAgents)
+        {
+            if (agent.TruckObject != truckObject && agent.CurrentDriverRestPhase != DriverRestPhase.None)
+            {
+                occupied.Add(agent.MotelParkingSlotIndex);
+            }
+        }
+        return occupied.Contains(0) ? 1 : 0;
     }
 
     private string GetTruckDisplayName(int truckNumber)

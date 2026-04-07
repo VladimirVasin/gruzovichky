@@ -417,10 +417,12 @@ public partial class GameBootstrap
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 30, 220, 22), $"Truck: {GetTruckDisplayName(selectedTruck.TruckNumber)}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 56, 220, 22), $"State: {GetTruckDetailStatus()}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 82, 220, 22), $"Fuel: {Mathf.CeilToInt(truckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 108, 220, 22), $"Cargo: {truckCargoWood}/1 ({truckCargoSource})");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 134, 220, 22), $"Grid cell: {truckCell.x}, {truckCell.y}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 160, 240, 22), $"Assigned route: {GetTripTitle(currentAssignedTrip)}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 182, 240, 22), $"Trip payout: ${currentAssignedTripReward}");
+        string energyLabel = needsRestAfterTrip ? " [rest queued]" : currentDriverRestPhase == DriverRestPhase.Sleeping ? $" [sleeping {Mathf.CeilToInt(driverSleepTimer)}s]" : "";
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 108, 260, 22), $"Energy: {Mathf.CeilToInt(driverEnergy)}/{Mathf.CeilToInt(DriverEnergyMax)}{energyLabel}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 134, 220, 22), $"Cargo: {truckCargoWood}/1 ({truckCargoSource})");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 160, 220, 22), $"Grid cell: {truckCell.x}, {truckCell.y}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 186, 240, 22), $"Assigned route: {GetTripTitle(currentAssignedTrip)}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 208, 240, 22), $"Trip payout: ${currentAssignedTripReward}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 204, 240, 22), isDriverRescueActive ? "Driver: On foot fuel rescue" : "Driver: In truck");
         if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + 230, panelRect.width - 24, 26), selectedTruck.IsTruckAutoModeEnabled ? "Auto Mode: ON" : "Auto Mode: OFF"))
         {
@@ -484,6 +486,7 @@ public partial class GameBootstrap
 
         return truckAgent.CurrentAssignedTrip == TripType.None &&
                truckAgent.CurrentRefuelPhase == RefuelPhase.None &&
+               truckAgent.CurrentDriverRestPhase == DriverRestPhase.None &&
                !truckAgent.IsTruckMoving &&
                !truckAgent.IsTruckInteracting &&
                !truckAgent.IsDriverRescueActive &&
@@ -495,6 +498,11 @@ public partial class GameBootstrap
         if (truckAgent == null)
         {
             return "No truck selected.";
+        }
+
+        if (truckAgent.CurrentDriverRestPhase != DriverRestPhase.None)
+        {
+            return "Commands blocked: driver is resting at motel.";
         }
 
         if (truckAgent.IsDriverRescueActive)
@@ -545,6 +553,20 @@ public partial class GameBootstrap
         if (isTruckMoving)
         {
             return "Moving";
+        }
+
+        if (currentDriverRestPhase != DriverRestPhase.None)
+        {
+            return currentDriverRestPhase switch
+            {
+                DriverRestPhase.ToMotel => "Driving to Motel",
+                DriverRestPhase.ParkAtMotel => "Parking at Motel",
+                DriverRestPhase.DriverWalkToMotel => "Driver walking to Motel",
+                DriverRestPhase.Sleeping => $"Driver sleeping ({Mathf.CeilToInt(driverSleepTimer)}s)",
+                DriverRestPhase.DriverWalkToTruck => "Driver returning to truck",
+                DriverRestPhase.ReturnToParking => "Returning from Motel",
+                _ => "Resting"
+            };
         }
 
         if (isDriverRescueActive)
@@ -648,10 +670,13 @@ public partial class GameBootstrap
                 FocusTruck(truckAgent.TruckNumber);
             }
 
-            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 8f, 120f, 20f), truckAgent.DisplayName);
-            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 28f, 120f, 18f), GetTruckFleetStatusLabel());
+            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 6f, 120f, 18f), truckAgent.DisplayName);
+            string fleetStatus = currentDriverRestPhase != DriverRestPhase.None ? "Resting" : GetTruckFleetStatusLabel();
+            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 24f, 120f, 16f), fleetStatus);
+            string energyMark = truckAgent.DriverEnergy <= DriverEnergyCriticalThreshold ? "!" : "";
+            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 40f, 120f, 14f), $"E: {Mathf.CeilToInt(truckAgent.DriverEnergy)}{energyMark}  F: {Mathf.CeilToInt(truckAgent.TruckFuel)}");
             SaveTruckState(truckAgent);
-            y += 60f;
+            y += 66f;
         }
     }
 

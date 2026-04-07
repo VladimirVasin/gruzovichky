@@ -29,6 +29,10 @@ public partial class GameBootstrap : MonoBehaviour
     private const float TruckCargoInteractionDuration = 3f;
     private const float TruckFuelCapacity = 100f;
     private const float TruckFuelPerCell = 1f;
+    private const float DriverEnergyMax = 100f;
+    private const float DriverEnergyCriticalThreshold = 30f;
+    private const float DriverEnergyDrainPerSecond = DriverEnergyMax / (DayNightCycleDuration / 24f * 8f);
+    private const float DriverSleepDuration = DayNightCycleDuration / 24f * 6f;
     private const float DriverWalkSpeed = 2.2f;
     private const float MoneyPopupDuration = 1.4f;
     private const int AudioSampleRate = 22050;
@@ -126,6 +130,12 @@ public partial class GameBootstrap : MonoBehaviour
     private float truckInteractionTimer;
     private float moneyPopupTimer;
     private float truckFuel = TruckFuelCapacity;
+    private float driverEnergy = DriverEnergyMax;
+    private bool needsRestAfterTrip;
+    private DriverRestPhase currentDriverRestPhase = DriverRestPhase.None;
+    private float driverSleepTimer;
+    private int motelParkingSlotIndex;
+    private Vector3 motelParkedPosition;
     private float dayNightCycleTimer = DayNightCycleDuration * 0.3f;
     private float currentStylizedDaylight = 1f;
     private float driverWalkAnimationTime;
@@ -265,7 +275,20 @@ public partial class GameBootstrap : MonoBehaviour
     {
         None,
         ToGasStation,
-        ToTruck
+        ToTruck,
+        ToMotelEntrance,
+        ToTruckAtMotel
+    }
+
+    private enum DriverRestPhase
+    {
+        None,
+        ToMotel,
+        ParkAtMotel,
+        DriverWalkToMotel,
+        Sleeping,
+        DriverWalkToTruck,
+        ReturnToParking
     }
 
     private sealed class LocationData
@@ -386,12 +409,18 @@ public partial class GameBootstrap : MonoBehaviour
         public float TruckSteerAngle;
         public float TruckInteractionTimer;
         public float TruckFuel = TruckFuelCapacity;
+        public float DriverEnergy = DriverEnergyMax;
+        public bool NeedsRestAfterTrip;
         public float DriverWalkAnimationTime;
         public int CurrentAssignedTripReward;
         public TripType CurrentAssignedTrip = TripType.None;
         public TripPhase CurrentTripPhase = TripPhase.None;
         public RefuelPhase CurrentRefuelPhase = RefuelPhase.None;
         public DriverRescuePhase CurrentDriverRescuePhase = DriverRescuePhase.None;
+        public DriverRestPhase CurrentDriverRestPhase = DriverRestPhase.None;
+        public float DriverSleepTimer;
+        public int MotelParkingSlotIndex;
+        public Vector3 MotelParkedPosition;
         public TruckInteractionType ActiveTruckInteraction = TruckInteractionType.None;
         public TruckInteractionType QueuedTruckInteraction = TruckInteractionType.None;
         public Quaternion TruckInteractionTargetRotation;
@@ -438,9 +467,11 @@ public partial class GameBootstrap : MonoBehaviour
             LoadTruckState(truckAgents[i]);
             UpdateTruckMovement();
             UpdateTruckInteraction();
+            UpdateDriverEnergy();
             UpdateAssignedTrip();
             UpdateRefuelOrder();
             UpdateDriverRescue();
+            UpdateDriverRest();
             UpdateDriverVisualAnimation();
             UpdateTruckAutoMode();
             UpdateAudio();
@@ -448,6 +479,7 @@ public partial class GameBootstrap : MonoBehaviour
             if (!isTruckMoving &&
                 !isTruckInteracting &&
                 !isDriverRescueActive &&
+                currentDriverRestPhase == DriverRestPhase.None &&
                 truckCell == locations[LocationType.Parking].Anchor)
             {
                 Vector3 parkedPosition = GetParkingSlotWorldPosition(truckAgents[i].ParkingSlotIndex);

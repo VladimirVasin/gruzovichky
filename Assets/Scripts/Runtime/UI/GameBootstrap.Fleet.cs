@@ -18,6 +18,11 @@ public partial class GameBootstrap
             return "Queue";
         }
 
+        if (currentDriverRestPhase != DriverRestPhase.None)
+        {
+            return "Resting";
+        }
+
         if (isDriverRescueActive)
         {
             return "Rescue";

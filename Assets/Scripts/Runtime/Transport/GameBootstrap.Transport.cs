@@ -170,6 +170,46 @@ public partial class GameBootstrap
                 }
 
                 return;
+
+            case DriverRescuePhase.ToMotelEntrance:
+                // Driver arrived at motel entrance — hide driver, start sleep timer
+                isDriverRescueActive = false;
+                currentDriverRescuePhase = DriverRescuePhase.None;
+                driverObject.SetActive(false);
+                driverRescuePath.Clear();
+                driverRescueWaypointIndex = 0;
+                driverWalkAnimationTime = 0f;
+                driverSleepTimer = DriverSleepDuration;
+                currentDriverRestPhase = DriverRestPhase.Sleeping;
+                SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} driver entered motel. Sleeping for {DriverSleepDuration}s.");
+                return;
+
+            case DriverRescuePhase.ToTruckAtMotel:
+                // Driver arrived back at motel-parked truck — board and drive to Parking
+                isDriverRescueActive = false;
+                currentDriverRescuePhase = DriverRescuePhase.None;
+                driverObject.SetActive(false);
+                driverRescuePath.Clear();
+                driverRescueWaypointIndex = 0;
+                driverWalkAnimationTime = 0f;
+                currentDriverRestPhase = DriverRestPhase.ReturnToParking;
+                SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} driver boarded truck at motel. Returning to Parking.");
+                return;
+        }
+    }
+
+    private void UpdateDriverEnergy()
+    {
+        if (currentAssignedTrip == TripType.None && currentRefuelPhase == RefuelPhase.None)
+        {
+            return;
+        }
+
+        driverEnergy = Mathf.Max(0f, driverEnergy - DriverEnergyDrainPerSecond * Time.deltaTime * gameSpeedMultiplier);
+        if (!needsRestAfterTrip && driverEnergy <= DriverEnergyCriticalThreshold)
+        {
+            needsRestAfterTrip = true;
+            SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} energy critical ({Mathf.CeilToInt(driverEnergy)}). Will rest after trip.");
         }
     }
 
