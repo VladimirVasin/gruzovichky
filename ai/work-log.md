@@ -2,6 +2,8 @@
 
 Last updated: 2026-04-06
 
+- 2026-04-06: Added `Motel` as a new visual-only building. Procedural 3D model: long cream one-storey wing, red flat roof, facade canopy on three posts, yellow MOTEL sign above roofline. Placed randomly on the map via `WorldLayoutGenerator` (size 2×1, interior location, far from Parking). Wired into `GeneratedWorldLayout.GetAllPlacements()` so the grid occupancy, terrain flattening, and tree exclusion all apply automatically. No gameplay/routing/truck behaviour changed. Files: `GeneratedWorldLayout.cs`, `WorldLayoutGenerator.cs`, `GameBootstrap.cs`, `GameBootstrap.Transport.cs`, `GameBootstrap.World.cs`, `GameBootstrap.UI.cs`.
+
 Purpose: short task memory for active and recent implementation work.
 
 - 2026-04-06: Added a pentatonic truck-interaction audio language using `C D E G A`. The project now keeps passive world/location ambience non-musical, but truck-driven commands and service completions use short tonal cues: route assignment (`Forest -> Warehouse`, `Warehouse -> Town`, `Refuel`), service completion at `Forest`, `Warehouse`, `Town`, and `Gas Station`, return-to-`Parking`, and the money reward stinger were all retuned into the shared pentatonic family. Files: `Assets/Scripts/Runtime/Core/GameBootstrap.cs`, `Assets/Scripts/Runtime/Actors/GameBootstrap.Actors.cs`, `Assets/Scripts/Runtime/Audio/GameBootstrap.Audio.cs`, `Assets/Scripts/Runtime/UI/GameBootstrap.Fleet.cs`, `Assets/Scripts/Runtime/UI/GameBootstrap.Orders.cs`, `Assets/Scripts/Runtime/Transport/GameBootstrap.Interaction.cs`, `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`. Verified `dotnet build Assembly-CSharp.csproj -nologo` completed successfully with 0 errors and 0 warnings.

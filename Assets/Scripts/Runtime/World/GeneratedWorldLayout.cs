@@ -20,6 +20,7 @@ public sealed class GeneratedWorldLayout
     public WorldLocationPlacement Forest;
     public WorldLocationPlacement Warehouse;
     public WorldLocationPlacement Town;
+    public WorldLocationPlacement Motel;
 
     public IEnumerable<WorldLocationPlacement> GetAllPlacements()
     {
@@ -28,6 +29,7 @@ public sealed class GeneratedWorldLayout
         yield return Forest;
         yield return Warehouse;
         yield return Town;
+        yield return Motel;
     }
 }
 

@@ -205,7 +205,8 @@ public partial class GameBootstrap : MonoBehaviour
         GasStation,
         Forest,
         Warehouse,
-        Town
+        Town,
+        Motel
     }
 
     private enum CargoSource

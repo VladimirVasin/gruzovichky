@@ -683,6 +683,7 @@ public partial class GameBootstrap
             LocationType.Forest => $"Logs stored: {locations[LocationType.Forest].WoodStored}/{ForestMaxLogsStorage}",
             LocationType.Warehouse => $"Logs stored: {locations[LocationType.Warehouse].WoodStored}",
             LocationType.Town => $"Logs received: {locations[LocationType.Town].WoodStored}",
+            LocationType.Motel => "Roadside stop",
             _ => string.Empty
         };
     }
@@ -696,6 +697,7 @@ public partial class GameBootstrap
             LocationType.Forest => "Forest",
             LocationType.Warehouse => "Warehouse",
             LocationType.Town => "Town Hall",
+            LocationType.Motel => "Motel",
             _ => "Location"
         };
     }

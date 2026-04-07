@@ -48,6 +48,15 @@ public static class WorldLayoutGenerator
                 continue;
             }
 
+            int motelMinX = parkingOnLeft ? 9 : 2;
+            int motelMaxX = parkingOnLeft ? 16 : 11;
+            int motelMinY = parkingOnBottom ? 3 : 4;
+            int motelMaxY = parkingOnBottom ? 10 : 13;
+            if (!TryPlaceInteriorLocation(candidate, "Motel", 2, 2, motelMinX, motelMaxX, motelMinY, motelMaxY, true, gridWidth, gridHeight, parkingAnchor))
+            {
+                continue;
+            }
+
             GeneratedWorldLayout layout = ToLayout(candidate);
             int score = ScoreLayoutDistribution(layout);
             if (score > bestScore)
@@ -304,7 +313,8 @@ public static class WorldLayoutGenerator
             GasStation = placements["GasStation"],
             Forest = placements["Forest"],
             Warehouse = placements["Warehouse"],
-            Town = placements["Town"]
+            Town = placements["Town"],
+            Motel = placements["Motel"]
         };
     }
 
@@ -316,7 +326,8 @@ public static class WorldLayoutGenerator
             GasStation = new WorldLocationPlacement { Min = new Vector2Int(6, 4), Max = new Vector2Int(7, 5), Anchor = new Vector2Int(6, 6) },
             Forest = new WorldLocationPlacement { Min = new Vector2Int(3, 14), Max = new Vector2Int(5, 16), Anchor = new Vector2Int(4, 13) },
             Warehouse = new WorldLocationPlacement { Min = new Vector2Int(9, 9), Max = new Vector2Int(10, 10), Anchor = new Vector2Int(9, 8) },
-            Town = new WorldLocationPlacement { Min = new Vector2Int(14, 2), Max = new Vector2Int(15, 3), Anchor = new Vector2Int(13, 3) }
+            Town = new WorldLocationPlacement { Min = new Vector2Int(14, 2), Max = new Vector2Int(15, 3), Anchor = new Vector2Int(13, 3) },
+            Motel = new WorldLocationPlacement { Min = new Vector2Int(13, 8), Max = new Vector2Int(14, 9), Anchor = new Vector2Int(13, 7) }
         };
     }
 }

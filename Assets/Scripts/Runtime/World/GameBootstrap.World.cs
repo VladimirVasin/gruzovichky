@@ -18,6 +18,7 @@ public partial class GameBootstrap
         CreateLocation(LocationType.Forest, "Forest", layout.Forest.Min, layout.Forest.Max, layout.Forest.Anchor, new Color(0.22f, 0.55f, 0.24f));
         CreateLocation(LocationType.Warehouse, "Warehouse", layout.Warehouse.Min, layout.Warehouse.Max, layout.Warehouse.Anchor, new Color(0.7f, 0.52f, 0.3f));
         CreateLocation(LocationType.Town, "Town", layout.Town.Min, layout.Town.Max, layout.Town.Anchor, new Color(0.3f, 0.52f, 0.8f));
+        CreateLocation(LocationType.Motel, "Motel", layout.Motel.Min, layout.Motel.Max, layout.Motel.Anchor, new Color(0.91f, 0.87f, 0.74f));
 
         SessionDebugLogger.Log(
             "WORLD",
@@ -29,7 +30,8 @@ public partial class GameBootstrap
         return FindRoadBuildPath(layout.Parking.Anchor, layout.GasStation.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.GasStation.Anchor, layout.Warehouse.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.Warehouse.Anchor, layout.Forest.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
-               FindRoadBuildPath(layout.Warehouse.Anchor, layout.Town.Anchor, cell => IsPlacementCell(layout, cell)) != null;
+               FindRoadBuildPath(layout.Warehouse.Anchor, layout.Town.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
+               FindRoadBuildPath(layout.Warehouse.Anchor, layout.Motel.Anchor, cell => IsPlacementCell(layout, cell)) != null;
     }
 
     private static bool IsPlacementCell(GeneratedWorldLayout layout, Vector2Int cell)

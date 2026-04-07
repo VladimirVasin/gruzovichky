@@ -180,6 +180,34 @@ public partial class GameBootstrap
         return parkingSlots[slotIndex];
     }
 
+    private Vector3 GetMotelParkingSlotWorldPosition(int slotIndex)
+    {
+        if (!locations.TryGetValue(LocationType.Motel, out LocationData motel))
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 center = GetLocationCenter(LocationType.Motel);
+        Vector3 anchorWorld = new Vector3(motel.Anchor.x + 0.5f, center.y, motel.Anchor.y + 0.5f);
+        Vector3 toAnchorRaw = anchorWorld - center;
+        toAnchorRaw.y = 0f;
+        Vector3 toAnchor;
+        if (Mathf.Abs(toAnchorRaw.x) >= Mathf.Abs(toAnchorRaw.z))
+            toAnchor = new Vector3(Mathf.Sign(toAnchorRaw.x), 0f, 0f);
+        else
+            toAnchor = new Vector3(0f, 0f, Mathf.Sign(toAnchorRaw.z));
+
+        // Perpendicular to anchor direction (right side when facing anchor)
+        Vector3 right = new Vector3(-toAnchor.z, 0f, toAnchor.x);
+
+        // Slots sit in the front half of the footprint (toward anchor), side by side
+        // slotIndex 0 = left slot, 1 = right slot (when facing the building from the road)
+        float forwardOffset = 0.5f;
+        float sideOffset = 0.27f;
+        float xSign = slotIndex == 0 ? -1f : 1f;
+        return center + toAnchor * forwardOffset + right * (xSign * sideOffset);
+    }
+
     private string GetTruckDisplayName(int truckNumber)
     {
         return $"Truck #{truckNumber}";

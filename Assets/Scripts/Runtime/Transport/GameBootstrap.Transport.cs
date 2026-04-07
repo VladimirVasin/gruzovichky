@@ -442,6 +442,7 @@ public partial class GameBootstrap
         CreateGuaranteedRoadConnection(locations[LocationType.GasStation].Anchor, locations[LocationType.Warehouse].Anchor);
         CreateGuaranteedRoadConnection(locations[LocationType.Warehouse].Anchor, locations[LocationType.Forest].Anchor);
         CreateGuaranteedRoadConnection(locations[LocationType.Warehouse].Anchor, locations[LocationType.Town].Anchor);
+        CreateGuaranteedRoadConnection(locations[LocationType.Warehouse].Anchor, locations[LocationType.Motel].Anchor);
         SessionDebugLogger.Log("ROAD", $"Generated starter road network with {roadCells.Count} road cells.");
     }
 
@@ -623,6 +624,23 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(size.x * 0.98f, 0.12f, size.y * 0.98f);
             ApplyColor(baseBlock, new Color(0.28f, 0.38f, 0.19f));
         }
+        else if (type == LocationType.Motel)
+        {
+            // Base block covers only the back half of the footprint (under the building).
+            // Anchor direction determines which half is "back" (away from anchor).
+            Vector3 toAnchorDir;
+            if (anchor.y < min.y) toAnchorDir = new Vector3(0f, 0f, -1f);
+            else if (anchor.y > max.y) toAnchorDir = new Vector3(0f, 0f, 1f);
+            else if (anchor.x < min.x) toAnchorDir = new Vector3(-1f, 0f, 0f);
+            else toAnchorDir = new Vector3(1f, 0f, 0f);
+
+            Vector3 backOffset = -toAnchorDir * 0.5f;
+            baseBlock.transform.position = center + backOffset;
+            float scaleX = toAnchorDir.z != 0f ? size.x * 0.95f : size.x * 0.47f;
+            float scaleZ = toAnchorDir.x != 0f ? size.y * 0.95f : size.y * 0.47f;
+            baseBlock.transform.localScale = new Vector3(scaleX, 0.7f, scaleZ);
+            ApplyColor(baseBlock, baseColor);
+        }
         else
         {
             baseBlock.transform.position = center;
@@ -648,6 +666,10 @@ public partial class GameBootstrap
         else if (type == LocationType.Warehouse)
         {
             CreateWarehouseDecoration(root.transform, center);
+        }
+        else if (type == LocationType.Motel)
+        {
+            CreateMotelDecoration(root.transform, center, min, max, anchor);
         }
         else
         {
@@ -1028,6 +1050,84 @@ public partial class GameBootstrap
             house.transform.localScale = new Vector3(0.45f, 0.5f, 0.45f);
             ApplyColor(house, new Color(0.92f, 0.84f, 0.66f));
         }
+    }
+
+    private void CreateMotelDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        // Oriented root: local +Z faces anchor, local -Z faces away (back of building).
+        // Snap to nearest cardinal axis to avoid diagonal rotations.
+        Vector3 anchorWorld = new Vector3(anchor.x + 0.5f, center.y, anchor.y + 0.5f);
+        Vector3 toAnchorRaw = anchorWorld - center;
+        toAnchorRaw.y = 0f;
+        Vector3 toAnchor;
+        if (Mathf.Abs(toAnchorRaw.x) >= Mathf.Abs(toAnchorRaw.z))
+            toAnchor = new Vector3(Mathf.Sign(toAnchorRaw.x), 0f, 0f);
+        else
+            toAnchor = new Vector3(0f, 0f, Mathf.Sign(toAnchorRaw.z));
+
+        GameObject orientedRoot = new GameObject("MotelOriented");
+        orientedRoot.transform.SetParent(parent, false);
+        orientedRoot.transform.position = center;
+        orientedRoot.transform.rotation = Quaternion.LookRotation(toAnchor, Vector3.up);
+        Transform or = orientedRoot.transform;
+
+        // === BUILDING — back half of footprint (local Z < 0 = away from anchor) ===
+
+        // Main body
+        GameObject mainBlock = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        mainBlock.transform.SetParent(or, false);
+        mainBlock.transform.localPosition = new Vector3(0f, 0.36f, -0.4f);
+        mainBlock.transform.localScale = new Vector3(1.85f, 0.52f, 0.72f);
+        ApplyColor(mainBlock, new Color(0.91f, 0.87f, 0.74f));
+
+        // Red flat roof
+        GameObject roofBlock = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roofBlock.transform.SetParent(or, false);
+        roofBlock.transform.localPosition = new Vector3(0f, 0.66f, -0.4f);
+        roofBlock.transform.localScale = new Vector3(1.92f, 0.09f, 0.82f);
+        ApplyColor(roofBlock, new Color(0.76f, 0.22f, 0.18f));
+
+        // Facade canopy — on the front face of the building body (toward anchor side)
+        GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        canopy.transform.SetParent(or, false);
+        canopy.transform.localPosition = new Vector3(0f, 0.58f, -0.06f);
+        canopy.transform.localScale = new Vector3(1.85f, 0.07f, 0.32f);
+        ApplyColor(canopy, new Color(0.78f, 0.24f, 0.2f));
+
+        // Three support posts under the canopy
+        float[] postX = { -0.68f, 0f, 0.68f };
+        foreach (float px in postX)
+        {
+            GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            post.transform.SetParent(or, false);
+            post.transform.localPosition = new Vector3(px, 0.38f, 0.04f);
+            post.transform.localScale = new Vector3(0.07f, 0.4f, 0.07f);
+            ApplyColor(post, new Color(0.82f, 0.22f, 0.18f));
+        }
+
+        // MOTEL sign above the roofline
+        GameObject sign = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        sign.transform.SetParent(or, false);
+        sign.transform.localPosition = new Vector3(0f, 0.82f, -0.18f);
+        sign.transform.localScale = new Vector3(0.72f, 0.18f, 0.06f);
+        ApplyColor(sign, new Color(0.98f, 0.84f, 0.12f));
+
+        // === PARKING AREA — front half of footprint (local Z > 0 = toward anchor) ===
+
+        // Two flat parking panels on the ground in front of the building.
+        // localY = 0.37 puts them just above the top of the location base block (top = 0.35 local).
+        float[] slotX = { -0.27f, 0.27f };
+        foreach (float sx in slotX)
+        {
+            GameObject slot = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slot.transform.SetParent(or, false);
+            slot.transform.localPosition = new Vector3(sx, -0.32f, 0.5f);
+            slot.transform.localScale = new Vector3(0.46f, 0.015f, 0.72f);
+            ApplyColor(slot, new Color(0.56f, 0.56f, 0.58f));
+            ConfigureStaticVisual(slot);
+        }
+
+        CreateDrivewayToAnchor(parent, min, max, anchor, 0.88f);
     }
 
     private void CreateLocationNightLights(LocationType type, Transform parent, Vector3 center, Vector2Int size)
