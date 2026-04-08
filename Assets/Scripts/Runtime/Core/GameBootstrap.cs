@@ -584,7 +584,7 @@ public partial class GameBootstrap : MonoBehaviour
         DrawMoneyHud();
         DrawTimeHud();
         DrawSpeedHud();
-        DrawCameraLegendHud();
+        DrawPauseOverlay();
         DrawMenuBar();
 
         if (isFleetPanelOpen) DrawFleetPanel();

@@ -380,8 +380,11 @@ public partial class GameBootstrap
 
     private void HireNewTruck()
     {
+        LogUiInput("Fleet/Parking: clicked Buy New Truck");
+        LogCommand($"HireNewTruck(cost=${HireTruckCost})");
         if (GetOwnedTruckCount() >= MaxTruckCount || money < HireTruckCost)
         {
+            SessionDebugLogger.Log("TRUCK_REACTION", $"Hire new truck rejected: {GetFleetBuyStatusLabel()}");
             return;
         }
 
@@ -390,6 +393,7 @@ public partial class GameBootstrap
         nextHireTruckNumber++;
         money -= HireTruckCost;
         SessionDebugLogger.Log("TRUCK", $"Hired {hiredTruck.DisplayName} for ${HireTruckCost}. Money now ${money}.");
+        LogTruckReaction(hiredTruck, $"purchased and spawned in parking for ${HireTruckCost}");
         TruckAgent selectedTruck = GetTruckAgent(selectedTruckNumber) ?? GetTruckAgent(1);
         if (selectedTruck != null)
         {
@@ -660,7 +664,13 @@ public partial class GameBootstrap
     {
         Rect panelRect = GetMoneyHudRect();
         GUI.Box(panelRect, "Treasury");
-        GUI.Label(new Rect(panelRect.x + 14, panelRect.y + 22, 160, 26), $"Money: ${money}");
+        GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontStyle = FontStyle.Bold
+        };
+
+        GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 26), $"${money}", centeredHudValueStyle);
 
         if (moneyPopupTimer <= 0f || moneyPopupAmount <= 0)
         {
@@ -672,7 +682,7 @@ public partial class GameBootstrap
         float alpha = 1f - normalized;
         Color previousColor = GUI.color;
         GUI.color = new Color(1f, 0.95f, 0.55f, alpha);
-        GUI.Label(new Rect(panelRect.x + 92, panelRect.y - 8f - rise, 120, 24), $"+${moneyPopupAmount}");
+        GUI.Label(new Rect(panelRect.x, panelRect.y - 8f - rise, panelRect.width, 24), $"+${moneyPopupAmount}", centeredHudValueStyle);
         GUI.color = previousColor;
     }
 
@@ -680,7 +690,13 @@ public partial class GameBootstrap
     {
         Rect panelRect = GetTimeHudRect();
         GUI.Box(panelRect, "Time");
-        GUI.Label(new Rect(panelRect.x + 14, panelRect.y + 22, 160, 26), $"{GetDayNightClockLabel()}  {GetTimeOfDayLabel()}");
+        GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontStyle = FontStyle.Bold
+        };
+
+        GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 26), $"{GetDayNightClockLabel()}  {GetTimeOfDayLabel()}", centeredHudValueStyle);
     }
 
     private void DrawSpeedHud()
@@ -688,19 +704,37 @@ public partial class GameBootstrap
         Rect panelRect = GetSpeedHudRect();
         GUI.Box(panelRect, "Speed");
         string speedLabel = gameSpeedMultiplier == 0 ? "Paused" : $"{gameSpeedMultiplier}x";
-        GUI.Label(new Rect(panelRect.x + 14, panelRect.y + 22, 120, 26), speedLabel);
+        GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontStyle = FontStyle.Bold
+        };
+
+        GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 26), speedLabel, centeredHudValueStyle);
     }
 
-    private void DrawCameraLegendHud()
+    private void DrawPauseOverlay()
     {
-        Rect panelRect = GetCameraLegendHudRect();
-        GUI.Box(panelRect, "Camera");
-        string focusLabel = isTruckDetailsOpen
-            ? (isTruckCameraFocused ? "F: Exit truck camera" : "F: Follow selected truck")
-            : "F: Select a truck first";
-        GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 22f, panelRect.width - 24f, 20f), "Q/E: Rotate map view");
-        GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 42f, panelRect.width - 24f, 20f), focusLabel);
-        GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 62f, panelRect.width - 24f, 20f), "P: Pause  |  F1/F2/F3: 1x / 2x / 3x");
+        if (gameSpeedMultiplier != 0)
+        {
+            return;
+        }
+
+        Rect overlayRect = new Rect(Screen.width * 0.5f - 120f, 78f, 240f, 44f);
+        Color previousColor = GUI.color;
+        GUI.color = new Color(0f, 0f, 0f, 0.58f);
+        GUI.Box(overlayRect, string.Empty);
+        GUI.color = new Color(1f, 0.93f, 0.42f, 1f);
+
+        GUIStyle pausedStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 22,
+            fontStyle = FontStyle.Bold
+        };
+
+        GUI.Label(overlayRect, "PAUSE", pausedStyle);
+        GUI.color = previousColor;
     }
 
     private void DrawSelectedBuildingHud(LocationType locationType)
@@ -737,6 +771,28 @@ public partial class GameBootstrap
             LocationType.Motel => "Motel",
             _ => "Location"
         };
+    }
+
+    private void LogUiInput(string message)
+    {
+        SessionDebugLogger.Log("UI_INPUT", message);
+    }
+
+    private void LogCommand(string message)
+    {
+        SessionDebugLogger.Log("COMMAND", message);
+    }
+
+    private void LogTruckReaction(TruckAgent truckAgent, string message)
+    {
+        string truckName = truckAgent != null ? truckAgent.DisplayName : "Truck";
+        SessionDebugLogger.Log("TRUCK_REACTION", $"{truckName}: {message}");
+    }
+
+    private void LogDriverReaction(DriverAgent driver, string message)
+    {
+        string driverName = driver != null ? driver.DriverName : "Driver";
+        SessionDebugLogger.Log("DRIVER_REACTION", $"{driverName}: {message}");
     }
 
 }

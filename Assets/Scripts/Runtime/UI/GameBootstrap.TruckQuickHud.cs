@@ -70,7 +70,11 @@ public partial class GameBootstrap
         LayoutElement closeLayout = truckQuickHud.CloseButton.gameObject.AddComponent<LayoutElement>();
         closeLayout.preferredWidth = 28f;
         closeLayout.preferredHeight = 28f;
-        truckQuickHud.CloseButton.onClick.AddListener(ClearTruckFocus);
+        truckQuickHud.CloseButton.onClick.AddListener(() =>
+        {
+            LogUiInput($"Quick HUD: closed {GetTruckDisplayName(selectedTruckNumber)}");
+            ClearTruckFocus();
+        });
 
         RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
         summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 136f;
@@ -93,6 +97,7 @@ public partial class GameBootstrap
                 return;
             }
 
+            LogUiInput($"Quick HUD: opened Drivers for {selectedTruck.Driver.DriverName} from {selectedTruck.DisplayName}");
             OpenDriversPanelForDriver(selectedTruck.Driver.DriverId);
         });
 
@@ -173,6 +178,7 @@ public partial class GameBootstrap
 
     private void OpenFleetFromQuickHud()
     {
+        LogUiInput($"Quick HUD: opened Fleet for {GetTruckDisplayName(selectedTruckNumber)}");
         isFleetPanelOpen = true;
         isDriversPanelOpen = false;
         isShiftsPanelOpen = false;

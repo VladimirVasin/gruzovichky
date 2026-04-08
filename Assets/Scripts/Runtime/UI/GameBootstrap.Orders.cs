@@ -72,8 +72,10 @@ public partial class GameBootstrap
             return;
         }
 
+        LogCommand($"SetAutoMode({truckAgent.DisplayName}, {(enabled ? "ON" : "OFF")})");
         truckAgent.IsTruckAutoModeEnabled = enabled;
         SessionDebugLogger.Log("ORDER", $"{truckAgent.DisplayName} auto mode set to {(enabled ? "ON" : "OFF")}.");
+        LogTruckReaction(truckAgent, $"auto mode set to {(enabled ? "ON" : "OFF")}");
         if (enabled)
         {
             bool canTakeOrdersNow =
@@ -91,6 +93,7 @@ public partial class GameBootstrap
                 if (truckAgent.TruckFuel < 30f)
                 {
                     truckAgent.CurrentRefuelPhase = RefuelPhase.ToGasStation;
+                    LogTruckReaction(truckAgent, $"queued refuel because fuel is low ({Mathf.CeilToInt(truckAgent.TruckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)})");
                 }
                 else
                 {
@@ -104,33 +107,43 @@ public partial class GameBootstrap
                         truckAgent.CurrentAssignedTrip = selectedTrip.Type;
                         truckAgent.CurrentTripPhase = TripPhase.ToPickup;
                         truckAgent.CurrentAssignedTripReward = selectedTrip.Reward;
+                        LogTruckReaction(truckAgent, $"queued auto trip '{selectedTrip.Title}' for ${selectedTrip.Reward}");
                     }
                 }
             }
+            else
+            {
+                LogTruckReaction(truckAgent, "auto mode enabled but no order was queued immediately");
+            }
 
-            KickTruckDecision(truckAgent);
         }
     }
 
     private void StartRefuelOrderForTruck(TruckAgent truckAgent)
     {
+        LogCommand($"StartRefuelOrder({truckAgent?.DisplayName ?? "null"})");
         if (truckAgent == null ||
             truckAgent.CurrentAssignedTrip != TripType.None ||
             truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
             truckAgent.Driver.RestPhase != DriverRestPhase.None ||
             !IsDriverOnShift(truckAgent.Driver))
         {
+            if (truckAgent != null)
+            {
+                LogTruckReaction(truckAgent, $"refuel command rejected: {GetTruckCommandBlockReason(truckAgent)}");
+            }
             return;
         }
 
         truckAgent.CurrentRefuelPhase = RefuelPhase.ToGasStation;
         PlayUiSound(routeAssignRefuelClip, 0.94f);
         SessionDebugLogger.Log("ORDER", $"{truckAgent.DisplayName} received manual refuel order.");
-        KickTruckDecision(truckAgent);
+        LogTruckReaction(truckAgent, "accepted manual refuel order");
     }
 
     private void AssignTripToTruck(TruckAgent truckAgent, TripOption trip)
     {
+        LogCommand($"AssignTrip({truckAgent?.DisplayName ?? "null"}, {trip?.Title ?? "None"})");
         if (truckAgent == null ||
             trip == null ||
             trip.Type == TripType.None ||
@@ -139,6 +152,10 @@ public partial class GameBootstrap
             truckAgent.Driver.RestPhase != DriverRestPhase.None ||
             !IsDriverOnShift(truckAgent.Driver))
         {
+            if (truckAgent != null)
+            {
+                LogTruckReaction(truckAgent, $"trip command rejected: {GetTruckCommandBlockReason(truckAgent)}");
+            }
             return;
         }
 
@@ -147,27 +164,7 @@ public partial class GameBootstrap
         truckAgent.CurrentAssignedTripReward = trip.Reward;
         PlayAssignedTripCue(trip.Type, 0.94f);
         SessionDebugLogger.Log("ORDER", $"{truckAgent.DisplayName} assigned trip '{trip.Title}' with reward ${trip.Reward}.");
-        KickTruckDecision(truckAgent);
-    }
-
-    private void KickTruckDecision(TruckAgent truckAgent)
-    {
-        if (truckAgent == null)
-        {
-            return;
-        }
-
-        LoadTruckState(truckAgent);
-        UpdateAssignedTrip(truckAgent.Driver);
-        UpdateRefuelOrder(truckAgent.Driver);
-        UpdateTruckAutoMode();
-        if (truckAgent.TruckObject != null)
-        {
-            truckAgent.TruckObject.transform.position = truckObject.transform.position;
-            truckAgent.TruckObject.transform.rotation = truckObject.transform.rotation;
-        }
-
-        SaveTruckState(truckAgent);
+        LogTruckReaction(truckAgent, $"accepted trip '{trip.Title}' with reward ${trip.Reward}");
     }
 
     private int GetTripReward(TripType tripType)

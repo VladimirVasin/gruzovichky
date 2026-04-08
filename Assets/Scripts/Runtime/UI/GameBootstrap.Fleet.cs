@@ -54,7 +54,7 @@ public partial class GameBootstrap
         return new Rect(12f, 68f, 300f, 140f);
     }
 
-    private void ToggleMenuPanel(ref bool target)
+    private void ToggleMenuPanel(string panelName, ref bool target)
     {
         bool wasOpen = target;
         isFleetPanelOpen = false;
@@ -64,6 +64,7 @@ public partial class GameBootstrap
         isBuildPanelOpen = false;
         target = !wasOpen;
         isFleetScreenDirty = true;
+        LogUiInput($"MenuBar: {(target ? "opened" : "closed")} {panelName}");
         PlayUiSound(target ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
     }
 
@@ -85,7 +86,7 @@ public partial class GameBootstrap
         {
             GUI.color = state ? Color.yellow : Color.white;
             if (GUI.Button(new Rect(x, btnY, MenuBtnW, MenuBtnH), label, btnStyle))
-                ToggleMenuPanel(ref state);
+                ToggleMenuPanel(label, ref state);
         }
 
         float x = bar.x + MenuBtnGap;
@@ -156,6 +157,7 @@ public partial class GameBootstrap
             if (GUI.Button(rowRect, string.Empty, GUIStyle.none))
             {
                 selectedShiftDriverId = isSelected ? 0 : d.DriverId;
+                LogUiInput($"Shifts: {(isSelected ? $"deselected {d.DriverName}" : $"selected {d.DriverName}")}");
                 PlayUiSound(uiSelectClip, 0.8f);
             }
 
@@ -204,12 +206,15 @@ public partial class GameBootstrap
                 GUI.Label(new Rect(card.x + 12f, ry + 4f, card.width - 80f, 18f), d.DriverName, labelMid);
                 if (GUI.Button(new Rect(card.x + card.width - 68f, ry + 3f, 60f, 20f), "Remove", btnSmall))
                 {
+                    LogUiInput($"Shifts: removed {d.DriverName} from {ShiftNames[c]}");
+                    LogCommand($"RemoveShift({d.DriverName})");
                     d.ShiftStartHour = -1;
                     d.IsOnActiveShift = false;
                     ta.IsTruckAutoModeEnabled = false;
                     if (selectedShiftDriverId == d.DriverId) selectedShiftDriverId = 0;
                     PlayUiSound(uiSelectClip, 0.85f);
                     SessionDebugLogger.Log("SHIFT", $"{d.DriverName} removed from shift — now Idle.");
+                    LogDriverReaction(d, "shift removed; now idle");
                 }
                 ry += 30f;
             }
@@ -229,6 +234,8 @@ public partial class GameBootstrap
             GUI.enabled = canAssign;
             if (GUI.Button(new Rect(card.x + 6f, card.y + cardH - 38f, card.width - 12f, 30f), assignLabel, btnStyle))
             {
+                LogUiInput($"Shifts: assigned {selDriver.DriverName} to {ShiftNames[c]}");
+                LogCommand($"AssignShift({selDriver.DriverName}, {ShiftNames[c]})");
                 selDriver.ShiftStartHour = ShiftPresetHours[c];
                 bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[c]);
                 selDriver.IsOnActiveShift = inWindow
@@ -237,6 +244,7 @@ public partial class GameBootstrap
                 if (selDriver.IsOnActiveShift) SetTruckAutoMode(selTruck, true);
                 PlayUiSound(uiSelectClip, 0.85f);
                 SessionDebugLogger.Log("SHIFT", $"{selDriver.DriverName} assigned to {ShiftNames[c]} ({GetShiftRangeLabel(ShiftPresetHours[c])}).");
+                LogDriverReaction(selDriver, $"assigned to {ShiftNames[c]} ({GetShiftRangeLabel(ShiftPresetHours[c])})");
             }
             GUI.enabled = true;
 
@@ -278,12 +286,14 @@ public partial class GameBootstrap
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 62f, 140f, 18f), $"Energy: {Mathf.CeilToInt(d.Energy)}{energyMark}/{Mathf.CeilToInt(DriverEnergyMax)}", labelMid);
             if (GUI.Button(new Rect(cardRect.x + cardRect.width - 96f, cardRect.y + 54f, 84f, 24f), "Open Fleet", btnStyle))
             {
+                LogUiInput($"Drivers: Open Fleet for {ta.DisplayName} via {d.DriverName}");
                 FocusTruck(ta.TruckNumber);
             }
 
             if (GUI.Button(cardRect, string.Empty, GUIStyle.none))
             {
                 selectedShiftDriverId = isSelected ? 0 : d.DriverId;
+                LogUiInput($"Drivers: {(isSelected ? $"deselected {d.DriverName}" : $"selected {d.DriverName}")}");
                 PlayUiSound(uiSelectClip, 0.8f);
             }
 
@@ -365,6 +375,7 @@ public partial class GameBootstrap
         if (GUI.Button(new Rect(panelRect.x + 12f, panelRect.y + 58f, 72f, 56f), "ROAD"))
         {
             activeBuildTool = roadModeActive ? BuildTool.None : BuildTool.Road;
+                    LogUiInput($"Build: switched tool to {activeBuildTool}");
             PlayUiSound(uiSelectClip, 0.85f);
             SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
         }
@@ -471,7 +482,6 @@ public partial class GameBootstrap
         if (GetMoneyHudRect().Contains(guiPosition) ||
             GetTimeHudRect().Contains(guiPosition) ||
             GetSpeedHudRect().Contains(guiPosition) ||
-            GetCameraLegendHudRect().Contains(guiPosition) ||
             GetMenuBarRect().Contains(guiPosition))
         {
             return true;
@@ -492,44 +502,44 @@ public partial class GameBootstrap
         return 286 + 36 + truckAgents.Count * 38 + 66;
     }
 
+    private const float TopBarY   = 12f;
+    private const float TopBarH   = 50f;
+    private const float RightColY = TopBarY + TopBarH + 8f;
+
     private Rect GetParkingHudRect()
     {
-        return new Rect(Screen.width - 290, 12, 278, GetParkingHudHeight());
+        return new Rect(Screen.width - 290, RightColY, 278, GetParkingHudHeight());
     }
 
     private Rect GetTruckDetailsHudRect()
     {
-        return new Rect(Screen.width - 290, 12, 278, 420f);
+        return new Rect(Screen.width - 290, RightColY, 278, 420f);
     }
 
     private Rect GetAvailableTripsHudRect()
     {
-        return new Rect(Screen.width - 290, 12 + GetParkingHudHeight() + 8, 278, 170);
+        return new Rect(Screen.width - 290, RightColY + GetParkingHudHeight() + 8, 278, 170);
     }
 
+    // Top-right compact bar: [Speed 90] [Time 140] [Treasury 150]  (gap 4px, margin 12px)
     private Rect GetMoneyHudRect()
     {
-        return new Rect(Screen.width * 0.5f - 90f, 12f, 180f, 54f);
+        return new Rect(Screen.width - 12f - 150f, TopBarY, 150f, TopBarH);
     }
 
     private Rect GetTimeHudRect()
     {
-        return new Rect(Screen.width * 0.5f + 100f, 12f, 190f, 54f);
+        return new Rect(Screen.width - 12f - 150f - 4f - 140f, TopBarY, 140f, TopBarH);
     }
 
     private Rect GetSpeedHudRect()
     {
-        return new Rect(Screen.width * 0.5f + 300f, 12f, 120f, 54f);
-    }
-
-    private Rect GetCameraLegendHudRect()
-    {
-        return new Rect(Screen.width * 0.5f - 180f, Screen.height - 96f, 360f, 90f);
+        return new Rect(Screen.width - 12f - 150f - 4f - 140f - 4f - 90f, TopBarY, 90f, TopBarH);
     }
 
     private Rect GetSelectedBuildingHudRect()
     {
-        return new Rect(Screen.width - 290, 12, 278, 96);
+        return new Rect(Screen.width - 290, RightColY, 278, 96);
     }
 
     private void UpdateMoneyPopup()
@@ -571,3 +581,5 @@ public partial class GameBootstrap
         PlayUiSound(clip, volumeScale);
     }
 }
+
+

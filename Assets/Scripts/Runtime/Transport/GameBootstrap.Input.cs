@@ -61,6 +61,7 @@ public partial class GameBootstrap
         {
             if (WasTruckHotkeyPressed(truckNumber))
             {
+                LogUiInput($"Hotkey: selected Truck #{truckNumber}");
                 if (isTruckCameraFocused && isTruckDetailsOpen && selectedTruckNumber == truckNumber)
                 {
                     ClearTruckFocus();
@@ -140,6 +141,8 @@ public partial class GameBootstrap
         isTruckCameraFocused = false;
         isCameraReturningToDiorama = wasTruckCameraFocused;
         isFleetScreenDirty = true;
+        LogUiInput($"Selection: focused {GetTruckDisplayName(truckNumber)}");
+        LogTruckReaction(GetTruckAgent(truckNumber), "became the active player-selected truck");
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelOpenClip, 0.9f);
     }
@@ -333,6 +336,7 @@ public partial class GameBootstrap
     {
         if (isTruckCameraFocused)
         {
+            LogUiInput($"Quick HUD: exit follow camera for {GetTruckDisplayName(selectedTruckNumber)}");
             DisableTruckCameraFocus();
             PlayUiSound(uiPanelCloseClip, 0.82f);
             return;
@@ -343,6 +347,7 @@ public partial class GameBootstrap
             return;
         }
 
+        LogUiInput($"Quick HUD: follow camera for {GetTruckDisplayName(selectedTruckNumber)}");
         isTruckCameraFocused = true;
         isCameraReturningToDiorama = false;
         isCameraRotatingToTarget = false;
@@ -390,6 +395,10 @@ public partial class GameBootstrap
 
     private void ClearTruckFocus()
     {
+        if (isTruckDetailsOpen && IsTruckNumberOwned(selectedTruckNumber))
+        {
+            LogUiInput($"Selection: cleared {GetTruckDisplayName(selectedTruckNumber)}");
+        }
         isTruckDetailsOpen = false;
         selectedLocation = null;
         DisableTruckCameraFocus();

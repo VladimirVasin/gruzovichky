@@ -149,7 +149,9 @@ public partial class GameBootstrap
                 10f * Time.deltaTime);
         }
 
-        if ((driver.DriverObject.transform.position - targetPosition).sqrMagnitude > 0.001f)
+        Vector3 flatDelta = driver.DriverObject.transform.position - targetPosition;
+        flatDelta.y = 0f;
+        if (flatDelta.sqrMagnitude > 0.001f)
         {
             return;
         }
