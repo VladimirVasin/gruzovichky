@@ -1,8 +1,6 @@
 using System.IO;
-using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.Networking;
 using UnityEngine.UI;
 
 public partial class GameBootstrap
@@ -35,7 +33,7 @@ public partial class GameBootstrap
     }
 
     private MainMenuHudRefs mainMenuHud;
-    private Coroutine mainMenuMusicLoadCoroutine;
+    // mainMenuMusicLoadCoroutine removed (music disabled)
 
     private void SetupMainMenuHud()
     {
@@ -58,7 +56,7 @@ public partial class GameBootstrap
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
         mainMenuHud.CanvasRoot = canvasObject;
-        mainMenuMusicSource = CreateAudioSource("MainMenuMusic", canvasObject.transform, true, 0.38f, 0f, false);
+        // mainMenuMusicSource disabled
 
         RectTransform backgroundRoot = CreateUiObject("MainMenuBackground", canvasObject.transform).GetComponent<RectTransform>();
         StretchRect(backgroundRoot, 0f, 0f, 0f, 0f);
@@ -119,7 +117,6 @@ public partial class GameBootstrap
         mainMenuHud.ExitButton.onClick.AddListener(ExitGameFromMainMenu);
 
         UpdateMainMenuHud();
-        EnsureMainMenuMusic();
     }
 
     private Sprite LoadMainMenuBackgroundSprite()
@@ -164,15 +161,9 @@ public partial class GameBootstrap
 
         if (!isMainMenuOpen)
         {
-            if (mainMenuMusicSource != null && mainMenuMusicSource.isPlaying)
-            {
-                mainMenuMusicSource.Stop();
-            }
-
             return;
         }
 
-        EnsureMainMenuMusic();
         UpdateMainMenuButtonFx(mainMenuHud.NewGameButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.ExitButtonFx);
     }
@@ -185,11 +176,6 @@ public partial class GameBootstrap
         lastActiveGameSpeedMultiplier = 1;
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;
-        if (mainMenuMusicSource != null)
-        {
-            mainMenuMusicSource.Stop();
-        }
-
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.9f);
     }
@@ -254,69 +240,8 @@ public partial class GameBootstrap
         return fx;
     }
 
-    private void EnsureMainMenuMusic()
-    {
-        if (!isMainMenuOpen || mainMenuMusicSource == null)
-        {
-            return;
-        }
-
-        if (mainMenuMusicClip != null)
-        {
-            if (mainMenuMusicSource.clip != mainMenuMusicClip)
-            {
-                mainMenuMusicSource.clip = mainMenuMusicClip;
-            }
-
-            if (!mainMenuMusicSource.isPlaying)
-            {
-                mainMenuMusicSource.Play();
-            }
-
-            return;
-        }
-
-        if (mainMenuMusicLoadCoroutine == null)
-        {
-            mainMenuMusicLoadCoroutine = StartCoroutine(LoadMainMenuMusicCoroutine());
-        }
-    }
-
-    private IEnumerator LoadMainMenuMusicCoroutine()
-    {
-#if UNITY_EDITOR
-        AudioClip editorClip = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/MenuMusic.mp3");
-        if (editorClip != null)
-        {
-            mainMenuMusicClip = editorClip;
-            mainMenuMusicLoadCoroutine = null;
-            EnsureMainMenuMusic();
-            yield break;
-        }
-#endif
-
-        string filePath = Path.Combine(Application.dataPath, "MenuMusic.mp3");
-        if (!File.Exists(filePath))
-        {
-            mainMenuMusicLoadCoroutine = null;
-            yield break;
-        }
-
-        using UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip($"file:///{filePath.Replace("\\", "/")}", AudioType.MPEG);
-        yield return request.SendWebRequest();
-
-        if (request.result == UnityWebRequest.Result.Success)
-        {
-            mainMenuMusicClip = DownloadHandlerAudioClip.GetContent(request);
-            if (mainMenuMusicClip != null)
-            {
-                mainMenuMusicClip.name = "MenuMusicRuntime";
-            }
-        }
-
-        mainMenuMusicLoadCoroutine = null;
-        EnsureMainMenuMusic();
-    }
+    // Menu music disabled
+    private void EnsureMainMenuMusic() { }
 
     private static void AddEventTrigger(EventTrigger trigger, EventTriggerType eventType, UnityEngine.Events.UnityAction callback)
     {

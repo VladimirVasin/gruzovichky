@@ -38,11 +38,7 @@ public partial class GameBootstrap
         return new Rect(12f, 68f, leftW + rightW + gap + pad * 2, h);
     }
 
-    private Rect GetDriversPanelRect()
-    {
-        float height = 44f + driverAgents.Count * 96f + 64f;
-        return new Rect(12f, 68f, 420f, Mathf.Min(height, Screen.height - 96f));
-    }
+    private Rect GetDriversPanelRect() => Rect.zero; // Drivers panel is now Canvas-based
 
     private Rect GetResourcesPanelRect()
     {
@@ -64,6 +60,7 @@ public partial class GameBootstrap
         isBuildPanelOpen = false;
         target = !wasOpen;
         isFleetScreenDirty = true;
+        isDriversScreenDirty = true;
         LogUiInput($"MenuBar: {(target ? "opened" : "closed")} {panelName}");
         PlayUiSound(target ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
     }
@@ -236,14 +233,12 @@ public partial class GameBootstrap
                 LogUiInput($"Shifts: assigned {selDriver.DriverName} to {ShiftNames[c]}");
                 LogCommand($"AssignShift({selDriver.DriverName}, {ShiftNames[c]})");
                 selDriver.ShiftStartHour = ShiftPresetHours[c];
+                selDriver.IsOnActiveShift = false;
+                selDriver.WaitingForShiftAtParking = false;
                 bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[c]);
-                selDriver.IsOnActiveShift = inWindow
-                    && selDriver.RestPhase == DriverRestPhase.None
-                    && selDriver.WalkPhase == DriverRescuePhase.None;
-                if (selDriver.IsOnActiveShift && GetAssignedTruckForDriver(selDriver) is TruckAgent assignedTruck)
+                if (inWindow && selDriver.RestPhase == DriverRestPhase.None && selDriver.WalkPhase == DriverRescuePhase.None)
                 {
-                    TryBoardDriverToAssignedTruck(selDriver);
-                    SetTruckAutoMode(assignedTruck, true);
+                    StartDriverShiftCommute(selDriver);
                 }
                 PlayUiSound(uiSelectClip, 0.85f);
                 SessionDebugLogger.Log("SHIFT", $"{selDriver.DriverName} assigned to {ShiftNames[c]} ({GetShiftRangeLabel(ShiftPresetHours[c])}).");
@@ -263,6 +258,7 @@ public partial class GameBootstrap
         GUIStyle labelBold = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold };
         GUIStyle labelMid  = new GUIStyle(GUI.skin.label) { fontSize = 12 };
         GUIStyle btnStyle  = new GUIStyle(GUI.skin.button) { fontSize = 11, fontStyle = FontStyle.Bold };
+        GUIStyle btnSmall  = new GUIStyle(GUI.skin.button) { fontSize = 11 };
 
         GUI.Box(panelRect, "Drivers");
 
@@ -272,7 +268,7 @@ public partial class GameBootstrap
             bool isSelected = selectedShiftDriverId == d.DriverId;
             TruckAgent assignedTruck = GetAssignedTruckForDriver(d);
 
-            Rect cardRect = new Rect(panelRect.x + 8f, y, panelRect.width - 16f, 88f);
+            Rect cardRect = new Rect(panelRect.x + 8f, y, panelRect.width - 16f, 106f);
             Color previousColor = GUI.color;
             GUI.color = isSelected ? new Color(1f, 0.88f, 0.25f) : Color.white;
             GUI.Box(cardRect, string.Empty);
@@ -286,6 +282,24 @@ public partial class GameBootstrap
 
             string energyMark = d.Energy <= DriverEnergyCriticalThreshold ? "!" : "";
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 62f, 140f, 18f), $"Energy: {Mathf.CeilToInt(d.Energy)}{energyMark}/{Mathf.CeilToInt(DriverEnergyMax)}", labelMid);
+
+            // Salary row
+            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 82f, 90f, 18f), $"Salary: ${d.Salary}", labelMid);
+            if (GUI.Button(new Rect(cardRect.x + 100f, cardRect.y + 80f, 22f, 20f), "–", btnSmall))
+            {
+                d.Salary = Mathf.Max(0, d.Salary - 25);
+                LogUiInput($"Drivers: {d.DriverName} salary decreased to ${d.Salary}");
+            }
+            if (GUI.Button(new Rect(cardRect.x + 124f, cardRect.y + 80f, 22f, 20f), "+", btnSmall))
+            {
+                d.Salary += 25;
+                LogUiInput($"Drivers: {d.DriverName} salary increased to ${d.Salary}");
+            }
+            GUI.Label(new Rect(cardRect.x + 152f, cardRect.y + 82f, 80f, 18f), "/shift", labelMid);
+
+            GUIStyle balanceStyle = new GUIStyle(GUI.skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
+            GUI.Label(new Rect(cardRect.x + cardRect.width - 120f, cardRect.y + 82f, 112f, 18f), $"Balance: ${d.Money}", balanceStyle);
+
             GUI.enabled = assignedTruck != null;
             if (GUI.Button(new Rect(cardRect.x + cardRect.width - 96f, cardRect.y + 54f, 84f, 24f), "Open Fleet", btnStyle))
             {
@@ -301,7 +315,7 @@ public partial class GameBootstrap
                 PlayUiSound(uiSelectClip, 0.8f);
             }
 
-            y += 96f;
+            y += 114f;
         }
 
         bool canHireDriver = money >= HireDriverCost;
@@ -515,8 +529,7 @@ public partial class GameBootstrap
 
         if (isFleetPanelOpen && GetFleetPanelRect().Contains(guiPosition)) return true;
         if (isShiftsPanelOpen && GetShiftsPanelRect().Contains(guiPosition)) return true;
-        if (isDriversPanelOpen && GetDriversPanelRect().Contains(guiPosition)) return true;
-        if (isResourcesPanelOpen && GetResourcesPanelRect().Contains(guiPosition)) return true;
+        // Drivers panel is Canvas — handled by EventSystem.IsPointerOverGameObject above
         if (isBuildPanelOpen && GetBuildPanelRect().Contains(guiPosition)) return true;
         if (isTruckDetailsOpen && GetTruckDetailsHudRect().Contains(guiPosition)) return true;
 
@@ -592,6 +605,8 @@ public partial class GameBootstrap
         money += amount;
         moneyPopupAmount = amount;
         moneyPopupTimer = MoneyPopupDuration;
+        isFleetScreenDirty = true;
+        isDriversScreenDirty = true;
         PlayUiSound(moneyRewardClip, 0.95f);
     }
 

@@ -419,6 +419,7 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("DRIVER", $"Hired {hiredDriver.DriverName} for ${HireDriverCost}. Money now ${money}.");
         LogDriverReaction(hiredDriver, $"hired for ${HireDriverCost} and waiting in Motel");
         isFleetScreenDirty = true;
+        isDriversScreenDirty = true;
         PlayUiSound(uiSelectClip, 0.96f);
     }
 
