@@ -283,7 +283,9 @@ public partial class GameBootstrap
             if (Mathf.Abs(scroll) > 0.01f)
             {
                 float currentDistance = cameraOffset.magnitude;
-                float targetDistance = Mathf.Clamp(currentDistance - scroll * 0.01f * CameraZoomSpeed, CameraMinDistance, CameraMaxDistance);
+                // Normalize scroll to ±1 per tick regardless of platform scroll magnitude, then apply a fixed step
+                float zoomStep = Mathf.Sign(scroll) * CameraZoomSpeed * 0.6f;
+                float targetDistance = Mathf.Clamp(currentDistance - zoomStep, CameraMinDistance, CameraMaxDistance);
                 Vector3 nextOffset = cameraOffset.normalized * targetDistance;
                 float clampedHeight = Mathf.Clamp(cameraFocusPoint.y + nextOffset.y, CameraMinHeight, CameraMaxHeight);
                 if (Mathf.Abs(nextOffset.y) > 0.0001f)
