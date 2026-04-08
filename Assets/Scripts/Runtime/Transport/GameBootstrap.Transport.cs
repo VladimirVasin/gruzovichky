@@ -115,7 +115,7 @@ public partial class GameBootstrap
 
     private void UpdateDriverWalk(DriverAgent driver)
     {
-        if (!isDriverRescueActive || driver.DriverObject == null)
+        if (driver == null || driver.WalkPhase == DriverRescuePhase.None || driver.DriverObject == null)
         {
             return;
         }
@@ -217,7 +217,8 @@ public partial class GameBootstrap
                 driver.SleepStartEnergy = driver.Energy;
                 driver.SleepTimer = DriverSleepDuration;
                 driver.RestPhase = DriverRestPhase.Sleeping;
-                SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} driver entered motel. Sleeping for {DriverSleepDuration}s.");
+                driver.DriverObject.transform.position = driver.MotelIdlePosition;
+                SessionDebugLogger.Log("REST", $"{driver.DriverName} entered motel. Sleeping for {DriverSleepDuration}s.");
                 return;
 
             case DriverRescuePhase.ToTruckAtMotel:
@@ -230,11 +231,26 @@ public partial class GameBootstrap
                 driver.RestPhase = DriverRestPhase.ReturnToParking;
                 SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} driver boarded truck at motel. Returning to Parking.");
                 return;
+
+            case DriverRescuePhase.ToParkingForShift:
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.WaitingForShiftAtParking = true;
+                SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} arrived at Parking for upcoming shift.");
+                TryBoardDriverToAssignedTruck(driver);
+                return;
         }
     }
 
     private void UpdateDriverEnergy(DriverAgent driver)
     {
+        if (driver == null)
+        {
+            return;
+        }
+
         if (driver.ShiftStartHour < 0) return; // idle — no energy drain
         if (currentAssignedTrip == TripType.None && currentRefuelPhase == RefuelPhase.None)
         {
@@ -251,6 +267,11 @@ public partial class GameBootstrap
 
     private void UpdateDriverVisualAnimation(DriverAgent driver)
     {
+        if (driver == null)
+        {
+            return;
+        }
+
         if (driver.DriverObject == null || driver.DriverVisualRoot == null)
         {
             return;
@@ -265,7 +286,7 @@ public partial class GameBootstrap
 
         Vector3 toTarget = driver.WalkTargetWorld - driver.DriverObject.transform.position;
         toTarget.y = 0f;
-        bool isWalking = isDriverRescueActive && toTarget.sqrMagnitude > 0.012f;
+        bool isWalking = driver.WalkPhase != DriverRescuePhase.None && toTarget.sqrMagnitude > 0.012f;
         if (isWalking)
         {
             driver.WalkAnimationTime += Time.deltaTime * 8.2f;

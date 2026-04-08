@@ -9,8 +9,11 @@ public partial class GameBootstrap
     private void SetupTruck()
     {
         TruckAgent firstTruck = CreateAndRegisterTruckAgent(1, 0);
+        DriverAgent firstDriver = CreateAndRegisterDriverAgent();
+        AssignDriverToTruckRoster(firstTruck, firstDriver);
         LoadTruckState(firstTruck);
         SessionDebugLogger.Log("TRUCK", $"Spawned initial {firstTruck.DisplayName} in parking slot {firstTruck.ParkingSlotIndex}.");
+        SessionDebugLogger.Log("DRIVER", $"{firstDriver.DriverName} hired and assigned to {firstTruck.DisplayName} roster.");
     }
 
     private TruckAgent CreateAndRegisterTruckAgent(int truckNumber, int parkingSlotIndex)
@@ -98,20 +101,25 @@ public partial class GameBootstrap
         truckObject.transform.position = truckTargetWorld;
         truckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         truckInteractionTargetRotation = truckObject.transform.rotation;
-        DriverAgent driver = SetupDriver();
-
         TruckAgent truckAgent = new()
         {
             TruckNumber = truckNumber,
             DisplayName = GetTruckDisplayName(truckNumber),
-            ParkingSlotIndex = parkingSlotIndex,
-            Driver = driver
+            ParkingSlotIndex = parkingSlotIndex
         };
 
         SaveTruckState(truckAgent);
         truckAgents.Add(truckAgent);
         SessionDebugLogger.Log("TRUCK", $"Registered {truckAgent.DisplayName} at parking slot {parkingSlotIndex}.");
         return truckAgent;
+    }
+
+    private DriverAgent CreateAndRegisterDriverAgent()
+    {
+        DriverAgent driver = SetupDriver();
+        driverAgents.Add(driver);
+        SessionDebugLogger.Log("DRIVER", $"Registered {driver.DriverName} in Motel.");
+        return driver;
     }
 
     private void CreateTruckHeadlightVisual(Vector3 localPosition, bool isLeft)
@@ -287,7 +295,7 @@ public partial class GameBootstrap
         }
 
         float darkness = 1f - stylizedDaylight;
-        bool flashlightOn = isDriverRescueActive && driver.DriverObject != null && driver.DriverObject.activeSelf && darkness > 0.55f;
+        bool flashlightOn = driver.WalkPhase != DriverRescuePhase.None && driver.DriverObject != null && driver.DriverObject.activeSelf && darkness > 0.55f;
         float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.65f, 2.2f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color flashlightColor = Color.Lerp(
             new Color(0.24f, 0.22f, 0.18f),
@@ -311,7 +319,7 @@ public partial class GameBootstrap
             DriverId = nextDriverId,
             DriverName = $"Driver #{nextDriverId}",
             ShiftStartHour = -1,
-            IsOnActiveShift = true
+            IsOnActiveShift = false
         };
         nextDriverId++;
 
@@ -382,7 +390,11 @@ public partial class GameBootstrap
         driver.DriverFlashlightLight.intensity = 0f;
         driver.DriverFlashlightLight.enabled = false;
 
-        driver.DriverObject.SetActive(false);
+        driver.MotelIdlePosition = GetDriverIdleMotelPosition(driver.DriverId - 1);
+        driver.DriverObject.transform.position = driver.MotelIdlePosition;
+        driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        driver.WalkTargetWorld = driver.MotelIdlePosition;
+        driver.DriverObject.SetActive(true);
         return driver;
     }
 

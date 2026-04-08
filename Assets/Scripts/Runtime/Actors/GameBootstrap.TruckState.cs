@@ -142,45 +142,117 @@ public partial class GameBootstrap
         return parkingSlots[slotIndex];
     }
 
-    private Vector3 GetMotelParkingSlotWorldPosition(int slotIndex)
+    private Vector3 GetDriverIdleMotelPosition(int driverIndex)
     {
-        if (!locations.TryGetValue(LocationType.Motel, out LocationData motel))
-        {
-            return Vector3.zero;
-        }
-
         Vector3 center = GetLocationCenter(LocationType.Motel);
-        Vector3 anchorWorld = new Vector3(motel.Anchor.x + 0.5f, center.y, motel.Anchor.y + 0.5f);
-        Vector3 toAnchorRaw = anchorWorld - center;
-        toAnchorRaw.y = 0f;
-        Vector3 toAnchor;
-        if (Mathf.Abs(toAnchorRaw.x) >= Mathf.Abs(toAnchorRaw.z))
-            toAnchor = new Vector3(Mathf.Sign(toAnchorRaw.x), 0f, 0f);
-        else
-            toAnchor = new Vector3(0f, 0f, Mathf.Sign(toAnchorRaw.z));
+        int ringIndex = Mathf.Max(0, driverIndex);
+        Vector3[] offsets =
+        {
+            new(-0.35f, 0f, -0.25f),
+            new(0.35f, 0f, -0.25f),
+            new(-0.35f, 0f, 0.25f),
+            new(0.35f, 0f, 0.25f),
+            new(0f, 0f, -0.45f),
+            new(0f, 0f, 0.45f)
+        };
 
-        // Perpendicular to anchor direction (right side when facing anchor)
-        Vector3 right = new Vector3(-toAnchor.z, 0f, toAnchor.x);
-
-        // Slots sit in the front half of the footprint (toward anchor), side by side
-        // slotIndex 0 = left slot, 1 = right slot (when facing the building from the road)
-        float forwardOffset = 0.5f;
-        float sideOffset = 0.27f;
-        float xSign = slotIndex == 0 ? -1f : 1f;
-        return center + toAnchor * forwardOffset + right * (xSign * sideOffset);
+        Vector3 position = center + offsets[ringIndex % offsets.Length];
+        position.y = SampleTerrainHeight(position.x, position.z);
+        return position;
     }
 
-    private int PickFreeMotelSlot(DriverAgent currentDriver)
+    private Vector3 GetDriverParkingWaitPosition(TruckAgent truckAgent)
     {
-        HashSet<int> occupied = new();
-        foreach (TruckAgent agent in truckAgents)
+        Vector3 truckPosition = truckAgent != null ? GetParkingSlotWorldPosition(truckAgent.ParkingSlotIndex) : GetLocationCenter(LocationType.Parking);
+        Vector3 waitPosition = truckPosition + new Vector3(-0.42f, 0f, -0.34f);
+        waitPosition.y = SampleTerrainHeight(waitPosition.x, waitPosition.z);
+        return waitPosition;
+    }
+
+    private TruckAgent GetAssignedTruckForDriver(DriverAgent driver)
+    {
+        if (driver == null || driver.AssignedTruckNumber <= 0)
         {
-            if (agent.Driver != currentDriver && agent.Driver.RestPhase != DriverRestPhase.None)
+            return null;
+        }
+
+        return GetTruckAgent(driver.AssignedTruckNumber);
+    }
+
+    private TruckAgent GetCurrentTruckForDriver(DriverAgent driver)
+    {
+        foreach (TruckAgent truckAgent in truckAgents)
+        {
+            if (truckAgent.Driver == driver)
             {
-                occupied.Add(agent.Driver.MotelSlotIndex);
+                return truckAgent;
             }
         }
-        return occupied.Contains(0) ? 1 : 0;
+
+        return null;
+    }
+
+    private bool IsDriverAssignedToTruck(TruckAgent truckAgent, DriverAgent driver)
+    {
+        return truckAgent != null && driver != null && truckAgent.AssignedDrivers.Contains(driver);
+    }
+
+    private bool AssignDriverToTruckRoster(TruckAgent truckAgent, DriverAgent driver)
+    {
+        if (truckAgent == null || driver == null)
+        {
+            return false;
+        }
+
+        if (driver.AssignedTruckNumber > 0 && driver.AssignedTruckNumber != truckAgent.TruckNumber)
+        {
+            return false;
+        }
+
+        if (truckAgent.AssignedDrivers.Contains(driver))
+        {
+            return true;
+        }
+
+        if (truckAgent.AssignedDrivers.Count >= 2)
+        {
+            return false;
+        }
+
+        truckAgent.AssignedDrivers.Add(driver);
+        driver.AssignedTruckNumber = truckAgent.TruckNumber;
+        return true;
+    }
+
+    private bool RemoveDriverFromTruckRoster(TruckAgent truckAgent, DriverAgent driver)
+    {
+        if (truckAgent == null || driver == null)
+        {
+            return false;
+        }
+
+        if (!truckAgent.AssignedDrivers.Remove(driver))
+        {
+            return false;
+        }
+
+        driver.AssignedTruckNumber = 0;
+        return true;
+    }
+
+    private string GetTruckAssignedDriverSummary(TruckAgent truckAgent)
+    {
+        if (truckAgent == null || truckAgent.AssignedDrivers.Count == 0)
+        {
+            return "None";
+        }
+
+        if (truckAgent.AssignedDrivers.Count == 1)
+        {
+            return truckAgent.AssignedDrivers[0].DriverName;
+        }
+
+        return $"{truckAgent.AssignedDrivers[0].DriverName} +{truckAgent.AssignedDrivers.Count - 1}";
     }
 
     private string GetTruckDisplayName(int truckNumber)

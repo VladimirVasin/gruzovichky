@@ -26,12 +26,12 @@ public partial class GameBootstrap
     private Rect GetShiftsPanelRect()
     {
         const float leftW = 210f, rightW = 476f, pad = 8f, gap = 8f;
-        float leftH = 34f + truckAgents.Count * 52f + pad;
+        float leftH = 34f + driverAgents.Count * 52f + pad;
         float rightH = pad;
         foreach (int hour in ShiftPresetHours)
         {
             int n = 0;
-            foreach (TruckAgent ta in truckAgents) if (ta.Driver.ShiftStartHour == hour) n++;
+            foreach (DriverAgent driver in driverAgents) if (driver.ShiftStartHour == hour) n++;
             rightH += Mathf.Max(32f + n * 30f + 44f + pad, 112f) + gap;
         }
         float h = Mathf.Max(leftH, rightH) + 48f;
@@ -40,7 +40,7 @@ public partial class GameBootstrap
 
     private Rect GetDriversPanelRect()
     {
-        float height = 44f + truckAgents.Count * 96f;
+        float height = 44f + driverAgents.Count * 96f + 64f;
         return new Rect(12f, 68f, 420f, Mathf.Min(height, Screen.height - 96f));
     }
 
@@ -134,9 +134,8 @@ public partial class GameBootstrap
         GUI.Box(leftRect, "Drivers", secStyle);
 
         float dy = leftRect.y + 32f;
-        foreach (TruckAgent ta in truckAgents)
+        foreach (DriverAgent d in driverAgents)
         {
-            DriverAgent d = ta.Driver;
             bool isSelected = selectedShiftDriverId == d.DriverId;
 
             Rect rowRect = new Rect(leftRect.x + 4f, dy, leftRect.width - 8f, 48f);
@@ -169,19 +168,14 @@ public partial class GameBootstrap
         float cy = panelRect.y + 38f;
 
         // Find currently selected driver
-        DriverAgent selDriver = null;
-        TruckAgent  selTruck  = null;
-        foreach (TruckAgent ta in truckAgents)
-        {
-            if (ta.Driver.DriverId == selectedShiftDriverId) { selDriver = ta.Driver; selTruck = ta; break; }
-        }
+        DriverAgent selDriver = driverAgents.Find(driver => driver.DriverId == selectedShiftDriverId);
 
         for (int c = 0; c < 3; c++)
         {
             // Compute card height
             int assignedCount = 0;
-            foreach (TruckAgent ta in truckAgents)
-                if (ta.Driver.ShiftStartHour == ShiftPresetHours[c]) assignedCount++;
+            foreach (DriverAgent driver in driverAgents)
+                if (driver.ShiftStartHour == ShiftPresetHours[c]) assignedCount++;
             float cardH = Mathf.Max(32f + assignedCount * 30f + 44f + pad, 112f);
 
             Rect card = new Rect(rx, cy, rightW, cardH);
@@ -196,9 +190,8 @@ public partial class GameBootstrap
 
             float ry = card.y + 36f;
             bool hasDrivers = false;
-            foreach (TruckAgent ta in truckAgents)
+            foreach (DriverAgent d in driverAgents)
             {
-                DriverAgent d = ta.Driver;
                 if (d.ShiftStartHour != ShiftPresetHours[c]) continue;
                 hasDrivers = true;
 
@@ -210,7 +203,13 @@ public partial class GameBootstrap
                     LogCommand($"RemoveShift({d.DriverName})");
                     d.ShiftStartHour = -1;
                     d.IsOnActiveShift = false;
-                    ta.IsTruckAutoModeEnabled = false;
+                    d.WaitingForShiftAtParking = false;
+                    d.NeedsShiftEndReturn = false;
+                    TruckAgent assignedTruck = GetAssignedTruckForDriver(d);
+                    if (assignedTruck != null)
+                    {
+                        assignedTruck.IsTruckAutoModeEnabled = false;
+                    }
                     if (selectedShiftDriverId == d.DriverId) selectedShiftDriverId = 0;
                     PlayUiSound(uiSelectClip, 0.85f);
                     SessionDebugLogger.Log("SHIFT", $"{d.DriverName} removed from shift — now Idle.");
@@ -241,7 +240,11 @@ public partial class GameBootstrap
                 selDriver.IsOnActiveShift = inWindow
                     && selDriver.RestPhase == DriverRestPhase.None
                     && selDriver.WalkPhase == DriverRescuePhase.None;
-                if (selDriver.IsOnActiveShift) SetTruckAutoMode(selTruck, true);
+                if (selDriver.IsOnActiveShift && GetAssignedTruckForDriver(selDriver) is TruckAgent assignedTruck)
+                {
+                    TryBoardDriverToAssignedTruck(selDriver);
+                    SetTruckAutoMode(assignedTruck, true);
+                }
                 PlayUiSound(uiSelectClip, 0.85f);
                 SessionDebugLogger.Log("SHIFT", $"{selDriver.DriverName} assigned to {ShiftNames[c]} ({GetShiftRangeLabel(ShiftPresetHours[c])}).");
                 LogDriverReaction(selDriver, $"assigned to {ShiftNames[c]} ({GetShiftRangeLabel(ShiftPresetHours[c])})");
@@ -264,11 +267,10 @@ public partial class GameBootstrap
         GUI.Box(panelRect, "Drivers");
 
         float y = panelRect.y + 34f;
-        foreach (TruckAgent ta in truckAgents)
+        foreach (DriverAgent d in driverAgents)
         {
-            LoadTruckState(ta);
-            DriverAgent d = ta.Driver;
             bool isSelected = selectedShiftDriverId == d.DriverId;
+            TruckAgent assignedTruck = GetAssignedTruckForDriver(d);
 
             Rect cardRect = new Rect(panelRect.x + 8f, y, panelRect.width - 16f, 88f);
             Color previousColor = GUI.color;
@@ -277,18 +279,20 @@ public partial class GameBootstrap
             GUI.color = previousColor;
 
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 6f,  180f, 20f), d.DriverName, labelBold);
-            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 26f, cardRect.width - 16f, 18f), $"Assigned truck: {ta.DisplayName}", labelMid);
+            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 26f, cardRect.width - 16f, 18f), $"Assigned truck: {(assignedTruck != null ? assignedTruck.DisplayName : "None")}", labelMid);
 
-            string status = GetDriverWorkforceStatus(ta, d);
+            string status = GetDriverWorkforceStatus(assignedTruck, d);
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 44f, cardRect.width - 120f, 18f), $"Status: {status}", labelMid);
 
             string energyMark = d.Energy <= DriverEnergyCriticalThreshold ? "!" : "";
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 62f, 140f, 18f), $"Energy: {Mathf.CeilToInt(d.Energy)}{energyMark}/{Mathf.CeilToInt(DriverEnergyMax)}", labelMid);
+            GUI.enabled = assignedTruck != null;
             if (GUI.Button(new Rect(cardRect.x + cardRect.width - 96f, cardRect.y + 54f, 84f, 24f), "Open Fleet", btnStyle))
             {
-                LogUiInput($"Drivers: Open Fleet for {ta.DisplayName} via {d.DriverName}");
-                FocusTruck(ta.TruckNumber);
+                LogUiInput($"Drivers: Open Fleet for {assignedTruck.DisplayName} via {d.DriverName}");
+                FocusTruck(assignedTruck.TruckNumber);
             }
+            GUI.enabled = true;
 
             if (GUI.Button(cardRect, string.Empty, GUIStyle.none))
             {
@@ -297,9 +301,16 @@ public partial class GameBootstrap
                 PlayUiSound(uiSelectClip, 0.8f);
             }
 
-            SaveTruckState(ta);
             y += 96f;
         }
+
+        bool canHireDriver = money >= HireDriverCost;
+        GUI.enabled = canHireDriver;
+        if (GUI.Button(new Rect(panelRect.x + 8f, panelRect.y + panelRect.height - 42f, panelRect.width - 16f, 30f), $"Hire New Driver  ${HireDriverCost}", btnStyle))
+        {
+            HireNewDriver();
+        }
+        GUI.enabled = true;
     }
 
     private string GetDriverWorkforceStatus(TruckAgent truckAgent, DriverAgent driver)
@@ -309,22 +320,37 @@ public partial class GameBootstrap
             return "Idle";
         }
 
+        if (driver.RestPhase == DriverRestPhase.Sleeping)
+        {
+            return "Sleeping";
+        }
+
         if (driver.RestPhase != DriverRestPhase.None)
         {
             return "Resting";
         }
 
-        if (driver.WalkPhase != DriverRescuePhase.None || truckAgent.IsDriverRescueActive)
+        if (driver.WalkPhase == DriverRescuePhase.ToParkingForShift)
+        {
+            return "Walking to parking";
+        }
+
+        if (driver.WaitingForShiftAtParking)
+        {
+            return "Waiting for shift";
+        }
+
+        if (driver.WalkPhase != DriverRescuePhase.None || (truckAgent != null && truckAgent.IsDriverRescueActive))
         {
             return "Working";
         }
 
-        if (truckAgent.IsTruckMoving || truckAgent.IsTruckInteracting || truckAgent.CurrentAssignedTrip != TripType.None || truckAgent.CurrentRefuelPhase != RefuelPhase.None)
+        if (truckAgent != null && (truckAgent.IsTruckMoving || truckAgent.IsTruckInteracting || truckAgent.CurrentAssignedTrip != TripType.None || truckAgent.CurrentRefuelPhase != RefuelPhase.None))
         {
             return "Working";
         }
 
-        return "Assigned";
+        return driver.AssignedTruckNumber > 0 ? "Assigned" : "Idle";
     }
 
     // ── Resources panel ──────────────────────────────────────────────────────

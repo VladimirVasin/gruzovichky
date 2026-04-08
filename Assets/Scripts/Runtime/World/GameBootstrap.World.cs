@@ -93,6 +93,7 @@ public partial class GameBootstrap
         }
 
         miscOccupiedCells.Clear();
+        miscTreeSways.Clear();
         List<Vector2Int> plannedCells = MiscTreePlanner.Plan(GridWidth, GridHeight, roadCells, IsLocationCell);
         SessionDebugLogger.Log("WORLD", $"Planning {plannedCells.Count} misc cells");
         for (int i = 0; i < plannedCells.Count; i++)
@@ -121,7 +122,52 @@ public partial class GameBootstrap
         treeRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
         treeRoot.transform.localScale = Vector3.one * Random.Range(0.86f, 1.14f);
         CreateTreeVariant(treeRoot.transform, variantIndex);
+        RegisterMiscTreeSway(treeRoot.transform, cell, variantIndex);
         miscOccupiedCells.Add(cell);
+    }
+
+    private void RegisterMiscTreeSway(Transform treeRoot, Vector2Int cell, int variantIndex)
+    {
+        if (treeRoot == null)
+        {
+            return;
+        }
+
+        miscTreeSways.Add(new MiscTreeSway
+        {
+            RootTransform = treeRoot,
+            BaseRotation = treeRoot.localRotation,
+            PhaseOffset = (cell.x * 0.73f) + (cell.y * 1.17f) + variantIndex * 0.41f,
+            SecondaryPhaseOffset = (cell.x * 1.31f) + (cell.y * 0.57f) + variantIndex * 0.88f,
+            Speed = 0.55f + ((cell.x + cell.y + variantIndex) % 5) * 0.06f,
+            PitchAmplitude = 1.2f + ((cell.x + variantIndex) % 4) * 0.18f,
+            RollAmplitude = 0.9f + ((cell.y + variantIndex) % 4) * 0.14f
+        });
+    }
+
+    private void UpdateMiscTreeSways()
+    {
+        if (miscTreeSways.Count == 0)
+        {
+            return;
+        }
+
+        float time = Time.time;
+        for (int i = miscTreeSways.Count - 1; i >= 0; i--)
+        {
+            MiscTreeSway sway = miscTreeSways[i];
+            if (sway.RootTransform == null)
+            {
+                miscTreeSways.RemoveAt(i);
+                continue;
+            }
+
+            float primary = Mathf.Sin(time * sway.Speed + sway.PhaseOffset);
+            float secondary = Mathf.Sin(time * (sway.Speed * 0.63f) + sway.SecondaryPhaseOffset);
+            float pitch = primary * sway.PitchAmplitude;
+            float roll = secondary * sway.RollAmplitude;
+            sway.RootTransform.localRotation = sway.BaseRotation * Quaternion.Euler(pitch, 0f, roll);
+        }
     }
 
     private void CreateTreeVariant(Transform parent, int variantIndex)

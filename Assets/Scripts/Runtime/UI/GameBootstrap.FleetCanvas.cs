@@ -35,13 +35,18 @@ public partial class GameBootstrap
         public Text DetailsHeaderText;
         public Text DetailsPlaceholderText;
         public GameObject DetailsContentRoot;
+        public LayoutElement InfoCardLayout;
         public Text InfoStateText;
-        public Button DriverLinkButton;
-        public Text DriverLinkButtonText;
-        public Button AssignDriverButton;
-        public Text AssignDriverButtonText;
+        public readonly List<Button> DriverLinkButtons = new();
+        public readonly List<Text> DriverLinkButtonTexts = new();
+        public readonly List<Button> AssignDriverButtons = new();
+        public readonly List<Text> AssignDriverButtonTexts = new();
+        public readonly List<Button> RemoveDriverButtons = new();
+        public readonly List<Text> RemoveDriverButtonTexts = new();
         public RectTransform AssignDriverPickerPanel;
+        public LayoutElement AssignDriverPickerLayout;
         public Text AssignDriverPickerTitleText;
+        public Text AssignDriverPickerEmptyText;
         public readonly List<Button> DriverPickerButtons = new();
         public readonly List<Text> DriverPickerButtonTexts = new();
         public Text ResourcesFuelText;
@@ -65,6 +70,8 @@ public partial class GameBootstrap
         public Text StateText;
         public Text ResourceText;
     }
+
+    private int fleetAssignDriverTargetSlot = -1;
 
     private void SetupFleetScreenUi()
     {
@@ -185,7 +192,8 @@ public partial class GameBootstrap
         detailsContentGroup.childForceExpandHeight = false;
 
         RectTransform infoCard = CreateSectionCard(fleetScreenUi.DetailsContentRoot.transform, uiFont, "Truck Overview", out RectTransform infoBody);
-        infoCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 208f;
+        fleetScreenUi.InfoCardLayout = infoCard.gameObject.AddComponent<LayoutElement>();
+        fleetScreenUi.InfoCardLayout.preferredHeight = 232f;
         RectTransform stateBlock = CreateStyledPanel("StateBlock", infoBody, FleetCardMutedColor);
         stateBlock.gameObject.AddComponent<LayoutElement>().preferredHeight = 66f;
         VerticalLayoutGroup stateBlockGroup = stateBlock.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -201,7 +209,7 @@ public partial class GameBootstrap
         fleetScreenUi.InfoStateText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
 
         RectTransform driverBlock = CreateStyledPanel("AssignedDriverBlock", infoBody, FleetCardMutedColor);
-        driverBlock.gameObject.AddComponent<LayoutElement>().preferredHeight = 62f;
+        driverBlock.gameObject.AddComponent<LayoutElement>().preferredHeight = 120f;
         VerticalLayoutGroup driverBlockGroup = driverBlock.gameObject.AddComponent<VerticalLayoutGroup>();
         driverBlockGroup.padding = new RectOffset(12, 12, 10, 10);
         driverBlockGroup.spacing = 6;
@@ -209,41 +217,73 @@ public partial class GameBootstrap
         driverBlockGroup.childControlHeight = true;
         driverBlockGroup.childForceExpandWidth = true;
         driverBlockGroup.childForceExpandHeight = false;
-        CreateHeaderText("AssignedDriverLabel", driverBlock, uiFont, "Assigned Driver", 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
-        RectTransform driverRow = CreateLayoutRow("AssignedDriverRow", driverBlock, 28f, 10f);
-        fleetScreenUi.DriverLinkButton = CreateButton("DriverLinkButton", driverRow, uiFont, out fleetScreenUi.DriverLinkButtonText, "Driver: None", 13, new Color(0.23f, 0.29f, 0.36f, 1f), Color.white);
-        LayoutElement driverLinkLayout = fleetScreenUi.DriverLinkButton.gameObject.AddComponent<LayoutElement>();
-        driverLinkLayout.preferredHeight = 28f;
-        driverLinkLayout.flexibleWidth = 1f;
-        fleetScreenUi.DriverLinkButtonText.alignment = TextAnchor.MiddleLeft;
-        fleetScreenUi.DriverLinkButton.onClick.AddListener(() =>
+        for (int slotIndex = 0; slotIndex < 2; slotIndex++)
         {
-            TruckAgent selectedTruck = GetFleetSelectedTruck();
-            if (selectedTruck?.Driver == null)
-            {
-                return;
-            }
+            CreateHeaderText($"AssignedDriverLabel{slotIndex + 1}", driverBlock, uiFont, $"Assigned Driver {slotIndex + 1}", 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+            RectTransform driverRow = CreateLayoutRow($"AssignedDriverRow{slotIndex + 1}", driverBlock, 28f, 10f);
 
-            LogUiInput($"Fleet Canvas: opened Drivers for {selectedTruck.Driver.DriverName} from {selectedTruck.DisplayName}");
-            OpenDriversPanelForDriver(selectedTruck.Driver.DriverId);
-        });
-        fleetScreenUi.AssignDriverButton = CreateButton("AssignDriverButton", driverRow, uiFont, out fleetScreenUi.AssignDriverButtonText, "Assign", 12, new Color(0.39f, 0.44f, 0.56f, 1f), Color.white);
-        LayoutElement assignDriverLayout = fleetScreenUi.AssignDriverButton.gameObject.AddComponent<LayoutElement>();
-        assignDriverLayout.preferredWidth = 138f;
-        assignDriverLayout.preferredHeight = 28f;
-        fleetScreenUi.AssignDriverButton.onClick.AddListener(() =>
-        {
-            TruckAgent selectedTruck = GetFleetSelectedTruck();
-            if (selectedTruck != null)
+            Button driverButton = CreateButton($"DriverLinkButton{slotIndex + 1}", driverRow, uiFont, out Text driverButtonText, "Empty", 13, new Color(0.23f, 0.29f, 0.36f, 1f), Color.white);
+            LayoutElement driverLinkLayout = driverButton.gameObject.AddComponent<LayoutElement>();
+            driverLinkLayout.preferredHeight = 28f;
+            driverLinkLayout.flexibleWidth = 1f;
+            driverButtonText.alignment = TextAnchor.MiddleLeft;
+            int driverSlotIndex = slotIndex;
+            driverButton.onClick.AddListener(() =>
             {
-                LogUiInput($"Fleet Canvas: clicked {fleetScreenUi.AssignDriverButtonText.text} for {selectedTruck.DisplayName}");
-            }
+                TruckAgent selectedTruck = GetFleetSelectedTruck();
+                if (selectedTruck == null || driverSlotIndex >= selectedTruck.AssignedDrivers.Count)
+                {
+                    return;
+                }
 
-            ToggleFleetDriverAssignmentPicker();
-        });
+                DriverAgent rosterDriver = selectedTruck.AssignedDrivers[driverSlotIndex];
+                LogUiInput($"Fleet Canvas: opened Drivers for {rosterDriver.DriverName} from {selectedTruck.DisplayName}");
+                OpenDriversPanelForDriver(rosterDriver.DriverId);
+            });
+            fleetScreenUi.DriverLinkButtons.Add(driverButton);
+            fleetScreenUi.DriverLinkButtonTexts.Add(driverButtonText);
+
+            Button removeButton = CreateButton($"RemoveDriverButton{slotIndex + 1}", driverRow, uiFont, out Text removeButtonText, "X", 12, new Color(0.66f, 0.20f, 0.20f, 1f), Color.white);
+            LayoutElement removeDriverLayout = removeButton.gameObject.AddComponent<LayoutElement>();
+            removeDriverLayout.preferredWidth = 28f;
+            removeDriverLayout.preferredHeight = 28f;
+            int removeSlotIndex = slotIndex;
+            removeButton.onClick.AddListener(() =>
+            {
+                TruckAgent currentTruck = GetFleetSelectedTruck();
+                if (currentTruck == null || removeSlotIndex >= currentTruck.AssignedDrivers.Count)
+                {
+                    return;
+                }
+
+                UnassignDriverFromTruck(currentTruck, currentTruck.AssignedDrivers[removeSlotIndex]);
+            });
+            fleetScreenUi.RemoveDriverButtons.Add(removeButton);
+            fleetScreenUi.RemoveDriverButtonTexts.Add(removeButtonText);
+
+            Button assignButton = CreateButton($"AssignDriverButton{slotIndex + 1}", driverRow, uiFont, out Text assignButtonText, "Assign", 12, new Color(0.39f, 0.44f, 0.56f, 1f), Color.white);
+            LayoutElement assignDriverLayout = assignButton.gameObject.AddComponent<LayoutElement>();
+            assignDriverLayout.preferredWidth = 100f;
+            assignDriverLayout.preferredHeight = 28f;
+            int assignSlotIndex = slotIndex;
+            assignButton.onClick.AddListener(() =>
+            {
+                TruckAgent selectedTruck = GetFleetSelectedTruck();
+                if (selectedTruck != null)
+                {
+                    LogUiInput($"Fleet Canvas: clicked assign driver slot {assignSlotIndex + 1} for {selectedTruck.DisplayName}");
+                }
+
+                fleetAssignDriverTargetSlot = assignSlotIndex;
+                ToggleFleetDriverAssignmentPicker();
+            });
+            fleetScreenUi.AssignDriverButtons.Add(assignButton);
+            fleetScreenUi.AssignDriverButtonTexts.Add(assignButtonText);
+        }
 
         fleetScreenUi.AssignDriverPickerPanel = CreateStyledPanel("AssignDriverPickerPanel", infoBody, FleetCardMutedColor);
-        fleetScreenUi.AssignDriverPickerPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 128f;
+        fleetScreenUi.AssignDriverPickerLayout = fleetScreenUi.AssignDriverPickerPanel.gameObject.AddComponent<LayoutElement>();
+        fleetScreenUi.AssignDriverPickerLayout.preferredHeight = 0f;
         VerticalLayoutGroup pickerGroup = fleetScreenUi.AssignDriverPickerPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         pickerGroup.padding = new RectOffset(12, 12, 12, 12);
         pickerGroup.spacing = 6;
@@ -252,6 +292,8 @@ public partial class GameBootstrap
         pickerGroup.childForceExpandWidth = true;
         pickerGroup.childForceExpandHeight = false;
         fleetScreenUi.AssignDriverPickerTitleText = CreateHeaderText("AssignDriverPickerTitle", fleetScreenUi.AssignDriverPickerPanel, uiFont, "Select Driver", 13, TextAnchor.MiddleLeft, Color.white);
+        fleetScreenUi.AssignDriverPickerEmptyText = CreateBodyText("AssignDriverPickerEmpty", fleetScreenUi.AssignDriverPickerPanel, uiFont, "No available drivers.", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        fleetScreenUi.AssignDriverPickerEmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
         for (int i = 0; i < 3; i++)
         {
             Button pickerButton = CreateButton($"AssignDriverOption{i + 1}", fleetScreenUi.AssignDriverPickerPanel, uiFont, out Text pickerText, string.Empty, 12, new Color(0.25f, 0.31f, 0.39f, 1f), Color.white);
@@ -355,7 +397,7 @@ public partial class GameBootstrap
             bool isSelected = isTruckDetailsOpen && selectedTruckNumber == truckAgent.TruckNumber;
             row.TruckNumber = truckAgent.TruckNumber;
             row.TruckNameText.text = truckAgent.DisplayName;
-            row.DriverText.text = truckAgent.Driver != null ? truckAgent.Driver.DriverName : "Driver: None";
+        row.DriverText.text = $"Assigned: {GetTruckAssignedDriverSummary(truckAgent)}";
             row.StateText.text = GetTruckListStatusForFleet(truckAgent);
             row.ResourceText.text = $"Fuel {Mathf.CeilToInt(truckAgent.TruckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}    {GetTruckCargoSummary(truckAgent)}";
             row.Background.color = isSelected ? FleetSelectedRowColor : FleetRowColor;
@@ -392,15 +434,26 @@ public partial class GameBootstrap
         DriverAgent driver = selectedTruck.Driver;
         fleetScreenUi.DetailsHeaderText.text = selectedTruck.DisplayName;
         fleetScreenUi.InfoStateText.text = GetTruckFleetStatusLabel();
-        fleetScreenUi.DriverLinkButtonText.text = driver != null ? driver.DriverName : "Driver: None";
-        fleetScreenUi.DriverLinkButton.interactable = driver != null;
+        for (int slotIndex = 0; slotIndex < fleetScreenUi.DriverLinkButtons.Count; slotIndex++)
+        {
+            bool hasRosterDriver = slotIndex < selectedTruck.AssignedDrivers.Count;
+            DriverAgent rosterDriver = hasRosterDriver ? selectedTruck.AssignedDrivers[slotIndex] : null;
+            bool isCurrentDriver = rosterDriver != null && rosterDriver == driver;
+            fleetScreenUi.DriverLinkButtonTexts[slotIndex].text = rosterDriver == null
+                ? "Empty"
+                : (isCurrentDriver ? $"{rosterDriver.DriverName}  (Current)" : rosterDriver.DriverName);
+            fleetScreenUi.DriverLinkButtons[slotIndex].interactable = rosterDriver != null;
+            fleetScreenUi.AssignDriverButtonTexts[slotIndex].text = rosterDriver == null ? "Assign" : "Assigned";
+            fleetScreenUi.AssignDriverButtons[slotIndex].interactable = rosterDriver == null;
+            fleetScreenUi.RemoveDriverButtons[slotIndex].gameObject.SetActive(rosterDriver != null);
+            fleetScreenUi.RemoveDriverButtons[slotIndex].interactable = CanUnassignDriverFromTruck(selectedTruck, rosterDriver);
+        }
         fleetScreenUi.ResourcesFuelText.text = FormatValueLine("Fuel", $"{Mathf.CeilToInt(truckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}");
         fleetScreenUi.ResourcesEnergyText.text = FormatValueLine("Energy", $"{(driver != null ? Mathf.CeilToInt(driver.Energy) : 0)} / {Mathf.CeilToInt(DriverEnergyMax)}");
         fleetScreenUi.ResourcesCargoText.text = FormatValueLine("Cargo", $"{truckCargoAmount}/1 ({truckCargoType})");
         fleetScreenUi.NavigationCellText.text = FormatValueLine("Grid Cell", $"{truckCell.x}, {truckCell.y}");
         fleetScreenUi.NavigationRouteText.text = FormatValueLine("Assigned Route", GetTripTitle(currentAssignedTrip));
         fleetScreenUi.NavigationPayoutText.text = FormatValueLine("Trip Payout", $"${currentAssignedTripReward}");
-        fleetScreenUi.AssignDriverButtonText.text = driver == null ? "Assign Driver" : "Change";
         UpdateFleetDriverAssignmentPicker(selectedTruck);
 
         SaveTruckState(selectedTruck);
@@ -466,7 +519,7 @@ public partial class GameBootstrap
 
     private string GetTruckAssignedDriverName(TruckAgent truckAgent)
     {
-        return truckAgent?.Driver != null ? truckAgent.Driver.DriverName : "None";
+        return GetTruckAssignedDriverSummary(truckAgent);
     }
 
     private void ToggleFleetDriverAssignmentPicker()
@@ -477,12 +530,35 @@ public partial class GameBootstrap
         }
 
         bool nextState = !fleetScreenUi.AssignDriverPickerPanel.gameObject.activeSelf;
+        if (nextState && fleetAssignDriverTargetSlot < 0)
+        {
+            return;
+        }
+
         fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(nextState);
+        if (fleetScreenUi.AssignDriverPickerLayout != null)
+        {
+            fleetScreenUi.AssignDriverPickerLayout.preferredHeight = nextState ? 128f : 0f;
+        }
+
+        if (fleetScreenUi.InfoCardLayout != null)
+        {
+            fleetScreenUi.InfoCardLayout.preferredHeight = nextState ? 360f : 232f;
+        }
+
         TruckAgent selectedTruck = GetFleetSelectedTruck();
         if (selectedTruck != null)
         {
             LogUiInput($"Fleet Canvas: {(nextState ? "opened" : "closed")} driver picker for {selectedTruck.DisplayName}");
         }
+
+        if (!nextState)
+        {
+            fleetAssignDriverTargetSlot = -1;
+        }
+
+        isFleetScreenDirty = true;
+        UpdateFleetDriverAssignmentPicker(selectedTruck);
         PlayUiSound(nextState ? uiPanelOpenClip : uiPanelCloseClip, 0.78f);
     }
 
@@ -496,11 +572,25 @@ public partial class GameBootstrap
         if (selectedTruck == null)
         {
             fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(false);
+            if (fleetScreenUi.AssignDriverPickerLayout != null) fleetScreenUi.AssignDriverPickerLayout.preferredHeight = 0f;
+            if (fleetScreenUi.InfoCardLayout != null) fleetScreenUi.InfoCardLayout.preferredHeight = 232f;
+            fleetAssignDriverTargetSlot = -1;
+            return;
+        }
+
+        if (fleetAssignDriverTargetSlot < 0 || fleetAssignDriverTargetSlot > 1 || fleetAssignDriverTargetSlot < selectedTruck.AssignedDrivers.Count)
+        {
+            fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(false);
+            if (fleetScreenUi.AssignDriverPickerLayout != null) fleetScreenUi.AssignDriverPickerLayout.preferredHeight = 0f;
+            if (fleetScreenUi.InfoCardLayout != null) fleetScreenUi.InfoCardLayout.preferredHeight = 232f;
+            fleetAssignDriverTargetSlot = -1;
             return;
         }
 
         List<DriverAgent> candidates = GetDriverAssignmentCandidates(selectedTruck);
-        fleetScreenUi.AssignDriverPickerTitleText.text = candidates.Count == 0 ? "No available drivers" : "Select Driver";
+        bool hasCandidates = candidates.Count > 0;
+        fleetScreenUi.AssignDriverPickerTitleText.text = $"Select Driver for Slot {fleetAssignDriverTargetSlot + 1}";
+        fleetScreenUi.AssignDriverPickerEmptyText.gameObject.SetActive(!hasCandidates);
         for (int i = 0; i < fleetScreenUi.DriverPickerButtons.Count; i++)
         {
             bool active = i < candidates.Count;
@@ -517,29 +607,34 @@ public partial class GameBootstrap
                 : $"{driver.DriverName}  ({assignedTruck.DisplayName})";
         }
 
-        if (fleetScreenUi.AssignDriverPickerPanel.gameObject.activeSelf && candidates.Count == 0)
+        fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(fleetScreenUi.AssignDriverPickerPanel.gameObject.activeSelf);
+        if (fleetScreenUi.AssignDriverPickerLayout != null)
         {
-            fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(false);
+            fleetScreenUi.AssignDriverPickerLayout.preferredHeight = fleetScreenUi.AssignDriverPickerPanel.gameObject.activeSelf ? (hasCandidates ? 128f : 72f) : 0f;
+        }
+
+        if (fleetScreenUi.InfoCardLayout != null)
+        {
+            fleetScreenUi.InfoCardLayout.preferredHeight = fleetScreenUi.AssignDriverPickerPanel.gameObject.activeSelf ? (hasCandidates ? 360f : 304f) : 232f;
         }
     }
 
     private List<DriverAgent> GetDriverAssignmentCandidates(TruckAgent selectedTruck)
     {
         List<DriverAgent> candidates = new();
-        foreach (TruckAgent truckAgent in truckAgents)
+        if (selectedTruck == null || selectedTruck.AssignedDrivers.Count >= 2)
         {
-            DriverAgent driver = truckAgent.Driver;
-            if (driver == null)
+            return candidates;
+        }
+
+        foreach (DriverAgent driver in driverAgents)
+        {
+            if (driver == null || driver.AssignedTruckNumber > 0)
             {
                 continue;
             }
 
-            if (driver == selectedTruck.Driver)
-            {
-                continue;
-            }
-
-            if (!CanReassignTruckDriver(selectedTruck, truckAgent, driver))
+            if (driver.RestPhase != DriverRestPhase.None || driver.WalkPhase != DriverRescuePhase.None)
             {
                 continue;
             }
@@ -568,62 +663,17 @@ public partial class GameBootstrap
         {
             LogUiInput($"Fleet Canvas: picked {candidates[optionIndex].DriverName} for {selectedTruck.DisplayName}");
             fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(false);
+            if (fleetScreenUi.AssignDriverPickerLayout != null) fleetScreenUi.AssignDriverPickerLayout.preferredHeight = 0f;
+            if (fleetScreenUi.InfoCardLayout != null) fleetScreenUi.InfoCardLayout.preferredHeight = 232f;
+            fleetAssignDriverTargetSlot = -1;
             isFleetScreenDirty = true;
         }
     }
 
-    private bool CanReassignTruckDriver(TruckAgent targetTruck, TruckAgent sourceTruck, DriverAgent candidateDriver)
-    {
-        if (targetTruck == null || sourceTruck == null || candidateDriver == null)
-        {
-            return false;
-        }
-
-        if (candidateDriver.RestPhase != DriverRestPhase.None || candidateDriver.WalkPhase != DriverRescuePhase.None)
-        {
-            return false;
-        }
-
-        return IsTruckSafeForDriverSwap(targetTruck) && IsTruckSafeForDriverSwap(sourceTruck);
-    }
-
-    private bool IsTruckSafeForDriverSwap(TruckAgent truckAgent)
-    {
-        if (truckAgent == null)
-        {
-            return false;
-        }
-
-        LoadTruckState(truckAgent);
-        bool isSafe =
-            !isTruckMoving &&
-            !isTruckInteracting &&
-            !isDriverRescueActive &&
-            currentAssignedTrip == TripType.None &&
-            currentRefuelPhase == RefuelPhase.None &&
-            IsTruckInsideParking();
-        SaveTruckState(truckAgent);
-        return isSafe;
-    }
-
-    private TruckAgent GetAssignedTruckForDriver(DriverAgent driver)
-    {
-        foreach (TruckAgent truckAgent in truckAgents)
-        {
-            if (truckAgent.Driver == driver)
-            {
-                return truckAgent;
-            }
-        }
-
-        return null;
-    }
-
     private bool AssignDriverToTruck(TruckAgent targetTruck, DriverAgent driver)
     {
-        TruckAgent sourceTruck = GetAssignedTruckForDriver(driver);
         LogCommand($"AssignDriver({targetTruck?.DisplayName ?? "null"}, {driver?.DriverName ?? "null"})");
-        if (targetTruck == null || driver == null || sourceTruck == null || sourceTruck == targetTruck)
+        if (targetTruck == null || driver == null)
         {
             if (targetTruck != null)
             {
@@ -632,21 +682,103 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (!CanReassignTruckDriver(targetTruck, sourceTruck, driver))
+        if (driver.AssignedTruckNumber > 0 && driver.AssignedTruckNumber != targetTruck.TruckNumber)
         {
-            LogTruckReaction(targetTruck, $"driver assignment rejected for {driver.DriverName}: swap is not safe right now");
+            LogTruckReaction(targetTruck, $"driver assignment rejected for {driver.DriverName}: already assigned to another truck");
             return false;
         }
 
-        DriverAgent previousDriver = targetTruck.Driver;
-        targetTruck.Driver = driver;
-        sourceTruck.Driver = previousDriver;
-        SessionDebugLogger.Log("DRIVER", $"{driver.DriverName} assigned to {targetTruck.DisplayName}; {previousDriver.DriverName} moved to {sourceTruck.DisplayName}.");
+        if (targetTruck.AssignedDrivers.Count >= 2)
+        {
+            LogTruckReaction(targetTruck, "driver assignment rejected: roster already full");
+            return false;
+        }
+
+        if (!AssignDriverToTruckRoster(targetTruck, driver))
+        {
+            LogTruckReaction(targetTruck, $"driver assignment rejected for {driver.DriverName}");
+            return false;
+        }
+
+        SessionDebugLogger.Log("DRIVER", $"{driver.DriverName} added to {targetTruck.DisplayName} roster.");
         LogDriverReaction(driver, $"assigned to {targetTruck.DisplayName}");
-        LogDriverReaction(previousDriver, $"moved to {sourceTruck.DisplayName}");
-        LogTruckReaction(targetTruck, $"accepted driver {driver.DriverName}");
-        LogTruckReaction(sourceTruck, $"received driver {previousDriver.DriverName}");
+        LogTruckReaction(targetTruck, $"added roster driver {driver.DriverName}");
         PlayUiSound(uiSelectClip, 0.88f);
+        return true;
+    }
+
+    private bool CanUnassignDriverFromTruck(TruckAgent targetTruck, DriverAgent driver)
+    {
+        if (targetTruck == null || driver == null)
+        {
+            return false;
+        }
+
+        if (targetTruck.Driver != driver)
+        {
+            return true;
+        }
+
+        return !targetTruck.IsTruckMoving &&
+               !targetTruck.IsTruckInteracting &&
+               !targetTruck.IsDriverRescueActive &&
+               targetTruck.CurrentAssignedTrip == TripType.None &&
+               targetTruck.CurrentRefuelPhase == RefuelPhase.None &&
+               IsTruckInsideParking(targetTruck);
+    }
+
+    private bool UnassignDriverFromTruck(TruckAgent targetTruck, DriverAgent driver)
+    {
+        LogCommand($"UnassignDriver({targetTruck?.DisplayName ?? "null"}, {driver?.DriverName ?? "null"})");
+        if (!CanUnassignDriverFromTruck(targetTruck, driver))
+        {
+            if (targetTruck != null && driver != null)
+            {
+                LogTruckReaction(targetTruck, $"driver unassign rejected for {driver.DriverName}: truck is currently using that driver");
+            }
+            return false;
+        }
+
+        if (!RemoveDriverFromTruckRoster(targetTruck, driver))
+        {
+            if (targetTruck != null && driver != null)
+            {
+                LogTruckReaction(targetTruck, $"driver unassign rejected for {driver.DriverName}");
+            }
+            return false;
+        }
+
+        if (targetTruck.Driver == driver)
+        {
+            targetTruck.Driver = null;
+            driver.IsOnActiveShift = false;
+            driver.WaitingForShiftAtParking = false;
+            driver.NeedsShiftEndReturn = false;
+            driver.NeedsRestAfterTrip = false;
+            driver.RestPhase = DriverRestPhase.None;
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.WalkPath.Clear();
+            driver.WalkWaypointIndex = 0;
+            driver.WalkAnimationTime = 0f;
+            if (driver.DriverObject != null)
+            {
+                driver.DriverObject.SetActive(true);
+                driver.DriverObject.transform.position = driver.MotelIdlePosition;
+                driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            }
+        }
+
+        fleetAssignDriverTargetSlot = -1;
+        if (fleetScreenUi?.AssignDriverPickerPanel != null)
+        {
+            fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(false);
+        }
+
+        SessionDebugLogger.Log("DRIVER", $"{driver.DriverName} removed from {targetTruck.DisplayName} roster.");
+        LogDriverReaction(driver, $"unassigned from {targetTruck.DisplayName} and returned to free pool");
+        LogTruckReaction(targetTruck, $"removed roster driver {driver.DriverName}");
+        isFleetScreenDirty = true;
+        PlayUiSound(uiSelectClip, 0.86f);
         return true;
     }
 

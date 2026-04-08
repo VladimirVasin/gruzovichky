@@ -78,6 +78,12 @@ public partial class GameBootstrap
         LogTruckReaction(truckAgent, $"auto mode set to {(enabled ? "ON" : "OFF")}");
         if (enabled)
         {
+            if (truckAgent.Driver == null)
+            {
+                LogTruckReaction(truckAgent, "auto mode enabled but no current driver is boarded");
+                return;
+            }
+
             bool canTakeOrdersNow =
                 truckAgent.CurrentAssignedTrip == TripType.None &&
                 truckAgent.CurrentRefuelPhase == RefuelPhase.None &&
@@ -123,6 +129,7 @@ public partial class GameBootstrap
     {
         LogCommand($"StartRefuelOrder({truckAgent?.DisplayName ?? "null"})");
         if (truckAgent == null ||
+            truckAgent.Driver == null ||
             truckAgent.CurrentAssignedTrip != TripType.None ||
             truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
             truckAgent.Driver.RestPhase != DriverRestPhase.None ||
@@ -147,6 +154,7 @@ public partial class GameBootstrap
         if (truckAgent == null ||
             trip == null ||
             trip.Type == TripType.None ||
+            truckAgent.Driver == null ||
             truckAgent.CurrentAssignedTrip != TripType.None ||
             truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
             truckAgent.Driver.RestPhase != DriverRestPhase.None ||

@@ -48,11 +48,7 @@ public static class WorldLayoutGenerator
                 continue;
             }
 
-            int motelMinX = parkingOnLeft ? 9 : 2;
-            int motelMaxX = parkingOnLeft ? 16 : 11;
-            int motelMinY = parkingOnBottom ? 3 : 4;
-            int motelMaxY = parkingOnBottom ? 10 : 13;
-            if (!TryPlaceInteriorLocation(candidate, "Motel", 2, 2, motelMinX, motelMaxX, motelMinY, motelMaxY, true, gridWidth, gridHeight, parkingAnchor))
+            if (!TryPlaceMotel(candidate, gridWidth, gridHeight))
             {
                 continue;
             }
@@ -131,6 +127,36 @@ public static class WorldLayoutGenerator
             }
 
             placements["GasStation"] = gasStation;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryPlaceMotel(Dictionary<string, WorldLocationPlacement> placements, int gridWidth, int gridHeight)
+    {
+        WorldLocationPlacement parking = placements["Parking"];
+        bool lowerHalf = parking.Anchor.y < gridHeight * 0.5f;
+        int xDirection = parking.Anchor.x < gridWidth * 0.5f ? 1 : -1;
+        int yDirection = lowerHalf ? 1 : -1;
+        WorldPlacementFacing facing = lowerHalf ? WorldPlacementFacing.North : WorldPlacementFacing.South;
+
+        for (int attempt = 0; attempt < 64; attempt++)
+        {
+            Vector2Int anchor = parking.Anchor + new Vector2Int(xDirection * Random.Range(2, 6), yDirection * Random.Range(3, 7));
+            if (!TryCreatePlacementFromAnchor(anchor, 2, 2, facing, gridWidth, gridHeight, out WorldLocationPlacement motel) ||
+                !PlacementFits(motel, placements.Values, 1, gridWidth, gridHeight))
+            {
+                continue;
+            }
+
+            int distanceToParking = ManhattanDistance(parking.Anchor, motel.Anchor);
+            if (distanceToParking < 4 || distanceToParking > 9)
+            {
+                continue;
+            }
+
+            placements["Motel"] = motel;
             return true;
         }
 

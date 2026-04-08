@@ -404,6 +404,24 @@ public partial class GameBootstrap
         PlayUiSound(uiSelectClip, 1f);
     }
 
+    private void HireNewDriver()
+    {
+        LogUiInput("Drivers: clicked Hire New Driver");
+        LogCommand($"HireNewDriver(cost=${HireDriverCost})");
+        if (money < HireDriverCost)
+        {
+            SessionDebugLogger.Log("DRIVER_REACTION", $"Hire new driver rejected: need ${HireDriverCost}.");
+            return;
+        }
+
+        DriverAgent hiredDriver = CreateAndRegisterDriverAgent();
+        money -= HireDriverCost;
+        SessionDebugLogger.Log("DRIVER", $"Hired {hiredDriver.DriverName} for ${HireDriverCost}. Money now ${money}.");
+        LogDriverReaction(hiredDriver, $"hired for ${HireDriverCost} and waiting in Motel");
+        isFleetScreenDirty = true;
+        PlayUiSound(uiSelectClip, 0.96f);
+    }
+
     private void DrawAvailableTripsHud()
     {
         Rect panelRect = GetAvailableTripsHudRect();
@@ -523,6 +541,7 @@ public partial class GameBootstrap
 
         return truckAgent.CurrentAssignedTrip == TripType.None &&
                truckAgent.CurrentRefuelPhase == RefuelPhase.None &&
+               truckAgent.Driver != null &&
                truckAgent.Driver.RestPhase == DriverRestPhase.None &&
                !truckAgent.IsTruckMoving &&
                !truckAgent.IsTruckInteracting &&
@@ -536,6 +555,11 @@ public partial class GameBootstrap
         if (truckAgent == null)
         {
             return "No truck selected.";
+        }
+
+        if (truckAgent.Driver == null)
+        {
+            return "Commands blocked: no boarded driver.";
         }
 
         if (truckAgent.Driver.RestPhase != DriverRestPhase.None)
