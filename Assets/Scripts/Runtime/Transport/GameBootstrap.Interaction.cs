@@ -110,7 +110,7 @@ public partial class GameBootstrap
             cargoTransferCrate.SetActive(isCargoTransfer);
         }
 
-        bool loading = interactionType == TruckInteractionType.LoadAtForest || interactionType == TruckInteractionType.LoadAtWarehouse;
+        bool loading = interactionType == TruckInteractionType.LoadAtForest || interactionType == TruckInteractionType.LoadAtSawmill;
         if (isCargoTransfer)
         {
             PlayTruckFx(loading ? cargoPickupClip : cargoDropClip, 0.8f);
@@ -124,33 +124,33 @@ public partial class GameBootstrap
     private void CompleteTruckInteraction()
     {
         TruckInteractionType completedInteraction = activeTruckInteraction;
-        bool completedLoad = activeTruckInteraction == TruckInteractionType.LoadAtForest || activeTruckInteraction == TruckInteractionType.LoadAtWarehouse;
+        bool completedLoad = activeTruckInteraction == TruckInteractionType.LoadAtForest || activeTruckInteraction == TruckInteractionType.LoadAtSawmill;
 
         switch (activeTruckInteraction)
         {
             case TruckInteractionType.LoadAtForest:
-                locations[LocationType.Forest].WoodStored = Mathf.Max(0, locations[LocationType.Forest].WoodStored - 1);
+                locations[LocationType.Forest].LogsStored = Mathf.Max(0, locations[LocationType.Forest].LogsStored - 1);
                 RefreshForestStoredLogsVisual();
-                truckCargoWood = 1;
-                truckCargoSource = CargoSource.Forest;
+                truckCargoAmount = 1;
+                truckCargoType = CargoType.Logs;
+                break;
+
+            case TruckInteractionType.UnloadAtSawmill:
+                locations[LocationType.Sawmill].LogsStored += truckCargoAmount;
+                truckCargoAmount = 0;
+                truckCargoType = CargoType.None;
+                break;
+
+            case TruckInteractionType.LoadAtSawmill:
+                locations[LocationType.Sawmill].BoardsStored = Mathf.Max(0, locations[LocationType.Sawmill].BoardsStored - 1);
+                truckCargoAmount = 1;
+                truckCargoType = CargoType.Boards;
                 break;
 
             case TruckInteractionType.UnloadAtWarehouse:
-                locations[LocationType.Warehouse].WoodStored += truckCargoWood;
-                truckCargoWood = 0;
-                truckCargoSource = CargoSource.None;
-                break;
-
-            case TruckInteractionType.LoadAtWarehouse:
-                locations[LocationType.Warehouse].WoodStored -= 1;
-                truckCargoWood = 1;
-                truckCargoSource = CargoSource.Warehouse;
-                break;
-
-            case TruckInteractionType.UnloadAtTown:
-                locations[LocationType.Town].WoodStored += truckCargoWood;
-                truckCargoWood = 0;
-                truckCargoSource = CargoSource.None;
+                locations[LocationType.Warehouse].BoardsStored += truckCargoAmount;
+                truckCargoAmount = 0;
+                truckCargoType = CargoType.None;
                 break;
 
             case TruckInteractionType.RefuelAtGasStation:
@@ -187,14 +187,14 @@ public partial class GameBootstrap
                 case TruckInteractionType.LoadAtForest:
                     PlayTruckFx(forestLoadCueClip, 0.68f);
                     break;
+                case TruckInteractionType.UnloadAtSawmill:
+                    PlayTruckFx(sawmillUnloadCueClip, 0.72f);
+                    break;
+                case TruckInteractionType.LoadAtSawmill:
+                    PlayTruckFx(sawmillLoadCueClip, 0.68f);
+                    break;
                 case TruckInteractionType.UnloadAtWarehouse:
-                    PlayTruckFx(warehouseUnloadCueClip, 0.72f);
-                    break;
-                case TruckInteractionType.LoadAtWarehouse:
-                    PlayTruckFx(warehouseLoadCueClip, 0.68f);
-                    break;
-                case TruckInteractionType.UnloadAtTown:
-                    PlayTruckFx(townUnloadCueClip, 0.78f);
+                    PlayTruckFx(warehouseUnloadBoardsCueClip, 0.78f);
                     break;
             }
         }

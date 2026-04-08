@@ -17,12 +17,12 @@ public partial class GameBootstrap
         CreateLocation(LocationType.GasStation, "Gas Station", layout.GasStation.Min, layout.GasStation.Max, layout.GasStation.Anchor, new Color(0.84f, 0.68f, 0.26f));
         CreateLocation(LocationType.Forest, "Forest", layout.Forest.Min, layout.Forest.Max, layout.Forest.Anchor, new Color(0.22f, 0.55f, 0.24f));
         CreateLocation(LocationType.Warehouse, "Warehouse", layout.Warehouse.Min, layout.Warehouse.Max, layout.Warehouse.Anchor, new Color(0.7f, 0.52f, 0.3f));
-        CreateLocation(LocationType.Town, "Town", layout.Town.Min, layout.Town.Max, layout.Town.Anchor, new Color(0.3f, 0.52f, 0.8f));
+        CreateLocation(LocationType.Sawmill, "Sawmill", layout.Sawmill.Min, layout.Sawmill.Max, layout.Sawmill.Anchor, new Color(0.3f, 0.52f, 0.8f));
         CreateLocation(LocationType.Motel, "Motel", layout.Motel.Min, layout.Motel.Max, layout.Motel.Anchor, new Color(0.91f, 0.87f, 0.74f));
 
         SessionDebugLogger.Log(
             "WORLD",
-            $"Generated layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, Town {FormatPlacement(layout.Town)}.");
+            $"Generated layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, Sawmill {FormatPlacement(layout.Sawmill)}.");
     }
 
     private bool HasRequiredLayoutRoads(GeneratedWorldLayout layout)
@@ -30,7 +30,8 @@ public partial class GameBootstrap
         return FindRoadBuildPath(layout.Parking.Anchor, layout.GasStation.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.GasStation.Anchor, layout.Warehouse.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.Warehouse.Anchor, layout.Forest.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
-               FindRoadBuildPath(layout.Warehouse.Anchor, layout.Town.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
+               FindRoadBuildPath(layout.Forest.Anchor, layout.Sawmill.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
+               FindRoadBuildPath(layout.Sawmill.Anchor, layout.Warehouse.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.Warehouse.Anchor, layout.Motel.Anchor, cell => IsPlacementCell(layout, cell)) != null;
     }
 
@@ -91,10 +92,12 @@ public partial class GameBootstrap
             return;
         }
 
+        miscOccupiedCells.Clear();
         List<Vector2Int> plannedCells = MiscTreePlanner.Plan(GridWidth, GridHeight, roadCells, IsLocationCell);
+        SessionDebugLogger.Log("WORLD", $"Planning {plannedCells.Count} misc cells");
         for (int i = 0; i < plannedCells.Count; i++)
         {
-            CreateMiscTree(plannedCells[i], i % 3);
+            CreateMiscTree(plannedCells[i], i % 6);
         }
 
         SessionDebugLogger.Log("WORLD", $"Placed {plannedCells.Count} misc trees.");
@@ -118,11 +121,13 @@ public partial class GameBootstrap
         treeRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
         treeRoot.transform.localScale = Vector3.one * Random.Range(0.86f, 1.14f);
         CreateTreeVariant(treeRoot.transform, variantIndex);
+        miscOccupiedCells.Add(cell);
     }
 
     private void CreateTreeVariant(Transform parent, int variantIndex)
     {
-        switch (Mathf.Abs(variantIndex) % 3)
+        int variant = Mathf.Abs(variantIndex) % 3;
+        switch (variant)
         {
             case 0:
                 CreateMiscTreeTall(parent);

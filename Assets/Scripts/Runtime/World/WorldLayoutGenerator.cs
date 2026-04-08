@@ -39,11 +39,11 @@ public static class WorldLayoutGenerator
                 continue;
             }
 
-            int townMinX = parkingOnLeft ? 9 : 2;
-            int townMaxX = parkingOnLeft ? 17 : 11;
-            int townMinY = parkingOnBottom ? 2 : 3;
-            int townMaxY = parkingOnBottom ? 10 : 11;
-            if (!TryPlaceInteriorLocation(candidate, "Town", 2, 2, townMinX, townMaxX, townMinY, townMaxY, true, gridWidth, gridHeight, parkingAnchor))
+            int sawmillMinX = parkingOnLeft ? 9 : 2;
+            int sawmillMaxX = parkingOnLeft ? 17 : 11;
+            int sawmillMinY = parkingOnBottom ? 2 : 3;
+            int sawmillMaxY = parkingOnBottom ? 10 : 11;
+            if (!TryPlaceInteriorLocation(candidate, "Sawmill", 2, 2, sawmillMinX, sawmillMaxX, sawmillMinY, sawmillMaxY, true, gridWidth, gridHeight, parkingAnchor))
             {
                 continue;
             }
@@ -248,7 +248,7 @@ public static class WorldLayoutGenerator
             layout.GasStation.Anchor,
             layout.Warehouse.Anchor,
             layout.Forest.Anchor,
-            layout.Town.Anchor
+            layout.Sawmill.Anchor
         };
 
         int minPairDistance = int.MaxValue;
@@ -313,7 +313,7 @@ public static class WorldLayoutGenerator
             GasStation = placements["GasStation"],
             Forest = placements["Forest"],
             Warehouse = placements["Warehouse"],
-            Town = placements["Town"],
+            Sawmill = placements["Sawmill"],
             Motel = placements["Motel"]
         };
     }
@@ -326,7 +326,7 @@ public static class WorldLayoutGenerator
             GasStation = new WorldLocationPlacement { Min = new Vector2Int(6, 4), Max = new Vector2Int(7, 5), Anchor = new Vector2Int(6, 6) },
             Forest = new WorldLocationPlacement { Min = new Vector2Int(3, 14), Max = new Vector2Int(5, 16), Anchor = new Vector2Int(4, 13) },
             Warehouse = new WorldLocationPlacement { Min = new Vector2Int(9, 9), Max = new Vector2Int(10, 10), Anchor = new Vector2Int(9, 8) },
-            Town = new WorldLocationPlacement { Min = new Vector2Int(14, 2), Max = new Vector2Int(15, 3), Anchor = new Vector2Int(13, 3) },
+            Sawmill = new WorldLocationPlacement { Min = new Vector2Int(14, 2), Max = new Vector2Int(15, 3), Anchor = new Vector2Int(13, 3) },
             Motel = new WorldLocationPlacement { Min = new Vector2Int(13, 8), Max = new Vector2Int(14, 9), Anchor = new Vector2Int(13, 7) }
         };
     }

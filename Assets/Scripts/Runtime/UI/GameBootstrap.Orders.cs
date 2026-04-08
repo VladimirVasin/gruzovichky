@@ -8,13 +8,26 @@ public partial class GameBootstrap
 {
     private void UpdateTruckAutoMode()
     {
+        // Find the driver for the currently loaded truck
+        DriverAgent currentDriver = null;
+        foreach (TruckAgent ta in truckAgents)
+        {
+            if (ta.TruckObject == truckObject) { currentDriver = ta.Driver; break; }
+        }
+        if (currentDriver == null) return;
+
+        if (!IsDriverOnShift(currentDriver))
+        {
+            return;
+        }
+
         TruckAutoDecisionKind decision = TruckAutoPlanner.Decide(
             isTruckAutoModeEnabled,
             currentAssignedTrip != TripType.None,
             currentRefuelPhase != RefuelPhase.None,
             isTruckMoving,
             isTruckInteracting,
-            isDriverRescueActive,
+            isDriverRescueActive || currentDriver.RestPhase != DriverRestPhase.None,
             IsTruckInsideParking(),
             truckFuel,
             GetAvailableTrips().Count);
@@ -66,10 +79,11 @@ public partial class GameBootstrap
             bool canTakeOrdersNow =
                 truckAgent.CurrentAssignedTrip == TripType.None &&
                 truckAgent.CurrentRefuelPhase == RefuelPhase.None &&
-                truckAgent.CurrentDriverRestPhase == DriverRestPhase.None &&
+                truckAgent.Driver.RestPhase == DriverRestPhase.None &&
                 !truckAgent.IsTruckMoving &&
                 !truckAgent.IsTruckInteracting &&
                 !truckAgent.IsDriverRescueActive &&
+                IsDriverOnShift(truckAgent.Driver) &&
                 IsTruckInsideParking(truckAgent);
 
             if (canTakeOrdersNow)
@@ -103,7 +117,8 @@ public partial class GameBootstrap
         if (truckAgent == null ||
             truckAgent.CurrentAssignedTrip != TripType.None ||
             truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
-            truckAgent.CurrentDriverRestPhase != DriverRestPhase.None)
+            truckAgent.Driver.RestPhase != DriverRestPhase.None ||
+            !IsDriverOnShift(truckAgent.Driver))
         {
             return;
         }
@@ -121,7 +136,8 @@ public partial class GameBootstrap
             trip.Type == TripType.None ||
             truckAgent.CurrentAssignedTrip != TripType.None ||
             truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
-            truckAgent.CurrentDriverRestPhase != DriverRestPhase.None)
+            truckAgent.Driver.RestPhase != DriverRestPhase.None ||
+            !IsDriverOnShift(truckAgent.Driver))
         {
             return;
         }
@@ -142,8 +158,8 @@ public partial class GameBootstrap
         }
 
         LoadTruckState(truckAgent);
-        UpdateAssignedTrip();
-        UpdateRefuelOrder();
+        UpdateAssignedTrip(truckAgent.Driver);
+        UpdateRefuelOrder(truckAgent.Driver);
         UpdateTruckAutoMode();
         if (truckAgent.TruckObject != null)
         {
@@ -169,7 +185,7 @@ public partial class GameBootstrap
             GetPathStepCount(locations[dropoff].Anchor, locations[LocationType.Parking].Anchor);
 
         int handlingBonus = 12;
-        int locationBonus = tripType == TripType.WarehouseToTown ? 10 : 6;
+        int locationBonus = tripType == TripType.SawmillToWarehouse ? 10 : 6;
         return TripRewardCalculator.Calculate(totalSteps, handlingBonus, locationBonus);
     }
 
@@ -183,8 +199,8 @@ public partial class GameBootstrap
     {
         return tripType switch
         {
-            TripType.ForestToWarehouse => LocationType.Forest,
-            TripType.WarehouseToTown => LocationType.Warehouse,
+            TripType.ForestToSawmill => LocationType.Forest,
+            TripType.SawmillToWarehouse => LocationType.Sawmill,
             _ => LocationType.Parking
         };
     }
@@ -193,8 +209,8 @@ public partial class GameBootstrap
     {
         return tripType switch
         {
-            TripType.ForestToWarehouse => LocationType.Warehouse,
-            TripType.WarehouseToTown => LocationType.Town,
+            TripType.ForestToSawmill => LocationType.Sawmill,
+            TripType.SawmillToWarehouse => LocationType.Warehouse,
             _ => LocationType.Parking
         };
     }
@@ -203,8 +219,8 @@ public partial class GameBootstrap
     {
         return tripType switch
         {
-            TripType.ForestToWarehouse => TruckInteractionType.LoadAtForest,
-            TripType.WarehouseToTown => TruckInteractionType.LoadAtWarehouse,
+            TripType.ForestToSawmill => TruckInteractionType.LoadAtForest,
+            TripType.SawmillToWarehouse => TruckInteractionType.LoadAtSawmill,
             _ => TruckInteractionType.None
         };
     }
@@ -213,8 +229,8 @@ public partial class GameBootstrap
     {
         return tripType switch
         {
-            TripType.ForestToWarehouse => TruckInteractionType.UnloadAtWarehouse,
-            TripType.WarehouseToTown => TruckInteractionType.UnloadAtTown,
+            TripType.ForestToSawmill => TruckInteractionType.UnloadAtSawmill,
+            TripType.SawmillToWarehouse => TruckInteractionType.UnloadAtWarehouse,
             _ => TruckInteractionType.None
         };
     }

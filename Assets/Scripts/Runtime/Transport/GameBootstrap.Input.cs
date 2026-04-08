@@ -13,6 +13,12 @@ public partial class GameBootstrap
             return;
         }
 
+        if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            CloseAllMenus();
+            return;
+        }
+
         if (Keyboard.current.fKey.wasPressedThisFrame && isTruckDetailsOpen && IsTruckNumberOwned(selectedTruckNumber))
         {
             ToggleTruckCameraFocus();
@@ -46,6 +52,10 @@ public partial class GameBootstrap
         {
             SetGameSpeed(3);
         }
+        else if (Keyboard.current.pKey.wasPressedThisFrame)
+        {
+            TogglePauseSpeed();
+        }
 
         for (int truckNumber = 1; truckNumber <= MaxTruckCount; truckNumber++)
         {
@@ -66,8 +76,29 @@ public partial class GameBootstrap
     private void SetGameSpeed(int multiplier)
     {
         gameSpeedMultiplier = Mathf.Clamp(multiplier, 1, 3);
+        lastActiveGameSpeedMultiplier = gameSpeedMultiplier;
         Time.timeScale = gameSpeedMultiplier;
         Time.fixedDeltaTime = 0.02f * Time.timeScale;
+        PlayUiSound(uiSelectClip, 0.8f);
+    }
+
+    private void TogglePauseSpeed()
+    {
+        if (gameSpeedMultiplier == 0)
+        {
+            int resumedSpeed = Mathf.Clamp(lastActiveGameSpeedMultiplier, 1, 3);
+            gameSpeedMultiplier = resumedSpeed;
+            Time.timeScale = resumedSpeed;
+            Time.fixedDeltaTime = 0.02f * Time.timeScale;
+        }
+        else
+        {
+            lastActiveGameSpeedMultiplier = Mathf.Clamp(gameSpeedMultiplier, 1, 3);
+            gameSpeedMultiplier = 0;
+            Time.timeScale = 0f;
+            Time.fixedDeltaTime = 0f;
+        }
+
         PlayUiSound(uiSelectClip, 0.8f);
     }
 
@@ -108,8 +139,39 @@ public partial class GameBootstrap
         isTruckDetailsOpen = true;
         isTruckCameraFocused = false;
         isCameraReturningToDiorama = wasTruckCameraFocused;
+        isFleetScreenDirty = true;
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelOpenClip, 0.9f);
+    }
+
+    private void CloseAllMenus()
+    {
+        bool hadOpenUi =
+            isFleetPanelOpen ||
+            isShiftsPanelOpen ||
+            isDriversPanelOpen ||
+            isResourcesPanelOpen ||
+            isBuildPanelOpen ||
+            isTruckDetailsOpen ||
+            activeBuildTool != BuildTool.None;
+
+        isFleetPanelOpen = false;
+        isShiftsPanelOpen = false;
+        isDriversPanelOpen = false;
+        isResourcesPanelOpen = false;
+        isBuildPanelOpen = false;
+        isTruckDetailsOpen = false;
+        activeBuildTool = BuildTool.None;
+        hoveredBuildCell = null;
+        selectedLocation = null;
+        isFleetScreenDirty = true;
+        DisableTruckCameraFocus();
+        RefreshSelectionVisuals();
+
+        if (hadOpenUi)
+        {
+            PlayUiSound(uiPanelCloseClip, 0.82f);
+        }
     }
 
     private void HandleCameraInput()
@@ -119,9 +181,11 @@ public partial class GameBootstrap
             return;
         }
 
+        float cameraDeltaTime = Time.unscaledDeltaTime;
+
         if (isTruckCameraFocused)
         {
-            UpdateTruckFollowCamera();
+            UpdateTruckFollowCamera(cameraDeltaTime);
             return;
         }
 
@@ -129,7 +193,7 @@ public partial class GameBootstrap
         {
             if (isCameraRotatingToTarget)
             {
-                cameraOffset = Vector3.Lerp(cameraOffset, cameraTargetOffset, 6.5f * Time.deltaTime);
+                cameraOffset = Vector3.Lerp(cameraOffset, cameraTargetOffset, 6.5f * cameraDeltaTime);
                 if ((cameraOffset - cameraTargetOffset).sqrMagnitude < 0.0025f)
                 {
                     cameraOffset = cameraTargetOffset;
@@ -139,8 +203,8 @@ public partial class GameBootstrap
 
             Vector3 defaultPosition = cameraFocusPoint + cameraOffset;
             Quaternion defaultRotation = GetDioramaCameraRotation();
-            mainCamera.transform.position = Vector3.Lerp(mainCamera.transform.position, defaultPosition, 5.5f * Time.deltaTime);
-            mainCamera.transform.rotation = Quaternion.Slerp(mainCamera.transform.rotation, defaultRotation, 6.5f * Time.deltaTime);
+            mainCamera.transform.position = Vector3.Lerp(mainCamera.transform.position, defaultPosition, 5.5f * cameraDeltaTime);
+            mainCamera.transform.rotation = Quaternion.Slerp(mainCamera.transform.rotation, defaultRotation, 6.5f * cameraDeltaTime);
 
             if ((mainCamera.transform.position - defaultPosition).sqrMagnitude < 0.01f &&
                 Quaternion.Angle(mainCamera.transform.rotation, defaultRotation) < 0.75f &&
@@ -180,7 +244,7 @@ public partial class GameBootstrap
 
         if (pan.sqrMagnitude > 0.0001f)
         {
-            cameraFocusPoint += pan.normalized * (CameraPanSpeed * Time.deltaTime);
+            cameraFocusPoint += pan.normalized * (CameraPanSpeed * cameraDeltaTime);
             isCameraRotatingToTarget = false;
         }
 
@@ -241,7 +305,7 @@ public partial class GameBootstrap
         mainCamera.transform.rotation = GetDioramaCameraRotation();
     }
 
-    private void UpdateTruckFollowCamera()
+    private void UpdateTruckFollowCamera(float cameraDeltaTime)
     {
         TruckAgent focusedTruck = GetTruckAgent(selectedTruckNumber);
         if (focusedTruck?.TruckObject == null)
@@ -260,9 +324,9 @@ public partial class GameBootstrap
         Vector3 desiredPosition = truckPosition - truckForward * TruckFollowDistance + Vector3.up * TruckFollowHeight;
         Vector3 lookTarget = truckPosition + Vector3.up * TruckFollowLookHeight + truckForward * 1.2f;
 
-        mainCamera.transform.position = Vector3.Lerp(mainCamera.transform.position, desiredPosition, 8f * Time.deltaTime);
+        mainCamera.transform.position = Vector3.Lerp(mainCamera.transform.position, desiredPosition, 8f * cameraDeltaTime);
         Quaternion desiredRotation = Quaternion.LookRotation((lookTarget - mainCamera.transform.position).normalized, Vector3.up);
-        mainCamera.transform.rotation = Quaternion.Slerp(mainCamera.transform.rotation, desiredRotation, 10f * Time.deltaTime);
+        mainCamera.transform.rotation = Quaternion.Slerp(mainCamera.transform.rotation, desiredRotation, 10f * cameraDeltaTime);
     }
 
     private void ToggleTruckCameraFocus()
@@ -335,6 +399,7 @@ public partial class GameBootstrap
             cameraOffset = DioramaCameraOffset;
         }
         cameraTargetOffset = cameraOffset;
+        isFleetScreenDirty = true;
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelCloseClip, 0.82f);
     }
@@ -343,6 +408,7 @@ public partial class GameBootstrap
     {
         if (mainCamera == null ||
             Mouse.current == null ||
+            activeBuildTool != BuildTool.Road ||
             !Mouse.current.rightButton.wasReleasedThisFrame ||
             isRightMouseDragging)
         {
@@ -409,7 +475,16 @@ public partial class GameBootstrap
             return;
         }
 
-        if (!IsInsideGrid(cell) || IsLocationCell(cell) || roadCells.Contains(cell))
+        if (activeBuildTool != BuildTool.Road)
+        {
+            selectedLocation = null;
+            isTruckDetailsOpen = false;
+            DisableTruckCameraFocus();
+            RefreshSelectionVisuals();
+            return;
+        }
+
+        if (IsRoadBuildCellBlocked(cell))
         {
             selectedLocation = null;
             isTruckDetailsOpen = false;
@@ -423,6 +498,74 @@ public partial class GameBootstrap
         DisableTruckCameraFocus();
         RefreshSelectionVisuals();
         AddRoad(cell);
+    }
+
+    private void SetupBuildHoverHighlight()
+    {
+        if (worldRoot == null)
+        {
+            return;
+        }
+
+        buildHoverHighlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        buildHoverHighlight.name = "BuildHoverHighlight";
+        buildHoverHighlight.transform.SetParent(worldRoot, false);
+        buildHoverHighlight.transform.localScale = new Vector3(0.92f, 0.04f, 0.92f);
+        buildHoverHighlight.GetComponent<Collider>().enabled = false;
+        ApplyColor(buildHoverHighlight, new Color(0.22f, 0.9f, 0.32f));
+        ConfigureStaticVisual(buildHoverHighlight);
+        buildHoverHighlight.SetActive(false);
+    }
+
+    private void UpdateBuildHoverHighlight()
+    {
+        if (buildHoverHighlight == null)
+        {
+            return;
+        }
+
+        hoveredBuildCell = null;
+        if (activeBuildTool != BuildTool.Road || mainCamera == null || Mouse.current == null || isTruckCameraFocused || isRightMouseDragging)
+        {
+            buildHoverHighlight.SetActive(false);
+            return;
+        }
+
+        Vector2 mousePosition = Mouse.current.position.ReadValue();
+        if (IsPointerOverHud(mousePosition))
+        {
+            buildHoverHighlight.SetActive(false);
+            return;
+        }
+
+        Ray ray = mainCamera.ScreenPointToRay(mousePosition);
+        Plane plane = new(Vector3.up, Vector3.zero);
+        if (!plane.Raycast(ray, out float distance))
+        {
+            buildHoverHighlight.SetActive(false);
+            return;
+        }
+
+        Vector2Int cell = WorldToCell(ray.GetPoint(distance));
+        if (!IsInsideGrid(cell))
+        {
+            buildHoverHighlight.SetActive(false);
+            return;
+        }
+
+        hoveredBuildCell = cell;
+        bool canBuild = !IsRoadBuildCellBlocked(cell);
+        buildHoverHighlight.SetActive(true);
+        buildHoverHighlight.transform.position = GetCellCenter(cell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
+        buildHoverHighlight.transform.localScale = new Vector3(canBuild ? 0.92f : 0.98f, 0.04f, canBuild ? 0.92f : 0.98f);
+
+        Renderer renderer = buildHoverHighlight.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            renderer.sharedMaterial.color = canBuild
+                ? new Color(0.22f, 0.9f, 0.32f)
+                : new Color(0.92f, 0.28f, 0.22f);
+        }
     }
 
 }

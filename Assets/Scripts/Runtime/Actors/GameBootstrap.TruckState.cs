@@ -14,19 +14,6 @@ public partial class GameBootstrap
         truckCabinTransform = truckAgent.TruckCabinTransform;
         truckHeadlightLeftRenderer = truckAgent.TruckHeadlightLeftRenderer;
         truckHeadlightRightRenderer = truckAgent.TruckHeadlightRightRenderer;
-        driverObject = truckAgent.DriverObject;
-        driverVisualRoot = truckAgent.DriverVisualRoot;
-        driverBodyTransform = truckAgent.DriverBodyTransform;
-        driverHeadTransform = truckAgent.DriverHeadTransform;
-        driverCapTransform = truckAgent.DriverCapTransform;
-        driverLeftArmTransform = truckAgent.DriverLeftArmTransform;
-        driverRightArmTransform = truckAgent.DriverRightArmTransform;
-        driverLeftLegTransform = truckAgent.DriverLeftLegTransform;
-        driverRightLegTransform = truckAgent.DriverRightLegTransform;
-        driverFuelCanTransform = truckAgent.DriverFuelCanTransform;
-        driverFlashlightTransform = truckAgent.DriverFlashlightTransform;
-        driverFlashlightLight = truckAgent.DriverFlashlightLight;
-        driverFlashlightRenderer = truckAgent.DriverFlashlightRenderer;
         truckLoopAudioSource = truckAgent.TruckLoopAudioSource;
         truckFxAudioSource = truckAgent.TruckFxAudioSource;
         truckCell = truckAgent.TruckCell;
@@ -38,28 +25,18 @@ public partial class GameBootstrap
         isTruckWaitingForService = truckAgent.IsTruckWaitingForService;
         isDriverRescueActive = truckAgent.IsDriverRescueActive;
         isTruckAutoModeEnabled = truckAgent.IsTruckAutoModeEnabled;
-        truckCargoSource = truckAgent.TruckCargoSource;
-        truckCargoWood = truckAgent.TruckCargoWood;
-        driverRescueTargetWorld = truckAgent.DriverRescueTargetWorld;
-        driverRescueWaypointIndex = truckAgent.DriverRescueWaypointIndex;
+        truckCargoType = truckAgent.TruckCargoType;
+        truckCargoAmount = truckAgent.TruckCargoAmount;
         truckSegmentProgress = truckAgent.TruckSegmentProgress;
         truckSegmentDuration = truckAgent.TruckSegmentDuration;
         truckWheelSpinAngle = truckAgent.TruckWheelSpinAngle;
         truckSteerAngle = truckAgent.TruckSteerAngle;
         truckInteractionTimer = truckAgent.TruckInteractionTimer;
         truckFuel = truckAgent.TruckFuel;
-        driverEnergy = truckAgent.DriverEnergy;
-        needsRestAfterTrip = truckAgent.NeedsRestAfterTrip;
-        currentDriverRestPhase = truckAgent.CurrentDriverRestPhase;
-        driverSleepTimer = truckAgent.DriverSleepTimer;
-        motelParkingSlotIndex = truckAgent.MotelParkingSlotIndex;
-        motelParkedPosition = truckAgent.MotelParkedPosition;
-        driverWalkAnimationTime = truckAgent.DriverWalkAnimationTime;
         currentAssignedTripReward = truckAgent.CurrentAssignedTripReward;
         currentAssignedTrip = truckAgent.CurrentAssignedTrip;
         currentTripPhase = truckAgent.CurrentTripPhase;
         currentRefuelPhase = truckAgent.CurrentRefuelPhase;
-        currentDriverRescuePhase = truckAgent.CurrentDriverRescuePhase;
         activeTruckInteraction = truckAgent.ActiveTruckInteraction;
         queuedTruckInteraction = truckAgent.QueuedTruckInteraction;
         truckInteractionTargetRotation = truckAgent.TruckInteractionTargetRotation;
@@ -68,8 +45,6 @@ public partial class GameBootstrap
         queuedServiceLocation = truckAgent.QueuedServiceLocation;
         activePath.Clear();
         activePath.AddRange(truckAgent.ActivePath);
-        driverRescuePath.Clear();
-        driverRescuePath.AddRange(truckAgent.DriverRescuePath);
         truckWheels.Clear();
         truckWheels.AddRange(truckAgent.TruckWheels);
         truckFrontWheels.Clear();
@@ -92,19 +67,6 @@ public partial class GameBootstrap
         truckAgent.TruckFrontWheels.AddRange(truckFrontWheels);
         truckAgent.TruckHeadlights.Clear();
         truckAgent.TruckHeadlights.AddRange(truckHeadlights);
-        truckAgent.DriverObject = driverObject;
-        truckAgent.DriverVisualRoot = driverVisualRoot;
-        truckAgent.DriverBodyTransform = driverBodyTransform;
-        truckAgent.DriverHeadTransform = driverHeadTransform;
-        truckAgent.DriverCapTransform = driverCapTransform;
-        truckAgent.DriverLeftArmTransform = driverLeftArmTransform;
-        truckAgent.DriverRightArmTransform = driverRightArmTransform;
-        truckAgent.DriverLeftLegTransform = driverLeftLegTransform;
-        truckAgent.DriverRightLegTransform = driverRightLegTransform;
-        truckAgent.DriverFuelCanTransform = driverFuelCanTransform;
-        truckAgent.DriverFlashlightTransform = driverFlashlightTransform;
-        truckAgent.DriverFlashlightLight = driverFlashlightLight;
-        truckAgent.DriverFlashlightRenderer = driverFlashlightRenderer;
         truckAgent.TruckLoopAudioSource = truckLoopAudioSource;
         truckAgent.TruckFxAudioSource = truckFxAudioSource;
         truckAgent.TruckCell = truckCell;
@@ -116,28 +78,18 @@ public partial class GameBootstrap
         truckAgent.IsTruckWaitingForService = isTruckWaitingForService;
         truckAgent.IsDriverRescueActive = isDriverRescueActive;
         truckAgent.IsTruckAutoModeEnabled = isTruckAutoModeEnabled;
-        truckAgent.TruckCargoSource = truckCargoSource;
-        truckAgent.TruckCargoWood = truckCargoWood;
-        truckAgent.DriverRescueTargetWorld = driverRescueTargetWorld;
-        truckAgent.DriverRescueWaypointIndex = driverRescueWaypointIndex;
+        truckAgent.TruckCargoType = truckCargoType;
+        truckAgent.TruckCargoAmount = truckCargoAmount;
         truckAgent.TruckSegmentProgress = truckSegmentProgress;
         truckAgent.TruckSegmentDuration = truckSegmentDuration;
         truckAgent.TruckWheelSpinAngle = truckWheelSpinAngle;
         truckAgent.TruckSteerAngle = truckSteerAngle;
         truckAgent.TruckInteractionTimer = truckInteractionTimer;
         truckAgent.TruckFuel = truckFuel;
-        truckAgent.DriverEnergy = driverEnergy;
-        truckAgent.NeedsRestAfterTrip = needsRestAfterTrip;
-        truckAgent.CurrentDriverRestPhase = currentDriverRestPhase;
-        truckAgent.DriverSleepTimer = driverSleepTimer;
-        truckAgent.MotelParkingSlotIndex = motelParkingSlotIndex;
-        truckAgent.MotelParkedPosition = motelParkedPosition;
-        truckAgent.DriverWalkAnimationTime = driverWalkAnimationTime;
         truckAgent.CurrentAssignedTripReward = currentAssignedTripReward;
         truckAgent.CurrentAssignedTrip = currentAssignedTrip;
         truckAgent.CurrentTripPhase = currentTripPhase;
         truckAgent.CurrentRefuelPhase = currentRefuelPhase;
-        truckAgent.CurrentDriverRescuePhase = currentDriverRescuePhase;
         truckAgent.ActiveTruckInteraction = activeTruckInteraction;
         truckAgent.QueuedTruckInteraction = queuedTruckInteraction;
         truckAgent.TruckInteractionTargetRotation = truckInteractionTargetRotation;
@@ -146,8 +98,6 @@ public partial class GameBootstrap
         truckAgent.QueuedServiceLocation = queuedServiceLocation;
         truckAgent.ActivePath.Clear();
         truckAgent.ActivePath.AddRange(activePath);
-        truckAgent.DriverRescuePath.Clear();
-        truckAgent.DriverRescuePath.AddRange(driverRescuePath);
     }
 
     private int GetOwnedTruckCount()
@@ -220,14 +170,14 @@ public partial class GameBootstrap
         return center + toAnchor * forwardOffset + right * (xSign * sideOffset);
     }
 
-    private int PickFreeMotelSlot()
+    private int PickFreeMotelSlot(DriverAgent currentDriver)
     {
         HashSet<int> occupied = new();
         foreach (TruckAgent agent in truckAgents)
         {
-            if (agent.TruckObject != truckObject && agent.CurrentDriverRestPhase != DriverRestPhase.None)
+            if (agent.Driver != currentDriver && agent.Driver.RestPhase != DriverRestPhase.None)
             {
-                occupied.Add(agent.MotelParkingSlotIndex);
+                occupied.Add(agent.Driver.MotelSlotIndex);
             }
         }
         return occupied.Contains(0) ? 1 : 0;

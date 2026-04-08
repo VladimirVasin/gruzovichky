@@ -6,10 +6,10 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
-    private void UpdateAssignedTrip()
+    private void UpdateAssignedTrip(DriverAgent driver)
     {
         if (currentAssignedTrip == TripType.None || currentRefuelPhase != RefuelPhase.None ||
-            currentDriverRestPhase != DriverRestPhase.None || isDriverRescueActive || isTruckMoving || isTruckInteracting)
+            driver.RestPhase != DriverRestPhase.None || isDriverRescueActive || isTruckMoving || isTruckInteracting)
         {
             return;
         }
@@ -93,20 +93,21 @@ public partial class GameBootstrap
                 currentAssignedTrip = TripType.None;
                 currentTripPhase = TripPhase.None;
                 currentAssignedTripReward = 0;
-                if (needsRestAfterTrip)
+                if (driver.NeedsRestAfterTrip)
                 {
-                    needsRestAfterTrip = false;
-                    currentDriverRestPhase = DriverRestPhase.ToMotel;
+                    driver.NeedsRestAfterTrip = false;
+                    driver.IsOnActiveShift = false;
+                    driver.RestPhase = DriverRestPhase.ToMotel;
                     SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} energy low — starting rest at Motel.");
                 }
                 return;
         }
     }
 
-    private void UpdateRefuelOrder()
+    private void UpdateRefuelOrder(DriverAgent driver)
     {
         if (currentRefuelPhase == RefuelPhase.None || currentAssignedTrip != TripType.None ||
-            currentDriverRestPhase != DriverRestPhase.None || isDriverRescueActive || isTruckMoving || isTruckInteracting)
+            driver.RestPhase != DriverRestPhase.None || isDriverRescueActive || isTruckMoving || isTruckInteracting)
         {
             return;
         }
@@ -156,14 +157,14 @@ public partial class GameBootstrap
         }
     }
 
-    private void UpdateDriverRest()
+    private void UpdateDriverRest(DriverAgent driver)
     {
-        if (currentDriverRestPhase == DriverRestPhase.None)
+        if (driver.RestPhase == DriverRestPhase.None)
         {
             return;
         }
 
-        switch (currentDriverRestPhase)
+        switch (driver.RestPhase)
         {
             case DriverRestPhase.ToMotel:
                 if (isTruckMoving || isTruckInteracting || isDriverRescueActive)
@@ -175,9 +176,9 @@ public partial class GameBootstrap
                     StartMoveTo(locations[LocationType.Motel].Anchor);
                     return;
                 }
-                motelParkingSlotIndex = PickFreeMotelSlot();
-                motelParkedPosition = GetMotelParkingSlotWorldPosition(motelParkingSlotIndex);
-                currentDriverRestPhase = DriverRestPhase.ParkAtMotel;
+                driver.MotelSlotIndex = PickFreeMotelSlot(driver);
+                driver.MotelParkedPosition = GetMotelParkingSlotWorldPosition(driver.MotelSlotIndex);
+                driver.RestPhase = DriverRestPhase.ParkAtMotel;
                 return;
 
             case DriverRestPhase.ParkAtMotel:
@@ -185,50 +186,49 @@ public partial class GameBootstrap
                 {
                     return;
                 }
-                // Snap truck to motel parking slot
-                truckObject.transform.position = motelParkedPosition;
-                truckTargetWorld = motelParkedPosition;
-                truckSegmentStartWorld = motelParkedPosition;
-                // Driver exits and walks to motel entrance
-                driverObject.SetActive(true);
-                driverObject.transform.position = GetDriverStandPointNearTruck();
-                driverObject.transform.rotation = truckObject.transform.rotation;
-                driverWalkAnimationTime = 0f;
-                ApplyDriverPose(0f, 0f);
-                driverRescueTargetWorld = GetDriverStandPointNearLocation(LocationType.Motel);
-                BuildDriverRescuePath(driverObject.transform.position, driverRescueTargetWorld);
+                truckObject.transform.position = driver.MotelParkedPosition;
+                truckTargetWorld = driver.MotelParkedPosition;
+                truckSegmentStartWorld = driver.MotelParkedPosition;
+                driver.DriverObject.SetActive(true);
+                driver.DriverObject.transform.position = GetDriverStandPointNearTruck();
+                driver.DriverObject.transform.rotation = truckObject.transform.rotation;
+                driver.WalkAnimationTime = 0f;
+                ApplyDriverPose(driver, 0f, 0f);
+                driver.WalkTargetWorld = GetDriverStandPointNearLocation(LocationType.Motel);
+                BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
                 isDriverRescueActive = true;
-                currentDriverRescuePhase = DriverRescuePhase.ToMotelEntrance;
-                currentDriverRestPhase = DriverRestPhase.DriverWalkToMotel;
-                SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} parked at Motel slot {motelParkingSlotIndex}. Driver walking to entrance.");
+                driver.WalkPhase = DriverRescuePhase.ToMotelEntrance;
+                driver.RestPhase = DriverRestPhase.DriverWalkToMotel;
+                SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} parked at Motel slot {driver.MotelSlotIndex}. Driver walking to entrance.");
                 return;
 
             case DriverRestPhase.DriverWalkToMotel:
-                // Handled by UpdateDriverRescue (ToMotelEntrance case) which transitions to Sleeping
+                // Handled by UpdateDriverWalk (ToMotelEntrance case) which transitions to Sleeping
                 return;
 
             case DriverRestPhase.Sleeping:
-                driverSleepTimer -= Time.deltaTime * gameSpeedMultiplier;
-                if (driverSleepTimer > 0f)
+                driver.SleepTimer -= Time.deltaTime * gameSpeedMultiplier;
+                float sleepProgress = 1f - Mathf.Clamp01(driver.SleepTimer / DriverSleepDuration);
+                driver.Energy = Mathf.Lerp(driver.SleepStartEnergy, DriverEnergyMax, sleepProgress);
+                if (driver.SleepTimer > 0f)
                 {
                     return;
                 }
-                driverEnergy = DriverEnergyMax;
+                driver.Energy = DriverEnergyMax;
                 SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} driver rested. Energy restored to {DriverEnergyMax}.");
-                // Driver walks back to truck
-                driverObject.SetActive(true);
-                driverObject.transform.position = GetDriverStandPointNearLocation(LocationType.Motel);
-                driverWalkAnimationTime = 0f;
-                ApplyDriverPose(0f, 0f);
-                driverRescueTargetWorld = motelParkedPosition + new Vector3(0.32f, 0f, -0.32f);
-                BuildDriverRescuePath(driverObject.transform.position, driverRescueTargetWorld);
+                driver.DriverObject.SetActive(true);
+                driver.DriverObject.transform.position = GetDriverStandPointNearLocation(LocationType.Motel);
+                driver.WalkAnimationTime = 0f;
+                ApplyDriverPose(driver, 0f, 0f);
+                driver.WalkTargetWorld = driver.MotelParkedPosition + new Vector3(0.32f, 0f, -0.32f);
+                BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
                 isDriverRescueActive = true;
-                currentDriverRescuePhase = DriverRescuePhase.ToTruckAtMotel;
-                currentDriverRestPhase = DriverRestPhase.DriverWalkToTruck;
+                driver.WalkPhase = DriverRescuePhase.ToTruckAtMotel;
+                driver.RestPhase = DriverRestPhase.DriverWalkToTruck;
                 return;
 
             case DriverRestPhase.DriverWalkToTruck:
-                // Handled by UpdateDriverRescue (ToTruckAtMotel case) which transitions to ReturnToParking
+                // Handled by UpdateDriverWalk (ToTruckAtMotel case) which transitions to ReturnToParking
                 return;
 
             case DriverRestPhase.ReturnToParking:
@@ -243,7 +243,7 @@ public partial class GameBootstrap
                 }
                 PlayTruckFx(parkingReturnCueClip, 0.58f);
                 SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} returned from Motel to Parking. Ready for orders.");
-                currentDriverRestPhase = DriverRestPhase.None;
+                driver.RestPhase = DriverRestPhase.None;
                 return;
         }
     }

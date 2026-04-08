@@ -20,8 +20,8 @@ public partial class GameBootstrap
         truckSegmentStartWorld = truckTargetWorld;
         truckSmoothedForward = Vector3.forward;
         truckFuel = TruckFuelCapacity;
-        truckCargoSource = CargoSource.None;
-        truckCargoWood = 0;
+        truckCargoType = CargoType.None;
+        truckCargoAmount = 0;
         isTruckMoving = false;
         isTruckInteracting = false;
         isTruckWaitingForService = false;
@@ -30,7 +30,6 @@ public partial class GameBootstrap
         currentAssignedTrip = TripType.None;
         currentTripPhase = TripPhase.None;
         currentRefuelPhase = RefuelPhase.None;
-        currentDriverRescuePhase = DriverRescuePhase.None;
         activeTruckInteraction = TruckInteractionType.None;
         queuedTruckInteraction = TruckInteractionType.None;
         activeServiceLocation = null;
@@ -41,7 +40,6 @@ public partial class GameBootstrap
         truckWheelSpinAngle = 0f;
         truckSteerAngle = 0f;
         truckInteractionTimer = 0f;
-        driverWalkAnimationTime = 0f;
         activePath.Clear();
         truckWheels.Clear();
         truckFrontWheels.Clear();
@@ -100,13 +98,14 @@ public partial class GameBootstrap
         truckObject.transform.position = truckTargetWorld;
         truckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         truckInteractionTargetRotation = truckObject.transform.rotation;
-        SetupDriver();
+        DriverAgent driver = SetupDriver();
 
         TruckAgent truckAgent = new()
         {
             TruckNumber = truckNumber,
             DisplayName = GetTruckDisplayName(truckNumber),
-            ParkingSlotIndex = parkingSlotIndex
+            ParkingSlotIndex = parkingSlotIndex,
+            Driver = driver
         };
 
         SaveTruckState(truckAgent);
@@ -153,7 +152,7 @@ public partial class GameBootstrap
         truckHeadlights.Add(headlight);
     }
 
-    private void UpdateTruckHeadlights(float stylizedDaylight)
+    private void UpdateTruckHeadlights(float stylizedDaylight, DriverAgent driver)
     {
         float darkness = 1f - stylizedDaylight;
         bool headlightsOn = darkness > 0.55f;
@@ -185,7 +184,7 @@ public partial class GameBootstrap
         }
 
         UpdateLocationNightLights(stylizedDaylight);
-        UpdateDriverFlashlight(stylizedDaylight);
+        UpdateDriverFlashlight(driver, stylizedDaylight);
     }
 
     private void UpdateLocationNightLights(float stylizedDaylight)
@@ -280,108 +279,118 @@ public partial class GameBootstrap
         }
     }
 
-    private void UpdateDriverFlashlight(float stylizedDaylight)
+    private void UpdateDriverFlashlight(DriverAgent driver, float stylizedDaylight)
     {
-        if (driverFlashlightLight == null)
+        if (driver == null || driver.DriverFlashlightLight == null)
         {
             return;
         }
 
         float darkness = 1f - stylizedDaylight;
-        bool flashlightOn = isDriverRescueActive && driverObject != null && driverObject.activeSelf && darkness > 0.55f;
+        bool flashlightOn = isDriverRescueActive && driver.DriverObject != null && driver.DriverObject.activeSelf && darkness > 0.55f;
         float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.65f, 2.2f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color flashlightColor = Color.Lerp(
             new Color(0.24f, 0.22f, 0.18f),
             new Color(1f, 0.92f, 0.74f),
             Mathf.Clamp01(flashlightIntensity / 2.2f));
 
-        driverFlashlightLight.enabled = flashlightOn;
-        driverFlashlightLight.intensity = flashlightIntensity;
-        driverFlashlightLight.color = flashlightColor;
+        driver.DriverFlashlightLight.enabled = flashlightOn;
+        driver.DriverFlashlightLight.intensity = flashlightIntensity;
+        driver.DriverFlashlightLight.color = flashlightColor;
 
-        if (driverFlashlightRenderer != null)
+        if (driver.DriverFlashlightRenderer != null)
         {
-            driverFlashlightRenderer.material.color = flashlightColor;
+            driver.DriverFlashlightRenderer.material.color = flashlightColor;
         }
     }
 
-    private void SetupDriver()
+    private DriverAgent SetupDriver()
     {
-        driverObject = new GameObject("Driver");
-        driverObject.transform.SetParent(worldRoot, false);
-        driverVisualRoot = new GameObject("DriverVisualRoot").transform;
-        driverVisualRoot.SetParent(driverObject.transform, false);
+        DriverAgent driver = new()
+        {
+            DriverId = nextDriverId,
+            DriverName = $"Driver #{nextDriverId}",
+            ShiftStartHour = -1,
+            IsOnActiveShift = true
+        };
+        nextDriverId++;
+
+        driver.DriverObject = new GameObject("Driver");
+        driver.DriverObject.transform.SetParent(worldRoot, false);
+        driver.DriverVisualRoot = new GameObject("DriverVisualRoot").transform;
+        driver.DriverVisualRoot.SetParent(driver.DriverObject.transform, false);
 
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        body.transform.SetParent(driverVisualRoot, false);
+        body.transform.SetParent(driver.DriverVisualRoot, false);
         body.transform.localPosition = new Vector3(0f, 0.38f, 0f);
         body.transform.localScale = new Vector3(0.22f, 0.34f, 0.22f);
         ApplyColor(body, new Color(0.22f, 0.44f, 0.88f));
         ConfigureShadowVisual(body);
-        driverBodyTransform = body.transform;
+        driver.DriverBodyTransform = body.transform;
 
         GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        head.transform.SetParent(driverVisualRoot, false);
+        head.transform.SetParent(driver.DriverVisualRoot, false);
         head.transform.localPosition = new Vector3(0f, 0.88f, 0f);
         head.transform.localScale = new Vector3(0.24f, 0.24f, 0.24f);
         ApplyColor(head, new Color(0.96f, 0.82f, 0.68f));
         ConfigureShadowVisual(head);
-        driverHeadTransform = head.transform;
+        driver.DriverHeadTransform = head.transform;
 
         GameObject cap = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        cap.transform.SetParent(driverVisualRoot, false);
+        cap.transform.SetParent(driver.DriverVisualRoot, false);
         cap.transform.localPosition = new Vector3(0f, 1.02f, 0f);
         cap.transform.localScale = new Vector3(0.26f, 0.08f, 0.26f);
         ApplyColor(cap, new Color(0.84f, 0.22f, 0.18f));
         ConfigureShadowVisual(cap);
-        driverCapTransform = cap.transform;
+        driver.DriverCapTransform = cap.transform;
 
-        driverLeftArmTransform = CreateDriverLimb("DriverLeftArm", new Vector3(-0.2f, 0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), new Color(0.22f, 0.44f, 0.88f));
-        driverRightArmTransform = CreateDriverLimb("DriverRightArm", new Vector3(0.2f, 0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), new Color(0.22f, 0.44f, 0.88f));
-        driverLeftLegTransform = CreateDriverLimb("DriverLeftLeg", new Vector3(-0.09f, 0.15f, 0f), new Vector3(0.1f, 0.42f, 0.1f), new Color(0.18f, 0.22f, 0.36f));
-        driverRightLegTransform = CreateDriverLimb("DriverRightLeg", new Vector3(0.09f, 0.15f, 0f), new Vector3(0.1f, 0.42f, 0.1f), new Color(0.18f, 0.22f, 0.36f));
+        driver.DriverLeftArmTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverLeftArm", new Vector3(-0.2f, 0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), new Color(0.22f, 0.44f, 0.88f));
+        driver.DriverRightArmTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverRightArm", new Vector3(0.2f, 0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), new Color(0.22f, 0.44f, 0.88f));
+        driver.DriverLeftLegTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverLeftLeg", new Vector3(-0.09f, 0.15f, 0f), new Vector3(0.1f, 0.42f, 0.1f), new Color(0.18f, 0.22f, 0.36f));
+        driver.DriverRightLegTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverRightLeg", new Vector3(0.09f, 0.15f, 0f), new Vector3(0.1f, 0.42f, 0.1f), new Color(0.18f, 0.22f, 0.36f));
 
         GameObject fuelCan = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        fuelCan.transform.SetParent(driverVisualRoot, false);
+        fuelCan.transform.SetParent(driver.DriverVisualRoot, false);
         fuelCan.transform.localPosition = new Vector3(0.18f, 0.42f, 0f);
         fuelCan.transform.localScale = new Vector3(0.14f, 0.2f, 0.1f);
         ApplyColor(fuelCan, new Color(0.9f, 0.76f, 0.18f));
         ConfigureShadowVisual(fuelCan);
-        driverFuelCanTransform = fuelCan.transform;
-        driverFuelCanTransform.gameObject.SetActive(false);
+        driver.DriverFuelCanTransform = fuelCan.transform;
+        driver.DriverFuelCanTransform.gameObject.SetActive(false);
 
         GameObject flashlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        flashlight.transform.SetParent(driverVisualRoot, false);
+        flashlight.transform.SetParent(driver.DriverVisualRoot, false);
         flashlight.transform.localPosition = new Vector3(0.24f, 0.57f, 0.1f);
         flashlight.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
         flashlight.transform.localScale = new Vector3(0.06f, 0.06f, 0.18f);
         ApplyColor(flashlight, new Color(0.24f, 0.24f, 0.26f));
         ConfigureShadowVisual(flashlight);
-        driverFlashlightTransform = flashlight.transform;
-        driverFlashlightRenderer = flashlight.GetComponent<Renderer>();
+        driver.DriverFlashlightTransform = flashlight.transform;
+        driver.DriverFlashlightRenderer = flashlight.GetComponent<Renderer>();
 
         GameObject flashlightBeamObject = new("DriverFlashlight");
-        flashlightBeamObject.transform.SetParent(driverFlashlightTransform, false);
+        flashlightBeamObject.transform.SetParent(driver.DriverFlashlightTransform, false);
         flashlightBeamObject.transform.localPosition = new Vector3(0f, 0f, 0.14f);
         flashlightBeamObject.transform.localRotation = Quaternion.Euler(10f, 0f, 0f);
-        driverFlashlightLight = flashlightBeamObject.AddComponent<Light>();
-        driverFlashlightLight.type = LightType.Spot;
-        driverFlashlightLight.color = new Color(1f, 0.88f, 0.66f);
-        driverFlashlightLight.range = 4.2f;
-        driverFlashlightLight.spotAngle = 40f;
-        driverFlashlightLight.innerSpotAngle = 18f;
-        driverFlashlightLight.shadows = LightShadows.None;
-        driverFlashlightLight.intensity = 0f;
-        driverFlashlightLight.enabled = false;
+        driver.DriverFlashlightLight = flashlightBeamObject.AddComponent<Light>();
+        driver.DriverFlashlightLight.type = LightType.Spot;
+        driver.DriverFlashlightLight.color = new Color(1f, 0.88f, 0.66f);
+        driver.DriverFlashlightLight.range = 4.2f;
+        driver.DriverFlashlightLight.spotAngle = 40f;
+        driver.DriverFlashlightLight.innerSpotAngle = 18f;
+        driver.DriverFlashlightLight.shadows = LightShadows.None;
+        driver.DriverFlashlightLight.intensity = 0f;
+        driver.DriverFlashlightLight.enabled = false;
 
-        driverObject.SetActive(false);
+        driver.DriverObject.SetActive(false);
+        return driver;
     }
 
-    private Transform CreateDriverLimb(string name, Vector3 localPosition, Vector3 localScale, Color color)
+    private Transform CreateDriverLimb(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Color color)
     {
         GameObject limb = GameObject.CreatePrimitive(PrimitiveType.Cube);
         limb.name = name;
-        limb.transform.SetParent(driverVisualRoot, false);
+        limb.transform.SetParent(parent, false);
         limb.transform.localPosition = localPosition;
         limb.transform.localScale = localScale;
         ApplyColor(limb, color);
@@ -411,7 +420,7 @@ public partial class GameBootstrap
         nightWindClip = CreateNightWindClip("Night_Wind", 6.8f, 0.026f);
         nightCricketsClip = CreateNightCricketsClip("Night_Crickets", 5.8f, 0.024f);
         gasStationHumClip = CreateGasStationHumClip("GasStation_Hum", 4.8f, 0.018f);
-        townHumClip = CreateTownHumClip("Town_Hum", 5f, 0.018f);
+        sawmillHumClip = CreateTownHumClip("Sawmill_Hum", 5f, 0.018f);
         warehouseCreakClip = CreateWarehouseCreakClip("Warehouse_Creak", 0.48f, 0.065f);
         owlClip = CreateOwlClip("Night_Owl", 0.95f, 0.05f);
         lanternBuzzClip = CreateLanternBuzzClip("Lantern_Buzz", 0.36f, 0.03f);
@@ -419,13 +428,13 @@ public partial class GameBootstrap
         truckRollClip = CreateTruckRollClip("Truck_Roll", 1.6f, 0.03f);
         cargoPickupClip = CreateCargoThunkClip("Cargo_Pickup", 0.42f, 0.06f, 0.05f);
         cargoDropClip = CreateCargoThunkClip("Cargo_Drop", 0.46f, 0.085f, 0.08f);
-        routeAssignForestWarehouseClip = CreatePentatonicMotifClip("Route_ForestToWarehouse", 0.42f, 0.06f, new[] { PentatonicD4, PentatonicE4 }, new[] { 0f, 0.12f });
-        routeAssignWarehouseTownClip = CreatePentatonicMotifClip("Route_WarehouseToTown", 0.46f, 0.065f, new[] { PentatonicE4, PentatonicA4 }, new[] { 0f, 0.12f });
+        routeAssignForestSawmillClip = CreatePentatonicMotifClip("Route_ForestToSawmill", 0.42f, 0.06f, new[] { PentatonicD4, PentatonicE4 }, new[] { 0f, 0.12f });
+        routeAssignSawmillWarehouseClip = CreatePentatonicMotifClip("Route_SawmillToWarehouse", 0.46f, 0.065f, new[] { PentatonicE4, PentatonicA4 }, new[] { 0f, 0.12f });
         routeAssignRefuelClip = CreatePentatonicMotifClip("Route_Refuel", 0.44f, 0.062f, new[] { PentatonicC4, PentatonicG4 }, new[] { 0f, 0.13f });
         forestLoadCueClip = CreatePentatonicMotifClip("Forest_Load", 0.28f, 0.05f, new[] { PentatonicD4 }, new[] { 0f });
-        warehouseUnloadCueClip = CreatePentatonicMotifClip("Warehouse_Unload", 0.34f, 0.052f, new[] { PentatonicE4, PentatonicG4 }, new[] { 0f, 0.09f });
-        warehouseLoadCueClip = CreatePentatonicMotifClip("Warehouse_Load", 0.3f, 0.05f, new[] { PentatonicE4 }, new[] { 0f });
-        townUnloadCueClip = CreatePentatonicMotifClip("Town_Unload", 0.48f, 0.064f, new[] { PentatonicA4, PentatonicC5, PentatonicE5 }, new[] { 0f, 0.08f, 0.16f });
+        sawmillUnloadCueClip = CreatePentatonicMotifClip("Sawmill_Unload", 0.34f, 0.052f, new[] { PentatonicE4, PentatonicG4 }, new[] { 0f, 0.09f });
+        sawmillLoadCueClip = CreatePentatonicMotifClip("Sawmill_Load", 0.3f, 0.05f, new[] { PentatonicE4 }, new[] { 0f });
+        warehouseUnloadBoardsCueClip = CreatePentatonicMotifClip("Warehouse_UnloadBoards", 0.48f, 0.064f, new[] { PentatonicA4, PentatonicC5, PentatonicE5 }, new[] { 0f, 0.08f, 0.16f });
         gasStationRefuelCueClip = CreatePentatonicMotifClip("GasStation_Refuel", 0.38f, 0.056f, new[] { PentatonicG4, PentatonicC5 }, new[] { 0f, 0.12f });
         parkingReturnCueClip = CreatePentatonicMotifClip("Parking_Return", 0.36f, 0.05f, new[] { PentatonicC4, PentatonicE4 }, new[] { 0f, 0.1f });
         moneyRewardClip = CreateMoneyRewardClip("Money_Reward", 0.6f, 0.08f);
@@ -438,7 +447,7 @@ public partial class GameBootstrap
         nightWindAudioSource = CreateAudioSource("NightWind", worldRoot, true, 0.26f, 0f, false);
         nightCricketsAudioSource = CreateAudioSource("NightCrickets", locations[LocationType.Forest].RootObject.transform, true, 0.24f, 0.82f, false);
         gasStationAudioSource = CreateAudioSource("GasStationHum", locations[LocationType.GasStation].RootObject.transform, true, 0.2f, 0.84f, false);
-        townAudioSource = CreateAudioSource("TownAmbience", locations[LocationType.Town].RootObject.transform, true, 0.34f, 0.9f, false);
+        townAudioSource = CreateAudioSource("SawmillAmbience", locations[LocationType.Sawmill].RootObject.transform, true, 0.34f, 0.9f, false);
         warehouseAudioSource = CreateAudioSource("WarehouseAmbience", locations[LocationType.Warehouse].RootObject.transform, false, 0.18f, 0.88f, false);
         ambienceFxAudioSource = CreateAudioSource("AmbienceFX", worldRoot, false, 0.24f, 0f, false);
 
@@ -460,7 +469,7 @@ public partial class GameBootstrap
         gasStationAudioSource.clip = gasStationHumClip;
         gasStationAudioSource.Play();
 
-        townAudioSource.clip = townHumClip;
+        townAudioSource.clip = sawmillHumClip;
         townAudioSource.Play();
 
         dayBirdTimer = Random.Range(4.5f, 8f);

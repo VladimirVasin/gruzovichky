@@ -58,50 +58,72 @@ public partial class GameBootstrap
 
     private void StartDriverRescue()
     {
-        if (driverObject == null)
+        // Find the driver for the currently loaded truck
+        DriverAgent driver = null;
+        foreach (TruckAgent ta in truckAgents)
         {
+            if (ta.TruckObject == truckObject) { driver = ta.Driver; break; }
+        }
+        if (driver == null || driver.DriverObject == null) return;
+
+        // If driver is already on a rest journey, silently refuel and continue — no walk rescue
+        if (driver.RestPhase != DriverRestPhase.None)
+        {
+            truckFuel = TruckFuelCapacity;
+            SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} refueled silently during rest journey (was at {truckCell.x},{truckCell.y}).");
+            if (activePath.Count > 0)
+            {
+                isTruckMoving = true;
+                BeginNextTruckSegment(activePath[0]);
+            }
             return;
         }
 
         isDriverRescueActive = true;
-        currentDriverRescuePhase = DriverRescuePhase.ToGasStation;
-        driverObject.SetActive(true);
-        if (driverFuelCanTransform != null)
+        driver.WalkPhase = DriverRescuePhase.ToGasStation;
+        driver.DriverObject.SetActive(true);
+        if (driver.DriverFuelCanTransform != null)
         {
-            driverFuelCanTransform.gameObject.SetActive(false);
+            driver.DriverFuelCanTransform.gameObject.SetActive(false);
         }
 
-        driverObject.transform.position = GetDriverStandPointNearTruck();
-        driverObject.transform.rotation = truckObject.transform.rotation;
-        driverWalkAnimationTime = 0f;
-        ApplyDriverPose(0f, 0f);
-        driverRescueTargetWorld = GetDriverStandPointNearLocation(LocationType.GasStation);
-        BuildDriverRescuePath(driverObject.transform.position, driverRescueTargetWorld);
+        driver.DriverObject.transform.position = GetDriverStandPointNearTruck();
+        driver.DriverObject.transform.rotation = truckObject.transform.rotation;
+        driver.WalkAnimationTime = 0f;
+        ApplyDriverPose(driver, 0f, 0f);
+        driver.WalkTargetWorld = GetDriverStandPointNearLocation(LocationType.GasStation);
+        BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
         SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} ran out of fuel at cell ({truckCell.x},{truckCell.y}); driver started rescue walk.");
         PlayUiSound(uiSelectClip, 0.9f);
     }
 
-    private void BuildDriverRescuePath(Vector3 startWorld, Vector3 targetWorld)
+    private void BuildDriverWalkPath(DriverAgent driver, Vector3 startWorld, Vector3 targetWorld)
     {
-        driverRescuePath.Clear();
-        driverRescueWaypointIndex = 0;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
 
         Vector2Int startCell = WorldToCell(startWorld);
         Vector2Int goalCell = WorldToCell(targetWorld);
         List<Vector2Int> cellPath = FindDriverWalkPath(startCell, goalCell);
         if (cellPath == null || cellPath.Count == 0)
         {
-            driverRescueTargetWorld = targetWorld;
+            driver.WalkTargetWorld = targetWorld;
+            SessionDebugLogger.Log(
+                "DRIVER",
+                $"{driver.DriverName} could not build a grid walk path from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}); using direct world target.");
             return;
         }
 
         for (int i = 1; i < cellPath.Count; i++)
         {
-            driverRescuePath.Add(GetCellCenter(cellPath[i]));
+            driver.WalkPath.Add(GetCellCenter(cellPath[i]));
         }
 
-        driverRescuePath.Add(targetWorld);
-        driverRescueTargetWorld = targetWorld;
+        driver.WalkPath.Add(targetWorld);
+        driver.WalkTargetWorld = targetWorld;
+        SessionDebugLogger.Log(
+            "DRIVER",
+            $"{driver.DriverName} built walk path for {driver.WalkPhase}: {cellPath.Count - 1} cell steps, {driver.WalkPath.Count} world waypoints, from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}).");
     }
 
     private List<Vector2Int> FindDriverWalkPath(Vector2Int start, Vector2Int goal)
@@ -207,7 +229,7 @@ public partial class GameBootstrap
         }
 
         Vector3 truckRearPoint = truckObject.transform.position - truckObject.transform.forward * 0.52f + Vector3.up * 0.18f;
-        bool loadingIntoTruck = activeTruckInteraction == TruckInteractionType.LoadAtForest || activeTruckInteraction == TruckInteractionType.LoadAtWarehouse;
+        bool loadingIntoTruck = activeTruckInteraction == TruckInteractionType.LoadAtForest || activeTruckInteraction == TruckInteractionType.LoadAtSawmill;
         Vector3 from = loadingIntoTruck ? truckInteractionBuildingPoint : truckRearPoint;
         Vector3 to = loadingIntoTruck ? truckRearPoint : truckInteractionBuildingPoint;
 
@@ -229,9 +251,9 @@ public partial class GameBootstrap
             return activeTruckInteraction switch
             {
                 TruckInteractionType.LoadAtForest => "Loading at Forest...",
-                TruckInteractionType.UnloadAtWarehouse => "Unloading at Warehouse...",
-                TruckInteractionType.LoadAtWarehouse => "Loading at Warehouse...",
-                TruckInteractionType.UnloadAtTown => "Unloading at Town...",
+                TruckInteractionType.UnloadAtSawmill => "Unloading at Sawmill...",
+                TruckInteractionType.LoadAtSawmill => "Loading at Sawmill...",
+                TruckInteractionType.UnloadAtWarehouse => "Unloading boards at Warehouse...",
                 TruckInteractionType.RefuelAtGasStation => "Refueling at Gas Station...",
                 _ => "Truck servicing cargo..."
             };
@@ -254,7 +276,13 @@ public partial class GameBootstrap
 
         if (isDriverRescueActive)
         {
-            return currentDriverRescuePhase == DriverRescuePhase.ToGasStation
+            DriverAgent activeDriver = null;
+            foreach (TruckAgent ta in truckAgents)
+            {
+                if (ta.TruckObject == truckObject) { activeDriver = ta.Driver; break; }
+            }
+            bool goingToStation = activeDriver == null || activeDriver.WalkPhase == DriverRescuePhase.ToGasStation;
+            return goingToStation
                 ? "Out of fuel. Driver is walking to Gas Station."
                 : "Driver is bringing fuel back to the truck.";
         }
@@ -331,9 +359,10 @@ public partial class GameBootstrap
             isTruckDetailsOpen = false;
         }
 
+        y += 8f;
         bool canHireTruck = GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
         GUI.enabled = canHireTruck;
-        if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + panelRect.height - 42f, panelRect.width - 24, 28), $"Hire New Truck  ${HireTruckCost}"))
+        if (GUI.Button(new Rect(panelRect.x + 12, y, panelRect.width - 24, 28), $"Hire New Truck  ${HireTruckCost}"))
         {
             HireNewTruck();
         }
@@ -341,11 +370,11 @@ public partial class GameBootstrap
         GUI.enabled = true;
         if (GetOwnedTruckCount() >= MaxTruckCount)
         {
-            GUI.Label(new Rect(panelRect.x + 12, panelRect.y + panelRect.height - 66f, 240, 20), "Parking is full.");
+            GUI.Label(new Rect(panelRect.x + 12, y + 32f, 240, 20), "Parking is full.");
         }
         else if (money < HireTruckCost)
         {
-            GUI.Label(new Rect(panelRect.x + 12, panelRect.y + panelRect.height - 66f, 240, 20), $"Need ${HireTruckCost} to hire a truck.");
+            GUI.Label(new Rect(panelRect.x + 12, y + 32f, 240, 20), $"Need ${HireTruckCost} to hire a truck.");
         }
     }
 
@@ -367,6 +396,7 @@ public partial class GameBootstrap
             LoadTruckState(selectedTruck);
         }
 
+        isFleetScreenDirty = true;
         PlayUiSound(uiSelectClip, 1f);
     }
 
@@ -412,19 +442,22 @@ public partial class GameBootstrap
         }
 
         LoadTruckState(selectedTruck);
+        DriverAgent driver = selectedTruck.Driver;
         Rect panelRect = GetTruckDetailsHudRect();
         GUI.Box(panelRect, "Truck HUD");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 30, 220, 22), $"Truck: {GetTruckDisplayName(selectedTruck.TruckNumber)}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 56, 220, 22), $"State: {GetTruckDetailStatus()}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 82, 220, 22), $"Fuel: {Mathf.CeilToInt(truckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)}");
-        string energyLabel = needsRestAfterTrip ? " [rest queued]" : currentDriverRestPhase == DriverRestPhase.Sleeping ? $" [sleeping {Mathf.CeilToInt(driverSleepTimer)}s]" : "";
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 108, 260, 22), $"Energy: {Mathf.CeilToInt(driverEnergy)}/{Mathf.CeilToInt(DriverEnergyMax)}{energyLabel}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 134, 220, 22), $"Cargo: {truckCargoWood}/1 ({truckCargoSource})");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 160, 220, 22), $"Grid cell: {truckCell.x}, {truckCell.y}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 186, 240, 22), $"Assigned route: {GetTripTitle(currentAssignedTrip)}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 208, 240, 22), $"Trip payout: ${currentAssignedTripReward}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 204, 240, 22), isDriverRescueActive ? "Driver: On foot fuel rescue" : "Driver: In truck");
-        if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + 230, panelRect.width - 24, 26), selectedTruck.IsTruckAutoModeEnabled ? "Auto Mode: ON" : "Auto Mode: OFF"))
+        string shiftStatus = driver.ShiftStartHour < 0 ? "Idle" : GetShiftRangeLabel(driver.ShiftStartHour);
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 52, 260, 18), $"{driver.DriverName}  |  Shift: {shiftStatus}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 74, 220, 22), $"State: {GetTruckDetailStatus(driver)}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 98, 220, 22), $"Fuel: {Mathf.CeilToInt(truckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)}");
+        string energyLabel = driver.NeedsRestAfterTrip ? " [rest queued]" : driver.RestPhase == DriverRestPhase.Sleeping ? $" [sleeping {Mathf.CeilToInt(driver.SleepTimer)}s]" : "";
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 122, 260, 22), $"Energy: {Mathf.CeilToInt(driver.Energy)}/{Mathf.CeilToInt(DriverEnergyMax)}{energyLabel}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 146, 220, 22), $"Cargo: {truckCargoAmount}/1 ({truckCargoType})");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 170, 220, 22), $"Grid cell: {truckCell.x}, {truckCell.y}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 194, 240, 22), $"Assigned route: {GetTripTitle(currentAssignedTrip)}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 216, 240, 22), $"Trip payout: ${currentAssignedTripReward}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 238, 240, 22), isDriverRescueActive ? "Driver: On foot fuel rescue" : "Driver: In truck");
+        if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + 262, panelRect.width - 24, 26), selectedTruck.IsTruckAutoModeEnabled ? "Auto Mode: ON" : "Auto Mode: OFF"))
         {
             SetTruckAutoMode(selectedTruck, !selectedTruck.IsTruckAutoModeEnabled);
             LoadTruckState(selectedTruck);
@@ -433,7 +466,7 @@ public partial class GameBootstrap
 
         List<TripOption> trips = GetAvailableTrips();
         bool truckAvailable = CanIssueOrdersToTruck(selectedTruck);
-        float y = panelRect.y + 266f;
+        float y = panelRect.y + 296f;
         if (!truckAvailable)
         {
             GUI.Label(new Rect(panelRect.x + 12, y - 18f, panelRect.width - 24, 18), GetTruckCommandBlockReason(selectedTruck));
@@ -486,10 +519,11 @@ public partial class GameBootstrap
 
         return truckAgent.CurrentAssignedTrip == TripType.None &&
                truckAgent.CurrentRefuelPhase == RefuelPhase.None &&
-               truckAgent.CurrentDriverRestPhase == DriverRestPhase.None &&
+               truckAgent.Driver.RestPhase == DriverRestPhase.None &&
                !truckAgent.IsTruckMoving &&
                !truckAgent.IsTruckInteracting &&
                !truckAgent.IsDriverRescueActive &&
+               IsDriverOnShift(truckAgent.Driver) &&
                IsTruckInsideParking(truckAgent);
     }
 
@@ -500,9 +534,14 @@ public partial class GameBootstrap
             return "No truck selected.";
         }
 
-        if (truckAgent.CurrentDriverRestPhase != DriverRestPhase.None)
+        if (truckAgent.Driver.RestPhase != DriverRestPhase.None)
         {
             return "Commands blocked: driver is resting at motel.";
+        }
+
+        if (!IsDriverOnShift(truckAgent.Driver))
+        {
+            return "Commands blocked: no active driver shift.";
         }
 
         if (truckAgent.IsDriverRescueActive)
@@ -538,7 +577,7 @@ public partial class GameBootstrap
         return string.Empty;
     }
 
-    private string GetTruckDetailStatus()
+    private string GetTruckDetailStatus(DriverAgent driver)
     {
         if (isTruckInteracting)
         {
@@ -555,14 +594,14 @@ public partial class GameBootstrap
             return "Moving";
         }
 
-        if (currentDriverRestPhase != DriverRestPhase.None)
+        if (driver.RestPhase != DriverRestPhase.None)
         {
-            return currentDriverRestPhase switch
+            return driver.RestPhase switch
             {
                 DriverRestPhase.ToMotel => "Driving to Motel",
                 DriverRestPhase.ParkAtMotel => "Parking at Motel",
                 DriverRestPhase.DriverWalkToMotel => "Driver walking to Motel",
-                DriverRestPhase.Sleeping => $"Driver sleeping ({Mathf.CeilToInt(driverSleepTimer)}s)",
+                DriverRestPhase.Sleeping => $"Driver sleeping ({Mathf.CeilToInt(driver.SleepTimer)}s)",
                 DriverRestPhase.DriverWalkToTruck => "Driver returning to truck",
                 DriverRestPhase.ReturnToParking => "Returning from Motel",
                 _ => "Resting"
@@ -571,7 +610,7 @@ public partial class GameBootstrap
 
         if (isDriverRescueActive)
         {
-            return currentDriverRescuePhase == DriverRescuePhase.ToGasStation ? "Driver fetching fuel" : "Driver returning with fuel";
+            return driver.WalkPhase == DriverRescuePhase.ToGasStation ? "Driver fetching fuel" : "Driver returning with fuel";
         }
 
         if (currentRefuelPhase != RefuelPhase.None)
@@ -648,36 +687,8 @@ public partial class GameBootstrap
     {
         Rect panelRect = GetSpeedHudRect();
         GUI.Box(panelRect, "Speed");
-        GUI.Label(new Rect(panelRect.x + 14, panelRect.y + 22, 120, 26), $"{gameSpeedMultiplier}x");
-    }
-
-    private void DrawTruckFleetHud()
-    {
-        Rect panelRect = GetTruckFleetHudRect();
-        GUI.Box(panelRect, "Fleet");
-
-        float y = panelRect.y + 30f;
-        foreach (TruckAgent truckAgent in truckAgents)
-        {
-            LoadTruckState(truckAgent);
-            bool isSelected = selectedTruckNumber == truckAgent.TruckNumber && isTruckDetailsOpen;
-            Rect cardRect = new Rect(panelRect.x + 10f, y, panelRect.width - 20f, 54f);
-            GUI.Box(cardRect, string.Empty);
-
-            string iconLabel = isSelected ? "[TRUCK]" : "TRUCK";
-            if (GUI.Button(new Rect(cardRect.x + 8f, cardRect.y + 10f, 66f, 34f), iconLabel))
-            {
-                FocusTruck(truckAgent.TruckNumber);
-            }
-
-            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 6f, 120f, 18f), truckAgent.DisplayName);
-            string fleetStatus = currentDriverRestPhase != DriverRestPhase.None ? "Resting" : GetTruckFleetStatusLabel();
-            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 24f, 120f, 16f), fleetStatus);
-            string energyMark = truckAgent.DriverEnergy <= DriverEnergyCriticalThreshold ? "!" : "";
-            GUI.Label(new Rect(cardRect.x + 84f, cardRect.y + 40f, 120f, 14f), $"E: {Mathf.CeilToInt(truckAgent.DriverEnergy)}{energyMark}  F: {Mathf.CeilToInt(truckAgent.TruckFuel)}");
-            SaveTruckState(truckAgent);
-            y += 66f;
-        }
+        string speedLabel = gameSpeedMultiplier == 0 ? "Paused" : $"{gameSpeedMultiplier}x";
+        GUI.Label(new Rect(panelRect.x + 14, panelRect.y + 22, 120, 26), speedLabel);
     }
 
     private void DrawCameraLegendHud()
@@ -689,6 +700,7 @@ public partial class GameBootstrap
             : "F: Select a truck first";
         GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 22f, panelRect.width - 24f, 20f), "Q/E: Rotate map view");
         GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 42f, panelRect.width - 24f, 20f), focusLabel);
+        GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 62f, panelRect.width - 24f, 20f), "P: Pause  |  F1/F2/F3: 1x / 2x / 3x");
     }
 
     private void DrawSelectedBuildingHud(LocationType locationType)
@@ -705,9 +717,9 @@ public partial class GameBootstrap
         {
             LocationType.Parking => $"Trucks parked: {GetParkingTruckCount()}/{MaxTruckCount}",
             LocationType.GasStation => "Fuel service: Ready",
-            LocationType.Forest => $"Logs stored: {locations[LocationType.Forest].WoodStored}/{ForestMaxLogsStorage}",
-            LocationType.Warehouse => $"Logs stored: {locations[LocationType.Warehouse].WoodStored}",
-            LocationType.Town => $"Logs received: {locations[LocationType.Town].WoodStored}",
+            LocationType.Forest => $"Logs stored: {locations[LocationType.Forest].LogsStored}/{ForestMaxLogsStorage}",
+            LocationType.Warehouse => $"Boards stored: {locations[LocationType.Warehouse].BoardsStored}",
+            LocationType.Sawmill => $"Logs: {locations[LocationType.Sawmill].LogsStored} | Boards: {locations[LocationType.Sawmill].BoardsStored}",
             LocationType.Motel => "Roadside stop",
             _ => string.Empty
         };
@@ -721,7 +733,7 @@ public partial class GameBootstrap
             LocationType.GasStation => "Fuel Stop",
             LocationType.Forest => "Forest",
             LocationType.Warehouse => "Warehouse",
-            LocationType.Town => "Town Hall",
+            LocationType.Sawmill => "Sawmill",
             LocationType.Motel => "Motel",
             _ => "Location"
         };

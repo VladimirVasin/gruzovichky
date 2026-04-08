@@ -1,48 +1,392 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
+using UnityEngine.EventSystems;
 
 public partial class GameBootstrap
 {
-    private string GetTruckFleetStatusLabel()
+    // ── Menu bar ─────────────────────────────────────────────────────────────
+
+    private const float MenuBtnW = 90f;
+    private const float MenuBtnH = 40f;
+    private const float MenuBtnGap = 5f;
+    private const int MenuBtnCount = 5;
+
+    private Rect GetMenuBarRect()
     {
-        if (isTruckInteracting)
+        float w = MenuBtnCount * MenuBtnW + (MenuBtnCount + 1) * MenuBtnGap;
+        return new Rect(12f, 12f, w, MenuBtnH + 10f);
+    }
+
+    private Rect GetFleetPanelRect()
+    {
+        float height = 44f + truckAgents.Count * 122f;
+        return new Rect(12f, 68f, 320f, height);
+    }
+
+    private Rect GetShiftsPanelRect()
+    {
+        const float leftW = 210f, rightW = 476f, pad = 8f, gap = 8f;
+        float leftH = 34f + truckAgents.Count * 52f + pad;
+        float rightH = pad;
+        foreach (int hour in ShiftPresetHours)
         {
-            return "Busy";
+            int n = 0;
+            foreach (TruckAgent ta in truckAgents) if (ta.Driver.ShiftStartHour == hour) n++;
+            rightH += Mathf.Max(32f + n * 30f + 44f + pad, 112f) + gap;
+        }
+        float h = Mathf.Max(leftH, rightH) + 48f;
+        return new Rect(12f, 68f, leftW + rightW + gap + pad * 2, h);
+    }
+
+    private Rect GetDriversPanelRect()
+    {
+        float height = 44f + truckAgents.Count * 96f;
+        return new Rect(12f, 68f, 420f, Mathf.Min(height, Screen.height - 96f));
+    }
+
+    private Rect GetResourcesPanelRect()
+    {
+        return new Rect(12f, 68f, 300f, 210f);
+    }
+
+    private Rect GetBuildPanelRect()
+    {
+        return new Rect(12f, 68f, 300f, 140f);
+    }
+
+    private void ToggleMenuPanel(ref bool target)
+    {
+        bool wasOpen = target;
+        isFleetPanelOpen = false;
+        isShiftsPanelOpen = false;
+        isDriversPanelOpen = false;
+        isResourcesPanelOpen = false;
+        isBuildPanelOpen = false;
+        target = !wasOpen;
+        isFleetScreenDirty = true;
+        PlayUiSound(target ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
+    }
+
+    private void DrawMenuBar()
+    {
+        Rect bar = GetMenuBarRect();
+        GUI.Box(bar, string.Empty);
+
+        GUIStyle btnStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 14,
+            fontStyle = FontStyle.Bold
+        };
+
+        float btnY = bar.y + 5f;
+        Color prev = GUI.color;
+
+        void MenuBtn(string label, ref bool state, float x)
+        {
+            GUI.color = state ? Color.yellow : Color.white;
+            if (GUI.Button(new Rect(x, btnY, MenuBtnW, MenuBtnH), label, btnStyle))
+                ToggleMenuPanel(ref state);
         }
 
-        if (isTruckWaitingForService)
+        float x = bar.x + MenuBtnGap;
+        MenuBtn("Fleet",     ref isFleetPanelOpen,     x); x += MenuBtnW + MenuBtnGap;
+        MenuBtn("Drivers",   ref isDriversPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
+        MenuBtn("Shifts",    ref isShiftsPanelOpen,    x); x += MenuBtnW + MenuBtnGap;
+        MenuBtn("Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+        MenuBtn("Build",     ref isBuildPanelOpen,     x);
+
+        GUI.color = prev;
+    }
+
+    // ── Fleet panel ──────────────────────────────────────────────────────────
+
+    private void DrawFleetPanel()
+    {
+    }
+
+    // ── Shifts panel ─────────────────────────────────────────────────────────
+
+    private static readonly int[]    ShiftPresetHours = { 6, 14, 22 };
+    private static readonly string[] ShiftNames       = { "Morning", "Evening", "Night" };
+
+    private void DrawShiftsPanel()
+    {
+        const float leftW = 210f, rightW = 476f, pad = 8f, gap = 8f;
+
+        Rect panelRect = GetShiftsPanelRect();
+
+        // Styles
+        GUIStyle titleStyle  = new GUIStyle(GUI.skin.box)   { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.UpperCenter };
+        GUIStyle secStyle    = new GUIStyle(GUI.skin.box)   { fontSize = 13, fontStyle = FontStyle.Bold };
+        GUIStyle labelBold   = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold };
+        GUIStyle labelMid    = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+        GUIStyle labelSm     = new GUIStyle(GUI.skin.label) { fontSize = 11 };
+        GUIStyle btnStyle    = new GUIStyle(GUI.skin.button) { fontSize = 12 };
+        GUIStyle btnSmall    = new GUIStyle(GUI.skin.button) { fontSize = 11 };
+        GUIStyle idleColor   = new GUIStyle(labelSm)  { normal = { textColor = new Color(0.65f, 0.65f, 0.65f) } };
+        GUIStyle assignColor = new GUIStyle(labelSm)  { normal = { textColor = new Color(0.45f, 0.9f,  0.45f) } };
+
+        GUI.Box(panelRect, "Shift Management", titleStyle);
+
+        // ── Left column: driver list ──────────────────────────────────────────
+        Rect leftRect = new Rect(panelRect.x + pad, panelRect.y + 38f, leftW, panelRect.height - 46f);
+        GUI.Box(leftRect, "Drivers", secStyle);
+
+        float dy = leftRect.y + 32f;
+        foreach (TruckAgent ta in truckAgents)
         {
-            return "Queue";
+            DriverAgent d = ta.Driver;
+            bool isSelected = selectedShiftDriverId == d.DriverId;
+
+            Rect rowRect = new Rect(leftRect.x + 4f, dy, leftRect.width - 8f, 48f);
+
+            Color prev = GUI.color;
+            GUI.color = isSelected ? new Color(1f, 0.88f, 0.25f) : Color.white;
+            GUI.Box(rowRect, string.Empty);
+            GUI.color = prev;
+
+            GUI.Label(new Rect(rowRect.x + 8f, rowRect.y + 6f,  rowRect.width - 16f, 20f), d.DriverName, labelBold);
+
+            bool isAssigned = d.ShiftStartHour >= 0;
+            string statusText = isAssigned ? $"Assigned: {GetShiftRangeLabel(d.ShiftStartHour)}" : "Idle";
+            GUI.Label(new Rect(rowRect.x + 8f, rowRect.y + 27f, rowRect.width - 16f, 16f), statusText,
+                isAssigned ? assignColor : idleColor);
+
+            // Invisible full-row button for selection
+            if (GUI.Button(rowRect, string.Empty, GUIStyle.none))
+            {
+                selectedShiftDriverId = isSelected ? 0 : d.DriverId;
+                PlayUiSound(uiSelectClip, 0.8f);
+            }
+
+            dy += 52f;
         }
 
-        if (currentDriverRestPhase != DriverRestPhase.None)
+        // ── Right column: shift cards stacked ────────────────────────────────
+        float rx = panelRect.x + pad + leftW + gap;
+        float cy = panelRect.y + 38f;
+
+        // Find currently selected driver
+        DriverAgent selDriver = null;
+        TruckAgent  selTruck  = null;
+        foreach (TruckAgent ta in truckAgents)
+        {
+            if (ta.Driver.DriverId == selectedShiftDriverId) { selDriver = ta.Driver; selTruck = ta; break; }
+        }
+
+        for (int c = 0; c < 3; c++)
+        {
+            // Compute card height
+            int assignedCount = 0;
+            foreach (TruckAgent ta in truckAgents)
+                if (ta.Driver.ShiftStartHour == ShiftPresetHours[c]) assignedCount++;
+            float cardH = Mathf.Max(32f + assignedCount * 30f + 44f + pad, 112f);
+
+            Rect card = new Rect(rx, cy, rightW, cardH);
+            GUI.Box(card, string.Empty);
+
+            // Card header
+            string header = $"{ShiftNames[c]}   {GetShiftRangeLabel(ShiftPresetHours[c])}";
+            GUI.Label(new Rect(card.x + 10f, card.y + 7f, card.width - 20f, 22f), header, labelBold);
+
+            // Separator line (thin box)
+            GUI.Box(new Rect(card.x + 6f, card.y + 30f, card.width - 12f, 2f), string.Empty);
+
+            float ry = card.y + 36f;
+            bool hasDrivers = false;
+            foreach (TruckAgent ta in truckAgents)
+            {
+                DriverAgent d = ta.Driver;
+                if (d.ShiftStartHour != ShiftPresetHours[c]) continue;
+                hasDrivers = true;
+
+                GUI.Box(new Rect(card.x + 6f, ry, card.width - 12f, 26f), string.Empty);
+                GUI.Label(new Rect(card.x + 12f, ry + 4f, card.width - 80f, 18f), d.DriverName, labelMid);
+                if (GUI.Button(new Rect(card.x + card.width - 68f, ry + 3f, 60f, 20f), "Remove", btnSmall))
+                {
+                    d.ShiftStartHour = -1;
+                    d.IsOnActiveShift = false;
+                    ta.IsTruckAutoModeEnabled = false;
+                    if (selectedShiftDriverId == d.DriverId) selectedShiftDriverId = 0;
+                    PlayUiSound(uiSelectClip, 0.85f);
+                    SessionDebugLogger.Log("SHIFT", $"{d.DriverName} removed from shift — now Idle.");
+                }
+                ry += 30f;
+            }
+
+            if (!hasDrivers)
+            {
+                GUI.Label(new Rect(card.x + 12f, ry, card.width - 24f, 18f), "No drivers assigned", idleColor);
+            }
+
+            // Assign button
+            bool alreadyHere = selDriver != null && selDriver.ShiftStartHour == ShiftPresetHours[c];
+            bool canAssign   = selDriver != null && !alreadyHere;
+            string assignLabel = selDriver == null      ? "Select a driver to assign"
+                               : alreadyHere            ? $"{selDriver.DriverName} already assigned"
+                               :                          $"Assign  {selDriver.DriverName}  →  {ShiftNames[c]}";
+
+            GUI.enabled = canAssign;
+            if (GUI.Button(new Rect(card.x + 6f, card.y + cardH - 38f, card.width - 12f, 30f), assignLabel, btnStyle))
+            {
+                selDriver.ShiftStartHour = ShiftPresetHours[c];
+                bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[c]);
+                selDriver.IsOnActiveShift = inWindow
+                    && selDriver.RestPhase == DriverRestPhase.None
+                    && selDriver.WalkPhase == DriverRescuePhase.None;
+                if (selDriver.IsOnActiveShift) SetTruckAutoMode(selTruck, true);
+                PlayUiSound(uiSelectClip, 0.85f);
+                SessionDebugLogger.Log("SHIFT", $"{selDriver.DriverName} assigned to {ShiftNames[c]} ({GetShiftRangeLabel(ShiftPresetHours[c])}).");
+            }
+            GUI.enabled = true;
+
+            cy += cardH + gap;
+        }
+    }
+
+    // ── Drivers panel ────────────────────────────────────────────────────────
+
+    private void DrawDriversPanel()
+    {
+        Rect panelRect = GetDriversPanelRect();
+        GUIStyle labelBold = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold };
+        GUIStyle labelMid  = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+        GUIStyle btnStyle  = new GUIStyle(GUI.skin.button) { fontSize = 11, fontStyle = FontStyle.Bold };
+
+        GUI.Box(panelRect, "Drivers");
+
+        float y = panelRect.y + 34f;
+        foreach (TruckAgent ta in truckAgents)
+        {
+            LoadTruckState(ta);
+            DriverAgent d = ta.Driver;
+            bool isSelected = selectedShiftDriverId == d.DriverId;
+
+            Rect cardRect = new Rect(panelRect.x + 8f, y, panelRect.width - 16f, 88f);
+            Color previousColor = GUI.color;
+            GUI.color = isSelected ? new Color(1f, 0.88f, 0.25f) : Color.white;
+            GUI.Box(cardRect, string.Empty);
+            GUI.color = previousColor;
+
+            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 6f,  180f, 20f), d.DriverName, labelBold);
+            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 26f, cardRect.width - 16f, 18f), $"Assigned truck: {ta.DisplayName}", labelMid);
+
+            string status = GetDriverWorkforceStatus(ta, d);
+            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 44f, cardRect.width - 120f, 18f), $"Status: {status}", labelMid);
+
+            string energyMark = d.Energy <= DriverEnergyCriticalThreshold ? "!" : "";
+            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 62f, 140f, 18f), $"Energy: {Mathf.CeilToInt(d.Energy)}{energyMark}/{Mathf.CeilToInt(DriverEnergyMax)}", labelMid);
+            if (GUI.Button(new Rect(cardRect.x + cardRect.width - 96f, cardRect.y + 54f, 84f, 24f), "Open Fleet", btnStyle))
+            {
+                FocusTruck(ta.TruckNumber);
+            }
+
+            if (GUI.Button(cardRect, string.Empty, GUIStyle.none))
+            {
+                selectedShiftDriverId = isSelected ? 0 : d.DriverId;
+                PlayUiSound(uiSelectClip, 0.8f);
+            }
+
+            SaveTruckState(ta);
+            y += 96f;
+        }
+    }
+
+    private string GetDriverWorkforceStatus(TruckAgent truckAgent, DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return "Idle";
+        }
+
+        if (driver.RestPhase != DriverRestPhase.None)
         {
             return "Resting";
         }
 
-        if (isDriverRescueActive)
+        if (driver.WalkPhase != DriverRescuePhase.None || truckAgent.IsDriverRescueActive)
         {
-            return "Rescue";
+            return "Working";
         }
 
-        if (isTruckMoving)
+        if (truckAgent.IsTruckMoving || truckAgent.IsTruckInteracting || truckAgent.CurrentAssignedTrip != TripType.None || truckAgent.CurrentRefuelPhase != RefuelPhase.None)
         {
-            return "Moving";
+            return "Working";
         }
 
-        if (currentRefuelPhase != RefuelPhase.None)
+        return "Assigned";
+    }
+
+    // ── Resources panel ──────────────────────────────────────────────────────
+
+    private void DrawResourcesPanel()
+    {
+        Rect panelRect = GetResourcesPanelRect();
+        GUIStyle labelName = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold };
+        GUIStyle labelVal  = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+
+        GUI.Box(panelRect, "Resources");
+
+        float y = panelRect.y + 34f;
+
+        DrawResourceRow(ref y, panelRect, LocationType.Forest,
+            $"Logs ready: {locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}", labelName, labelVal);
+
+        DrawResourceRow(ref y, panelRect, LocationType.Sawmill,
+            $"Boards ready: {locations[LocationType.Sawmill].BoardsStored}", labelName, labelVal);
+
+        DrawResourceRow(ref y, panelRect, LocationType.Warehouse,
+            $"Boards stored: {locations[LocationType.Warehouse].BoardsStored}", labelName, labelVal);
+    }
+
+    private void DrawResourceRow(ref float y, Rect panelRect, LocationType loc, string resourceText, GUIStyle nameStyle, GUIStyle valStyle)
+    {
+        GUI.Box(new Rect(panelRect.x + 8f, y, panelRect.width - 16f, 52f), string.Empty);
+        GUI.Label(new Rect(panelRect.x + 12f, y + 6f,  panelRect.width - 24f, 20f), locations[loc].Label, nameStyle);
+        GUI.Label(new Rect(panelRect.x + 12f, y + 28f, panelRect.width - 24f, 18f), resourceText, valStyle);
+        y += 58f;
+    }
+
+    // ── Build panel ──────────────────────────────────────────────────────────
+
+    private void DrawBuildPanel()
+    {
+        Rect panelRect = GetBuildPanelRect();
+        GUIStyle labelStyle = new GUIStyle(GUI.skin.label) { fontSize = 13 };
+        GUIStyle smallStyle = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+        GUI.Box(panelRect, "Build");
+
+        GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 32f, panelRect.width - 24f, 20f), "Select a building tool.", labelStyle);
+
+        bool roadModeActive = activeBuildTool == BuildTool.Road;
+        Color previousColor = GUI.color;
+        GUI.color = roadModeActive ? new Color(1f, 0.9f, 0.35f) : Color.white;
+
+        if (GUI.Button(new Rect(panelRect.x + 12f, panelRect.y + 58f, 72f, 56f), "ROAD"))
         {
-            return "Refuel";
+            activeBuildTool = roadModeActive ? BuildTool.None : BuildTool.Road;
+            PlayUiSound(uiSelectClip, 0.85f);
+            SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
         }
 
-        if (currentAssignedTrip != TripType.None)
-        {
-            return "Assigned";
-        }
+        GUI.color = previousColor;
+        GUI.Label(new Rect(panelRect.x + 96f, panelRect.y + 66f, panelRect.width - 108f, 20f), "Road", labelStyle);
+        GUI.Label(
+            new Rect(panelRect.x + 96f, panelRect.y + 88f, panelRect.width - 108f, 34f),
+            roadModeActive ? "Mode active: left click builds, right click removes." : "Click to enter road building mode.",
+            smallStyle);
+    }
 
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private string GetTruckFleetStatusLabel()
+    {
+        if (isTruckInteracting) return "Busy";
+        if (isTruckWaitingForService) return "Queue";
+        if (isDriverRescueActive) return "Rescue";
+        if (isTruckMoving) return "Moving";
+        if (currentRefuelPhase != RefuelPhase.None) return "Refuel";
+        if (currentAssignedTrip != TripType.None) return "Assigned";
         return IsTruckInsideParking() ? "Parked" : "Idle";
     }
 
@@ -52,29 +396,29 @@ public partial class GameBootstrap
 
         bool canReachForestTrip =
             HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Forest].Anchor) &&
-            HasPath(locations[LocationType.Forest].Anchor, locations[LocationType.Warehouse].Anchor);
-        if (locations[LocationType.Forest].WoodStored > 0 && canReachForestTrip)
+            HasPath(locations[LocationType.Forest].Anchor, locations[LocationType.Sawmill].Anchor);
+        if (locations[LocationType.Forest].LogsStored > 0 && canReachForestTrip)
         {
             trips.Add(new TripOption
             {
-                Type = TripType.ForestToWarehouse,
-                Title = "Deliver Logs: Forest -> Warehouse",
-                Description = "Pick up logs in Forest and deliver them to Warehouse.",
-                Reward = GetTripReward(TripType.ForestToWarehouse)
+                Type = TripType.ForestToSawmill,
+                Title = "Deliver Logs: Forest -> Sawmill",
+                Description = "Pick up logs in Forest and deliver them to Sawmill.",
+                Reward = GetTripReward(TripType.ForestToSawmill)
             });
         }
 
-        bool canReachTownTrip =
-            HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Warehouse].Anchor) &&
-            HasPath(locations[LocationType.Warehouse].Anchor, locations[LocationType.Town].Anchor);
-        if (locations[LocationType.Warehouse].WoodStored > 0 && canReachTownTrip)
+        bool canReachWarehouseTrip =
+            HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Sawmill].Anchor) &&
+            HasPath(locations[LocationType.Sawmill].Anchor, locations[LocationType.Warehouse].Anchor);
+        if (locations[LocationType.Sawmill].BoardsStored > 0 && canReachWarehouseTrip)
         {
             trips.Add(new TripOption
             {
-                Type = TripType.WarehouseToTown,
-                Title = "Deliver Logs: Warehouse -> Town",
-                Description = "Take stored logs from Warehouse to Town.",
-                Reward = GetTripReward(TripType.WarehouseToTown)
+                Type = TripType.SawmillToWarehouse,
+                Title = "Deliver Boards: Sawmill -> Warehouse",
+                Description = "Take processed boards from Sawmill to Warehouse.",
+                Reward = GetTripReward(TripType.SawmillToWarehouse)
             });
         }
 
@@ -109,52 +453,58 @@ public partial class GameBootstrap
     {
         return tripType switch
         {
-            TripType.ForestToWarehouse => "Forest -> Warehouse",
-            TripType.WarehouseToTown => "Warehouse -> Town",
+            TripType.ForestToSawmill => "Forest -> Sawmill",
+            TripType.SawmillToWarehouse => "Sawmill -> Warehouse",
             _ => "None"
         };
     }
 
     private bool IsPointerOverHud(Vector2 screenPosition)
     {
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        {
+            return true;
+        }
+
         Vector2 guiPosition = new Vector2(screenPosition.x, Screen.height - screenPosition.y);
 
-        if (GetMoneyHudRect().Contains(guiPosition) || GetTimeHudRect().Contains(guiPosition) || GetSpeedHudRect().Contains(guiPosition) || GetTruckFleetHudRect().Contains(guiPosition) || GetCameraLegendHudRect().Contains(guiPosition))
+        if (GetMoneyHudRect().Contains(guiPosition) ||
+            GetTimeHudRect().Contains(guiPosition) ||
+            GetSpeedHudRect().Contains(guiPosition) ||
+            GetCameraLegendHudRect().Contains(guiPosition) ||
+            GetMenuBarRect().Contains(guiPosition))
         {
             return true;
         }
 
-        if (selectedLocation == LocationType.Parking && GetParkingHudRect().Contains(guiPosition))
-        {
-            return true;
-        }
+        if (isFleetPanelOpen && GetFleetPanelRect().Contains(guiPosition)) return true;
+        if (isShiftsPanelOpen && GetShiftsPanelRect().Contains(guiPosition)) return true;
+        if (isDriversPanelOpen && GetDriversPanelRect().Contains(guiPosition)) return true;
+        if (isResourcesPanelOpen && GetResourcesPanelRect().Contains(guiPosition)) return true;
+        if (isBuildPanelOpen && GetBuildPanelRect().Contains(guiPosition)) return true;
+        if (isTruckDetailsOpen && GetTruckDetailsHudRect().Contains(guiPosition)) return true;
 
-        if (selectedLocation.HasValue && selectedLocation != LocationType.Parking && GetSelectedBuildingHudRect().Contains(guiPosition))
-        {
-            return true;
-        }
+        return false;
+    }
 
-        if (selectedLocation == LocationType.Parking && GetAvailableTripsHudRect().Contains(guiPosition))
-        {
-            return true;
-        }
-
-        return isTruckDetailsOpen && GetTruckDetailsHudRect().Contains(guiPosition);
+    private int GetParkingHudHeight()
+    {
+        return 286 + 36 + truckAgents.Count * 38 + 66;
     }
 
     private Rect GetParkingHudRect()
     {
-        return new Rect(Screen.width - 290, 12, 278, 286);
+        return new Rect(Screen.width - 290, 12, 278, GetParkingHudHeight());
     }
 
     private Rect GetTruckDetailsHudRect()
     {
-        return new Rect(Screen.width - 290, 488, 278, 388);
+        return new Rect(Screen.width - 290, 12, 278, 420f);
     }
 
     private Rect GetAvailableTripsHudRect()
     {
-        return new Rect(Screen.width - 290, 308, 278, 170);
+        return new Rect(Screen.width - 290, 12 + GetParkingHudHeight() + 8, 278, 170);
     }
 
     private Rect GetMoneyHudRect()
@@ -172,14 +522,9 @@ public partial class GameBootstrap
         return new Rect(Screen.width * 0.5f + 300f, 12f, 120f, 54f);
     }
 
-    private Rect GetTruckFleetHudRect()
-    {
-        return new Rect(12f, 12f, 220f, 324f);
-    }
-
     private Rect GetCameraLegendHudRect()
     {
-        return new Rect(Screen.width * 0.5f - 160f, Screen.height - 78f, 320f, 72f);
+        return new Rect(Screen.width * 0.5f - 180f, Screen.height - 96f, 360f, 90f);
     }
 
     private Rect GetSelectedBuildingHudRect()
@@ -218,13 +563,11 @@ public partial class GameBootstrap
     {
         AudioClip clip = tripType switch
         {
-            TripType.ForestToWarehouse => routeAssignForestWarehouseClip,
-            TripType.WarehouseToTown => routeAssignWarehouseTownClip,
+            TripType.ForestToSawmill => routeAssignForestSawmillClip,
+            TripType.SawmillToWarehouse => routeAssignSawmillWarehouseClip,
             _ => null
         };
 
         PlayUiSound(clip, volumeScale);
     }
-
 }
-

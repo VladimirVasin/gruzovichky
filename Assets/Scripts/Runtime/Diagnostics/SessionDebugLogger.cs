@@ -7,6 +7,7 @@ public static class SessionDebugLogger
     private static readonly object SyncRoot = new();
     private static string logFilePath;
     private static bool sessionActive;
+    private static Func<string> gameTimeProvider;
 
     public static string LogFilePath
     {
@@ -30,6 +31,14 @@ public static class SessionDebugLogger
             File.WriteAllText(LogFilePath, string.Empty);
             sessionActive = true;
             WriteLine("SESSION", $"Started new play session: {sessionLabel}");
+        }
+    }
+
+    public static void SetGameTimeProvider(Func<string> provider)
+    {
+        lock (SyncRoot)
+        {
+            gameTimeProvider = provider;
         }
     }
 
@@ -63,6 +72,23 @@ public static class SessionDebugLogger
     private static void WriteLine(string category, string message)
     {
         string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        File.AppendAllText(LogFilePath, $"[{timestamp}] [{category}] {message}{Environment.NewLine}");
+        string gameTimePrefix = string.Empty;
+        if (gameTimeProvider != null)
+        {
+            try
+            {
+                string gameTime = gameTimeProvider();
+                if (!string.IsNullOrWhiteSpace(gameTime))
+                {
+                    gameTimePrefix = $" [GAME {gameTime}]";
+                }
+            }
+            catch
+            {
+                // Keep logger resilient; if the game-time provider fails, fall back to system-time-only logging.
+            }
+        }
+
+        File.AppendAllText(LogFilePath, $"[{timestamp}]{gameTimePrefix} [{category}] {message}{Environment.NewLine}");
     }
 }

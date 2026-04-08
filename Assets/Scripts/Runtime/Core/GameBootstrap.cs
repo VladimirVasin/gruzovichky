@@ -31,22 +31,22 @@ public partial class GameBootstrap : MonoBehaviour
     private const float TruckFuelPerCell = 1f;
     private const float DriverEnergyMax = 100f;
     private const float DriverEnergyCriticalThreshold = 30f;
-    private const float DriverEnergyDrainPerSecond = DriverEnergyMax / (DayNightCycleDuration / 24f * 8f);
+    private const float DriverEnergyDrainPerSecond = DriverEnergyMax / (DayNightCycleDuration / 24f * 16f);
     private const float DriverSleepDuration = DayNightCycleDuration / 24f * 6f;
     private const float DriverWalkSpeed = 2.2f;
     private const float MoneyPopupDuration = 1.4f;
     private const int AudioSampleRate = 22050;
     private const int MaxTruckCount = 5;
     private const int HireTruckCost = 300;
-    private const float DayNightCycleDuration = 180f;
+    private const float DayNightCycleDuration = 300f;
     private const float DioramaCameraPitch = 42f;
     private static readonly Vector3 DioramaCameraOffset = new(-11.5f, 15f, -11.5f);
 
     private readonly HashSet<Vector2Int> roadCells = new();
+    private readonly HashSet<Vector2Int> miscOccupiedCells = new();
     private readonly Dictionary<Vector2Int, GameObject> roadVisuals = new();
     private readonly Dictionary<LocationType, LocationData> locations = new();
     private readonly List<Vector2Int> activePath = new();
-    private readonly List<Vector3> driverRescuePath = new();
     private readonly List<Transform> truckWheels = new();
     private readonly List<Transform> truckFrontWheels = new();
     private readonly List<Light> truckHeadlights = new();
@@ -69,19 +69,6 @@ public partial class GameBootstrap : MonoBehaviour
     private Transform truckCabinTransform;
     private Renderer truckHeadlightLeftRenderer;
     private Renderer truckHeadlightRightRenderer;
-    private GameObject driverObject;
-    private Transform driverVisualRoot;
-    private Transform driverBodyTransform;
-    private Transform driverHeadTransform;
-    private Transform driverCapTransform;
-    private Transform driverLeftArmTransform;
-    private Transform driverRightArmTransform;
-    private Transform driverLeftLegTransform;
-    private Transform driverRightLegTransform;
-    private Transform driverFuelCanTransform;
-    private Transform driverFlashlightTransform;
-    private Light driverFlashlightLight;
-    private Renderer driverFlashlightRenderer;
     private Transform worldRoot;
     private Transform groundRoot;
     private Transform roadsRoot;
@@ -105,6 +92,7 @@ public partial class GameBootstrap : MonoBehaviour
     private TextMesh selectedLocationLabelText;
     private readonly List<TextMesh> selectedLocationLabelOutlines = new();
     private GameObject cargoTransferCrate;
+    private GameObject buildHoverHighlight;
     private Vector2Int truckCell;
     private Vector3 truckTargetWorld;
     private Vector3 truckSegmentStartWorld;
@@ -113,16 +101,14 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isTruckInteracting;
     private bool isTruckWaitingForService;
     private bool isDriverRescueActive;
-    private CargoSource truckCargoSource = CargoSource.None;
-    private int truckCargoWood;
+    private CargoType truckCargoType = CargoType.None;
+    private int truckCargoAmount;
     private float productionTimer;
     private Vector3 cameraFocusPoint;
     private Vector3 cameraOffset;
     private Vector3 cameraTargetOffset;
     private Vector2 lastMousePosition;
     private Vector2 rightMousePressPosition;
-    private Vector3 driverRescueTargetWorld;
-    private int driverRescueWaypointIndex;
     private float truckSegmentProgress;
     private float truckSegmentDuration;
     private float truckWheelSpinAngle;
@@ -130,16 +116,10 @@ public partial class GameBootstrap : MonoBehaviour
     private float truckInteractionTimer;
     private float moneyPopupTimer;
     private float truckFuel = TruckFuelCapacity;
-    private float driverEnergy = DriverEnergyMax;
-    private bool needsRestAfterTrip;
-    private DriverRestPhase currentDriverRestPhase = DriverRestPhase.None;
-    private float driverSleepTimer;
-    private int motelParkingSlotIndex;
-    private Vector3 motelParkedPosition;
-    private float dayNightCycleTimer = DayNightCycleDuration * 0.3f;
+    private float dayNightCycleTimer = DayNightCycleDuration * (5f / 24f);
     private float currentStylizedDaylight = 1f;
-    private float driverWalkAnimationTime;
     private float forestProductionProgress;
+    private float sawmillProcessingTimer;
     private float dayBirdTimer;
     private float nightOwlTimer;
     private float lanternBuzzTimer;
@@ -153,13 +133,24 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isCameraRotatingToTarget;
     private bool isTruckCameraFocused;
     private bool isTruckAutoModeEnabled;
+    private bool isFleetScreenDirty = true;
     private int selectedTruckNumber = 1;
     private int money;
     private int currentAssignedTripReward;
+    private bool isFleetPanelOpen;
+    private bool isShiftsPanelOpen;
+    private bool isDriversPanelOpen;
+    private int selectedShiftDriverId; // DriverId, 0 = none
+    private bool isResourcesPanelOpen;
+    private bool isBuildPanelOpen;
     private int moneyPopupAmount;
     private int gameSpeedMultiplier = 1;
+    private int lastActiveGameSpeedMultiplier = 1;
     private int nextHireTruckNumber = 2;
+    private int nextDriverId = 1;
     private TripType currentAssignedTrip = TripType.None;
+    private BuildTool activeBuildTool = BuildTool.None;
+    private Vector2Int? hoveredBuildCell;
 
     private sealed class RoadLanternData
     {
@@ -173,7 +164,6 @@ public partial class GameBootstrap : MonoBehaviour
     }
     private TripPhase currentTripPhase = TripPhase.None;
     private RefuelPhase currentRefuelPhase = RefuelPhase.None;
-    private DriverRescuePhase currentDriverRescuePhase = DriverRescuePhase.None;
     private TruckInteractionType activeTruckInteraction = TruckInteractionType.None;
     private TruckInteractionType queuedTruckInteraction = TruckInteractionType.None;
     private Quaternion truckInteractionTargetRotation;
@@ -190,7 +180,7 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip nightWindClip;
     private AudioClip nightCricketsClip;
     private AudioClip gasStationHumClip;
-    private AudioClip townHumClip;
+    private AudioClip sawmillHumClip;
     private AudioClip warehouseCreakClip;
     private AudioClip owlClip;
     private AudioClip lanternBuzzClip;
@@ -198,13 +188,13 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip truckRollClip;
     private AudioClip cargoPickupClip;
     private AudioClip cargoDropClip;
-    private AudioClip routeAssignForestWarehouseClip;
-    private AudioClip routeAssignWarehouseTownClip;
+    private AudioClip routeAssignForestSawmillClip;
+    private AudioClip routeAssignSawmillWarehouseClip;
     private AudioClip routeAssignRefuelClip;
     private AudioClip forestLoadCueClip;
-    private AudioClip warehouseUnloadCueClip;
-    private AudioClip warehouseLoadCueClip;
-    private AudioClip townUnloadCueClip;
+    private AudioClip sawmillUnloadCueClip;
+    private AudioClip sawmillLoadCueClip;
+    private AudioClip warehouseUnloadBoardsCueClip;
     private AudioClip gasStationRefuelCueClip;
     private AudioClip parkingReturnCueClip;
     private AudioClip moneyRewardClip;
@@ -215,15 +205,15 @@ public partial class GameBootstrap : MonoBehaviour
         GasStation,
         Forest,
         Warehouse,
-        Town,
+        Sawmill,
         Motel
     }
 
-    private enum CargoSource
+    private enum CargoType
     {
         None,
-        Forest,
-        Warehouse
+        Logs,
+        Boards
     }
 
     private enum TransportTask
@@ -231,26 +221,32 @@ public partial class GameBootstrap : MonoBehaviour
         None,
         ReturnToParking,
         PickUpAtForest,
-        DeliverToWarehouse,
-        PickUpAtWarehouse,
-        DeliverToTown
+        DeliverToSawmill,
+        PickUpAtSawmill,
+        DeliverToWarehouse
     }
 
     private enum TruckInteractionType
     {
         None,
         LoadAtForest,
+        UnloadAtSawmill,
+        LoadAtSawmill,
         UnloadAtWarehouse,
-        LoadAtWarehouse,
-        UnloadAtTown,
         RefuelAtGasStation
     }
 
     private enum TripType
     {
         None,
-        ForestToWarehouse,
-        WarehouseToTown
+        ForestToSawmill,
+        SawmillToWarehouse
+    }
+
+    private enum BuildTool
+    {
+        None,
+        Road
     }
 
     private enum TripPhase
@@ -291,6 +287,7 @@ public partial class GameBootstrap : MonoBehaviour
         ReturnToParking
     }
 
+
     private sealed class LocationData
     {
         public string Label;
@@ -298,10 +295,12 @@ public partial class GameBootstrap : MonoBehaviour
         public Vector2Int Max;
         public Vector2Int Anchor;
         public Color BaseColor;
-        public int WoodStored;
+        public int LogsStored;
+        public int BoardsStored;
         public GameObject RootObject;
         public Renderer BaseRenderer;
         public readonly List<GameObject> StoredLogVisuals = new();
+        public readonly List<GameObject> StoredBoardVisuals = new();
 
         public bool Contains(Vector2Int cell)
         {
@@ -373,6 +372,47 @@ public partial class GameBootstrap : MonoBehaviour
         public readonly List<Transform> TruckWheels = new();
         public readonly List<Transform> TruckFrontWheels = new();
         public readonly List<Light> TruckHeadlights = new();
+        public DriverAgent Driver;
+        public AudioSource TruckLoopAudioSource;
+        public AudioSource TruckFxAudioSource;
+        public readonly List<Vector2Int> ActivePath = new();
+        public Vector2Int TruckCell;
+        public Vector3 TruckTargetWorld;
+        public Vector3 TruckSegmentStartWorld;
+        public Vector3 TruckSmoothedForward = Vector3.forward;
+        public bool IsTruckMoving;
+        public bool IsTruckInteracting;
+        public bool IsTruckWaitingForService;
+        public bool IsDriverRescueActive;
+        public bool IsTruckAutoModeEnabled;
+        public CargoType TruckCargoType = CargoType.None;
+        public int TruckCargoAmount;
+        public float TruckSegmentProgress;
+        public float TruckSegmentDuration;
+        public float TruckWheelSpinAngle;
+        public float TruckSteerAngle;
+        public float TruckInteractionTimer;
+        public float TruckFuel = TruckFuelCapacity;
+        public int CurrentAssignedTripReward;
+        public TripType CurrentAssignedTrip = TripType.None;
+        public TripPhase CurrentTripPhase = TripPhase.None;
+        public RefuelPhase CurrentRefuelPhase = RefuelPhase.None;
+        public TruckInteractionType ActiveTruckInteraction = TruckInteractionType.None;
+        public TruckInteractionType QueuedTruckInteraction = TruckInteractionType.None;
+        public Quaternion TruckInteractionTargetRotation;
+        public Vector3 TruckInteractionBuildingPoint;
+        public LocationType? ActiveServiceLocation;
+        public LocationType? QueuedServiceLocation;
+        public int ParkingSlotIndex;
+    }
+
+    private sealed class DriverAgent
+    {
+        public int DriverId;
+        public string DriverName;
+        // ShiftStartHour: -1 = always active, 0-23 = activate at that game hour
+        public int ShiftStartHour = -1;
+        public bool IsOnActiveShift = true;
         public GameObject DriverObject;
         public Transform DriverVisualRoot;
         public Transform DriverBodyTransform;
@@ -386,52 +426,88 @@ public partial class GameBootstrap : MonoBehaviour
         public Transform DriverFlashlightTransform;
         public Light DriverFlashlightLight;
         public Renderer DriverFlashlightRenderer;
-        public AudioSource TruckLoopAudioSource;
-        public AudioSource TruckFxAudioSource;
-        public readonly List<Vector2Int> ActivePath = new();
-        public Vector2Int TruckCell;
-        public Vector3 TruckTargetWorld;
-        public Vector3 TruckSegmentStartWorld;
-        public Vector3 TruckSmoothedForward = Vector3.forward;
-        public bool IsTruckMoving;
-        public bool IsTruckInteracting;
-        public bool IsTruckWaitingForService;
-        public bool IsDriverRescueActive;
-        public bool IsTruckAutoModeEnabled;
-        public CargoSource TruckCargoSource = CargoSource.None;
-        public int TruckCargoWood;
-        public Vector3 DriverRescueTargetWorld;
-        public readonly List<Vector3> DriverRescuePath = new();
-        public int DriverRescueWaypointIndex;
-        public float TruckSegmentProgress;
-        public float TruckSegmentDuration;
-        public float TruckWheelSpinAngle;
-        public float TruckSteerAngle;
-        public float TruckInteractionTimer;
-        public float TruckFuel = TruckFuelCapacity;
-        public float DriverEnergy = DriverEnergyMax;
+        public float Energy = DriverEnergyMax;
+        public float SleepStartEnergy = DriverEnergyMax;
         public bool NeedsRestAfterTrip;
-        public float DriverWalkAnimationTime;
-        public int CurrentAssignedTripReward;
-        public TripType CurrentAssignedTrip = TripType.None;
-        public TripPhase CurrentTripPhase = TripPhase.None;
-        public RefuelPhase CurrentRefuelPhase = RefuelPhase.None;
-        public DriverRescuePhase CurrentDriverRescuePhase = DriverRescuePhase.None;
-        public DriverRestPhase CurrentDriverRestPhase = DriverRestPhase.None;
-        public float DriverSleepTimer;
-        public int MotelParkingSlotIndex;
+        public DriverRestPhase RestPhase = DriverRestPhase.None;
+        public float SleepTimer;
+        public int MotelSlotIndex;
         public Vector3 MotelParkedPosition;
-        public TruckInteractionType ActiveTruckInteraction = TruckInteractionType.None;
-        public TruckInteractionType QueuedTruckInteraction = TruckInteractionType.None;
-        public Quaternion TruckInteractionTargetRotation;
-        public Vector3 TruckInteractionBuildingPoint;
-        public LocationType? ActiveServiceLocation;
-        public LocationType? QueuedServiceLocation;
-        public int ParkingSlotIndex;
+        public DriverRescuePhase WalkPhase = DriverRescuePhase.None;
+        public Vector3 WalkTargetWorld;
+        public readonly List<Vector3> WalkPath = new();
+        public int WalkWaypointIndex;
+        public float WalkAnimationTime;
+    }
+
+    private int GetCurrentHour()
+    {
+        float normalized = dayNightCycleTimer / DayNightCycleDuration;
+        return Mathf.FloorToInt(normalized * 24f) % 24;
+    }
+
+    // Returns true if 'hour' falls within the 8-hour window starting at 'shiftStart'
+    private static bool IsHourInShiftWindow(int hour, int shiftStart)
+    {
+        return (hour - shiftStart + 24) % 24 < 8;
+    }
+
+    // Shift display string: "06:00 – 14:00"
+    private static string GetShiftRangeLabel(int shiftStart)
+    {
+        int end = (shiftStart + 8) % 24;
+        return $"{shiftStart:00}:00 – {end:00}:00";
+    }
+
+    private bool IsDriverOnShift(DriverAgent driver)
+    {
+        if (driver == null) return false;
+        if (driver.ShiftStartHour < 0) return false; // Idle — no shift assigned
+        return driver.IsOnActiveShift;
+    }
+
+    private void UpdateDriverShiftActivation(DriverAgent driver)
+    {
+        if (driver.ShiftStartHour < 0) return;
+        if (driver.IsOnActiveShift) return;
+        if (driver.RestPhase != DriverRestPhase.None) return;
+        if (driver.WalkPhase != DriverRescuePhase.None) return;
+        if (!IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour)) return;
+
+        driver.IsOnActiveShift = true;
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} shift started ({GetShiftRangeLabel(driver.ShiftStartHour)}).");
+        foreach (TruckAgent ta in truckAgents)
+        {
+            if (ta.Driver == driver)
+            {
+                SetTruckAutoMode(ta, true);
+                break;
+            }
+        }
+    }
+
+    private void UpdateIdleRecall(DriverAgent driver)
+    {
+        // Driver has no shift assigned — ensure truck returns to parking
+        if (driver.ShiftStartHour >= 0) return;
+        if (driver.RestPhase != DriverRestPhase.None) return;
+        if (isDriverRescueActive) return;
+        if (truckCell == locations[LocationType.Parking].Anchor) return;
+        if (isTruckMoving) return;
+
+        // Cancel any active orders then head home
+        currentAssignedTrip = TripType.None;
+        currentTripPhase = TripPhase.None;
+        currentRefuelPhase = RefuelPhase.None;
+        isTruckAutoModeEnabled = false;
+        currentAssignedTripReward = 0;
+        StartMoveTo(locations[LocationType.Parking].Anchor);
+        SessionDebugLogger.Log("IDLE", $"{GetLoadedTruckDisplayName()} returning to parking — driver is idle.");
     }
 
     private void Awake()
     {
+        SessionDebugLogger.SetGameTimeProvider(() => GetDayNightClockLabel());
         SessionDebugLogger.StartNewSession($"{nameof(GameBootstrap)} on {gameObject.scene.name}");
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;
@@ -457,42 +533,50 @@ public partial class GameBootstrap : MonoBehaviour
         HandleCameraInput();
         HandleRoadRemovalInput();
         HandleRoadPlacementInput();
+        UpdateBuildHoverHighlight();
         ProduceForestWood();
+        UpdateSawmillProcessing();
         UpdateDayNightCycle();
         UpdateSelectedLocationLabel();
         UpdateForestTreeWobbles();
         UpdateForestWorkers();
         for (int i = 0; i < truckAgents.Count; i++)
         {
-            LoadTruckState(truckAgents[i]);
+            TruckAgent ta = truckAgents[i];
+            DriverAgent da = ta.Driver;
+            LoadTruckState(ta);
             UpdateTruckMovement();
             UpdateTruckInteraction();
-            UpdateDriverEnergy();
-            UpdateAssignedTrip();
-            UpdateRefuelOrder();
-            UpdateDriverRescue();
-            UpdateDriverRest();
-            UpdateDriverVisualAnimation();
+            UpdateDriverEnergy(da);
+            UpdateDriverShiftActivation(da);
+            UpdateIdleRecall(da);
+            UpdateAssignedTrip(da);
+            UpdateRefuelOrder(da);
+            UpdateDriverWalk(da);
+            UpdateDriverRest(da);
+            UpdateDriverVisualAnimation(da);
             UpdateTruckAutoMode();
             UpdateAudio();
 
             if (!isTruckMoving &&
                 !isTruckInteracting &&
                 !isDriverRescueActive &&
-                currentDriverRestPhase == DriverRestPhase.None &&
+                da.RestPhase == DriverRestPhase.None &&
                 truckCell == locations[LocationType.Parking].Anchor)
             {
-                Vector3 parkedPosition = GetParkingSlotWorldPosition(truckAgents[i].ParkingSlotIndex);
+                Vector3 parkedPosition = GetParkingSlotWorldPosition(ta.ParkingSlotIndex);
                 truckObject.transform.position = parkedPosition;
                 truckTargetWorld = parkedPosition;
                 truckSegmentStartWorld = parkedPosition;
                 truckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
             }
 
-            SaveTruckState(truckAgents[i]);
+            SaveTruckState(ta);
         }
 
         UpdateMoneyPopup();
+        UpdateFleetScreenUi();
+        UpdateTruckQuickHud();
     }
 
     private void OnGUI()
@@ -500,24 +584,15 @@ public partial class GameBootstrap : MonoBehaviour
         DrawMoneyHud();
         DrawTimeHud();
         DrawSpeedHud();
-        DrawTruckFleetHud();
         DrawCameraLegendHud();
+        DrawMenuBar();
 
-        if (selectedLocation.HasValue && selectedLocation != LocationType.Parking)
-        {
-            DrawSelectedBuildingHud(selectedLocation.Value);
-        }
+        if (isFleetPanelOpen) DrawFleetPanel();
+        if (isShiftsPanelOpen) DrawShiftsPanel();
+        if (isDriversPanelOpen) DrawDriversPanel();
+        if (isResourcesPanelOpen) DrawResourcesPanel();
+        if (isBuildPanelOpen) DrawBuildPanel();
 
-        if (selectedLocation == LocationType.Parking)
-        {
-            DrawParkingHud();
-            DrawAvailableTripsHud();
-        }
-
-        if (isTruckDetailsOpen)
-        {
-            DrawTruckDetailsHud();
-        }
     }
 
     private void BuildPrototypeScene()
@@ -541,11 +616,14 @@ public partial class GameBootstrap : MonoBehaviour
         SetupGrid();
         RebuildRoadLanterns();
         PopulateMiscTrees();
+        SetupBuildHoverHighlight();
         SetupForestWorkers();
         SetupSelectionVisuals();
         SetupTruck();
         SetupCargoTransferVisual();
         SetupAudio();
+        SetupFleetScreenUi();
+        SetupTruckQuickHud();
     }
 
     private void SetupCamera()
@@ -636,7 +714,7 @@ public partial class GameBootstrap : MonoBehaviour
         for (int i = 0; i < truckAgents.Count; i++)
         {
             LoadTruckState(truckAgents[i]);
-            UpdateTruckHeadlights(stylizedDaylight);
+            UpdateTruckHeadlights(stylizedDaylight, truckAgents[i].Driver);
             SaveTruckState(truckAgents[i]);
         }
     }

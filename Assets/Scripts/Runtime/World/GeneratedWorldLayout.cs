@@ -19,7 +19,7 @@ public sealed class GeneratedWorldLayout
     public WorldLocationPlacement GasStation;
     public WorldLocationPlacement Forest;
     public WorldLocationPlacement Warehouse;
-    public WorldLocationPlacement Town;
+    public WorldLocationPlacement Sawmill;
     public WorldLocationPlacement Motel;
 
     public IEnumerable<WorldLocationPlacement> GetAllPlacements()
@@ -28,7 +28,7 @@ public sealed class GeneratedWorldLayout
         yield return GasStation;
         yield return Forest;
         yield return Warehouse;
-        yield return Town;
+        yield return Sawmill;
         yield return Motel;
     }
 }
