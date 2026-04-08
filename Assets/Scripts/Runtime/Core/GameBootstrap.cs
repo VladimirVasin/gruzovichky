@@ -17,9 +17,9 @@ public partial class GameBootstrap : MonoBehaviour
     private const float CameraDragPanMultiplier = 0.035f;
     private const float CameraZoomSpeed = 8f;
     private const float CameraMinHeight = 6f;
-    private const float CameraMaxHeight = 18f;
+    private const float CameraMaxHeight = 70f;
     private const float CameraMinDistance = 6f;
-    private const float CameraMaxDistance = 18f;
+    private const float CameraMaxDistance = 70f;
     private const float TruckFollowDistance = 4.4f;
     private const float TruckFollowHeight = 2.05f;
     private const float TruckFollowLookHeight = 1.05f;
@@ -43,6 +43,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DriverShiftArrivalLeadHours = 1f;
     private const float DioramaCameraPitch = 42f;
     private static readonly Vector3 DioramaCameraOffset = new(-11.5f, 15f, -11.5f);
+    private static readonly Vector3 CloudTravelDir = new Vector3(1f, 0f, 0.4f).normalized;
+    private const float CloudTravelLength = 64f;  // full path spawn→exit
 
     private readonly HashSet<Vector2Int> roadCells = new();
     private readonly HashSet<Vector2Int> miscOccupiedCells = new();
@@ -62,6 +64,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<Transform> forestWorkTargetTrees = new();
     private readonly List<ForestTreeWobble> forestTreeWobbles = new();
     private readonly List<MiscTreeSway> miscTreeSways = new();
+    private readonly List<DistantCloudData> distantClouds = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
     private readonly Dictionary<LocationType, GameObject> locationSelectionHighlights = new();
     private float[,] terrainHeights = new float[GridWidth, GridHeight];
@@ -91,6 +94,10 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioSource townAudioSource;
     private AudioSource truckLoopAudioSource;
     private AudioSource truckFxAudioSource;
+    private Material groundSurfaceMaterial;
+    private Material grassSurfaceMaterial;
+    private Texture2D groundSurfaceTexture;
+    private Texture2D grassSurfaceTexture;
     private Light mainDirectionalLight;
     private GameObject selectedLocationLabelRoot;
     private TextMesh selectedLocationLabelText;
@@ -379,6 +386,17 @@ public partial class GameBootstrap : MonoBehaviour
         public float Speed;
         public float PitchAmplitude;
         public float RollAmplitude;
+    }
+
+    private sealed class DistantCloudData
+    {
+        public Transform RootTransform;
+        public Vector3 SpawnPosition;   // world position at TravelOffset = 0
+        public float TravelOffset;      // current distance along CloudTravelDir
+        public float TravelSpeed;       // units/sec
+        public float VerticalBobAmplitude;
+        public float VerticalBobSpeed;
+        public float PhaseOffset;
     }
 
     private sealed class TruckAgent
@@ -802,6 +820,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateSelectedLocationLabel();
         UpdateForestTreeWobbles();
         UpdateMiscTreeSways();
+        UpdateDistantClouds();
         UpdateForestWorkers();
         for (int i = 0; i < truckAgents.Count; i++)
         {
@@ -895,12 +914,14 @@ public partial class GameBootstrap : MonoBehaviour
         SetupCamera();
         SetupLighting();
         SetupDioramaPostProcessing();
+        SetupSurfaceMaterials();
         SetupLocations();
         GenerateInitialRoadNetwork();
         GenerateTerrainHeights();
         ApplyTerrainHeightsToWorld();
         SetupGround();
         SetupGrid();
+        SetupDistantClouds();
         RebuildRoadLanterns();
         PopulateMiscTrees();
         SetupBuildHoverHighlight();
@@ -951,8 +972,8 @@ public partial class GameBootstrap : MonoBehaviour
         mainDirectionalLight = keyLight;
         keyLight.type = LightType.Directional;
         keyLight.transform.rotation = Quaternion.Euler(48f, -34f, 0f);
-        keyLight.color = new Color(1f, 0.95f, 0.86f);
-        keyLight.intensity = 1.15f;
+        keyLight.color = new Color(1f, 0.94f, 0.78f);
+        keyLight.intensity = 1.22f;
         keyLight.shadows = LightShadows.Soft;
         keyLight.shadowStrength = 0.9f;
         keyLight.shadowBias = 0.04f;
@@ -967,7 +988,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         RenderSettings.ambientMode = AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.78f, 0.82f, 0.88f);
+        RenderSettings.ambientLight = new Color(0.84f, 0.84f, 0.8f);
     }
 
     private void UpdateDayNightCycle()
@@ -979,27 +1000,39 @@ public partial class GameBootstrap : MonoBehaviour
 
         dayNightCycleTimer = Mathf.Repeat(dayNightCycleTimer + Time.deltaTime, DayNightCycleDuration);
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
-        float sunArc = Mathf.Sin(normalizedTime * Mathf.PI * 2f - Mathf.PI * 0.5f);
-        float daylight = Mathf.Clamp01((sunArc + 1f) * 0.5f);
-        float stylizedDaylight = Mathf.SmoothStep(0.06f, 1f, daylight);
+        float dayHour = normalizedTime * 24f;
+        float sunriseBlend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(4.8f, 7.2f, dayHour));
+        float sunsetBlend = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(18f, 20.6f, dayHour));
+        float daylight = Mathf.Clamp01(sunriseBlend * sunsetBlend);
+        float stylizedDaylight = Mathf.SmoothStep(0.04f, 1f, daylight);
         currentStylizedDaylight = stylizedDaylight;
 
-        float sunPitch = Mathf.Lerp(205f, 335f, normalizedTime);
-        mainDirectionalLight.transform.rotation = Quaternion.Euler(sunPitch, -34f, 0f);
-        mainDirectionalLight.intensity = Mathf.Lerp(0.1f, 1.18f, stylizedDaylight);
+        float sunTravel = Mathf.Clamp01(Mathf.InverseLerp(4.5f, 20.5f, dayHour));
+        float sunArc = Mathf.Sin(sunTravel * Mathf.PI);
+        float lowSun = 1f - Mathf.SmoothStep(0.18f, 0.72f, sunArc);
+        float sunPitch = Mathf.Lerp(14f, 68f, sunArc);
+        float sunYaw = Mathf.Lerp(-62f, -8f, sunTravel);
+        mainDirectionalLight.transform.rotation = Quaternion.Euler(sunPitch, sunYaw, 0f);
+        mainDirectionalLight.intensity = Mathf.Lerp(0.18f, 1.38f, stylizedDaylight) * Mathf.Lerp(0.82f, 1f, sunArc);
         mainDirectionalLight.color = Color.Lerp(
-            new Color(0.34f, 0.41f, 0.68f),
-            new Color(1f, 0.95f, 0.86f),
+            new Color(0.66f, 0.54f, 0.58f),
+            Color.Lerp(
+                new Color(1f, 0.72f, 0.46f),
+                new Color(1f, 0.97f, 0.84f),
+                Mathf.SmoothStep(0f, 1f, sunArc)),
             stylizedDaylight);
+        mainDirectionalLight.shadowStrength = Mathf.Lerp(0.76f, 0.95f, stylizedDaylight);
+        mainDirectionalLight.shadowBias = Mathf.Lerp(0.06f, 0.03f, sunArc);
+        mainDirectionalLight.shadowNormalBias = Mathf.Lerp(0.48f, 0.24f, sunArc);
 
         RenderSettings.ambientLight = Color.Lerp(
-            new Color(0.055f, 0.07f, 0.12f),
-            new Color(0.78f, 0.82f, 0.88f),
+            Color.Lerp(new Color(0.16f, 0.12f, 0.14f), new Color(0.35f, 0.24f, 0.18f), lowSun * daylight),
+            new Color(0.93f, 0.88f, 0.76f),
             stylizedDaylight);
 
         mainCamera.backgroundColor = Color.Lerp(
-            new Color(0.012f, 0.02f, 0.055f),
-            new Color(0.82f, 0.9f, 0.97f),
+            Color.Lerp(new Color(0.08f, 0.06f, 0.09f), new Color(0.52f, 0.3f, 0.24f), lowSun * daylight),
+            new Color(0.56f, 0.74f, 0.94f),
             stylizedDaylight);
 
         for (int i = 0; i < truckAgents.Count; i++)
@@ -1027,7 +1060,7 @@ public partial class GameBootstrap : MonoBehaviour
                 groundTile.transform.SetParent(groundRoot, false);
                 groundTile.transform.position = new Vector3(x + 0.5f, terrainHeight - thickness * 0.5f - 0.02f, y + 0.5f);
                 groundTile.transform.localScale = new Vector3(1.02f, thickness, 1.02f);
-                ApplyColor(groundTile, new Color(0.72f, 0.67f, 0.55f));
+                ApplyStylizedGroundMaterial(groundTile, x, y);
                 ConfigureStaticVisual(groundTile);
             }
         }
@@ -1042,6 +1075,8 @@ public partial class GameBootstrap : MonoBehaviour
         cameraData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
         cameraData.antialiasingQuality = AntialiasingQuality.Medium;
 
+        RenderSettings.fog = false;
+
         GameObject volumeObject = new("DioramaVolume");
         volumeObject.transform.SetParent(worldRoot, false);
         Volume volume = volumeObject.AddComponent<Volume>();
@@ -1052,14 +1087,14 @@ public partial class GameBootstrap : MonoBehaviour
         volume.sharedProfile = profile;
 
         ColorAdjustments colorAdjustments = profile.Add<ColorAdjustments>(true);
-        colorAdjustments.postExposure.Override(0.03f);
-        colorAdjustments.contrast.Override(12f);
-        colorAdjustments.saturation.Override(8f);
+        colorAdjustments.postExposure.Override(0.08f);
+        colorAdjustments.contrast.Override(10f);
+        colorAdjustments.saturation.Override(12f);
 
         Bloom bloom = profile.Add<Bloom>(true);
-        bloom.threshold.Override(1.02f);
-        bloom.intensity.Override(0.045f);
-        bloom.scatter.Override(0.46f);
+        bloom.threshold.Override(0.98f);
+        bloom.intensity.Override(0.095f);
+        bloom.scatter.Override(0.56f);
         bloom.highQualityFiltering.Override(false);
 
         DepthOfField depthOfField = profile.Add<DepthOfField>(true);
@@ -1073,6 +1108,181 @@ public partial class GameBootstrap : MonoBehaviour
         vignette.intensity.Override(0.08f);
         vignette.smoothness.Override(0.48f);
         vignette.rounded.Override(false);
+    }
+
+    private void SetupSurfaceMaterials()
+    {
+        groundSurfaceTexture = CreateStylizedGroundTexture(128);
+        grassSurfaceTexture = CreateStylizedGrassTexture(128);
+        groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.96f, 0.93f, 0.86f), 0.09f);
+        grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.9f, 0.96f, 0.9f), 0.07f);
+    }
+
+    private Material CreateSurfaceMaterial(Texture2D texture, Color tint, float smoothness)
+    {
+        Material material = new(Shader.Find("Universal Render Pipeline/Lit"));
+        material.color = tint;
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", tint);
+        }
+
+        if (material.HasProperty("_BaseMap"))
+        {
+            material.SetTexture("_BaseMap", texture);
+        }
+
+        material.mainTexture = texture;
+        if (material.HasProperty("_Smoothness"))
+        {
+            material.SetFloat("_Smoothness", smoothness);
+        }
+
+        if (material.HasProperty("_Metallic"))
+        {
+            material.SetFloat("_Metallic", 0f);
+        }
+
+        return material;
+    }
+
+    private Texture2D CreateStylizedGroundTexture(int size)
+    {
+        Texture2D texture = new(size, size, TextureFormat.RGBA32, false);
+        texture.name = "StylizedGroundTexture";
+        texture.wrapMode = TextureWrapMode.Repeat;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color baseColor = new(0.79f, 0.73f, 0.61f);
+        Color warmPatch = new(0.87f, 0.8f, 0.66f);
+        Color coolPatch = new(0.69f, 0.64f, 0.54f);
+        Vector2[] blotchCenters =
+        {
+            new(0.18f, 0.22f),
+            new(0.72f, 0.28f),
+            new(0.36f, 0.68f),
+            new(0.82f, 0.78f)
+        };
+
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                float u = x / (float)(size - 1);
+                float v = y / (float)(size - 1);
+                float largeNoise = Mathf.PerlinNoise(u * 2.4f + 0.11f, v * 2.4f + 0.37f);
+                float detailNoise = Mathf.PerlinNoise(u * 7.2f + 1.2f, v * 7.2f + 2.4f);
+                float diagonal = Mathf.Sin((u + v) * 8.5f) * 0.015f;
+
+                float warmMask = 0f;
+                for (int i = 0; i < blotchCenters.Length; i++)
+                {
+                    float dist = Vector2.Distance(new Vector2(u, v), blotchCenters[i]);
+                    warmMask += Mathf.Clamp01(1f - dist * 3.2f);
+                }
+                warmMask = Mathf.Clamp01(warmMask * 0.42f);
+
+                Color color = Color.Lerp(coolPatch, baseColor, largeNoise);
+                color = Color.Lerp(color, warmPatch, warmMask);
+                color *= 0.96f + detailNoise * 0.08f + diagonal;
+                texture.SetPixel(x, y, color);
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    private Texture2D CreateStylizedGrassTexture(int size)
+    {
+        Texture2D texture = new(size, size, TextureFormat.RGBA32, false);
+        texture.name = "StylizedGrassTexture";
+        texture.wrapMode = TextureWrapMode.Repeat;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color darkGreen = new(0.18f, 0.4f, 0.15f);
+        Color baseGreen = new(0.31f, 0.62f, 0.24f);
+        Color lightGreen = new(0.56f, 0.82f, 0.38f);
+
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                float u = x / (float)(size - 1);
+                float v = y / (float)(size - 1);
+                float broadNoise = Mathf.PerlinNoise(u * 2.5f + 0.5f, v * 2.5f + 0.9f);
+                float fineNoise = Mathf.PerlinNoise(u * 9.2f + 2.3f, v * 9.2f + 3.7f);
+                float bladeNoise = Mathf.PerlinNoise(u * 17.5f + 4.1f, v * 15.2f + 5.6f);
+                float stripe = Mathf.Sin((u * 0.95f + v * 1.2f) * 20f) * 0.055f;
+
+                Color color = Color.Lerp(darkGreen, baseGreen, broadNoise);
+                color = Color.Lerp(color, lightGreen, Mathf.Clamp01(fineNoise * 0.78f));
+                color = Color.Lerp(color, lightGreen * 1.05f, Mathf.Clamp01((bladeNoise - 0.52f) * 1.8f));
+                color *= 0.96f + stripe;
+                texture.SetPixel(x, y, color);
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    private void ApplyStylizedGroundMaterial(GameObject target, int x, int y)
+    {
+        if (target == null || groundSurfaceMaterial == null)
+        {
+            ApplyColor(target, new Color(0.72f, 0.67f, 0.55f));
+            return;
+        }
+
+        if (!target.TryGetComponent(out Renderer renderer))
+        {
+            return;
+        }
+
+        float grassPatchNoise = Mathf.PerlinNoise((x + 1) * 0.18f + 4.2f, (y + 1) * 0.2f + 7.4f);
+        bool useGrassPatch = grassSurfaceMaterial != null && grassPatchNoise > 0.34f;
+        Material material = new(useGrassPatch ? grassSurfaceMaterial : groundSurfaceMaterial);
+        float tintNoise = Mathf.PerlinNoise((x + 1) * 0.37f, (y + 1) * 0.41f);
+        Color tint = useGrassPatch
+            ? Color.Lerp(new Color(0.94f, 1f, 0.88f), new Color(1.08f, 1.14f, 0.98f), tintNoise)
+            : Color.Lerp(new Color(0.95f, 0.91f, 0.84f), new Color(1.01f, 0.98f, 0.92f), tintNoise);
+        material.color = tint;
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", tint);
+        }
+
+        material.mainTextureScale = useGrassPatch ? new Vector2(0.54f, 0.54f) : new Vector2(0.62f, 0.62f);
+        material.mainTextureOffset = new Vector2((x % 5) * 0.13f, (y % 5) * 0.11f);
+        renderer.material = material;
+    }
+
+    private void ApplyStylizedGrassMaterial(GameObject target, float seedX, float seedY)
+    {
+        if (target == null || grassSurfaceMaterial == null)
+        {
+            ApplyColor(target, new Color(0.24f, 0.34f, 0.16f));
+            return;
+        }
+
+        if (!target.TryGetComponent(out Renderer renderer))
+        {
+            return;
+        }
+
+        Material material = new(grassSurfaceMaterial);
+        float tintNoise = Mathf.PerlinNoise(seedX * 0.29f + 1.1f, seedY * 0.33f + 2.4f);
+        Color tint = Color.Lerp(new Color(0.96f, 1.04f, 0.92f), new Color(1.12f, 1.15f, 0.98f), tintNoise);
+        material.color = tint;
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", tint);
+        }
+
+        material.mainTextureScale = new Vector2(0.42f, 0.42f);
+        material.mainTextureOffset = new Vector2(seedX * 0.03f, seedY * 0.03f);
+        renderer.material = material;
     }
 
     private void CreateDioramaBase()
@@ -1134,6 +1344,101 @@ public partial class GameBootstrap : MonoBehaviour
                 float edgeHeight = GetHorizontalEdgeHeight(x, y) + 0.025f;
                 CreateGridLine(gridRoot.transform, lineMaterial, new Vector3(x, edgeHeight, y), new Vector3(x + 1f, edgeHeight, y));
             }
+        }
+    }
+
+    private void SetupDistantClouds()
+    {
+        distantClouds.Clear();
+
+        // SpawnPosition = behind left/near edge; clouds travel along CloudTravelDir, staggered via initialOffset
+        // Args: spawnPosition, travelSpeed, bobAmplitude, bobSpeed, phaseOffset, scale, initialOffset
+        Vector3 center = new(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
+        Vector3 spawnBase = center + new Vector3(-24f, 0f, -4f);
+
+        CreateDistantCloud(spawnBase + new Vector3(0f, 15f, -5f),  1.0f, 0.9f,  0.42f, 0.95f, 2.35f,  0f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 17f,  3f),  0.8f, 0.8f,  0.36f, 1.8f,  2.15f,  9f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 14f,  9f),  1.3f, 0.72f, 0.48f, 0.7f,  2.05f, 18f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 16f, -1f),  1.1f, 0.95f, 0.32f, 2.4f,  2.4f,  27f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 13f,  6f),  0.9f, 0.68f, 0.34f, 1.2f,  1.95f, 36f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 15f, 13f),  1.5f, 0.82f, 0.38f, 2.9f,  2.2f,  45f);
+    }
+
+    private void CreateDistantCloud(Vector3 spawnPosition, float travelSpeed, float bobAmplitude, float bobSpeed, float phaseOffset, float scaleMultiplier, float initialOffset)
+    {
+        GameObject cloudRoot = new($"DistantCloud_{distantClouds.Count + 1}");
+        cloudRoot.transform.SetParent(worldRoot, false);
+        cloudRoot.transform.position = spawnPosition + CloudTravelDir * initialOffset;
+        cloudRoot.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+        cloudRoot.transform.localScale = Vector3.one * scaleMultiplier;
+
+        CreateCloudLump(cloudRoot.transform, new Vector3(-0.95f, 0f, 0f), new Vector3(1.5f, 0.8f, 0.9f));
+        CreateCloudLump(cloudRoot.transform, new Vector3(0f, 0.18f, 0f), new Vector3(1.9f, 1f, 1f));
+        CreateCloudLump(cloudRoot.transform, new Vector3(1.02f, 0.02f, 0.08f), new Vector3(1.4f, 0.74f, 0.86f));
+        CreateCloudLump(cloudRoot.transform, new Vector3(0.18f, -0.12f, 0.18f), new Vector3(1.7f, 0.54f, 0.86f));
+
+        cloudRoot.SetActive(true);
+        distantClouds.Add(new DistantCloudData
+        {
+            RootTransform = cloudRoot.transform,
+            SpawnPosition = spawnPosition,
+            TravelOffset = initialOffset,
+            TravelSpeed = travelSpeed,
+            VerticalBobAmplitude = bobAmplitude,
+            VerticalBobSpeed = bobSpeed,
+            PhaseOffset = phaseOffset
+        });
+    }
+
+    private void CreateCloudLump(Transform parent, Vector3 localPosition, Vector3 localScale)
+    {
+        GameObject lump = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        lump.transform.SetParent(parent, false);
+        lump.transform.localPosition = localPosition;
+        lump.transform.localScale = localScale;
+        ApplyColor(lump, new Color(0.97f, 0.98f, 1f));
+        Renderer rendererComponent = lump.GetComponent<Renderer>();
+        if (rendererComponent != null)
+        {
+            rendererComponent.shadowCastingMode = ShadowCastingMode.On;
+            rendererComponent.receiveShadows = false;
+        }
+
+        Collider colliderComponent = lump.GetComponent<Collider>();
+        if (colliderComponent != null)
+        {
+            colliderComponent.enabled = false;
+        }
+    }
+
+    private void UpdateDistantClouds()
+    {
+        if (distantClouds.Count == 0 || mainCamera == null)
+        {
+            return;
+        }
+
+        float dt = Time.deltaTime * gameSpeedMultiplier;
+        float time = Time.time;
+
+        for (int i = 0; i < distantClouds.Count; i++)
+        {
+            DistantCloudData cloud = distantClouds[i];
+            if (cloud.RootTransform == null)
+            {
+                continue;
+            }
+
+            cloud.TravelOffset += cloud.TravelSpeed * dt;
+            if (cloud.TravelOffset > CloudTravelLength)
+            {
+                cloud.TravelOffset -= CloudTravelLength;
+            }
+
+            float bob = Mathf.Sin(time * cloud.VerticalBobSpeed + cloud.PhaseOffset * 1.9f) * cloud.VerticalBobAmplitude;
+            Vector3 pos = cloud.SpawnPosition + CloudTravelDir * cloud.TravelOffset;
+            pos.y += bob;
+            cloud.RootTransform.position = pos;
         }
     }
 

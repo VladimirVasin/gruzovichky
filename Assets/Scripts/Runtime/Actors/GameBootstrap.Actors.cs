@@ -159,7 +159,7 @@ public partial class GameBootstrap
         headlight.range = 5.4f;
         headlight.spotAngle = 44f;
         headlight.innerSpotAngle = 22f;
-        headlight.shadows = LightShadows.None;
+        headlight.shadows = LightShadows.Soft;
         headlight.enabled = false;
         truckHeadlights.Add(headlight);
     }
@@ -456,7 +456,7 @@ public partial class GameBootstrap
         parkingReturnCueClip = CreatePentatonicMotifClip("Parking_Return", 0.36f, 0.068f, new[] { PentatonicC4, PentatonicE4 }, new[] { 0f, 0.1f });
         moneyRewardClip = CreateMoneyRewardClip("Money_Reward", 0.6f, 0.1f);
 
-        uiAudioSource = CreateAudioSource("UIAudio", null, false, 0.96f, 1f, false);
+        uiAudioSource = CreateAudioSource("UIAudio", null, false, 0.96f, 0f, false);
         ambientAudioSource = CreateAudioSource("AmbientWind", worldRoot, true, 0.42f, 0f, false);
         dayBirdsAudioSource = CreateAudioSource("DayBirds", worldRoot, true, 0.34f, 0f, false);
         forestAudioSource = CreateAudioSource("ForestAmbience", locations[LocationType.Forest].RootObject.transform, true, 0.52f, 0.82f, false);

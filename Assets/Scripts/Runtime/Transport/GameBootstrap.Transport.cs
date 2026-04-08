@@ -725,7 +725,7 @@ public partial class GameBootstrap
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.17f, 0f);
             baseBlock.transform.localScale = new Vector3(size.x * 0.98f, 0.12f, size.y * 0.98f);
-            ApplyColor(baseBlock, new Color(0.28f, 0.38f, 0.19f));
+            ApplyStylizedGrassMaterial(baseBlock, min.x + max.x + 0.5f, min.y + max.y + 0.5f);
         }
         else if (type == LocationType.Motel)
         {
@@ -838,7 +838,7 @@ public partial class GameBootstrap
             Mathf.Max(1.35f, (max.x - min.x + 1) * 0.58f),
             0.07f,
             Mathf.Max(1.35f, (max.y - min.y + 1) * 0.58f));
-        ApplyColor(groundPatch, new Color(0.24f, 0.34f, 0.16f));
+        ApplyStylizedGrassMaterial(groundPatch, min.x + max.x, min.y + max.y);
         ConfigureStaticVisual(groundPatch);
 
         List<Vector2Int> forestCells = new();
@@ -1462,7 +1462,7 @@ public partial class GameBootstrap
         }
 
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        renderer.receiveShadows = false;
+        renderer.receiveShadows = true;
     }
 
     private static void ConfigureShadowVisual(GameObject target)
