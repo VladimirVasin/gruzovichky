@@ -1,5 +1,14 @@
 Shader "Hidden/Diorama/TiltShift"
 {
+    Properties
+    {
+        _FocusCenter("Focus Center", Range(0, 1)) = 0.53
+        _FocusWidth("Focus Width", Range(0.01, 0.4)) = 0.3
+        _FocusFalloff("Focus Falloff", Range(0.01, 0.35)) = 0.08
+        _BlurStrength("Blur Strength", Range(0, 2)) = 0.16
+        _BlurRadius("Blur Radius", Range(0.5, 4)) = 0.58
+    }
+
     SubShader
     {
         Tags { "RenderPipeline" = "UniversalPipeline" }
@@ -33,17 +42,17 @@ Shader "Hidden/Diorama/TiltShift"
                 float mask = smoothstep(_FocusWidth, _FocusWidth + max(_FocusFalloff, 0.0001), dist);
 
                 float2 texelOffset = _BlitTexture_TexelSize.xy * max(_BlurRadius, 0.001);
-                float2 blurOffset = texelOffset * (0.45 + mask * _BlurStrength);
+                float2 blurOffset = texelOffset * (0.28 + mask * _BlurStrength);
 
-                float4 blurredColor = sharpColor * 0.24;
-                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2( blurOffset.x, 0.0)) * 0.12;
-                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2(-blurOffset.x, 0.0)) * 0.12;
-                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2(0.0,  blurOffset.y)) * 0.12;
-                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2(0.0, -blurOffset.y)) * 0.12;
-                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + blurOffset) * 0.10;
-                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv - blurOffset) * 0.10;
-                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2( blurOffset.x, -blurOffset.y)) * 0.09;
-                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2(-blurOffset.x,  blurOffset.y)) * 0.09;
+                float4 blurredColor = sharpColor * 0.30;
+                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2( blurOffset.x, 0.0)) * 0.105;
+                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2(-blurOffset.x, 0.0)) * 0.105;
+                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2(0.0,  blurOffset.y)) * 0.105;
+                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2(0.0, -blurOffset.y)) * 0.105;
+                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + blurOffset) * 0.08;
+                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv - blurOffset) * 0.08;
+                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2( blurOffset.x, -blurOffset.y)) * 0.06;
+                blurredColor += SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv + float2(-blurOffset.x,  blurOffset.y)) * 0.06;
 
                 return lerp(sharpColor, blurredColor, saturate(mask));
             }

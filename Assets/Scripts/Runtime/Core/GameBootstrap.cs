@@ -1040,7 +1040,7 @@ public partial class GameBootstrap : MonoBehaviour
         UniversalAdditionalCameraData cameraData = mainCamera.GetUniversalAdditionalCameraData();
         cameraData.renderPostProcessing = true;
         cameraData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
-        cameraData.antialiasingQuality = AntialiasingQuality.High;
+        cameraData.antialiasingQuality = AntialiasingQuality.Medium;
 
         GameObject volumeObject = new("DioramaVolume");
         volumeObject.transform.SetParent(worldRoot, false);
@@ -1052,21 +1052,21 @@ public partial class GameBootstrap : MonoBehaviour
         volume.sharedProfile = profile;
 
         ColorAdjustments colorAdjustments = profile.Add<ColorAdjustments>(true);
-        colorAdjustments.postExposure.Override(0.04f);
-        colorAdjustments.contrast.Override(8f);
-        colorAdjustments.saturation.Override(10f);
+        colorAdjustments.postExposure.Override(0.03f);
+        colorAdjustments.contrast.Override(12f);
+        colorAdjustments.saturation.Override(8f);
 
         Bloom bloom = profile.Add<Bloom>(true);
-        bloom.threshold.Override(0.96f);
-        bloom.intensity.Override(0.08f);
-        bloom.scatter.Override(0.58f);
+        bloom.threshold.Override(1.02f);
+        bloom.intensity.Override(0.045f);
+        bloom.scatter.Override(0.46f);
         bloom.highQualityFiltering.Override(false);
 
         DepthOfField depthOfField = profile.Add<DepthOfField>(true);
         depthOfField.mode.Override(DepthOfFieldMode.Gaussian);
-        depthOfField.gaussianStart.Override(12f);
-        depthOfField.gaussianEnd.Override(20f);
-        depthOfField.gaussianMaxRadius.Override(0.12f);
+        depthOfField.gaussianStart.Override(14.5f);
+        depthOfField.gaussianEnd.Override(22f);
+        depthOfField.gaussianMaxRadius.Override(0.06f);
         depthOfField.highQualitySampling.Override(false);
 
         Vignette vignette = profile.Add<Vignette>(true);
