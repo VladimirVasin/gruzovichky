@@ -176,6 +176,7 @@ public partial class GameBootstrap : MonoBehaviour
     private LocationType? activeServiceLocation;
     private LocationType? queuedServiceLocation;
     private AudioClip uiSelectClip;
+    private AudioClip menuHoverClip;
     private AudioClip uiPanelOpenClip;
     private AudioClip uiPanelCloseClip;
     private AudioClip ambientWindClip;
@@ -203,6 +204,8 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip gasStationRefuelCueClip;
     private AudioClip parkingReturnCueClip;
     private AudioClip moneyRewardClip;
+    private AudioClip mainMenuMusicClip;
+    private AudioSource mainMenuMusicSource;
 
     private enum LocationType
     {

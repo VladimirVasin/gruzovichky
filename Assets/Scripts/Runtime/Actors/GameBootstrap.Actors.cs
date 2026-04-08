@@ -423,6 +423,7 @@ public partial class GameBootstrap
     private void SetupAudio()
     {
         uiSelectClip = CreateUiPulseClip("UI_Select", 280f, 0.09f, 0.018f);
+        menuHoverClip = CreateUiPulseClip("Menu_Hover", 356f, 0.1f, 0.022f);
         uiPanelOpenClip = CreateUiPulseClip("UI_Open", 420f, 0.12f, 0.025f);
         uiPanelCloseClip = CreateUiPulseClip("UI_Close", 220f, 0.1f, 0.02f);
         ambientWindClip = CreateWindClip("Ambient_Wind", 6f, 0.022f);
