@@ -16,6 +16,10 @@ public partial class GameBootstrap
         truckHeadlightRightRenderer = truckAgent.TruckHeadlightRightRenderer;
         truckLoopAudioSource = truckAgent.TruckLoopAudioSource;
         truckFxAudioSource = truckAgent.TruckFxAudioSource;
+        truckEngineAudioPhaseOffset = truckAgent.EngineAudioPhaseOffset;
+        truckEngineAudioWobbleSpeed = truckAgent.EngineAudioWobbleSpeed;
+        truckEngineAudioPitchBias = truckAgent.EngineAudioPitchBias;
+        truckEngineAudioVolumeBias = truckAgent.EngineAudioVolumeBias;
         truckCell = truckAgent.TruckCell;
         truckTargetWorld = truckAgent.TruckTargetWorld;
         truckSegmentStartWorld = truckAgent.TruckSegmentStartWorld;
@@ -69,6 +73,10 @@ public partial class GameBootstrap
         truckAgent.TruckHeadlights.AddRange(truckHeadlights);
         truckAgent.TruckLoopAudioSource = truckLoopAudioSource;
         truckAgent.TruckFxAudioSource = truckFxAudioSource;
+        truckAgent.EngineAudioPhaseOffset = truckEngineAudioPhaseOffset;
+        truckAgent.EngineAudioWobbleSpeed = truckEngineAudioWobbleSpeed;
+        truckAgent.EngineAudioPitchBias = truckEngineAudioPitchBias;
+        truckAgent.EngineAudioVolumeBias = truckEngineAudioVolumeBias;
         truckAgent.TruckCell = truckCell;
         truckAgent.TruckTargetWorld = truckTargetWorld;
         truckAgent.TruckSegmentStartWorld = truckSegmentStartWorld;

@@ -204,8 +204,10 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip gasStationRefuelCueClip;
     private AudioClip parkingReturnCueClip;
     private AudioClip moneyRewardClip;
-    private AudioClip mainMenuMusicClip;
-    private AudioSource mainMenuMusicSource;
+    private float truckEngineAudioPhaseOffset;
+    private float truckEngineAudioWobbleSpeed = 1f;
+    private float truckEngineAudioPitchBias = 1f;
+    private float truckEngineAudioVolumeBias = 1f;
 
     private enum LocationType
     {
@@ -396,6 +398,10 @@ public partial class GameBootstrap : MonoBehaviour
         public DriverAgent Driver;
         public AudioSource TruckLoopAudioSource;
         public AudioSource TruckFxAudioSource;
+        public float EngineAudioPhaseOffset;
+        public float EngineAudioWobbleSpeed = 1f;
+        public float EngineAudioPitchBias = 1f;
+        public float EngineAudioVolumeBias = 1f;
         public readonly List<Vector2Int> ActivePath = new();
         public Vector2Int TruckCell;
         public Vector3 TruckTargetWorld;
@@ -454,6 +460,8 @@ public partial class GameBootstrap : MonoBehaviour
         public float SleepTimer;
         public Vector3 MotelIdlePosition;
         public int AssignedTruckNumber;
+        public int Salary = 25;
+        public int Money;
         public bool WaitingForShiftAtParking;
         public bool NeedsShiftEndReturn;
         public DriverRescuePhase WalkPhase = DriverRescuePhase.None;
@@ -611,12 +619,13 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void UpdateDriverShiftPreparation(DriverAgent driver)
     {
-        if (driver == null || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || driver.WalkPhase != DriverRescuePhase.None || driver.AssignedTruckNumber <= 0)
+        if (driver == null || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || driver.WalkPhase != DriverRescuePhase.None || driver.AssignedTruckNumber <= 0)
         {
             return;
         }
 
-        if (!ShouldDriverHeadToShift(driver))
+        bool shouldCommuteToShift = ShouldDriverHeadToShift(driver) || IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour);
+        if (!shouldCommuteToShift)
         {
             return;
         }
@@ -681,6 +690,7 @@ public partial class GameBootstrap : MonoBehaviour
                 currentAssignedTrip == TripType.None &&
                 currentRefuelPhase == RefuelPhase.None)
             {
+                PayDriverSalary(driver);
                 StartDriverMotelRest(truckAgent, driver);
             }
             return;
@@ -703,9 +713,20 @@ public partial class GameBootstrap : MonoBehaviour
             }
             else
             {
+                PayDriverSalary(driver);
                 StartDriverMotelRest(truckAgent, driver);
             }
         }
+    }
+
+    private void PayDriverSalary(DriverAgent driver)
+    {
+        if (driver == null || driver.Salary <= 0) return;
+        driver.Money += driver.Salary;
+        money = Mathf.Max(0, money - driver.Salary);
+        isFleetScreenDirty = true;
+        isDriversScreenDirty = true;
+        SessionDebugLogger.Log("PAY", $"{driver.DriverName} paid ${driver.Salary}. Personal balance: ${driver.Money}. Treasury: ${money}.");
     }
 
     private void UpdateIdleRecall(DriverAgent driver)
@@ -790,11 +811,11 @@ public partial class GameBootstrap : MonoBehaviour
             UpdateTruckMovement();
             UpdateTruckInteraction();
             UpdateDriverEnergy(da);
+            UpdateAssignedTrip(da);   // award trip money BEFORE salary deduction
+            UpdateRefuelOrder(da);
             UpdateDriverShiftEnd(ta, da);
             UpdateDriverShiftActivation(da);
             UpdateIdleRecall(da);
-            UpdateAssignedTrip(da);
-            UpdateRefuelOrder(da);
             UpdateDriverWalk(da);
             UpdateDriverRest(da);
             UpdateDriverVisualAnimation(da);
@@ -834,6 +855,8 @@ public partial class GameBootstrap : MonoBehaviour
 
         UpdateMoneyPopup();
         UpdateFleetScreenUi();
+        UpdateDriversScreenUi();
+        UpdateResourcesScreenUi();
         UpdateTruckQuickHud();
         UpdateBuildingQuickHud();
     }
@@ -853,8 +876,8 @@ public partial class GameBootstrap : MonoBehaviour
 
         if (isFleetPanelOpen) DrawFleetPanel();
         if (isShiftsPanelOpen) DrawShiftsPanel();
-        if (isDriversPanelOpen) DrawDriversPanel();
-        if (isResourcesPanelOpen) DrawResourcesPanel();
+        // Drivers panel is now Canvas-based (DriversScreenCanvas)
+        // Resources panel is now Canvas-based (ResourcesScreenCanvas)
         if (isBuildPanelOpen) DrawBuildPanel();
 
     }
@@ -887,6 +910,8 @@ public partial class GameBootstrap : MonoBehaviour
         SetupCargoTransferVisual();
         SetupAudio();
         SetupFleetScreenUi();
+        SetupDriversScreenUi();
+        SetupResourcesScreenUi();
         SetupTruckQuickHud();
         SetupBuildingQuickHud();
         SetupMainMenuHud();

@@ -31,48 +31,54 @@ public partial class GameBootstrap
             truckLoopAudioSource.Play();
         }
 
-        float targetVolume = isTruckMoving ? 0.3f : 0.2f;
+        float targetVolume = isTruckMoving ? 0.56f : 0.38f;
         if (isTruckInteracting)
         {
-            targetVolume = 0.14f;
+            targetVolume = 0.28f;
         }
 
-        truckLoopAudioSource.volume = Mathf.Lerp(truckLoopAudioSource.volume, targetVolume, 2.5f * Time.deltaTime);
-        truckLoopAudioSource.pitch = Mathf.Lerp(truckLoopAudioSource.pitch, isTruckMoving ? 1.05f : 0.94f, 2.5f * Time.deltaTime);
+        float engineTime = Time.time * truckEngineAudioWobbleSpeed + truckEngineAudioPhaseOffset;
+        float slowWobble = Mathf.Sin(engineTime * (isTruckMoving ? 1.75f : 1.1f)) * (isTruckMoving ? 0.035f : 0.022f);
+        float textureWobble = (Mathf.PerlinNoise(engineTime * 0.45f, 7.3f) - 0.5f) * (isTruckMoving ? 0.06f : 0.03f);
+        float targetPitch = (isTruckMoving ? 1.09f : 0.95f) * truckEngineAudioPitchBias + slowWobble + textureWobble;
+        float targetVolumeWithLife = targetVolume * truckEngineAudioVolumeBias + Mathf.Abs(slowWobble) * 0.08f + Mathf.Max(0f, textureWobble) * 0.06f;
+
+        truckLoopAudioSource.volume = Mathf.Lerp(truckLoopAudioSource.volume, targetVolumeWithLife, 2.5f * Time.deltaTime);
+        truckLoopAudioSource.pitch = Mathf.Lerp(truckLoopAudioSource.pitch, targetPitch, 2.5f * Time.deltaTime);
 
         if (ambientAudioSource != null)
         {
-            ambientAudioSource.volume = Mathf.Lerp(ambientAudioSource.volume, Mathf.Lerp(0.22f, 0.34f, dayBlend), 1.8f * Time.deltaTime);
+            ambientAudioSource.volume = Mathf.Lerp(ambientAudioSource.volume, Mathf.Lerp(0.4f, 0.58f, dayBlend), 1.8f * Time.deltaTime);
         }
 
         if (dayBirdsAudioSource != null)
         {
-            dayBirdsAudioSource.volume = Mathf.Lerp(dayBirdsAudioSource.volume, 0.3f * dayBlend, 1.8f * Time.deltaTime);
+            dayBirdsAudioSource.volume = Mathf.Lerp(dayBirdsAudioSource.volume, 0.54f * dayBlend, 1.8f * Time.deltaTime);
         }
 
         if (forestAudioSource != null)
         {
-            forestAudioSource.volume = Mathf.Lerp(forestAudioSource.volume, Mathf.Lerp(0.18f, 0.42f, dayBlend), 1.8f * Time.deltaTime);
+            forestAudioSource.volume = Mathf.Lerp(forestAudioSource.volume, Mathf.Lerp(0.36f, 0.68f, dayBlend), 1.8f * Time.deltaTime);
         }
 
         if (townAudioSource != null)
         {
-            townAudioSource.volume = Mathf.Lerp(townAudioSource.volume, Mathf.Lerp(0.2f, 0.34f, dayBlend), 1.8f * Time.deltaTime);
+            townAudioSource.volume = Mathf.Lerp(townAudioSource.volume, Mathf.Lerp(0.36f, 0.54f, dayBlend), 1.8f * Time.deltaTime);
         }
 
         if (nightWindAudioSource != null)
         {
-            nightWindAudioSource.volume = Mathf.Lerp(nightWindAudioSource.volume, 0.32f * nightBlend, 1.8f * Time.deltaTime);
+            nightWindAudioSource.volume = Mathf.Lerp(nightWindAudioSource.volume, 0.56f * nightBlend, 1.8f * Time.deltaTime);
         }
 
         if (nightCricketsAudioSource != null)
         {
-            nightCricketsAudioSource.volume = Mathf.Lerp(nightCricketsAudioSource.volume, 0.34f * nightBlend, 1.8f * Time.deltaTime);
+            nightCricketsAudioSource.volume = Mathf.Lerp(nightCricketsAudioSource.volume, 0.58f * nightBlend, 1.8f * Time.deltaTime);
         }
 
         if (gasStationAudioSource != null)
         {
-            gasStationAudioSource.volume = Mathf.Lerp(gasStationAudioSource.volume, Mathf.Lerp(0.14f, 0.22f, dayBlend), 1.8f * Time.deltaTime);
+            gasStationAudioSource.volume = Mathf.Lerp(gasStationAudioSource.volume, Mathf.Lerp(0.26f, 0.38f, dayBlend), 1.8f * Time.deltaTime);
         }
 
         UpdateDayNightAmbientOneShots(dayBlend, nightBlend);
@@ -105,7 +111,7 @@ public partial class GameBootstrap
             return;
         }
 
-        uiAudioSource.PlayOneShot(clip, volumeScale * 1.2f);
+        uiAudioSource.PlayOneShot(clip, volumeScale * 1.7f);
     }
 
     private void PlayTruckFx(AudioClip clip, float volumeScale)
@@ -115,7 +121,7 @@ public partial class GameBootstrap
             return;
         }
 
-        truckFxAudioSource.PlayOneShot(clip, volumeScale * 1.18f);
+        truckFxAudioSource.PlayOneShot(clip, volumeScale * 1.62f);
     }
 
     private void PlayForestWorkerFx(AudioClip clip, Vector3 worldPosition, float volumeScale)
@@ -126,7 +132,7 @@ public partial class GameBootstrap
         }
 
         forestWorkerAudioSource.transform.position = worldPosition;
-        forestWorkerAudioSource.PlayOneShot(clip, volumeScale * 1.25f);
+        forestWorkerAudioSource.PlayOneShot(clip, volumeScale * 1.68f);
     }
 
     private void PlayAmbientFx(AudioClip clip, Vector3 worldPosition, float volumeScale)
@@ -137,7 +143,7 @@ public partial class GameBootstrap
         }
 
         ambienceFxAudioSource.transform.position = worldPosition;
-        ambienceFxAudioSource.PlayOneShot(clip, volumeScale);
+        ambienceFxAudioSource.PlayOneShot(clip, volumeScale * 1.38f);
     }
 
     private void UpdateDayNightAmbientOneShots(float dayBlend, float nightBlend)
@@ -149,7 +155,7 @@ public partial class GameBootstrap
 
         if (dayBlend > 0.25f && dayBirdTimer <= 0f)
         {
-            PlayAmbientFx(dayBirdsClip, cameraFocusPoint + new Vector3(0f, 2.5f, 0f), Random.Range(0.22f, 0.32f));
+            PlayAmbientFx(dayBirdsClip, cameraFocusPoint + new Vector3(0f, 2.5f, 0f), Random.Range(0.36f, 0.5f));
             dayBirdTimer = Random.Range(5.5f, 9.5f);
         }
 
@@ -158,13 +164,13 @@ public partial class GameBootstrap
             Vector3 warehousePosition = locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse)
                 ? warehouse.RootObject.transform.position + new Vector3(0f, 0.9f, 0f)
                 : cameraFocusPoint;
-            PlayAmbientFx(warehouseCreakClip, warehousePosition, Random.Range(0.16f, 0.26f));
+            PlayAmbientFx(warehouseCreakClip, warehousePosition, Random.Range(0.28f, 0.42f));
             warehouseCreakTimer = Random.Range(8f, 14f);
         }
 
         if (nightBlend > 0.25f && nightOwlTimer <= 0f)
         {
-            PlayAmbientFx(owlClip, cameraFocusPoint + new Vector3(Random.Range(-3f, 3f), 3f, Random.Range(-3f, 3f)), Random.Range(0.2f, 0.3f));
+            PlayAmbientFx(owlClip, cameraFocusPoint + new Vector3(Random.Range(-3f, 3f), 3f, Random.Range(-3f, 3f)), Random.Range(0.32f, 0.46f));
             nightOwlTimer = Random.Range(10f, 18f);
         }
 
@@ -173,7 +179,7 @@ public partial class GameBootstrap
             int lanternIndex = Random.Range(0, roadLanterns.Count);
             Light lantern = roadLanterns[lanternIndex].Light;
             Vector3 lanternPosition = lantern != null ? lantern.transform.position : cameraFocusPoint;
-            PlayAmbientFx(lanternBuzzClip, lanternPosition, Random.Range(0.14f, 0.22f));
+            PlayAmbientFx(lanternBuzzClip, lanternPosition, Random.Range(0.26f, 0.38f));
             lanternBuzzTimer = Random.Range(6f, 12f);
         }
     }
@@ -424,13 +430,20 @@ public partial class GameBootstrap
         for (int i = 0; i < sampleCount; i++)
         {
             float t = i / (float)AudioSampleRate;
-            float engine =
-                Mathf.Sin(2f * Mathf.PI * 48f * t) * 0.55f +
-                Mathf.Sin(2f * Mathf.PI * 96f * t + 0.3f) * 0.2f +
-                Mathf.Sin(2f * Mathf.PI * 144f * t + 0.8f) * 0.12f;
+            float baseRpm = 42f + Mathf.Sin(2f * Mathf.PI * 0.48f * t + 0.2f) * 1.4f;
+            float idlePulse = 0.86f + Mathf.Sin(2f * Mathf.PI * 1.8f * t + Mathf.Sin(2f * Mathf.PI * 0.31f * t) * 0.4f) * 0.12f;
+            float engineBody =
+                Mathf.Sin(2f * Mathf.PI * baseRpm * t) * 0.46f +
+                Mathf.Sin(2f * Mathf.PI * (baseRpm * 1.97f) * t + 0.26f) * 0.22f +
+                Mathf.Sin(2f * Mathf.PI * (baseRpm * 3.14f) * t + 0.9f) * 0.09f;
+            float mechanicalTick =
+                Mathf.Sin(2f * Mathf.PI * 188f * t + Mathf.Sin(2f * Mathf.PI * 2.8f * t) * 0.45f) * 0.035f +
+                Mathf.Sin(2f * Mathf.PI * 246f * t + 1.1f) * 0.024f;
+            float chassisRattle =
+                Mathf.Sin(2f * Mathf.PI * 13.5f * t + 0.6f) * 0.03f +
+                Mathf.Sin(2f * Mathf.PI * 27f * t + 1.8f) * 0.018f;
 
-            float wobble = 0.82f + Mathf.Sin(2f * Mathf.PI * 1.25f * t) * 0.08f;
-            samples[i] = engine * wobble * amplitude * 1.4f;
+            samples[i] = (engineBody * idlePulse + mechanicalTick + chassisRattle) * amplitude * 1.55f;
         }
 
         return CreateClipFromSamples(clipName, samples);
@@ -444,14 +457,21 @@ public partial class GameBootstrap
         for (int i = 0; i < sampleCount; i++)
         {
             float t = i / (float)AudioSampleRate;
-            float wheel =
-                Mathf.Sin(2f * Mathf.PI * 78f * t) * 0.28f +
-                Mathf.Sin(2f * Mathf.PI * 118f * t + 0.4f) * 0.18f;
+            float rpmSweep = 70f + Mathf.Sin(2f * Mathf.PI * 0.72f * t) * 3.6f;
+            float engine =
+                Mathf.Sin(2f * Mathf.PI * rpmSweep * t) * 0.24f +
+                Mathf.Sin(2f * Mathf.PI * (rpmSweep * 1.63f) * t + 0.34f) * 0.16f +
+                Mathf.Sin(2f * Mathf.PI * (rpmSweep * 2.38f) * t + 1.1f) * 0.07f;
+            float drivetrain =
+                Mathf.Sin(2f * Mathf.PI * 122f * t + Mathf.Sin(2f * Mathf.PI * 2.7f * t) * 0.25f) * 0.11f +
+                Mathf.Sin(2f * Mathf.PI * 168f * t + 0.5f) * 0.075f;
             float road =
                 Mathf.Sin(2f * Mathf.PI * 320f * t + Mathf.Sin(2f * Mathf.PI * 4.5f * t)) * 0.06f +
-                Mathf.Sin(2f * Mathf.PI * 440f * t + 1.4f) * 0.04f;
+                Mathf.Sin(2f * Mathf.PI * 440f * t + 1.4f) * 0.045f +
+                Mathf.Sin(2f * Mathf.PI * 560f * t + Mathf.Sin(2f * Mathf.PI * 1.2f * t) * 0.3f) * 0.022f;
+            float loadPulse = 0.92f + Mathf.Sin(2f * Mathf.PI * 1.55f * t + 0.2f) * 0.08f;
 
-            samples[i] = (wheel + road) * amplitude * 1.45f;
+            samples[i] = ((engine + drivetrain) * loadPulse + road) * amplitude * 1.56f;
         }
 
         return CreateClipFromSamples(clipName, samples);
