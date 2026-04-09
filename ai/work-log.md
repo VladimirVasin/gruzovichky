@@ -270,3 +270,18 @@ Purpose: short task memory for active and recent implementation work.
 
 - 2026-04-09: Retuned ambient edge-highway bus timing and bus-stop sign placement. Highway buses now spawn less often with a wider random interval and extra cross-lane jitter so the two directions no longer feel synchronized, and the Bus Stop pole/sign were moved to the side of the shelter platform instead of standing out in front on the road side. Files: Assets/Scripts/Runtime/Core/GameBootstrap.cs, Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs. Verified dotnet build Assembly-CSharp.csproj -nologo completed successfully with 0 errors and 0 warnings.
 
+
+- 2026-04-09: Added Berry Bush as a second misc ambient prop type. Misc decoration cells still come only from the existing grass-only planner, but now a share of those cells spawn compact low-poly berry bushes with red berries instead of trees, while still avoiding roads, the edge highway, and building cells. File: Assets/Scripts/Runtime/World/GameBootstrap.World.cs. Verified dotnet build Assembly-CSharp.csproj -nologo completed successfully with 0 errors and 0 warnings.
+
+
+- 2026-04-09: Strengthened the Berry Bush visual so it reads much more clearly as a berry-bearing shrub. Bush leaf clumps were tightened and darkened, while the berry count, size, and color contrast were increased substantially so the red berries stand out from the greenery at gameplay camera distance. File: Assets/Scripts/Runtime/World/GameBootstrap.World.cs. Verified dotnet build Assembly-CSharp.csproj -nologo completed successfully with 0 errors and 0 warnings.
+
+
+
+- 2026-04-09: Reworked Hire Driver into a scripted bus-arrival flow. New hires now register hidden, wait for the city-side edge-highway lane to clear, arrive by a dedicated hiring bus, disembark at the Bus Stop, walk from the stop to the Motel, and only then enter the normal idle loop; while this sequence is active, random ambient buses no longer spawn on that same city-side lane. Files: Assets/Scripts/Runtime/Core/GameBootstrap.cs, Assets/Scripts/Runtime/Actors/GameBootstrap.Actors.cs, Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs, Assets/Scripts/Runtime/UI/GameBootstrap.UI.cs, Assets/Scripts/Runtime/UI/GameBootstrap.Fleet.cs, Assets/Scripts/Runtime/UI/GameBootstrap.FleetCanvas.cs, Assets/Scripts/Runtime/UI/GameBootstrap.DriverQuickHud.cs. Verified dotnet build Assembly-CSharp.csproj -nologo completed successfully with 0 errors and 0 warnings.
+
+
+- 2026-04-09: Adjusted the scripted hire-arrival bus so it no longer waits for the new driver to reach the Motel. After the dropoff pause finishes, the bus now departs immediately while the driver continues the walk-to-motel sequence independently. File: Assets/Scripts/Runtime/Core/GameBootstrap.cs. Verified dotnet build Assembly-CSharp.csproj -nologo completed successfully with 0 errors and 0 warnings.
+
+
+- 2026-04-09: Replaced the harsh daytime DayBirds ambience with a softer ASMR-style tonal trill. The procedural daytime bird loop now uses gentler pure-tone motifs with smooth envelopes instead of the sharper chirpy FM-like pattern, so the daytime ambience reads calmer and more musical. File: Assets/Scripts/Runtime/Audio/GameBootstrap.Audio.cs. Verified dotnet build Assembly-CSharp.csproj -nologo completed successfully with 0 errors and 0 warnings.

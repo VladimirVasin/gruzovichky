@@ -252,13 +252,32 @@ public partial class GameBootstrap
         for (int i = 0; i < sampleCount; i++)
         {
             float t = i / (float)AudioSampleRate;
-            float chirpGate =
-                Mathf.Pow(Mathf.Max(0f, Mathf.Sin(2f * Mathf.PI * 0.42f * t + 0.4f)), 8f) +
-                Mathf.Pow(Mathf.Max(0f, Mathf.Sin(2f * Mathf.PI * 0.31f * t + 2.1f)), 10f) * 0.7f;
-            float chirp =
-                Mathf.Sin(2f * Mathf.PI * (980f + Mathf.Sin(2f * Mathf.PI * 5.5f * t) * 120f) * t) * 0.12f +
-                Mathf.Sin(2f * Mathf.PI * (1420f + Mathf.Sin(2f * Mathf.PI * 7.2f * t) * 180f) * t) * 0.08f;
-            samples[i] = chirp * chirpGate * amplitude;
+            float motifA = Mathf.Repeat(t * 0.78f + 0.12f, 1f);
+            float motifB = Mathf.Repeat(t * 0.56f + 0.53f, 1f);
+            float motifC = Mathf.Repeat(t * 0.92f + 0.31f, 1f);
+
+            float gateA = Mathf.Clamp01(1f - Mathf.Abs(motifA - 0.2f) / 0.12f);
+            gateA = gateA * gateA * (3f - 2f * gateA);
+            float gateB = Mathf.Clamp01(1f - Mathf.Abs(motifB - 0.42f) / 0.1f);
+            gateB = gateB * gateB * (3f - 2f * gateB);
+            float gateC = Mathf.Clamp01(1f - Mathf.Abs(motifC - 0.7f) / 0.08f);
+            gateC = gateC * gateC * (3f - 2f * gateC);
+
+            float trillA =
+                Mathf.Sin(2f * Mathf.PI * 1046f * t) * 0.06f +
+                Mathf.Sin(2f * Mathf.PI * 1318f * t + 0.35f) * 0.04f;
+            float trillB =
+                Mathf.Sin(2f * Mathf.PI * 880f * t + 0.18f) * 0.055f +
+                Mathf.Sin(2f * Mathf.PI * 1174f * t + 0.52f) * 0.035f;
+            float trillC =
+                Mathf.Sin(2f * Mathf.PI * 988f * t + 0.26f) * 0.04f +
+                Mathf.Sin(2f * Mathf.PI * 1480f * t + 0.74f) * 0.022f;
+
+            float bed =
+                Mathf.Sin(2f * Mathf.PI * 0.19f * t + 0.8f) * 0.01f +
+                Mathf.Sin(2f * Mathf.PI * 0.33f * t + 1.7f) * 0.008f;
+
+            samples[i] = (trillA * gateA + trillB * gateB + trillC * gateC + bed) * amplitude * 0.95f;
         }
 
         return CreateClipFromSamples(clipName, samples);

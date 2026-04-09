@@ -1553,13 +1553,15 @@ public partial class GameBootstrap
             card.Background.color = isSelected ? DriversCardSelected : DriversCardColor;
             if (card.StatusBadgeBackground != null)
             {
-                card.StatusBadgeBackground.color = truck != null
+                card.StatusBadgeBackground.color = d.IsArrivingByBus
+                    ? new Color(0.22f, 0.36f, 0.54f, 1f)
+                    : truck != null
                     ? new Color(0.35f, 0.29f, 0.14f, 1f)
                     : new Color(0.24f, 0.29f, 0.36f, 1f);
             }
 
             card.NameText.text = d.DriverName;
-            card.StatusText.text = truck != null ? "Assigned" : "Idle";
+            card.StatusText.text = d.IsArrivingByBus ? "Arriving by Bus" : truck != null ? "Assigned" : "Idle";
 
             card.TruckText.text = truck != null ? truck.DisplayName : "Unassigned";
 
@@ -1570,12 +1572,14 @@ public partial class GameBootstrap
             card.BalanceText.text = $"${d.Money}";
         }
 
-        bool canHire = money >= HireDriverCost;
+        bool canHire = money >= HireDriverCost && hiringDriverArrival == null;
         driversScreenUi.HireButton.interactable = canHire;
         driversScreenUi.HireButtonText.text = $"Hire New Driver — ${HireDriverCost}";
-        driversScreenUi.HireStatusText.text = canHire
-            ? "Adds a new driver to the workforce."
-            : $"Need ${HireDriverCost} to hire a new driver.";
+        driversScreenUi.HireStatusText.text = hiringDriverArrival != null
+            ? "Another driver is currently arriving by bus."
+            : canHire
+                ? "New hires arrive at the bus stop before checking in at the motel."
+                : $"Need ${HireDriverCost} to hire a new driver.";
         driversScreenUi.HireStatusText.color = canHire ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.CardListContent);

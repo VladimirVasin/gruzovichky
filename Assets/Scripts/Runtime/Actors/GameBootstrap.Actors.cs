@@ -118,11 +118,13 @@ public partial class GameBootstrap
         return truckAgent;
     }
 
-    private DriverAgent CreateAndRegisterDriverAgent()
+    private DriverAgent CreateAndRegisterDriverAgent(bool spawnInMotel = true)
     {
-        DriverAgent driver = SetupDriver();
+        DriverAgent driver = SetupDriver(spawnInMotel);
         driverAgents.Add(driver);
-        SessionDebugLogger.Log("DRIVER", $"Registered {driver.DriverName} in Motel.");
+        SessionDebugLogger.Log("DRIVER", spawnInMotel
+            ? $"Registered {driver.DriverName} in Motel."
+            : $"Registered {driver.DriverName} for bus arrival.");
         return driver;
     }
 
@@ -316,7 +318,7 @@ public partial class GameBootstrap
         }
     }
 
-    private DriverAgent SetupDriver()
+    private DriverAgent SetupDriver(bool spawnInMotel = true)
     {
         DriverAgent driver = new()
         {
@@ -398,7 +400,8 @@ public partial class GameBootstrap
         driver.DriverObject.transform.position = driver.MotelIdlePosition;
         driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         driver.WalkTargetWorld = driver.MotelIdlePosition;
-        driver.DriverObject.SetActive(true);
+        driver.DriverObject.SetActive(spawnInMotel);
+        driver.IsArrivingByBus = !spawnInMotel;
         return driver;
     }
 
@@ -458,6 +461,7 @@ public partial class GameBootstrap
         edgeHighwayBusPassbyClip = CreateBusPassbyClip("EdgeHighway_BusPassby", 1.15f, 0.055f);
 
         uiAudioSource = CreateAudioSource("UIAudio", null, false, 0.96f, 0f, false);
+        uiAudioSource.ignoreListenerPause = true;
         ambientAudioSource = CreateAudioSource("AmbientWind", worldRoot, true, 0.42f, 0f, false);
         dayBirdsAudioSource = CreateAudioSource("DayBirds", worldRoot, true, 0.34f, 0f, false);
         forestAudioSource = CreateAudioSource("ForestAmbience", locations[LocationType.Forest].RootObject.transform, true, 0.52f, 0.82f, false);

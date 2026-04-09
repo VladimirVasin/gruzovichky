@@ -278,6 +278,19 @@ public partial class GameBootstrap
                 TryBoardDriverToAssignedTruck(driver);
                 return;
 
+            case DriverRescuePhase.ToMotelFromBusStop:
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.IsArrivingByBus = false;
+                driver.DriverObject.transform.position = driver.MotelIdlePosition;
+                driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+                driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+                driver.IdleWanderPointIndex = -1;
+                SessionDebugLogger.Log("DRIVER", $"{driver.DriverName} reached Motel after arriving by bus.");
+                return;
+
             case DriverRescuePhase.IdleWander:
                 driver.WalkPhase = DriverRescuePhase.None;
                 driver.WalkPath.Clear();

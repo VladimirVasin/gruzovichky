@@ -339,6 +339,11 @@ public partial class GameBootstrap
             return "Idle";
         }
 
+        if (driver.IsArrivingByBus)
+        {
+            return "Arriving by bus";
+        }
+
         if (driver.RestPhase == DriverRestPhase.Sleeping)
         {
             return "Sleeping";
@@ -352,6 +357,11 @@ public partial class GameBootstrap
         if (driver.WalkPhase == DriverRescuePhase.ToParkingForShift)
         {
             return "Walking to parking";
+        }
+
+        if (driver.WalkPhase == DriverRescuePhase.ToMotelFromBusStop)
+        {
+            return "Walking from bus stop";
         }
 
         if (driver.WalkPhase == DriverRescuePhase.IdleWander)

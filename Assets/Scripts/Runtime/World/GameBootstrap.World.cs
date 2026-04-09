@@ -7,6 +7,7 @@ using UnityEngine.Rendering.Universal;
 public partial class GameBootstrap
 {
     private const float TreeHeightScale = 1.1f;
+    private const float BerryBushSpawnChance = 0.28f;
 
     private void SetupLocations()
     {
@@ -102,13 +103,22 @@ public partial class GameBootstrap
             edgeHighwayCells,
             IsLocationCell,
             cell => IsGrassGroundCell(cell.x, cell.y));
+        int bushCount = 0;
         SessionDebugLogger.Log("WORLD", $"Planning {plannedCells.Count} misc cells");
         for (int i = 0; i < plannedCells.Count; i++)
         {
-            CreateMiscTree(plannedCells[i], i % 6);
+            if (Random.value < BerryBushSpawnChance)
+            {
+                CreateBerryBush(plannedCells[i], i);
+                bushCount++;
+            }
+            else
+            {
+                CreateMiscTree(plannedCells[i], i % 6);
+            }
         }
 
-        SessionDebugLogger.Log("WORLD", $"Placed {plannedCells.Count} misc trees.");
+        SessionDebugLogger.Log("WORLD", $"Placed {plannedCells.Count} misc props ({plannedCells.Count - bushCount} trees, {bushCount} berry bushes).");
     }
 
     private static string FormatPlacement(WorldLocationPlacement placement)
@@ -130,6 +140,66 @@ public partial class GameBootstrap
         treeRoot.transform.localScale = Vector3.one * Random.Range(1.18f, 1.58f);
         CreateTreeVariant(treeRoot.transform, variantIndex);
         RegisterMiscTreeSway(treeRoot.transform, cell, variantIndex);
+        miscOccupiedCells.Add(cell);
+    }
+
+    private void CreateBerryBush(Vector2Int cell, int variantSeed)
+    {
+        if (miscRoot == null)
+        {
+            return;
+        }
+
+        GameObject bushRoot = new($"BerryBush_{cell.x}_{cell.y}");
+        bushRoot.transform.SetParent(miscRoot, false);
+        bushRoot.transform.position = GetCellCenter(cell);
+        bushRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+        bushRoot.transform.localScale = Vector3.one * Random.Range(0.78f, 1.02f);
+
+        Color leafDark = new Color(0.16f, 0.42f, 0.2f);
+        Color leafLight = new Color(0.22f, 0.52f, 0.26f);
+        Color berryColor = new Color(0.9f, 0.08f, 0.12f);
+        Color berryHighlight = new Color(0.98f, 0.2f, 0.24f);
+
+        Vector3[] clumpPositions =
+        {
+            new Vector3(-0.12f, 0.18f, -0.02f),
+            new Vector3(0.14f, 0.22f, 0.04f),
+            new Vector3(0.02f, 0.25f, -0.14f)
+        };
+
+        Vector3[] clumpScales =
+        {
+            new Vector3(0.32f, 0.24f, 0.3f),
+            new Vector3(0.36f, 0.28f, 0.32f),
+            new Vector3(0.28f, 0.22f, 0.26f)
+        };
+
+        for (int i = 0; i < clumpPositions.Length; i++)
+        {
+            GameObject clump = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            clump.transform.SetParent(bushRoot.transform, false);
+            clump.transform.localPosition = clumpPositions[i];
+            clump.transform.localScale = clumpScales[i];
+            ApplyColor(clump, i % 2 == 0 ? leafLight : leafDark);
+            ConfigureStaticVisual(clump);
+        }
+
+        for (int i = 0; i < 12; i++)
+        {
+            float angle = (i / 12f) * Mathf.PI * 2f + variantSeed * 0.37f;
+            float radius = 0.08f + (i % 3) * 0.035f;
+            GameObject berry = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            berry.transform.SetParent(bushRoot.transform, false);
+            berry.transform.localPosition = new Vector3(
+                Mathf.Cos(angle) * radius,
+                0.13f + (i % 4) * 0.045f,
+                Mathf.Sin(angle) * radius * 0.88f);
+            berry.transform.localScale = new Vector3(0.085f, 0.085f, 0.085f);
+            ApplyColor(berry, i % 3 == 0 ? berryHighlight : berryColor);
+            ConfigureStaticVisual(berry);
+        }
+
         miscOccupiedCells.Add(cell);
     }
 

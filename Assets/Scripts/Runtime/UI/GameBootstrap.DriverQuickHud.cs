@@ -131,7 +131,9 @@ public partial class GameBootstrap
         driverQuickHud.HeaderText.text = driver.DriverName;
 
         string statusLabel;
-        if (driver.RestPhase == DriverRestPhase.Sleeping)
+        if (driver.IsArrivingByBus)
+            statusLabel = "Arriving by Bus";
+        else if (driver.RestPhase == DriverRestPhase.Sleeping)
             statusLabel = "Sleeping";
         else if (driver.RestPhase != DriverRestPhase.None)
             statusLabel = "Walking";
@@ -139,6 +141,8 @@ public partial class GameBootstrap
             statusLabel = "On Shift";
         else if (driver.WaitingForShiftAtParking)
             statusLabel = "At Parking";
+        else if (driver.WalkPhase == DriverRescuePhase.ToMotelFromBusStop)
+            statusLabel = "Walking from Bus Stop";
         else if (driver.WalkPhase == DriverRescuePhase.IdleWander)
             statusLabel = "Wandering";
         else if (driver.ShiftStartHour >= 0)

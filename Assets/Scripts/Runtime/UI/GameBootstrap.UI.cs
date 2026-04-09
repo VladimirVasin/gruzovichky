@@ -444,11 +444,22 @@ public partial class GameBootstrap
             return;
         }
 
-        DriverAgent hiredDriver = CreateAndRegisterDriverAgent();
+        if (hiringDriverArrival != null)
+        {
+            SessionDebugLogger.Log("DRIVER_REACTION", "Hire new driver rejected: another driver is already arriving by bus.");
+            return;
+        }
+
+        DriverAgent hiredDriver = CreateAndRegisterDriverAgent(spawnInMotel: false);
         money -= HireDriverCost;
         RecordMoneyMovement(-HireDriverCost, "Treasury", "Hiring", $"Hire {hiredDriver.DriverName}", money);
+        hiringDriverArrival = new HiringDriverArrivalData
+        {
+            Driver = hiredDriver,
+            Phase = HiringDriverArrivalPhase.WaitingLaneClear
+        };
         SessionDebugLogger.Log("DRIVER", $"Hired {hiredDriver.DriverName} for ${HireDriverCost}. Money now ${money}.");
-        LogDriverReaction(hiredDriver, $"hired for ${HireDriverCost} and waiting in Motel");
+        LogDriverReaction(hiredDriver, $"hired for ${HireDriverCost} and arriving by bus");
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isEconomyScreenDirty = true;

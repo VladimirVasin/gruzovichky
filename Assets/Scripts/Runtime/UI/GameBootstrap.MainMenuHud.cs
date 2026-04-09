@@ -195,6 +195,7 @@ public partial class GameBootstrap
         lastActiveGameSpeedMultiplier = 1;
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;
+        AudioListener.pause = false;
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.9f);
     }
@@ -206,6 +207,7 @@ public partial class GameBootstrap
         gameSpeedMultiplier = lastActiveGameSpeedMultiplier > 0 ? lastActiveGameSpeedMultiplier : 1;
         Time.timeScale = gameSpeedMultiplier;
         Time.fixedDeltaTime = 0.02f * Time.timeScale;
+        AudioListener.pause = false;
         UpdateMainMenuHud();
         PlayUiSound(uiPanelCloseClip, 0.85f);
     }
@@ -217,6 +219,7 @@ public partial class GameBootstrap
         gameSpeedMultiplier = 0;
         Time.timeScale = 0f;
         Time.fixedDeltaTime = 0f;
+        AudioListener.pause = true;
         isMainMenuOpen = true;
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.8f);
