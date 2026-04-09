@@ -634,7 +634,7 @@ public partial class GameBootstrap
                 continue;
             }
 
-            if (driver.RestPhase != DriverRestPhase.None || driver.WalkPhase != DriverRescuePhase.None)
+            if (driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver))
             {
                 continue;
             }
@@ -1849,7 +1849,7 @@ public partial class GameBootstrap
                 selectedDriver.IsOnActiveShift = false;
                 selectedDriver.WaitingForShiftAtParking = false;
                 bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[currentShiftIndex]);
-                if (inWindow && selectedDriver.RestPhase == DriverRestPhase.None && selectedDriver.WalkPhase == DriverRescuePhase.None)
+                if (inWindow && selectedDriver.RestPhase == DriverRestPhase.None && !IsDriverBusyWalkPhase(selectedDriver))
                 {
                     StartDriverShiftCommute(selectedDriver);
                 }
@@ -2001,6 +2001,7 @@ public partial class GameBootstrap
         {
             bool roadModeActive = activeBuildTool == BuildTool.Road;
             activeBuildTool = roadModeActive ? BuildTool.None : BuildTool.Road;
+            isBuildPanelOpen = false;
             LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
             PlayUiSound(uiSelectClip, 0.85f);
             SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");

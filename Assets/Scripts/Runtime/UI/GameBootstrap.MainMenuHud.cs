@@ -24,15 +24,19 @@ public partial class GameBootstrap
     {
         public GameObject CanvasRoot;
         public RectTransform WindowRoot;
+        public Button ContinueButton;
+        public Text ContinueButtonText;
         public Button NewGameButton;
         public Text NewGameButtonText;
         public Button ExitButton;
         public Text ExitButtonText;
+        public MainMenuButtonFx ContinueButtonFx;
         public MainMenuButtonFx NewGameButtonFx;
         public MainMenuButtonFx ExitButtonFx;
     }
 
     private MainMenuHudRefs mainMenuHud;
+    private bool isGameStarted;
     // mainMenuMusicLoadCoroutine removed (music disabled)
 
     private void SetupMainMenuHud()
@@ -59,8 +63,12 @@ public partial class GameBootstrap
         // mainMenuMusicSource disabled
 
         RectTransform backgroundRoot = CreateUiObject("MainMenuBackground", canvasObject.transform).GetComponent<RectTransform>();
-        StretchRect(backgroundRoot, 0f, 0f, 0f, 0f);
-        backgroundRoot.anchoredPosition = new Vector2(0f, 64f);
+        // Anchor top edge to top of canvas so anchoredPosition.y controls vertical shift cleanly
+        backgroundRoot.anchorMin = new Vector2(0f, 1f);
+        backgroundRoot.anchorMax = new Vector2(1f, 1f);
+        backgroundRoot.pivot = new Vector2(0.5f, 1f);
+        backgroundRoot.sizeDelta = new Vector2(0f, 900f);
+        backgroundRoot.anchoredPosition = new Vector2(0f, 20f);
         Image backgroundImage = backgroundRoot.gameObject.AddComponent<Image>();
         Sprite menuBackgroundSprite = LoadMainMenuBackgroundSprite();
         if (menuBackgroundSprite != null)
@@ -70,9 +78,8 @@ public partial class GameBootstrap
             backgroundImage.preserveAspect = true;
             backgroundImage.color = Color.white;
             AspectRatioFitter aspectFitter = backgroundRoot.gameObject.AddComponent<AspectRatioFitter>();
-            aspectFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            aspectFitter.aspectMode = AspectRatioFitter.AspectMode.WidthControlsHeight;
             aspectFitter.aspectRatio = menuBackgroundSprite.rect.width / menuBackgroundSprite.rect.height;
-            backgroundRoot.localScale = new Vector3(1.04f, 1.04f, 1f);
         }
         else
         {
@@ -106,6 +113,11 @@ public partial class GameBootstrap
         buttonLayout.childForceExpandWidth = true;
         buttonLayout.childForceExpandHeight = false;
         buttonStack.gameObject.AddComponent<LayoutElement>().preferredHeight = 98f;
+
+        mainMenuHud.ContinueButton = CreateButton("ContinueButton", buttonStack, uiFont, out mainMenuHud.ContinueButtonText, "Continue", 18, new Color(0.22f, 0.54f, 0.30f, 1f), Color.white);
+        mainMenuHud.ContinueButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
+        mainMenuHud.ContinueButtonFx = SetupMainMenuButtonFx(mainMenuHud.ContinueButton, new Color(0.22f, 0.54f, 0.30f, 1f), new Color(0.30f, 0.72f, 0.40f, 1f));
+        mainMenuHud.ContinueButton.onClick.AddListener(ContinueGameFromMainMenu);
 
         mainMenuHud.NewGameButton = CreateButton("NewGameButton", buttonStack, uiFont, out mainMenuHud.NewGameButtonText, "New Game", 18, FleetPrimaryButtonColor, Color.white);
         mainMenuHud.NewGameButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
@@ -165,6 +177,11 @@ public partial class GameBootstrap
             return;
         }
 
+        bool showContinue = isGameStarted;
+        if (mainMenuHud.ContinueButton.gameObject.activeSelf != showContinue)
+            mainMenuHud.ContinueButton.gameObject.SetActive(showContinue);
+
+        UpdateMainMenuButtonFx(mainMenuHud.ContinueButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.NewGameButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.ExitButtonFx);
     }
@@ -173,12 +190,36 @@ public partial class GameBootstrap
     {
         LogUiInput("Main Menu: clicked New Game");
         isMainMenuOpen = false;
+        isGameStarted = true;
         gameSpeedMultiplier = 1;
         lastActiveGameSpeedMultiplier = 1;
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.9f);
+    }
+
+    private void ContinueGameFromMainMenu()
+    {
+        LogUiInput("Main Menu: clicked Continue");
+        isMainMenuOpen = false;
+        gameSpeedMultiplier = lastActiveGameSpeedMultiplier > 0 ? lastActiveGameSpeedMultiplier : 1;
+        Time.timeScale = gameSpeedMultiplier;
+        Time.fixedDeltaTime = 0.02f * Time.timeScale;
+        UpdateMainMenuHud();
+        PlayUiSound(uiPanelCloseClip, 0.85f);
+    }
+
+    private void OpenPauseMenu()
+    {
+        if (!isGameStarted) return;
+        lastActiveGameSpeedMultiplier = gameSpeedMultiplier > 0 ? gameSpeedMultiplier : lastActiveGameSpeedMultiplier;
+        gameSpeedMultiplier = 0;
+        Time.timeScale = 0f;
+        Time.fixedDeltaTime = 0f;
+        isMainMenuOpen = true;
+        UpdateMainMenuHud();
+        PlayUiSound(uiPanelOpenClip, 0.8f);
     }
 
     private void ExitGameFromMainMenu()

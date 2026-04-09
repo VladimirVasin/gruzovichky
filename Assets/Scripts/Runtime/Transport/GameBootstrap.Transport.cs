@@ -6,6 +6,9 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
+    private const float BuildingDecorScale = 1.56f;
+    private const float LargePropScale = 1.40f;
+
     private bool TryHandleTruckSelection(Ray ray)
     {
         if (!Physics.Raycast(ray, out RaycastHit hit, 200f))
@@ -150,7 +153,22 @@ public partial class GameBootstrap
 
         if (flatDirection.sqrMagnitude > 0.0001f)
         {
-            Vector3 step = flatDirection.normalized * (DriverWalkSpeed * Time.deltaTime);
+            float walkSpeed = driver.WalkPhase == DriverRescuePhase.IdleWander ? DriverIdleWanderSpeed : DriverWalkSpeed;
+            Vector3 step = flatDirection.normalized * (walkSpeed * Time.deltaTime);
+            Vector3 proposedPosition = step.sqrMagnitude >= flatDirection.sqrMagnitude
+                ? targetPosition
+                : currentPosition + step;
+
+            if (driver.WalkPhase == DriverRescuePhase.IdleWander && WouldIdleDriverOverlapAtPosition(driver, proposedPosition))
+            {
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.IdleWanderPauseTimer = Random.Range(0.8f, 1.8f);
+                SessionDebugLogger.Log("IDLE", $"{driver.DriverName} paused idle walk to avoid overlapping another driver.");
+                return;
+            }
+
             if (step.sqrMagnitude >= flatDirection.sqrMagnitude)
             {
                 currentPosition = targetPosition;
@@ -259,7 +277,38 @@ public partial class GameBootstrap
                 SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} arrived at Parking for upcoming shift.");
                 TryBoardDriverToAssignedTruck(driver);
                 return;
+
+            case DriverRescuePhase.IdleWander:
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+                SessionDebugLogger.Log("IDLE", $"{driver.DriverName} reached motel idle point.");
+                return;
         }
+    }
+
+    private bool WouldIdleDriverOverlapAtPosition(DriverAgent driver, Vector3 proposedPosition)
+    {
+        float personalSpaceSqr = DriverIdlePersonalSpace * DriverIdlePersonalSpace;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent other = driverAgents[i];
+            if (other == null || other == driver || other.DriverObject == null || !other.DriverObject.activeSelf)
+            {
+                continue;
+            }
+
+            Vector3 otherDelta = other.DriverObject.transform.position - proposedPosition;
+            otherDelta.y = 0f;
+            if (otherDelta.sqrMagnitude < personalSpaceSqr)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void UpdateDriverEnergy(DriverAgent driver)
@@ -300,33 +349,55 @@ public partial class GameBootstrap
         Vector3 toTarget = driver.WalkTargetWorld - driver.DriverObject.transform.position;
         toTarget.y = 0f;
         bool isWalking = driver.WalkPhase != DriverRescuePhase.None && toTarget.sqrMagnitude > 0.012f;
+        bool isConversing = IsDriverIdleConversing(driver);
         if (isWalking)
         {
             driver.WalkAnimationTime += Time.deltaTime * 8.2f;
         }
         else
         {
-            driver.WalkAnimationTime = Mathf.MoveTowards(driver.WalkAnimationTime, 0f, Time.deltaTime * 6f);
+            driver.WalkAnimationTime += Time.deltaTime * (isConversing ? 3.1f : 4.2f);
+        }
+
+        if (!isWalking && isConversing)
+        {
+            DriverAgent partner = GetDriverAgentById(driver.IdleConversationPartnerId);
+            if (partner?.DriverObject != null)
+            {
+                Vector3 faceDirection = partner.DriverObject.transform.position - driver.DriverObject.transform.position;
+                faceDirection.y = 0f;
+                if (faceDirection.sqrMagnitude > 0.0001f)
+                {
+                    driver.DriverObject.transform.rotation = Quaternion.Slerp(
+                        driver.DriverObject.transform.rotation,
+                        Quaternion.LookRotation(faceDirection.normalized, Vector3.up),
+                        7f * Time.deltaTime);
+                }
+            }
         }
 
         float swing = isWalking ? Mathf.Sin(driver.WalkAnimationTime) : 0f;
-        float bob = isWalking ? Mathf.Abs(Mathf.Sin(driver.WalkAnimationTime * 2f)) * 0.06f : 0f;
+        float bob = isWalking
+            ? Mathf.Abs(Mathf.Sin(driver.WalkAnimationTime * 2f)) * 0.06f
+            : isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.8f) * 0.012f : 0f;
         ApplyDriverPose(driver, swing, bob);
     }
 
     private void ApplyDriverPose(DriverAgent driver, float swing, float bob)
     {
+        bool isConversing = IsDriverIdleConversing(driver);
         driver.DriverVisualRoot.localPosition = new Vector3(0f, bob, 0f);
-        driver.DriverVisualRoot.localRotation = Quaternion.Euler(0f, 0f, swing * 2.5f);
+        driver.DriverVisualRoot.localRotation = Quaternion.Euler(0f, 0f, isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.3f) * 1.4f : swing * 2.5f);
 
         if (driver.DriverBodyTransform != null)
         {
-            driver.DriverBodyTransform.localRotation = Quaternion.Euler(swing * 4f, 0f, 0f);
+            driver.DriverBodyTransform.localRotation = Quaternion.Euler(isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.1f) * 3.5f : swing * 4f, 0f, 0f);
         }
 
         if (driver.DriverHeadTransform != null)
         {
-            driver.DriverHeadTransform.localRotation = Quaternion.Euler(-swing * 2f, 0f, 0f);
+            float headPitch = isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.7f) * 3.2f : -swing * 2f;
+            driver.DriverHeadTransform.localRotation = Quaternion.Euler(headPitch, 0f, 0f);
         }
 
         if (driver.DriverCapTransform != null)
@@ -336,23 +407,29 @@ public partial class GameBootstrap
 
         if (driver.DriverLeftArmTransform != null)
         {
-            driver.DriverLeftArmTransform.localRotation = Quaternion.Euler(swing * 28f, 0f, 0f);
+            float leftArmPitch = isConversing
+                ? 10f + Mathf.Sin(driver.WalkAnimationTime * 1.9f + driver.DriverId * 0.4f) * 16f
+                : swing * 28f;
+            driver.DriverLeftArmTransform.localRotation = Quaternion.Euler(leftArmPitch, 0f, 0f);
         }
 
         if (driver.DriverRightArmTransform != null)
         {
             float carryOffset = driver.DriverFuelCanTransform != null && driver.DriverFuelCanTransform.gameObject.activeSelf ? 18f : 0f;
-            driver.DriverRightArmTransform.localRotation = Quaternion.Euler(-swing * 28f - carryOffset, 0f, 0f);
+            float rightArmPitch = isConversing
+                ? -12f + Mathf.Sin(driver.WalkAnimationTime * 2.1f + driver.DriverId * 0.7f + 1.3f) * 20f
+                : -swing * 28f - carryOffset;
+            driver.DriverRightArmTransform.localRotation = Quaternion.Euler(rightArmPitch, 0f, 0f);
         }
 
         if (driver.DriverLeftLegTransform != null)
         {
-            driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-swing * 24f, 0f, 0f);
+            driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(isConversing ? 3f : -swing * 24f, 0f, 0f);
         }
 
         if (driver.DriverRightLegTransform != null)
         {
-            driver.DriverRightLegTransform.localRotation = Quaternion.Euler(swing * 24f, 0f, 0f);
+            driver.DriverRightLegTransform.localRotation = Quaternion.Euler(isConversing ? -3f : swing * 24f, 0f, 0f);
         }
 
         if (driver.DriverFuelCanTransform != null && driver.DriverFuelCanTransform.gameObject.activeSelf)
@@ -634,6 +711,8 @@ public partial class GameBootstrap
 
             CreateRoadLantern(worldPosition, worldRotation);
         }
+
+        RebuildEdgeHighwayLanterns();
     }
 
     private bool TryGetRoadLanternPlacement(Vector2Int cell, out Vector3 worldPosition, out Quaternion worldRotation)
@@ -651,6 +730,27 @@ public partial class GameBootstrap
     {
         Vector2Int neighbor = cell + offset;
         return roadCells.Contains(neighbor) || IsAnchorCell(neighbor);
+    }
+
+    private void RebuildEdgeHighwayLanterns()
+    {
+        if (lanternsRoot == null)
+        {
+            return;
+        }
+
+        int lowerLaneY = 0;
+        int upperLaneY = 1;
+        float outerSouthZ = lowerLaneY + 0.06f;
+        float outerNorthZ = upperLaneY + 0.94f;
+        for (int x = 0; x < GridWidth; x += 2)
+        {
+            Vector3 southPosition = new Vector3(x + 0.5f, GetTerrainHeight(new Vector2Int(x, lowerLaneY)) + 0.04f, outerSouthZ);
+            CreateRoadLantern(southPosition, Quaternion.identity);
+
+            Vector3 northPosition = new Vector3(x + 0.5f, GetTerrainHeight(new Vector2Int(x, upperLaneY)) + 0.04f, outerNorthZ);
+            CreateRoadLantern(northPosition, Quaternion.Euler(0f, 180f, 0f));
+        }
     }
 
     private void CreateRoadLantern(Vector3 worldPosition, Quaternion worldRotation)
@@ -757,6 +857,12 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(scaleX, 0.7f, scaleZ);
             ApplyColor(baseBlock, baseColor);
         }
+        else if (type == LocationType.BusStop)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.22f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.92f, 0.14f, size.y * 0.64f);
+            ApplyColor(baseBlock, new Color(0.78f, 0.74f, 0.68f));
+        }
         else
         {
             baseBlock.transform.position = center;
@@ -791,6 +897,10 @@ public partial class GameBootstrap
         {
             CreateSawmillDecoration(root.transform, center);
         }
+        else if (type == LocationType.BusStop)
+        {
+            CreateBusStopDecoration(root.transform, center, min, max, anchor);
+        }
         else
         {
             CreateMotelDecoration(root.transform, center, min, max, anchor);
@@ -809,10 +919,13 @@ public partial class GameBootstrap
 
     private void CreateParkingDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
+        Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
+
         GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Cube);
         canopy.transform.SetParent(parent, false);
-        canopy.transform.position = center + new Vector3(0f, 0.6f, -0.15f);
-        canopy.transform.localScale = new Vector3(2.8f, 0.12f, 1.4f);
+        canopy.transform.position = center + ScaleOffset(new Vector3(0f, 0.6f, -0.15f));
+        canopy.transform.localScale = ScaleSize(new Vector3(2.8f, 0.12f, 1.4f));
         ApplyColor(canopy, new Color(0.18f, 0.2f, 0.24f));
 
         Vector3[] postOffsets =
@@ -827,12 +940,66 @@ public partial class GameBootstrap
         {
             GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cube);
             post.transform.SetParent(parent, false);
-            post.transform.position = center + offset;
-            post.transform.localScale = new Vector3(0.12f, 0.56f, 0.12f);
+            post.transform.position = center + ScaleOffset(offset);
+            post.transform.localScale = ScaleSize(new Vector3(0.12f, 0.56f, 0.12f));
             ApplyColor(post, new Color(0.3f, 0.32f, 0.36f));
         }
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.62f);
+    }
+
+    private void CreateBusStopDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        GameObject shelterRoof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        shelterRoof.transform.SetParent(parent, false);
+        shelterRoof.transform.position = center + new Vector3(0f, 0.72f, 0.05f);
+        shelterRoof.transform.localScale = new Vector3(1.55f, 0.08f, 0.52f);
+        ApplyColor(shelterRoof, new Color(0.86f, 0.22f, 0.18f));
+        ConfigureStaticVisual(shelterRoof);
+
+        Vector3[] postOffsets =
+        {
+            new(-0.58f, 0.33f, -0.1f),
+            new(0.58f, 0.33f, -0.1f)
+        };
+
+        foreach (Vector3 offset in postOffsets)
+        {
+            GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            post.transform.SetParent(parent, false);
+            post.transform.position = center + offset;
+            post.transform.localScale = new Vector3(0.08f, 0.62f, 0.08f);
+            ApplyColor(post, new Color(0.28f, 0.3f, 0.34f));
+            ConfigureStaticVisual(post);
+        }
+
+        GameObject backPanel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        backPanel.transform.SetParent(parent, false);
+        backPanel.transform.position = center + new Vector3(0f, 0.38f, 0.18f);
+        backPanel.transform.localScale = new Vector3(1.4f, 0.5f, 0.06f);
+        ApplyColor(backPanel, new Color(0.9f, 0.92f, 0.95f));
+        ConfigureStaticVisual(backPanel);
+
+        GameObject bench = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        bench.transform.SetParent(parent, false);
+        bench.transform.position = center + new Vector3(0f, 0.16f, -0.05f);
+        bench.transform.localScale = new Vector3(0.88f, 0.08f, 0.2f);
+        ApplyColor(bench, new Color(0.5f, 0.34f, 0.2f));
+        ConfigureStaticVisual(bench);
+
+        GameObject stopPole = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        stopPole.transform.SetParent(parent, false);
+        stopPole.transform.position = center + new Vector3(0.92f, 0.5f, 0.16f);
+        stopPole.transform.localScale = new Vector3(0.06f, 1f, 0.06f);
+        ApplyColor(stopPole, new Color(0.26f, 0.28f, 0.32f));
+        ConfigureStaticVisual(stopPole);
+
+        GameObject stopSign = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        stopSign.transform.SetParent(parent, false);
+        stopSign.transform.position = center + new Vector3(0.92f, 0.92f, 0.16f);
+        stopSign.transform.localScale = new Vector3(0.34f, 0.28f, 0.04f);
+        ApplyColor(stopSign, new Color(0.95f, 0.84f, 0.2f));
+        ConfigureStaticVisual(stopSign);
     }
 
     private void CreateForestDecoration(Transform parent, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -848,9 +1015,9 @@ public partial class GameBootstrap
             0.02f,
             (min.y + max.y + 1) * 0.5f);
         groundPatch.transform.localScale = new Vector3(
-            Mathf.Max(1.35f, (max.x - min.x + 1) * 0.58f),
+            Mathf.Max(1.35f, (max.x - min.x + 1) * 0.58f) * LargePropScale,
             0.07f,
-            Mathf.Max(1.35f, (max.y - min.y + 1) * 0.58f));
+            Mathf.Max(1.35f, (max.y - min.y + 1) * 0.58f) * LargePropScale);
         ApplyStylizedGrassMaterial(groundPatch, min.x + max.x, min.y + max.y);
         ConfigureStaticVisual(groundPatch);
 
@@ -905,7 +1072,7 @@ public partial class GameBootstrap
                 treeRoot.transform.SetParent(parent, false);
                 treeRoot.transform.position = GetCellCenter(cell) + new Vector3(offsetX, 0f, offsetZ);
                 treeRoot.transform.rotation = Quaternion.Euler(0f, (cell.x * 37 + cell.y * 29 + i * 71) % 360, 0f);
-                treeRoot.transform.localScale = Vector3.one * (0.96f + ((cell.x + cell.y + i) % 3) * 0.12f);
+                treeRoot.transform.localScale = Vector3.one * ((0.96f + ((cell.x + cell.y + i) % 3) * 0.12f) * LargePropScale);
                 CreateTreeVariant(treeRoot.transform, (cell.x + cell.y + i) % 3);
                 if (!keepApproachClear)
                 {
@@ -923,7 +1090,7 @@ public partial class GameBootstrap
         GameObject lumberMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
         lumberMarker.transform.SetParent(parent, false);
         lumberMarker.transform.position = GetCellCenter(GetForestDepotCell(min, max, anchor)) + new Vector3(0f, 0.12f, 0f);
-        lumberMarker.transform.localScale = new Vector3(0.44f, 0.14f, 0.72f);
+        lumberMarker.transform.localScale = new Vector3(0.44f, 0.14f, 0.72f) * LargePropScale;
         ApplyColor(lumberMarker, new Color(0.47f, 0.31f, 0.18f));
         ConfigureStaticVisual(lumberMarker);
 
@@ -931,7 +1098,7 @@ public partial class GameBootstrap
         logTop.transform.SetParent(parent, false);
         logTop.transform.position = lumberMarker.transform.position + new Vector3(-0.12f, 0.14f, 0f);
         logTop.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
-        logTop.transform.localScale = new Vector3(0.12f, 0.18f, 0.12f);
+        logTop.transform.localScale = new Vector3(0.12f, 0.18f, 0.12f) * LargePropScale;
         ApplyColor(logTop, new Color(0.6f, 0.42f, 0.24f));
         ConfigureStaticVisual(logTop);
 
@@ -939,7 +1106,7 @@ public partial class GameBootstrap
         logBottom.transform.SetParent(parent, false);
         logBottom.transform.position = lumberMarker.transform.position + new Vector3(0.1f, 0.08f, 0f);
         logBottom.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
-        logBottom.transform.localScale = new Vector3(0.12f, 0.2f, 0.12f);
+        logBottom.transform.localScale = new Vector3(0.12f, 0.2f, 0.12f) * LargePropScale;
         ApplyColor(logBottom, new Color(0.56f, 0.38f, 0.22f));
         ConfigureStaticVisual(logBottom);
 
@@ -1038,10 +1205,13 @@ public partial class GameBootstrap
 
     private void CreateGasStationDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
+        Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
+
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(parent, false);
-        roof.transform.position = center + new Vector3(0f, 0.72f, -0.18f);
-        roof.transform.localScale = new Vector3(2.15f, 0.12f, 1.08f);
+        roof.transform.position = center + ScaleOffset(new Vector3(0f, 0.72f, -0.18f));
+        roof.transform.localScale = ScaleSize(new Vector3(2.15f, 0.12f, 1.08f));
         ApplyColor(roof, new Color(0.95f, 0.3f, 0.22f));
 
         Vector3[] postOffsets =
@@ -1056,21 +1226,21 @@ public partial class GameBootstrap
         {
             GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cube);
             post.transform.SetParent(parent, false);
-            post.transform.position = center + offset;
-            post.transform.localScale = new Vector3(0.12f, 0.64f, 0.12f);
+            post.transform.position = center + ScaleOffset(offset);
+            post.transform.localScale = ScaleSize(new Vector3(0.12f, 0.64f, 0.12f));
             ApplyColor(post, new Color(0.96f, 0.94f, 0.88f));
         }
 
         GameObject kiosk = GameObject.CreatePrimitive(PrimitiveType.Cube);
         kiosk.transform.SetParent(parent, false);
-        kiosk.transform.position = center + new Vector3(0f, 0.36f, 0.38f);
-        kiosk.transform.localScale = new Vector3(1.25f, 0.52f, 0.5f);
+        kiosk.transform.position = center + ScaleOffset(new Vector3(0f, 0.36f, 0.38f));
+        kiosk.transform.localScale = ScaleSize(new Vector3(1.25f, 0.52f, 0.5f));
         ApplyColor(kiosk, new Color(0.98f, 0.92f, 0.78f));
 
         GameObject pump = GameObject.CreatePrimitive(PrimitiveType.Cube);
         pump.transform.SetParent(parent, false);
-        pump.transform.position = center + new Vector3(0f, 0.32f, -0.12f);
-        pump.transform.localScale = new Vector3(0.24f, 0.42f, 0.24f);
+        pump.transform.position = center + ScaleOffset(new Vector3(0f, 0.32f, -0.12f));
+        pump.transform.localScale = ScaleSize(new Vector3(0.24f, 0.42f, 0.24f));
         ApplyColor(pump, new Color(0.2f, 0.22f, 0.26f));
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.58f);
@@ -1153,21 +1323,27 @@ public partial class GameBootstrap
 
     private void CreateWarehouseDecoration(Transform parent, Vector3 center)
     {
+        Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
+        Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
+
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(parent, false);
-        roof.transform.position = center + new Vector3(0f, 0.47f, 0f);
-        roof.transform.localScale = new Vector3(2.05f, 0.12f, 2.05f);
+        roof.transform.position = center + ScaleOffset(new Vector3(0f, 0.47f, 0f));
+        roof.transform.localScale = ScaleSize(new Vector3(2.05f, 0.12f, 2.05f));
         ApplyColor(roof, new Color(0.88f, 0.24f, 0.2f));
     }
 
     private void CreateSawmillDecoration(Transform parent, Vector3 center)
     {
+        Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
+        Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
+
         for (int i = 0; i < 2; i++)
         {
             GameObject house = GameObject.CreatePrimitive(PrimitiveType.Cube);
             house.transform.SetParent(parent, false);
-            house.transform.position = center + new Vector3(-0.3f + i * 0.6f, 0.4f, 0f);
-            house.transform.localScale = new Vector3(0.45f, 0.5f, 0.45f);
+            house.transform.position = center + ScaleOffset(new Vector3(-0.3f + i * 0.6f, 0.4f, 0f));
+            house.transform.localScale = ScaleSize(new Vector3(0.45f, 0.5f, 0.45f));
             ApplyColor(house, new Color(0.92f, 0.84f, 0.66f));
         }
     }
@@ -1189,6 +1365,7 @@ public partial class GameBootstrap
         orientedRoot.transform.SetParent(parent, false);
         orientedRoot.transform.position = center;
         orientedRoot.transform.rotation = Quaternion.LookRotation(toAnchor, Vector3.up);
+        orientedRoot.transform.localScale = Vector3.one * BuildingDecorScale;
         Transform or = orientedRoot.transform;
 
         // === BUILDING — back half of footprint (local Z < 0 = away from anchor) ===

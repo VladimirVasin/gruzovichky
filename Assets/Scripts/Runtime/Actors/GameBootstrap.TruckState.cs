@@ -152,21 +152,70 @@ public partial class GameBootstrap
 
     private Vector3 GetDriverIdleMotelPosition(int driverIndex)
     {
-        Vector3 center = GetLocationCenter(LocationType.Motel);
-        int ringIndex = Mathf.Max(0, driverIndex);
-        Vector3[] offsets =
-        {
-            new(-0.35f, 0f, -0.25f),
-            new(0.35f, 0f, -0.25f),
-            new(-0.35f, 0f, 0.25f),
-            new(0.35f, 0f, 0.25f),
-            new(0f, 0f, -0.45f),
-            new(0f, 0f, 0.45f)
-        };
-
-        Vector3 position = center + offsets[ringIndex % offsets.Length];
+        Vector3 position = GetDriverIdleMotelWanderPosition(driverIndex, driverIndex);
         position.y = SampleTerrainHeight(position.x, position.z);
         return position;
+    }
+
+    private Vector3 GetDriverIdleMotelWanderPosition(int driverIndex, int pointIndex)
+    {
+        Vector3 frontageBase = GetDriverStandPointNearLocation(LocationType.Motel);
+        if (!locations.TryGetValue(LocationType.Motel, out LocationData motel))
+        {
+            frontageBase.y = SampleTerrainHeight(frontageBase.x, frontageBase.z);
+            return frontageBase;
+        }
+
+        Vector3 center = GetLocationCenter(LocationType.Motel);
+        Vector3 anchorCenter = GetCellCenter(motel.Anchor);
+        Vector3 outward = anchorCenter - center;
+        outward.y = 0f;
+        if (outward.sqrMagnitude < 0.0001f)
+        {
+            outward = Vector3.forward;
+        }
+        else
+        {
+            outward.Normalize();
+        }
+
+        Vector3 right = new Vector3(outward.z, 0f, -outward.x);
+        Vector2[] localPoints =
+        {
+            new Vector2(0.55f, -1.15f),
+            new Vector2(1.05f, -1.35f),
+            new Vector2(1.62f, -1.05f),
+            new Vector2(2.05f, -0.52f),
+            new Vector2(2.22f, 0.14f),
+            new Vector2(1.96f, 0.82f),
+            new Vector2(1.42f, 1.36f),
+            new Vector2(0.82f, 1.74f),
+            new Vector2(0.18f, 1.98f),
+            new Vector2(-0.34f, 1.52f),
+            new Vector2(-0.58f, 0.88f),
+            new Vector2(-0.26f, 0.18f),
+            new Vector2(0.36f, -0.26f),
+            new Vector2(1.22f, 0.34f)
+        };
+
+        int baseIndex = Mathf.Abs(pointIndex + Mathf.Max(0, driverIndex)) % localPoints.Length;
+        for (int attempt = 0; attempt < localPoints.Length; attempt++)
+        {
+            Vector2 localPoint = localPoints[(baseIndex + attempt) % localPoints.Length];
+            Vector3 position = frontageBase + right * localPoint.x + outward * localPoint.y;
+            position.y = SampleTerrainHeight(position.x, position.z);
+
+            Vector2Int cell = WorldToCell(position);
+            if (!IsInsideGrid(cell) || roadCells.Contains(cell) || IsLocationCell(cell))
+            {
+                continue;
+            }
+
+            return position;
+        }
+
+        frontageBase.y = SampleTerrainHeight(frontageBase.x, frontageBase.z);
+        return frontageBase;
     }
 
     private Vector3 GetDriverParkingWaitPosition(TruckAgent truckAgent)

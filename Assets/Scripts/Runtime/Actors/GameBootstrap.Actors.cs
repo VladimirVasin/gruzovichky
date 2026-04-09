@@ -299,7 +299,7 @@ public partial class GameBootstrap
         }
 
         float darkness = 1f - stylizedDaylight;
-        bool flashlightOn = driver.WalkPhase != DriverRescuePhase.None && driver.DriverObject != null && driver.DriverObject.activeSelf && darkness > 0.55f;
+        bool flashlightOn = IsDriverBusyWalkPhase(driver) && driver.DriverObject != null && driver.DriverObject.activeSelf && darkness > 0.55f;
         float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.65f, 2.2f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color flashlightColor = Color.Lerp(
             new Color(0.24f, 0.22f, 0.18f),
@@ -455,6 +455,7 @@ public partial class GameBootstrap
         gasStationRefuelCueClip = CreatePentatonicMotifClip("GasStation_Refuel", 0.38f, 0.076f, new[] { PentatonicG4, PentatonicC5 }, new[] { 0f, 0.12f });
         parkingReturnCueClip = CreatePentatonicMotifClip("Parking_Return", 0.36f, 0.068f, new[] { PentatonicC4, PentatonicE4 }, new[] { 0f, 0.1f });
         moneyRewardClip = CreateMoneyRewardClip("Money_Reward", 0.6f, 0.1f);
+        edgeHighwayBusPassbyClip = CreateBusPassbyClip("EdgeHighway_BusPassby", 1.15f, 0.055f);
 
         uiAudioSource = CreateAudioSource("UIAudio", null, false, 0.96f, 0f, false);
         ambientAudioSource = CreateAudioSource("AmbientWind", worldRoot, true, 0.42f, 0f, false);

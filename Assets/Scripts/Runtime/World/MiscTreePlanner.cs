@@ -3,7 +3,13 @@ using UnityEngine;
 
 public static class MiscTreePlanner
 {
-    public static List<Vector2Int> Plan(int gridWidth, int gridHeight, HashSet<Vector2Int> roadCells, System.Func<Vector2Int, bool> isLocationCell)
+    public static List<Vector2Int> Plan(
+        int gridWidth,
+        int gridHeight,
+        HashSet<Vector2Int> roadCells,
+        HashSet<Vector2Int> blockedDecorationCells,
+        System.Func<Vector2Int, bool> isLocationCell,
+        System.Func<Vector2Int, bool> isAllowedGroundCell)
     {
         List<Vector2Int> candidates = new();
         for (int x = 0; x < gridWidth; x++)
@@ -11,7 +17,7 @@ public static class MiscTreePlanner
             for (int y = 0; y < gridHeight; y++)
             {
                 Vector2Int cell = new Vector2Int(x, y);
-                if (IsCellAvailable(cell, gridWidth, gridHeight, roadCells, isLocationCell))
+                if (IsCellAvailable(cell, gridWidth, gridHeight, roadCells, blockedDecorationCells, isLocationCell, isAllowedGroundCell))
                 {
                     candidates.Add(cell);
                 }
@@ -48,9 +54,20 @@ public static class MiscTreePlanner
         return plannedCells;
     }
 
-    private static bool IsCellAvailable(Vector2Int cell, int gridWidth, int gridHeight, HashSet<Vector2Int> roadCells, System.Func<Vector2Int, bool> isLocationCell)
+    private static bool IsCellAvailable(
+        Vector2Int cell,
+        int gridWidth,
+        int gridHeight,
+        HashSet<Vector2Int> roadCells,
+        HashSet<Vector2Int> blockedDecorationCells,
+        System.Func<Vector2Int, bool> isLocationCell,
+        System.Func<Vector2Int, bool> isAllowedGroundCell)
     {
-        if (!IsInsideGrid(cell, gridWidth, gridHeight) || roadCells.Contains(cell) || isLocationCell(cell))
+        if (!IsInsideGrid(cell, gridWidth, gridHeight) ||
+            roadCells.Contains(cell) ||
+            blockedDecorationCells.Contains(cell) ||
+            isLocationCell(cell) ||
+            !isAllowedGroundCell(cell))
         {
             return false;
         }
@@ -62,7 +79,7 @@ public static class MiscTreePlanner
                 continue;
             }
 
-            if (roadCells.Contains(neighbor) || isLocationCell(neighbor))
+            if (roadCells.Contains(neighbor) || blockedDecorationCells.Contains(neighbor) || isLocationCell(neighbor))
             {
                 return false;
             }

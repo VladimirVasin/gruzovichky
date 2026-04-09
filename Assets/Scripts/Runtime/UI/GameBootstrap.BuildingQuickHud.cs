@@ -185,6 +185,7 @@ public partial class GameBootstrap
             LocationType.Sawmill => "Processing logs into boards",
             LocationType.Warehouse => "Finished goods storage",
             LocationType.Motel => "Drivers rest and idle here",
+            LocationType.BusStop => "Roadside bus stop by the edge highway",
             _ => string.Empty
         };
     }
@@ -199,6 +200,7 @@ public partial class GameBootstrap
             LocationType.Sawmill => $"{FormatValueLine("Logs", locations[LocationType.Sawmill].LogsStored.ToString())}\n{FormatValueLine("Boards", locations[LocationType.Sawmill].BoardsStored.ToString())}",
             LocationType.Warehouse => FormatValueLine("Boards", locations[LocationType.Warehouse].BoardsStored.ToString()),
             LocationType.Motel => FormatValueLine("Drivers", driverAgents.Count.ToString()),
+            LocationType.BusStop => FormatValueLine("Status", "Waiting bay ready"),
             _ => string.Empty
         };
     }

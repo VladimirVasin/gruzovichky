@@ -139,6 +139,8 @@ public partial class GameBootstrap
             statusLabel = "On Shift";
         else if (driver.WaitingForShiftAtParking)
             statusLabel = "At Parking";
+        else if (driver.WalkPhase == DriverRescuePhase.IdleWander)
+            statusLabel = "Wandering";
         else if (driver.ShiftStartHour >= 0)
             statusLabel = $"Shift at {driver.ShiftStartHour:00}:00";
         else

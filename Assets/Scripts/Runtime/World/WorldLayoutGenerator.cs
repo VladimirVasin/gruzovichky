@@ -3,6 +3,11 @@ using UnityEngine;
 
 public static class WorldLayoutGenerator
 {
+    private const int PlacementPadding = 2;
+    private const int FarFromParkingDistance = 8;
+    private const int DecorativeBottomRoadOccupiedRows = 2;
+    private const int DecorativeBottomRoadClearanceRows = 2;
+
     public static GeneratedWorldLayout Generate(int gridWidth, int gridHeight, System.Func<GeneratedWorldLayout, bool> isValidLayout = null)
     {
         GeneratedWorldLayout bestCandidate = null;
@@ -25,30 +30,46 @@ public static class WorldLayoutGenerator
             bool parkingOnLeft = parkingAnchor.x < gridWidth * 0.5f;
             bool parkingOnBottom = parkingAnchor.y < gridHeight * 0.5f;
 
-            if (!TryPlaceInteriorLocation(candidate, "Warehouse", 2, 2, 7, 12, 7, 12, true, gridWidth, gridHeight, parkingAnchor))
+            int innerMinX = 4;
+            int innerMaxX = gridWidth - 5;
+            int innerMinY = 4;
+            int innerMaxY = gridHeight - 5;
+            int horizontalMid = gridWidth / 2;
+            int verticalMid = gridHeight / 2;
+
+            int warehouseMinX = parkingOnLeft ? horizontalMid + 2 : innerMinX;
+            int warehouseMaxX = parkingOnLeft ? innerMaxX : horizontalMid - 2;
+            int warehouseMinY = parkingOnBottom ? verticalMid + 1 : innerMinY;
+            int warehouseMaxY = parkingOnBottom ? innerMaxY : verticalMid - 1;
+            if (!TryPlaceInteriorLocation(candidate, "Warehouse", 2, 2, warehouseMinX, warehouseMaxX, warehouseMinY, warehouseMaxY, true, gridWidth, gridHeight, parkingAnchor))
             {
                 continue;
             }
 
-            int forestMinX = parkingOnLeft ? 9 : 2;
-            int forestMaxX = parkingOnLeft ? 17 : 11;
-            int forestMinY = parkingOnBottom ? 10 : 8;
-            int forestMaxY = 17;
+            int forestMinX = parkingOnLeft ? horizontalMid + 1 : innerMinX;
+            int forestMaxX = parkingOnLeft ? innerMaxX : horizontalMid - 1;
+            int forestMinY = parkingOnBottom ? innerMinY : verticalMid + 1;
+            int forestMaxY = parkingOnBottom ? verticalMid - 1 : innerMaxY;
             if (!TryPlaceInteriorLocation(candidate, "Forest", 3, 3, forestMinX, forestMaxX, forestMinY, forestMaxY, true, gridWidth, gridHeight, parkingAnchor))
             {
                 continue;
             }
 
-            int sawmillMinX = parkingOnLeft ? 9 : 2;
-            int sawmillMaxX = parkingOnLeft ? 17 : 11;
-            int sawmillMinY = parkingOnBottom ? 2 : 3;
-            int sawmillMaxY = parkingOnBottom ? 10 : 11;
+            int sawmillMinX = parkingOnLeft ? horizontalMid + 1 : innerMinX;
+            int sawmillMaxX = parkingOnLeft ? innerMaxX : horizontalMid - 1;
+            int sawmillMinY = parkingOnBottom ? verticalMid + 1 : innerMinY;
+            int sawmillMaxY = parkingOnBottom ? innerMaxY : verticalMid - 1;
             if (!TryPlaceInteriorLocation(candidate, "Sawmill", 2, 2, sawmillMinX, sawmillMaxX, sawmillMinY, sawmillMaxY, true, gridWidth, gridHeight, parkingAnchor))
             {
                 continue;
             }
 
             if (!TryPlaceMotel(candidate, gridWidth, gridHeight))
+            {
+                continue;
+            }
+
+            if (!TryPlaceBusStop(candidate, gridWidth, gridHeight))
             {
                 continue;
             }
@@ -85,14 +106,14 @@ public static class WorldLayoutGenerator
         {
             Vector2Int anchor = corner switch
             {
-                0 => new Vector2Int(Random.Range(2, 5), Random.Range(4, 6)),
-                1 => new Vector2Int(Random.Range(gridWidth - 5, gridWidth - 2), Random.Range(4, 6)),
-                2 => new Vector2Int(Random.Range(2, 5), Random.Range(gridHeight - 6, gridHeight - 3)),
-                _ => new Vector2Int(Random.Range(gridWidth - 5, gridWidth - 2), Random.Range(gridHeight - 6, gridHeight - 3))
+                0 => new Vector2Int(Random.Range(2, 7), Random.Range(3, 8)),
+                1 => new Vector2Int(Random.Range(gridWidth - 7, gridWidth - 2), Random.Range(3, 8)),
+                2 => new Vector2Int(Random.Range(2, 7), Random.Range(gridHeight - 8, gridHeight - 3)),
+                _ => new Vector2Int(Random.Range(gridWidth - 7, gridWidth - 2), Random.Range(gridHeight - 8, gridHeight - 3))
             };
 
             if (!TryCreatePlacementFromAnchor(anchor, 3, 2, facing, gridWidth, gridHeight, out WorldLocationPlacement parking) ||
-                !PlacementFits(parking, placements.Values, 1, gridWidth, gridHeight))
+                !PlacementFits(parking, placements.Values, PlacementPadding, gridWidth, gridHeight))
             {
                 continue;
             }
@@ -108,20 +129,22 @@ public static class WorldLayoutGenerator
     {
         WorldLocationPlacement parking = placements["Parking"];
         bool lowerHalf = parking.Anchor.y < gridHeight * 0.5f;
-        int xDirection = parking.Anchor.x < gridWidth * 0.5f ? 1 : -1;
-        int yDirection = lowerHalf ? 1 : -1;
-        WorldPlacementFacing facing = lowerHalf ? WorldPlacementFacing.North : WorldPlacementFacing.South;
+        // GasStation can go in any direction from parking, not just "inward"
+        WorldPlacementFacing facing = (WorldPlacementFacing)Random.Range(0, 4);
 
-        for (int attempt = 0; attempt < 48; attempt++)
+        for (int attempt = 0; attempt < 64; attempt++)
         {
-            Vector2Int anchor = parking.Anchor + new Vector2Int(xDirection * Random.Range(1, 5), yDirection * Random.Range(2, 5));
+            int dx = Random.Range(-7, 8);
+            int dy = Random.Range(-7, 8);
+            Vector2Int anchor = parking.Anchor + new Vector2Int(dx, dy);
             if (!TryCreatePlacementFromAnchor(anchor, 2, 2, facing, gridWidth, gridHeight, out WorldLocationPlacement gasStation) ||
-                !PlacementFits(gasStation, placements.Values, 1, gridWidth, gridHeight))
+                !PlacementFits(gasStation, placements.Values, PlacementPadding, gridWidth, gridHeight))
             {
                 continue;
             }
 
-            if (ManhattanDistance(parking.Anchor, gasStation.Anchor) > 7)
+            int distanceToParking = ManhattanDistance(parking.Anchor, gasStation.Anchor);
+            if (distanceToParking < 4 || distanceToParking > 12)
             {
                 continue;
             }
@@ -136,22 +159,21 @@ public static class WorldLayoutGenerator
     private static bool TryPlaceMotel(Dictionary<string, WorldLocationPlacement> placements, int gridWidth, int gridHeight)
     {
         WorldLocationPlacement parking = placements["Parking"];
-        bool lowerHalf = parking.Anchor.y < gridHeight * 0.5f;
-        int xDirection = parking.Anchor.x < gridWidth * 0.5f ? 1 : -1;
-        int yDirection = lowerHalf ? 1 : -1;
-        WorldPlacementFacing facing = lowerHalf ? WorldPlacementFacing.North : WorldPlacementFacing.South;
+        WorldPlacementFacing facing = (WorldPlacementFacing)Random.Range(0, 4);
 
-        for (int attempt = 0; attempt < 64; attempt++)
+        for (int attempt = 0; attempt < 80; attempt++)
         {
-            Vector2Int anchor = parking.Anchor + new Vector2Int(xDirection * Random.Range(2, 6), yDirection * Random.Range(3, 7));
+            int dx = Random.Range(-9, 10);
+            int dy = Random.Range(-9, 10);
+            Vector2Int anchor = parking.Anchor + new Vector2Int(dx, dy);
             if (!TryCreatePlacementFromAnchor(anchor, 2, 2, facing, gridWidth, gridHeight, out WorldLocationPlacement motel) ||
-                !PlacementFits(motel, placements.Values, 1, gridWidth, gridHeight))
+                !PlacementFits(motel, placements.Values, PlacementPadding, gridWidth, gridHeight))
             {
                 continue;
             }
 
             int distanceToParking = ManhattanDistance(parking.Anchor, motel.Anchor);
-            if (distanceToParking < 4 || distanceToParking > 9)
+            if (distanceToParking < 6 || distanceToParking > 14)
             {
                 continue;
             }
@@ -182,12 +204,12 @@ public static class WorldLayoutGenerator
             WorldPlacementFacing facing = (WorldPlacementFacing)Random.Range(0, 4);
             Vector2Int anchor = new Vector2Int(Random.Range(minAnchorX, maxAnchorX + 1), Random.Range(minAnchorY, maxAnchorY + 1));
             if (!TryCreatePlacementFromAnchor(anchor, width, height, facing, gridWidth, gridHeight, out WorldLocationPlacement placement) ||
-                !PlacementFits(placement, placements.Values, 1, gridWidth, gridHeight))
+                !PlacementFits(placement, placements.Values, PlacementPadding, gridWidth, gridHeight))
             {
                 continue;
             }
 
-            if (requireFarFromParking && ManhattanDistance(anchor, parkingAnchor) < 6)
+            if (requireFarFromParking && ManhattanDistance(anchor, parkingAnchor) < FarFromParkingDistance)
             {
                 continue;
             }
@@ -227,7 +249,19 @@ public static class WorldLayoutGenerator
 
     private static bool PlacementFits(WorldLocationPlacement placement, IEnumerable<WorldLocationPlacement> existingPlacements, int padding, int gridWidth, int gridHeight)
     {
-        if (!IsPlacementInsideGrid(placement, gridWidth, gridHeight))
+        return PlacementFits(placement, existingPlacements, padding, gridWidth, gridHeight, false);
+    }
+
+    private static bool PlacementFits(
+        WorldLocationPlacement placement,
+        IEnumerable<WorldLocationPlacement> existingPlacements,
+        int padding,
+        int gridWidth,
+        int gridHeight,
+        bool allowBottomRoadAdjacency)
+    {
+        if (!IsPlacementInsideGrid(placement, gridWidth, gridHeight) ||
+            (!allowBottomRoadAdjacency && IsTooCloseToDecorativeBottomRoad(placement)))
         {
             return false;
         }
@@ -246,11 +280,39 @@ public static class WorldLayoutGenerator
         return true;
     }
 
+    private static bool TryPlaceBusStop(Dictionary<string, WorldLocationPlacement> placements, int gridWidth, int gridHeight)
+    {
+        int centerX = gridWidth / 2;
+        int minAnchorX = Mathf.Clamp(centerX - 4, 2, gridWidth - 3);
+        int maxAnchorX = Mathf.Clamp(centerX + 4, 2, gridWidth - 3);
+
+        for (int attempt = 0; attempt < 48; attempt++)
+        {
+            Vector2Int anchor = new(Random.Range(minAnchorX, maxAnchorX + 1), DecorativeBottomRoadOccupiedRows - 1);
+            if (!TryCreatePlacementFromAnchor(anchor, 2, 1, WorldPlacementFacing.South, gridWidth, gridHeight, out WorldLocationPlacement busStop) ||
+                !PlacementFits(busStop, placements.Values, PlacementPadding, gridWidth, gridHeight, true))
+            {
+                continue;
+            }
+
+            placements["BusStop"] = busStop;
+            return true;
+        }
+
+        return false;
+    }
+
     private static bool IsPlacementInsideGrid(WorldLocationPlacement placement, int gridWidth, int gridHeight)
     {
         return IsInsideGrid(placement.Min, gridWidth, gridHeight) &&
                IsInsideGrid(placement.Max, gridWidth, gridHeight) &&
                IsInsideGrid(placement.Anchor, gridWidth, gridHeight);
+    }
+
+    private static bool IsTooCloseToDecorativeBottomRoad(WorldLocationPlacement placement)
+    {
+        int firstAllowedY = DecorativeBottomRoadOccupiedRows + DecorativeBottomRoadClearanceRows;
+        return placement.Min.y < firstAllowedY || placement.Anchor.y < firstAllowedY;
     }
 
     private static bool IsInsideGrid(Vector2Int cell, int gridWidth, int gridHeight)
@@ -274,7 +336,8 @@ public static class WorldLayoutGenerator
             layout.GasStation.Anchor,
             layout.Warehouse.Anchor,
             layout.Forest.Anchor,
-            layout.Sawmill.Anchor
+            layout.Sawmill.Anchor,
+            layout.BusStop.Anchor
         };
 
         int minPairDistance = int.MaxValue;
@@ -304,16 +367,16 @@ public static class WorldLayoutGenerator
         HashSet<Vector2Int> macroCells = new();
         foreach (Vector2Int anchor in anchors)
         {
-            macroCells.Add(new Vector2Int(Mathf.Clamp(anchor.x / 7, 0, 2), Mathf.Clamp(anchor.y / 7, 0, 2)));
+            macroCells.Add(new Vector2Int(Mathf.Clamp(anchor.x / 8, 0, 2), Mathf.Clamp(anchor.y / 8, 0, 2)));
         }
 
         int score = minPairDistance + spanX + spanY + macroCells.Count * 4;
-        if (ManhattanDistance(layout.Parking.Anchor, layout.GasStation.Anchor) > 8)
+        if (ManhattanDistance(layout.Parking.Anchor, layout.GasStation.Anchor) > 10)
         {
             score -= 6;
         }
 
-        if (spanX < 8 || spanY < 8)
+        if (spanX < 10 || spanY < 10)
         {
             score -= 10;
         }
@@ -340,7 +403,8 @@ public static class WorldLayoutGenerator
             Forest = placements["Forest"],
             Warehouse = placements["Warehouse"],
             Sawmill = placements["Sawmill"],
-            Motel = placements["Motel"]
+            Motel = placements["Motel"],
+            BusStop = placements["BusStop"]
         };
     }
 
@@ -348,12 +412,13 @@ public static class WorldLayoutGenerator
     {
         return new GeneratedWorldLayout
         {
-            Parking = new WorldLocationPlacement { Min = new Vector2Int(2, 2), Max = new Vector2Int(4, 3), Anchor = new Vector2Int(3, 4) },
-            GasStation = new WorldLocationPlacement { Min = new Vector2Int(6, 4), Max = new Vector2Int(7, 5), Anchor = new Vector2Int(6, 6) },
-            Forest = new WorldLocationPlacement { Min = new Vector2Int(3, 14), Max = new Vector2Int(5, 16), Anchor = new Vector2Int(4, 13) },
-            Warehouse = new WorldLocationPlacement { Min = new Vector2Int(9, 9), Max = new Vector2Int(10, 10), Anchor = new Vector2Int(9, 8) },
-            Sawmill = new WorldLocationPlacement { Min = new Vector2Int(14, 2), Max = new Vector2Int(15, 3), Anchor = new Vector2Int(13, 3) },
-            Motel = new WorldLocationPlacement { Min = new Vector2Int(13, 8), Max = new Vector2Int(14, 9), Anchor = new Vector2Int(13, 7) }
+            Parking = new WorldLocationPlacement { Min = new Vector2Int(2, 4), Max = new Vector2Int(4, 5), Anchor = new Vector2Int(3, 6) },
+            GasStation = new WorldLocationPlacement { Min = new Vector2Int(8, 8), Max = new Vector2Int(9, 9), Anchor = new Vector2Int(8, 10) },
+            Forest = new WorldLocationPlacement { Min = new Vector2Int(20, 19), Max = new Vector2Int(22, 21), Anchor = new Vector2Int(21, 18) },
+            Warehouse = new WorldLocationPlacement { Min = new Vector2Int(21, 10), Max = new Vector2Int(22, 11), Anchor = new Vector2Int(21, 9) },
+            Sawmill = new WorldLocationPlacement { Min = new Vector2Int(15, 22), Max = new Vector2Int(16, 23), Anchor = new Vector2Int(15, 21) },
+            Motel = new WorldLocationPlacement { Min = new Vector2Int(11, 11), Max = new Vector2Int(12, 12), Anchor = new Vector2Int(11, 10) },
+            BusStop = new WorldLocationPlacement { Min = new Vector2Int(12, 2), Max = new Vector2Int(13, 2), Anchor = new Vector2Int(13, 1) }
         };
     }
 }

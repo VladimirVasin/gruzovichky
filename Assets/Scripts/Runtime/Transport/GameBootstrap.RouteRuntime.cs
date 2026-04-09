@@ -206,6 +206,10 @@ public partial class GameBootstrap
                 driver.DriverObject.transform.position = driver.MotelIdlePosition;
                 driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
                 driver.WalkAnimationTime = 0f;
+                driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+                driver.IdleWanderPointIndex = -1;
+                driver.IdleConversationTimer = 0f;
+                driver.IdleConversationPartnerId = -1;
                 ApplyDriverPose(driver, 0f, 0f);
                 driver.RestPhase = DriverRestPhase.None;
                 SessionDebugLogger.Log("REST", $"{driver.DriverName} rested. Energy restored to {DriverEnergyMax}.");

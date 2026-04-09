@@ -19,10 +19,11 @@ public partial class GameBootstrap
         CreateLocation(LocationType.Warehouse, "Warehouse", layout.Warehouse.Min, layout.Warehouse.Max, layout.Warehouse.Anchor, new Color(0.7f, 0.52f, 0.3f));
         CreateLocation(LocationType.Sawmill, "Sawmill", layout.Sawmill.Min, layout.Sawmill.Max, layout.Sawmill.Anchor, new Color(0.3f, 0.52f, 0.8f));
         CreateLocation(LocationType.Motel, "Motel", layout.Motel.Min, layout.Motel.Max, layout.Motel.Anchor, new Color(0.91f, 0.87f, 0.74f));
+        CreateLocation(LocationType.BusStop, "Bus Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f));
 
         SessionDebugLogger.Log(
             "WORLD",
-            $"Generated layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, Sawmill {FormatPlacement(layout.Sawmill)}.");
+            $"Generated layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, Sawmill {FormatPlacement(layout.Sawmill)}, Motel {FormatPlacement(layout.Motel)}, BusStop {FormatPlacement(layout.BusStop)}.");
     }
 
     private bool HasRequiredLayoutRoads(GeneratedWorldLayout layout)
@@ -94,7 +95,13 @@ public partial class GameBootstrap
 
         miscOccupiedCells.Clear();
         miscTreeSways.Clear();
-        List<Vector2Int> plannedCells = MiscTreePlanner.Plan(GridWidth, GridHeight, roadCells, IsLocationCell);
+        List<Vector2Int> plannedCells = MiscTreePlanner.Plan(
+            GridWidth,
+            GridHeight,
+            roadCells,
+            edgeHighwayCells,
+            IsLocationCell,
+            cell => IsGrassGroundCell(cell.x, cell.y));
         SessionDebugLogger.Log("WORLD", $"Planning {plannedCells.Count} misc cells");
         for (int i = 0; i < plannedCells.Count; i++)
         {
@@ -120,7 +127,7 @@ public partial class GameBootstrap
         treeRoot.transform.SetParent(miscRoot, false);
         treeRoot.transform.position = GetCellCenter(cell);
         treeRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-        treeRoot.transform.localScale = Vector3.one * Random.Range(0.86f, 1.14f);
+        treeRoot.transform.localScale = Vector3.one * Random.Range(1.18f, 1.58f);
         CreateTreeVariant(treeRoot.transform, variantIndex);
         RegisterMiscTreeSway(treeRoot.transform, cell, variantIndex);
         miscOccupiedCells.Add(cell);

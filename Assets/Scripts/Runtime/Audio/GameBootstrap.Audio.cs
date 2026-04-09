@@ -542,6 +542,33 @@ public partial class GameBootstrap
             new[] { 0f, 0.08f, 0.16f, 0.26f });
     }
 
+    private AudioClip CreateBusPassbyClip(string clipName, float duration, float amplitude)
+    {
+        int sampleCount = Mathf.CeilToInt(duration * AudioSampleRate);
+        float[] samples = new float[sampleCount];
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)AudioSampleRate;
+            float norm = t / Mathf.Max(0.001f, duration);
+            float attack = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.18f, norm));
+            float release = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1f, norm));
+            float envelope = attack * release;
+
+            float engineBed =
+                Mathf.Sin(2f * Mathf.PI * 82f * t + 0.3f) * 0.26f +
+                Mathf.Sin(2f * Mathf.PI * 124f * t + Mathf.Sin(2f * Mathf.PI * 1.8f * t) * 0.22f) * 0.18f;
+            float tireHiss =
+                Mathf.Sin(2f * Mathf.PI * 420f * t + 0.9f) * 0.04f +
+                Mathf.Sin(2f * Mathf.PI * 560f * t + 1.7f) * 0.03f;
+            float whoosh = Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(160f, 105f, norm) * t + 0.15f) * 0.08f;
+
+            samples[i] = Mathf.Clamp((engineBed + tireHiss + whoosh) * envelope * amplitude * 1.55f, -1f, 1f);
+        }
+
+        return CreateClipFromSamples(clipName, samples);
+    }
+
     private AudioClip CreateClipFromSamples(string clipName, float[] samples)
     {
         AudioClip clip = AudioClip.Create(clipName, samples.Length, 1, AudioSampleRate, false);

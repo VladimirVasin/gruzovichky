@@ -6,8 +6,8 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap : MonoBehaviour
 {
-    private const int GridWidth = 20;
-    private const int GridHeight = 20;
+    private const int GridWidth = 28;
+    private const int GridHeight = 28;
     private const float CellSize = 1f;
     private const float RoadHeight = 0.12f;
     private const float TruckCruiseSpeed = 1.9f;
@@ -20,6 +20,13 @@ public partial class GameBootstrap : MonoBehaviour
     private const float CameraMaxHeight = 70f;
     private const float CameraMinDistance = 6f;
     private const float CameraMaxDistance = 70f;
+    private const float EdgeHighwayBusSpeed = 2.8f;
+    private const float EdgeHighwayBusSpawnIntervalMin = 14f;
+    private const float EdgeHighwayBusSpawnIntervalMax = 30f;
+    private const float EdgeHighwayBusSpawnSpacing = 5.5f;
+    private const float EdgeHighwayBusLaneOffset = 0.32f;
+    private const float EdgeHighwayBusLift = 0.24f;
+    private const float EdgeHighwayBusPassbyDistance = 5.5f;
     private const float TruckFollowDistance = 4.4f;
     private const float TruckFollowHeight = 2.05f;
     private const float TruckFollowLookHeight = 1.05f;
@@ -34,6 +41,17 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DriverEnergyDrainPerSecond = DriverEnergyMax / (DayNightCycleDuration / 24f * 16f);
     private const float DriverSleepDuration = DayNightCycleDuration / 24f * 6f;
     private const float DriverWalkSpeed = 2.2f;
+    private const float DriverIdleWanderSpeed = 1.35f;
+    private const float DriverIdleWanderPauseMin = 2.2f;
+    private const float DriverIdleWanderPauseMax = 4.6f;
+    private const float DriverIdlePersonalSpace = 0.62f;
+    private const float DriverIdleConversationDistance = 1.5f;
+    private const float DriverIdleConversationDurationMin = 3.4f;
+    private const float DriverIdleConversationDurationMax = 6.2f;
+    private const float DriverIdleConversationCooldownMin = 7.5f;
+    private const float DriverIdleConversationCooldownMax = 12.5f;
+    private const float DriverIdleConversationStartChance = 0.3f;
+    private const int StartingTreasury = 350;
     private const float MoneyPopupDuration = 1.4f;
     private const int AudioSampleRate = 22050;
     private const int MaxTruckCount = 5;
@@ -45,9 +63,10 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DioramaCameraPitch = 42f;
     private static readonly Vector3 DioramaCameraOffset = new(-11.5f, 15f, -11.5f);
     private static readonly Vector3 CloudTravelDir = new Vector3(1f, 0f, 0.4f).normalized;
-    private const float CloudTravelLength = 64f;  // full path spawn→exit
+    private const float CloudTravelLength = 80f;  // full path spawn→exit (wider spawn X=-30 needs longer path)
 
     private readonly HashSet<Vector2Int> roadCells = new();
+    private readonly HashSet<Vector2Int> edgeHighwayCells = new();
     private readonly HashSet<Vector2Int> miscOccupiedCells = new();
     private readonly Dictionary<Vector2Int, GameObject> roadVisuals = new();
     private readonly Dictionary<LocationType, LocationData> locations = new();
@@ -69,6 +88,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<MoneyLedgerEntry> moneyLedgerEntries = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
     private readonly Dictionary<LocationType, GameObject> locationSelectionHighlights = new();
+    private readonly List<EdgeHighwayBusData> edgeHighwayBuses = new();
     private float[,] terrainHeights = new float[GridWidth, GridHeight];
 
     private Camera mainCamera;
@@ -106,6 +126,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<TextMesh> selectedLocationLabelOutlines = new();
     private GameObject cargoTransferCrate;
     private GameObject buildHoverHighlight;
+    private Transform edgeHighwayBusRoot;
     private Vector2Int truckCell;
     private Vector3 truckTargetWorld;
     private Vector3 truckSegmentStartWorld;
@@ -166,6 +187,8 @@ public partial class GameBootstrap : MonoBehaviour
     private TripType currentAssignedTrip = TripType.None;
     private BuildTool activeBuildTool = BuildTool.None;
     private Vector2Int? hoveredBuildCell;
+    private float edgeHighwayBusSpawnTimerCitySide;
+    private float edgeHighwayBusSpawnTimerOuterSide;
 
     private sealed class RoadLanternData
     {
@@ -187,6 +210,23 @@ public partial class GameBootstrap : MonoBehaviour
         public string Reason;
         public int? TreasuryAfter;
         public int? RecipientBalanceAfter;
+    }
+
+    private sealed class EdgeHighwayBusData
+    {
+        public Transform RootTransform;
+        public float WorldX;
+        public float TravelDirection;
+        public bool IsCitySideLane;
+        public float Speed;
+        public float BobPhase;
+        public Color BodyColor;
+        public bool HasPlayedPassbyAudio;
+        public bool HasEnteredRoadStrip;
+        public Renderer HeadlightLeftRenderer;
+        public Renderer HeadlightRightRenderer;
+        public Light HeadlightLeft;
+        public Light HeadlightRight;
     }
     private TripPhase currentTripPhase = TripPhase.None;
     private RefuelPhase currentRefuelPhase = RefuelPhase.None;
@@ -225,6 +265,7 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip gasStationRefuelCueClip;
     private AudioClip parkingReturnCueClip;
     private AudioClip moneyRewardClip;
+    private AudioClip edgeHighwayBusPassbyClip;
     private float truckEngineAudioPhaseOffset;
     private float truckEngineAudioWobbleSpeed = 1f;
     private float truckEngineAudioPitchBias = 1f;
@@ -237,7 +278,8 @@ public partial class GameBootstrap : MonoBehaviour
         Forest,
         Warehouse,
         Sawmill,
-        Motel
+        Motel,
+        BusStop
     }
 
     private enum CargoType
@@ -301,6 +343,7 @@ public partial class GameBootstrap : MonoBehaviour
     private enum DriverRescuePhase
     {
         None,
+        IdleWander,
         ToGasStation,
         ToTruck,
         ToMotelEntrance,
@@ -502,6 +545,11 @@ public partial class GameBootstrap : MonoBehaviour
         public readonly List<Vector3> WalkPath = new();
         public int WalkWaypointIndex;
         public float WalkAnimationTime;
+        public int IdleWanderPointIndex = -1;
+        public float IdleWanderPauseTimer;
+        public float IdleConversationTimer;
+        public int IdleConversationPartnerId = -1;
+        public float IdleConversationCooldownTimer;
     }
 
     private int GetCurrentHour()
@@ -546,6 +594,23 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver == null) return false;
         if (driver.ShiftStartHour < 0) return false; // Idle — no shift assigned
         return driver.IsOnActiveShift;
+    }
+
+    private static bool IsDriverIdleWanderPhase(DriverAgent driver)
+    {
+        return driver != null && driver.WalkPhase == DriverRescuePhase.IdleWander;
+    }
+
+    private static bool IsDriverIdleConversing(DriverAgent driver)
+    {
+        return driver != null && driver.IdleConversationTimer > 0f && driver.WalkPhase == DriverRescuePhase.None;
+    }
+
+    private static bool IsDriverBusyWalkPhase(DriverAgent driver)
+    {
+        return driver != null &&
+               driver.WalkPhase != DriverRescuePhase.None &&
+               driver.WalkPhase != DriverRescuePhase.IdleWander;
     }
 
     private bool ShouldDriverHeadToShift(DriverAgent driver)
@@ -618,11 +683,15 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         driver.WaitingForShiftAtParking = false;
+        driver.IdleWanderPauseTimer = 0f;
+        driver.IdleWanderPointIndex = -1;
+        driver.IdleConversationTimer = 0f;
+        driver.IdleConversationPartnerId = -1;
         driver.WalkAnimationTime = 0f;
         ApplyDriverPose(driver, 0f, 0f);
+        driver.WalkPhase = DriverRescuePhase.ToParkingForShift;
         driver.WalkTargetWorld = GetDriverParkingWaitPosition(assignedTruck);
         BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
-        driver.WalkPhase = DriverRescuePhase.ToParkingForShift;
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} started commute to Parking for {assignedTruck.DisplayName}.");
     }
 
@@ -652,7 +721,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void UpdateDriverShiftPreparation(DriverAgent driver)
     {
-        if (driver == null || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || driver.WalkPhase != DriverRescuePhase.None || driver.AssignedTruckNumber <= 0)
+        if (driver == null || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || driver.AssignedTruckNumber <= 0)
         {
             return;
         }
@@ -676,6 +745,269 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         StartDriverShiftCommute(driver);
+    }
+
+    private void UpdateDriverIdleWander(DriverAgent driver)
+    {
+        if (driver == null || driver.DriverObject == null)
+        {
+            return;
+        }
+
+        if (driver.RestPhase != DriverRestPhase.None ||
+            driver.IsOnActiveShift ||
+            driver.WaitingForShiftAtParking ||
+            GetCurrentTruckForDriver(driver) != null)
+        {
+            if (IsDriverIdleWanderPhase(driver))
+            {
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+            }
+
+            driver.IdleConversationTimer = 0f;
+            driver.IdleConversationPartnerId = -1;
+
+            return;
+        }
+
+        if (driver.IdleConversationCooldownTimer > 0f)
+        {
+            driver.IdleConversationCooldownTimer = Mathf.Max(0f, driver.IdleConversationCooldownTimer - Time.deltaTime * gameSpeedMultiplier);
+        }
+
+        if (IsDriverBusyWalkPhase(driver))
+        {
+            return;
+        }
+
+        if (IsDriverIdleConversing(driver))
+        {
+            DriverAgent partner = GetDriverAgentById(driver.IdleConversationPartnerId);
+            if (!CanDriverContinueIdleConversation(driver, partner))
+            {
+                StopDriverIdleConversation(driver, true);
+                return;
+            }
+
+            driver.IdleConversationTimer -= Time.deltaTime * gameSpeedMultiplier;
+            if (driver.IdleConversationTimer <= 0f)
+            {
+                StopDriverIdleConversation(driver, true);
+            }
+            return;
+        }
+
+        if (IsDriverIdleWanderPhase(driver))
+        {
+            return;
+        }
+
+        if (driver.ShiftStartHour >= 0 &&
+            (ShouldDriverHeadToShift(driver) || IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour)))
+        {
+            return;
+        }
+
+        if (driver.IdleWanderPauseTimer > 0f)
+        {
+            driver.IdleWanderPauseTimer -= Time.deltaTime * gameSpeedMultiplier;
+            return;
+        }
+
+        if (TryStartIdleConversation(driver))
+        {
+            return;
+        }
+
+        Vector3 startPosition = driver.DriverObject.transform.position;
+        Vector3 targetPosition = FindDriverIdleWanderTarget(driver, startPosition);
+        if ((targetPosition - startPosition).sqrMagnitude < 0.04f)
+        {
+            driver.IdleWanderPointIndex++;
+            driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+            return;
+        }
+
+        driver.WalkPhase = DriverRescuePhase.IdleWander;
+        driver.IdleWanderPointIndex++;
+        driver.WalkAnimationTime = 0f;
+        BuildDriverWalkPath(driver, startPosition, targetPosition);
+        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started motel idle walk.");
+    }
+
+    private Vector3 FindDriverIdleWanderTarget(DriverAgent driver, Vector3 startPosition)
+    {
+        int nextPointIndex = driver.IdleWanderPointIndex + 1;
+        float personalSpaceSqr = DriverIdlePersonalSpace * DriverIdlePersonalSpace;
+        for (int attempt = 0; attempt < 16; attempt++)
+        {
+            Vector3 candidate = GetDriverIdleMotelWanderPosition(driver.DriverId - 1, nextPointIndex + attempt);
+            Vector3 flatDelta = candidate - startPosition;
+            flatDelta.y = 0f;
+            if (flatDelta.sqrMagnitude < 0.04f)
+            {
+                continue;
+            }
+
+            bool blockedByOtherDriver = false;
+            for (int i = 0; i < driverAgents.Count; i++)
+            {
+                DriverAgent other = driverAgents[i];
+                if (other == null || other == driver || other.DriverObject == null || !other.DriverObject.activeSelf)
+                {
+                    continue;
+                }
+
+                Vector3 otherDelta = other.DriverObject.transform.position - candidate;
+                otherDelta.y = 0f;
+                if (otherDelta.sqrMagnitude < personalSpaceSqr)
+                {
+                    blockedByOtherDriver = true;
+                    break;
+                }
+            }
+
+            if (!blockedByOtherDriver)
+            {
+                return candidate;
+            }
+        }
+
+        return startPosition;
+    }
+
+    private DriverAgent GetDriverAgentById(int driverId)
+    {
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            if (driverAgents[i].DriverId == driverId)
+            {
+                return driverAgents[i];
+            }
+        }
+
+        return null;
+    }
+
+    private bool CanDriverStartIdleConversation(DriverAgent driver)
+    {
+        return driver != null &&
+               driver.DriverObject != null &&
+               driver.DriverObject.activeSelf &&
+               driver.ShiftStartHour < 0 &&
+               !driver.IsOnActiveShift &&
+               !driver.WaitingForShiftAtParking &&
+               driver.RestPhase == DriverRestPhase.None &&
+               driver.WalkPhase == DriverRescuePhase.None &&
+               driver.IdleConversationTimer <= 0f &&
+               driver.IdleConversationCooldownTimer <= 0f &&
+               GetCurrentTruckForDriver(driver) == null;
+    }
+
+    private bool TryStartIdleConversation(DriverAgent driver)
+    {
+        if (!CanDriverStartIdleConversation(driver))
+        {
+            return false;
+        }
+
+        DriverAgent bestPartner = null;
+        float bestDistanceSqr = DriverIdleConversationDistance * DriverIdleConversationDistance;
+        Vector3 driverPosition = driver.DriverObject.transform.position;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent candidate = driverAgents[i];
+            if (candidate == driver || !CanDriverStartIdleConversation(candidate))
+            {
+                continue;
+            }
+
+            Vector3 delta = candidate.DriverObject.transform.position - driverPosition;
+            delta.y = 0f;
+            float sqrDistance = delta.sqrMagnitude;
+            if (sqrDistance < 0.12f || sqrDistance > bestDistanceSqr)
+            {
+                continue;
+            }
+
+            bestDistanceSqr = sqrDistance;
+            bestPartner = candidate;
+        }
+
+        if (bestPartner == null)
+        {
+            return false;
+        }
+
+        if (Random.value > DriverIdleConversationStartChance)
+        {
+            driver.IdleWanderPauseTimer = Random.Range(0.8f, 1.6f);
+            return false;
+        }
+
+        float duration = Random.Range(DriverIdleConversationDurationMin, DriverIdleConversationDurationMax);
+        driver.IdleConversationTimer = duration;
+        driver.IdleConversationPartnerId = bestPartner.DriverId;
+        bestPartner.IdleConversationTimer = duration;
+        bestPartner.IdleConversationPartnerId = driver.DriverId;
+        driver.IdleWanderPauseTimer = 0f;
+        bestPartner.IdleWanderPauseTimer = 0f;
+        driver.WalkAnimationTime = 0f;
+        bestPartner.WalkAnimationTime = 0f;
+        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} and {bestPartner.DriverName} started an idle conversation.");
+        return true;
+    }
+
+    private bool CanDriverContinueIdleConversation(DriverAgent driver, DriverAgent partner)
+    {
+        if (!CanDriverStartIdleConversation(driver) || partner == null || !CanDriverStartIdleConversation(partner))
+        {
+            return false;
+        }
+
+        if (partner.IdleConversationPartnerId != driver.DriverId)
+        {
+            return false;
+        }
+
+        Vector3 delta = partner.DriverObject.transform.position - driver.DriverObject.transform.position;
+        delta.y = 0f;
+        float sqrDistance = delta.sqrMagnitude;
+        return sqrDistance >= 0.12f &&
+               sqrDistance <= DriverIdleConversationDistance * DriverIdleConversationDistance * 1.2f;
+    }
+
+    private void StopDriverIdleConversation(DriverAgent driver, bool addPause)
+    {
+        if (driver == null)
+        {
+            return;
+        }
+
+        int partnerId = driver.IdleConversationPartnerId;
+        driver.IdleConversationTimer = 0f;
+        driver.IdleConversationPartnerId = -1;
+        driver.IdleConversationCooldownTimer = Random.Range(DriverIdleConversationCooldownMin, DriverIdleConversationCooldownMax);
+        driver.IdleWanderPointIndex++;
+        if (addPause)
+        {
+            driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+        }
+
+        DriverAgent partner = GetDriverAgentById(partnerId);
+        if (partner != null && partner.IdleConversationPartnerId == driver.DriverId)
+        {
+            partner.IdleConversationTimer = 0f;
+            partner.IdleConversationPartnerId = -1;
+            partner.IdleConversationCooldownTimer = Random.Range(DriverIdleConversationCooldownMin, DriverIdleConversationCooldownMax);
+            partner.IdleWanderPointIndex += 2;
+            if (addPause)
+            {
+                partner.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+            }
+        }
     }
 
     private void UpdateDriverShiftActivation(DriverAgent driver)
@@ -880,6 +1212,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateSelectedLocationLabel();
         UpdateForestTreeWobbles();
         UpdateMiscTreeSways();
+        UpdateEdgeHighwayBuses();
         UpdateDistantClouds();
         UpdateForestWorkers();
         for (int i = 0; i < truckAgents.Count; i++)
@@ -926,8 +1259,9 @@ public partial class GameBootstrap : MonoBehaviour
 
             UpdateDriverShiftPreparation(driver);
             UpdateDriverShiftActivation(driver);
-            UpdateDriverWalk(driver);
             UpdateDriverRest(driver);
+            UpdateDriverIdleWander(driver);
+            UpdateDriverWalk(driver);
             UpdateDriverVisualAnimation(driver);
             UpdateDriverFlashlight(driver, currentStylizedDaylight);
         }
@@ -986,6 +1320,8 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyTerrainHeightsToWorld();
         SetupGround();
         SetupGrid();
+        SetupEdgeHighway();
+        SetupEdgeHighwayBuses();
         SetupDistantClouds();
         RebuildRoadLanterns();
         PopulateMiscTrees();
@@ -993,6 +1329,7 @@ public partial class GameBootstrap : MonoBehaviour
         SetupForestWorkers();
         SetupSelectionVisuals();
         SetupTruck();
+        money = StartingTreasury;
         SetupCargoTransferVisual();
         SetupAudio();
         SetupFleetScreenUi();
@@ -1320,8 +1657,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        float grassPatchNoise = Mathf.PerlinNoise((x + 1) * 0.18f + 4.2f, (y + 1) * 0.2f + 7.4f);
-        bool useGrassPatch = grassSurfaceMaterial != null && grassPatchNoise > 0.5f;
+        bool useGrassPatch = IsGrassGroundCell(x, y);
         Material material = new(useGrassPatch ? grassSurfaceMaterial : groundSurfaceMaterial);
         float tintNoise = Mathf.PerlinNoise((x + 1) * 0.37f, (y + 1) * 0.41f);
         Color tint = useGrassPatch
@@ -1336,6 +1672,17 @@ public partial class GameBootstrap : MonoBehaviour
         material.mainTextureScale = useGrassPatch ? new Vector2(0.54f, 0.54f) : new Vector2(0.62f, 0.62f);
         material.mainTextureOffset = new Vector2((x % 5) * 0.13f, (y % 5) * 0.11f);
         renderer.material = material;
+    }
+
+    private bool IsGrassGroundCell(int x, int y)
+    {
+        if (grassSurfaceMaterial == null)
+        {
+            return false;
+        }
+
+        float grassPatchNoise = Mathf.PerlinNoise((x + 1) * 0.18f + 4.2f, (y + 1) * 0.2f + 7.4f);
+        return grassPatchNoise > 0.5f;
     }
 
     private void ApplyStylizedGrassMaterial(GameObject target, float seedX, float seedY)
@@ -1427,21 +1774,410 @@ public partial class GameBootstrap : MonoBehaviour
         }
     }
 
+    private void SetupEdgeHighway()
+    {
+        if (worldRoot == null)
+        {
+            return;
+        }
+
+        edgeHighwayCells.Clear();
+        Transform highwayRoot = new GameObject("EdgeHighway").transform;
+        highwayRoot.SetParent(worldRoot, false);
+
+        int bottomLaneY = 0;
+        int upperLaneY = 1;
+        for (int x = 0; x < GridWidth; x++)
+        {
+            CreateEdgeHighwayTile(highwayRoot, new Vector2Int(x, bottomLaneY), horizontal: true, vertical: false);
+            CreateEdgeHighwayTile(highwayRoot, new Vector2Int(x, upperLaneY), horizontal: true, vertical: false);
+        }
+
+        CreateEdgeHighwayCenterLine(highwayRoot, bottomLaneY, upperLaneY);
+    }
+
+    private void SetupEdgeHighwayBuses()
+    {
+        edgeHighwayBuses.Clear();
+        if (edgeHighwayBusRoot != null)
+        {
+            Destroy(edgeHighwayBusRoot.gameObject);
+        }
+
+        edgeHighwayBusRoot = new GameObject("EdgeHighwayBuses").transform;
+        edgeHighwayBusRoot.SetParent(worldRoot, false);
+        edgeHighwayBusSpawnTimerCitySide = Random.Range(6f, 16f);
+        edgeHighwayBusSpawnTimerOuterSide = Random.Range(12f, 24f);
+    }
+
+    private void CreateEdgeHighwayTile(Transform parent, Vector2Int cell, bool horizontal, bool vertical)
+    {
+        if (!IsInsideGrid(cell) || edgeHighwayCells.Contains(cell))
+        {
+            return;
+        }
+
+        edgeHighwayCells.Add(cell);
+
+        GameObject road = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        road.name = $"EdgeHighway_{cell.x}_{cell.y}";
+        road.transform.SetParent(parent, false);
+        road.transform.position = GetCellCenter(cell) + new Vector3(0f, RoadHeight - 0.015f, 0f);
+        road.transform.localScale = new Vector3(horizontal ? 1.12f : 0.94f, 0.16f, vertical ? 1.12f : 0.94f);
+        ApplyColor(road, new Color(0.16f, 0.17f, 0.19f));
+        ConfigureStaticVisual(road);
+
+        GameObject roadTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roadTop.name = "EdgeHighwayTop";
+        roadTop.transform.SetParent(road.transform, false);
+        roadTop.transform.localPosition = new Vector3(0f, 0.32f, 0f);
+        roadTop.transform.localScale = new Vector3(horizontal ? 0.94f : 0.74f, 0.16f, vertical ? 0.94f : 0.74f);
+        ApplyColor(roadTop, new Color(0.56f, 0.58f, 0.6f));
+        ConfigureStaticVisual(roadTop);
+
+        if (horizontal)
+        {
+            CreateEdgeHighwayLaneStripe(road.transform, new Vector3(0f, 0.46f, 0.23f), new Vector3(0.84f, 0.06f, 0.08f));
+            CreateEdgeHighwayLaneStripe(road.transform, new Vector3(0f, 0.46f, -0.23f), new Vector3(0.84f, 0.06f, 0.08f));
+        }
+
+        if (vertical)
+        {
+            CreateEdgeHighwayLaneStripe(road.transform, new Vector3(0.23f, 0.46f, 0f), new Vector3(0.08f, 0.06f, 0.84f));
+            CreateEdgeHighwayLaneStripe(road.transform, new Vector3(-0.23f, 0.46f, 0f), new Vector3(0.08f, 0.06f, 0.84f));
+        }
+    }
+
+    private void CreateEdgeHighwayLaneStripe(Transform parent, Vector3 localPosition, Vector3 localScale)
+    {
+        GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        stripe.name = "EdgeHighwayStripe";
+        stripe.transform.SetParent(parent, false);
+        stripe.transform.localPosition = localPosition;
+        stripe.transform.localScale = localScale;
+        ApplyColor(stripe, new Color(0.88f, 0.83f, 0.68f));
+        ConfigureStaticVisual(stripe);
+    }
+
+    private void CreateEdgeHighwayCenterLine(Transform parent, int lowerLaneY, int upperLaneY)
+    {
+        float centerZ = (lowerLaneY + upperLaneY + 1f) * 0.5f;
+        for (int x = 0; x < GridWidth; x += 2)
+        {
+            GameObject dash = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            dash.name = $"EdgeHighwayCenterDash_{x}";
+            dash.transform.SetParent(parent, false);
+            dash.transform.position = new Vector3(x + 0.5f, GetTerrainHeight(new Vector2Int(x, lowerLaneY)) + RoadHeight + 0.06f, centerZ);
+            dash.transform.localScale = new Vector3(0.68f, 0.04f, 0.08f);
+            ApplyColor(dash, new Color(0.92f, 0.92f, 0.9f));
+            ConfigureStaticVisual(dash);
+        }
+    }
+
+    private void UpdateEdgeHighwayBuses()
+    {
+        if (edgeHighwayBusRoot == null)
+        {
+            return;
+        }
+
+        float dt = Time.deltaTime * gameSpeedMultiplier;
+        edgeHighwayBusSpawnTimerCitySide -= dt;
+        edgeHighwayBusSpawnTimerOuterSide -= dt;
+
+        if (edgeHighwayBusSpawnTimerCitySide <= 0f)
+        {
+            TrySpawnEdgeHighwayBus(isCitySideLane: true);
+            edgeHighwayBusSpawnTimerCitySide = Random.Range(EdgeHighwayBusSpawnIntervalMin, EdgeHighwayBusSpawnIntervalMax);
+            edgeHighwayBusSpawnTimerOuterSide += Random.Range(1.5f, 4.5f);
+        }
+
+        if (edgeHighwayBusSpawnTimerOuterSide <= 0f)
+        {
+            TrySpawnEdgeHighwayBus(isCitySideLane: false);
+            edgeHighwayBusSpawnTimerOuterSide = Random.Range(EdgeHighwayBusSpawnIntervalMin, EdgeHighwayBusSpawnIntervalMax);
+            edgeHighwayBusSpawnTimerCitySide += Random.Range(1.5f, 4.5f);
+        }
+
+        for (int i = edgeHighwayBuses.Count - 1; i >= 0; i--)
+        {
+            EdgeHighwayBusData bus = edgeHighwayBuses[i];
+            if (bus.RootTransform == null)
+            {
+                edgeHighwayBuses.RemoveAt(i);
+                continue;
+            }
+
+            bus.WorldX += bus.Speed * dt * bus.TravelDirection;
+            if (!bus.HasEnteredRoadStrip && bus.WorldX > 0f && bus.WorldX < GridWidth)
+            {
+                bus.HasEnteredRoadStrip = true;
+            }
+
+            if (bus.HasEnteredRoadStrip &&
+                ((bus.TravelDirection > 0f && bus.WorldX >= GridWidth) ||
+                 (bus.TravelDirection < 0f && bus.WorldX <= 0f)))
+            {
+                Destroy(bus.RootTransform.gameObject);
+                edgeHighwayBuses.RemoveAt(i);
+                continue;
+            }
+
+            float laneZ = GetEdgeHighwayBusLaneWorldZ(bus.IsCitySideLane);
+            float bob = Mathf.Sin(Time.time * 3.2f + bus.BobPhase) * 0.015f;
+            float y = SampleTerrainHeight(bus.WorldX, laneZ) + RoadHeight + EdgeHighwayBusLift + bob;
+            bus.RootTransform.position = new Vector3(bus.WorldX, y, laneZ);
+            bus.RootTransform.rotation = bus.TravelDirection > 0f
+                ? Quaternion.identity
+                : Quaternion.Euler(0f, 180f, 0f);
+
+            float darkness = 1f - currentStylizedDaylight;
+            bool headlightsOn = darkness > 0.55f;
+            float headlightIntensity = headlightsOn ? Mathf.Lerp(0.4f, 1.75f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+            Color lampColor = Color.Lerp(
+                new Color(0.34f, 0.3f, 0.22f),
+                new Color(1f, 0.94f, 0.78f),
+                Mathf.Clamp01(headlightIntensity / 1.75f));
+
+            if (bus.HeadlightLeft != null)
+            {
+                bus.HeadlightLeft.enabled = headlightsOn;
+                bus.HeadlightLeft.intensity = headlightIntensity;
+            }
+
+            if (bus.HeadlightRight != null)
+            {
+                bus.HeadlightRight.enabled = headlightsOn;
+                bus.HeadlightRight.intensity = headlightIntensity;
+            }
+
+            if (bus.HeadlightLeftRenderer != null)
+            {
+                bus.HeadlightLeftRenderer.material.color = lampColor;
+            }
+
+            if (bus.HeadlightRightRenderer != null)
+            {
+                bus.HeadlightRightRenderer.material.color = lampColor;
+            }
+
+            if (!bus.HasPlayedPassbyAudio)
+            {
+                Vector3 audioDelta = bus.RootTransform.position - cameraFocusPoint;
+                audioDelta.y = 0f;
+                if (audioDelta.sqrMagnitude <= EdgeHighwayBusPassbyDistance * EdgeHighwayBusPassbyDistance)
+                {
+                    PlayAmbientFx(edgeHighwayBusPassbyClip, bus.RootTransform.position, 0.34f);
+                    bus.HasPlayedPassbyAudio = true;
+                }
+            }
+        }
+    }
+
+    private void TrySpawnEdgeHighwayBus(bool isCitySideLane)
+    {
+        float travelDirection = isCitySideLane ? 1f : -1f;
+        float spawnX = travelDirection > 0f ? -1.6f : GridWidth + 1.6f;
+        for (int i = 0; i < edgeHighwayBuses.Count; i++)
+        {
+            EdgeHighwayBusData existing = edgeHighwayBuses[i];
+            if (existing == null || existing.RootTransform == null || existing.IsCitySideLane != isCitySideLane)
+            {
+                continue;
+            }
+
+            if (Mathf.Abs(existing.WorldX - spawnX) < EdgeHighwayBusSpawnSpacing)
+            {
+                return;
+            }
+        }
+
+        CreateEdgeHighwayBus(travelDirection, isCitySideLane);
+    }
+
+    private void CreateEdgeHighwayBus(float travelDirection, bool isCitySideLane)
+    {
+        if (edgeHighwayBusRoot == null)
+        {
+            return;
+        }
+
+        float spawnX = travelDirection > 0f ? -1.6f : GridWidth + 1.6f;
+        float laneZ = GetEdgeHighwayBusLaneWorldZ(isCitySideLane);
+        GameObject busRoot = new($"EdgeHighwayBus_{edgeHighwayBuses.Count + 1}");
+        busRoot.transform.SetParent(edgeHighwayBusRoot, false);
+
+        Color bodyColor = Random.value < 0.5f
+            ? new Color(0.9f, 0.26f, 0.22f)
+            : new Color(0.24f, 0.5f, 0.86f);
+        Color roofColor = new Color(0.94f, 0.92f, 0.84f);
+        Color windowColor = new Color(0.72f, 0.88f, 0.95f);
+
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        body.transform.SetParent(busRoot.transform, false);
+        body.transform.localPosition = new Vector3(0f, 0.26f, 0f);
+        body.transform.localScale = new Vector3(1.24f, 0.42f, 0.44f);
+        ApplyColor(body, bodyColor);
+        ConfigureShadowVisual(body);
+
+        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roof.transform.SetParent(busRoot.transform, false);
+        roof.transform.localPosition = new Vector3(-0.02f, 0.56f, 0f);
+        roof.transform.localScale = new Vector3(1.02f, 0.12f, 0.4f);
+        ApplyColor(roof, roofColor);
+        ConfigureShadowVisual(roof);
+
+        GameObject windowBand = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        windowBand.transform.SetParent(busRoot.transform, false);
+        windowBand.transform.localPosition = new Vector3(-0.02f, 0.38f, 0f);
+        windowBand.transform.localScale = new Vector3(0.94f, 0.18f, 0.46f);
+        ApplyColor(windowBand, windowColor);
+        ConfigureShadowVisual(windowBand);
+
+        GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        windshield.transform.SetParent(busRoot.transform, false);
+        windshield.transform.localPosition = new Vector3(0.56f, 0.41f, 0f);
+        windshield.transform.localScale = new Vector3(0.12f, 0.2f, 0.38f);
+        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f));
+        ConfigureShadowVisual(windshield);
+
+        GameObject rearWindow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rearWindow.transform.SetParent(busRoot.transform, false);
+        rearWindow.transform.localPosition = new Vector3(-0.56f, 0.39f, 0f);
+        rearWindow.transform.localScale = new Vector3(0.08f, 0.17f, 0.34f);
+        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f));
+        ConfigureShadowVisual(rearWindow);
+
+        GameObject headlightLeftVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        headlightLeftVisual.transform.SetParent(busRoot.transform, false);
+        headlightLeftVisual.transform.localPosition = new Vector3(0.61f, 0.26f, -0.14f);
+        headlightLeftVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
+        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f));
+        ConfigureShadowVisual(headlightLeftVisual);
+
+        GameObject headlightRightVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        headlightRightVisual.transform.SetParent(busRoot.transform, false);
+        headlightRightVisual.transform.localPosition = new Vector3(0.61f, 0.26f, 0.14f);
+        headlightRightVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
+        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f));
+        ConfigureShadowVisual(headlightRightVisual);
+
+        GameObject sideStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        sideStripe.transform.SetParent(busRoot.transform, false);
+        sideStripe.transform.localPosition = new Vector3(0f, 0.23f, 0f);
+        sideStripe.transform.localScale = new Vector3(1.08f, 0.06f, 0.47f);
+        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f));
+        ConfigureShadowVisual(sideStripe);
+
+        GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        door.transform.SetParent(busRoot.transform, false);
+        door.transform.localPosition = new Vector3(0.18f, 0.23f, -0.22f);
+        door.transform.localScale = new Vector3(0.24f, 0.32f, 0.05f);
+        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f));
+        ConfigureShadowVisual(door);
+
+        float[] wheelX = { -0.38f, 0.38f };
+        float[] wheelZ = { -0.18f, 0.18f };
+        foreach (float wx in wheelX)
+        {
+            foreach (float wz in wheelZ)
+            {
+                GameObject wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                wheel.transform.SetParent(busRoot.transform, false);
+                wheel.transform.localPosition = new Vector3(wx, 0.1f, wz);
+                wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                wheel.transform.localScale = new Vector3(0.1f, 0.05f, 0.1f);
+                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f));
+                ConfigureShadowVisual(wheel);
+            }
+        }
+
+        GameObject routePlate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        routePlate.transform.SetParent(busRoot.transform, false);
+        routePlate.transform.localPosition = new Vector3(0.48f, 0.53f, 0f);
+        routePlate.transform.localScale = new Vector3(0.18f, 0.08f, 0.3f);
+        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f));
+        ConfigureShadowVisual(routePlate);
+
+        GameObject leftLightObject = new("BusHeadlightLeft");
+        leftLightObject.transform.SetParent(busRoot.transform, false);
+        leftLightObject.transform.localPosition = new Vector3(0.64f, 0.28f, -0.14f);
+        leftLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
+        Light leftLight = leftLightObject.AddComponent<Light>();
+        leftLight.type = LightType.Spot;
+        leftLight.color = new Color(1f, 0.9f, 0.72f);
+        leftLight.range = 3.6f;
+        leftLight.spotAngle = 42f;
+        leftLight.innerSpotAngle = 22f;
+        leftLight.intensity = 0f;
+        leftLight.shadows = LightShadows.None;
+        leftLight.enabled = false;
+
+        GameObject rightLightObject = new("BusHeadlightRight");
+        rightLightObject.transform.SetParent(busRoot.transform, false);
+        rightLightObject.transform.localPosition = new Vector3(0.64f, 0.28f, 0.14f);
+        rightLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
+        Light rightLight = rightLightObject.AddComponent<Light>();
+        rightLight.type = LightType.Spot;
+        rightLight.color = new Color(1f, 0.9f, 0.72f);
+        rightLight.range = 3.6f;
+        rightLight.spotAngle = 42f;
+        rightLight.innerSpotAngle = 22f;
+        rightLight.intensity = 0f;
+        rightLight.shadows = LightShadows.None;
+        rightLight.enabled = false;
+
+        float y = SampleTerrainHeight(spawnX, laneZ) + RoadHeight + EdgeHighwayBusLift;
+        busRoot.transform.position = new Vector3(spawnX, y, laneZ);
+        busRoot.transform.rotation = Quaternion.LookRotation(travelDirection > 0f ? Vector3.right : Vector3.left, Vector3.up);
+
+        edgeHighwayBuses.Add(new EdgeHighwayBusData
+        {
+            RootTransform = busRoot.transform,
+            WorldX = spawnX,
+            TravelDirection = travelDirection,
+            IsCitySideLane = isCitySideLane,
+            Speed = EdgeHighwayBusSpeed * Random.Range(0.92f, 1.08f),
+            BobPhase = Random.Range(0f, 10f),
+            BodyColor = bodyColor,
+            HasPlayedPassbyAudio = false,
+            HasEnteredRoadStrip = false,
+            HeadlightLeftRenderer = headlightLeftVisual.GetComponent<Renderer>(),
+            HeadlightRightRenderer = headlightRightVisual.GetComponent<Renderer>(),
+            HeadlightLeft = leftLight,
+            HeadlightRight = rightLight
+        });
+    }
+
+    private float GetEdgeHighwayBusLaneWorldZ(bool isCitySideLane)
+    {
+        float centerZ = 1f;
+        return centerZ + (isCitySideLane ? EdgeHighwayBusLaneOffset : -EdgeHighwayBusLaneOffset);
+    }
+
     private void SetupDistantClouds()
     {
         distantClouds.Clear();
 
         // SpawnPosition = behind left/near edge; clouds travel along CloudTravelDir, staggered via initialOffset
         // Args: spawnPosition, travelSpeed, bobAmplitude, bobSpeed, phaseOffset, scale, initialOffset
+        // Z spread covers from well before the grid to well beyond it, matching full screen top-to-bottom
         Vector3 center = new(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
-        Vector3 spawnBase = center + new Vector3(-24f, 0f, -4f);
+        Vector3 spawnBase = center + new Vector3(-30f, 0f, -4f);
 
-        CreateDistantCloud(spawnBase + new Vector3(0f, 15f, -5f),  1.0f, 0.9f,  0.42f, 0.95f, 2.35f,  0f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 17f,  3f),  0.8f, 0.8f,  0.36f, 1.8f,  2.15f,  9f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 14f,  9f),  1.3f, 0.72f, 0.48f, 0.7f,  2.05f, 18f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 16f, -1f),  1.1f, 0.95f, 0.32f, 2.4f,  2.4f,  27f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 13f,  6f),  0.9f, 0.68f, 0.34f, 1.2f,  1.95f, 36f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 15f, 13f),  1.5f, 0.82f, 0.38f, 2.9f,  2.2f,  45f);
+        // Near (bottom screen) — lower Y so they sit closer to ground-level perspective
+        CreateDistantCloud(spawnBase + new Vector3(0f, 10f, -18f), 1.0f, 0.7f,  0.44f, 0.30f, 1.8f,   4f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 11f, -12f), 0.8f, 0.85f, 0.38f, 1.50f, 2.0f,  22f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 12f,  -7f), 1.2f, 0.75f, 0.41f, 0.80f, 2.15f,  0f);
+        // Mid (center screen)
+        CreateDistantCloud(spawnBase + new Vector3(0f, 14f,  -1f), 1.1f, 0.9f,  0.36f, 2.10f, 2.35f, 14f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 15f,   5f), 0.9f, 0.72f, 0.48f, 0.60f, 2.05f, 36f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 16f,  11f), 1.3f, 0.95f, 0.32f, 1.90f, 2.4f,  50f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 14f,   8f), 0.8f, 0.68f, 0.34f, 1.20f, 1.95f, 28f);
+        // Far (top screen)
+        CreateDistantCloud(spawnBase + new Vector3(0f, 17f,  17f), 1.5f, 0.82f, 0.38f, 2.80f, 2.2f,   9f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 18f,  23f), 1.0f, 0.9f,  0.42f, 0.40f, 2.35f, 42f);
+        CreateDistantCloud(spawnBase + new Vector3(0f, 17f,  30f), 1.2f, 0.78f, 0.46f, 1.60f, 2.1f,  18f);
     }
 
     private void CreateDistantCloud(Vector3 spawnPosition, float travelSpeed, float bobAmplitude, float bobSpeed, float phaseOffset, float scaleMultiplier, float initialOffset)

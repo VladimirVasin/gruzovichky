@@ -241,7 +241,7 @@ public partial class GameBootstrap
                 selDriver.IsOnActiveShift = false;
                 selDriver.WaitingForShiftAtParking = false;
                 bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[c]);
-                if (inWindow && selDriver.RestPhase == DriverRestPhase.None && selDriver.WalkPhase == DriverRescuePhase.None)
+                if (inWindow && selDriver.RestPhase == DriverRestPhase.None && !IsDriverBusyWalkPhase(selDriver))
                 {
                     StartDriverShiftCommute(selDriver);
                 }
@@ -354,12 +354,17 @@ public partial class GameBootstrap
             return "Walking to parking";
         }
 
+        if (driver.WalkPhase == DriverRescuePhase.IdleWander)
+        {
+            return "Walking near motel";
+        }
+
         if (driver.WaitingForShiftAtParking)
         {
             return "Waiting for shift";
         }
 
-        if (driver.WalkPhase != DriverRescuePhase.None || (truckAgent != null && truckAgent.IsDriverRescueActive))
+        if (IsDriverBusyWalkPhase(driver) || (truckAgent != null && truckAgent.IsDriverRescueActive))
         {
             return "Working";
         }

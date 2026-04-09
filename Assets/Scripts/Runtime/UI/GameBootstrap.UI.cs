@@ -104,13 +104,36 @@ public partial class GameBootstrap
 
         Vector2Int startCell = WorldToCell(startWorld);
         Vector2Int goalCell = WorldToCell(targetWorld);
-        List<Vector2Int> cellPath = FindDriverWalkPath(startCell, goalCell);
+        List<Vector2Int> cellPath = FindDriverWalkPath(startCell, goalCell, driver.WalkPhase);
         if (cellPath == null || cellPath.Count == 0)
         {
-            driver.WalkTargetWorld = targetWorld;
+            if (startCell == goalCell)
+            {
+                driver.WalkPath.Add(targetWorld);
+                driver.WalkTargetWorld = targetWorld;
+                SessionDebugLogger.Log(
+                    "DRIVER",
+                    $"{driver.DriverName} built a same-cell walk target for {driver.WalkPhase} at ({goalCell.x},{goalCell.y}).");
+                return;
+            }
+
+            bool startInLocation = IsLocationCell(startCell);
+            bool goalInLocation = IsLocationCell(goalCell);
+            bool isIdleWander = driver.WalkPhase == DriverRescuePhase.IdleWander;
+            if (!isIdleWander && !startInLocation && !goalInLocation)
+            {
+                driver.WalkPath.Add(targetWorld);
+                driver.WalkTargetWorld = targetWorld;
+                SessionDebugLogger.Log(
+                    "DRIVER",
+                    $"{driver.DriverName} could not build a grid walk path from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}); using direct open-ground target.");
+                return;
+            }
+
+            driver.WalkTargetWorld = startWorld;
             SessionDebugLogger.Log(
                 "DRIVER",
-                $"{driver.DriverName} could not build a grid walk path from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}); using direct world target.");
+                $"{driver.DriverName} could not build a safe walk path from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}); blocking direct fallback through buildings.");
             return;
         }
 
@@ -126,32 +149,38 @@ public partial class GameBootstrap
             $"{driver.DriverName} built walk path for {driver.WalkPhase}: {cellPath.Count - 1} cell steps, {driver.WalkPath.Count} world waypoints, from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}).");
     }
 
-    private List<Vector2Int> FindDriverWalkPath(Vector2Int start, Vector2Int goal)
+    private List<Vector2Int> FindDriverWalkPath(Vector2Int start, Vector2Int goal, DriverRescuePhase walkPhase)
     {
-        LocationType? startLocation = GetContainingLocation(start);
-        LocationType? goalLocation = GetContainingLocation(goal);
         return GridPathService.FindPath(
                    start,
                    goal,
                    GridPathService.GetCardinalNeighbors,
-                   neighbor => IsWalkableDriverCell(neighbor, startLocation, goalLocation))
-               ?? new List<Vector2Int> { start, goal };
+                   neighbor => IsWalkableDriverCell(neighbor, start, goal, walkPhase));
     }
 
-    private bool IsWalkableDriverCell(Vector2Int cell, LocationType? startLocation, LocationType? goalLocation)
+    private bool IsWalkableDriverCell(Vector2Int cell, Vector2Int start, Vector2Int goal, DriverRescuePhase walkPhase)
     {
         if (!IsInsideGrid(cell))
         {
             return false;
         }
 
-        LocationType? containingLocation = GetContainingLocation(cell);
-        if (!containingLocation.HasValue)
+        if (cell == start || cell == goal || IsAnchorCell(cell))
         {
             return true;
         }
 
-        return containingLocation == startLocation || containingLocation == goalLocation;
+        if (IsLocationCell(cell))
+        {
+            return false;
+        }
+
+        if (walkPhase == DriverRescuePhase.IdleWander && roadCells.Contains(cell))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private Vector3 GetDriverStandPointNearTruck()
@@ -783,6 +812,7 @@ public partial class GameBootstrap
             LocationType.Warehouse => $"Boards stored: {locations[LocationType.Warehouse].BoardsStored}",
             LocationType.Sawmill => $"Logs: {locations[LocationType.Sawmill].LogsStored} | Boards: {locations[LocationType.Sawmill].BoardsStored}",
             LocationType.Motel => "Roadside stop",
+            LocationType.BusStop => "Bus stop by the highway",
             _ => string.Empty
         };
     }
@@ -797,6 +827,7 @@ public partial class GameBootstrap
             LocationType.Warehouse => "Warehouse",
             LocationType.Sawmill => "Sawmill",
             LocationType.Motel => "Motel",
+            LocationType.BusStop => "Bus Stop",
             _ => "Location"
         };
     }

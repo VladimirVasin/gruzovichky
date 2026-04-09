@@ -15,7 +15,19 @@ public partial class GameBootstrap
 
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
-            CloseAllMenus();
+            bool anyMenuOpen =
+                isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
+                isResourcesPanelOpen || isEconomyPanelOpen || isBuildPanelOpen ||
+                isTruckDetailsOpen || isDriverDetailsOpen || activeBuildTool != BuildTool.None;
+
+            if (anyMenuOpen)
+            {
+                CloseAllMenus();
+            }
+            else if (isGameStarted)
+            {
+                OpenPauseMenu();
+            }
             return;
         }
 
@@ -55,6 +67,22 @@ public partial class GameBootstrap
         else if (Keyboard.current.pKey.wasPressedThisFrame)
         {
             TogglePauseSpeed();
+        }
+
+        if (Keyboard.current.bKey.wasPressedThisFrame)
+        {
+            isBuildPanelOpen = !isBuildPanelOpen;
+            if (isBuildPanelOpen)
+            {
+                isFleetPanelOpen = false;
+                isShiftsPanelOpen = false;
+                isDriversPanelOpen = false;
+                isResourcesPanelOpen = false;
+                isEconomyPanelOpen = false;
+            }
+            isBuildScreenDirty = true;
+            PlayUiSound(isBuildPanelOpen ? uiPanelOpenClip : uiPanelCloseClip, 0.85f);
+            return;
         }
 
         for (int truckNumber = 1; truckNumber <= MaxTruckCount; truckNumber++)
