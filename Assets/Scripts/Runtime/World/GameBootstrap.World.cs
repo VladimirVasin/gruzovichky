@@ -8,12 +8,13 @@ public partial class GameBootstrap
 {
     private const float TreeHeightScale = 1.1f;
     private const float BerryBushSpawnChance = 0.28f;
+    private const float FlowerPatchSpawnChance = 0.18f;
 
     private void SetupLocations()
     {
         locations.Clear();
 
-        GeneratedWorldLayout layout = WorldLayoutGenerator.Generate(GridWidth, GridHeight, HasRequiredLayoutRoads);
+        GeneratedWorldLayout layout = WorldLayoutGenerator.Generate(GridWidth, GridHeight, waterCells, HasRequiredLayoutRoads);
         CreateLocation(LocationType.Parking, "Parking", layout.Parking.Min, layout.Parking.Max, layout.Parking.Anchor, new Color(0.46f, 0.46f, 0.52f));
         CreateLocation(LocationType.GasStation, "Gas Station", layout.GasStation.Min, layout.GasStation.Max, layout.GasStation.Anchor, new Color(0.84f, 0.68f, 0.26f));
         CreateLocation(LocationType.Forest, "Forest", layout.Forest.Min, layout.Forest.Max, layout.Forest.Anchor, new Color(0.22f, 0.55f, 0.24f));
@@ -96,18 +97,27 @@ public partial class GameBootstrap
 
         miscOccupiedCells.Clear();
         miscTreeSways.Clear();
+        miscTreePerchPoints.Clear();
+        flowerBeePoints.Clear();
         List<Vector2Int> plannedCells = MiscTreePlanner.Plan(
             GridWidth,
             GridHeight,
             roadCells,
             edgeHighwayCells,
             IsLocationCell,
-            cell => IsGrassGroundCell(cell.x, cell.y));
+            cell => IsGrassGroundCell(cell.x, cell.y) && !waterCells.Contains(cell));
         int bushCount = 0;
+        int flowerCount = 0;
         SessionDebugLogger.Log("WORLD", $"Planning {plannedCells.Count} misc cells");
         for (int i = 0; i < plannedCells.Count; i++)
         {
-            if (Random.value < BerryBushSpawnChance)
+            float roll = Random.value;
+            if (roll < FlowerPatchSpawnChance)
+            {
+                CreateFlowerPatch(plannedCells[i], i);
+                flowerCount++;
+            }
+            else if (roll < FlowerPatchSpawnChance + BerryBushSpawnChance)
             {
                 CreateBerryBush(plannedCells[i], i);
                 bushCount++;
@@ -118,7 +128,7 @@ public partial class GameBootstrap
             }
         }
 
-        SessionDebugLogger.Log("WORLD", $"Placed {plannedCells.Count} misc props ({plannedCells.Count - bushCount} trees, {bushCount} berry bushes).");
+        SessionDebugLogger.Log("WORLD", $"Placed {plannedCells.Count} misc props ({plannedCells.Count - bushCount - flowerCount} trees, {bushCount} berry bushes, {flowerCount} flower patches).");
     }
 
     private static string FormatPlacement(WorldLocationPlacement placement)
@@ -140,6 +150,7 @@ public partial class GameBootstrap
         treeRoot.transform.localScale = Vector3.one * Random.Range(1.18f, 1.58f);
         CreateTreeVariant(treeRoot.transform, variantIndex);
         RegisterMiscTreeSway(treeRoot.transform, cell, variantIndex);
+        RegisterMiscTreePerchPoint(treeRoot.transform, cell, variantIndex);
         miscOccupiedCells.Add(cell);
     }
 
@@ -203,6 +214,64 @@ public partial class GameBootstrap
         miscOccupiedCells.Add(cell);
     }
 
+    private void CreateFlowerPatch(Vector2Int cell, int variantSeed)
+    {
+        if (miscRoot == null)
+        {
+            return;
+        }
+
+        GameObject patchRoot = new($"FlowerPatch_{cell.x}_{cell.y}");
+        patchRoot.transform.SetParent(miscRoot, false);
+        patchRoot.transform.position = GetCellCenter(cell);
+        patchRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+        patchRoot.transform.localScale = Vector3.one * Random.Range(0.82f, 1.08f);
+
+        Color stemColor = new Color(0.2f, 0.5f, 0.24f);
+        Color[] petalColors =
+        {
+            new Color(0.94f, 0.88f, 0.24f),
+            new Color(0.96f, 0.62f, 0.22f),
+            new Color(0.92f, 0.48f, 0.58f),
+            new Color(0.86f, 0.78f, 0.96f)
+        };
+
+        int flowerCount = 4 + (variantSeed % 3);
+        for (int i = 0; i < flowerCount; i++)
+        {
+            float angle = (i / Mathf.Max(1f, flowerCount)) * Mathf.PI * 2f + variantSeed * 0.31f;
+            float radius = 0.08f + (i % 2) * 0.06f;
+            Vector3 baseOffset = new Vector3(
+                Mathf.Cos(angle) * radius,
+                0.04f,
+                Mathf.Sin(angle) * radius);
+
+            GameObject stem = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stem.transform.SetParent(patchRoot.transform, false);
+            stem.transform.localPosition = baseOffset + new Vector3(0f, 0.08f, 0f);
+            stem.transform.localScale = new Vector3(0.018f, 0.08f, 0.018f);
+            ApplyColor(stem, stemColor);
+            ConfigureStaticVisual(stem);
+
+            GameObject bloom = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            bloom.transform.SetParent(patchRoot.transform, false);
+            bloom.transform.localPosition = baseOffset + new Vector3(0f, 0.17f + (i % 2) * 0.015f, 0f);
+            bloom.transform.localScale = new Vector3(0.08f, 0.035f, 0.08f);
+            ApplyColor(bloom, petalColors[(variantSeed + i) % petalColors.Length]);
+            ConfigureStaticVisual(bloom);
+        }
+
+        GameObject grassClump = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        grassClump.transform.SetParent(patchRoot.transform, false);
+        grassClump.transform.localPosition = new Vector3(0f, 0.03f, 0f);
+        grassClump.transform.localScale = new Vector3(0.28f, 0.08f, 0.24f);
+        ApplyColor(grassClump, new Color(0.24f, 0.56f, 0.28f));
+        ConfigureStaticVisual(grassClump);
+
+        flowerBeePoints.Add(patchRoot.transform.position + new Vector3(0f, 0.08f, 0f));
+        miscOccupiedCells.Add(cell);
+    }
+
     private void RegisterMiscTreeSway(Transform treeRoot, Vector2Int cell, int variantIndex)
     {
         if (treeRoot == null)
@@ -220,6 +289,21 @@ public partial class GameBootstrap
             PitchAmplitude = 1.2f + ((cell.x + variantIndex) % 4) * 0.18f,
             RollAmplitude = 0.9f + ((cell.y + variantIndex) % 4) * 0.14f
         });
+    }
+
+    private void RegisterMiscTreePerchPoint(Transform treeRoot, Vector2Int cell, int variantIndex)
+    {
+        if (treeRoot == null)
+        {
+            return;
+        }
+
+        float canopyHeight = treeRoot.localScale.y * Random.Range(0.76f, 0.9f);
+        Vector3 perchOffset = new(
+            (((cell.x + variantIndex) % 3) - 1) * 0.05f,
+            canopyHeight,
+            (((cell.y + variantIndex * 2) % 3) - 1) * 0.05f);
+        miscTreePerchPoints.Add(treeRoot.position + perchOffset);
     }
 
     private void UpdateMiscTreeSways()

@@ -613,6 +613,7 @@ public partial class GameBootstrap
         }
 
         RebuildRoadLanterns();
+        RebuildRoadsideBenches();
         SessionDebugLogger.Log("ROAD", $"Added road at cell ({cell.x},{cell.y}).");
     }
 
@@ -638,6 +639,7 @@ public partial class GameBootstrap
         }
 
         RebuildRoadLanterns();
+        RebuildRoadsideBenches();
         SessionDebugLogger.Log("ROAD", $"Removed road at cell ({cell.x},{cell.y}).");
     }
 
@@ -763,6 +765,173 @@ public partial class GameBootstrap
 
             Vector3 northPosition = new Vector3(x + 0.5f, GetTerrainHeight(new Vector2Int(x, upperLaneY)) + 0.04f, outerNorthZ);
             CreateRoadLantern(northPosition, Quaternion.Euler(0f, 180f, 0f));
+        }
+    }
+
+    private void RebuildRoadsideBenches()
+    {
+        if (roadsidePropsRoot == null)
+        {
+            return;
+        }
+
+        for (int i = roadsidePropsRoot.childCount - 1; i >= 0; i--)
+        {
+            Destroy(roadsidePropsRoot.GetChild(i).gameObject);
+        }
+
+        HashSet<Vector2Int> reservedSideCells = new();
+        foreach (Vector2Int roadCell in roadCells)
+        {
+            if (!TryGetRoadsideBenchPlacement(roadCell, reservedSideCells, out Vector3 worldPosition, out Quaternion worldRotation, out Vector2Int sideCell))
+            {
+                continue;
+            }
+
+            CreateRoadsideBench(worldPosition, worldRotation, roadCell);
+            reservedSideCells.Add(sideCell);
+        }
+    }
+
+    private bool TryGetRoadsideBenchPlacement(
+        Vector2Int roadCell,
+        HashSet<Vector2Int> reservedSideCells,
+        out Vector3 worldPosition,
+        out Quaternion worldRotation,
+        out Vector2Int sideCell)
+    {
+        worldPosition = default;
+        worldRotation = Quaternion.identity;
+        sideCell = default;
+
+        int connectivity = 0;
+        bool north = ConnectsToRoadOrAnchor(roadCell, Vector2Int.up);
+        bool south = ConnectsToRoadOrAnchor(roadCell, Vector2Int.down);
+        bool east = ConnectsToRoadOrAnchor(roadCell, Vector2Int.right);
+        bool west = ConnectsToRoadOrAnchor(roadCell, Vector2Int.left);
+        connectivity += north ? 1 : 0;
+        connectivity += south ? 1 : 0;
+        connectivity += east ? 1 : 0;
+        connectivity += west ? 1 : 0;
+        if (connectivity != 2)
+        {
+            return false;
+        }
+
+        bool isVertical = north && south && !east && !west;
+        bool isHorizontal = east && west && !north && !south;
+        if (!isVertical && !isHorizontal)
+        {
+            return false;
+        }
+
+        int hash = Mathf.Abs(roadCell.x * 92821 + roadCell.y * 68917 + 17);
+        if ((hash % 100) >= 15)
+        {
+            return false;
+        }
+
+        Vector2Int[] sideOffsets = isVertical
+            ? ((hash & 1) == 0 ? new[] { Vector2Int.left, Vector2Int.right } : new[] { Vector2Int.right, Vector2Int.left })
+            : ((hash & 1) == 0 ? new[] { Vector2Int.down, Vector2Int.up } : new[] { Vector2Int.up, Vector2Int.down });
+
+        for (int i = 0; i < sideOffsets.Length; i++)
+        {
+            Vector2Int candidateSideCell = roadCell + sideOffsets[i];
+            if (!CanPlaceRoadsideBenchInCell(candidateSideCell, reservedSideCells))
+            {
+                continue;
+            }
+
+            Vector3 center = GetCellCenter(roadCell);
+            Vector3 sideDirection = new Vector3(sideOffsets[i].x, 0f, sideOffsets[i].y).normalized;
+            Vector3 candidateWorld = center + sideDirection * 0.62f;
+            candidateWorld.y = SampleTerrainHeight(candidateWorld.x, candidateWorld.z) + 0.02f;
+            if (IsRoadsideBenchTooCloseToLantern(candidateWorld))
+            {
+                continue;
+            }
+
+            worldPosition = candidateWorld;
+            Vector3 facingAwayFromRoad = sideDirection;
+            worldRotation = Quaternion.LookRotation(facingAwayFromRoad, Vector3.up);
+            sideCell = candidateSideCell;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool CanPlaceRoadsideBenchInCell(Vector2Int cell, HashSet<Vector2Int> reservedSideCells)
+    {
+        return IsInsideGrid(cell) &&
+               !roadCells.Contains(cell) &&
+               !edgeHighwayCells.Contains(cell) &&
+               !IsLocationCell(cell) &&
+               !miscOccupiedCells.Contains(cell) &&
+               !reservedSideCells.Contains(cell);
+    }
+
+    private bool IsRoadsideBenchTooCloseToLantern(Vector3 candidateWorld)
+    {
+        for (int i = 0; i < roadLanterns.Count; i++)
+        {
+            Light lantern = roadLanterns[i].Light;
+            if (lantern == null)
+            {
+                continue;
+            }
+
+            Vector3 delta = lantern.transform.position - candidateWorld;
+            delta.y = 0f;
+            if (delta.sqrMagnitude < 0.72f * 0.72f)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void CreateRoadsideBench(Vector3 worldPosition, Quaternion worldRotation, Vector2Int roadCell)
+    {
+        if (roadsidePropsRoot == null)
+        {
+            return;
+        }
+
+        GameObject benchRoot = new($"RoadsideBench_{roadCell.x}_{roadCell.y}");
+        benchRoot.transform.SetParent(roadsidePropsRoot, false);
+        benchRoot.transform.position = worldPosition;
+        benchRoot.transform.rotation = worldRotation;
+
+        int tintHash = Mathf.Abs(roadCell.x * 3343 + roadCell.y * 9283);
+        Color woodColor = (tintHash & 1) == 0 ? new Color(0.58f, 0.41f, 0.24f) : new Color(0.46f, 0.34f, 0.2f);
+        Color legColor = new Color(0.2f, 0.2f, 0.22f);
+
+        GameObject seat = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        seat.transform.SetParent(benchRoot.transform, false);
+        seat.transform.localPosition = new Vector3(0f, 0.16f, 0f);
+        seat.transform.localScale = new Vector3(0.48f, 0.05f, 0.18f);
+        ApplyColor(seat, woodColor);
+        ConfigureShadowVisual(seat);
+
+        GameObject back = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        back.transform.SetParent(benchRoot.transform, false);
+        back.transform.localPosition = new Vector3(0f, 0.31f, -0.07f);
+        back.transform.localScale = new Vector3(0.48f, 0.17f, 0.04f);
+        ApplyColor(back, woodColor * 0.96f);
+        ConfigureShadowVisual(back);
+
+        float[] legX = { -0.16f, 0.16f };
+        foreach (float legXPos in legX)
+        {
+            GameObject leg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            leg.transform.SetParent(benchRoot.transform, false);
+            leg.transform.localPosition = new Vector3(legXPos, 0.08f, 0f);
+            leg.transform.localScale = new Vector3(0.045f, 0.16f, 0.045f);
+            ApplyColor(leg, legColor);
+            ConfigureShadowVisual(leg);
         }
     }
 

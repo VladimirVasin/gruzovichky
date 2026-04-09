@@ -450,6 +450,11 @@ public partial class GameBootstrap
 
     private void HandleRoadRemovalInput()
     {
+        if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            ClearSelectedDebugCell();
+        }
+
         if (mainCamera == null ||
             Mouse.current == null ||
             activeBuildTool != BuildTool.Road ||
@@ -510,22 +515,26 @@ public partial class GameBootstrap
 
         if (TryHandleTruckSelection(ray))
         {
+            ClearSelectedDebugCell();
             return;
         }
 
         if (TryHandleDriverSelection(ray))
         {
+            ClearSelectedDebugCell();
             return;
         }
 
         Vector2Int cell = WorldToCell(ray.GetPoint(distance));
         if (TryHandleLocationSelection(cell))
         {
+            ClearSelectedDebugCell();
             return;
         }
 
         if (activeBuildTool != BuildTool.Road)
         {
+            SelectDebugCell(cell);
             selectedLocation = null;
             isTruckDetailsOpen = false;
             isDriverDetailsOpen = false;
@@ -536,6 +545,7 @@ public partial class GameBootstrap
 
         if (IsRoadBuildCellBlocked(cell))
         {
+            ClearSelectedDebugCell();
             selectedLocation = null;
             isTruckDetailsOpen = false;
             isDriverDetailsOpen = false;
@@ -544,6 +554,7 @@ public partial class GameBootstrap
             return;
         }
 
+        ClearSelectedDebugCell();
         selectedLocation = null;
         isTruckDetailsOpen = false;
         DisableTruckCameraFocus();

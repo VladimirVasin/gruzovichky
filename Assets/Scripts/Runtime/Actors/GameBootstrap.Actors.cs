@@ -473,14 +473,14 @@ public partial class GameBootstrap
         warehouseAudioSource = CreateAudioSource("WarehouseAmbience", locations[LocationType.Warehouse].RootObject.transform, false, 0.26f, 0.88f, false);
         ambienceFxAudioSource = CreateAudioSource("AmbienceFX", worldRoot, false, 0.34f, 0f, false);
 
-        ambientAudioSource.clip = ambientWindClip;
-        ambientAudioSource.Play();
+        ambientAudioSource.clip = null;
+        ambientAudioSource.Stop();
 
-        dayBirdsAudioSource.clip = dayBirdsClip;
-        dayBirdsAudioSource.Play();
+        dayBirdsAudioSource.clip = null;
+        dayBirdsAudioSource.Stop();
 
-        forestAudioSource.clip = forestRustleClip;
-        forestAudioSource.Play();
+        forestAudioSource.clip = null;
+        forestAudioSource.Stop();
 
         nightWindAudioSource.clip = nightWindClip;
         nightWindAudioSource.Play();
@@ -488,11 +488,11 @@ public partial class GameBootstrap
         nightCricketsAudioSource.clip = nightCricketsClip;
         nightCricketsAudioSource.Play();
 
-        gasStationAudioSource.clip = gasStationHumClip;
-        gasStationAudioSource.Play();
+        gasStationAudioSource.clip = null;
+        gasStationAudioSource.Stop();
 
-        townAudioSource.clip = sawmillHumClip;
-        townAudioSource.Play();
+        townAudioSource.clip = null;
+        townAudioSource.Stop();
 
         dayBirdTimer = Random.Range(4.5f, 8f);
         nightOwlTimer = Random.Range(8f, 14f);
@@ -514,8 +514,8 @@ public partial class GameBootstrap
 
         truckAgent.TruckLoopAudioSource = CreateAudioSource($"TruckLoop_{truckAgent.TruckNumber}", truckAgent.TruckObject.transform, true, 0.4f, 0.65f, false);
         truckAgent.TruckFxAudioSource = CreateAudioSource($"TruckFX_{truckAgent.TruckNumber}", truckAgent.TruckObject.transform, false, 0.74f, 0.8f, false);
-        truckAgent.TruckLoopAudioSource.clip = truckIdleClip;
-        truckAgent.TruckLoopAudioSource.Play();
+        truckAgent.TruckLoopAudioSource.clip = null;
+        truckAgent.TruckLoopAudioSource.Stop();
     }
 
 }

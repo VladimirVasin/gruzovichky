@@ -8,6 +8,7 @@ public partial class GameBootstrap
 {
     private void LoadTruckState(TruckAgent truckAgent)
     {
+        currentLoadedTruckAgent = truckAgent;
         truckObject = truckAgent.TruckObject;
         truckVisualRoot = truckAgent.TruckVisualRoot;
         truckBodyTransform = truckAgent.TruckBodyTransform;

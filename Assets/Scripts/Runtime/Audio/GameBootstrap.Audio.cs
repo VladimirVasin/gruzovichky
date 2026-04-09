@@ -16,54 +16,96 @@ public partial class GameBootstrap
 
     private void UpdateAudio()
     {
-        if (truckLoopAudioSource == null)
-        {
-            return;
-        }
-
         float dayBlend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.42f, 0.6f, currentStylizedDaylight));
         float nightBlend = 1f - dayBlend;
 
-        AudioClip targetClip = isTruckMoving ? truckRollClip : truckIdleClip;
-        if (truckLoopAudioSource.clip != targetClip)
+        for (int i = 0; i < truckAgents.Count; i++)
         {
-            truckLoopAudioSource.clip = targetClip;
-            truckLoopAudioSource.Play();
+            TruckAgent truckAgent = truckAgents[i];
+            if (truckAgent?.TruckLoopAudioSource == null)
+            {
+                continue;
+            }
+
+            bool truckHasDriverInside = truckAgent.Driver != null;
+            if (!truckHasDriverInside)
+            {
+                if (truckAgent.TruckLoopAudioSource.isPlaying)
+                {
+                    truckAgent.TruckLoopAudioSource.Stop();
+                }
+
+                truckAgent.TruckLoopAudioSource.clip = null;
+                truckAgent.TruckLoopAudioSource.volume = 0f;
+                continue;
+            }
+
+            bool truckIsCurrent = truckAgent == currentLoadedTruckAgent;
+            bool truckIsActive = truckIsCurrent && (isTruckMoving || isTruckInteracting || truckAgent.Driver.IsOnActiveShift);
+            AudioClip targetClip = truckIsActive && isTruckMoving ? truckRollClip : truckIdleClip;
+            if (truckAgent.TruckLoopAudioSource.clip != targetClip)
+            {
+                truckAgent.TruckLoopAudioSource.clip = targetClip;
+            }
+
+            if (!truckAgent.TruckLoopAudioSource.isPlaying)
+            {
+                truckAgent.TruckLoopAudioSource.Play();
+            }
+
+            float targetVolume = truckIsActive ? (isTruckInteracting ? 0.28f : isTruckMoving ? 0.56f : 0.38f) : 0.18f;
+            float pitchBias = truckAgent.EngineAudioPitchBias;
+            float volumeBias = truckAgent.EngineAudioVolumeBias;
+            float wobbleSpeed = truckAgent.EngineAudioWobbleSpeed;
+            float phaseOffset = truckAgent.EngineAudioPhaseOffset;
+            float engineTime = Time.time * wobbleSpeed + phaseOffset;
+            float slowWobble = Mathf.Sin(engineTime * (truckIsActive && isTruckMoving ? 1.75f : 1.1f)) * (truckIsActive && isTruckMoving ? 0.035f : 0.022f);
+            float textureWobble = (Mathf.PerlinNoise(engineTime * 0.45f, 7.3f) - 0.5f) * (truckIsActive && isTruckMoving ? 0.06f : 0.03f);
+            float targetPitch = (truckIsActive && isTruckMoving ? 1.09f : 0.95f) * pitchBias + slowWobble + textureWobble;
+            float targetVolumeWithLife = targetVolume * volumeBias + Mathf.Abs(slowWobble) * 0.08f + Mathf.Max(0f, textureWobble) * 0.06f;
+
+            truckAgent.TruckLoopAudioSource.volume = Mathf.Lerp(truckAgent.TruckLoopAudioSource.volume, targetVolumeWithLife, 2.5f * Time.deltaTime);
+            truckAgent.TruckLoopAudioSource.pitch = Mathf.Lerp(truckAgent.TruckLoopAudioSource.pitch, targetPitch, 2.5f * Time.deltaTime);
         }
-
-        float targetVolume = isTruckMoving ? 0.56f : 0.38f;
-        if (isTruckInteracting)
-        {
-            targetVolume = 0.28f;
-        }
-
-        float engineTime = Time.time * truckEngineAudioWobbleSpeed + truckEngineAudioPhaseOffset;
-        float slowWobble = Mathf.Sin(engineTime * (isTruckMoving ? 1.75f : 1.1f)) * (isTruckMoving ? 0.035f : 0.022f);
-        float textureWobble = (Mathf.PerlinNoise(engineTime * 0.45f, 7.3f) - 0.5f) * (isTruckMoving ? 0.06f : 0.03f);
-        float targetPitch = (isTruckMoving ? 1.09f : 0.95f) * truckEngineAudioPitchBias + slowWobble + textureWobble;
-        float targetVolumeWithLife = targetVolume * truckEngineAudioVolumeBias + Mathf.Abs(slowWobble) * 0.08f + Mathf.Max(0f, textureWobble) * 0.06f;
-
-        truckLoopAudioSource.volume = Mathf.Lerp(truckLoopAudioSource.volume, targetVolumeWithLife, 2.5f * Time.deltaTime);
-        truckLoopAudioSource.pitch = Mathf.Lerp(truckLoopAudioSource.pitch, targetPitch, 2.5f * Time.deltaTime);
 
         if (ambientAudioSource != null)
         {
-            ambientAudioSource.volume = Mathf.Lerp(ambientAudioSource.volume, Mathf.Lerp(0.4f, 0.58f, dayBlend), 1.8f * Time.deltaTime);
+            if (ambientAudioSource.isPlaying)
+            {
+                ambientAudioSource.Stop();
+            }
+            ambientAudioSource.clip = null;
+            ambientAudioSource.volume = 0f;
         }
 
         if (dayBirdsAudioSource != null)
         {
-            dayBirdsAudioSource.volume = Mathf.Lerp(dayBirdsAudioSource.volume, 0.54f * dayBlend, 1.8f * Time.deltaTime);
+            if (dayBirdsAudioSource.isPlaying)
+            {
+                dayBirdsAudioSource.Stop();
+            }
+            dayBirdsAudioSource.clip = null;
+            dayBirdsAudioSource.volume = 0f;
         }
 
         if (forestAudioSource != null)
         {
-            forestAudioSource.volume = Mathf.Lerp(forestAudioSource.volume, Mathf.Lerp(0.36f, 0.68f, dayBlend), 1.8f * Time.deltaTime);
+            if (forestAudioSource.isPlaying)
+            {
+                forestAudioSource.Stop();
+            }
+            forestAudioSource.clip = null;
+            forestAudioSource.volume = 0f;
         }
 
         if (townAudioSource != null)
         {
-            townAudioSource.volume = Mathf.Lerp(townAudioSource.volume, Mathf.Lerp(0.36f, 0.54f, dayBlend), 1.8f * Time.deltaTime);
+            if (townAudioSource.isPlaying)
+            {
+                townAudioSource.Stop();
+            }
+            townAudioSource.clip = null;
+            townAudioSource.volume = 0f;
         }
 
         if (nightWindAudioSource != null)
@@ -78,7 +120,12 @@ public partial class GameBootstrap
 
         if (gasStationAudioSource != null)
         {
-            gasStationAudioSource.volume = Mathf.Lerp(gasStationAudioSource.volume, Mathf.Lerp(0.26f, 0.38f, dayBlend), 1.8f * Time.deltaTime);
+            if (gasStationAudioSource.isPlaying)
+            {
+                gasStationAudioSource.Stop();
+            }
+            gasStationAudioSource.clip = null;
+            gasStationAudioSource.volume = 0f;
         }
 
         UpdateDayNightAmbientOneShots(dayBlend, nightBlend);
@@ -155,7 +202,6 @@ public partial class GameBootstrap
 
         if (dayBlend > 0.25f && dayBirdTimer <= 0f)
         {
-            PlayAmbientFx(dayBirdsClip, cameraFocusPoint + new Vector3(0f, 2.5f, 0f), Random.Range(0.36f, 0.5f));
             dayBirdTimer = Random.Range(5.5f, 9.5f);
         }
 
