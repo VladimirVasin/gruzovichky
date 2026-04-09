@@ -60,6 +60,7 @@ public partial class GameBootstrap
 
         RectTransform backgroundRoot = CreateUiObject("MainMenuBackground", canvasObject.transform).GetComponent<RectTransform>();
         StretchRect(backgroundRoot, 0f, 0f, 0f, 0f);
+        backgroundRoot.anchoredPosition = new Vector2(0f, 64f);
         Image backgroundImage = backgroundRoot.gameObject.AddComponent<Image>();
         Sprite menuBackgroundSprite = LoadMainMenuBackgroundSprite();
         if (menuBackgroundSprite != null)
@@ -85,7 +86,7 @@ public partial class GameBootstrap
         window.anchorMin = new Vector2(0f, 0f);
         window.anchorMax = new Vector2(0f, 0f);
         window.pivot = new Vector2(0f, 0f);
-        window.anchoredPosition = new Vector2(48f, 42f);
+        window.anchoredPosition = new Vector2(48f, 58f);
         window.sizeDelta = new Vector2(320f, 150f);
         mainMenuHud.WindowRoot = window;
 

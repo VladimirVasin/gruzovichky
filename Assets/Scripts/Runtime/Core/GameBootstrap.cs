@@ -39,6 +39,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const int MaxTruckCount = 5;
     private const int HireTruckCost = 300;
     private const int HireDriverCost = 50;
+    private const int MaxMoneyLedgerEntries = 128;
     private const float DayNightCycleDuration = 300f;
     private const float DriverShiftArrivalLeadHours = 1f;
     private const float DioramaCameraPitch = 42f;
@@ -65,6 +66,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<ForestTreeWobble> forestTreeWobbles = new();
     private readonly List<MiscTreeSway> miscTreeSways = new();
     private readonly List<DistantCloudData> distantClouds = new();
+    private readonly List<MoneyLedgerEntry> moneyLedgerEntries = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
     private readonly Dictionary<LocationType, GameObject> locationSelectionHighlights = new();
     private float[,] terrainHeights = new float[GridWidth, GridHeight];
@@ -154,6 +156,7 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isDriversPanelOpen;
     private int selectedShiftDriverId; // DriverId, 0 = none
     private bool isResourcesPanelOpen;
+    private bool isEconomyPanelOpen;
     private bool isBuildPanelOpen;
     private int moneyPopupAmount;
     private int gameSpeedMultiplier = 1;
@@ -173,6 +176,17 @@ public partial class GameBootstrap : MonoBehaviour
         public float FlickerSpeed;
         public float FlickerStrength;
         public float FlickerThreshold;
+    }
+
+    private sealed class MoneyLedgerEntry
+    {
+        public string TimeLabel;
+        public int TreasuryDelta;
+        public string FromLabel;
+        public string ToLabel;
+        public string Reason;
+        public int? TreasuryAfter;
+        public int? RecipientBalanceAfter;
     }
     private TripPhase currentTripPhase = TripPhase.None;
     private RefuelPhase currentRefuelPhase = RefuelPhase.None;
@@ -482,6 +496,7 @@ public partial class GameBootstrap : MonoBehaviour
         public int Money;
         public bool WaitingForShiftAtParking;
         public bool NeedsShiftEndReturn;
+        public bool IsShiftSalaryPending;
         public DriverRescuePhase WalkPhase = DriverRescuePhase.None;
         public Vector3 WalkTargetWorld;
         public readonly List<Vector3> WalkPath = new();
@@ -683,6 +698,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         driver.IsOnActiveShift = true;
+        driver.IsShiftSalaryPending = false;
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} shift started ({GetShiftRangeLabel(driver.ShiftStartHour)}).");
         SetTruckAutoMode(assignedTruck, true);
     }
@@ -717,6 +733,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IsOnActiveShift = false;
         truckAgent.IsTruckAutoModeEnabled = false;
         driver.NeedsShiftEndReturn = true;
+        driver.IsShiftSalaryPending = true;
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} shift ended. {truckAgent.DisplayName} returning to Parking for handoff.");
 
         if (currentAssignedTrip == TripType.None &&
@@ -739,12 +756,55 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void PayDriverSalary(DriverAgent driver)
     {
-        if (driver == null || driver.Salary <= 0) return;
+        if (driver == null || driver.Salary <= 0 || !driver.IsShiftSalaryPending) return;
+        int treasuryBefore = money;
         driver.Money += driver.Salary;
         money = Mathf.Max(0, money - driver.Salary);
+        int actualTreasuryDelta = money - treasuryBefore;
+        driver.IsShiftSalaryPending = false;
+        RecordMoneyMovement(
+            actualTreasuryDelta,
+            "Treasury",
+            driver.DriverName,
+            $"Salary payout ({GetShiftRangeLabel(driver.ShiftStartHour)})",
+            money,
+            driver.Money);
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         SessionDebugLogger.Log("PAY", $"{driver.DriverName} paid ${driver.Salary}. Personal balance: ${driver.Money}. Treasury: ${money}.");
+    }
+
+    private void EnsurePendingShiftSalaryPaid(DriverAgent driver)
+    {
+        if (driver == null) return;
+        // Driver may leave before shift end time (energy rest) — mark salary as pending so PayDriverSalary will execute
+        if (driver.IsOnActiveShift && !driver.IsShiftSalaryPending)
+        {
+            driver.IsShiftSalaryPending = true;
+        }
+        PayDriverSalary(driver);
+    }
+
+    private void RecordMoneyMovement(int treasuryDelta, string fromLabel, string toLabel, string reason, int? treasuryAfter = null, int? recipientBalanceAfter = null)
+    {
+        MoneyLedgerEntry entry = new()
+        {
+            TimeLabel = GetDayNightClockLabel(),
+            TreasuryDelta = treasuryDelta,
+            FromLabel = fromLabel,
+            ToLabel = toLabel,
+            Reason = reason,
+            TreasuryAfter = treasuryAfter,
+            RecipientBalanceAfter = recipientBalanceAfter
+        };
+
+        moneyLedgerEntries.Insert(0, entry);
+        if (moneyLedgerEntries.Count > MaxMoneyLedgerEntries)
+        {
+            moneyLedgerEntries.RemoveAt(moneyLedgerEntries.Count - 1);
+        }
+
+        isEconomyScreenDirty = true;
     }
 
     private void UpdateIdleRecall(DriverAgent driver)
@@ -875,8 +935,12 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateMoneyPopup();
         UpdateFleetScreenUi();
         UpdateDriversScreenUi();
+        UpdateShiftsScreenUi();
         UpdateResourcesScreenUi();
+        UpdateEconomyScreenUi();
+        UpdateBuildScreenUi();
         UpdateTruckQuickHud();
+        UpdateDriverQuickHud();
         UpdateBuildingQuickHud();
     }
 
@@ -894,10 +958,11 @@ public partial class GameBootstrap : MonoBehaviour
         DrawMenuBar();
 
         if (isFleetPanelOpen) DrawFleetPanel();
-        if (isShiftsPanelOpen) DrawShiftsPanel();
+        // Shifts panel is now Canvas-based (ShiftsScreenCanvas)
         // Drivers panel is now Canvas-based (DriversScreenCanvas)
         // Resources panel is now Canvas-based (ResourcesScreenCanvas)
-        if (isBuildPanelOpen) DrawBuildPanel();
+        // Economy panel is now Canvas-based (EconomyScreenCanvas)
+        // Build panel is now Canvas-based (BuildScreenCanvas)
 
     }
 
@@ -932,8 +997,12 @@ public partial class GameBootstrap : MonoBehaviour
         SetupAudio();
         SetupFleetScreenUi();
         SetupDriversScreenUi();
+        SetupShiftsScreenUi();
         SetupResourcesScreenUi();
+        SetupEconomyScreenUi();
+        SetupBuildScreenUi();
         SetupTruckQuickHud();
+        SetupDriverQuickHud();
         SetupBuildingQuickHud();
         SetupMainMenuHud();
     }
@@ -1030,10 +1099,20 @@ public partial class GameBootstrap : MonoBehaviour
             new Color(0.93f, 0.88f, 0.76f),
             stylizedDaylight);
 
-        mainCamera.backgroundColor = Color.Lerp(
+        Color backgroundColor = Color.Lerp(
             Color.Lerp(new Color(0.08f, 0.06f, 0.09f), new Color(0.52f, 0.3f, 0.24f), lowSun * daylight),
             new Color(0.56f, 0.74f, 0.94f),
             stylizedDaylight);
+        mainCamera.backgroundColor = backgroundColor;
+
+        float zoomT = Mathf.InverseLerp(CameraMinHeight, CameraMaxHeight, cameraOffset.y);
+        float fogZoom = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.58f, 0.96f, zoomT));
+        RenderSettings.fog = fogZoom > 0.001f;
+        RenderSettings.fogMode = FogMode.Linear;
+        float fogStrength = fogZoom * 0.26f;
+        RenderSettings.fogColor = Color.Lerp(backgroundColor, Color.Lerp(backgroundColor, Color.white, 0.12f), fogStrength);
+        RenderSettings.fogStartDistance = Mathf.Lerp(110f, 62f, fogZoom);
+        RenderSettings.fogEndDistance = Mathf.Lerp(150f, 92f, fogZoom);
 
         for (int i = 0; i < truckAgents.Count; i++)
         {
@@ -1076,6 +1155,7 @@ public partial class GameBootstrap : MonoBehaviour
         cameraData.antialiasingQuality = AntialiasingQuality.Medium;
 
         RenderSettings.fog = false;
+        RenderSettings.fogMode = FogMode.Linear;
 
         GameObject volumeObject = new("DioramaVolume");
         volumeObject.transform.SetParent(worldRoot, false);
@@ -1093,20 +1173,20 @@ public partial class GameBootstrap : MonoBehaviour
 
         Bloom bloom = profile.Add<Bloom>(true);
         bloom.threshold.Override(0.98f);
-        bloom.intensity.Override(0.095f);
-        bloom.scatter.Override(0.56f);
+        bloom.intensity.Override(0.045f);
+        bloom.scatter.Override(0.44f);
         bloom.highQualityFiltering.Override(false);
 
         DepthOfField depthOfField = profile.Add<DepthOfField>(true);
         depthOfField.mode.Override(DepthOfFieldMode.Gaussian);
-        depthOfField.gaussianStart.Override(14.5f);
-        depthOfField.gaussianEnd.Override(22f);
-        depthOfField.gaussianMaxRadius.Override(0.06f);
+        depthOfField.gaussianStart.Override(36f);
+        depthOfField.gaussianEnd.Override(78f);
+        depthOfField.gaussianMaxRadius.Override(0.018f);
         depthOfField.highQualitySampling.Override(false);
 
         Vignette vignette = profile.Add<Vignette>(true);
-        vignette.intensity.Override(0.08f);
-        vignette.smoothness.Override(0.48f);
+        vignette.intensity.Override(0.045f);
+        vignette.smoothness.Override(0.42f);
         vignette.rounded.Override(false);
     }
 
@@ -1115,7 +1195,7 @@ public partial class GameBootstrap : MonoBehaviour
         groundSurfaceTexture = CreateStylizedGroundTexture(128);
         grassSurfaceTexture = CreateStylizedGrassTexture(128);
         groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.96f, 0.93f, 0.86f), 0.09f);
-        grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.9f, 0.96f, 0.9f), 0.07f);
+        grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.74f, 0.82f, 0.72f), 0.07f);
     }
 
     private Material CreateSurfaceMaterial(Texture2D texture, Color tint, float smoothness)
@@ -1200,9 +1280,9 @@ public partial class GameBootstrap : MonoBehaviour
         texture.wrapMode = TextureWrapMode.Repeat;
         texture.filterMode = FilterMode.Bilinear;
 
-        Color darkGreen = new(0.18f, 0.4f, 0.15f);
-        Color baseGreen = new(0.31f, 0.62f, 0.24f);
-        Color lightGreen = new(0.56f, 0.82f, 0.38f);
+        Color darkGreen = new(0.12f, 0.3f, 0.11f);
+        Color baseGreen = new(0.22f, 0.46f, 0.2f);
+        Color lightGreen = new(0.38f, 0.6f, 0.29f);
 
         for (int x = 0; x < size; x++)
         {
@@ -1241,11 +1321,11 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         float grassPatchNoise = Mathf.PerlinNoise((x + 1) * 0.18f + 4.2f, (y + 1) * 0.2f + 7.4f);
-        bool useGrassPatch = grassSurfaceMaterial != null && grassPatchNoise > 0.34f;
+        bool useGrassPatch = grassSurfaceMaterial != null && grassPatchNoise > 0.5f;
         Material material = new(useGrassPatch ? grassSurfaceMaterial : groundSurfaceMaterial);
         float tintNoise = Mathf.PerlinNoise((x + 1) * 0.37f, (y + 1) * 0.41f);
         Color tint = useGrassPatch
-            ? Color.Lerp(new Color(0.94f, 1f, 0.88f), new Color(1.08f, 1.14f, 0.98f), tintNoise)
+            ? Color.Lerp(new Color(0.74f, 0.82f, 0.7f), new Color(0.84f, 0.9f, 0.78f), tintNoise)
             : Color.Lerp(new Color(0.95f, 0.91f, 0.84f), new Color(1.01f, 0.98f, 0.92f), tintNoise);
         material.color = tint;
         if (material.HasProperty("_BaseColor"))
@@ -1273,7 +1353,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         Material material = new(grassSurfaceMaterial);
         float tintNoise = Mathf.PerlinNoise(seedX * 0.29f + 1.1f, seedY * 0.33f + 2.4f);
-        Color tint = Color.Lerp(new Color(0.96f, 1.04f, 0.92f), new Color(1.12f, 1.15f, 0.98f), tintNoise);
+        Color tint = Color.Lerp(new Color(0.72f, 0.8f, 0.68f), new Color(0.82f, 0.88f, 0.74f), tintNoise);
         material.color = tint;
         if (material.HasProperty("_BaseColor"))
         {

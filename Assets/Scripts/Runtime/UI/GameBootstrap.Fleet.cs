@@ -9,7 +9,7 @@ public partial class GameBootstrap
     private const float MenuBtnW = 90f;
     private const float MenuBtnH = 40f;
     private const float MenuBtnGap = 5f;
-    private const int MenuBtnCount = 5;
+    private const int MenuBtnCount = 6;
 
     private Rect GetMenuBarRect()
     {
@@ -57,10 +57,14 @@ public partial class GameBootstrap
         isShiftsPanelOpen = false;
         isDriversPanelOpen = false;
         isResourcesPanelOpen = false;
+        isEconomyPanelOpen = false;
         isBuildPanelOpen = false;
         target = !wasOpen;
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
+        isShiftsScreenDirty = true;
+        isEconomyScreenDirty = true;
+        isBuildScreenDirty = true;
         LogUiInput($"MenuBar: {(target ? "opened" : "closed")} {panelName}");
         PlayUiSound(target ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
     }
@@ -91,6 +95,7 @@ public partial class GameBootstrap
         MenuBtn("Drivers",   ref isDriversPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
         MenuBtn("Shifts",    ref isShiftsPanelOpen,    x); x += MenuBtnW + MenuBtnGap;
         MenuBtn("Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+        MenuBtn("Economy",   ref isEconomyPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
         MenuBtn("Build",     ref isBuildPanelOpen,     x);
 
         GUI.color = prev;
@@ -528,9 +533,7 @@ public partial class GameBootstrap
         }
 
         if (isFleetPanelOpen && GetFleetPanelRect().Contains(guiPosition)) return true;
-        if (isShiftsPanelOpen && GetShiftsPanelRect().Contains(guiPosition)) return true;
-        // Drivers panel is Canvas — handled by EventSystem.IsPointerOverGameObject above
-        if (isBuildPanelOpen && GetBuildPanelRect().Contains(guiPosition)) return true;
+        // Shifts / Drivers / Resources / Economy / Build panels are Canvas-based — handled by EventSystem.IsPointerOverGameObject above
         if (isTruckDetailsOpen && GetTruckDetailsHudRect().Contains(guiPosition)) return true;
 
         return false;
@@ -595,7 +598,7 @@ public partial class GameBootstrap
         }
     }
 
-    private void AwardMoney(int amount)
+    private void AwardMoney(int amount, string fromLabel, string reason)
     {
         if (amount <= 0)
         {
@@ -603,10 +606,12 @@ public partial class GameBootstrap
         }
 
         money += amount;
+        RecordMoneyMovement(amount, fromLabel, "Treasury", reason, money);
         moneyPopupAmount = amount;
         moneyPopupTimer = MoneyPopupDuration;
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
+        isEconomyScreenDirty = true;
         PlayUiSound(moneyRewardClip, 0.95f);
     }
 

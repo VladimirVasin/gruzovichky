@@ -1033,7 +1033,17 @@ public partial class GameBootstrap
 
     private DriversScreenUiRefs driversScreenUi;
     private bool isDriversScreenDirty = true;
+    private bool isEconomyScreenDirty = true;
     private const int MaxDriverCardSlots = 8;
+    private const int MaxShiftDriverSlots = 16;
+    private const int MaxEconomyRowSlots = 64;
+    private static readonly Color ShiftsScreenTint = new(0.06f, 0.08f, 0.11f, 0.76f);
+    private static readonly Color ShiftsCardColor = new(0.13f, 0.16f, 0.21f, 0.98f);
+    private static readonly Color ShiftsCardSelected = new(0.29f, 0.25f, 0.13f, 0.98f);
+    private ShiftsScreenUiRefs shiftsScreenUi;
+    private bool isShiftsScreenDirty = true;
+    private BuildScreenUiRefs buildScreenUi;
+    private bool isBuildScreenDirty = true;
 
     private sealed class DriversScreenUiRefs
     {
@@ -1045,6 +1055,49 @@ public partial class GameBootstrap
         public Text   HireButtonText;
         public Text   HireStatusText;
         public Text   HeaderCountText;
+    }
+
+    private sealed class ShiftsScreenUiRefs
+    {
+        public GameObject CanvasRoot;
+        public RectTransform WindowRoot;
+        public RectTransform DriverListContent;
+        public Text HeaderCountText;
+        public readonly List<ShiftDriverRowUi> DriverRows = new();
+        public readonly List<ShiftCardUi> ShiftCards = new();
+    }
+
+    private sealed class ShiftDriverRowUi
+    {
+        public int DriverId;
+        public RectTransform Root;
+        public Image Background;
+        public Text NameText;
+        public Text StatusText;
+        public Button SelectButton;
+    }
+
+    private sealed class ShiftCardUi
+    {
+        public int ShiftHour;
+        public Text HeaderText;
+        public RectTransform AssignedListRoot;
+        public Text EmptyText;
+        public readonly List<GameObject> AssignedRows = new();
+        public readonly List<Text> AssignedDriverTexts = new();
+        public readonly List<Button> RemoveButtons = new();
+        public Text AssignButtonText;
+        public Button AssignButton;
+    }
+
+    private sealed class BuildScreenUiRefs
+    {
+        public GameObject CanvasRoot;
+        public RectTransform WindowRoot;
+        public Button RoadButton;
+        public Text RoadButtonText;
+        public Text RoadTitleText;
+        public Text RoadDescriptionText;
     }
 
     private sealed class DriverCardUi
@@ -1059,6 +1112,7 @@ public partial class GameBootstrap
         public Text  EnergyText;
         public Text  SalaryText;
         public Text  BalanceText;
+        public Button SelectButton;
     }
 
     private sealed class ResourcesScreenUiRefs
@@ -1075,7 +1129,27 @@ public partial class GameBootstrap
         public Text TreasuryValueText;
     }
 
+    private sealed class EconomyScreenUiRefs
+    {
+        public GameObject CanvasRoot;
+        public RectTransform WindowRoot;
+        public Text HeaderCountText;
+        public RectTransform EntryListContent;
+        public Text EmptyText;
+        public readonly List<EconomyEntryRowUi> Rows = new();
+    }
+
+    private sealed class EconomyEntryRowUi
+    {
+        public RectTransform Root;
+        public Text TimeText;
+        public Text AmountText;
+        public Text FlowText;
+        public Text ReasonText;
+    }
+
     private ResourcesScreenUiRefs resourcesScreenUi;
+    private EconomyScreenUiRefs economyScreenUi;
 
     private void SetupDriversScreenUi()
     {
@@ -1323,10 +1397,30 @@ public partial class GameBootstrap
         RectTransform statusBadge = CreateStyledPanel($"DriverStatusBadge{cardIndex}", headerRow, new Color(0.24f, 0.29f, 0.36f, 1f));
         card.StatusBadgeBackground = statusBadge.GetComponent<Image>();
         LayoutElement statusBadgeLayout = statusBadge.gameObject.AddComponent<LayoutElement>();
-        statusBadgeLayout.preferredWidth = 106f;
+        statusBadgeLayout.preferredWidth = 90f;
         statusBadgeLayout.preferredHeight = 24f;
         card.StatusText = CreateBodyText("Status", statusBadge, font, string.Empty, 11, TextAnchor.MiddleCenter, Color.white);
         card.StatusText.fontStyle = FontStyle.Bold;
+
+        int cii = cardIndex;
+        card.SelectButton = CreateButton($"DriverSelectBtn{cardIndex}", headerRow, font, out Text selectTxt, "Select", 11, new Color(0.25f, 0.33f, 0.46f, 1f), Color.white);
+        selectTxt.horizontalOverflow = HorizontalWrapMode.Overflow;
+        LayoutElement selectLayout = card.SelectButton.gameObject.AddComponent<LayoutElement>();
+        selectLayout.preferredWidth = 64f;
+        selectLayout.preferredHeight = 24f;
+        card.SelectButton.onClick.AddListener(() =>
+        {
+            if (cii >= driverAgents.Count) return;
+            DriverAgent d = driverAgents[cii];
+            isDriversPanelOpen = false;
+            isDriversScreenDirty = true;
+            FocusDriver(d.DriverId);
+            if (d.DriverObject != null && d.DriverObject.activeSelf)
+            {
+                Vector3 pos = d.DriverObject.transform.position;
+                cameraFocusPoint = new Vector3(pos.x, 0f, pos.z);
+            }
+        });
 
         RectTransform infoRow = CreateLayoutRow($"DriverCardInfo{cardIndex}", cardObj.transform, 52f, 12f);
 
@@ -1455,7 +1549,7 @@ public partial class GameBootstrap
             TruckAgent truck = GetAssignedTruckForDriver(d);
 
             card.DriverId = d.DriverId;
-            bool isSelected = selectedShiftDriverId == d.DriverId;
+            bool isSelected = selectedShiftDriverId == d.DriverId || selectedDriverId == d.DriverId;
             card.Background.color = isSelected ? DriversCardSelected : DriversCardColor;
             if (card.StatusBadgeBackground != null)
             {
@@ -1487,6 +1581,477 @@ public partial class GameBootstrap
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.CardListContent);
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WindowRoot);
         isDriversScreenDirty = false;
+    }
+
+    private void SetupShiftsScreenUi()
+    {
+        if (shiftsScreenUi != null) return;
+
+        EnsureFleetEventSystem();
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        shiftsScreenUi = new ShiftsScreenUiRefs();
+
+        GameObject canvasObject = new("ShiftsScreenCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 5;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1600f, 900f);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
+        shiftsScreenUi.CanvasRoot = canvasObject;
+
+        GameObject windowRoot = CreateUiObject("ShiftsWindowRoot", canvasObject.transform);
+        RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
+        SetCenteredWindow(windowRect, 980f, 600f, -16f);
+        shiftsScreenUi.WindowRoot = windowRect;
+
+        Image windowBg = windowRoot.AddComponent<Image>();
+        windowBg.color = ShiftsScreenTint;
+        Outline windowOutline = windowRoot.AddComponent<Outline>();
+        windowOutline.effectColor = new Color(0f, 0f, 0f, 0.28f);
+        windowOutline.effectDistance = new Vector2(2f, -2f);
+
+        HorizontalLayoutGroup rootLayout = windowRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+        rootLayout.padding = new RectOffset(18, 18, 18, 18);
+        rootLayout.spacing = 16;
+        rootLayout.childControlWidth = true;
+        rootLayout.childControlHeight = true;
+        rootLayout.childForceExpandWidth = true;
+        rootLayout.childForceExpandHeight = true;
+
+        RectTransform leftPanel = CreateStyledPanel("ShiftsDriverListPanel", windowRoot.transform, FleetPanelColor);
+        LayoutElement leftPanelLayout = leftPanel.gameObject.AddComponent<LayoutElement>();
+        leftPanelLayout.preferredWidth = 300f;
+        leftPanelLayout.flexibleWidth = 0f;
+        VerticalLayoutGroup leftLayout = leftPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        leftLayout.padding = new RectOffset(16, 16, 16, 16);
+        leftLayout.spacing = 14;
+        leftLayout.childControlWidth = true;
+        leftLayout.childControlHeight = true;
+        leftLayout.childForceExpandWidth = true;
+        leftLayout.childForceExpandHeight = false;
+
+        RectTransform leftHeader = CreateLayoutRow("ShiftsHeaderRow", leftPanel, 40f, 0f);
+        Text shiftsTitle = CreateHeaderText("ShiftsTitle", leftHeader, font, "Shifts", 24, TextAnchor.MiddleLeft, Color.white);
+        shiftsTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        shiftsScreenUi.HeaderCountText = CreateHeaderText("ShiftsCount", leftHeader, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
+
+        RectTransform listFrame = CreateStyledPanel("ShiftsDriverListFrame", leftPanel, FleetInsetColor);
+        LayoutElement listFrameLayout = listFrame.gameObject.AddComponent<LayoutElement>();
+        listFrameLayout.flexibleHeight = 1f;
+        listFrameLayout.minHeight = 320f;
+
+        GameObject scrollObj = CreateUiObject("ShiftsDriverScrollView", listFrame);
+        StretchRect(scrollObj.GetComponent<RectTransform>(), 8f, 8f, 8f, 8f);
+        Image scrollImg = scrollObj.AddComponent<Image>();
+        scrollImg.color = new Color(0f, 0f, 0f, 0f);
+        ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.scrollSensitivity = 28f;
+
+        GameObject viewportObj = CreateUiObject("Viewport", scrollObj.transform);
+        StretchRect(viewportObj.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
+        Image viewportImage = viewportObj.AddComponent<Image>();
+        viewportImage.color = new Color(0f, 0f, 0f, 0.04f);
+        Mask viewportMask = viewportObj.AddComponent<Mask>();
+        viewportMask.showMaskGraphic = false;
+        scrollRect.viewport = viewportObj.GetComponent<RectTransform>();
+
+        GameObject contentObj = CreateUiObject("ShiftsDriverListContent", viewportObj.transform);
+        RectTransform contentRect = contentObj.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.anchoredPosition = Vector2.zero;
+        contentRect.sizeDelta = new Vector2(0f, 0f);
+        ContentSizeFitter contentFitter = contentObj.AddComponent<ContentSizeFitter>();
+        contentFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        VerticalLayoutGroup contentLayout = contentObj.AddComponent<VerticalLayoutGroup>();
+        contentLayout.spacing = 12;
+        contentLayout.childControlWidth = true;
+        contentLayout.childControlHeight = true;
+        contentLayout.childForceExpandWidth = true;
+        contentLayout.childForceExpandHeight = false;
+        scrollRect.content = contentRect;
+        shiftsScreenUi.DriverListContent = contentRect;
+
+        for (int i = 0; i < MaxShiftDriverSlots; i++)
+        {
+            ShiftDriverRowUi row = new();
+            GameObject rowObj = CreateUiObject($"ShiftDriverRow{i + 1}", contentRect);
+            row.Root = rowObj.GetComponent<RectTransform>();
+            row.Root.gameObject.AddComponent<LayoutElement>().preferredHeight = 60f;
+            row.Background = rowObj.AddComponent<Image>();
+            row.Background.color = ShiftsCardColor;
+            Outline rowOutline = rowObj.AddComponent<Outline>();
+            rowOutline.effectColor = new Color(0f, 0f, 0f, 0.2f);
+            rowOutline.effectDistance = new Vector2(1f, -1f);
+            VerticalLayoutGroup rowLayout = rowObj.AddComponent<VerticalLayoutGroup>();
+            rowLayout.padding = new RectOffset(12, 12, 10, 10);
+            rowLayout.spacing = 4;
+            rowLayout.childControlWidth = true;
+            rowLayout.childControlHeight = true;
+            rowLayout.childForceExpandWidth = true;
+            rowLayout.childForceExpandHeight = false;
+
+            row.NameText = CreateHeaderText($"ShiftDriverName{i + 1}", rowObj.transform, font, string.Empty, 14, TextAnchor.MiddleLeft, Color.white);
+            row.StatusText = CreateBodyText($"ShiftDriverStatus{i + 1}", rowObj.transform, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+
+            row.SelectButton = rowObj.AddComponent<Button>();
+            ColorBlock rowColors = row.SelectButton.colors;
+            rowColors.normalColor = Color.white;
+            rowColors.highlightedColor = new Color(1f, 1f, 1f, 0.96f);
+            rowColors.pressedColor = new Color(0.94f, 0.94f, 0.94f, 1f);
+            rowColors.selectedColor = Color.white;
+            rowColors.fadeDuration = 0.08f;
+            row.SelectButton.colors = rowColors;
+
+            int rowIndex = i;
+            row.SelectButton.onClick.AddListener(() =>
+            {
+                if (rowIndex >= driverAgents.Count)
+                {
+                    return;
+                }
+
+                DriverAgent driver = driverAgents[rowIndex];
+                bool isSelected = selectedShiftDriverId == driver.DriverId;
+                selectedShiftDriverId = isSelected ? 0 : driver.DriverId;
+                LogUiInput($"Shifts Canvas: {(isSelected ? $"deselected {driver.DriverName}" : $"selected {driver.DriverName}")}");
+                PlayUiSound(uiSelectClip, 0.8f);
+                isShiftsScreenDirty = true;
+                isDriversScreenDirty = true;
+            });
+
+            shiftsScreenUi.DriverRows.Add(row);
+        }
+
+        RectTransform rightPanel = CreateStyledPanel("ShiftsCardsPanel", windowRoot.transform, FleetPanelColor);
+        LayoutElement rightPanelLayout = rightPanel.gameObject.AddComponent<LayoutElement>();
+        rightPanelLayout.flexibleWidth = 1f;
+        VerticalLayoutGroup rightLayout = rightPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        rightLayout.padding = new RectOffset(16, 16, 16, 16);
+        rightLayout.spacing = 14;
+        rightLayout.childControlWidth = true;
+        rightLayout.childControlHeight = true;
+        rightLayout.childForceExpandWidth = true;
+        rightLayout.childForceExpandHeight = false;
+
+        for (int i = 0; i < ShiftPresetHours.Length; i++)
+        {
+            int shiftHour = ShiftPresetHours[i];
+            ShiftCardUi card = new() { ShiftHour = shiftHour };
+            RectTransform cardRoot = CreateSectionCard(rightPanel, font, string.Empty, out RectTransform cardBody, false);
+            cardRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 158f;
+            VerticalLayoutGroup cardBodyLayout = cardBody.GetComponent<VerticalLayoutGroup>();
+            cardBodyLayout.spacing = 8;
+
+            card.HeaderText = CreateHeaderText($"ShiftHeader{i}", cardBody, font, $"{ShiftNames[i]}  {GetShiftRangeLabel(shiftHour)}", 16, TextAnchor.MiddleLeft, Color.white);
+
+            RectTransform assignedPanel = CreateStyledPanel($"ShiftAssignedPanel{i}", cardBody, FleetCardMutedColor);
+            card.AssignedListRoot = assignedPanel;
+            VerticalLayoutGroup assignedLayout = assignedPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+            assignedLayout.padding = new RectOffset(10, 10, 10, 10);
+            assignedLayout.spacing = 6;
+            assignedLayout.childControlWidth = true;
+            assignedLayout.childControlHeight = true;
+            assignedLayout.childForceExpandWidth = true;
+            assignedLayout.childForceExpandHeight = false;
+            assignedPanel.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+
+            card.EmptyText = CreateBodyText($"ShiftEmpty{i}", assignedPanel, font, "No drivers assigned", 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+
+            for (int rowIndex = 0; rowIndex < MaxShiftDriverSlots; rowIndex++)
+            {
+                GameObject assignedRow = CreateUiObject($"ShiftAssignedRow{i}_{rowIndex}", assignedPanel);
+                assignedRow.AddComponent<LayoutElement>().preferredHeight = 26f;
+                HorizontalLayoutGroup assignedRowLayout = assignedRow.AddComponent<HorizontalLayoutGroup>();
+                assignedRowLayout.spacing = 8;
+                assignedRowLayout.childControlWidth = true;
+                assignedRowLayout.childControlHeight = true;
+                assignedRowLayout.childForceExpandWidth = false;
+                assignedRowLayout.childForceExpandHeight = false;
+
+                Text assignedText = CreateBodyText($"ShiftAssignedText{i}_{rowIndex}", assignedRow.transform, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+                assignedText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+                Button removeButton = CreateButton($"ShiftRemoveButton{i}_{rowIndex}", assignedRow.transform, font, out Text removeButtonText, "Remove", 11, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
+                LayoutElement removeLayout = removeButton.gameObject.AddComponent<LayoutElement>();
+                removeLayout.preferredWidth = 72f;
+                removeLayout.preferredHeight = 22f;
+                int shiftCardIndex = i;
+                int assignedSlotIndex = rowIndex;
+                removeButton.onClick.AddListener(() =>
+                {
+                    List<DriverAgent> assignedDrivers = new();
+                    foreach (DriverAgent candidateDriver in driverAgents)
+                    {
+                        if (candidateDriver.ShiftStartHour == ShiftPresetHours[shiftCardIndex])
+                        {
+                            assignedDrivers.Add(candidateDriver);
+                        }
+                    }
+
+                    if (assignedSlotIndex >= assignedDrivers.Count)
+                    {
+                        return;
+                    }
+
+                    DriverAgent assignedDriver = assignedDrivers[assignedSlotIndex];
+                    LogUiInput($"Shifts Canvas: removed {assignedDriver.DriverName} from {ShiftNames[shiftCardIndex]}");
+                    LogCommand($"RemoveShift({assignedDriver.DriverName})");
+                    assignedDriver.ShiftStartHour = -1;
+                    assignedDriver.IsOnActiveShift = false;
+                    assignedDriver.WaitingForShiftAtParking = false;
+                    assignedDriver.NeedsShiftEndReturn = false;
+                    TruckAgent assignedTruck = GetAssignedTruckForDriver(assignedDriver);
+                    if (assignedTruck != null)
+                    {
+                        assignedTruck.IsTruckAutoModeEnabled = false;
+                    }
+
+                    if (selectedShiftDriverId == assignedDriver.DriverId)
+                    {
+                        selectedShiftDriverId = 0;
+                    }
+
+                    PlayUiSound(uiSelectClip, 0.85f);
+                    SessionDebugLogger.Log("SHIFT", $"{assignedDriver.DriverName} removed from shift — now Idle.");
+                    LogDriverReaction(assignedDriver, "shift removed; now idle");
+                    isShiftsScreenDirty = true;
+                    isDriversScreenDirty = true;
+                    isFleetScreenDirty = true;
+                });
+
+                card.AssignedRows.Add(assignedRow);
+                card.AssignedDriverTexts.Add(assignedText);
+                card.RemoveButtons.Add(removeButton);
+            }
+
+            card.AssignButton = CreateButton($"ShiftAssignButton{i}", cardBody, font, out Text assignText, string.Empty, 12, FleetPrimaryButtonColor, Color.white);
+            card.AssignButtonText = assignText;
+            card.AssignButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
+            int currentShiftIndex = i;
+            card.AssignButton.onClick.AddListener(() =>
+            {
+                DriverAgent selectedDriver = driverAgents.Find(driver => driver.DriverId == selectedShiftDriverId);
+                if (selectedDriver == null || selectedDriver.ShiftStartHour == ShiftPresetHours[currentShiftIndex])
+                {
+                    return;
+                }
+
+                LogUiInput($"Shifts Canvas: assigned {selectedDriver.DriverName} to {ShiftNames[currentShiftIndex]}");
+                LogCommand($"AssignShift({selectedDriver.DriverName}, {ShiftNames[currentShiftIndex]})");
+                selectedDriver.ShiftStartHour = ShiftPresetHours[currentShiftIndex];
+                selectedDriver.IsOnActiveShift = false;
+                selectedDriver.WaitingForShiftAtParking = false;
+                bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[currentShiftIndex]);
+                if (inWindow && selectedDriver.RestPhase == DriverRestPhase.None && selectedDriver.WalkPhase == DriverRescuePhase.None)
+                {
+                    StartDriverShiftCommute(selectedDriver);
+                }
+
+                PlayUiSound(uiSelectClip, 0.85f);
+                SessionDebugLogger.Log("SHIFT", $"{selectedDriver.DriverName} assigned to {ShiftNames[currentShiftIndex]} ({GetShiftRangeLabel(ShiftPresetHours[currentShiftIndex])}).");
+                LogDriverReaction(selectedDriver, $"assigned to {ShiftNames[currentShiftIndex]} ({GetShiftRangeLabel(ShiftPresetHours[currentShiftIndex])})");
+                isShiftsScreenDirty = true;
+                isDriversScreenDirty = true;
+            });
+
+            shiftsScreenUi.ShiftCards.Add(card);
+        }
+
+        shiftsScreenUi.CanvasRoot.SetActive(false);
+        UpdateShiftsScreenUi();
+    }
+
+    private void UpdateShiftsScreenUi()
+    {
+        if (shiftsScreenUi == null) return;
+
+        bool shouldShow = isShiftsPanelOpen;
+        if (shiftsScreenUi.CanvasRoot.activeSelf != shouldShow)
+        {
+            shiftsScreenUi.CanvasRoot.SetActive(shouldShow);
+            isShiftsScreenDirty = true;
+        }
+
+        if (!shouldShow) return;
+        if (!isShiftsScreenDirty) return;
+
+        shiftsScreenUi.HeaderCountText.text = $"{driverAgents.Count} Driver{(driverAgents.Count == 1 ? "" : "s")}";
+
+        for (int i = 0; i < shiftsScreenUi.DriverRows.Count; i++)
+        {
+            ShiftDriverRowUi row = shiftsScreenUi.DriverRows[i];
+            bool active = i < driverAgents.Count;
+            row.Root.gameObject.SetActive(active);
+            if (!active) continue;
+
+            DriverAgent driver = driverAgents[i];
+            row.DriverId = driver.DriverId;
+            bool isSelected = selectedShiftDriverId == driver.DriverId;
+            row.Background.color = isSelected ? ShiftsCardSelected : ShiftsCardColor;
+            row.NameText.text = driver.DriverName;
+            bool isAssigned = driver.ShiftStartHour >= 0;
+            row.StatusText.text = isAssigned ? $"Assigned: {GetShiftRangeLabel(driver.ShiftStartHour)}" : "Idle";
+            row.StatusText.color = isAssigned ? new Color(0.62f, 0.92f, 0.62f, 1f) : FleetMutedTextColor;
+        }
+
+        DriverAgent selectedDriver = driverAgents.Find(driver => driver.DriverId == selectedShiftDriverId);
+
+        for (int i = 0; i < shiftsScreenUi.ShiftCards.Count; i++)
+        {
+            ShiftCardUi card = shiftsScreenUi.ShiftCards[i];
+            List<DriverAgent> assignedDrivers = new();
+            foreach (DriverAgent driver in driverAgents)
+            {
+                if (driver.ShiftStartHour == card.ShiftHour)
+                {
+                    assignedDrivers.Add(driver);
+                }
+            }
+
+            card.EmptyText.gameObject.SetActive(assignedDrivers.Count == 0);
+            for (int rowIndex = 0; rowIndex < card.AssignedRows.Count; rowIndex++)
+            {
+                bool rowActive = rowIndex < assignedDrivers.Count;
+                card.AssignedRows[rowIndex].SetActive(rowActive);
+                if (!rowActive) continue;
+
+                card.AssignedDriverTexts[rowIndex].text = assignedDrivers[rowIndex].DriverName;
+            }
+
+            bool alreadyAssigned = selectedDriver != null && selectedDriver.ShiftStartHour == card.ShiftHour;
+            card.AssignButton.interactable = selectedDriver != null && !alreadyAssigned;
+            card.AssignButtonText.text = selectedDriver == null
+                ? "Select a driver to assign"
+                : alreadyAssigned
+                    ? $"{selectedDriver.DriverName} already assigned"
+                    : $"Assign {selectedDriver.DriverName} → {ShiftNames[i]}";
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(shiftsScreenUi.DriverListContent);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(shiftsScreenUi.WindowRoot);
+        isShiftsScreenDirty = false;
+    }
+
+    private void SetupBuildScreenUi()
+    {
+        if (buildScreenUi != null) return;
+
+        EnsureFleetEventSystem();
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        buildScreenUi = new BuildScreenUiRefs();
+
+        GameObject canvasObject = new("BuildScreenCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 5;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1600f, 900f);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
+        buildScreenUi.CanvasRoot = canvasObject;
+
+        GameObject windowRoot = CreateUiObject("BuildWindowRoot", canvasObject.transform);
+        RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
+        SetCenteredWindow(windowRect, 520f, 220f, -16f);
+        buildScreenUi.WindowRoot = windowRect;
+
+        Image windowBg = windowRoot.AddComponent<Image>();
+        windowBg.color = FleetScreenTint;
+        Outline windowOutline = windowRoot.AddComponent<Outline>();
+        windowOutline.effectColor = new Color(0f, 0f, 0f, 0.28f);
+        windowOutline.effectDistance = new Vector2(2f, -2f);
+
+        VerticalLayoutGroup rootLayout = windowRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        rootLayout.padding = new RectOffset(18, 18, 18, 18);
+        rootLayout.spacing = 16;
+        rootLayout.childControlWidth = true;
+        rootLayout.childControlHeight = true;
+        rootLayout.childForceExpandWidth = true;
+        rootLayout.childForceExpandHeight = false;
+
+        RectTransform headerRow = CreateLayoutRow("BuildHeaderRow", windowRoot.transform, 40f, 0f);
+        Text buildTitle = CreateHeaderText("BuildTitle", headerRow, font, "Build", 24, TextAnchor.MiddleLeft, Color.white);
+        buildTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        RectTransform toolCard = CreateSectionCard(windowRoot.transform, font, string.Empty, out RectTransform toolBody, false);
+        toolCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 110f;
+        RectTransform toolRow = CreateUiObject("BuildToolRow", toolBody).GetComponent<RectTransform>();
+        HorizontalLayoutGroup toolLayout = toolRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        toolLayout.spacing = 14;
+        toolLayout.childControlWidth = true;
+        toolLayout.childControlHeight = true;
+        toolLayout.childForceExpandWidth = false;
+        toolLayout.childForceExpandHeight = false;
+
+        buildScreenUi.RoadButton = CreateButton("BuildRoadButton", toolRow, font, out Text roadButtonText, "ROAD", 16, FleetPrimaryButtonColor, Color.white);
+        buildScreenUi.RoadButtonText = roadButtonText;
+        LayoutElement roadButtonLayout = buildScreenUi.RoadButton.gameObject.AddComponent<LayoutElement>();
+        roadButtonLayout.preferredWidth = 96f;
+        roadButtonLayout.preferredHeight = 56f;
+        buildScreenUi.RoadButton.onClick.AddListener(() =>
+        {
+            bool roadModeActive = activeBuildTool == BuildTool.Road;
+            activeBuildTool = roadModeActive ? BuildTool.None : BuildTool.Road;
+            LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
+            PlayUiSound(uiSelectClip, 0.85f);
+            SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
+            isBuildScreenDirty = true;
+        });
+
+        RectTransform roadInfo = CreateUiObject("RoadInfo", toolRow).GetComponent<RectTransform>();
+        roadInfo.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup roadInfoLayout = roadInfo.gameObject.AddComponent<VerticalLayoutGroup>();
+        roadInfoLayout.spacing = 6;
+        roadInfoLayout.childControlWidth = true;
+        roadInfoLayout.childControlHeight = true;
+        roadInfoLayout.childForceExpandWidth = true;
+        roadInfoLayout.childForceExpandHeight = false;
+
+        buildScreenUi.RoadTitleText = CreateHeaderText("RoadTitle", roadInfo, font, "Road", 18, TextAnchor.MiddleLeft, Color.white);
+        buildScreenUi.RoadDescriptionText = CreateBodyText("RoadDescription", roadInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
+
+        buildScreenUi.CanvasRoot.SetActive(false);
+        UpdateBuildScreenUi();
+    }
+
+    private void UpdateBuildScreenUi()
+    {
+        if (buildScreenUi == null) return;
+
+        bool shouldShow = isBuildPanelOpen;
+        if (buildScreenUi.CanvasRoot.activeSelf != shouldShow)
+        {
+            buildScreenUi.CanvasRoot.SetActive(shouldShow);
+            isBuildScreenDirty = true;
+        }
+
+        if (!shouldShow) return;
+        if (!isBuildScreenDirty) return;
+
+        bool roadModeActive = activeBuildTool == BuildTool.Road;
+        Image buttonImage = buildScreenUi.RoadButton.GetComponent<Image>();
+        if (buttonImage != null)
+        {
+            buttonImage.color = roadModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
+        }
+
+        buildScreenUi.RoadButtonText.text = "ROAD";
+        buildScreenUi.RoadTitleText.text = "Road";
+        buildScreenUi.RoadDescriptionText.text = roadModeActive
+            ? "Mode active: left click builds, right click removes."
+            : "Click to enter road building mode.";
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(buildScreenUi.WindowRoot);
+        isBuildScreenDirty = false;
     }
 
     private void SetupResourcesScreenUi()
@@ -1587,5 +2152,178 @@ public partial class GameBootstrap
         resourcesScreenUi.TreasuryValueText.text = $"${money}";
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(resourcesScreenUi.WindowRoot);
+    }
+
+    private void SetupEconomyScreenUi()
+    {
+        if (economyScreenUi != null) return;
+
+        EnsureFleetEventSystem();
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        economyScreenUi = new EconomyScreenUiRefs();
+
+        GameObject canvasObject = new("EconomyScreenCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 5;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1600f, 900f);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
+        economyScreenUi.CanvasRoot = canvasObject;
+
+        GameObject windowRoot = CreateUiObject("EconomyWindowRoot", canvasObject.transform);
+        RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
+        SetCenteredWindow(windowRect, 920f, 560f, -16f);
+        economyScreenUi.WindowRoot = windowRect;
+
+        Image windowBg = windowRoot.AddComponent<Image>();
+        windowBg.color = DriversScreenTint;
+        Outline windowOutline = windowRoot.AddComponent<Outline>();
+        windowOutline.effectColor = new Color(0f, 0f, 0f, 0.28f);
+        windowOutline.effectDistance = new Vector2(2f, -2f);
+
+        VerticalLayoutGroup rootLayout = windowRoot.AddComponent<VerticalLayoutGroup>();
+        rootLayout.padding = new RectOffset(18, 18, 18, 18);
+        rootLayout.spacing = 16;
+        rootLayout.childControlWidth = true;
+        rootLayout.childControlHeight = true;
+        rootLayout.childForceExpandWidth = true;
+        rootLayout.childForceExpandHeight = false;
+
+        RectTransform headerRow = CreateLayoutRow("EconomyHeaderRow", windowRoot.transform, 40f, 0f);
+        Text titleText = CreateHeaderText("EconomyTitle", headerRow, font, "Economy", 24, TextAnchor.MiddleLeft, Color.white);
+        titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        economyScreenUi.HeaderCountText = CreateHeaderText("EconomyCount", headerRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
+
+        RectTransform ledgerFrame = CreateStyledPanel("EconomyLedgerFrame", windowRoot.transform, FleetInsetColor);
+        LayoutElement frameLayout = ledgerFrame.gameObject.AddComponent<LayoutElement>();
+        frameLayout.flexibleHeight = 1f;
+        frameLayout.minHeight = 360f;
+
+        GameObject scrollObj = CreateUiObject("EconomyScrollView", ledgerFrame);
+        StretchRect(scrollObj.GetComponent<RectTransform>(), 8f, 8f, 8f, 8f);
+        Image scrollImage = scrollObj.AddComponent<Image>();
+        scrollImage.color = new Color(0f, 0f, 0f, 0f);
+        ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
+        scrollRect.horizontal = false;
+        scrollRect.scrollSensitivity = 28f;
+
+        GameObject viewportObj = CreateUiObject("Viewport", scrollObj.transform);
+        StretchRect(viewportObj.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
+        Image viewportImage = viewportObj.AddComponent<Image>();
+        viewportImage.color = new Color(0f, 0f, 0f, 0.04f);
+        viewportImage.raycastTarget = true;
+        viewportObj.AddComponent<Mask>().showMaskGraphic = false;
+
+        GameObject contentObj = CreateUiObject("Content", viewportObj.transform);
+        RectTransform contentRect = contentObj.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.anchoredPosition = Vector2.zero;
+        contentRect.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup contentLayout = contentObj.AddComponent<VerticalLayoutGroup>();
+        contentLayout.spacing = 10f;
+        contentLayout.childControlWidth = true;
+        contentLayout.childControlHeight = true;
+        contentLayout.childForceExpandWidth = true;
+        contentLayout.childForceExpandHeight = false;
+        contentObj.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scrollRect.viewport = viewportObj.GetComponent<RectTransform>();
+        scrollRect.content = contentRect;
+        economyScreenUi.EntryListContent = contentRect;
+
+        economyScreenUi.EmptyText = CreateBodyText("EconomyEmptyText", contentRect, font, "No money movements yet.", 15, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
+        economyScreenUi.EmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+
+        for (int i = 0; i < MaxEconomyRowSlots; i++)
+        {
+            economyScreenUi.Rows.Add(CreateEconomyEntryRow(contentRect, font, i));
+        }
+
+        economyScreenUi.CanvasRoot.SetActive(false);
+        UpdateEconomyScreenUi();
+    }
+
+    private static EconomyEntryRowUi CreateEconomyEntryRow(RectTransform parent, Font font, int rowIndex)
+    {
+        EconomyEntryRowUi row = new();
+        RectTransform card = CreateSectionCard(parent, font, string.Empty, out RectTransform body, false);
+        row.Root = card;
+        LayoutElement cardLayout = card.gameObject.AddComponent<LayoutElement>();
+        cardLayout.preferredHeight = 84f;
+
+        RectTransform topRow = CreateLayoutRow($"EconomyTopRow{rowIndex}", body, 24f, 12f);
+        row.TimeText = CreateBodyText($"EconomyTime{rowIndex}", topRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        row.TimeText.gameObject.AddComponent<LayoutElement>().preferredWidth = 82f;
+        row.FlowText = CreateBodyText($"EconomyFlow{rowIndex}", topRow, font, string.Empty, 14, TextAnchor.MiddleLeft, Color.white);
+        row.FlowText.fontStyle = FontStyle.Bold;
+        row.FlowText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        row.AmountText = CreateHeaderText($"EconomyAmount{rowIndex}", topRow, font, string.Empty, 15, TextAnchor.MiddleRight, FleetAccentColor);
+        row.AmountText.gameObject.AddComponent<LayoutElement>().preferredWidth = 116f;
+
+        row.ReasonText = CreateBodyText($"EconomyReason{rowIndex}", body, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        row.ReasonText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        return row;
+    }
+
+    private void UpdateEconomyScreenUi()
+    {
+        if (economyScreenUi == null) return;
+
+        bool shouldShow = isEconomyPanelOpen;
+        if (economyScreenUi.CanvasRoot.activeSelf != shouldShow)
+        {
+            economyScreenUi.CanvasRoot.SetActive(shouldShow);
+            isEconomyScreenDirty = true;
+        }
+
+        if (!shouldShow) return;
+        bool forceLayoutRebuild = isEconomyScreenDirty;
+
+        economyScreenUi.HeaderCountText.text = $"{moneyLedgerEntries.Count} Entr{(moneyLedgerEntries.Count == 1 ? "y" : "ies")}";
+        economyScreenUi.EmptyText.gameObject.SetActive(moneyLedgerEntries.Count == 0);
+
+        for (int i = 0; i < economyScreenUi.Rows.Count; i++)
+        {
+            bool active = i < moneyLedgerEntries.Count;
+            EconomyEntryRowUi row = economyScreenUi.Rows[i];
+            row.Root.gameObject.SetActive(active);
+            if (!active) continue;
+
+            MoneyLedgerEntry entry = moneyLedgerEntries[i];
+            row.TimeText.text = entry.TimeLabel;
+            row.FlowText.text = $"{entry.FromLabel} → {entry.ToLabel}";
+            row.ReasonText.text = BuildEconomyEntryDetail(entry);
+            bool isIncome = entry.TreasuryDelta > 0;
+            row.AmountText.text = $"{(isIncome ? "+" : "-")}${Mathf.Abs(entry.TreasuryDelta)}";
+            row.AmountText.color = isIncome ? new Color(0.56f, 0.92f, 0.57f, 1f) : new Color(0.95f, 0.66f, 0.42f, 1f);
+        }
+
+        if (forceLayoutRebuild)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(economyScreenUi.EntryListContent);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(economyScreenUi.WindowRoot);
+        }
+        isEconomyScreenDirty = false;
+    }
+
+    private static string BuildEconomyEntryDetail(MoneyLedgerEntry entry)
+    {
+        string detail = entry.Reason;
+        if (entry.RecipientBalanceAfter.HasValue)
+        {
+            detail += $" • {entry.ToLabel} balance: ${entry.RecipientBalanceAfter.Value}";
+        }
+
+        if (entry.TreasuryAfter.HasValue)
+        {
+            detail += $" • Treasury: ${entry.TreasuryAfter.Value}";
+        }
+
+        return detail;
     }
 }

@@ -17,10 +17,10 @@ MonoBehaviour:
   shader: {fileID: 4800000, guid: dc321338b5bcf3b43b4cbf008f938b95, type: 3}
   settings:
     focusCenter: 0.53
-    focusWidth: 0.22
-    falloff: 0.16
-    blurStrength: 0.35
-    blurRadius: 0.85
+    focusWidth: 0.34
+    falloff: 0.08
+    blurStrength: 0.08
+    blurRadius: 0.55
     renderPassEvent: 600
 --- !u!114 &11400000
 MonoBehaviour:

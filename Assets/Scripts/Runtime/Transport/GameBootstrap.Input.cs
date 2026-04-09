@@ -154,6 +154,7 @@ public partial class GameBootstrap
             isShiftsPanelOpen ||
             isDriversPanelOpen ||
             isResourcesPanelOpen ||
+            isEconomyPanelOpen ||
             isBuildPanelOpen ||
             isTruckDetailsOpen ||
             activeBuildTool != BuildTool.None;
@@ -162,12 +163,16 @@ public partial class GameBootstrap
         isShiftsPanelOpen = false;
         isDriversPanelOpen = false;
         isResourcesPanelOpen = false;
+        isEconomyPanelOpen = false;
         isBuildPanelOpen = false;
         isTruckDetailsOpen = false;
+        isDriverDetailsOpen = false;
         activeBuildTool = BuildTool.None;
         hoveredBuildCell = null;
         selectedLocation = null;
         isFleetScreenDirty = true;
+        isEconomyScreenDirty = true;
+        isBuildScreenDirty = true;
         DisableTruckCameraFocus();
         RefreshSelectionVisuals();
 
@@ -480,6 +485,11 @@ public partial class GameBootstrap
             return;
         }
 
+        if (TryHandleDriverSelection(ray))
+        {
+            return;
+        }
+
         Vector2Int cell = WorldToCell(ray.GetPoint(distance));
         if (TryHandleLocationSelection(cell))
         {
@@ -490,6 +500,7 @@ public partial class GameBootstrap
         {
             selectedLocation = null;
             isTruckDetailsOpen = false;
+            isDriverDetailsOpen = false;
             DisableTruckCameraFocus();
             RefreshSelectionVisuals();
             return;
@@ -499,6 +510,7 @@ public partial class GameBootstrap
         {
             selectedLocation = null;
             isTruckDetailsOpen = false;
+            isDriverDetailsOpen = false;
             DisableTruckCameraFocus();
             RefreshSelectionVisuals();
             return;

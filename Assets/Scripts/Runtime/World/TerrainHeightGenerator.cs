@@ -13,9 +13,11 @@ public static class TerrainHeightGenerator
         {
             for (int y = 0; y < gridHeight; y++)
             {
+                float broadHills = Mathf.PerlinNoise(noiseOffsetX * 0.19f + x * 0.095f, noiseOffsetY * 0.19f + y * 0.095f);
                 float primaryNoise = Mathf.PerlinNoise(noiseOffsetX + x * 0.19f, noiseOffsetY + y * 0.19f);
                 float secondaryNoise = Mathf.PerlinNoise(noiseOffsetX * 0.37f + x * 0.41f, noiseOffsetY * 0.37f + y * 0.41f);
-                heights[x, y] = Mathf.Lerp(0.04f, 0.62f, primaryNoise * 0.72f + secondaryNoise * 0.28f);
+                float combined = broadHills * 0.42f + primaryNoise * 0.43f + secondaryNoise * 0.15f;
+                heights[x, y] = Mathf.Lerp(0.02f, 0.78f, combined);
             }
         }
 

@@ -30,6 +30,24 @@ public partial class GameBootstrap
         return false;
     }
 
+    private bool TryHandleDriverSelection(Ray ray)
+    {
+        if (!Physics.Raycast(ray, out RaycastHit hit, 200f)) return false;
+        if (hit.transform == null) return false;
+
+        foreach (DriverAgent driver in driverAgents)
+        {
+            if (driver.DriverObject != null && driver.DriverObject.activeSelf &&
+                hit.transform.IsChildOf(driver.DriverObject.transform))
+            {
+                FocusDriver(driver.DriverId);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void ProduceForestWood()
     {
         // Forest production is now driven by worker chop hits.
@@ -258,11 +276,6 @@ public partial class GameBootstrap
         }
 
         driver.Energy = Mathf.Max(0f, driver.Energy - DriverEnergyDrainPerSecond * Time.deltaTime * gameSpeedMultiplier);
-        if (!driver.NeedsRestAfterTrip && driver.Energy <= DriverEnergyCriticalThreshold)
-        {
-            driver.NeedsRestAfterTrip = true;
-            SessionDebugLogger.Log("REST", $"{GetLoadedTruckDisplayName()} energy critical ({Mathf.CeilToInt(driver.Energy)}). Will rest after trip.");
-        }
     }
 
     private void UpdateDriverVisualAnimation(DriverAgent driver)

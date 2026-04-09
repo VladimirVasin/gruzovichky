@@ -392,6 +392,7 @@ public partial class GameBootstrap
         SetupTruckAudio(hiredTruck);
         nextHireTruckNumber++;
         money -= HireTruckCost;
+        RecordMoneyMovement(-HireTruckCost, "Treasury", "Fleet Expansion", $"Hire {hiredTruck.DisplayName}", money);
         SessionDebugLogger.Log("TRUCK", $"Hired {hiredTruck.DisplayName} for ${HireTruckCost}. Money now ${money}.");
         LogTruckReaction(hiredTruck, $"purchased and spawned in parking for ${HireTruckCost}");
         TruckAgent selectedTruck = GetTruckAgent(selectedTruckNumber) ?? GetTruckAgent(1);
@@ -416,10 +417,12 @@ public partial class GameBootstrap
 
         DriverAgent hiredDriver = CreateAndRegisterDriverAgent();
         money -= HireDriverCost;
+        RecordMoneyMovement(-HireDriverCost, "Treasury", "Hiring", $"Hire {hiredDriver.DriverName}", money);
         SessionDebugLogger.Log("DRIVER", $"Hired {hiredDriver.DriverName} for ${HireDriverCost}. Money now ${money}.");
         LogDriverReaction(hiredDriver, $"hired for ${HireDriverCost} and waiting in Motel");
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
+        isEconomyScreenDirty = true;
         PlayUiSound(uiSelectClip, 0.96f);
     }
 

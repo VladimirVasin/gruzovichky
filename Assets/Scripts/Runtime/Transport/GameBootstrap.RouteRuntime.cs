@@ -93,14 +93,15 @@ public partial class GameBootstrap
                 }
 
                 PlayTruckFx(parkingReturnCueClip, 0.64f);
-                AwardMoney(currentAssignedTripReward);
+                AwardMoney(currentAssignedTripReward, "Client Delivery", $"Trip reward: {GetTripTitle(currentAssignedTrip)}");
                 SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} completed trip {GetTripTitle(currentAssignedTrip)} and earned ${currentAssignedTripReward}.");
                 currentAssignedTrip = TripType.None;
                 currentTripPhase = TripPhase.None;
                 currentAssignedTripReward = 0;
 
-                if ((driver.NeedsRestAfterTrip || driver.NeedsShiftEndReturn) && GetCurrentTruckForDriver(driver) is TruckAgent truckAgent)
+                if (driver.NeedsShiftEndReturn && GetCurrentTruckForDriver(driver) is TruckAgent truckAgent)
                 {
+                    EnsurePendingShiftSalaryPaid(driver);
                     StartDriverMotelRest(truckAgent, driver);
                 }
 
@@ -162,8 +163,9 @@ public partial class GameBootstrap
                 PlayTruckFx(parkingReturnCueClip, 0.58f);
                 SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} finished refuel order and returned to parking.");
                 currentRefuelPhase = RefuelPhase.None;
-                if ((driver.NeedsRestAfterTrip || driver.NeedsShiftEndReturn) && GetCurrentTruckForDriver(driver) is TruckAgent truckAgent)
+                if (driver.NeedsShiftEndReturn && GetCurrentTruckForDriver(driver) is TruckAgent truckAgent)
                 {
+                    EnsurePendingShiftSalaryPaid(driver);
                     StartDriverMotelRest(truckAgent, driver);
                 }
                 return;
@@ -182,6 +184,7 @@ public partial class GameBootstrap
             case DriverRestPhase.ToMotel:
                 if (GetCurrentTruckForDriver(driver) is TruckAgent currentTruck)
                 {
+                    EnsurePendingShiftSalaryPaid(driver);
                     StartDriverMotelRest(currentTruck, driver);
                 }
                 return;
