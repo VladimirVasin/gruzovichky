@@ -105,7 +105,7 @@ public partial class GameBootstrap
             roadCells,
             edgeHighwayCells,
             IsLocationCell,
-            cell => IsGrassGroundCell(cell.x, cell.y) && !waterCells.Contains(cell));
+            cell => IsGrassGroundCell(cell.x, cell.y) && !IsWaterOrBeachCell(cell));
         int bushCount = 0;
         int flowerCount = 0;
         SessionDebugLogger.Log("WORLD", $"Planning {plannedCells.Count} misc cells");

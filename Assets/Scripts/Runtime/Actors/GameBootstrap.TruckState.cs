@@ -15,6 +15,8 @@ public partial class GameBootstrap
         truckCabinTransform = truckAgent.TruckCabinTransform;
         truckHeadlightLeftRenderer = truckAgent.TruckHeadlightLeftRenderer;
         truckHeadlightRightRenderer = truckAgent.TruckHeadlightRightRenderer;
+        truckHeadlightLeftMaterial = truckAgent.TruckHeadlightLeftMaterial;
+        truckHeadlightRightMaterial = truckAgent.TruckHeadlightRightMaterial;
         truckLoopAudioSource = truckAgent.TruckLoopAudioSource;
         truckFxAudioSource = truckAgent.TruckFxAudioSource;
         truckEngineAudioPhaseOffset = truckAgent.EngineAudioPhaseOffset;
@@ -66,6 +68,8 @@ public partial class GameBootstrap
         truckAgent.TruckCabinTransform = truckCabinTransform;
         truckAgent.TruckHeadlightLeftRenderer = truckHeadlightLeftRenderer;
         truckAgent.TruckHeadlightRightRenderer = truckHeadlightRightRenderer;
+        truckAgent.TruckHeadlightLeftMaterial = truckHeadlightLeftMaterial;
+        truckAgent.TruckHeadlightRightMaterial = truckHeadlightRightMaterial;
         truckAgent.TruckWheels.Clear();
         truckAgent.TruckWheels.AddRange(truckWheels);
         truckAgent.TruckFrontWheels.Clear();

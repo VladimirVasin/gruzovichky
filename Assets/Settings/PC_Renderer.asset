@@ -50,7 +50,7 @@ MonoBehaviour:
   - {fileID: 7833122117494664109}
   - {fileID: -8827121196713674249}
   - {fileID: 7412786932404050939}
-  m_RendererFeatureMap: ad6b866f10d7b46c
+  m_RendererFeatureMap: ad6b866f10d7b46cf7798f280ac47f85fbdb99bd7082df66
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}

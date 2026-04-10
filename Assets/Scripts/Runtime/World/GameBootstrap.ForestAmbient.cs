@@ -382,6 +382,7 @@ public partial class GameBootstrap
             FlashlightTransform = flashlight.transform,
             FlashlightLight = flashlightLight,
             FlashlightRenderer = flashlightRenderer,
+            FlashlightMaterial = flashlightRenderer != null ? flashlightRenderer.material : null,
             MoveSpeed = Random.Range(1.05f, 1.35f)
         };
     }
@@ -543,9 +544,9 @@ public partial class GameBootstrap
         worker.FlashlightLight.intensity = flashlightIntensity;
         worker.FlashlightLight.color = flashlightColor;
 
-        if (worker.FlashlightRenderer != null)
+        if (worker.FlashlightMaterial != null)
         {
-            worker.FlashlightRenderer.material.color = flashlightColor;
+            worker.FlashlightMaterial.color = flashlightColor;
         }
     }
 }

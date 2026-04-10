@@ -144,13 +144,13 @@ public partial class GameBootstrap
         Vector2Int cell = selectedDebugCell.Value;
         if (selectedDebugCellHighlight != null)
         {
-            float y = SampleTerrainHeight(cell.x + 0.5f, cell.y + 0.5f) + 0.06f;
+            float y = (waterCells.Contains(cell) ? GetCurrentVisualWaterHeight(cell) : SampleTerrainHeight(cell.x + 0.5f, cell.y + 0.5f)) + 0.06f;
             selectedDebugCellHighlight.transform.position = new Vector3(cell.x + 0.5f, y, cell.y + 0.5f);
         }
 
         if (selectedDebugCellOutline != null)
         {
-            float outlineY = SampleTerrainHeight(cell.x + 0.5f, cell.y + 0.5f) + 0.085f;
+            float outlineY = (waterCells.Contains(cell) ? GetCurrentVisualWaterHeight(cell) : SampleTerrainHeight(cell.x + 0.5f, cell.y + 0.5f)) + 0.085f;
             selectedDebugCellOutline.transform.position = new Vector3(cell.x + 0.5f, outlineY, cell.y + 0.5f);
         }
 
@@ -279,12 +279,16 @@ public partial class GameBootstrap
 
         string locationLabel = containingLocation.HasValue ? locations[containingLocation.Value].Label : "None";
 
+        string heightLine = waterCells.Contains(cell)
+            ? $"Height: {SampleTerrainHeight(cell.x + 0.5f, cell.y + 0.5f):0.00}\nVisual Water Height: {GetCurrentVisualWaterHeight(cell):0.00}"
+            : $"Height: {SampleTerrainHeight(cell.x + 0.5f, cell.y + 0.5f):0.00}";
+
         return
             $"Surface: {movementLabel}\n" +
             $"Shore: {shoreLabel}\n" +
             $"Location: {locationLabel}" + (IsAnchorCell(cell) ? " (Anchor)" : string.Empty) + "\n" +
             $"Occupant: {occupantLabel}\n" +
             $"Misc: {(miscOccupiedCells.Contains(cell) ? "Yes" : "No")}\n" +
-            $"Height: {SampleTerrainHeight(cell.x + 0.5f, cell.y + 0.5f):0.00}";
+            heightLine;
     }
 }

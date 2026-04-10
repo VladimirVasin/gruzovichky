@@ -105,7 +105,6 @@ public sealed class TiltShiftRendererFeature : ScriptableRendererFeature
         private readonly ProfilingSampler profilingSampler = new("TiltShift Diorama");
 
         private Material material;
-        private RTHandle temporaryColor;
 
         public TiltShiftPass(TiltShiftSettings settings)
         {
@@ -157,49 +156,7 @@ public sealed class TiltShiftRendererFeature : ScriptableRendererFeature
             renderGraph.AddBlitPass(copyBackParameters, "TiltShift Diorama CopyBack");
         }
 
-        public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
-        {
-            if (material == null)
-            {
-                return;
-            }
-
-            RenderTextureDescriptor descriptor = renderingData.cameraData.cameraTargetDescriptor;
-            descriptor.depthBufferBits = 0;
-            descriptor.msaaSamples = 1;
-            RenderingUtils.ReAllocateIfNeeded(ref temporaryColor, descriptor, FilterMode.Bilinear, TextureWrapMode.Clamp, name: "_TiltShiftTemporaryColor");
-        }
-
-        public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
-        {
-            if (material == null || temporaryColor == null)
-            {
-                return;
-            }
-
-            CommandBuffer cmd = CommandBufferPool.Get();
-            using (new ProfilingScope(cmd, profilingSampler))
-            {
-                material.SetFloat(FocusCenterId, settings.focusCenter);
-                material.SetFloat(FocusWidthId, settings.focusWidth);
-                material.SetFloat(FocusFalloffId, settings.falloff);
-                material.SetFloat(BlurStrengthId, settings.blurStrength);
-                material.SetFloat(BlurRadiusId, settings.blurRadius);
-
-                RTHandle source = renderingData.cameraData.renderer.cameraColorTargetHandle;
-                Blitter.BlitCameraTexture(cmd, source, temporaryColor, material, 0);
-                Blitter.BlitCameraTexture(cmd, temporaryColor, source);
-            }
-
-            context.ExecuteCommandBuffer(cmd);
-            CommandBufferPool.Release(cmd);
-        }
-
-        public void Dispose()
-        {
-            temporaryColor?.Release();
-            temporaryColor = null;
-        }
+        public void Dispose() { }
     }
 }
 

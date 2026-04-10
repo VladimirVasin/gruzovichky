@@ -140,10 +140,12 @@ public partial class GameBootstrap
         if (isLeft)
         {
             truckHeadlightLeftRenderer = rendererComponent;
+            truckHeadlightLeftMaterial = rendererComponent != null ? rendererComponent.material : null;
         }
         else
         {
             truckHeadlightRightRenderer = rendererComponent;
+            truckHeadlightRightMaterial = rendererComponent != null ? rendererComponent.material : null;
         }
     }
 
@@ -187,14 +189,14 @@ public partial class GameBootstrap
             headlight.intensity = headlightIntensity;
         }
 
-        if (truckHeadlightLeftRenderer != null)
+        if (truckHeadlightLeftMaterial != null)
         {
-            truckHeadlightLeftRenderer.material.color = lampColor;
+            truckHeadlightLeftMaterial.color = lampColor;
         }
 
-        if (truckHeadlightRightRenderer != null)
+        if (truckHeadlightRightMaterial != null)
         {
-            truckHeadlightRightRenderer.material.color = lampColor;
+            truckHeadlightRightMaterial.color = lampColor;
         }
 
         UpdateLocationNightLights(stylizedDaylight);
@@ -222,14 +224,14 @@ public partial class GameBootstrap
             lightComponent.intensity = lightIntensity;
         }
 
-        foreach (Renderer rendererComponent in locationNightLightRenderers)
+        foreach (Material material in locationNightLightMaterials)
         {
-            if (rendererComponent == null)
+            if (material == null)
             {
                 continue;
             }
 
-            rendererComponent.material.color = lampColor;
+            material.color = lampColor;
         }
 
         UpdateRoadLanternLights(darkness);
@@ -240,7 +242,7 @@ public partial class GameBootstrap
         float time = Time.time;
         foreach (RoadLanternData roadLantern in roadLanterns)
         {
-            if (roadLantern.Light == null || roadLantern.GlowRenderer == null)
+            if (roadLantern.Light == null || roadLantern.GlowMaterial == null)
             {
                 continue;
             }
@@ -289,7 +291,7 @@ public partial class GameBootstrap
             roadLantern.Light.enabled = lightsOn;
             roadLantern.Light.intensity = lightIntensity;
             roadLantern.Light.color = lanternColor;
-            roadLantern.GlowRenderer.material.color = lanternColor;
+            roadLantern.GlowMaterial.color = lanternColor;
         }
     }
 
@@ -312,9 +314,9 @@ public partial class GameBootstrap
         driver.DriverFlashlightLight.intensity = flashlightIntensity;
         driver.DriverFlashlightLight.color = flashlightColor;
 
-        if (driver.DriverFlashlightRenderer != null)
+        if (driver.DriverFlashlightMaterial != null)
         {
-            driver.DriverFlashlightRenderer.material.color = flashlightColor;
+            driver.DriverFlashlightMaterial.color = flashlightColor;
         }
     }
 
@@ -381,6 +383,7 @@ public partial class GameBootstrap
         ConfigureShadowVisual(flashlight);
         driver.DriverFlashlightTransform = flashlight.transform;
         driver.DriverFlashlightRenderer = flashlight.GetComponent<Renderer>();
+        driver.DriverFlashlightMaterial = driver.DriverFlashlightRenderer != null ? driver.DriverFlashlightRenderer.material : null;
 
         GameObject flashlightBeamObject = new("DriverFlashlight");
         flashlightBeamObject.transform.SetParent(driver.DriverFlashlightTransform, false);
