@@ -153,6 +153,11 @@ public partial class GameBootstrap
                 truckCargoType = CargoType.None;
                 break;
 
+            case TruckInteractionType.TradeUnloadAtWarehouse:
+                truckCargoAmount = 0;
+                truckCargoType = CargoType.None;
+                break;
+
             case TruckInteractionType.RefuelAtGasStation:
                 truckFuel = TruckFuelCapacity;
                 break;
@@ -195,6 +200,9 @@ public partial class GameBootstrap
                     break;
                 case TruckInteractionType.UnloadAtWarehouse:
                     PlayTruckFx(warehouseUnloadBoardsCueClip, 0.78f);
+                    break;
+                case TruckInteractionType.TradeUnloadAtWarehouse:
+                    PlayTruckFx(warehouseUnloadBoardsCueClip, 0.74f);
                     break;
             }
         }

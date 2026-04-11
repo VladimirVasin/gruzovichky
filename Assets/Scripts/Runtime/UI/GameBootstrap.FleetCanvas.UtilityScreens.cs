@@ -170,15 +170,17 @@ public partial class GameBootstrap
         LayoutElement contentLayout = contentRoot.gameObject.AddComponent<LayoutElement>();
         contentLayout.flexibleHeight = 1f;
         VerticalLayoutGroup contentGroup = contentRoot.gameObject.AddComponent<VerticalLayoutGroup>();
-        contentGroup.spacing = 14;
+        contentGroup.spacing = 10;
         contentGroup.childControlWidth = true;
         contentGroup.childControlHeight = true;
         contentGroup.childForceExpandWidth = true;
         contentGroup.childForceExpandHeight = false;
 
-        CreateResourceSummaryCard(contentRoot, font, "Forest", out resourcesScreenUi.ForestValueText, out resourcesScreenUi.ForestSubText);
-        CreateResourceSummaryCard(contentRoot, font, "Sawmill", out resourcesScreenUi.SawmillValueText, out resourcesScreenUi.SawmillSubText);
-        CreateResourceSummaryCard(contentRoot, font, "Warehouse", out resourcesScreenUi.WarehouseValueText, out resourcesScreenUi.WarehouseSubText);
+        CreateResourceSummaryRow(contentRoot, font, "Logs", ResourceVisualKind.Logs, resourcesScreenUi.Rows);
+        CreateResourceSummaryRow(contentRoot, font, "Boards", ResourceVisualKind.Boards, resourcesScreenUi.Rows);
+        CreateResourceSummaryRow(contentRoot, font, "Cotton", ResourceVisualKind.Cotton, resourcesScreenUi.Rows);
+        CreateResourceSummaryRow(contentRoot, font, "Textile", ResourceVisualKind.Textile, resourcesScreenUi.Rows);
+        CreateResourceSummaryRow(contentRoot, font, "Furniture", ResourceVisualKind.Furniture, resourcesScreenUi.Rows);
 
         RectTransform footerCard = CreateSectionCard(windowRoot.transform, font, "Treasury", out RectTransform footerBody);
         footerCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 74f;
@@ -188,14 +190,117 @@ public partial class GameBootstrap
         UpdateResourcesScreenUi();
     }
 
-    private static void CreateResourceSummaryCard(RectTransform parent, Font font, string title, out Text valueText, out Text subText)
+    private enum ResourceVisualKind
     {
-        RectTransform card = CreateSectionCard(parent, font, title, out RectTransform body);
-        card.gameObject.AddComponent<LayoutElement>().preferredHeight = 88f;
-        valueText = CreateHeaderText($"{title}Value", body, font, string.Empty, 18, TextAnchor.MiddleLeft, Color.white);
-        valueText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
-        subText = CreateBodyText($"{title}Sub", body, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        subText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        Logs,
+        Boards,
+        Cotton,
+        Textile,
+        Furniture
+    }
+
+    private void CreateResourceSummaryRow(RectTransform parent, Font font, string title, ResourceVisualKind iconKind, List<ResourceSummaryRowUi> rows)
+    {
+        RectTransform card = CreateStyledPanel($"{title}RowCard", parent, FleetInsetColor);
+        card.gameObject.AddComponent<LayoutElement>().preferredHeight = 62f;
+
+        HorizontalLayoutGroup layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(12, 12, 10, 10);
+        layout.spacing = 12;
+        layout.childControlWidth = false;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+
+        RectTransform iconRoot = CreateUiObject($"{title}IconRoot", card).GetComponent<RectTransform>();
+        LayoutElement iconLayout = iconRoot.gameObject.AddComponent<LayoutElement>();
+        iconLayout.preferredWidth = 34f;
+        iconLayout.preferredHeight = 34f;
+        Image iconBackground = iconRoot.gameObject.AddComponent<Image>();
+        iconBackground.color = new Color(1f, 1f, 1f, 0.06f);
+        DrawResourceIcon(iconRoot, iconKind);
+
+        RectTransform textRoot = CreateUiObject($"{title}TextRoot", card).GetComponent<RectTransform>();
+        LayoutElement textLayout = textRoot.gameObject.AddComponent<LayoutElement>();
+        textLayout.flexibleWidth = 1f;
+        VerticalLayoutGroup textGroup = textRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        textGroup.spacing = 2f;
+        textGroup.childControlWidth = true;
+        textGroup.childControlHeight = true;
+        textGroup.childForceExpandWidth = true;
+        textGroup.childForceExpandHeight = false;
+
+        Text nameText = CreateBodyText($"{title}Name", textRoot, font, title, 14, TextAnchor.MiddleLeft, Color.white);
+        nameText.fontStyle = FontStyle.Bold;
+        nameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+        Text valueText = CreateHeaderText($"{title}Value", textRoot, font, string.Empty, 18, TextAnchor.MiddleLeft, FleetAccentColor);
+        valueText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+
+        rows.Add(new ResourceSummaryRowUi
+        {
+            NameText = nameText,
+            ValueText = valueText
+        });
+    }
+
+    private static void DrawResourceIcon(RectTransform parent, ResourceVisualKind iconKind)
+    {
+        switch (iconKind)
+        {
+            case ResourceVisualKind.Logs:
+                CreateIconBar(parent, new Vector2(18f, 7f), new Vector2(0f, 9f), new Color(0.63f, 0.43f, 0.2f));
+                CreateIconBar(parent, new Vector2(20f, 7f), new Vector2(2f, 0f), new Color(0.74f, 0.52f, 0.26f));
+                CreateIconBar(parent, new Vector2(18f, 7f), new Vector2(-1f, -9f), new Color(0.56f, 0.36f, 0.16f));
+                break;
+            case ResourceVisualKind.Boards:
+                CreateIconBar(parent, new Vector2(20f, 4f), new Vector2(0f, 8f), new Color(0.86f, 0.72f, 0.45f));
+                CreateIconBar(parent, new Vector2(20f, 4f), new Vector2(0f, 1f), new Color(0.81f, 0.67f, 0.4f));
+                CreateIconBar(parent, new Vector2(20f, 4f), new Vector2(0f, -6f), new Color(0.76f, 0.61f, 0.35f));
+                break;
+            case ResourceVisualKind.Cotton:
+                CreateIconCircle(parent, 11f, new Vector2(-6f, 2f), new Color(0.97f, 0.97f, 0.95f));
+                CreateIconCircle(parent, 10f, new Vector2(4f, 5f), new Color(0.98f, 0.98f, 0.96f));
+                CreateIconCircle(parent, 9f, new Vector2(0f, -5f), new Color(0.95f, 0.95f, 0.93f));
+                break;
+            case ResourceVisualKind.Textile:
+                CreateIconBar(parent, new Vector2(22f, 18f), Vector2.zero, new Color(0.72f, 0.84f, 0.95f));
+                CreateIconBar(parent, new Vector2(3f, 18f), new Vector2(-6f, 0f), new Color(0.55f, 0.74f, 0.9f));
+                CreateIconBar(parent, new Vector2(3f, 18f), new Vector2(2f, 0f), new Color(0.55f, 0.74f, 0.9f));
+                CreateIconBar(parent, new Vector2(3f, 18f), new Vector2(10f, 0f), new Color(0.55f, 0.74f, 0.9f));
+                break;
+            case ResourceVisualKind.Furniture:
+                CreateIconBar(parent, new Vector2(18f, 4f), new Vector2(0f, 7f), new Color(0.78f, 0.56f, 0.3f));
+                CreateIconBar(parent, new Vector2(14f, 4f), new Vector2(0f, -1f), new Color(0.72f, 0.5f, 0.25f));
+                CreateIconBar(parent, new Vector2(3f, 10f), new Vector2(-6f, -8f), new Color(0.58f, 0.39f, 0.18f));
+                CreateIconBar(parent, new Vector2(3f, 10f), new Vector2(6f, -8f), new Color(0.58f, 0.39f, 0.18f));
+                break;
+        }
+    }
+
+    private static void CreateIconBar(RectTransform parent, Vector2 size, Vector2 anchoredPosition, Color color)
+    {
+        RectTransform rect = CreateUiObject("IconBar", parent).GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = anchoredPosition;
+        rect.sizeDelta = size;
+        Image image = rect.gameObject.AddComponent<Image>();
+        image.color = color;
+    }
+
+    private static void CreateIconCircle(RectTransform parent, float diameter, Vector2 anchoredPosition, Color color)
+    {
+        RectTransform rect = CreateUiObject("IconCircle", parent).GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = anchoredPosition;
+        rect.sizeDelta = new Vector2(diameter, diameter);
+        Image image = rect.gameObject.AddComponent<Image>();
+        image.color = color;
     }
 
     private void UpdateResourcesScreenUi()
@@ -212,14 +317,19 @@ public partial class GameBootstrap
 
         if (!shouldShow) return;
 
-        string headerCount = "3 Production Nodes";
-        string forestValue = $"{locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage} Logs";
-        string forestSub = "Raw logs ready for pickup";
-        string sawmillValue = $"{locations[LocationType.Sawmill].BoardsStored} Boards";
-        string sawmillSub = $"{locations[LocationType.Sawmill].LogsStored} logs waiting for processing";
-        string warehouseValue = $"{locations[LocationType.Warehouse].BoardsStored} Boards";
-        string warehouseSub = "Finished goods in storage";
+        string headerCount = $"{resourcesScreenUi.Rows.Count} Resources";
         string treasuryValue = $"${money}";
+        int totalLogs = GetTotalLogsResourceAmount();
+        int totalBoards = GetTotalBoardsResourceAmount();
+        string[] resourceNames = { "Logs", "Boards", "Cotton", "Textile", "Furniture" };
+        string[] resourceValues =
+        {
+            totalLogs.ToString(),
+            totalBoards.ToString(),
+            cottonStored.ToString(),
+            textileStored.ToString(),
+            furnitureStored.ToString()
+        };
 
         if (resourcesScreenUi.LastHeaderCount != headerCount)
         {
@@ -228,46 +338,22 @@ public partial class GameBootstrap
             forceLayoutRebuild = true;
         }
 
-        if (resourcesScreenUi.LastForestValue != forestValue)
+        for (int i = 0; i < resourcesScreenUi.Rows.Count && i < resourceNames.Length; i++)
         {
-            resourcesScreenUi.ForestValueText.text = forestValue;
-            resourcesScreenUi.LastForestValue = forestValue;
-            forceLayoutRebuild = true;
-        }
+            ResourceSummaryRowUi row = resourcesScreenUi.Rows[i];
+            if (row.LastName != resourceNames[i])
+            {
+                row.NameText.text = resourceNames[i];
+                row.LastName = resourceNames[i];
+                forceLayoutRebuild = true;
+            }
 
-        if (resourcesScreenUi.LastForestSub != forestSub)
-        {
-            resourcesScreenUi.ForestSubText.text = forestSub;
-            resourcesScreenUi.LastForestSub = forestSub;
-            forceLayoutRebuild = true;
-        }
-
-        if (resourcesScreenUi.LastSawmillValue != sawmillValue)
-        {
-            resourcesScreenUi.SawmillValueText.text = sawmillValue;
-            resourcesScreenUi.LastSawmillValue = sawmillValue;
-            forceLayoutRebuild = true;
-        }
-
-        if (resourcesScreenUi.LastSawmillSub != sawmillSub)
-        {
-            resourcesScreenUi.SawmillSubText.text = sawmillSub;
-            resourcesScreenUi.LastSawmillSub = sawmillSub;
-            forceLayoutRebuild = true;
-        }
-
-        if (resourcesScreenUi.LastWarehouseValue != warehouseValue)
-        {
-            resourcesScreenUi.WarehouseValueText.text = warehouseValue;
-            resourcesScreenUi.LastWarehouseValue = warehouseValue;
-            forceLayoutRebuild = true;
-        }
-
-        if (resourcesScreenUi.LastWarehouseSub != warehouseSub)
-        {
-            resourcesScreenUi.WarehouseSubText.text = warehouseSub;
-            resourcesScreenUi.LastWarehouseSub = warehouseSub;
-            forceLayoutRebuild = true;
+            if (row.LastValue != resourceValues[i])
+            {
+                row.ValueText.text = resourceValues[i];
+                row.LastValue = resourceValues[i];
+                forceLayoutRebuild = true;
+            }
         }
 
         if (resourcesScreenUi.LastTreasuryValue != treasuryValue)
@@ -281,6 +367,48 @@ public partial class GameBootstrap
         {
             LayoutRebuilder.ForceRebuildLayoutImmediate(resourcesScreenUi.WindowRoot);
         }
+    }
+
+    private int GetTotalLogsResourceAmount()
+    {
+        int total = 0;
+        if (locations.TryGetValue(LocationType.Forest, out LocationData forest))
+        {
+            total += forest.LogsStored;
+        }
+
+        if (locations.TryGetValue(LocationType.Sawmill, out LocationData sawmill))
+        {
+            total += sawmill.LogsStored;
+        }
+
+        if (truckCargoType == CargoType.Logs)
+        {
+            total += truckCargoAmount;
+        }
+
+        return total;
+    }
+
+    private int GetTotalBoardsResourceAmount()
+    {
+        int total = 0;
+        if (locations.TryGetValue(LocationType.Sawmill, out LocationData sawmill))
+        {
+            total += sawmill.BoardsStored;
+        }
+
+        if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse))
+        {
+            total += warehouse.BoardsStored;
+        }
+
+        if (truckCargoType == CargoType.Boards)
+        {
+            total += truckCargoAmount;
+        }
+
+        return total;
     }
 
     private void SetupEconomyScreenUi()
@@ -327,10 +455,77 @@ public partial class GameBootstrap
         titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         economyScreenUi.HeaderCountText = CreateHeaderText("EconomyCount", headerRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
 
+        RectTransform tradeCard = CreateSectionCard(windowRoot.transform, font, "Trade Dispatch", out RectTransform tradeBody);
+        tradeCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 216f;
+
+        RectTransform resourceRow = CreateLayoutRow("TradeResourceRow", tradeBody, 34f, 8f);
+        CreateBodyText("TradeResourceLabel", resourceRow, font, "Resource", 13, TextAnchor.MiddleLeft, FleetMutedTextColor)
+            .gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
+        economyScreenUi.TradePrevButton = CreateButton("TradePrevButton", resourceRow, font, out Text tradePrevText, "<", 13, new Color(0.26f, 0.30f, 0.36f, 1f), Color.white);
+        tradePrevText.fontStyle = FontStyle.Bold;
+        LayoutElement tradePrevLayout = economyScreenUi.TradePrevButton.gameObject.AddComponent<LayoutElement>();
+        tradePrevLayout.preferredWidth = 34f;
+        tradePrevLayout.preferredHeight = 34f;
+        economyScreenUi.TradePrevButton.onClick.AddListener(() =>
+        {
+            selectedTradeResourceType = GetAdjacentTradeResource(selectedTradeResourceType, -1);
+            isEconomyScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.82f);
+        });
+        economyScreenUi.TradeResourceText = CreateHeaderText("TradeResourceValue", resourceRow, font, string.Empty, 16, TextAnchor.MiddleCenter, Color.white);
+        economyScreenUi.TradeResourceText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        economyScreenUi.TradeNextButton = CreateButton("TradeNextButton", resourceRow, font, out Text tradeNextText, ">", 13, new Color(0.26f, 0.30f, 0.36f, 1f), Color.white);
+        tradeNextText.fontStyle = FontStyle.Bold;
+        LayoutElement tradeNextLayout = economyScreenUi.TradeNextButton.gameObject.AddComponent<LayoutElement>();
+        tradeNextLayout.preferredWidth = 34f;
+        tradeNextLayout.preferredHeight = 34f;
+        economyScreenUi.TradeNextButton.onClick.AddListener(() =>
+        {
+            selectedTradeResourceType = GetAdjacentTradeResource(selectedTradeResourceType, 1);
+            isEconomyScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.82f);
+        });
+
+        RectTransform offerRow = CreateLayoutRow("TradeOfferRow", tradeBody, 30f, 8f);
+        CreateBodyText("TradeOfferLabel", offerRow, font, "Offer", 13, TextAnchor.MiddleLeft, FleetMutedTextColor)
+            .gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
+        economyScreenUi.TradePriceText = CreateHeaderText("TradePriceValue", offerRow, font, string.Empty, 15, TextAnchor.MiddleLeft, FleetAccentColor);
+        economyScreenUi.TradePriceText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        economyScreenUi.TradeEtaText = CreateBodyText("TradeEtaText", offerRow, font, string.Empty, 12, TextAnchor.MiddleRight, FleetSecondaryTextColor);
+        economyScreenUi.TradeEtaText.gameObject.AddComponent<LayoutElement>().preferredWidth = 172f;
+
+        RectTransform modeRow = CreateLayoutRow("TradeModeRow", tradeBody, 34f, 8f);
+        CreateBodyText("TradeModeLabel", modeRow, font, "Mode", 13, TextAnchor.MiddleLeft, FleetMutedTextColor)
+            .gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
+        economyScreenUi.TradeModeButton = CreateButton("TradeModeButton", modeRow, font, out Text tradeModeText, string.Empty, 13, FleetPrimaryButtonColor, Color.white);
+        economyScreenUi.TradeModeText = tradeModeText;
+        LayoutElement tradeModeLayout = economyScreenUi.TradeModeButton.gameObject.AddComponent<LayoutElement>();
+        tradeModeLayout.preferredWidth = 168f;
+        tradeModeLayout.preferredHeight = 34f;
+        economyScreenUi.TradeModeButton.onClick.AddListener(() =>
+        {
+            selectedTradeOrderType = selectedTradeOrderType == TradeOrderType.Buy ? TradeOrderType.Sell : TradeOrderType.Buy;
+            isEconomyScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.82f);
+        });
+        RectTransform statusRow = CreateLayoutRow("TradeStatusRow", tradeBody, 32f, 8f);
+        CreateBodyText("TradeStatusLabel", statusRow, font, "Status", 13, TextAnchor.MiddleLeft, FleetMutedTextColor)
+            .gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
+        economyScreenUi.TradeStatusText = CreateBodyText("TradeStatusText", statusRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        economyScreenUi.TradeStatusText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        RectTransform dispatchRow = CreateLayoutRow("TradeDispatchRow", tradeBody, 34f, 8f);
+        economyScreenUi.TradeDispatchButton = CreateButton("TradeDispatchButton", dispatchRow, font, out Text tradeDispatchButtonText, "Send on Trade Run", 13, FleetPrimaryButtonColor, Color.white);
+        economyScreenUi.TradeDispatchButtonText = tradeDispatchButtonText;
+        LayoutElement tradeDispatchLayout = economyScreenUi.TradeDispatchButton.gameObject.AddComponent<LayoutElement>();
+        tradeDispatchLayout.flexibleWidth = 1f;
+        tradeDispatchLayout.preferredHeight = 34f;
+        economyScreenUi.TradeDispatchButton.onClick.AddListener(HandleTradeDispatchRequested);
+
         RectTransform ledgerFrame = CreateStyledPanel("EconomyLedgerFrame", windowRoot.transform, FleetInsetColor);
         LayoutElement frameLayout = ledgerFrame.gameObject.AddComponent<LayoutElement>();
         frameLayout.flexibleHeight = 1f;
-        frameLayout.minHeight = 360f;
+        frameLayout.minHeight = 250f;
 
         GameObject scrollObj = CreateUiObject("EconomyScrollView", ledgerFrame);
         StretchRect(scrollObj.GetComponent<RectTransform>(), 8f, 8f, 8f, 8f);
@@ -413,7 +608,18 @@ public partial class GameBootstrap
         if (!shouldShow) return;
         bool forceLayoutRebuild = isEconomyScreenDirty;
 
-        economyScreenUi.HeaderCountText.text = $"{moneyLedgerEntries.Count} Entr{(moneyLedgerEntries.Count == 1 ? "y" : "ies")}";
+        EnsureTradeSelectionMatchesCurrentZone();
+        economyScreenUi.HeaderCountText.text = "Economy & Trade";
+        economyScreenUi.TradeResourceText.text = GetTradeResourceLabel(selectedTradeResourceType);
+        economyScreenUi.TradeModeText.text = GetTradeModeLabel(selectedTradeOrderType);
+        economyScreenUi.TradePriceText.text = GetTradeOfferLabel(selectedTradeResourceType, selectedTradeOrderType);
+        economyScreenUi.TradeEtaText.text = GetTradeEtaLabel();
+        economyScreenUi.TradeStatusText.text = BuildTradeDispatchStatusText();
+        bool tradeRunActive = HasActiveTradeRun();
+        economyScreenUi.TradeDispatchButton.interactable = CanDispatchTradeRun();
+        economyScreenUi.TradePrevButton.interactable = !tradeRunActive && GetTradeCatalogForCurrentZone(selectedTradeOrderType).Length > 1;
+        economyScreenUi.TradeNextButton.interactable = !tradeRunActive && GetTradeCatalogForCurrentZone(selectedTradeOrderType).Length > 1;
+        economyScreenUi.TradeModeButton.interactable = !tradeRunActive;
         economyScreenUi.EmptyText.gameObject.SetActive(moneyLedgerEntries.Count == 0);
 
         for (int i = 0; i < economyScreenUi.Rows.Count; i++)
@@ -438,6 +644,75 @@ public partial class GameBootstrap
             LayoutRebuilder.ForceRebuildLayoutImmediate(economyScreenUi.WindowRoot);
         }
         isEconomyScreenDirty = false;
+    }
+
+    private TradeResourceType GetAdjacentTradeResource(TradeResourceType current, int direction)
+    {
+        TradeResourceType[] values = GetTradeCatalogForCurrentZone(selectedTradeOrderType);
+        if (values.Length == 0)
+        {
+            return current;
+        }
+
+        int currentIndex = System.Array.IndexOf(values, current);
+        if (currentIndex < 0)
+        {
+            return values[0];
+        }
+
+        currentIndex = (currentIndex + direction + values.Length) % values.Length;
+        return values[currentIndex];
+    }
+
+    private string GetTradeResourceLabel(TradeResourceType resourceType)
+    {
+        return resourceType switch
+        {
+            TradeResourceType.Logs => "Logs",
+            TradeResourceType.Boards => "Boards",
+            TradeResourceType.Cotton => "Cotton",
+            TradeResourceType.Textile => "Textile",
+            TradeResourceType.Furniture => "Furniture",
+            _ => resourceType.ToString()
+        };
+    }
+
+    private bool CanDispatchTradeRun()
+    {
+        return TryGetTradeDispatchContext(out _, out _, out _);
+    }
+
+    private string BuildTradeDispatchStatusText()
+    {
+        if (HasActiveTradeRun())
+        {
+            return GetTradeRunStatusLabel();
+        }
+
+        if (!TryGetTradeDispatchContext(out _, out _, out string blockReason))
+        {
+            return blockReason;
+        }
+
+        if (tradeDispatchStatusText == "Assign an Intercity driver to unlock trade dispatch.")
+        {
+            return "Ready to dispatch via edge highway";
+        }
+
+        return tradeDispatchStatusText;
+    }
+
+    private void HandleTradeDispatchRequested()
+    {
+        if (!BeginTradeRun())
+        {
+            tradeDispatchStatusText = BuildTradeDispatchStatusText();
+            isEconomyScreenDirty = true;
+            return;
+        }
+
+        PlayUiSound(uiSelectClip, 0.88f);
+        isEconomyScreenDirty = true;
     }
 
     private static string BuildEconomyEntryDetail(MoneyLedgerEntry entry)

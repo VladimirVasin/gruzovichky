@@ -35,7 +35,8 @@ public partial class GameBootstrap
                FindRoadBuildPath(layout.Warehouse.Anchor, layout.Forest.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.Forest.Anchor, layout.Sawmill.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.Sawmill.Anchor, layout.Warehouse.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
-               FindRoadBuildPath(layout.Warehouse.Anchor, layout.Motel.Anchor, cell => IsPlacementCell(layout, cell)) != null;
+               FindRoadBuildPath(layout.Warehouse.Anchor, layout.Motel.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
+               FindRoadBuildPath(layout.Motel.Anchor, layout.BusStop.Anchor, cell => IsPlacementCell(layout, cell)) != null;
     }
 
     private static bool IsPlacementCell(GeneratedWorldLayout layout, Vector2Int cell)

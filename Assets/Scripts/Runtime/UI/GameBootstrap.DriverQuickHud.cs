@@ -10,6 +10,7 @@ public partial class GameBootstrap
         public Text HeaderText;
         public Text StatusText;
         public Text TruckText;
+        public Text ModeText;
         public Text ShiftText;
         public Text EnergyText;
         public Text BalanceText;
@@ -46,7 +47,7 @@ public partial class GameBootstrap
         root.anchorMax = new Vector2(1f, 0f);
         root.pivot = new Vector2(1f, 0f);
         root.anchoredPosition = new Vector2(-18f, 104f);
-        root.sizeDelta = new Vector2(300f, 220f);
+        root.sizeDelta = new Vector2(300f, 244f);
         VerticalLayoutGroup rootLayout = root.gameObject.AddComponent<VerticalLayoutGroup>();
         rootLayout.padding = new RectOffset(16, 16, 16, 16);
         rootLayout.spacing = 12;
@@ -56,7 +57,6 @@ public partial class GameBootstrap
         rootLayout.childForceExpandHeight = false;
         driverQuickHud.Root = root;
 
-        // Header row: name + close button
         RectTransform headerRow = CreateLayoutRow("DriverQuickHudHeader", root, 30f, 10f);
         driverQuickHud.HeaderText = CreateHeaderText("DriverName", headerRow, uiFont, "Driver", 21, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.HeaderText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -66,9 +66,8 @@ public partial class GameBootstrap
         closeLayout.preferredHeight = 28f;
         driverQuickHud.CloseButton.onClick.AddListener(ClearDriverFocus);
 
-        // Info card
         RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
-        summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 110f;
+        summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 124f;
 
         driverQuickHud.StatusText = CreateBodyText("Status", summaryBody, uiFont, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.StatusText.fontStyle = FontStyle.Bold;
@@ -76,17 +75,17 @@ public partial class GameBootstrap
 
         RectTransform statsGrid = CreateUiObject("StatsGrid", summaryBody).GetComponent<RectTransform>();
         GridLayoutGroup statsLayout = statsGrid.gameObject.AddComponent<GridLayoutGroup>();
-        statsLayout.cellSize = new Vector2(120f, 26f);
+        statsLayout.cellSize = new Vector2(120f, 24f);
         statsLayout.spacing = new Vector2(8f, 6f);
         statsLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         statsLayout.constraintCount = 2;
-        statsGrid.gameObject.AddComponent<LayoutElement>().preferredHeight = 64f;
-        driverQuickHud.TruckText   = CreateBodyText("TruckText",   statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.ShiftText   = CreateBodyText("ShiftText",   statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.EnergyText  = CreateBodyText("EnergyText",  statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        statsGrid.gameObject.AddComponent<LayoutElement>().preferredHeight = 92f;
+        driverQuickHud.TruckText = CreateBodyText("TruckText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.ModeText = CreateBodyText("ModeText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.ShiftText = CreateBodyText("ShiftText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.EnergyText = CreateBodyText("EnergyText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.BalanceText = CreateBodyText("BalanceText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
 
-        // Action row
         RectTransform actionRow = CreateLayoutRow("DriverQuickHudActions", root, 34f, 0f);
         driverQuickHud.OpenDriversButton = CreateButton("OpenDriversBtn", actionRow, uiFont, out driverQuickHud.OpenDriversButtonText, "Open Drivers", 13, FleetPrimaryButtonColor, Color.white);
         driverQuickHud.OpenDriversButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
@@ -131,12 +130,16 @@ public partial class GameBootstrap
         driverQuickHud.HeaderText.text = driver.DriverName;
 
         string statusLabel;
-        if (driver.IsArrivingByBus)
+        if (IsDriverOnActiveTradeRun(driver))
+            statusLabel = "On Trade Run";
+        else if (driver.IsArrivingByBus)
             statusLabel = "Arriving by Bus";
         else if (driver.RestPhase == DriverRestPhase.Sleeping)
             statusLabel = "Sleeping";
         else if (driver.RestPhase != DriverRestPhase.None)
             statusLabel = "Walking";
+        else if (IsDriverIntercity(driver))
+            statusLabel = "Intercity";
         else if (driver.IsOnActiveShift)
             statusLabel = "On Shift";
         else if (driver.WaitingForShiftAtParking)
@@ -151,9 +154,10 @@ public partial class GameBootstrap
             statusLabel = "Idle";
 
         driverQuickHud.StatusText.text = statusLabel;
-        driverQuickHud.TruckText.text  = FormatValueLine("Truck",   truck != null ? truck.DisplayName : "None");
-        driverQuickHud.ShiftText.text  = FormatValueLine("Shift",   driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "â€”");
-        driverQuickHud.EnergyText.text = FormatValueLine("Energy",  $"{Mathf.CeilToInt(driver.Energy)} / {Mathf.CeilToInt(DriverEnergyMax)}");
+        driverQuickHud.TruckText.text = FormatValueLine("Truck", truck != null ? truck.DisplayName : "None");
+        driverQuickHud.ModeText.text = FormatValueLine("Mode", IsDriverIntercity(driver) ? "Intercity" : "Local");
+        driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—");
+        driverQuickHud.EnergyText.text = FormatValueLine("Energy", $"{Mathf.CeilToInt(driver.Energy)} / {Mathf.CeilToInt(DriverEnergyMax)}");
         driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
     }
 

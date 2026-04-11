@@ -440,11 +440,13 @@ public partial class GameBootstrap : MonoBehaviour
         colorAdjustments.postExposure.Override(0.08f);
         colorAdjustments.contrast.Override(10f);
         colorAdjustments.saturation.Override(12f);
+        colorAdjustments.colorFilter.Override(new Color(1f, 0.97f, 0.93f, 1f));
 
         Bloom bloom = profile.Add<Bloom>(true);
-        bloom.threshold.Override(0.98f);
-        bloom.intensity.Override(0.045f);
-        bloom.scatter.Override(0.44f);
+        bloom.threshold.Override(0.86f);
+        bloom.intensity.Override(0.12f);
+        bloom.scatter.Override(0.52f);
+        bloom.tint.Override(new Color(1f, 0.94f, 0.84f, 1f));
         bloom.highQualityFiltering.Override(false);
 
         DepthOfField depthOfField = profile.Add<DepthOfField>(true);

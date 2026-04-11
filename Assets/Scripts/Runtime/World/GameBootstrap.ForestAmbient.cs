@@ -34,6 +34,22 @@ public partial class GameBootstrap
             return;
         }
 
+        if (AreProductionsPausedAtNight())
+        {
+            StopForestWorkerAudioForNight();
+            foreach (ForestWorkerAmbient pausedWorker in forestWorkers)
+            {
+                if (pausedWorker?.RootObject == null)
+                {
+                    continue;
+                }
+
+                ApplyForestWorkerNightPause(pausedWorker);
+            }
+
+            return;
+        }
+
         foreach (ForestWorkerAmbient worker in forestWorkers)
         {
             if (worker?.RootObject == null)
@@ -487,6 +503,23 @@ public partial class GameBootstrap
 
     private void UpdateForestTreeWobbles()
     {
+        if (AreProductionsPausedAtNight())
+        {
+            for (int i = forestTreeWobbles.Count - 1; i >= 0; i--)
+            {
+                ForestTreeWobble wobble = forestTreeWobbles[i];
+                if (wobble?.TreeTransform == null)
+                {
+                    forestTreeWobbles.RemoveAt(i);
+                    continue;
+                }
+
+                wobble.TreeTransform.localRotation = wobble.BaseRotation;
+            }
+
+            return;
+        }
+
         for (int i = forestTreeWobbles.Count - 1; i >= 0; i--)
         {
             ForestTreeWobble wobble = forestTreeWobbles[i];
@@ -525,10 +558,50 @@ public partial class GameBootstrap
         return limb.transform;
     }
 
+    private void ApplyForestWorkerNightPause(ForestWorkerAmbient worker)
+    {
+        if (worker == null)
+        {
+            return;
+        }
+
+        ApplyForestWorkerPose(worker, 0f, 0f, -1.5f, false);
+        if (worker.FlashlightLight != null)
+        {
+            worker.FlashlightLight.enabled = false;
+            worker.FlashlightLight.intensity = 0f;
+        }
+
+        if (worker.FlashlightMaterial != null)
+        {
+            worker.FlashlightMaterial.color = new Color(0.24f, 0.22f, 0.18f);
+        }
+    }
+
+    private void StopForestWorkerAudioForNight()
+    {
+        if (forestWorkerAudioSource != null && forestWorkerAudioSource.isPlaying)
+        {
+            forestWorkerAudioSource.Stop();
+        }
+    }
+
     private void UpdateForestWorkerFlashlight(ForestWorkerAmbient worker)
     {
         if (worker?.FlashlightLight == null)
         {
+            return;
+        }
+
+        if (AreProductionsPausedAtNight())
+        {
+            worker.FlashlightLight.enabled = false;
+            worker.FlashlightLight.intensity = 0f;
+            if (worker.FlashlightMaterial != null)
+            {
+                worker.FlashlightMaterial.color = new Color(0.24f, 0.22f, 0.18f);
+            }
+
             return;
         }
 

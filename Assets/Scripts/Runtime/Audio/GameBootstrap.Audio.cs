@@ -27,7 +27,7 @@ public partial class GameBootstrap
                 continue;
             }
 
-            bool truckHasDriverInside = truckAgent.Driver != null;
+            bool truckHasDriverInside = truckAgent.Driver != null && !IsTruckOutOfMapForTrade(truckAgent);
             if (!truckHasDriverInside)
             {
                 if (truckAgent.TruckLoopAudioSource.isPlaying)
@@ -199,6 +199,7 @@ public partial class GameBootstrap
         warehouseCreakTimer -= Time.deltaTime;
         nightOwlTimer -= Time.deltaTime;
         lanternBuzzTimer -= Time.deltaTime;
+        riverSplashTimer -= Time.deltaTime;
 
         if (dayBlend > 0.25f && dayBirdTimer <= 0f)
         {
@@ -227,6 +228,16 @@ public partial class GameBootstrap
             Vector3 lanternPosition = lantern != null ? lantern.transform.position : cameraFocusPoint;
             PlayAmbientFx(lanternBuzzClip, lanternPosition, Random.Range(0.26f, 0.38f));
             lanternBuzzTimer = Random.Range(6f, 12f);
+        }
+
+        if (riverSplashTimer <= 0f && waterSurfaceTiles.Count > 0)
+        {
+            WaterSurfaceTileData tile = waterSurfaceTiles[Random.Range(0, waterSurfaceTiles.Count)];
+            Vector3 splashPos = tile.Transform != null
+                ? tile.Transform.position + new Vector3(0f, 0.05f, 0f)
+                : cameraFocusPoint;
+            PlayAmbientFx(riverSplashClip, splashPos, Random.Range(0.22f, 0.38f));
+            riverSplashTimer = Random.Range(8f, 20f);
         }
     }
 
@@ -629,6 +640,98 @@ public partial class GameBootstrap
             float whoosh = Mathf.Sin(2f * Mathf.PI * Mathf.Lerp(160f, 105f, norm) * t + 0.15f) * 0.08f;
 
             samples[i] = Mathf.Clamp((engineBed + tireHiss + whoosh) * envelope * amplitude * 1.55f, -1f, 1f);
+        }
+
+        return CreateClipFromSamples(clipName, samples);
+    }
+
+    private AudioClip CreateRiverAmbientClip(string clipName, float duration, float amplitude)
+    {
+        int sampleCount = Mathf.CeilToInt(duration * AudioSampleRate);
+        float[] samples = new float[sampleCount];
+
+        // Pink noise approximation: 1/sqrt(f) amplitude spectrum via stacked sines
+        // Low-frequency water gurgle bed (80-400 Hz), slow-modulated
+        float[] freqs  = { 82f, 107f, 143f, 191f, 247f, 313f, 389f };
+        float[] amps   = { 0.36f, 0.28f, 0.22f, 0.17f, 0.13f, 0.10f, 0.07f };
+        float[] phases = { 0f, 1.3f, 2.6f, 0.7f, 1.9f, 3.1f, 0.4f };
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)AudioSampleRate;
+            // Slow amplitude swell: two overlapping LFOs at ~0.08 and ~0.13 Hz
+            float swell = 0.72f
+                + Mathf.Sin(2f * Mathf.PI * 0.083f * t) * 0.16f
+                + Mathf.Sin(2f * Mathf.PI * 0.131f * t + 1.4f) * 0.10f;
+
+            float s = 0f;
+            for (int fi = 0; fi < freqs.Length; fi++)
+            {
+                // Each partial is frequency-modulated slightly for water texture
+                float fm = freqs[fi] + Mathf.Sin(2f * Mathf.PI * 0.04f * t + phases[fi]) * freqs[fi] * 0.018f;
+                s += Mathf.Sin(2f * Mathf.PI * fm * t + phases[fi]) * amps[fi];
+            }
+
+            // Gentle high-mid shimmer (water surface reflections)
+            s += Mathf.Sin(2f * Mathf.PI * 620f * t + Mathf.Sin(2f * Mathf.PI * 0.07f * t)) * 0.018f;
+            s += Mathf.Sin(2f * Mathf.PI * 850f * t + 2.1f) * 0.010f;
+
+            samples[i] = Mathf.Clamp(s * swell * amplitude, -1f, 1f);
+        }
+
+        return CreateClipFromSamples(clipName, samples);
+    }
+
+    private AudioClip CreateWaterSplashClip(string clipName, float duration, float amplitude)
+    {
+        int sampleCount = Mathf.CeilToInt(duration * AudioSampleRate);
+        float[] samples = new float[sampleCount];
+
+        // Band-limited noise burst 200-800 Hz with fast exponential decay
+        float[] splashFreqs  = { 212f, 284f, 357f, 443f, 521f, 618f, 724f, 798f };
+        float[] splashPhases = { 0f, 0.8f, 1.7f, 2.5f, 0.3f, 1.1f, 2.9f, 0.6f };
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)AudioSampleRate;
+            float envelope = Mathf.Exp(-18f * t);
+            float s = 0f;
+            for (int fi = 0; fi < splashFreqs.Length; fi++)
+            {
+                s += Mathf.Sin(2f * Mathf.PI * splashFreqs[fi] * t + splashPhases[fi]) * (1f / splashFreqs.Length);
+            }
+            // Add percussive low thump for impact character
+            s += Mathf.Sin(2f * Mathf.PI * 95f * t) * Mathf.Exp(-38f * t) * 0.35f;
+            samples[i] = Mathf.Clamp(s * envelope * amplitude, -1f, 1f);
+        }
+
+        return CreateClipFromSamples(clipName, samples);
+    }
+
+    private AudioClip CreateBoatMotorClip(string clipName, float duration, float amplitude)
+    {
+        int sampleCount = Mathf.CeilToInt(duration * AudioSampleRate);
+        float[] samples = new float[sampleCount];
+
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)AudioSampleRate;
+            // Low diesel hum: fundamental + 2nd + 3rd harmonics
+            float hum =
+                Mathf.Sin(2f * Mathf.PI * 65f * t) * 0.46f +
+                Mathf.Sin(2f * Mathf.PI * 130f * t + 0.38f) * 0.22f +
+                Mathf.Sin(2f * Mathf.PI * 195f * t + 1.2f) * 0.09f;
+
+            // Slow amplitude wobble simulating load variation
+            float wobble = 0.85f + Mathf.Sin(2f * Mathf.PI * 0.52f * t) * 0.10f
+                                 + Mathf.Sin(2f * Mathf.PI * 1.3f  * t + 0.6f) * 0.04f;
+
+            // Gentle water slosh against hull (300-500 Hz ripple, 0.4 Hz beat)
+            float slosh =
+                Mathf.Sin(2f * Mathf.PI * 320f * t + Mathf.Sin(2f * Mathf.PI * 0.4f * t) * 0.5f) * 0.026f +
+                Mathf.Sin(2f * Mathf.PI * 480f * t + 1.1f) * 0.014f;
+
+            samples[i] = Mathf.Clamp((hum * wobble + slosh) * amplitude, -1f, 1f);
         }
 
         return CreateClipFromSamples(clipName, samples);

@@ -452,6 +452,7 @@ public partial class GameBootstrap
 
     private string GetTruckFleetStatusLabel()
     {
+        if (IsTruckOnActiveTradeRun(currentLoadedTruckAgent)) return "Trade";
         if (isTruckInteracting) return "Busy";
         if (isTruckWaitingForService) return "Queue";
         if (isDriverRescueActive) return "Rescue";

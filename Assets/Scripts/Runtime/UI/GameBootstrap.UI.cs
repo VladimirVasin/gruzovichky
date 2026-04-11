@@ -283,6 +283,7 @@ public partial class GameBootstrap
                 TruckInteractionType.UnloadAtSawmill => "Unloading at Sawmill...",
                 TruckInteractionType.LoadAtSawmill => "Loading at Sawmill...",
                 TruckInteractionType.UnloadAtWarehouse => "Unloading boards at Warehouse...",
+                TruckInteractionType.TradeUnloadAtWarehouse => "Unloading trade goods at Warehouse...",
                 TruckInteractionType.RefuelAtGasStation => "Refueling at Gas Station...",
                 _ => "Truck servicing cargo..."
             };

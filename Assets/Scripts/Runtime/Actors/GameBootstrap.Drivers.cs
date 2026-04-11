@@ -9,10 +9,37 @@ public partial class GameBootstrap : MonoBehaviour
     private bool IsDriverOnShift(DriverAgent driver)
     {
         if (driver == null) return false;
-        if (driver.ShiftStartHour < 0) return false; // Idle — no shift assigned
+        if (IsDriverIntercity(driver)) return false;
+        if (driver.ShiftStartHour < 0) return false; // Idle вЂ” no shift assigned
         return driver.IsOnActiveShift;
     }
 
+    private static bool IsDriverIntercity(DriverAgent driver)
+    {
+        return driver != null && driver.DutyMode == DriverDutyMode.Intercity;
+    }
+
+    private void SetDriverDutyMode(DriverAgent driver, DriverDutyMode dutyMode)
+    {
+        if (driver == null || driver.DutyMode == dutyMode)
+        {
+            return;
+        }
+
+        driver.DutyMode = dutyMode;
+        if (dutyMode == DriverDutyMode.Intercity)
+        {
+            driver.ShiftStartHour = -1;
+            driver.IsOnActiveShift = false;
+            driver.WaitingForShiftAtParking = false;
+            driver.NeedsShiftEndReturn = false;
+            driver.IsShiftSalaryPending = false;
+        }
+
+        isDriversScreenDirty = true;
+        isShiftsScreenDirty = true;
+        isFleetScreenDirty = true;
+    }
     private static bool IsDriverIdleWanderPhase(DriverAgent driver)
     {
         return driver != null && driver.WalkPhase == DriverRescuePhase.IdleWander;
@@ -32,7 +59,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private bool ShouldDriverHeadToShift(DriverAgent driver)
     {
-        if (driver == null || driver.ShiftStartHour < 0 || driver.AssignedTruckNumber <= 0)
+        if (driver == null || IsDriverIntercity(driver) || driver.ShiftStartHour < 0 || driver.AssignedTruckNumber <= 0)
         {
             return false;
         }
@@ -138,7 +165,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void UpdateDriverShiftPreparation(DriverAgent driver)
     {
-        if (driver == null || driver.IsArrivingByBus || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || driver.AssignedTruckNumber <= 0)
+        if (driver == null || IsDriverIntercity(driver) || driver.IsArrivingByBus || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || driver.AssignedTruckNumber <= 0)
         {
             return;
         }
@@ -609,6 +636,7 @@ public partial class GameBootstrap : MonoBehaviour
     private void UpdateDriverShiftActivation(DriverAgent driver)
     {
         if (driver == null) return;
+        if (IsDriverIntercity(driver)) return;
         if (driver.IsArrivingByBus) return;
         if (driver.ShiftStartHour < 0) return;
         if (driver.IsOnActiveShift) return;
@@ -634,7 +662,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void UpdateDriverShiftEnd(TruckAgent truckAgent, DriverAgent driver)
     {
-        if (truckAgent == null || driver == null || !driver.IsOnActiveShift || driver.ShiftStartHour < 0)
+        if (truckAgent == null || driver == null || IsDriverIntercity(driver) || !driver.IsOnActiveShift || driver.ShiftStartHour < 0)
         {
             return;
         }
@@ -743,6 +771,11 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        if (IsDriverIntercity(driver) || IsDriverOnActiveTradeRun(driver))
+        {
+            return;
+        }
+
         // Driver has no shift assigned — ensure truck returns to parking
         if (driver.ShiftStartHour >= 0) return;
         if (driver.RestPhase != DriverRestPhase.None) return;
@@ -768,3 +801,4 @@ public partial class GameBootstrap : MonoBehaviour
     }
 
 }
+

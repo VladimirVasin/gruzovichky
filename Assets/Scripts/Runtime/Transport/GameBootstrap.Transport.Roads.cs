@@ -53,7 +53,7 @@ public partial class GameBootstrap
 
     private bool IsDriveable(Vector2Int cell)
     {
-        return IsInsideGrid(cell) && (roadCells.Contains(cell) || IsAnchorCell(cell));
+        return IsInsideGrid(cell) && (roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) || IsAnchorCell(cell));
     }
 
     private bool CanBuildRoadThroughCell(Vector2Int cell, Vector2Int start, Vector2Int goal, System.Func<Vector2Int, bool> isBlockedLocationCell)
@@ -117,7 +117,7 @@ public partial class GameBootstrap
 
     private bool IsRoadBuildCellBlocked(Vector2Int cell)
     {
-        return !IsInsideGrid(cell) || IsLocationCell(cell) || roadCells.Contains(cell) || miscOccupiedCells.Contains(cell);
+        return !IsInsideGrid(cell) || IsLocationCell(cell) || roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) || miscOccupiedCells.Contains(cell);
     }
 
     private void AddRoad(Vector2Int cell)
@@ -194,6 +194,7 @@ public partial class GameBootstrap
         CreateGuaranteedRoadConnection(locations[LocationType.Forest].Anchor, locations[LocationType.Sawmill].Anchor);
         CreateGuaranteedRoadConnection(locations[LocationType.Sawmill].Anchor, locations[LocationType.Warehouse].Anchor);
         CreateGuaranteedRoadConnection(locations[LocationType.Warehouse].Anchor, locations[LocationType.Motel].Anchor);
+        CreateGuaranteedRoadConnection(locations[LocationType.Motel].Anchor, locations[LocationType.BusStop].Anchor);
         SessionDebugLogger.Log("ROAD", $"Generated starter road network with {roadCells.Count} road cells.");
     }
 
@@ -276,6 +277,16 @@ public partial class GameBootstrap
 
     private bool TryGetRoadLanternPlacement(Vector2Int cell, out Vector3 worldPosition, out Quaternion worldRotation)
     {
+        if (edgeHighwayCells.Contains(cell + Vector2Int.up) ||
+            edgeHighwayCells.Contains(cell + Vector2Int.down) ||
+            edgeHighwayCells.Contains(cell + Vector2Int.left) ||
+            edgeHighwayCells.Contains(cell + Vector2Int.right))
+        {
+            worldPosition = default;
+            worldRotation = Quaternion.identity;
+            return false;
+        }
+
         return RoadLanternPlanner.TryGetPlacement(
             cell,
             neighbor => roadCells.Contains(neighbor) || IsAnchorCell(neighbor),
@@ -304,12 +315,68 @@ public partial class GameBootstrap
         float outerNorthZ = upperLaneY + 0.94f;
         for (int x = 0; x < GridWidth; x += 2)
         {
+            if (IsEdgeHighwayLanternSuppressedNearConnection(x))
+            {
+                continue;
+            }
+
             Vector3 southPosition = new Vector3(x + 0.5f, GetTerrainHeight(new Vector2Int(x, lowerLaneY)) + 0.04f, outerSouthZ);
             CreateRoadLantern(southPosition, Quaternion.identity);
 
             Vector3 northPosition = new Vector3(x + 0.5f, GetTerrainHeight(new Vector2Int(x, upperLaneY)) + 0.04f, outerNorthZ);
             CreateRoadLantern(northPosition, Quaternion.Euler(0f, 180f, 0f));
         }
+    }
+
+    private bool IsEdgeHighwayLanternSuppressedNearConnection(int columnX)
+    {
+        for (int x = Mathf.Max(0, columnX - 1); x <= Mathf.Min(GridWidth - 1, columnX + 1); x++)
+        {
+            if (DoesEdgeHighwayColumnTouchRegularRoadConnection(x))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool DoesEdgeHighwayColumnTouchRegularRoadConnection(int columnX)
+    {
+        return DoesEdgeHighwayCellTouchRegularRoadConnection(new Vector2Int(columnX, 0)) ||
+               DoesEdgeHighwayCellTouchRegularRoadConnection(new Vector2Int(columnX, 1));
+    }
+
+    private bool DoesEdgeHighwayCellTouchRegularRoadConnection(Vector2Int edgeCell)
+    {
+        if (!edgeHighwayCells.Contains(edgeCell))
+        {
+            return false;
+        }
+
+        Vector2Int[] offsets =
+        {
+            Vector2Int.up,
+            Vector2Int.down,
+            Vector2Int.left,
+            Vector2Int.right
+        };
+
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            Vector2Int neighbor = edgeCell + offsets[i];
+            if (!IsInsideGrid(neighbor) || edgeHighwayCells.Contains(neighbor))
+            {
+                continue;
+            }
+
+            if (roadCells.Contains(neighbor) || IsAnchorCell(neighbor))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void RebuildRoadsideBenches()

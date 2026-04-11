@@ -66,6 +66,11 @@ public partial class GameBootstrap
             return;
         }
 
+        if (AreProductionsPausedAtNight())
+        {
+            return;
+        }
+
         sawmillProcessingTimer += Time.deltaTime * gameSpeedMultiplier;
         if (sawmillProcessingTimer < 4.5f)
         {

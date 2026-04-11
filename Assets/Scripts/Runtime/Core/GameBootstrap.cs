@@ -155,6 +155,7 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioSource townAudioSource;
     private AudioSource truckLoopAudioSource;
     private AudioSource truckFxAudioSource;
+    private AudioSource riverAmbientAudioSource;
     private Material groundSurfaceMaterial;
     private Material grassSurfaceMaterial;
     private Material waterShallowMaterial;
@@ -204,6 +205,7 @@ public partial class GameBootstrap : MonoBehaviour
     private float nightOwlTimer;
     private float lanternBuzzTimer;
     private float warehouseCreakTimer;
+    private float riverSplashTimer;
     private float terrainNoiseOffsetX;
     private float terrainNoiseOffsetY;
     private LocationType? selectedLocation;
@@ -217,11 +219,18 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isMainMenuOpen = true;
     private int selectedTruckNumber = 1;
     private int money;
+    private int cottonStored = 0;
+    private int textileStored = 0;
+    private int furnitureStored = 0;
     private int currentAssignedTripReward;
     private bool isFleetPanelOpen;
     private bool isShiftsPanelOpen;
     private bool isDriversPanelOpen;
     private int selectedShiftDriverId; // DriverId, 0 = none
+    private int intercityDriverId;
+    private TradeResourceType selectedTradeResourceType = TradeResourceType.Cotton;
+    private TradeOrderType selectedTradeOrderType = TradeOrderType.Buy;
+    private string tradeDispatchStatusText = "Assign an Intercity driver to unlock trade dispatch.";
     private bool isResourcesPanelOpen;
     private bool isEconomyPanelOpen;
     private bool isBuildPanelOpen;
@@ -273,6 +282,9 @@ public partial class GameBootstrap : MonoBehaviour
         public float BobPhase;
         public float RockPhase;
         public bool HasEnteredRiver;
+        public Renderer LanternRenderer;
+        public Light LanternLight;
+        public AudioSource BoatAudioSource;
     }
 
     private sealed class EdgeHighwayBusData
@@ -357,6 +369,9 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip parkingReturnCueClip;
     private AudioClip moneyRewardClip;
     private AudioClip edgeHighwayBusPassbyClip;
+    private AudioClip riverAmbientClip;
+    private AudioClip riverSplashClip;
+    private AudioClip boatMotorClip;
     private bool wereAmbientLanternMothsActiveLastFrame;
     private float riverFishSpawnTimer;
     private float truckEngineAudioPhaseOffset;
@@ -401,6 +416,7 @@ public partial class GameBootstrap : MonoBehaviour
         UnloadAtSawmill,
         LoadAtSawmill,
         UnloadAtWarehouse,
+        TradeUnloadAtWarehouse,
         RefuelAtGasStation
     }
 
@@ -456,6 +472,27 @@ public partial class GameBootstrap : MonoBehaviour
         Sleeping,
         DriverWalkToTruck,
         ReturnToParking
+    }
+
+    private enum DriverDutyMode
+    {
+        Local,
+        Intercity
+    }
+
+    private enum TradeResourceType
+    {
+        Logs,
+        Boards,
+        Cotton,
+        Textile,
+        Furniture
+    }
+
+    private enum TradeOrderType
+    {
+        Buy,
+        Sell
     }
 
 
@@ -795,6 +832,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         public int DriverId;
         public string DriverName;
+        public DriverDutyMode DutyMode = DriverDutyMode.Local;
         // ShiftStartHour: -1 = idle/no shift assigned
         public int ShiftStartHour = -1;
         public bool IsOnActiveShift;
@@ -841,6 +879,17 @@ public partial class GameBootstrap : MonoBehaviour
     {
         float normalized = dayNightCycleTimer / DayNightCycleDuration;
         return Mathf.FloorToInt(normalized * 24f) % 24;
+    }
+
+    private bool IsNightTime()
+    {
+        float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
+        return normalizedTime < 0.25f;
+    }
+
+    private bool AreProductionsPausedAtNight()
+    {
+        return IsNightTime();
     }
 
     private int GetCurrentTotalMinutes()
@@ -934,9 +983,15 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateDistantClouds();
         UpdateAmbientAirParticles();
         UpdateForestWorkers();
+        UpdateActiveTradeRun();
         for (int i = 0; i < truckAgents.Count; i++)
         {
             TruckAgent ta = truckAgents[i];
+            if (ShouldSkipTruckRuntimeForTrade(ta))
+            {
+                continue;
+            }
+
             DriverAgent da = ta.Driver;
             LoadTruckState(ta);
             UpdateTruckMovement();

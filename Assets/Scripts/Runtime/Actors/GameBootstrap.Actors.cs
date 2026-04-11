@@ -462,6 +462,9 @@ public partial class GameBootstrap
         parkingReturnCueClip = CreatePentatonicMotifClip("Parking_Return", 0.36f, 0.068f, new[] { PentatonicC4, PentatonicE4 }, new[] { 0f, 0.1f });
         moneyRewardClip = CreateMoneyRewardClip("Money_Reward", 0.6f, 0.1f);
         edgeHighwayBusPassbyClip = CreateBusPassbyClip("EdgeHighway_BusPassby", 1.15f, 0.055f);
+        riverAmbientClip = CreateRiverAmbientClip("River_Ambient", 8f, 0.034f);
+        riverSplashClip  = CreateWaterSplashClip("River_Splash", 0.28f, 0.075f);
+        boatMotorClip    = CreateBoatMotorClip("Boat_Motor", 3.8f, 0.038f);
 
         uiAudioSource = CreateAudioSource("UIAudio", null, false, 0.96f, 0f, false);
         uiAudioSource.ignoreListenerPause = true;
@@ -475,6 +478,7 @@ public partial class GameBootstrap
         townAudioSource = CreateAudioSource("SawmillAmbience", locations[LocationType.Sawmill].RootObject.transform, true, 0.44f, 0.9f, false);
         warehouseAudioSource = CreateAudioSource("WarehouseAmbience", locations[LocationType.Warehouse].RootObject.transform, false, 0.26f, 0.88f, false);
         ambienceFxAudioSource = CreateAudioSource("AmbienceFX", worldRoot, false, 0.34f, 0f, false);
+        riverAmbientAudioSource = CreateAudioSource("RiverAmbient", worldRoot, true, 0.38f, 0f, false);
 
         ambientAudioSource.clip = null;
         ambientAudioSource.Stop();
@@ -497,10 +501,14 @@ public partial class GameBootstrap
         townAudioSource.clip = null;
         townAudioSource.Stop();
 
+        riverAmbientAudioSource.clip = riverAmbientClip;
+        riverAmbientAudioSource.Play();
+
         dayBirdTimer = Random.Range(4.5f, 8f);
         nightOwlTimer = Random.Range(8f, 14f);
         lanternBuzzTimer = Random.Range(5f, 9f);
         warehouseCreakTimer = Random.Range(6f, 10f);
+        riverSplashTimer = Random.Range(4f, 10f);
 
         foreach (TruckAgent truckAgent in truckAgents)
         {

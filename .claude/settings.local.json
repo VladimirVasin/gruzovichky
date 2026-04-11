@@ -4,7 +4,10 @@
       "Bash(dotnet build:*)",
       "Bash(\"C:/Program Files/Unity/Hub/Editor/6000.0.47f1/Editor/Data/Tools/RoslynScripts/unity_csc.bat\")",
       "Bash(\"/c/Program Files/Unity/Hub/Editor/6000.0.30f1/Editor/Data/Tools/RoslynScripts/unity_csc.bat\")",
-      "Read(//c/Program Files/Unity/**)"
+      "Read(//c/Program Files/Unity/**)",
+      "Bash(xargs grep:*)",
+      "Bash(grep \"^guid:\" \"c:/Users/tushk/Gruzovichky/Library/PackageCache/com.unity.render-pipelines.universal@37e0d4fc2503/Shaders/Lit.shader.meta\" find \"c:/Users/tushk/Gruzovichky/Library/PackageCache/com.unity.render-pipelines.universal@37e0d4fc2503/Shaders\" -name \"Unlit.shader.meta\")",
+      "Bash(grep \"^guid:\" \"c:/Users/tushk/Gruzovichky/Library/PackageCache/com.unity.render-pipelines.universal@37e0d4fc2503/Shaders/Unlit.shader.meta\" find \"c:/Users/tushk/Gruzovichky/Library/PackageCache\" -name \"Sprites-Default.shader.meta\")"
     ]
   }
 }

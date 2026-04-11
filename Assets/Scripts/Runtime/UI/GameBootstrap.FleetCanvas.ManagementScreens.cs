@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -44,6 +44,7 @@ public partial class GameBootstrap
         public Text HeaderCountText;
         public readonly List<ShiftDriverRowUi> DriverRows = new();
         public readonly List<ShiftCardUi> ShiftCards = new();
+        public IntercitySlotUi IntercitySlot;
     }
 
     private sealed class ShiftDriverRowUi
@@ -67,6 +68,15 @@ public partial class GameBootstrap
         public readonly List<Button> RemoveButtons = new();
         public Text AssignButtonText;
         public Button AssignButton;
+    }
+
+    private sealed class IntercitySlotUi
+    {
+        public Text AssignedDriverText;
+        public Text StatusText;
+        public Text AssignButtonText;
+        public Button AssignButton;
+        public Button RemoveButton;
     }
 
     private sealed class BuildScreenUiRefs
@@ -99,21 +109,18 @@ public partial class GameBootstrap
         public GameObject CanvasRoot;
         public RectTransform WindowRoot;
         public Text HeaderCountText;
-        public Text ForestValueText;
-        public Text ForestSubText;
-        public Text SawmillValueText;
-        public Text SawmillSubText;
-        public Text WarehouseValueText;
-        public Text WarehouseSubText;
         public Text TreasuryValueText;
         public string LastHeaderCount;
-        public string LastForestValue;
-        public string LastForestSub;
-        public string LastSawmillValue;
-        public string LastSawmillSub;
-        public string LastWarehouseValue;
-        public string LastWarehouseSub;
         public string LastTreasuryValue;
+        public readonly List<ResourceSummaryRowUi> Rows = new();
+    }
+
+    private sealed class ResourceSummaryRowUi
+    {
+        public Text NameText;
+        public Text ValueText;
+        public string LastName;
+        public string LastValue;
     }
 
     private sealed class EconomyScreenUiRefs
@@ -121,6 +128,16 @@ public partial class GameBootstrap
         public GameObject CanvasRoot;
         public RectTransform WindowRoot;
         public Text HeaderCountText;
+        public Text TradeResourceText;
+        public Text TradeModeText;
+        public Text TradePriceText;
+        public Text TradeEtaText;
+        public Text TradeStatusText;
+        public Button TradePrevButton;
+        public Button TradeNextButton;
+        public Button TradeModeButton;
+        public Button TradeDispatchButton;
+        public Text TradeDispatchButtonText;
         public RectTransform EntryListContent;
         public Text EmptyText;
         public readonly List<EconomyEntryRowUi> Rows = new();
@@ -548,7 +565,15 @@ public partial class GameBootstrap
             }
 
             card.NameText.text = d.DriverName;
-            card.StatusText.text = d.IsArrivingByBus ? "Arriving by Bus" : truck != null ? "Assigned" : "Idle";
+            card.StatusText.text = d.IsArrivingByBus
+                ? "Arriving by Bus"
+                : IsDriverOnActiveTradeRun(d)
+                    ? "Trade Run"
+                    : IsDriverIntercity(d)
+                        ? "Intercity"
+                        : truck != null
+                            ? "Assigned"
+                            : "Idle";
 
             card.TruckText.text = truck != null ? truck.DisplayName : "Unassigned";
 
@@ -855,6 +880,41 @@ public partial class GameBootstrap
             shiftsScreenUi.ShiftCards.Add(card);
         }
 
+        shiftsScreenUi.IntercitySlot = new IntercitySlotUi();
+        RectTransform intercityCard = CreateSectionCard(rightPanel, font, string.Empty, out RectTransform intercityBody, false);
+        intercityCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 142f;
+        VerticalLayoutGroup intercityLayout = intercityBody.GetComponent<VerticalLayoutGroup>();
+        intercityLayout.spacing = 8;
+
+        CreateHeaderText("IntercityHeader", intercityBody, font, "Intercity", 16, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.IntercitySlot.AssignedDriverText = CreateHeaderText("IntercityAssigned", intercityBody, font, string.Empty, 15, TextAnchor.MiddleLeft, FleetAccentColor);
+        shiftsScreenUi.IntercitySlot.AssignedDriverText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+        shiftsScreenUi.IntercitySlot.StatusText = CreateBodyText("IntercityStatus", intercityBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        shiftsScreenUi.IntercitySlot.StatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+
+        RectTransform intercityButtonRow = CreateLayoutRow("IntercityButtonRow", intercityBody, 30f, 8f);
+        shiftsScreenUi.IntercitySlot.AssignButton = CreateButton("IntercityAssignButton", intercityButtonRow, font, out Text intercityAssignText, string.Empty, 12, FleetPrimaryButtonColor, Color.white);
+        shiftsScreenUi.IntercitySlot.AssignButtonText = intercityAssignText;
+        LayoutElement intercityAssignLayout = shiftsScreenUi.IntercitySlot.AssignButton.gameObject.AddComponent<LayoutElement>();
+        intercityAssignLayout.flexibleWidth = 1f;
+        intercityAssignLayout.preferredHeight = 30f;
+        shiftsScreenUi.IntercitySlot.AssignButton.onClick.AddListener(() =>
+        {
+            DriverAgent selectedDriver = driverAgents.Find(driver => driver.DriverId == selectedShiftDriverId);
+            if (selectedDriver == null)
+            {
+                return;
+            }
+
+            AssignDriverToIntercitySlot(selectedDriver);
+        });
+
+        shiftsScreenUi.IntercitySlot.RemoveButton = CreateButton("IntercityRemoveButton", intercityButtonRow, font, out Text intercityRemoveText, "Remove", 12, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
+        LayoutElement intercityRemoveLayout = shiftsScreenUi.IntercitySlot.RemoveButton.gameObject.AddComponent<LayoutElement>();
+        intercityRemoveLayout.preferredWidth = 92f;
+        intercityRemoveLayout.preferredHeight = 30f;
+        shiftsScreenUi.IntercitySlot.RemoveButton.onClick.AddListener(RemoveIntercityDriverAssignment);
+
         shiftsScreenUi.CanvasRoot.SetActive(false);
         UpdateShiftsScreenUi();
     }
@@ -888,8 +948,15 @@ public partial class GameBootstrap
             row.Background.color = isSelected ? ShiftsCardSelected : ShiftsCardColor;
             row.NameText.text = driver.DriverName;
             bool isAssigned = driver.ShiftStartHour >= 0;
-            row.StatusText.text = isAssigned ? $"Assigned: {GetShiftRangeLabel(driver.ShiftStartHour)}" : "Idle";
-            row.StatusText.color = isAssigned ? new Color(0.62f, 0.92f, 0.62f, 1f) : FleetMutedTextColor;
+            bool isIntercity = IsDriverIntercity(driver);
+            row.StatusText.text = isIntercity
+                ? "Intercity"
+                : isAssigned
+                    ? $"Assigned: {GetShiftRangeLabel(driver.ShiftStartHour)}"
+                    : "Idle";
+            row.StatusText.color = isIntercity
+                ? FleetAccentColor
+                : isAssigned ? new Color(0.62f, 0.92f, 0.62f, 1f) : FleetMutedTextColor;
         }
 
         DriverAgent selectedDriver = driverAgents.Find(driver => driver.DriverId == selectedShiftDriverId);
@@ -900,7 +967,7 @@ public partial class GameBootstrap
             List<DriverAgent> assignedDrivers = new();
             foreach (DriverAgent driver in driverAgents)
             {
-                if (driver.ShiftStartHour == card.ShiftHour)
+                if (!IsDriverIntercity(driver) && driver.ShiftStartHour == card.ShiftHour)
                 {
                     assignedDrivers.Add(driver);
                 }
@@ -917,17 +984,102 @@ public partial class GameBootstrap
             }
 
             bool alreadyAssigned = selectedDriver != null && selectedDriver.ShiftStartHour == card.ShiftHour;
-            card.AssignButton.interactable = selectedDriver != null && !alreadyAssigned;
+            bool intercitySelected = IsDriverIntercity(selectedDriver);
+            card.AssignButton.interactable = selectedDriver != null && !alreadyAssigned && !intercitySelected;
             card.AssignButtonText.text = selectedDriver == null
                 ? "Select a driver to assign"
-                : alreadyAssigned
-                    ? $"{selectedDriver.DriverName} already assigned"
-                    : $"Assign {selectedDriver.DriverName} → {ShiftNames[i]}";
+                : intercitySelected
+                    ? $"{selectedDriver.DriverName} is Intercity"
+                    : alreadyAssigned
+                        ? $"{selectedDriver.DriverName} already assigned"
+                        : $"Assign {selectedDriver.DriverName} -> {ShiftNames[i]}";
         }
+
+        UpdateIntercitySlotUi(selectedDriver);
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(shiftsScreenUi.DriverListContent);
         LayoutRebuilder.ForceRebuildLayoutImmediate(shiftsScreenUi.WindowRoot);
         isShiftsScreenDirty = false;
+    }
+
+    private void UpdateIntercitySlotUi(DriverAgent selectedDriver)
+    {
+        if (shiftsScreenUi?.IntercitySlot == null)
+        {
+            return;
+        }
+
+        DriverAgent intercityDriver = GetIntercityAssignedDriver();
+        bool selectedIsIntercity = IsDriverIntercity(selectedDriver);
+        shiftsScreenUi.IntercitySlot.AssignedDriverText.text = intercityDriver != null ? intercityDriver.DriverName : "No driver assigned";
+        shiftsScreenUi.IntercitySlot.StatusText.text = intercityDriver != null
+            ? "Reserved for future trade runs"
+            : "Assign one dedicated driver to intercity duty";
+        shiftsScreenUi.IntercitySlot.AssignButton.interactable = selectedDriver != null && !selectedIsIntercity;
+        shiftsScreenUi.IntercitySlot.AssignButtonText.text = selectedDriver == null
+            ? "Select a driver"
+            : selectedIsIntercity
+                ? $"{selectedDriver.DriverName} already Intercity"
+                : $"Assign {selectedDriver.DriverName}";
+        shiftsScreenUi.IntercitySlot.RemoveButton.interactable = intercityDriver != null;
+    }
+
+    private DriverAgent GetIntercityAssignedDriver()
+    {
+        return driverAgents.Find(driver => driver.DriverId == intercityDriverId && IsDriverIntercity(driver));
+    }
+
+    private void AssignDriverToIntercitySlot(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return;
+        }
+
+        if (HasActiveTradeRun())
+        {
+            tradeDispatchStatusText = "Wait for the active trade run to finish";
+            isEconomyScreenDirty = true;
+            return;
+        }
+
+        DriverAgent currentIntercity = GetIntercityAssignedDriver();
+        if (currentIntercity != null && currentIntercity != driver)
+        {
+            SetDriverDutyMode(currentIntercity, DriverDutyMode.Local);
+        }
+
+        SetDriverDutyMode(driver, DriverDutyMode.Intercity);
+        intercityDriverId = driver.DriverId;
+        PlayUiSound(uiSelectClip, 0.85f);
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to Intercity slot.");
+        LogDriverReaction(driver, "assigned to Intercity duty");
+        isShiftsScreenDirty = true;
+        isDriversScreenDirty = true;
+    }
+
+    private void RemoveIntercityDriverAssignment()
+    {
+        DriverAgent intercityDriver = GetIntercityAssignedDriver();
+        if (intercityDriver == null)
+        {
+            return;
+        }
+
+        if (IsDriverOnActiveTradeRun(intercityDriver))
+        {
+            tradeDispatchStatusText = "Intercity driver is currently on a trade run";
+            isEconomyScreenDirty = true;
+            return;
+        }
+
+        SetDriverDutyMode(intercityDriver, DriverDutyMode.Local);
+        intercityDriverId = 0;
+        PlayUiSound(uiSelectClip, 0.85f);
+        SessionDebugLogger.Log("SHIFT", $"{intercityDriver.DriverName} removed from Intercity slot.");
+        LogDriverReaction(intercityDriver, "returned from Intercity duty to local pool");
+        isShiftsScreenDirty = true;
+        isDriversScreenDirty = true;
     }
 
 }

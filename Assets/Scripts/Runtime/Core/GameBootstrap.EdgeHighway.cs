@@ -121,6 +121,37 @@ public partial class GameBootstrap : MonoBehaviour
             // +0.13f lifts hull so bottom sits on water surface, not center
             boat.RootTransform.position = new Vector3(boat.WorldX, waterY + 0.13f + bob, laneZ);
             boat.RootTransform.rotation = Quaternion.Euler(0f, boat.TravelDirection > 0f ? 90f : -90f, roll);
+
+            // Lantern — on at night, same threshold as bus headlights
+            float darkness = 1f - currentStylizedDaylight;
+            bool lanternOn = darkness > 0.55f;
+            float lanternIntensity = lanternOn
+                ? Mathf.Lerp(0.3f, 1.2f, Mathf.InverseLerp(0.55f, 1f, darkness))
+                : 0f;
+            Color lampColor = Color.Lerp(
+                new Color(0.34f, 0.30f, 0.22f),
+                new Color(1f, 0.88f, 0.62f),
+                Mathf.Clamp01(lanternIntensity / 1.2f));
+
+            if (boat.LanternLight != null)
+            {
+                boat.LanternLight.enabled = lanternOn;
+                boat.LanternLight.intensity = lanternIntensity;
+            }
+            if (boat.LanternRenderer != null)
+            {
+                boat.LanternRenderer.material.color = lampColor;
+            }
+
+            // Boat motor audio — fade in when inside river, fade out approaching edge
+            if (boat.BoatAudioSource != null)
+            {
+                float margin = 2f;
+                float edgeFade = Mathf.Clamp01(Mathf.Min(boat.WorldX / margin, (GridWidth - boat.WorldX) / margin));
+                float targetVol = boat.HasEnteredRiver ? 0.28f * edgeFade : 0f;
+                boat.BoatAudioSource.volume = Mathf.MoveTowards(
+                    boat.BoatAudioSource.volume, targetVol, 0.6f * Time.deltaTime);
+            }
         }
     }
 
@@ -230,11 +261,55 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyColor(chimney, new Color(0.14f, 0.14f, 0.16f));
         ConfigureShadowVisual(chimney);
 
+        // Mast
+        GameObject mast = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        mast.transform.SetParent(boatRoot.transform, false);
+        mast.transform.localPosition = new Vector3(0f, 0.62f, 0.28f);
+        mast.transform.localScale = new Vector3(0.03f, 0.28f, 0.03f);
+        ApplyColor(mast, new Color(0.72f, 0.64f, 0.52f));
+        ConfigureShadowVisual(mast);
+
+        // Lantern head — glowing cube on top of mast
+        GameObject lanternHead = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        lanternHead.transform.SetParent(boatRoot.transform, false);
+        lanternHead.transform.localPosition = new Vector3(0f, 0.94f, 0.28f);
+        lanternHead.transform.localScale = new Vector3(0.07f, 0.07f, 0.07f);
+        ApplyColor(lanternHead, new Color(0.34f, 0.30f, 0.22f));
+        ConfigureShadowVisual(lanternHead);
+        Renderer lanternRenderer = lanternHead.GetComponent<Renderer>();
+
+        // Lantern point light
+        GameObject lanternLightObj = new("BoatLantern");
+        lanternLightObj.transform.SetParent(boatRoot.transform, false);
+        lanternLightObj.transform.localPosition = new Vector3(0f, 0.98f, 0.28f);
+        Light lanternLight = lanternLightObj.AddComponent<Light>();
+        lanternLight.type = LightType.Point;
+        lanternLight.color = new Color(1f, 0.88f, 0.62f);
+        lanternLight.range = 2.8f;
+        lanternLight.intensity = 0f;
+        lanternLight.shadows = LightShadows.None;
+        lanternLight.enabled = false;
+
         const float waterSurfaceY = 0.22f;
         boatRoot.transform.position = new Vector3(spawnX, waterSurfaceY, laneZ);
-        // travelDirection > 0 → moving in +X → face +Z rotated to +X = Y=90...
-        // BUT geometry is built along Z, so: direction +X means we want local Z → world +X → Y=90°
         boatRoot.transform.rotation = Quaternion.Euler(0f, travelDirection > 0f ? 90f : -90f, 0f);
+
+        // Boat motor audio source — spatial, loops quietly while in scene
+        AudioSource boatAudio = null;
+        if (boatMotorClip != null)
+        {
+            boatAudio = boatRoot.AddComponent<AudioSource>();
+            boatAudio.clip = boatMotorClip;
+            boatAudio.loop = true;
+            boatAudio.volume = 0f;
+            boatAudio.spatialBlend = 1f;
+            boatAudio.rolloffMode = AudioRolloffMode.Linear;
+            boatAudio.minDistance = 3f;
+            boatAudio.maxDistance = 18f;
+            boatAudio.dopplerLevel = 0f;
+            boatAudio.pitch = Random.Range(0.94f, 1.06f);
+            boatAudio.Play();
+        }
 
         riverBoats.Add(new RiverBoatData
         {
@@ -245,6 +320,9 @@ public partial class GameBootstrap : MonoBehaviour
             BobPhase        = Random.Range(0f, 10f),
             RockPhase       = Random.Range(0f, 10f),
             HasEnteredRiver = false,
+            LanternRenderer = lanternRenderer,
+            LanternLight    = lanternLight,
+            BoatAudioSource = boatAudio,
         });
     }
 
@@ -323,9 +401,20 @@ public partial class GameBootstrap : MonoBehaviour
         edgeHighwayBusSpawnTimerCitySide -= dt;
         edgeHighwayBusSpawnTimerOuterSide -= dt;
 
+        bool pauseCitySideLane = ShouldPauseEdgeHighwayBusLaneForTrade(isCitySideLane: true);
+        bool pauseOuterSideLane = ShouldPauseEdgeHighwayBusLaneForTrade(isCitySideLane: false);
+
         if (edgeHighwayBusSpawnTimerCitySide <= 0f)
         {
-            if (!IsDriverMotelArrivalInProgress())
+            if (IsDriverMotelArrivalInProgress())
+            {
+                SessionDebugLogger.Log("BUS_SPAWN", "CityLane spawn skipped: hiring-arrival bus is active.");
+            }
+            else if (pauseCitySideLane)
+            {
+                SessionDebugLogger.Log("BUS_SPAWN", "CityLane spawn skipped: lane paused.");
+            }
+            else
             {
                 TrySpawnEdgeHighwayBus(isCitySideLane: true);
             }
@@ -335,7 +424,14 @@ public partial class GameBootstrap : MonoBehaviour
 
         if (edgeHighwayBusSpawnTimerOuterSide <= 0f)
         {
-            TrySpawnEdgeHighwayBus(isCitySideLane: false);
+            if (pauseOuterSideLane)
+            {
+                SessionDebugLogger.Log("BUS_SPAWN", "OuterLane spawn skipped: lane paused.");
+            }
+            else
+            {
+                TrySpawnEdgeHighwayBus(isCitySideLane: false);
+            }
             edgeHighwayBusSpawnTimerOuterSide = Random.Range(EdgeHighwayBusSpawnIntervalMin, EdgeHighwayBusSpawnIntervalMax);
             edgeHighwayBusSpawnTimerCitySide += Random.Range(1.5f, 4.5f);
         }
@@ -417,8 +513,9 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void TrySpawnEdgeHighwayBus(bool isCitySideLane)
     {
-        float travelDirection = isCitySideLane ? 1f : -1f;
+        float travelDirection = isCitySideLane ? -1f : 1f;
         float spawnX = travelDirection > 0f ? -1.6f : GridWidth + 1.6f;
+        string laneLabel = isCitySideLane ? "CityLane" : "OuterLane";
         for (int i = 0; i < edgeHighwayBuses.Count; i++)
         {
             EdgeHighwayBusData existing = edgeHighwayBuses[i];
@@ -429,11 +526,58 @@ public partial class GameBootstrap : MonoBehaviour
 
             if (Mathf.Abs(existing.WorldX - spawnX) < EdgeHighwayBusSpawnSpacing)
             {
+                SessionDebugLogger.Log(
+                    "BUS_SPAWN",
+                    $"{laneLabel} spawn blocked by spacing: existingX={existing.WorldX:0.00}, spawnX={spawnX:0.00}, direction={(travelDirection > 0f ? "+" : "-")}.");
                 return;
             }
         }
 
+        SessionDebugLogger.Log(
+            "BUS_SPAWN",
+            $"{laneLabel} spawn ok: spawnX={spawnX:0.00}, direction={(travelDirection > 0f ? "+" : "-")}, laneZ={GetEdgeHighwayBusLaneWorldZ(isCitySideLane):0.00}.");
         CreateEdgeHighwayBus(travelDirection, isCitySideLane);
+    }
+
+    private bool ShouldPauseEdgeHighwayBusLaneForTrade(bool isCitySideLane)
+    {
+        if (!HasActiveTradeRun())
+        {
+            return false;
+        }
+
+        int laneRow = isCitySideLane ? 1 : 0;
+        bool isRelevantTradePhase =
+            activeTradeRun.Phase == TradeRunPhase.DrivingToHighway ||
+            activeTradeRun.Phase == TradeRunPhase.ReturningFromOffMap;
+        if (!isRelevantTradePhase)
+        {
+            return false;
+        }
+
+        TruckAgent truckAgent = GetTruckAgent(activeTradeRun.TruckNumber);
+        if (truckAgent == null)
+        {
+            return false;
+        }
+
+        if (truckAgent.TruckCell.y == laneRow && edgeHighwayCells.Contains(truckAgent.TruckCell))
+        {
+            return true;
+        }
+
+        if (!truckAgent.IsTruckMoving || truckAgent.ActivePath == null || truckAgent.ActivePath.Count == 0)
+        {
+            return false;
+        }
+
+        Vector2Int nextStep = truckAgent.ActivePath[0];
+        if (nextStep.y != laneRow)
+        {
+            return false;
+        }
+
+        return edgeHighwayCells.Contains(nextStep) || edgeHighwayCells.Contains(truckAgent.TruckCell);
     }
 
     private void CreateEdgeHighwayBus(float travelDirection, bool isCitySideLane)
@@ -602,7 +746,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         float spawnX = -1.6f;
-        float laneZ = GetEdgeHighwayBusLaneWorldZ(isCitySideLane: true);
+        float laneZ = GetEdgeHighwayBusLaneWorldZ(isCitySideLane: false);
         GameObject busRoot = new($"HiringBus_{hiringDriverArrival.Driver?.DriverId ?? 0}");
         busRoot.transform.SetParent(edgeHighwayBusRoot, false);
 
@@ -744,7 +888,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        float laneZ = GetEdgeHighwayBusLaneWorldZ(isCitySideLane: true);
+        float laneZ = GetEdgeHighwayBusLaneWorldZ(isCitySideLane: false);
         float bob = Mathf.Sin(Time.time * 3.2f + hiringDriverArrival.BobPhase) * 0.015f;
         float y = SampleTerrainHeight(hiringDriverArrival.BusWorldX, laneZ) + RoadHeight + EdgeHighwayBusLift + bob;
         hiringDriverArrival.BusRootTransform.position = new Vector3(hiringDriverArrival.BusWorldX, y, laneZ);
