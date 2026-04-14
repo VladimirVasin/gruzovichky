@@ -93,6 +93,10 @@ public partial class GameBootstrap
         public Text FurnitureFactoryButtonText;
         public Text FurnitureFactoryTitleText;
         public Text FurnitureFactoryDescriptionText;
+        public Button BarButton;
+        public Text BarButtonText;
+        public Text BarTitleText;
+        public Text BarDescriptionText;
     }
 
     private sealed class DriverCardUi
@@ -130,6 +134,7 @@ public partial class GameBootstrap
         public TradeResourceType ResourceType;
         public Button ModeButton;
         public Text ModeButtonText;
+        public LayoutElement ThresholdRootLayout;
         public RectTransform ThresholdControls;
         public Button DecrBtn;
         public Text ThresholdText;

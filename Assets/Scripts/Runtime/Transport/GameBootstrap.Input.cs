@@ -570,6 +570,7 @@ public partial class GameBootstrap
         {
             BuildTool.Road => TryPlaceRoadAtCell(cell),
             BuildTool.FurnitureFactory => TryPlaceFurnitureFactoryAtAnchor(cell),
+            BuildTool.Bar => TryPlaceBarAtAnchor(cell),
             _ => false
         };
 
@@ -692,6 +693,11 @@ public partial class GameBootstrap
         if (activeBuildTool == BuildTool.FurnitureFactory)
         {
             return GetFurnitureFactoryPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
+        if (activeBuildTool == BuildTool.Bar)
+        {
+            return GetBarPlacementPreview(cell, out previewPosition, out previewScale);
         }
 
         return false;

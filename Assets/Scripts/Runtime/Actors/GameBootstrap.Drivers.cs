@@ -54,7 +54,31 @@ public partial class GameBootstrap : MonoBehaviour
     {
         return driver != null &&
                driver.WalkPhase != DriverRescuePhase.None &&
-               driver.WalkPhase != DriverRescuePhase.IdleWander;
+               driver.WalkPhase != DriverRescuePhase.IdleWander &&
+               driver.WalkPhase != DriverRescuePhase.IdleSittingOnBench &&
+               driver.WalkPhase != DriverRescuePhase.IdleAtBar &&
+               driver.WalkPhase != DriverRescuePhase.IdleSmoking &&
+               driver.WalkPhase != DriverRescuePhase.IdlePhoneCall;
+    }
+
+    private void ReleaseBench(DriverAgent driver)
+    {
+        if (driver.SittingBenchIndex >= 0 && driver.SittingBenchIndex < benchOccupied.Length)
+        {
+            benchOccupied[driver.SittingBenchIndex] = false;
+        }
+        driver.SittingBenchIndex = -1;
+    }
+
+    private static bool IsDriverInIdleActivity(DriverAgent driver)
+    {
+        if (driver == null) return false;
+        return driver.WalkPhase == DriverRescuePhase.IdleWalkToBench ||
+               driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench ||
+               driver.WalkPhase == DriverRescuePhase.IdleWalkToBar ||
+               driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
+               driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
+               driver.WalkPhase == DriverRescuePhase.IdlePhoneCall;
     }
 
     private bool ShouldDriverHeadToShift(DriverAgent driver)
@@ -132,6 +156,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IdleConversationTimer = 0f;
         driver.IdleConversationPartnerId = -1;
         driver.WalkAnimationTime = 0f;
+        ReleaseBench(driver);
         ApplyDriverPose(driver, 0f, 0f);
         driver.WalkPhase = DriverRescuePhase.ToParkingForShift;
         driver.WalkTargetWorld = GetDriverParkingWaitPosition(assignedTruck);
@@ -204,8 +229,9 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WaitingForShiftAtParking ||
             GetCurrentTruckForDriver(driver) != null)
         {
-            if (IsDriverIdleWanderPhase(driver))
+            if (IsDriverIdleWanderPhase(driver) || IsDriverInIdleActivity(driver))
             {
+                ReleaseBench(driver);
                 driver.WalkPhase = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
@@ -249,6 +275,27 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        // Handle stationary idle activities
+        if (driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench ||
+            driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
+            driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
+            driver.WalkPhase == DriverRescuePhase.IdlePhoneCall)
+        {
+            driver.IdleActivityTimer -= Time.deltaTime * gameSpeedMultiplier;
+            if (driver.IdleActivityTimer <= 0f)
+            {
+                if (driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench)
+                {
+                    ReleaseBench(driver);
+                }
+
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.IdleWanderPauseTimer = Random.Range(0.5f, 1.5f);
+            }
+
+            return;
+        }
+
         if (driver.ShiftStartHour >= 0 &&
             (ShouldDriverHeadToShift(driver) || IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour)))
         {
@@ -275,11 +322,55 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        driver.WalkPhase = DriverRescuePhase.IdleWander;
-        driver.IdleWanderPointIndex++;
-        driver.WalkAnimationTime = 0f;
-        BuildDriverWalkPath(driver, startPosition, targetPosition);
-        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started motel idle walk.");
+        SelectNextIdleActivity(driver, startPosition, targetPosition);
+    }
+
+    private void SelectNextIdleActivity(DriverAgent driver, Vector3 startPosition, Vector3 wanderTarget)
+    {
+        float roll = Random.value;
+
+        if (roll < 0.35f)
+        {
+            driver.WalkPhase = DriverRescuePhase.IdleWander;
+            driver.IdleWanderPointIndex++;
+            driver.WalkAnimationTime = 0f;
+            BuildDriverWalkPath(driver, startPosition, wanderTarget);
+            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started motel idle walk.");
+        }
+        else if (roll < 0.55f && TryGetNearestFreeBench(startPosition, 14f, out int bIdx, out Vector3 bPos))
+        {
+            if (bIdx < benchOccupied.Length) benchOccupied[bIdx] = true;
+            driver.SittingBenchIndex = bIdx;
+            driver.IdleActivityTimer = Random.Range(15f, 45f);
+            driver.WalkTargetWorld = bPos;
+            BuildDriverWalkPath(driver, startPosition, bPos);
+            driver.WalkPhase = DriverRescuePhase.IdleWalkToBench;
+            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading to bench {bIdx}.");
+        }
+        else if (roll < 0.70f && locations.ContainsKey(LocationType.Bar))
+        {
+            driver.IdleActivityTimer = Random.Range(180f, 480f);
+            LocationData bar = locations[LocationType.Bar];
+            float bx = (bar.Min.x + bar.Max.x + 1) * 0.5f;
+            float bz = (bar.Min.y + bar.Max.y + 1) * 0.5f;
+            Vector3 barPos = new Vector3(bx + Random.Range(-0.2f, 0.2f), 0f, bz + Random.Range(-0.2f, 0.2f));
+            driver.WalkTargetWorld = barPos;
+            BuildDriverWalkPath(driver, startPosition, barPos);
+            driver.WalkPhase = DriverRescuePhase.IdleWalkToBar;
+            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading to Bar.");
+        }
+        else if (roll < 0.85f)
+        {
+            driver.IdleActivityTimer = Random.Range(20f, 45f);
+            driver.WalkPhase = DriverRescuePhase.IdleSmoking;
+            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started smoking break.");
+        }
+        else
+        {
+            driver.IdleActivityTimer = Random.Range(8f, 25f);
+            driver.WalkPhase = DriverRescuePhase.IdlePhoneCall;
+            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} making a phone call.");
+        }
     }
 
     private Vector3 FindDriverIdleWanderTarget(DriverAgent driver, Vector3 startPosition)

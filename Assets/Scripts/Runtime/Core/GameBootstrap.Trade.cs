@@ -839,6 +839,7 @@ public partial class GameBootstrap
 
     private void UpdateTradeRunOutOfMap(DriverAgent driver, TruckAgent truckAgent)
     {
+        if (isRacingActive) return;
         activeTradeRun.OutOfMapTimer = Mathf.Max(0f, activeTradeRun.OutOfMapTimer - Time.deltaTime * gameSpeedMultiplier);
         tradeDispatchStatusText = GetTradeRunStatusLabel();
 
@@ -960,6 +961,13 @@ public partial class GameBootstrap
 
     private void CompleteTradeRun(DriverAgent driver, TruckAgent truckAgent)
     {
+        if (racingBonusEarned > 0)
+        {
+            money += racingBonusEarned;
+            RecordMoneyMovement(racingBonusEarned, "Racing Bonus", "Treasury", "Intercity racing bonus", money);
+            racingBonusEarned = 0;
+        }
+
         string resourceLabel = GetTradeResourceLabel(activeTradeRun.ResourceType);
         TradeOrderType completedOrderType = activeTradeRun.OrderType;
         TradeResourceType completedResourceType = activeTradeRun.ResourceType;

@@ -98,6 +98,10 @@ public partial class GameBootstrap
         {
             CreateBusStopDecoration(root.transform, center, min, max, anchor);
         }
+        else if (type == LocationType.Bar)
+        {
+            CreateBarDecoration(root.transform, center, min, max, anchor);
+        }
         else
         {
             CreateMotelDecoration(root.transform, center, min, max, anchor);

@@ -179,6 +179,141 @@ public partial class GameBootstrap
         return true;
     }
 
+    private bool TryPlaceBarAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.Bar))
+        {
+            SessionDebugLogger.Log("BUILD", "Bar placement rejected: bar already exists.");
+            return false;
+        }
+
+        if (!TryGetBarPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Bar placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.Bar, "Bar", min, max, anchorCell, new Color(0.38f, 0.18f, 0.12f));
+        selectedLocation = LocationType.Bar;
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RefreshSelectionVisuals();
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        SessionDebugLogger.Log("BUILD", $"Placed Bar at anchor ({anchorCell.x},{anchorCell.y}).");
+        return true;
+    }
+
+    private bool TryGetBarPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
+    {
+        // Anchor is on the road side; building footprint is 2×2 one row north of anchor
+        min = new Vector2Int(anchorCell.x - 1, anchorCell.y + 1);
+        max = new Vector2Int(anchorCell.x,     anchorCell.y + 2);
+
+        if (locations.ContainsKey(LocationType.Bar)) return false;
+
+        if (!IsInsideGrid(anchorCell) || !IsInsideGrid(min) || !IsInsideGrid(max)) return false;
+
+        if (roadCells.Contains(anchorCell) || edgeHighwayCells.Contains(anchorCell) ||
+            miscOccupiedCells.Contains(anchorCell) || IsLocationCell(anchorCell) || IsWaterOrBeachCell(anchorCell))
+            return false;
+
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                Vector2Int cell = new(x, y);
+                if (!IsInsideGrid(cell) || roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) ||
+                    miscOccupiedCells.Contains(cell) || IsLocationCell(cell) || IsWaterOrBeachCell(cell))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool GetBarPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
+        previewScale = new Vector3(0.98f, 0.04f, 0.98f);
+        bool canPlace = TryGetBarPlacement(anchorCell, out Vector2Int min, out Vector2Int max);
+        if (!canPlace) return false;
+
+        float centerX = (min.x + max.x + 1) * 0.5f;
+        float centerZ = (min.y + max.y + 1) * 0.5f;
+        previewPosition = new Vector3(centerX, SampleTerrainHeight(centerX, centerZ) + RoadHeight + 0.03f, centerZ);
+        previewScale = new Vector3((max.x - min.x + 1) * 0.94f, 0.04f, (max.y - min.y + 1) * 0.94f);
+        return true;
+    }
+
+    private void CreateBarDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        Color bodyColor = new Color(0.38f, 0.18f, 0.12f);
+        float scale = BuildingDecorScale;
+
+        // Main body
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        body.transform.SetParent(parent, false);
+        body.transform.position = center + new Vector3(0f, 0.42f * scale, 0f);
+        body.transform.localScale = new Vector3(1.6f * scale, 0.84f * scale, 1.6f * scale);
+        ApplyColor(body, bodyColor);
+        ConfigureStaticVisual(body);
+
+        // Roof overhang
+        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roof.transform.SetParent(parent, false);
+        roof.transform.position = center + new Vector3(0f, 0.88f * scale, 0f);
+        roof.transform.localScale = new Vector3(1.76f * scale, 0.07f * scale, 1.76f * scale);
+        ApplyColor(roof, bodyColor * 0.72f);
+        ConfigureStaticVisual(roof);
+
+        // Small chimney
+        GameObject chimney = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        chimney.transform.SetParent(parent, false);
+        chimney.transform.position = center + new Vector3(-0.38f * scale, 1.18f * scale, 0.28f * scale);
+        chimney.transform.localScale = new Vector3(0.16f * scale, 0.58f * scale, 0.16f * scale);
+        ApplyColor(chimney, new Color(0.28f, 0.22f, 0.18f));
+        ConfigureStaticVisual(chimney);
+
+        // Door (faces south toward anchor) — on south face of body
+        GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        door.transform.SetParent(parent, false);
+        door.transform.position = center + new Vector3(0f, 0.22f * scale, -0.81f * scale);
+        door.transform.localScale = new Vector3(0.36f * scale, 0.52f * scale, 0.04f * scale);
+        ApplyColor(door, new Color(0.18f, 0.10f, 0.04f));
+        ConfigureStaticVisual(door);
+
+        // Door frame
+        GameObject doorFrame = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        doorFrame.transform.SetParent(parent, false);
+        doorFrame.transform.position = center + new Vector3(0f, 0.26f * scale, -0.82f * scale);
+        doorFrame.transform.localScale = new Vector3(0.44f * scale, 0.62f * scale, 0.03f * scale);
+        ApplyColor(doorFrame, new Color(0.55f, 0.35f, 0.18f));
+        ConfigureStaticVisual(doorFrame);
+
+        // Sign board above door
+        GameObject signBg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        signBg.transform.SetParent(parent, false);
+        signBg.transform.position = center + new Vector3(0f, 0.68f * scale, -0.82f * scale);
+        signBg.transform.localScale = new Vector3(0.68f * scale, 0.22f * scale, 0.04f * scale);
+        ApplyColor(signBg, new Color(0.92f, 0.88f, 0.72f));
+        ConfigureStaticVisual(signBg);
+
+        // Warm point light above entrance
+        GameObject lightObj = new("BarLight");
+        lightObj.transform.SetParent(parent, false);
+        lightObj.transform.position = center + new Vector3(0f, 0.9f * scale, -0.9f * scale);
+        Light barLight = lightObj.AddComponent<Light>();
+        barLight.type = LightType.Point;
+        barLight.color = new Color(1f, 0.85f, 0.5f);
+        barLight.intensity = 0.35f;
+        barLight.range = 3f;
+        barLight.shadows = LightShadows.None;
+
+        // Walkway from entrance to anchor
+        CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
+    }
+
     private bool TryGetFurnitureFactoryPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
         min = new Vector2Int(anchorCell.x - 1, anchorCell.y + 1);

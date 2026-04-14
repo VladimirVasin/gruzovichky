@@ -138,6 +138,8 @@ public partial class GameBootstrap : MonoBehaviour
     private Transform roadsRoot;
     private Transform lanternsRoot;
     private Transform roadsidePropsRoot;
+    private readonly List<Vector3> roadsideBenchPositions = new();
+    private readonly bool[] benchOccupied = new bool[64];
     private Transform miscRoot;
     private Transform ambientAirRoot;
     private Transform miscBirdRoot;
@@ -222,6 +224,8 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isTruckAutoModeEnabled;
     private bool isFleetScreenDirty = true;
     private bool isMainMenuOpen = true;
+    private bool isRacingActive;
+    private int racingBonusEarned;
     private int selectedTruckNumber = 1;
     private int money;
     private int cottonStored = 0;
@@ -416,7 +420,8 @@ public partial class GameBootstrap : MonoBehaviour
         Sawmill,
         FurnitureFactory,
         Motel,
-        BusStop
+        BusStop,
+        Bar
     }
 
     private enum CargoType
@@ -475,7 +480,8 @@ public partial class GameBootstrap : MonoBehaviour
     {
         None,
         Road,
-        FurnitureFactory
+        FurnitureFactory,
+        Bar
     }
 
     private enum TripPhase
@@ -505,7 +511,13 @@ public partial class GameBootstrap : MonoBehaviour
         ToTruck,
         ToMotelEntrance,
         ToTruckAtMotel,
-        ToParkingForShift
+        ToParkingForShift,
+        IdleWalkToBench,
+        IdleSittingOnBench,
+        IdleWalkToBar,
+        IdleAtBar,
+        IdleSmoking,
+        IdlePhoneCall
     }
 
     private enum DriverRestPhase
@@ -921,6 +933,8 @@ public partial class GameBootstrap : MonoBehaviour
         public int IdleConversationPartnerId = -1;
         public float IdleConversationCooldownTimer;
         public bool IsArrivingByBus;
+        public int SittingBenchIndex = -1;
+        public float IdleActivityTimer;
     }
 
     private int GetCurrentHour()
@@ -1003,6 +1017,9 @@ public partial class GameBootstrap : MonoBehaviour
         {
             return;
         }
+
+        if (isRacingActive) { UpdateRacingMinigame(); return; }
+        UpdateJoinRaceButton();
 
         HandleHotkeys();
         HandleCameraInput();
@@ -1251,6 +1268,7 @@ public partial class GameBootstrap : MonoBehaviour
         SetupBuildingQuickHud();
         SetupCellQuickHud();
         SetupMainMenuHud();
+        SetupJoinRaceButton();
     }
 
     private void SetupCamera()

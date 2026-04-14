@@ -202,6 +202,7 @@ public partial class GameBootstrap
                 : "Finished goods storage",
             LocationType.Motel => "Drivers rest and idle here",
             LocationType.BusStop => "Roadside bus stop by the edge highway",
+            LocationType.Bar => "Social hub — idle drivers gather here",
             _ => string.Empty
         };
     }

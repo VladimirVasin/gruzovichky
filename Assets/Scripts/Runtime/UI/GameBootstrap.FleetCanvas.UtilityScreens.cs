@@ -28,7 +28,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("BuildWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 560f, 310f, -16f);
+        SetCenteredWindow(windowRect, 560f, 390f, -16f);
         buildScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();
@@ -50,7 +50,7 @@ public partial class GameBootstrap
         buildTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
         RectTransform toolCard = CreateSectionCard(windowRoot.transform, font, string.Empty, out RectTransform toolBody, false);
-        toolCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 180f;
+        toolCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 260f;
         VerticalLayoutGroup toolBodyLayout = toolBody.gameObject.GetComponent<VerticalLayoutGroup>();
         toolBodyLayout.spacing = 14f;
         toolBodyLayout.childControlWidth = true;
@@ -130,6 +130,42 @@ public partial class GameBootstrap
         buildScreenUi.FurnitureFactoryTitleText = CreateHeaderText("FurnitureFactoryTitle", factoryInfo, font, "Furniture Factory", 18, TextAnchor.MiddleLeft, Color.white);
         buildScreenUi.FurnitureFactoryDescriptionText = CreateBodyText("FurnitureFactoryDescription", factoryInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
 
+        RectTransform barRow = CreateUiObject("BuildBarRow", toolBody).GetComponent<RectTransform>();
+        HorizontalLayoutGroup barLayout = barRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        barLayout.spacing = 14;
+        barLayout.childControlWidth = true;
+        barLayout.childControlHeight = true;
+        barLayout.childForceExpandWidth = false;
+        barLayout.childForceExpandHeight = false;
+
+        buildScreenUi.BarButton = CreateButton("BuildBarButton", barRow, font, out Text barButtonText, "BAR", 16, FleetPrimaryButtonColor, Color.white);
+        buildScreenUi.BarButtonText = barButtonText;
+        LayoutElement barButtonLayout = buildScreenUi.BarButton.gameObject.AddComponent<LayoutElement>();
+        barButtonLayout.preferredWidth = 96f;
+        barButtonLayout.preferredHeight = 56f;
+        buildScreenUi.BarButton.onClick.AddListener(() =>
+        {
+            bool barModeActive = activeBuildTool == BuildTool.Bar;
+            activeBuildTool = barModeActive ? BuildTool.None : BuildTool.Bar;
+            isBuildPanelOpen = false;
+            LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
+            PlayUiSound(uiSelectClip, 0.85f);
+            SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
+            isBuildScreenDirty = true;
+        });
+
+        RectTransform barInfo = CreateUiObject("BarInfo", barRow).GetComponent<RectTransform>();
+        barInfo.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup barInfoLayout = barInfo.gameObject.AddComponent<VerticalLayoutGroup>();
+        barInfoLayout.spacing = 6;
+        barInfoLayout.childControlWidth = true;
+        barInfoLayout.childControlHeight = true;
+        barInfoLayout.childForceExpandWidth = true;
+        barInfoLayout.childForceExpandHeight = false;
+
+        buildScreenUi.BarTitleText = CreateHeaderText("BarTitle", barInfo, font, "Bar", 18, TextAnchor.MiddleLeft, Color.white);
+        buildScreenUi.BarDescriptionText = CreateBodyText("BarDescription", barInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
+
         AddOverlayCloseButton(windowRect, font);
         buildScreenUi.CanvasRoot.SetActive(false);
         UpdateBuildScreenUi();
@@ -151,6 +187,7 @@ public partial class GameBootstrap
 
         bool roadModeActive = activeBuildTool == BuildTool.Road;
         bool factoryModeActive = activeBuildTool == BuildTool.FurnitureFactory;
+        bool barModeActive = activeBuildTool == BuildTool.Bar;
         Image roadButtonImage = buildScreenUi.RoadButton.GetComponent<Image>();
         if (roadButtonImage != null)
         {
@@ -175,6 +212,20 @@ public partial class GameBootstrap
             : locations.ContainsKey(LocationType.FurnitureFactory)
                 ? "Already built on this map."
                 : "Place a 3x2 factory that turns 1 Board + 1 Textile into 1 Furniture.";
+
+        Image barButtonImage = buildScreenUi.BarButton.GetComponent<Image>();
+        if (barButtonImage != null)
+        {
+            barButtonImage.color = barModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
+        }
+
+        buildScreenUi.BarButtonText.text = "BAR";
+        buildScreenUi.BarTitleText.text = "Bar";
+        buildScreenUi.BarDescriptionText.text = barModeActive
+            ? "Mode active: place bar from its roadside anchor."
+            : locations.ContainsKey(LocationType.Bar)
+                ? "Already built on this map."
+                : "Social hub — idle drivers gather here to rest.";
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(buildScreenUi.WindowRoot);
         isBuildScreenDirty = false;
@@ -202,7 +253,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("ResourcesWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 860f, 460f, -16f);
+        SetCenteredWindow(windowRect, 400f, 440f, -16f);
         resourcesScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();
@@ -212,27 +263,48 @@ public partial class GameBootstrap
         windowOutline.effectDistance = new Vector2(2f, -2f);
 
         VerticalLayoutGroup rootLayout = windowRoot.AddComponent<VerticalLayoutGroup>();
-        rootLayout.padding = new RectOffset(18, 18, 18, 18);
-        rootLayout.spacing = 16;
+        rootLayout.padding = new RectOffset(14, 14, 14, 14);
+        rootLayout.spacing = 8;
         rootLayout.childControlWidth = true;
         rootLayout.childControlHeight = true;
         rootLayout.childForceExpandWidth = true;
         rootLayout.childForceExpandHeight = false;
 
-        RectTransform headerRow = CreateLayoutRow("ResourcesHeaderRow", windowRoot.transform, 40f, 0f);
-        Text resourcesTitleText = CreateHeaderText("ResourcesTitle", headerRow, font, "Resources", 24, TextAnchor.MiddleLeft, Color.white);
+        RectTransform headerRow = CreateLayoutRow("ResourcesHeaderRow", windowRoot.transform, 34f, 0f);
+        Text resourcesTitleText = CreateHeaderText("ResourcesTitle", headerRow, font, "Resources", 20, TextAnchor.MiddleLeft, Color.white);
         resourcesTitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        resourcesScreenUi.HeaderCountText = CreateHeaderText("ResourcesHeaderCount", headerRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
+        resourcesScreenUi.HeaderCountText = CreateHeaderText("ResourcesHeaderCount", headerRow, font, string.Empty, 11, TextAnchor.MiddleRight, FleetSecondaryTextColor);
 
-        RectTransform contentRoot = CreateUiObject("ResourcesContentRoot", windowRoot.transform).GetComponent<RectTransform>();
-        LayoutElement contentLayout = contentRoot.gameObject.AddComponent<LayoutElement>();
-        contentLayout.flexibleHeight = 1f;
-        VerticalLayoutGroup contentGroup = contentRoot.gameObject.AddComponent<VerticalLayoutGroup>();
-        contentGroup.spacing = 10;
+        // Scroll view — stretches to fill remaining height
+        GameObject scrollGo = CreateUiObject("ResourcesScrollView", windowRoot.transform);
+        RectTransform scrollRect = scrollGo.GetComponent<RectTransform>();
+        scrollGo.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        ScrollRect scroll = scrollGo.AddComponent<ScrollRect>();
+        scrollGo.AddComponent<RectMask2D>();
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 30f;
+        scroll.inertia = false;
+
+        // Content inside scroll — auto-sizes vertically
+        GameObject contentGo = CreateUiObject("ResourcesContentRoot", scrollGo.transform);
+        RectTransform contentRoot = contentGo.GetComponent<RectTransform>();
+        contentRoot.anchorMin = new Vector2(0f, 1f);
+        contentRoot.anchorMax = new Vector2(1f, 1f);
+        contentRoot.pivot = new Vector2(0.5f, 1f);
+        contentRoot.anchoredPosition = Vector2.zero;
+        contentRoot.sizeDelta = Vector2.zero;
+
+        VerticalLayoutGroup contentGroup = contentGo.AddComponent<VerticalLayoutGroup>();
+        contentGroup.spacing = 6;
         contentGroup.childControlWidth = true;
         contentGroup.childControlHeight = true;
         contentGroup.childForceExpandWidth = true;
         contentGroup.childForceExpandHeight = false;
+        contentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        scroll.content = contentRoot;
 
         CreateResourceSummaryRow(contentRoot, font, "Logs",      ResourceVisualKind.Logs,      TradeResourceType.Logs,      resourcesScreenUi.Rows);
         CreateResourceSummaryRow(contentRoot, font, "Boards",    ResourceVisualKind.Boards,    TradeResourceType.Boards,    resourcesScreenUi.Rows);
@@ -241,8 +313,8 @@ public partial class GameBootstrap
         CreateResourceSummaryRow(contentRoot, font, "Furniture", ResourceVisualKind.Furniture, TradeResourceType.Furniture, resourcesScreenUi.Rows);
 
         RectTransform footerCard = CreateSectionCard(windowRoot.transform, font, "Treasury", out RectTransform footerBody);
-        footerCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 74f;
-        resourcesScreenUi.TreasuryValueText = CreateHeaderText("TreasuryValue", footerBody, font, string.Empty, 18, TextAnchor.MiddleLeft, FleetAccentColor);
+        footerCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 60f;
+        resourcesScreenUi.TreasuryValueText = CreateHeaderText("TreasuryValue", footerBody, font, string.Empty, 16, TextAnchor.MiddleLeft, FleetAccentColor);
 
         AddOverlayCloseButton(windowRect, font);
         resourcesScreenUi.CanvasRoot.SetActive(false);
@@ -261,12 +333,12 @@ public partial class GameBootstrap
     private void CreateResourceSummaryRow(RectTransform parent, Font font, string title, ResourceVisualKind iconKind, TradeResourceType resourceType, List<ResourceSummaryRowUi> rows)
     {
         RectTransform card = CreateStyledPanel($"{title}RowCard", parent, FleetInsetColor);
-        card.gameObject.AddComponent<LayoutElement>().preferredHeight = 62f;
+        card.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
 
         HorizontalLayoutGroup layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.padding = new RectOffset(12, 12, 10, 10);
-        layout.spacing = 12;
-        layout.childControlWidth = false;
+        layout.padding = new RectOffset(10, 10, 5, 5);
+        layout.spacing = 10;
+        layout.childControlWidth = true;
         layout.childControlHeight = true;
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = false;
@@ -274,8 +346,8 @@ public partial class GameBootstrap
 
         RectTransform iconRoot = CreateUiObject($"{title}IconRoot", card).GetComponent<RectTransform>();
         LayoutElement iconLayout = iconRoot.gameObject.AddComponent<LayoutElement>();
-        iconLayout.preferredWidth = 34f;
-        iconLayout.preferredHeight = 34f;
+        iconLayout.preferredWidth = 28f;
+        iconLayout.preferredHeight = 28f;
         Image iconBackground = iconRoot.gameObject.AddComponent<Image>();
         iconBackground.color = new Color(1f, 1f, 1f, 0.06f);
         DrawResourceIcon(iconRoot, iconKind);
@@ -284,54 +356,67 @@ public partial class GameBootstrap
         LayoutElement textLayout = textRoot.gameObject.AddComponent<LayoutElement>();
         textLayout.flexibleWidth = 1f;
         VerticalLayoutGroup textGroup = textRoot.gameObject.AddComponent<VerticalLayoutGroup>();
-        textGroup.spacing = 2f;
+        textGroup.spacing = 1f;
         textGroup.childControlWidth = true;
         textGroup.childControlHeight = true;
         textGroup.childForceExpandWidth = true;
         textGroup.childForceExpandHeight = false;
 
-        Text nameText = CreateBodyText($"{title}Name", textRoot, font, title, 14, TextAnchor.MiddleLeft, Color.white);
+        Text nameText = CreateBodyText($"{title}Name", textRoot, font, title, 12, TextAnchor.MiddleLeft, Color.white);
         nameText.fontStyle = FontStyle.Bold;
         nameText.horizontalOverflow = HorizontalWrapMode.Overflow;
-        nameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        nameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 15f;
 
-        Text valueText = CreateHeaderText($"{title}Value", textRoot, font, string.Empty, 18, TextAnchor.MiddleLeft, FleetAccentColor);
-        valueText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+        Text valueText = CreateHeaderText($"{title}Value", textRoot, font, string.Empty, 16, TextAnchor.MiddleLeft, FleetAccentColor);
+        valueText.gameObject.AddComponent<LayoutElement>().preferredHeight = 19f;
 
-        // Threshold controls block
+        // Threshold controls — right side, dynamically sized: 42px (Off) or 116px (active)
+        const float kModeW = 42f;
+        const float kTcW   = 60f; // decr(16) + spacing(4) + value(20) + spacing(4) + incr(16)
+        const float kGap   = 4f;
+
         RectTransform thresholdRoot = CreateUiObject($"{title}ThresholdRoot", card).GetComponent<RectTransform>();
-        thresholdRoot.gameObject.AddComponent<LayoutElement>().preferredWidth = 176f;
+        LayoutElement thresholdRootLayout = thresholdRoot.gameObject.AddComponent<LayoutElement>();
+        thresholdRootLayout.preferredWidth = kModeW; // starts collapsed
         HorizontalLayoutGroup thresholdGroup = thresholdRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
-        thresholdGroup.spacing = 4f;
-        thresholdGroup.childAlignment = TextAnchor.MiddleRight;
-        thresholdGroup.childControlWidth = false;
-        thresholdGroup.childControlHeight = false;
+        thresholdGroup.spacing = kGap;
+        thresholdGroup.childAlignment = TextAnchor.MiddleCenter;
+        thresholdGroup.childControlWidth = true;
+        thresholdGroup.childControlHeight = true;
         thresholdGroup.childForceExpandWidth = false;
-        thresholdGroup.childForceExpandHeight = false;
+        thresholdGroup.childForceExpandHeight = true;
 
-        Button modeBtn = CreateButton($"{title}ModeBtn", thresholdRoot, font, out Text modeBtnText, "—", 11,
+        Button modeBtn = CreateButton($"{title}ModeBtn", thresholdRoot, font, out Text modeBtnText, "—", 10,
             new Color(0.22f, 0.25f, 0.30f, 1f), FleetMutedTextColor);
-        modeBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 52f;
+        modeBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = kModeW;
         modeBtnText.fontStyle = FontStyle.Bold;
+        modeBtnText.rectTransform.offsetMin = new Vector2(2f, 0f);
+        modeBtnText.rectTransform.offsetMax = new Vector2(-2f, 0f);
 
         RectTransform thresholdControls = CreateUiObject($"{title}ThresholdControls", thresholdRoot).GetComponent<RectTransform>();
-        thresholdControls.gameObject.AddComponent<LayoutElement>().preferredWidth = 116f;
+        thresholdControls.gameObject.AddComponent<LayoutElement>().preferredWidth = kTcW;
         HorizontalLayoutGroup tcGroup = thresholdControls.gameObject.AddComponent<HorizontalLayoutGroup>();
-        tcGroup.spacing = 4f;
-        tcGroup.childAlignment = TextAnchor.MiddleRight;
-        tcGroup.childControlWidth = false;
-        tcGroup.childControlHeight = false;
+        tcGroup.spacing = kGap;
+        tcGroup.childAlignment = TextAnchor.MiddleCenter;
+        tcGroup.childControlWidth = true;
+        tcGroup.childControlHeight = true;
+        tcGroup.childForceExpandWidth = false;
+        tcGroup.childForceExpandHeight = true;
 
-        Button decrBtn = CreateButton($"{title}DecrBtn", thresholdControls, font, out Text _, "−", 14,
+        Button decrBtn = CreateButton($"{title}DecrBtn", thresholdControls, font, out Text decrLabel, "−", 12,
             new Color(0.22f, 0.25f, 0.30f, 1f), Color.white);
-        decrBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
+        decrBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 16f;
+        decrLabel.rectTransform.offsetMin = new Vector2(1f, 0f);
+        decrLabel.rectTransform.offsetMax = new Vector2(-1f, 0f);
 
-        Text thresholdText = CreateHeaderText($"{title}Threshold", thresholdControls, font, "0", 15, TextAnchor.MiddleCenter, Color.white);
-        thresholdText.gameObject.AddComponent<LayoutElement>().preferredWidth = 36f;
+        Text thresholdText = CreateHeaderText($"{title}Threshold", thresholdControls, font, "0", 12, TextAnchor.MiddleCenter, Color.white);
+        thresholdText.gameObject.AddComponent<LayoutElement>().preferredWidth = 20f;
 
-        Button incrBtn = CreateButton($"{title}IncrBtn", thresholdControls, font, out Text _, "+", 14,
+        Button incrBtn = CreateButton($"{title}IncrBtn", thresholdControls, font, out Text incrLabel, "+", 12,
             new Color(0.22f, 0.25f, 0.30f, 1f), Color.white);
-        incrBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
+        incrBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 16f;
+        incrLabel.rectTransform.offsetMin = new Vector2(1f, 0f);
+        incrLabel.rectTransform.offsetMax = new Vector2(-1f, 0f);
 
         thresholdControls.gameObject.SetActive(false);
 
@@ -366,6 +451,7 @@ public partial class GameBootstrap
             ResourceType = resourceType,
             ModeButton = modeBtn,
             ModeButtonText = modeBtnText,
+            ThresholdRootLayout = thresholdRootLayout,
             ThresholdControls = thresholdControls,
             DecrBtn = decrBtn,
             ThresholdText = thresholdText,
@@ -511,6 +597,7 @@ public partial class GameBootstrap
             if (row.ThresholdControls.gameObject.activeSelf != isActive)
             {
                 row.ThresholdControls.gameObject.SetActive(isActive);
+                row.ThresholdRootLayout.preferredWidth = isActive ? 42f + 4f + 60f : 42f;
                 forceLayoutRebuild = true;
             }
             row.ThresholdText.text = cfg.Threshold.ToString();

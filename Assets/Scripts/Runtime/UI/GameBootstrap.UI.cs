@@ -853,6 +853,7 @@ public partial class GameBootstrap
             LocationType.FurnitureFactory => "Furniture Factory",
             LocationType.Motel => "Motel",
             LocationType.BusStop => "Bus Stop",
+            LocationType.Bar => "Bar",
             _ => "Location"
         };
     }

@@ -391,6 +391,7 @@ public partial class GameBootstrap
             Destroy(roadsidePropsRoot.GetChild(i).gameObject);
         }
 
+        roadsideBenchPositions.Clear();
         HashSet<Vector2Int> reservedSideCells = new();
         foreach (Vector2Int roadCell in roadCells)
         {
@@ -544,6 +545,22 @@ public partial class GameBootstrap
             ApplyColor(leg, legColor);
             ConfigureShadowVisual(leg);
         }
+
+        roadsideBenchPositions.Add(worldPosition);
+    }
+
+    private bool TryGetNearestFreeBench(Vector3 fromPos, float maxDist, out int idx, out Vector3 pos)
+    {
+        idx = -1;
+        pos = default;
+        float best = maxDist * maxDist;
+        for (int i = 0; i < roadsideBenchPositions.Count; i++)
+        {
+            if (i < benchOccupied.Length && benchOccupied[i]) continue;
+            float d = (roadsideBenchPositions[i] - fromPos).sqrMagnitude;
+            if (d < best) { best = d; idx = i; pos = roadsideBenchPositions[i]; }
+        }
+        return idx >= 0;
     }
 
     private void CreateRoadLantern(Vector3 worldPosition, Quaternion worldRotation)
