@@ -9,7 +9,7 @@ public partial class GameBootstrap
     private const float MenuBtnW = 90f;
     private const float MenuBtnH = 40f;
     private const float MenuBtnGap = 5f;
-    private const int MenuBtnCount = 6;
+    private const int MenuBtnCount = 7;
 
     private Rect GetMenuBarRect()
     {
@@ -59,12 +59,14 @@ public partial class GameBootstrap
         isResourcesPanelOpen = false;
         isEconomyPanelOpen = false;
         isBuildPanelOpen = false;
+        isWorldMapPanelOpen = false;
         target = !wasOpen;
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isShiftsScreenDirty = true;
         isEconomyScreenDirty = true;
         isBuildScreenDirty = true;
+        isWorldMapScreenDirty = true;
         LogUiInput($"MenuBar: {(target ? "opened" : "closed")} {panelName}");
         PlayUiSound(target ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
     }
@@ -81,24 +83,32 @@ public partial class GameBootstrap
         };
 
         float btnY = bar.y + 5f;
-        Color prev = GUI.color;
+        Color prevColor = GUI.color;
+        bool prevEnabled = GUI.enabled;
 
-        void MenuBtn(string label, ref bool state, float x)
+        try
         {
-            GUI.color = state ? Color.yellow : Color.white;
-            if (GUI.Button(new Rect(x, btnY, MenuBtnW, MenuBtnH), label, btnStyle))
-                ToggleMenuPanel(label, ref state);
+            void MenuBtn(string label, ref bool state, float x)
+            {
+                GUI.color = state ? Color.yellow : Color.white;
+                if (GUI.Button(new Rect(x, btnY, MenuBtnW, MenuBtnH), label, btnStyle))
+                    ToggleMenuPanel(label, ref state);
+            }
+
+            float x = bar.x + MenuBtnGap;
+            MenuBtn("Fleet",     ref isFleetPanelOpen,     x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Drivers",   ref isDriversPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Shifts",    ref isShiftsPanelOpen,    x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Economy",   ref isEconomyPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Build",     ref isBuildPanelOpen,     x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Map",       ref isWorldMapPanelOpen,  x);
         }
-
-        float x = bar.x + MenuBtnGap;
-        MenuBtn("Fleet",     ref isFleetPanelOpen,     x); x += MenuBtnW + MenuBtnGap;
-        MenuBtn("Drivers",   ref isDriversPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
-        MenuBtn("Shifts",    ref isShiftsPanelOpen,    x); x += MenuBtnW + MenuBtnGap;
-        MenuBtn("Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-        MenuBtn("Economy",   ref isEconomyPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
-        MenuBtn("Build",     ref isBuildPanelOpen,     x);
-
-        GUI.color = prev;
+        finally
+        {
+            GUI.color = prevColor;
+            GUI.enabled = prevEnabled;
+        }
     }
 
     // ── Fleet panel ──────────────────────────────────────────────────────────
@@ -476,7 +486,8 @@ public partial class GameBootstrap
                 Type = TripType.ForestToSawmill,
                 Title = "Deliver Logs: Forest -> Sawmill",
                 Description = "Pick up logs in Forest and deliver them to Sawmill.",
-                Reward = GetTripReward(TripType.ForestToSawmill)
+                Reward = GetTripReward(TripType.ForestToSawmill),
+                Priority = 0
             });
         }
 
@@ -490,8 +501,59 @@ public partial class GameBootstrap
                 Type = TripType.SawmillToWarehouse,
                 Title = "Deliver Boards: Sawmill -> Warehouse",
                 Description = "Take processed boards from Sawmill to Warehouse.",
-                Reward = GetTripReward(TripType.SawmillToWarehouse)
+                Reward = GetTripReward(TripType.SawmillToWarehouse),
+                Priority = 1
             });
+        }
+
+        if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
+        {
+            bool canReachFactoryFromWarehouse =
+                HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Warehouse].Anchor) &&
+                HasPath(locations[LocationType.Warehouse].Anchor, furnitureFactory.Anchor);
+            bool canReachWarehouseFromFactory =
+                HasPath(locations[LocationType.Parking].Anchor, furnitureFactory.Anchor) &&
+                HasPath(furnitureFactory.Anchor, locations[LocationType.Warehouse].Anchor);
+
+            if (locations[LocationType.Warehouse].BoardsStored > 0 &&
+                furnitureFactory.BoardsStored < FurnitureFactoryMaxBoardsStorage &&
+                canReachFactoryFromWarehouse)
+            {
+                trips.Add(new TripOption
+                {
+                    Type = TripType.WarehouseToFurnitureFactoryBoards,
+                    Title = "Deliver Boards: Warehouse -> Factory",
+                    Description = "Take boards from Warehouse to the Furniture Factory.",
+                    Reward = GetTripReward(TripType.WarehouseToFurnitureFactoryBoards),
+                    Priority = 1
+                });
+            }
+
+            if (textileStored > 0 &&
+                furnitureFactory.TextileStored < FurnitureFactoryMaxTextileStorage &&
+                canReachFactoryFromWarehouse)
+            {
+                trips.Add(new TripOption
+                {
+                    Type = TripType.WarehouseToFurnitureFactoryTextile,
+                    Title = "Deliver Textile: Warehouse -> Factory",
+                    Description = "Take textile stock from Warehouse to the Furniture Factory.",
+                    Reward = GetTripReward(TripType.WarehouseToFurnitureFactoryTextile),
+                    Priority = 1
+                });
+            }
+
+            if (furnitureFactory.FurnitureStored > 0 && canReachWarehouseFromFactory)
+            {
+                trips.Add(new TripOption
+                {
+                    Type = TripType.FurnitureFactoryToWarehouse,
+                    Title = "Deliver Furniture: Factory -> Warehouse",
+                    Description = "Pick up finished furniture and return it to Warehouse storage.",
+                    Reward = GetTripReward(TripType.FurnitureFactoryToWarehouse),
+                    Priority = 2
+                });
+            }
         }
 
         return trips;
@@ -527,6 +589,9 @@ public partial class GameBootstrap
         {
             TripType.ForestToSawmill => "Forest -> Sawmill",
             TripType.SawmillToWarehouse => "Sawmill -> Warehouse",
+            TripType.WarehouseToFurnitureFactoryBoards => "Warehouse -> Furniture Factory (Boards)",
+            TripType.WarehouseToFurnitureFactoryTextile => "Warehouse -> Furniture Factory (Textile)",
+            TripType.FurnitureFactoryToWarehouse => "Furniture Factory -> Warehouse",
             _ => "None"
         };
     }

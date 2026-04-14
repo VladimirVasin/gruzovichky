@@ -41,16 +41,28 @@ public partial class GameBootstrap
             case TruckAutoDecisionKind.Trip:
             {
                 List<TripOption> trips = GetAvailableTrips();
-                int tripIndex = TruckAutoPlanner.PickTripIndex(trips.Count);
-                if (tripIndex >= 0)
+                TripOption best = PickHighestPriorityTrip(trips);
+                if (best != null)
                 {
-                    SessionDebugLogger.Log("AUTO", $"{GetLoadedTruckDisplayName()} chose trip '{trips[tripIndex].Title}'.");
-                    AssignTrip(trips[tripIndex]);
+                    SessionDebugLogger.Log("AUTO", $"{GetLoadedTruckDisplayName()} chose trip '{best.Title}'.");
+                    AssignTrip(best);
                 }
 
                 return;
             }
         }
+    }
+
+    private TripOption PickHighestPriorityTrip(List<TripOption> trips)
+    {
+        if (trips == null || trips.Count == 0) return null;
+        int maxPriority = -1;
+        foreach (TripOption t in trips)
+            if (t.Priority > maxPriority) maxPriority = t.Priority;
+        List<TripOption> best = new();
+        foreach (TripOption t in trips)
+            if (t.Priority == maxPriority) best.Add(t);
+        return best[Random.Range(0, best.Count)];
     }
 
     private void EvaluateTruckAutoModeNow(TruckAgent truckAgent)
@@ -190,7 +202,14 @@ public partial class GameBootstrap
             GetPathStepCount(locations[dropoff].Anchor, locations[LocationType.Parking].Anchor);
 
         int handlingBonus = 12;
-        int locationBonus = tripType == TripType.SawmillToWarehouse ? 10 : 6;
+        int locationBonus = tripType switch
+        {
+            TripType.SawmillToWarehouse => 10,
+            TripType.WarehouseToFurnitureFactoryBoards => 10,
+            TripType.WarehouseToFurnitureFactoryTextile => 10,
+            TripType.FurnitureFactoryToWarehouse => 11,
+            _ => 6
+        };
         return TripRewardCalculator.Calculate(totalSteps, handlingBonus, locationBonus);
     }
 
@@ -206,6 +225,9 @@ public partial class GameBootstrap
         {
             TripType.ForestToSawmill => LocationType.Forest,
             TripType.SawmillToWarehouse => LocationType.Sawmill,
+            TripType.WarehouseToFurnitureFactoryBoards => LocationType.Warehouse,
+            TripType.WarehouseToFurnitureFactoryTextile => LocationType.Warehouse,
+            TripType.FurnitureFactoryToWarehouse => LocationType.FurnitureFactory,
             _ => LocationType.Parking
         };
     }
@@ -216,6 +238,9 @@ public partial class GameBootstrap
         {
             TripType.ForestToSawmill => LocationType.Sawmill,
             TripType.SawmillToWarehouse => LocationType.Warehouse,
+            TripType.WarehouseToFurnitureFactoryBoards => LocationType.FurnitureFactory,
+            TripType.WarehouseToFurnitureFactoryTextile => LocationType.FurnitureFactory,
+            TripType.FurnitureFactoryToWarehouse => LocationType.Warehouse,
             _ => LocationType.Parking
         };
     }
@@ -226,6 +251,9 @@ public partial class GameBootstrap
         {
             TripType.ForestToSawmill => TruckInteractionType.LoadAtForest,
             TripType.SawmillToWarehouse => TruckInteractionType.LoadAtSawmill,
+            TripType.WarehouseToFurnitureFactoryBoards => TruckInteractionType.LoadBoardsAtWarehouse,
+            TripType.WarehouseToFurnitureFactoryTextile => TruckInteractionType.LoadTextileAtWarehouse,
+            TripType.FurnitureFactoryToWarehouse => TruckInteractionType.LoadAtFurnitureFactory,
             _ => TruckInteractionType.None
         };
     }
@@ -236,6 +264,9 @@ public partial class GameBootstrap
         {
             TripType.ForestToSawmill => TruckInteractionType.UnloadAtSawmill,
             TripType.SawmillToWarehouse => TruckInteractionType.UnloadAtWarehouse,
+            TripType.WarehouseToFurnitureFactoryBoards => TruckInteractionType.UnloadBoardsAtFurnitureFactory,
+            TripType.WarehouseToFurnitureFactoryTextile => TruckInteractionType.UnloadTextileAtFurnitureFactory,
+            TripType.FurnitureFactoryToWarehouse => TruckInteractionType.UnloadFurnitureAtWarehouse,
             _ => TruckInteractionType.None
         };
     }

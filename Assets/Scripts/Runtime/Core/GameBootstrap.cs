@@ -13,6 +13,10 @@ public partial class GameBootstrap : MonoBehaviour
     private const float RoadHeight = 0.12f;
     private const float TruckCruiseSpeed = 1.9f;
     private const int ForestMaxLogsStorage = 10;
+    private const int FurnitureFactoryMaxBoardsStorage = 6;
+    private const int FurnitureFactoryMaxTextileStorage = 6;
+    private const int FurnitureFactoryMaxFurnitureStorage = 6;
+    private const float FurnitureFactoryProcessingDuration = 5.5f;
     private const float ForestLogProgressPerChop = 0.08f;
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
@@ -201,6 +205,7 @@ public partial class GameBootstrap : MonoBehaviour
     private float currentStylizedDaylight = 1f;
     private float forestProductionProgress;
     private float sawmillProcessingTimer;
+    private float furnitureFactoryProcessingTimer;
     private float dayBirdTimer;
     private float nightOwlTimer;
     private float lanternBuzzTimer;
@@ -230,10 +235,31 @@ public partial class GameBootstrap : MonoBehaviour
     private int intercityDriverId;
     private TradeResourceType selectedTradeResourceType = TradeResourceType.Cotton;
     private TradeOrderType selectedTradeOrderType = TradeOrderType.Buy;
+
+    private enum TradeThresholdMode { Off, Buy, Sell }
+
+    private sealed class TradeThresholdConfig
+    {
+        public TradeThresholdMode Mode = TradeThresholdMode.Off;
+        public int Threshold = 0;
+    }
+
+    private readonly Dictionary<TradeResourceType, TradeThresholdConfig> tradeThresholds = new()
+    {
+        { TradeResourceType.Logs,      new TradeThresholdConfig() },
+        { TradeResourceType.Boards,    new TradeThresholdConfig() },
+        { TradeResourceType.Cotton,    new TradeThresholdConfig() },
+        { TradeResourceType.Textile,   new TradeThresholdConfig() },
+        { TradeResourceType.Furniture, new TradeThresholdConfig() },
+    };
+
+    private float tradeThresholdCheckTimer;
     private string tradeDispatchStatusText = "Assign an Intercity driver to unlock trade dispatch.";
     private bool isResourcesPanelOpen;
     private bool isEconomyPanelOpen;
     private bool isBuildPanelOpen;
+    private bool isWorldMapPanelOpen;
+    private int selectedWorldMapRegionIndex = 4;
     private int moneyPopupAmount;
     private int gameSpeedMultiplier = 1;
     private int lastActiveGameSpeedMultiplier = 1;
@@ -388,6 +414,7 @@ public partial class GameBootstrap : MonoBehaviour
         Forest,
         Warehouse,
         Sawmill,
+        FurnitureFactory,
         Motel,
         BusStop
     }
@@ -396,7 +423,9 @@ public partial class GameBootstrap : MonoBehaviour
     {
         None,
         Logs,
-        Boards
+        Boards,
+        Textile,
+        Furniture
     }
 
     private enum TransportTask
@@ -406,7 +435,13 @@ public partial class GameBootstrap : MonoBehaviour
         PickUpAtForest,
         DeliverToSawmill,
         PickUpAtSawmill,
-        DeliverToWarehouse
+        DeliverToWarehouse,
+        PickUpBoardsAtWarehouse,
+        DeliverBoardsToFurnitureFactory,
+        PickUpTextileAtWarehouse,
+        DeliverTextileToFurnitureFactory,
+        PickUpAtFurnitureFactory,
+        DeliverFurnitureToWarehouse
     }
 
     private enum TruckInteractionType
@@ -416,6 +451,12 @@ public partial class GameBootstrap : MonoBehaviour
         UnloadAtSawmill,
         LoadAtSawmill,
         UnloadAtWarehouse,
+        LoadBoardsAtWarehouse,
+        LoadTextileAtWarehouse,
+        UnloadBoardsAtFurnitureFactory,
+        UnloadTextileAtFurnitureFactory,
+        LoadAtFurnitureFactory,
+        UnloadFurnitureAtWarehouse,
         TradeUnloadAtWarehouse,
         RefuelAtGasStation
     }
@@ -424,13 +465,17 @@ public partial class GameBootstrap : MonoBehaviour
     {
         None,
         ForestToSawmill,
-        SawmillToWarehouse
+        SawmillToWarehouse,
+        WarehouseToFurnitureFactoryBoards,
+        WarehouseToFurnitureFactoryTextile,
+        FurnitureFactoryToWarehouse
     }
 
     private enum BuildTool
     {
         None,
-        Road
+        Road,
+        FurnitureFactory
     }
 
     private enum TripPhase
@@ -505,6 +550,8 @@ public partial class GameBootstrap : MonoBehaviour
         public Color BaseColor;
         public int LogsStored;
         public int BoardsStored;
+        public int TextileStored;
+        public int FurnitureStored;
         public GameObject RootObject;
         public Renderer BaseRenderer;
         public readonly List<GameObject> StoredLogVisuals = new();
@@ -522,6 +569,7 @@ public partial class GameBootstrap : MonoBehaviour
         public string Title;
         public string Description;
         public int Reward;
+        public int Priority; // 0=Low, 1=Medium, 2=High
     }
 
     private enum ForestWorkerState
@@ -964,6 +1012,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateBuildHoverHighlight();
         ProduceForestWood();
         UpdateSawmillProcessing();
+        UpdateFurnitureFactoryProcessing();
         UpdateDayNightCycle();
         UpdateSelectedLocationLabel();
         UpdateForestTreeWobbles();
@@ -984,6 +1033,12 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateAmbientAirParticles();
         UpdateForestWorkers();
         UpdateActiveTradeRun();
+        tradeThresholdCheckTimer -= Time.deltaTime;
+        if (tradeThresholdCheckTimer <= 0f)
+        {
+            tradeThresholdCheckTimer = 5f;
+            CheckTradeThresholds();
+        }
         for (int i = 0; i < truckAgents.Count; i++)
         {
             TruckAgent ta = truckAgents[i];
@@ -1048,6 +1103,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateResourcesScreenUi();
         UpdateEconomyScreenUi();
         UpdateBuildScreenUi();
+        UpdateWorldMapScreenUi();
         UpdateTruckQuickHud();
         UpdateDriverQuickHud();
         UpdateBuildingQuickHud();
@@ -1104,19 +1160,36 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        DrawMoneyHud();
-        DrawTimeHud();
-        DrawSpeedHud();
-        DrawPauseOverlay();
-        DrawMenuBar();
+        try
+        {
+            Color prevColor = GUI.color;
+            bool prevEnabled = GUI.enabled;
 
-        if (isFleetPanelOpen) DrawFleetPanel();
-        // Shifts panel is now Canvas-based (ShiftsScreenCanvas)
-        // Drivers panel is now Canvas-based (DriversScreenCanvas)
-        // Resources panel is now Canvas-based (ResourcesScreenCanvas)
-        // Economy panel is now Canvas-based (EconomyScreenCanvas)
-        // Build panel is now Canvas-based (BuildScreenCanvas)
+            DrawMoneyHud();
+            DrawTimeHud();
+            DrawSpeedHud();
+            DrawPauseOverlay();
 
+            if (!isWorldMapPanelOpen)
+            {
+                DrawMenuBar();
+                if (isFleetPanelOpen) DrawFleetPanel();
+            }
+            // Shifts panel is now Canvas-based (ShiftsScreenCanvas)
+            // Drivers panel is now Canvas-based (DriversScreenCanvas)
+            // Resources panel is now Canvas-based (ResourcesScreenCanvas)
+            // Economy panel is now Canvas-based (EconomyScreenCanvas)
+            // Build panel is now Canvas-based (BuildScreenCanvas)
+
+            GUI.color = prevColor;
+            GUI.enabled = prevEnabled;
+        }
+        catch (System.Exception ex)
+        {
+            SessionDebugLogger.Log("GUI", $"OnGUI exception: {ex.Message}");
+            GUI.color = Color.white;
+            GUI.enabled = true;
+        }
     }
 
     private void BuildPrototypeScene()
@@ -1172,6 +1245,7 @@ public partial class GameBootstrap : MonoBehaviour
         SetupResourcesScreenUi();
         SetupEconomyScreenUi();
         SetupBuildScreenUi();
+        SetupWorldMapScreenUi();
         SetupTruckQuickHud();
         SetupDriverQuickHud();
         SetupBuildingQuickHud();

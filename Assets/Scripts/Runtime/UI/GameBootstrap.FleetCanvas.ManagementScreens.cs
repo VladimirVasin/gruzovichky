@@ -23,6 +23,8 @@ public partial class GameBootstrap
     private bool isShiftsScreenDirty = true;
     private BuildScreenUiRefs buildScreenUi;
     private bool isBuildScreenDirty = true;
+    private WorldMapScreenUiRefs worldMapScreenUi;
+    private bool isWorldMapScreenDirty = true;
 
     private sealed class DriversScreenUiRefs
     {
@@ -87,6 +89,10 @@ public partial class GameBootstrap
         public Text RoadButtonText;
         public Text RoadTitleText;
         public Text RoadDescriptionText;
+        public Button FurnitureFactoryButton;
+        public Text FurnitureFactoryButtonText;
+        public Text FurnitureFactoryTitleText;
+        public Text FurnitureFactoryDescriptionText;
     }
 
     private sealed class DriverCardUi
@@ -121,6 +127,13 @@ public partial class GameBootstrap
         public Text ValueText;
         public string LastName;
         public string LastValue;
+        public TradeResourceType ResourceType;
+        public Button ModeButton;
+        public Text ModeButtonText;
+        public RectTransform ThresholdControls;
+        public Button DecrBtn;
+        public Text ThresholdText;
+        public Button IncrBtn;
     }
 
     private sealed class EconomyScreenUiRefs
@@ -141,6 +154,57 @@ public partial class GameBootstrap
         public RectTransform EntryListContent;
         public Text EmptyText;
         public readonly List<EconomyEntryRowUi> Rows = new();
+    }
+
+    private sealed class WorldMapScreenUiRefs
+    {
+        public GameObject CanvasRoot;
+        public RectTransform WindowRoot;
+        public Text TitleText;
+        public Text SubtitleText;
+        public Text SelectionHintText;
+        public readonly List<WorldMapCellUi> Cells = new();
+        public WorldMapDetailPreviewUi DetailPreview;
+        public Text DetailsNameText;
+        public Text DetailsStatusText;
+        public Text DetailsResourcesText;
+        public Text DetailsDescriptionText;
+    }
+
+    private sealed class WorldMapCellUi
+    {
+        public Button Button;
+        public Image Background;
+        public Outline Outline;
+        public Image PreviewBackground;
+        public Text PreviewPlaceholderText;
+        public Image WaterShape;
+        public Image HighwayShape;
+        public Image ForestShape;
+        public Image TownBlockA;
+        public Image TownBlockB;
+        public Image TownBlockC;
+        public Image HighwayDashA;
+        public Image HighwayDashB;
+        public Image HighwayDashC;
+        public Text NameText;
+        public Text TypeText;
+        public int RegionIndex;
+    }
+
+    private sealed class WorldMapDetailPreviewUi
+    {
+        public Image PreviewBackground;
+        public Text PlaceholderText;
+        public Image WaterShape;
+        public Image HighwayShape;
+        public Image ForestShape;
+        public Image TownBlockA;
+        public Image TownBlockB;
+        public Image TownBlockC;
+        public Image HighwayDashA;
+        public Image HighwayDashB;
+        public Image HighwayDashC;
     }
 
     private sealed class EconomyEntryRowUi
@@ -270,6 +334,7 @@ public partial class GameBootstrap
         });
         driversScreenUi.HireStatusText = CreateBodyText("HireStatus", hireSection, font, string.Empty, 12, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
 
+        AddOverlayCloseButton(windowRect, font);
         driversScreenUi.CanvasRoot.SetActive(false);
         UpdateDriversScreenUi();
     }
@@ -915,6 +980,7 @@ public partial class GameBootstrap
         intercityRemoveLayout.preferredHeight = 30f;
         shiftsScreenUi.IntercitySlot.RemoveButton.onClick.AddListener(RemoveIntercityDriverAssignment);
 
+        AddOverlayCloseButton(windowRect, font);
         shiftsScreenUi.CanvasRoot.SetActive(false);
         UpdateShiftsScreenUi();
     }

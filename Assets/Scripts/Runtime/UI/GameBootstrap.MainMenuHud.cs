@@ -134,30 +134,23 @@ public partial class GameBootstrap
 
     private Sprite LoadMainMenuBackgroundSprite()
     {
+        // Load from Resources/ (works in Editor and Build)
+        Sprite sprite = Resources.Load<Sprite>("MenuPic");
+        if (sprite != null)
+        {
+            return sprite;
+        }
+
+        // Fallback for Editor: direct AssetDatabase path
 #if UNITY_EDITOR
-        Sprite editorSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/MenuPic.png");
+        Sprite editorSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Resources/MenuPic.png");
         if (editorSprite != null)
         {
             return editorSprite;
         }
 #endif
 
-        string filePath = Path.Combine(Application.dataPath, "MenuPic.png");
-        if (!File.Exists(filePath))
-        {
-            return null;
-        }
-
-        byte[] bytes = File.ReadAllBytes(filePath);
-        Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-        if (!texture.LoadImage(bytes))
-        {
-            Object.Destroy(texture);
-            return null;
-        }
-
-        texture.name = "MenuPicRuntime";
-        return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+        return null;
     }
 
     private void UpdateMainMenuHud()

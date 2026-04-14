@@ -17,7 +17,7 @@ public partial class GameBootstrap
         {
             bool anyMenuOpen =
                 isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
-                isResourcesPanelOpen || isEconomyPanelOpen || isBuildPanelOpen ||
+                isResourcesPanelOpen || isEconomyPanelOpen || isBuildPanelOpen || isWorldMapPanelOpen ||
                 isTruckDetailsOpen || isDriverDetailsOpen || activeBuildTool != BuildTool.None;
 
             if (anyMenuOpen)
@@ -82,6 +82,24 @@ public partial class GameBootstrap
             }
             isBuildScreenDirty = true;
             PlayUiSound(isBuildPanelOpen ? uiPanelOpenClip : uiPanelCloseClip, 0.85f);
+            return;
+        }
+
+        if (Keyboard.current.mKey.wasPressedThisFrame)
+        {
+            isWorldMapPanelOpen = !isWorldMapPanelOpen;
+            if (isWorldMapPanelOpen)
+            {
+                isFleetPanelOpen = false;
+                isShiftsPanelOpen = false;
+                isDriversPanelOpen = false;
+                isResourcesPanelOpen = false;
+                isEconomyPanelOpen = false;
+                isBuildPanelOpen = false;
+            }
+
+            isWorldMapScreenDirty = true;
+            PlayUiSound(isWorldMapPanelOpen ? uiPanelOpenClip : uiPanelCloseClip, 0.85f);
             return;
         }
 
@@ -183,6 +201,7 @@ public partial class GameBootstrap
             isDriversPanelOpen ||
             isResourcesPanelOpen ||
             isEconomyPanelOpen ||
+            isWorldMapPanelOpen ||
             isBuildPanelOpen ||
             isTruckDetailsOpen ||
             activeBuildTool != BuildTool.None;
@@ -192,6 +211,7 @@ public partial class GameBootstrap
         isDriversPanelOpen = false;
         isResourcesPanelOpen = false;
         isEconomyPanelOpen = false;
+        isWorldMapPanelOpen = false;
         isBuildPanelOpen = false;
         isTruckDetailsOpen = false;
         isDriverDetailsOpen = false;
@@ -201,6 +221,7 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         isEconomyScreenDirty = true;
         isBuildScreenDirty = true;
+        isWorldMapScreenDirty = true;
         DisableTruckCameraFocus();
         RefreshSelectionVisuals();
 
@@ -313,7 +334,9 @@ public partial class GameBootstrap
             }
 
             float scroll = Mouse.current.scroll.ReadValue().y;
-            if (Mathf.Abs(scroll) > 0.01f)
+            bool anyHudOpen = isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
+                isResourcesPanelOpen || isEconomyPanelOpen || isBuildPanelOpen || isWorldMapPanelOpen;
+            if (Mathf.Abs(scroll) > 0.01f && !anyHudOpen)
             {
                 float currentDistance = cameraOffset.magnitude;
                 // Normalize scroll to ±1 per tick regardless of platform scroll magnitude, then apply a fixed step
@@ -532,7 +555,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (activeBuildTool != BuildTool.Road)
+        if (activeBuildTool == BuildTool.None)
         {
             SelectDebugCell(cell);
             selectedLocation = null;
@@ -543,7 +566,14 @@ public partial class GameBootstrap
             return;
         }
 
-        if (IsRoadBuildCellBlocked(cell))
+        bool buildActionSucceeded = activeBuildTool switch
+        {
+            BuildTool.Road => TryPlaceRoadAtCell(cell),
+            BuildTool.FurnitureFactory => TryPlaceFurnitureFactoryAtAnchor(cell),
+            _ => false
+        };
+
+        if (!buildActionSucceeded)
         {
             ClearSelectedDebugCell();
             selectedLocation = null;
@@ -555,11 +585,13 @@ public partial class GameBootstrap
         }
 
         ClearSelectedDebugCell();
-        selectedLocation = null;
         isTruckDetailsOpen = false;
         DisableTruckCameraFocus();
-        RefreshSelectionVisuals();
-        AddRoad(cell);
+        if (activeBuildTool == BuildTool.Road)
+        {
+            selectedLocation = null;
+            RefreshSelectionVisuals();
+        }
     }
 
     private void SetupBuildHoverHighlight()
@@ -587,7 +619,7 @@ public partial class GameBootstrap
         }
 
         hoveredBuildCell = null;
-        if (activeBuildTool != BuildTool.Road || mainCamera == null || Mouse.current == null || isTruckCameraFocused || isRightMouseDragging)
+        if (activeBuildTool == BuildTool.None || mainCamera == null || Mouse.current == null || isTruckCameraFocused || isRightMouseDragging)
         {
             buildHoverHighlight.SetActive(false);
             return;
@@ -616,10 +648,10 @@ public partial class GameBootstrap
         }
 
         hoveredBuildCell = cell;
-        bool canBuild = !IsRoadBuildCellBlocked(cell);
+        bool canBuild = GetBuildPreviewAtCell(cell, out Vector3 previewPosition, out Vector3 previewScale);
         buildHoverHighlight.SetActive(true);
-        buildHoverHighlight.transform.position = GetCellCenter(cell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
-        buildHoverHighlight.transform.localScale = new Vector3(canBuild ? 0.92f : 0.98f, 0.04f, canBuild ? 0.92f : 0.98f);
+        buildHoverHighlight.transform.position = previewPosition;
+        buildHoverHighlight.transform.localScale = previewScale;
 
         Renderer renderer = buildHoverHighlight.GetComponent<Renderer>();
         if (renderer != null)
@@ -628,6 +660,41 @@ public partial class GameBootstrap
                 ? new Color(0.22f, 0.9f, 0.32f)
                 : new Color(0.92f, 0.28f, 0.22f);
         }
+    }
+
+    private bool TryPlaceRoadAtCell(Vector2Int cell)
+    {
+        if (IsRoadBuildCellBlocked(cell))
+        {
+            return false;
+        }
+
+        AddRoad(cell);
+        return true;
+    }
+
+    private bool GetBuildPreviewAtCell(Vector2Int cell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        previewPosition = GetCellCenter(cell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
+        previewScale = new Vector3(0.92f, 0.04f, 0.92f);
+
+        if (activeBuildTool == BuildTool.Road)
+        {
+            bool canBuildRoad = !IsRoadBuildCellBlocked(cell);
+            if (!canBuildRoad)
+            {
+                previewScale = new Vector3(0.98f, 0.04f, 0.98f);
+            }
+
+            return canBuildRoad;
+        }
+
+        if (activeBuildTool == BuildTool.FurnitureFactory)
+        {
+            return GetFurnitureFactoryPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
+        return false;
     }
 
 }

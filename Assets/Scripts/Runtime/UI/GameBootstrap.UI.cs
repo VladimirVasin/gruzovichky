@@ -258,7 +258,12 @@ public partial class GameBootstrap
         }
 
         Vector3 truckRearPoint = truckObject.transform.position - truckObject.transform.forward * 0.52f + Vector3.up * 0.18f;
-        bool loadingIntoTruck = activeTruckInteraction == TruckInteractionType.LoadAtForest || activeTruckInteraction == TruckInteractionType.LoadAtSawmill;
+        bool loadingIntoTruck =
+            activeTruckInteraction == TruckInteractionType.LoadAtForest ||
+            activeTruckInteraction == TruckInteractionType.LoadAtSawmill ||
+            activeTruckInteraction == TruckInteractionType.LoadBoardsAtWarehouse ||
+            activeTruckInteraction == TruckInteractionType.LoadTextileAtWarehouse ||
+            activeTruckInteraction == TruckInteractionType.LoadAtFurnitureFactory;
         Vector3 from = loadingIntoTruck ? truckInteractionBuildingPoint : truckRearPoint;
         Vector3 to = loadingIntoTruck ? truckRearPoint : truckInteractionBuildingPoint;
 
@@ -283,6 +288,12 @@ public partial class GameBootstrap
                 TruckInteractionType.UnloadAtSawmill => "Unloading at Sawmill...",
                 TruckInteractionType.LoadAtSawmill => "Loading at Sawmill...",
                 TruckInteractionType.UnloadAtWarehouse => "Unloading boards at Warehouse...",
+                TruckInteractionType.LoadBoardsAtWarehouse => "Loading boards at Warehouse...",
+                TruckInteractionType.LoadTextileAtWarehouse => "Loading textile at Warehouse...",
+                TruckInteractionType.UnloadBoardsAtFurnitureFactory => "Unloading boards at Furniture Factory...",
+                TruckInteractionType.UnloadTextileAtFurnitureFactory => "Unloading textile at Furniture Factory...",
+                TruckInteractionType.LoadAtFurnitureFactory => "Loading furniture at Furniture Factory...",
+                TruckInteractionType.UnloadFurnitureAtWarehouse => "Unloading furniture at Warehouse...",
                 TruckInteractionType.TradeUnloadAtWarehouse => "Unloading trade goods at Warehouse...",
                 TruckInteractionType.RefuelAtGasStation => "Refueling at Gas Station...",
                 _ => "Truck servicing cargo..."
@@ -823,6 +834,7 @@ public partial class GameBootstrap
             LocationType.Forest => $"Logs stored: {locations[LocationType.Forest].LogsStored}/{ForestMaxLogsStorage}",
             LocationType.Warehouse => $"Boards stored: {locations[LocationType.Warehouse].BoardsStored}",
             LocationType.Sawmill => $"Logs: {locations[LocationType.Sawmill].LogsStored} | Boards: {locations[LocationType.Sawmill].BoardsStored}",
+            LocationType.FurnitureFactory => $"Boards: {locations[LocationType.FurnitureFactory].BoardsStored} | Textile: {locations[LocationType.FurnitureFactory].TextileStored} | Furniture: {locations[LocationType.FurnitureFactory].FurnitureStored}",
             LocationType.Motel => "Roadside stop",
             LocationType.BusStop => "Bus stop by the highway",
             _ => string.Empty
@@ -838,6 +850,7 @@ public partial class GameBootstrap
             LocationType.Forest => "Forest",
             LocationType.Warehouse => "Warehouse",
             LocationType.Sawmill => "Sawmill",
+            LocationType.FurnitureFactory => "Furniture Factory",
             LocationType.Motel => "Motel",
             LocationType.BusStop => "Bus Stop",
             _ => "Location"

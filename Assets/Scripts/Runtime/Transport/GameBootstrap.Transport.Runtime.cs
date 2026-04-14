@@ -83,6 +83,42 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("SAWMILL", $"Sawmill processed 1 Logs into Boards. Logs={sawmill.LogsStored}, Boards={sawmill.BoardsStored}.");
     }
 
+    private void UpdateFurnitureFactoryProcessing()
+    {
+        if (!locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
+        {
+            furnitureFactoryProcessingTimer = 0f;
+            return;
+        }
+
+        if (furnitureFactory.BoardsStored <= 0 ||
+            furnitureFactory.TextileStored <= 0 ||
+            furnitureFactory.FurnitureStored >= FurnitureFactoryMaxFurnitureStorage)
+        {
+            furnitureFactoryProcessingTimer = 0f;
+            return;
+        }
+
+        if (AreProductionsPausedAtNight())
+        {
+            return;
+        }
+
+        furnitureFactoryProcessingTimer += Time.deltaTime * gameSpeedMultiplier;
+        if (furnitureFactoryProcessingTimer < FurnitureFactoryProcessingDuration)
+        {
+            return;
+        }
+
+        furnitureFactoryProcessingTimer = 0f;
+        furnitureFactory.BoardsStored = Mathf.Max(0, furnitureFactory.BoardsStored - 1);
+        furnitureFactory.TextileStored = Mathf.Max(0, furnitureFactory.TextileStored - 1);
+        furnitureFactory.FurnitureStored = Mathf.Min(FurnitureFactoryMaxFurnitureStorage, furnitureFactory.FurnitureStored + 1);
+        SessionDebugLogger.Log(
+            "FACTORY",
+            $"Furniture Factory produced 1 Furniture. Boards={furnitureFactory.BoardsStored}, Textile={furnitureFactory.TextileStored}, Furniture={furnitureFactory.FurnitureStored}.");
+    }
+
     private void UpdateTruckMovement()
     {
         if (isTruckInteracting || isDriverRescueActive)

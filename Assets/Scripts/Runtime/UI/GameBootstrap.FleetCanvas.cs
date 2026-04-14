@@ -327,6 +327,7 @@ public partial class GameBootstrap
         fleetScreenUi.NavigationRouteText = CreateValueText("NavigationRoute", navigationBody, uiFont);
         fleetScreenUi.NavigationPayoutText = CreateValueText("NavigationPayout", navigationBody, uiFont);
 
+        AddOverlayCloseButton(screenRect, uiFont);
         fleetScreenUi.CanvasRoot.SetActive(false);
         UpdateFleetScreenUi();
     }
@@ -1023,6 +1024,51 @@ public partial class GameBootstrap
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = new Vector2(0f, yOffset);
         rect.sizeDelta = new Vector2(width, height);
+    }
+
+    private void AddOverlayCloseButton(RectTransform parent, Font font)
+    {
+        GameObject go = new("OverlayCloseButton");
+        go.transform.SetParent(parent, false);
+
+        RectTransform rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(1f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-10f, -10f);
+        rt.sizeDelta = new Vector2(36f, 36f);
+
+        // Exclude from layout so it floats over the window
+        go.AddComponent<LayoutElement>().ignoreLayout = true;
+
+        Image img = go.AddComponent<Image>();
+        img.color = new Color(0.62f, 0.14f, 0.10f, 0.94f);
+
+        Button btn = go.AddComponent<Button>();
+        ColorBlock cb = btn.colors;
+        cb.normalColor = Color.white;
+        cb.highlightedColor = new Color(1.0f, 0.36f, 0.28f, 1f);
+        cb.pressedColor = new Color(0.5f, 0.10f, 0.08f, 1f);
+        cb.selectedColor = Color.white;
+        btn.colors = cb;
+        btn.targetGraphic = img;
+        btn.onClick.AddListener(CloseAllMenus);
+
+        GameObject textGo = new("X");
+        textGo.transform.SetParent(go.transform, false);
+        RectTransform textRt = textGo.AddComponent<RectTransform>();
+        StretchRect(textRt, 0f, 0f, 0f, 0f);
+        Text txt = textGo.AddComponent<Text>();
+        txt.text = "✕";
+        txt.font = font;
+        txt.fontSize = 18;
+        txt.fontStyle = FontStyle.Bold;
+        txt.alignment = TextAnchor.MiddleCenter;
+        txt.color = Color.white;
+        txt.raycastTarget = false;
+
+        // Render on top — move to last sibling
+        go.transform.SetAsLastSibling();
     }
 
     // ── Drivers Canvas Screen ─────────────────────────────────────────────────

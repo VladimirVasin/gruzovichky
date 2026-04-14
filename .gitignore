@@ -7,6 +7,10 @@
 [Uu]ser[Ss]ettings/
 [Mm]emoryCaptures/
 debug.log
+Build_09.04/
+Build_09.04.zip
+Assets/_Recovery/
+.claude/
 
 # Unity generated
 *.csproj

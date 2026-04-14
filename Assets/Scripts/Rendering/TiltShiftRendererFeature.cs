@@ -19,8 +19,8 @@ public sealed class TiltShiftRendererFeature : ScriptableRendererFeature
         [Range(0f, 1f)] public float focusCenter = 0.53f;
         [Range(0.01f, 0.4f)] public float focusWidth = 0.22f;
         [Range(0.01f, 0.35f)] public float falloff = 0.16f;
-        [Range(0f, 2f)] public float blurStrength = 0.35f;
-        [Range(0.5f, 4f)] public float blurRadius = 0.85f;
+        [Range(0f, 2f)] public float blurStrength = 0.50f;
+        [Range(0.5f, 4f)] public float blurRadius = 0.90f;
         public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
     }
 

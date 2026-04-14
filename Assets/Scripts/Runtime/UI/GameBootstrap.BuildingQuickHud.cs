@@ -183,6 +183,7 @@ public partial class GameBootstrap
             {
                 LocationType.Forest => "Paused for Night - logging crew offline",
                 LocationType.Sawmill => "Paused for Night - processing stopped",
+                LocationType.FurnitureFactory => "Paused for Night - workshop idle",
                 _ => "Paused for Night"
             };
         }
@@ -193,6 +194,7 @@ public partial class GameBootstrap
             LocationType.GasStation => "Fuel service online",
             LocationType.Forest => "Logging area in production",
             LocationType.Sawmill => "Processing logs into boards",
+            LocationType.FurnitureFactory => "Crafting furniture from boards and textile",
             LocationType.Warehouse => HasActiveTradeRun() &&
                                       activeTradeRun.OrderType == TradeOrderType.Buy &&
                                       (activeTradeRun.Phase == TradeRunPhase.ReturningToWarehouse || activeTradeRun.Phase == TradeRunPhase.UnloadingAtWarehouse)
@@ -212,6 +214,7 @@ public partial class GameBootstrap
             LocationType.GasStation => FormatValueLine("Fuel Service", "Ready"),
             LocationType.Forest => FormatValueLine("Logs", $"{locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}"),
             LocationType.Sawmill => $"{FormatValueLine("Logs", locations[LocationType.Sawmill].LogsStored.ToString())}\n{FormatValueLine("Boards", locations[LocationType.Sawmill].BoardsStored.ToString())}",
+            LocationType.FurnitureFactory => $"{FormatValueLine("Boards", $"{locations[LocationType.FurnitureFactory].BoardsStored} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{locations[LocationType.FurnitureFactory].TextileStored} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{locations[LocationType.FurnitureFactory].FurnitureStored} / {FurnitureFactoryMaxFurnitureStorage}")}",
             LocationType.Warehouse => $"{FormatValueLine("Boards", locations[LocationType.Warehouse].BoardsStored.ToString())}\n{FormatValueLine("Imports", $"C:{cottonStored}  T:{textileStored}  F:{furnitureStored}")}",
             LocationType.Motel => FormatValueLine("Drivers", driverAgents.Count.ToString()),
             LocationType.BusStop => FormatValueLine("Status", "Waiting bay ready"),
@@ -236,6 +239,6 @@ public partial class GameBootstrap
             return false;
         }
 
-        return locationType == LocationType.Forest || locationType == LocationType.Sawmill;
+        return locationType == LocationType.Forest || locationType == LocationType.Sawmill || locationType == LocationType.FurnitureFactory;
     }
 }

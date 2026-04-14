@@ -90,6 +90,10 @@ public partial class GameBootstrap
         {
             CreateSawmillDecoration(root.transform, center);
         }
+        else if (type == LocationType.FurnitureFactory)
+        {
+            CreateFurnitureFactoryDecoration(root.transform, center, min, max, anchor);
+        }
         else if (type == LocationType.BusStop)
         {
             CreateBusStopDecoration(root.transform, center, min, max, anchor);
@@ -108,6 +112,15 @@ public partial class GameBootstrap
         ApplyColor(anchorMarker, new Color(1f, 0.9f, 0.35f));
 
         locations[type] = data;
+        root.transform.position = new Vector3(0f, GetLocationBaseHeight(type), 0f);
+        if (worldRoot != null && !locationSelectionHighlights.ContainsKey(type))
+        {
+            locationSelectionHighlights[type] = SelectionVisualService.CreateHighlight(
+                worldRoot,
+                data.Label,
+                ApplyColor,
+                ConfigureStaticVisual);
+        }
     }
 
     private void CreateParkingDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -541,6 +554,77 @@ public partial class GameBootstrap
         }
     }
 
+    private void CreateFurnitureFactoryDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
+        Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
+
+        GameObject mainHall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        mainHall.transform.SetParent(parent, false);
+        mainHall.transform.position = center + ScaleOffset(new Vector3(-0.18f, 0.42f, 0.02f));
+        mainHall.transform.localScale = ScaleSize(new Vector3(2.1f, 0.52f, 1.2f));
+        ApplyColor(mainHall, new Color(0.86f, 0.8f, 0.68f));
+        ConfigureStaticVisual(mainHall);
+
+        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roof.transform.SetParent(parent, false);
+        roof.transform.position = center + ScaleOffset(new Vector3(-0.18f, 0.73f, 0.02f));
+        roof.transform.localScale = ScaleSize(new Vector3(2.2f, 0.09f, 1.28f));
+        ApplyColor(roof, new Color(0.72f, 0.24f, 0.18f));
+        ConfigureStaticVisual(roof);
+
+        GameObject sideWing = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        sideWing.transform.SetParent(parent, false);
+        sideWing.transform.position = center + ScaleOffset(new Vector3(0.94f, 0.28f, -0.04f));
+        sideWing.transform.localScale = ScaleSize(new Vector3(0.68f, 0.32f, 0.78f));
+        ApplyColor(sideWing, new Color(0.64f, 0.56f, 0.4f));
+        ConfigureStaticVisual(sideWing);
+
+        GameObject loadingAwning = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        loadingAwning.transform.SetParent(parent, false);
+        loadingAwning.transform.position = center + ScaleOffset(new Vector3(0.92f, 0.54f, -0.44f));
+        loadingAwning.transform.localScale = ScaleSize(new Vector3(0.86f, 0.06f, 0.42f));
+        ApplyColor(loadingAwning, new Color(0.24f, 0.28f, 0.33f));
+        ConfigureStaticVisual(loadingAwning);
+
+        float[] postX = { 0.64f, 1.2f };
+        foreach (float px in postX)
+        {
+            GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            post.transform.SetParent(parent, false);
+            post.transform.position = center + ScaleOffset(new Vector3(px, 0.24f, -0.44f));
+            post.transform.localScale = ScaleSize(new Vector3(0.08f, 0.42f, 0.08f));
+            ApplyColor(post, new Color(0.28f, 0.3f, 0.34f));
+            ConfigureStaticVisual(post);
+        }
+
+        GameObject chimney = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        chimney.transform.SetParent(parent, false);
+        chimney.transform.position = center + ScaleOffset(new Vector3(-0.78f, 0.92f, 0.26f));
+        chimney.transform.localScale = ScaleSize(new Vector3(0.18f, 0.78f, 0.18f));
+        ApplyColor(chimney, new Color(0.42f, 0.3f, 0.22f));
+        ConfigureStaticVisual(chimney);
+
+        GameObject sign = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        sign.transform.SetParent(parent, false);
+        sign.transform.position = center + ScaleOffset(new Vector3(-0.12f, 0.58f, -0.62f));
+        sign.transform.localScale = ScaleSize(new Vector3(1.02f, 0.18f, 0.06f));
+        ApplyColor(sign, new Color(0.94f, 0.82f, 0.22f));
+        ConfigureStaticVisual(sign);
+
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject crate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            crate.transform.SetParent(parent, false);
+            crate.transform.position = center + ScaleOffset(new Vector3(0.62f + i * 0.22f, 0.08f + (i % 2) * 0.02f, 0.38f));
+            crate.transform.localScale = ScaleSize(new Vector3(0.18f, 0.16f, 0.18f));
+            ApplyColor(crate, new Color(0.68f, 0.48f, 0.22f));
+            ConfigureStaticVisual(crate);
+        }
+
+        CreateDrivewayToAnchor(parent, min, max, anchor, 0.96f);
+    }
+
     private void CreateMotelDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         // Oriented root: local +Z faces anchor, local -Z faces away (back of building).
@@ -633,7 +717,7 @@ public partial class GameBootstrap
         CreateLocationNightLight(parent, center + new Vector3(-xOffset, 0.92f, -zOffset));
         CreateLocationNightLight(parent, center + new Vector3(xOffset, 0.92f, -zOffset));
 
-        if (type == LocationType.Sawmill)
+        if (type == LocationType.Sawmill || type == LocationType.FurnitureFactory)
         {
             CreateLocationNightLight(parent, center + new Vector3(0f, 0.86f, zOffset));
         }

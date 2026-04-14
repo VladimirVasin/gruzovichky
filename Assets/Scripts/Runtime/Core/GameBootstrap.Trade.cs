@@ -32,7 +32,7 @@ public partial class GameBootstrap
 
     private ActiveTradeRunData activeTradeRun;
     private static readonly TradeResourceType[] TradeImportCatalog = { TradeResourceType.Cotton, TradeResourceType.Textile, TradeResourceType.Furniture };
-    private static readonly TradeResourceType[] TradeExportCatalog = { TradeResourceType.Logs, TradeResourceType.Boards };
+    private static readonly TradeResourceType[] TradeExportCatalog = { TradeResourceType.Logs, TradeResourceType.Boards, TradeResourceType.Furniture };
 
     private bool HasActiveTradeRun()
     {
@@ -699,6 +699,23 @@ public partial class GameBootstrap
             "TRADE",
             $"{driver.DriverName} dispatched on trade run with {truckAgent.DisplayName}: {(selectedTradeOrderType == TradeOrderType.Buy ? "buy" : "sell")} {resourceLabel} x{quantity}.");
         return true;
+    }
+
+    private void CheckTradeThresholds()
+    {
+        if (HasActiveTradeRun()) return;
+        foreach (KeyValuePair<TradeResourceType, TradeThresholdConfig> kvp in tradeThresholds)
+        {
+            TradeThresholdConfig cfg = kvp.Value;
+            if (cfg.Mode != TradeThresholdMode.Buy) continue; // Sell auto-trigger: next iteration
+            if (cfg.Threshold <= 0) continue;
+            int stock = GetStoredTradeResourceAmount(kvp.Key);
+            if (stock >= cfg.Threshold) continue;
+            selectedTradeResourceType = kvp.Key;
+            selectedTradeOrderType = TradeOrderType.Buy;
+            BeginTradeRun(); // silently fails if driver/truck not available
+            return;
+        }
     }
 
     private void UpdateActiveTradeRun()

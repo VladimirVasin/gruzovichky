@@ -28,7 +28,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("BuildWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 520f, 220f, -16f);
+        SetCenteredWindow(windowRect, 560f, 310f, -16f);
         buildScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();
@@ -50,7 +50,14 @@ public partial class GameBootstrap
         buildTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
         RectTransform toolCard = CreateSectionCard(windowRoot.transform, font, string.Empty, out RectTransform toolBody, false);
-        toolCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 110f;
+        toolCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 180f;
+        VerticalLayoutGroup toolBodyLayout = toolBody.gameObject.GetComponent<VerticalLayoutGroup>();
+        toolBodyLayout.spacing = 14f;
+        toolBodyLayout.childControlWidth = true;
+        toolBodyLayout.childControlHeight = true;
+        toolBodyLayout.childForceExpandWidth = true;
+        toolBodyLayout.childForceExpandHeight = false;
+
         RectTransform toolRow = CreateUiObject("BuildToolRow", toolBody).GetComponent<RectTransform>();
         HorizontalLayoutGroup toolLayout = toolRow.gameObject.AddComponent<HorizontalLayoutGroup>();
         toolLayout.spacing = 14;
@@ -87,6 +94,43 @@ public partial class GameBootstrap
         buildScreenUi.RoadTitleText = CreateHeaderText("RoadTitle", roadInfo, font, "Road", 18, TextAnchor.MiddleLeft, Color.white);
         buildScreenUi.RoadDescriptionText = CreateBodyText("RoadDescription", roadInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
 
+        RectTransform factoryRow = CreateUiObject("BuildFurnitureFactoryRow", toolBody).GetComponent<RectTransform>();
+        HorizontalLayoutGroup factoryLayout = factoryRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        factoryLayout.spacing = 14;
+        factoryLayout.childControlWidth = true;
+        factoryLayout.childControlHeight = true;
+        factoryLayout.childForceExpandWidth = false;
+        factoryLayout.childForceExpandHeight = false;
+
+        buildScreenUi.FurnitureFactoryButton = CreateButton("BuildFurnitureFactoryButton", factoryRow, font, out Text factoryButtonText, "FACTORY", 16, FleetPrimaryButtonColor, Color.white);
+        buildScreenUi.FurnitureFactoryButtonText = factoryButtonText;
+        LayoutElement factoryButtonLayout = buildScreenUi.FurnitureFactoryButton.gameObject.AddComponent<LayoutElement>();
+        factoryButtonLayout.preferredWidth = 96f;
+        factoryButtonLayout.preferredHeight = 56f;
+        buildScreenUi.FurnitureFactoryButton.onClick.AddListener(() =>
+        {
+            bool factoryModeActive = activeBuildTool == BuildTool.FurnitureFactory;
+            activeBuildTool = factoryModeActive ? BuildTool.None : BuildTool.FurnitureFactory;
+            isBuildPanelOpen = false;
+            LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
+            PlayUiSound(uiSelectClip, 0.85f);
+            SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
+            isBuildScreenDirty = true;
+        });
+
+        RectTransform factoryInfo = CreateUiObject("FurnitureFactoryInfo", factoryRow).GetComponent<RectTransform>();
+        factoryInfo.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup factoryInfoLayout = factoryInfo.gameObject.AddComponent<VerticalLayoutGroup>();
+        factoryInfoLayout.spacing = 6;
+        factoryInfoLayout.childControlWidth = true;
+        factoryInfoLayout.childControlHeight = true;
+        factoryInfoLayout.childForceExpandWidth = true;
+        factoryInfoLayout.childForceExpandHeight = false;
+
+        buildScreenUi.FurnitureFactoryTitleText = CreateHeaderText("FurnitureFactoryTitle", factoryInfo, font, "Furniture Factory", 18, TextAnchor.MiddleLeft, Color.white);
+        buildScreenUi.FurnitureFactoryDescriptionText = CreateBodyText("FurnitureFactoryDescription", factoryInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
+
+        AddOverlayCloseButton(windowRect, font);
         buildScreenUi.CanvasRoot.SetActive(false);
         UpdateBuildScreenUi();
     }
@@ -106,10 +150,17 @@ public partial class GameBootstrap
         if (!isBuildScreenDirty) return;
 
         bool roadModeActive = activeBuildTool == BuildTool.Road;
-        Image buttonImage = buildScreenUi.RoadButton.GetComponent<Image>();
-        if (buttonImage != null)
+        bool factoryModeActive = activeBuildTool == BuildTool.FurnitureFactory;
+        Image roadButtonImage = buildScreenUi.RoadButton.GetComponent<Image>();
+        if (roadButtonImage != null)
         {
-            buttonImage.color = roadModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
+            roadButtonImage.color = roadModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
+        }
+
+        Image factoryButtonImage = buildScreenUi.FurnitureFactoryButton.GetComponent<Image>();
+        if (factoryButtonImage != null)
+        {
+            factoryButtonImage.color = factoryModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
         }
 
         buildScreenUi.RoadButtonText.text = "ROAD";
@@ -117,6 +168,13 @@ public partial class GameBootstrap
         buildScreenUi.RoadDescriptionText.text = roadModeActive
             ? "Mode active: left click builds, right click removes."
             : "Click to enter road building mode.";
+        buildScreenUi.FurnitureFactoryButtonText.text = "FACTORY";
+        buildScreenUi.FurnitureFactoryTitleText.text = "Furniture Factory";
+        buildScreenUi.FurnitureFactoryDescriptionText.text = factoryModeActive
+            ? "Mode active: place one 3x2 furniture factory from its roadside anchor."
+            : locations.ContainsKey(LocationType.FurnitureFactory)
+                ? "Already built on this map."
+                : "Place a 3x2 factory that turns 1 Board + 1 Textile into 1 Furniture.";
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(buildScreenUi.WindowRoot);
         isBuildScreenDirty = false;
@@ -144,7 +202,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("ResourcesWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 700f, 460f, -16f);
+        SetCenteredWindow(windowRect, 860f, 460f, -16f);
         resourcesScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();
@@ -176,16 +234,17 @@ public partial class GameBootstrap
         contentGroup.childForceExpandWidth = true;
         contentGroup.childForceExpandHeight = false;
 
-        CreateResourceSummaryRow(contentRoot, font, "Logs", ResourceVisualKind.Logs, resourcesScreenUi.Rows);
-        CreateResourceSummaryRow(contentRoot, font, "Boards", ResourceVisualKind.Boards, resourcesScreenUi.Rows);
-        CreateResourceSummaryRow(contentRoot, font, "Cotton", ResourceVisualKind.Cotton, resourcesScreenUi.Rows);
-        CreateResourceSummaryRow(contentRoot, font, "Textile", ResourceVisualKind.Textile, resourcesScreenUi.Rows);
-        CreateResourceSummaryRow(contentRoot, font, "Furniture", ResourceVisualKind.Furniture, resourcesScreenUi.Rows);
+        CreateResourceSummaryRow(contentRoot, font, "Logs",      ResourceVisualKind.Logs,      TradeResourceType.Logs,      resourcesScreenUi.Rows);
+        CreateResourceSummaryRow(contentRoot, font, "Boards",    ResourceVisualKind.Boards,    TradeResourceType.Boards,    resourcesScreenUi.Rows);
+        CreateResourceSummaryRow(contentRoot, font, "Cotton",    ResourceVisualKind.Cotton,    TradeResourceType.Cotton,    resourcesScreenUi.Rows);
+        CreateResourceSummaryRow(contentRoot, font, "Textile",   ResourceVisualKind.Textile,   TradeResourceType.Textile,   resourcesScreenUi.Rows);
+        CreateResourceSummaryRow(contentRoot, font, "Furniture", ResourceVisualKind.Furniture, TradeResourceType.Furniture, resourcesScreenUi.Rows);
 
         RectTransform footerCard = CreateSectionCard(windowRoot.transform, font, "Treasury", out RectTransform footerBody);
         footerCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 74f;
         resourcesScreenUi.TreasuryValueText = CreateHeaderText("TreasuryValue", footerBody, font, string.Empty, 18, TextAnchor.MiddleLeft, FleetAccentColor);
 
+        AddOverlayCloseButton(windowRect, font);
         resourcesScreenUi.CanvasRoot.SetActive(false);
         UpdateResourcesScreenUi();
     }
@@ -199,7 +258,7 @@ public partial class GameBootstrap
         Furniture
     }
 
-    private void CreateResourceSummaryRow(RectTransform parent, Font font, string title, ResourceVisualKind iconKind, List<ResourceSummaryRowUi> rows)
+    private void CreateResourceSummaryRow(RectTransform parent, Font font, string title, ResourceVisualKind iconKind, TradeResourceType resourceType, List<ResourceSummaryRowUi> rows)
     {
         RectTransform card = CreateStyledPanel($"{title}RowCard", parent, FleetInsetColor);
         card.gameObject.AddComponent<LayoutElement>().preferredHeight = 62f;
@@ -233,15 +292,84 @@ public partial class GameBootstrap
 
         Text nameText = CreateBodyText($"{title}Name", textRoot, font, title, 14, TextAnchor.MiddleLeft, Color.white);
         nameText.fontStyle = FontStyle.Bold;
+        nameText.horizontalOverflow = HorizontalWrapMode.Overflow;
         nameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
         Text valueText = CreateHeaderText($"{title}Value", textRoot, font, string.Empty, 18, TextAnchor.MiddleLeft, FleetAccentColor);
         valueText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
+        // Threshold controls block
+        RectTransform thresholdRoot = CreateUiObject($"{title}ThresholdRoot", card).GetComponent<RectTransform>();
+        thresholdRoot.gameObject.AddComponent<LayoutElement>().preferredWidth = 176f;
+        HorizontalLayoutGroup thresholdGroup = thresholdRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+        thresholdGroup.spacing = 4f;
+        thresholdGroup.childAlignment = TextAnchor.MiddleRight;
+        thresholdGroup.childControlWidth = false;
+        thresholdGroup.childControlHeight = false;
+        thresholdGroup.childForceExpandWidth = false;
+        thresholdGroup.childForceExpandHeight = false;
+
+        Button modeBtn = CreateButton($"{title}ModeBtn", thresholdRoot, font, out Text modeBtnText, "—", 11,
+            new Color(0.22f, 0.25f, 0.30f, 1f), FleetMutedTextColor);
+        modeBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 52f;
+        modeBtnText.fontStyle = FontStyle.Bold;
+
+        RectTransform thresholdControls = CreateUiObject($"{title}ThresholdControls", thresholdRoot).GetComponent<RectTransform>();
+        thresholdControls.gameObject.AddComponent<LayoutElement>().preferredWidth = 116f;
+        HorizontalLayoutGroup tcGroup = thresholdControls.gameObject.AddComponent<HorizontalLayoutGroup>();
+        tcGroup.spacing = 4f;
+        tcGroup.childAlignment = TextAnchor.MiddleRight;
+        tcGroup.childControlWidth = false;
+        tcGroup.childControlHeight = false;
+
+        Button decrBtn = CreateButton($"{title}DecrBtn", thresholdControls, font, out Text _, "−", 14,
+            new Color(0.22f, 0.25f, 0.30f, 1f), Color.white);
+        decrBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
+
+        Text thresholdText = CreateHeaderText($"{title}Threshold", thresholdControls, font, "0", 15, TextAnchor.MiddleCenter, Color.white);
+        thresholdText.gameObject.AddComponent<LayoutElement>().preferredWidth = 36f;
+
+        Button incrBtn = CreateButton($"{title}IncrBtn", thresholdControls, font, out Text _, "+", 14,
+            new Color(0.22f, 0.25f, 0.30f, 1f), Color.white);
+        incrBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
+
+        thresholdControls.gameObject.SetActive(false);
+
+        modeBtn.onClick.AddListener(() =>
+        {
+            TradeThresholdConfig cfg = tradeThresholds[resourceType];
+            cfg.Mode = cfg.Mode switch
+            {
+                TradeThresholdMode.Off  => TradeThresholdMode.Buy,
+                TradeThresholdMode.Buy  => TradeThresholdMode.Sell,
+                _                       => TradeThresholdMode.Off,
+            };
+            UpdateResourcesScreenUi();
+        });
+
+        decrBtn.onClick.AddListener(() =>
+        {
+            TradeThresholdConfig cfg = tradeThresholds[resourceType];
+            if (cfg.Threshold > 0) { cfg.Threshold--; UpdateResourcesScreenUi(); }
+        });
+
+        incrBtn.onClick.AddListener(() =>
+        {
+            tradeThresholds[resourceType].Threshold++;
+            UpdateResourcesScreenUi();
+        });
+
         rows.Add(new ResourceSummaryRowUi
         {
             NameText = nameText,
-            ValueText = valueText
+            ValueText = valueText,
+            ResourceType = resourceType,
+            ModeButton = modeBtn,
+            ModeButtonText = modeBtnText,
+            ThresholdControls = thresholdControls,
+            DecrBtn = decrBtn,
+            ThresholdText = thresholdText,
+            IncrBtn = incrBtn,
         });
     }
 
@@ -321,14 +449,22 @@ public partial class GameBootstrap
         string treasuryValue = $"${money}";
         int totalLogs = GetTotalLogsResourceAmount();
         int totalBoards = GetTotalBoardsResourceAmount();
-        string[] resourceNames = { "Logs", "Boards", "Cotton", "Textile", "Furniture" };
+        int totalTextile = GetTotalTextileResourceAmount();
+        int totalFurniture = GetTotalFurnitureResourceAmount();
+        string[] resourceNames = { 
+            GetTradeResourceLabel(TradeResourceType.Logs),
+            GetTradeResourceLabel(TradeResourceType.Boards),
+            GetTradeResourceLabel(TradeResourceType.Cotton),
+            GetTradeResourceLabel(TradeResourceType.Textile),
+            GetTradeResourceLabel(TradeResourceType.Furniture)
+        };
         string[] resourceValues =
         {
             totalLogs.ToString(),
             totalBoards.ToString(),
             cottonStored.ToString(),
-            textileStored.ToString(),
-            furnitureStored.ToString()
+            totalTextile.ToString(),
+            totalFurniture.ToString()
         };
 
         if (resourcesScreenUi.LastHeaderCount != headerCount)
@@ -354,6 +490,30 @@ public partial class GameBootstrap
                 row.LastValue = resourceValues[i];
                 forceLayoutRebuild = true;
             }
+
+            // Threshold controls
+            TradeThresholdConfig cfg = tradeThresholds[row.ResourceType];
+            bool isActive = cfg.Mode != TradeThresholdMode.Off;
+            row.ModeButtonText.text = cfg.Mode switch
+            {
+                TradeThresholdMode.Buy  => "BUY",
+                TradeThresholdMode.Sell => "SELL",
+                _                       => "—",
+            };
+            Image modeBtnImg = row.ModeButton.GetComponent<Image>();
+            modeBtnImg.color = cfg.Mode switch
+            {
+                TradeThresholdMode.Buy  => new Color(0.12f, 0.30f, 0.52f, 1f),
+                TradeThresholdMode.Sell => new Color(0.48f, 0.26f, 0.10f, 1f),
+                _                       => new Color(0.22f, 0.25f, 0.30f, 1f),
+            };
+            row.ModeButtonText.color = isActive ? Color.white : FleetMutedTextColor;
+            if (row.ThresholdControls.gameObject.activeSelf != isActive)
+            {
+                row.ThresholdControls.gameObject.SetActive(isActive);
+                forceLayoutRebuild = true;
+            }
+            row.ThresholdText.text = cfg.Threshold.ToString();
         }
 
         if (resourcesScreenUi.LastTreasuryValue != treasuryValue)
@@ -403,7 +563,44 @@ public partial class GameBootstrap
             total += warehouse.BoardsStored;
         }
 
+        if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
+        {
+            total += furnitureFactory.BoardsStored;
+        }
+
         if (truckCargoType == CargoType.Boards)
+        {
+            total += truckCargoAmount;
+        }
+
+        return total;
+    }
+
+    private int GetTotalTextileResourceAmount()
+    {
+        int total = textileStored;
+        if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
+        {
+            total += furnitureFactory.TextileStored;
+        }
+
+        if (truckCargoType == CargoType.Textile)
+        {
+            total += truckCargoAmount;
+        }
+
+        return total;
+    }
+
+    private int GetTotalFurnitureResourceAmount()
+    {
+        int total = furnitureStored;
+        if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
+        {
+            total += furnitureFactory.FurnitureStored;
+        }
+
+        if (truckCargoType == CargoType.Furniture)
         {
             total += truckCargoAmount;
         }
@@ -568,6 +765,7 @@ public partial class GameBootstrap
             economyScreenUi.Rows.Add(CreateEconomyEntryRow(contentRect, font, i));
         }
 
+        AddOverlayCloseButton(windowRect, font);
         economyScreenUi.CanvasRoot.SetActive(false);
         UpdateEconomyScreenUi();
     }
@@ -664,9 +862,22 @@ public partial class GameBootstrap
         return values[currentIndex];
     }
 
-    private string GetTradeResourceLabel(TradeResourceType resourceType)
+    private string GetResourcePriority(TradeResourceType resourceType)
     {
         return resourceType switch
+        {
+            TradeResourceType.Logs => "Low",
+            TradeResourceType.Boards => "Medium",
+            TradeResourceType.Cotton => "Low",
+            TradeResourceType.Textile => "Medium",
+            TradeResourceType.Furniture => "High",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetTradeResourceLabel(TradeResourceType resourceType)
+    {
+        string baseName = resourceType switch
         {
             TradeResourceType.Logs => "Logs",
             TradeResourceType.Boards => "Boards",
@@ -675,6 +886,8 @@ public partial class GameBootstrap
             TradeResourceType.Furniture => "Furniture",
             _ => resourceType.ToString()
         };
+        string priority = GetResourcePriority(resourceType);
+        return $"{baseName} ({priority})";
     }
 
     private bool CanDispatchTradeRun()
@@ -729,5 +942,403 @@ public partial class GameBootstrap
         }
 
         return detail;
+    }
+
+    private void SetupWorldMapScreenUi()
+    {
+        if (worldMapScreenUi != null) return;
+
+        EnsureFleetEventSystem();
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        worldMapScreenUi = new WorldMapScreenUiRefs();
+
+        GameObject canvasObject = new("WorldMapScreenCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 20;
+
+        CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1600f, 900f);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
+        worldMapScreenUi.CanvasRoot = canvasObject;
+
+        // Fullscreen backdrop — sits directly on the canvas, covers everything below
+        GameObject backdropGo = CreateUiObject("WorldMapBackdrop", canvasObject.transform);
+        RectTransform backdropRect = backdropGo.GetComponent<RectTransform>();
+        backdropRect.anchorMin = Vector2.zero;
+        backdropRect.anchorMax = Vector2.one;
+        backdropRect.sizeDelta = Vector2.zero;
+        backdropGo.AddComponent<Image>().color = new Color(0.04f, 0.06f, 0.09f, 0.96f);
+
+        GameObject windowRoot = CreateUiObject("WorldMapWindowRoot", canvasObject.transform);
+        RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
+        windowRect.anchorMin = Vector2.zero;
+        windowRect.anchorMax = Vector2.one;
+        windowRect.pivot = new Vector2(0.5f, 0.5f);
+        windowRect.anchoredPosition = Vector2.zero;
+        windowRect.sizeDelta = Vector2.zero;
+        worldMapScreenUi.WindowRoot = windowRect;
+
+        VerticalLayoutGroup rootLayout = windowRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        rootLayout.padding = new RectOffset(28, 28, 28, 28);
+        rootLayout.spacing = 16;
+        rootLayout.childControlWidth = true;
+        rootLayout.childControlHeight = true;
+        rootLayout.childForceExpandWidth = true;
+        rootLayout.childForceExpandHeight = false;
+
+        RectTransform headerRow = CreateLayoutRow("WorldMapHeaderRow", windowRoot.transform, 44f, 0f);
+        worldMapScreenUi.TitleText = CreateHeaderText("WorldMapTitle", headerRow, font, "Regional Map", 24, TextAnchor.MiddleLeft, Color.white);
+        worldMapScreenUi.TitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        worldMapScreenUi.SubtitleText = CreateBodyText("WorldMapSubtitle", headerRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
+
+        RectTransform contentRow = CreateUiObject("WorldMapContentRow", windowRoot.transform).GetComponent<RectTransform>();
+        LayoutElement contentLayout = contentRow.gameObject.AddComponent<LayoutElement>();
+        contentLayout.flexibleHeight = 1f;
+        HorizontalLayoutGroup contentGroup = contentRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        contentGroup.spacing = 16f;
+        contentGroup.childControlWidth = true;
+        contentGroup.childControlHeight = true;
+        contentGroup.childForceExpandWidth = true;
+        contentGroup.childForceExpandHeight = true;
+
+        RectTransform mapCard = CreateSectionCard(contentRow, font, "Region Grid", out RectTransform mapBody);
+        LayoutElement mapCardLayout = mapCard.gameObject.AddComponent<LayoutElement>();
+        mapCardLayout.preferredWidth = 600f;
+        mapCardLayout.flexibleWidth = 1f;
+        mapCardLayout.flexibleHeight = 1f;
+
+        worldMapScreenUi.SelectionHintText = CreateBodyText(
+            "WorldMapHint",
+            mapBody,
+            font,
+            "Click a region cell to inspect its resource profile.",
+            13,
+            TextAnchor.MiddleLeft,
+            FleetSecondaryTextColor);
+
+        RectTransform mapFrame = CreateStyledPanel("WorldMapFrame", mapBody, FleetCardMutedColor);
+        LayoutElement mapFrameLayout = mapFrame.gameObject.AddComponent<LayoutElement>();
+        mapFrameLayout.preferredHeight = 480f;
+        VerticalLayoutGroup mapFrameLayoutGroup = mapFrame.gameObject.AddComponent<VerticalLayoutGroup>();
+        mapFrameLayoutGroup.padding = new RectOffset(16, 16, 16, 16);
+        mapFrameLayoutGroup.spacing = 10;
+        mapFrameLayoutGroup.childControlWidth = true;
+        mapFrameLayoutGroup.childControlHeight = true;
+        mapFrameLayoutGroup.childForceExpandWidth = true;
+        mapFrameLayoutGroup.childForceExpandHeight = false;
+
+        RectTransform mapSurface = CreateUiObject("WorldMapSurface", mapFrame).GetComponent<RectTransform>();
+        LayoutElement mapSurfaceLayout = mapSurface.gameObject.AddComponent<LayoutElement>();
+        mapSurfaceLayout.preferredHeight = 420f;
+        Image mapSurfaceBackground = mapSurface.gameObject.AddComponent<Image>();
+        mapSurfaceBackground.color = new Color(0.11f, 0.14f, 0.19f, 0.72f);
+
+        RectTransform gridRoot = CreateUiObject("WorldMapGridRoot", mapSurface).GetComponent<RectTransform>();
+        gridRoot.anchorMin = Vector2.zero;
+        gridRoot.anchorMax = Vector2.one;
+        gridRoot.offsetMin = Vector2.zero;
+        gridRoot.offsetMax = Vector2.zero;
+        LayoutElement gridLayoutElement = gridRoot.gameObject.AddComponent<LayoutElement>();
+        gridLayoutElement.preferredHeight = 420f;
+        GridLayoutGroup gridLayout = gridRoot.gameObject.AddComponent<GridLayoutGroup>();
+        gridLayout.cellSize = new Vector2(170f, 120f);
+        gridLayout.spacing = new Vector2(10f, 10f);
+        gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        gridLayout.constraintCount = 3;
+        gridLayout.childAlignment = TextAnchor.MiddleCenter;
+
+        for (int regionIndex = 0; regionIndex < 9; regionIndex++)
+        {
+            worldMapScreenUi.Cells.Add(CreateWorldMapCell(gridRoot, font, regionIndex));
+        }
+
+        RectTransform detailsCard = CreateSectionCard(contentRow, font, "Region Preview", out RectTransform detailsBody);
+        LayoutElement detailsCardLayout = detailsCard.gameObject.AddComponent<LayoutElement>();
+        detailsCardLayout.preferredWidth = 448f;
+        detailsCardLayout.flexibleWidth = 0f;
+        detailsCardLayout.flexibleHeight = 1f;
+
+        RectTransform previewContainer = CreateStyledPanel("WorldMapDetailPreviewContainer", detailsBody, new Color(0.12f, 0.15f, 0.20f, 0.98f));
+        LayoutElement previewContainerLayout = previewContainer.gameObject.AddComponent<LayoutElement>();
+        previewContainerLayout.flexibleHeight = 1f;
+        previewContainerLayout.minHeight = 200f;
+        worldMapScreenUi.DetailPreview = CreateWorldMapDetailPreview(previewContainer, font);
+
+        RectTransform infoPanel = CreateStyledPanel("WorldMapDetailInfoPanel", detailsBody, FleetCardMutedColor);
+        infoPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 190f;
+        VerticalLayoutGroup infoLayout = infoPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        infoLayout.padding = new RectOffset(14, 14, 12, 12);
+        infoLayout.spacing = 6f;
+        infoLayout.childControlWidth = true;
+        infoLayout.childControlHeight = true;
+        infoLayout.childForceExpandWidth = true;
+        infoLayout.childForceExpandHeight = false;
+
+        worldMapScreenUi.DetailsNameText = CreateHeaderText("WorldMapDetailsName", infoPanel, font, string.Empty, 22, TextAnchor.MiddleLeft, Color.white);
+        worldMapScreenUi.DetailsStatusText = CreateBodyText("WorldMapDetailsStatus", infoPanel, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        CreateHeaderText("WorldMapResourcesLabel", infoPanel, font, "Produced Resources", 11, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        worldMapScreenUi.DetailsResourcesText = CreateHeaderText("WorldMapDetailsResources", infoPanel, font, string.Empty, 17, TextAnchor.MiddleLeft, FleetAccentColor);
+        worldMapScreenUi.DetailsDescriptionText = CreateBodyText("WorldMapDetailsDescription", infoPanel, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
+        worldMapScreenUi.DetailsDescriptionText.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+
+        RectTransform footerCard = CreateSectionCard(windowRoot.transform, font, "Current Trade Context", out RectTransform footerBody);
+        footerCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 74f;
+        CreateBodyText(
+            "WorldMapFooter",
+            footerBody,
+            font,
+            "Current gameplay rule: textile comes from another region, so the map shows where it conceptually enters your economy.",
+            13,
+            TextAnchor.MiddleLeft,
+            FleetAccentColor);
+
+        AddOverlayCloseButton(windowRect, font);
+        worldMapScreenUi.CanvasRoot.SetActive(false);
+        UpdateWorldMapScreenUi();
+    }
+
+    private WorldMapCellUi CreateWorldMapCell(RectTransform parent, Font font, int regionIndex)
+    {
+        WorldMapCellUi cell = new();
+        GameObject cellObject = CreateUiObject($"WorldMapCell_{regionIndex}", parent);
+        RectTransform cellRect = cellObject.GetComponent<RectTransform>();
+        LayoutElement layoutElement = cellRect.gameObject.AddComponent<LayoutElement>();
+        layoutElement.preferredWidth = 170f;
+        layoutElement.preferredHeight = 120f;
+
+        Image background = cellObject.AddComponent<Image>();
+        background.color = FleetInsetColor;
+        Button button = cellObject.AddComponent<Button>();
+        Outline outline = cellObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.22f);
+        outline.effectDistance = new Vector2(1f, -1f);
+
+        VerticalLayoutGroup layout = cellObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(12, 12, 12, 10);
+        layout.spacing = 8f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        RectTransform previewRoot = CreateStyledPanel($"WorldMapCellPreview_{regionIndex}", cellRect, new Color(0.12f, 0.15f, 0.20f, 0.98f));
+        LayoutElement previewLayout = previewRoot.gameObject.AddComponent<LayoutElement>();
+        previewLayout.preferredHeight = 70f;
+        cell.PreviewBackground = previewRoot.GetComponent<Image>();
+
+        cell.PreviewPlaceholderText = CreateBodyText($"WorldMapCellPreviewPlaceholder_{regionIndex}", previewRoot, font, string.Empty, 12, TextAnchor.MiddleCenter, FleetMutedTextColor);
+        StretchRect(cell.PreviewPlaceholderText.rectTransform, 10f, 10f, 10f, 10f);
+
+        cell.WaterShape = CreateWorldMapPreviewShape(previewRoot, $"WorldMapWater_{regionIndex}", new Color(0.54f, 0.77f, 0.92f, 0.95f), 0f, 0.76f, 1f, 0.24f);
+        cell.HighwayShape = CreateWorldMapPreviewShape(previewRoot, $"WorldMapHighway_{regionIndex}", new Color(0.15f, 0.17f, 0.20f, 1f), 0.04f, 0.08f, 0.92f, 0.16f);
+        cell.ForestShape = CreateWorldMapPreviewShape(previewRoot, $"WorldMapForest_{regionIndex}", new Color(0.19f, 0.39f, 0.24f, 0.98f), 0.06f, 0.36f, 0.28f, 0.30f);
+        cell.TownBlockA = CreateWorldMapPreviewShape(previewRoot, $"WorldMapTownA_{regionIndex}", new Color(0.83f, 0.72f, 0.46f, 0.96f), 0.40f, 0.30f, 0.16f, 0.16f);
+        cell.TownBlockB = CreateWorldMapPreviewShape(previewRoot, $"WorldMapTownB_{regionIndex}", new Color(0.86f, 0.78f, 0.55f, 0.96f), 0.58f, 0.30f, 0.18f, 0.18f);
+        cell.TownBlockC = CreateWorldMapPreviewShape(previewRoot, $"WorldMapTownC_{regionIndex}", new Color(0.76f, 0.63f, 0.34f, 0.96f), 0.50f, 0.50f, 0.12f, 0.12f);
+        cell.HighwayDashA = CreateWorldMapPreviewShape(previewRoot, $"WorldMapDashA_{regionIndex}", new Color(0.95f, 0.93f, 0.82f, 0.95f), 0.18f, 0.12f, 0.10f, 0.03f);
+        cell.HighwayDashB = CreateWorldMapPreviewShape(previewRoot, $"WorldMapDashB_{regionIndex}", new Color(0.95f, 0.93f, 0.82f, 0.95f), 0.45f, 0.12f, 0.10f, 0.03f);
+        cell.HighwayDashC = CreateWorldMapPreviewShape(previewRoot, $"WorldMapDashC_{regionIndex}", new Color(0.95f, 0.93f, 0.82f, 0.95f), 0.72f, 0.12f, 0.10f, 0.03f);
+
+        cell.NameText = CreateHeaderText($"WorldMapCellName_{regionIndex}", cellRect, font, string.Empty, 15, TextAnchor.MiddleLeft, Color.white);
+        cell.TypeText = CreateBodyText($"WorldMapCellType_{regionIndex}", cellRect, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetMutedTextColor);
+
+        cell.Button = button;
+        cell.Background = background;
+        cell.Outline = outline;
+        cell.RegionIndex = regionIndex;
+        cell.Button.onClick.AddListener(() => SelectWorldMapRegion(regionIndex));
+        return cell;
+    }
+
+    private WorldMapDetailPreviewUi CreateWorldMapDetailPreview(RectTransform parent, Font font)
+    {
+        WorldMapDetailPreviewUi preview = new();
+        preview.PreviewBackground = parent.GetComponent<Image>();
+
+        preview.PlaceholderText = CreateBodyText("WorldMapDetailPlaceholder", parent, font,
+            "No regional map yet", 14, TextAnchor.MiddleCenter, FleetMutedTextColor);
+        StretchRect(preview.PlaceholderText.rectTransform, 10f, 10f, 10f, 10f);
+
+        preview.WaterShape   = CreateWorldMapPreviewShape(parent, "WorldMapDetailWater",    new Color(0.54f, 0.77f, 0.92f, 0.95f), 0f,    0.76f, 1f,    0.24f);
+        preview.HighwayShape = CreateWorldMapPreviewShape(parent, "WorldMapDetailHighway",  new Color(0.15f, 0.17f, 0.20f, 1f),    0.04f, 0.08f, 0.92f, 0.16f);
+        preview.ForestShape  = CreateWorldMapPreviewShape(parent, "WorldMapDetailForest",   new Color(0.19f, 0.39f, 0.24f, 0.98f), 0.06f, 0.36f, 0.28f, 0.30f);
+        preview.TownBlockA   = CreateWorldMapPreviewShape(parent, "WorldMapDetailTownA",    new Color(0.83f, 0.72f, 0.46f, 0.96f), 0.40f, 0.30f, 0.16f, 0.16f);
+        preview.TownBlockB   = CreateWorldMapPreviewShape(parent, "WorldMapDetailTownB",    new Color(0.86f, 0.78f, 0.55f, 0.96f), 0.58f, 0.30f, 0.18f, 0.18f);
+        preview.TownBlockC   = CreateWorldMapPreviewShape(parent, "WorldMapDetailTownC",    new Color(0.76f, 0.63f, 0.34f, 0.96f), 0.50f, 0.50f, 0.12f, 0.12f);
+        preview.HighwayDashA = CreateWorldMapPreviewShape(parent, "WorldMapDetailDashA",    new Color(0.95f, 0.93f, 0.82f, 0.95f), 0.18f, 0.12f, 0.10f, 0.03f);
+        preview.HighwayDashB = CreateWorldMapPreviewShape(parent, "WorldMapDetailDashB",    new Color(0.95f, 0.93f, 0.82f, 0.95f), 0.45f, 0.12f, 0.10f, 0.03f);
+        preview.HighwayDashC = CreateWorldMapPreviewShape(parent, "WorldMapDetailDashC",    new Color(0.95f, 0.93f, 0.82f, 0.95f), 0.72f, 0.12f, 0.10f, 0.03f);
+
+        return preview;
+    }
+
+    private Image CreateWorldMapPreviewShape(RectTransform parent, string name, Color color, float x, float y, float width, float height)
+    {
+        GameObject obj = CreateUiObject(name, parent);
+        RectTransform rect = obj.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(x, y);
+        rect.anchorMax = new Vector2(x + width, y + height);
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        Image image = obj.AddComponent<Image>();
+        image.color = color;
+        return image;
+    }
+
+    private void SelectWorldMapRegion(int regionIndex)
+    {
+        selectedWorldMapRegionIndex = Mathf.Clamp(regionIndex, 0, 8);
+        isWorldMapScreenDirty = true;
+        PlayUiSound(uiSelectClip, 0.82f);
+    }
+
+    private static string GetWorldMapRegionName(int regionIndex)
+    {
+        return regionIndex switch
+        {
+            0 => "North Ridge",
+            1 => "Forest Belt",
+            2 => "River Port",
+            3 => "Cotton Plains",
+            4 => "Your Town",
+            5 => "Textile District",
+            6 => "Dry South",
+            7 => "Freight Steppe",
+            8 => "Coastal Gate",
+            _ => "Unknown Region"
+        };
+    }
+
+    private static string GetWorldMapRegionTypeLabel(int regionIndex)
+    {
+        return regionIndex switch
+        {
+            4 => "Current region",
+            2 or 3 or 5 => "Neighbor region",
+            _ => "Empty region slot"
+        };
+    }
+
+    private static string GetWorldMapRegionProducedResources(int regionIndex)
+    {
+        return regionIndex switch
+        {
+            4 => "Logs, Boards, Furniture",
+            5 => "Textile",
+            3 => "Cotton",
+            2 => "Trade logistics",
+            _ => "No confirmed survey data"
+        };
+    }
+
+    private static string GetWorldMapRegionDescription(int regionIndex)
+    {
+        return regionIndex switch
+        {
+            4 => "This is your active simulation region. It contains the current town, highways, production buildings, and local roads.",
+            5 => "A neighboring industrial district focused on textile output. This is the important current external source for textile supply.",
+            3 => "A farming-heavy region that supplies raw cotton into the wider trade network.",
+            2 => "A schematic route hub near the river corridor, reserved for future logistics and regional expansion passes.",
+            _ => "This region exists on the wider map, but it has not been fully designed or assigned concrete production data yet."
+        };
+    }
+
+    private static bool IsWorldMapRegionKnown(int regionIndex)
+    {
+        return regionIndex == 2 || regionIndex == 3 || regionIndex == 4 || regionIndex == 5;
+    }
+
+    private void UpdateWorldMapScreenUi()
+    {
+        if (worldMapScreenUi == null) return;
+
+        bool shouldShow = isWorldMapPanelOpen;
+        if (worldMapScreenUi.CanvasRoot.activeSelf != shouldShow)
+        {
+            worldMapScreenUi.CanvasRoot.SetActive(shouldShow);
+            isWorldMapScreenDirty = true;
+        }
+
+        if (!shouldShow || !isWorldMapScreenDirty)
+        {
+            return;
+        }
+
+        worldMapScreenUi.TitleText.text = "Regional Map";
+        worldMapScreenUi.SubtitleText.text = "Open/Close: M";
+        worldMapScreenUi.SelectionHintText.text = "Each cell is a mini-map of a larger world region. Only the current region is drawn for now.";
+
+        for (int i = 0; i < worldMapScreenUi.Cells.Count; i++)
+        {
+            WorldMapCellUi cell = worldMapScreenUi.Cells[i];
+            bool isSelected = i == selectedWorldMapRegionIndex;
+            bool isCurrent = i == 4;
+            bool isKnown = IsWorldMapRegionKnown(i);
+            bool hasRealPreview = isCurrent;
+
+            cell.NameText.text = GetWorldMapRegionName(i);
+            cell.TypeText.text = GetWorldMapRegionTypeLabel(i);
+            cell.Background.color = isSelected
+                ? FleetSelectedRowColor
+                : isCurrent
+                    ? new Color(0.30f, 0.24f, 0.10f, 0.98f)
+                    : isKnown
+                        ? FleetInsetColor
+                        : FleetCardMutedColor;
+            cell.NameText.color = isKnown || isCurrent ? Color.white : FleetSecondaryTextColor;
+            cell.TypeText.color = isSelected ? FleetAccentColor : FleetMutedTextColor;
+            cell.PreviewBackground.color = hasRealPreview
+                ? new Color(0.18f, 0.20f, 0.17f, 1f)
+                : new Color(0.15f, 0.17f, 0.21f, 0.98f);
+            cell.PreviewPlaceholderText.gameObject.SetActive(!hasRealPreview);
+            cell.PreviewPlaceholderText.text = i == 4 ? string.Empty : "No regional map yet";
+            cell.WaterShape.gameObject.SetActive(hasRealPreview);
+            cell.HighwayShape.gameObject.SetActive(hasRealPreview);
+            cell.ForestShape.gameObject.SetActive(hasRealPreview);
+            cell.TownBlockA.gameObject.SetActive(hasRealPreview);
+            cell.TownBlockB.gameObject.SetActive(hasRealPreview);
+            cell.TownBlockC.gameObject.SetActive(hasRealPreview);
+            cell.HighwayDashA.gameObject.SetActive(hasRealPreview);
+            cell.HighwayDashB.gameObject.SetActive(hasRealPreview);
+            cell.HighwayDashC.gameObject.SetActive(hasRealPreview);
+            if (cell.Outline != null)
+            {
+                cell.Outline.effectColor = isSelected
+                    ? new Color(FleetAccentColor.r, FleetAccentColor.g, FleetAccentColor.b, 0.72f)
+                    : new Color(0f, 0f, 0f, 0.22f);
+                cell.Outline.effectDistance = isSelected ? new Vector2(2f, -2f) : new Vector2(1f, -1f);
+            }
+        }
+
+        int selected = Mathf.Clamp(selectedWorldMapRegionIndex, 0, 8);
+        bool detailHasPreview = selected == 4;
+
+        if (worldMapScreenUi.DetailPreview != null)
+        {
+            worldMapScreenUi.DetailPreview.PlaceholderText.gameObject.SetActive(!detailHasPreview);
+            worldMapScreenUi.DetailPreview.PreviewBackground.color = detailHasPreview
+                ? new Color(0.18f, 0.20f, 0.17f, 1f)
+                : new Color(0.12f, 0.15f, 0.20f, 0.98f);
+            worldMapScreenUi.DetailPreview.WaterShape.gameObject.SetActive(detailHasPreview);
+            worldMapScreenUi.DetailPreview.HighwayShape.gameObject.SetActive(detailHasPreview);
+            worldMapScreenUi.DetailPreview.ForestShape.gameObject.SetActive(detailHasPreview);
+            worldMapScreenUi.DetailPreview.TownBlockA.gameObject.SetActive(detailHasPreview);
+            worldMapScreenUi.DetailPreview.TownBlockB.gameObject.SetActive(detailHasPreview);
+            worldMapScreenUi.DetailPreview.TownBlockC.gameObject.SetActive(detailHasPreview);
+            worldMapScreenUi.DetailPreview.HighwayDashA.gameObject.SetActive(detailHasPreview);
+            worldMapScreenUi.DetailPreview.HighwayDashB.gameObject.SetActive(detailHasPreview);
+            worldMapScreenUi.DetailPreview.HighwayDashC.gameObject.SetActive(detailHasPreview);
+        }
+
+        worldMapScreenUi.DetailsNameText.text = GetWorldMapRegionName(selected);
+        worldMapScreenUi.DetailsStatusText.text = GetWorldMapRegionTypeLabel(selected);
+        worldMapScreenUi.DetailsResourcesText.text = GetWorldMapRegionProducedResources(selected);
+        worldMapScreenUi.DetailsDescriptionText.text = GetWorldMapRegionDescription(selected);
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(worldMapScreenUi.WindowRoot);
+        isWorldMapScreenDirty = false;
     }
 }

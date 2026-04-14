@@ -137,6 +137,88 @@ public partial class GameBootstrap
         return $"min({placement.Min.x},{placement.Min.y}) max({placement.Max.x},{placement.Max.y}) anchor({placement.Anchor.x},{placement.Anchor.y})";
     }
 
+    private bool GetFurnitureFactoryPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
+        previewScale = new Vector3(0.98f, 0.04f, 0.98f);
+        bool canPlace = TryGetFurnitureFactoryPlacement(anchorCell, out Vector2Int min, out Vector2Int max);
+        if (!canPlace)
+        {
+            return false;
+        }
+
+        float centerX = (min.x + max.x + 1) * 0.5f;
+        float centerZ = (min.y + max.y + 1) * 0.5f;
+        previewPosition = new Vector3(centerX, SampleTerrainHeight(centerX, centerZ) + RoadHeight + 0.03f, centerZ);
+        previewScale = new Vector3((max.x - min.x + 1) * 0.94f, 0.04f, (max.y - min.y + 1) * 0.94f);
+        return true;
+    }
+
+    private bool TryPlaceFurnitureFactoryAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.FurnitureFactory))
+        {
+            SessionDebugLogger.Log("BUILD", "Furniture Factory placement rejected: factory already exists.");
+            return false;
+        }
+
+        if (!TryGetFurnitureFactoryPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Furniture Factory placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.FurnitureFactory, "Furniture Factory", min, max, anchorCell, new Color(0.74f, 0.62f, 0.42f));
+        selectedLocation = LocationType.FurnitureFactory;
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RefreshSelectionVisuals();
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        SessionDebugLogger.Log("BUILD", $"Placed Furniture Factory at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool TryGetFurnitureFactoryPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
+    {
+        min = new Vector2Int(anchorCell.x - 1, anchorCell.y + 1);
+        max = new Vector2Int(anchorCell.x + 1, anchorCell.y + 2);
+
+        if (locations.ContainsKey(LocationType.FurnitureFactory))
+        {
+            return false;
+        }
+
+        if (!IsInsideGrid(anchorCell) || !IsInsideGrid(min) || !IsInsideGrid(max))
+        {
+            return false;
+        }
+
+        if (roadCells.Contains(anchorCell) || edgeHighwayCells.Contains(anchorCell) || miscOccupiedCells.Contains(anchorCell) || IsLocationCell(anchorCell) || IsWaterOrBeachCell(anchorCell))
+        {
+            return false;
+        }
+
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                Vector2Int cell = new Vector2Int(x, y);
+                if (!IsInsideGrid(cell) ||
+                    roadCells.Contains(cell) ||
+                    edgeHighwayCells.Contains(cell) ||
+                    miscOccupiedCells.Contains(cell) ||
+                    IsLocationCell(cell) ||
+                    IsWaterOrBeachCell(cell))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     private void CreateMiscTree(Vector2Int cell, int variantIndex)
     {
         if (miscRoot == null)
