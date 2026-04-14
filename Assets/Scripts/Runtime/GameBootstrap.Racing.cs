@@ -33,19 +33,21 @@ public partial class GameBootstrap : MonoBehaviour
     private Canvas racingHudCanvas;
     private Text racingHudText;
 
+    private AudioSource racingMusicSource;
+
     private GameObject joinRaceButtonRoot;  // the "JOIN THE RACE" button canvas
     private Button joinRaceButton;
     private Text joinRaceButtonText;
 
     // ── Constants ────────────────────────────────────────────────────────────
 
-    private const float RacingAcceleration  = 18f;
-    private const float RacingMaxSpeed      = 14f;     // units/s
+    private const float RacingAcceleration  = 36f;
+    private const float RacingMaxSpeed      = 28f;     // units/s
     private const float RacingDrag          = 0.94f;   // base per-second factor
     private const float RacingAngularDrag   = 0.80f;
     private const float RacingSteerForce    = 110f;    // deg/s per (speed unit)
     private const float RacingLateralFriction = 52f;
-    private const int   RaceSegmentCount    = 18;
+    private const int   RaceSegmentCount    = 9;
     private const float RaceTrackOffsetX    = 2000f;   // remote position, away from main world
     private const float RaceFinishRadius    = 2.8f;
 
@@ -156,6 +158,17 @@ public partial class GameBootstrap : MonoBehaviour
         racingVelocity   = Vector2.zero;
         racingAngularVel = 0f;
 
+        // Start looping music
+        AudioClip musicClip = Resources.Load<AudioClip>("Race1");
+        if (musicClip != null)
+        {
+            racingMusicSource = CreateAudioSource("RacingMusic", null, true, 0.72f, 0f, false);
+            racingMusicSource.ignoreListenerPause = true;
+            racingMusicSource.ignoreListenerVolume = false;
+            racingMusicSource.clip = musicClip;
+            racingMusicSource.Play();
+        }
+
         SessionDebugLogger.Log("RACING", "Racing minigame started.");
     }
 
@@ -173,6 +186,9 @@ public partial class GameBootstrap : MonoBehaviour
         {
             SessionDebugLogger.Log("RACING", "Race skipped.");
         }
+
+        // Stop music
+        if (racingMusicSource != null) { Object.Destroy(racingMusicSource.gameObject); racingMusicSource = null; }
 
         // Destroy racing scene
         if (racingCamera != null) { Object.Destroy(racingCamera.gameObject); racingCamera = null; }
