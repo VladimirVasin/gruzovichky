@@ -26,12 +26,18 @@ public partial class GameBootstrap : MonoBehaviour
     private float racingTruckAngle;   // degrees, Y-up
     private Vector2 racingVelocity;   // X = world X, Y = world Z
     private float racingAngularVel;   // degrees/s
+    private float racingSteerInput;   // -1..1, ramps up/down like a steering wheel
 
     private readonly List<RaceSegment> raceSegments = new();
     private Vector3 raceFinishPos;
 
     private Canvas racingHudCanvas;
     private Text racingHudText;
+    private RectTransform racingSpeedometerNeedle;
+    private Text racingSpeedometerText;
+    private Light racingHeadlightL;
+    private Light racingHeadlightR;
+    private readonly List<Light> racingWorldLights = new();
 
     private AudioSource racingMusicSource;
 
@@ -41,13 +47,13 @@ public partial class GameBootstrap : MonoBehaviour
 
     // ── Constants ────────────────────────────────────────────────────────────
 
-    private const float RacingAcceleration  = 36f;
-    private const float RacingMaxSpeed      = 28f;     // units/s
-    private const float RacingDrag          = 0.94f;   // base per-second factor
-    private const float RacingAngularDrag   = 0.80f;
-    private const float RacingSteerForce    = 110f;    // deg/s per (speed unit)
-    private const float RacingLateralFriction = 52f;
-    private const int   RaceSegmentCount    = 9;
+    private const float RacingAcceleration  = 12f;    // raw power, torque curve limits top end
+    private const float RacingMaxSpeed      = 11.5f;  // ~41 km/h — torque → 0 at this speed
+    private const float RacingDrag          = 0.997f; // very gentle coasting drag
+    private const float RacingAngularDrag   = 0.72f;   // lower = more drift tail
+    private const float RacingSteerForce    = 380f;    // max wheel-turn force
+    private const float RacingLateralFriction = 28f;   // lower = more drift/slide
+    private const int   RaceSegmentCount    = 18;
     private const float RaceTrackOffsetX    = 2000f;   // remote position, away from main world
     private const float RaceFinishRadius    = 2.8f;
 
@@ -119,8 +125,8 @@ public partial class GameBootstrap : MonoBehaviour
 
         bool shouldShow = isGameStarted &&
                           !isRacingActive &&
-                          activeTradeRun != null &&
-                          activeTradeRun.Phase == TradeRunPhase.OutOfMap;
+                          (activeTradeRun != null && activeTradeRun.Phase == TradeRunPhase.OutOfMap
+                           || UnityEngine.Debug.isDebugBuild || Application.isEditor);
 
         if (joinRaceButtonRoot.activeSelf != shouldShow)
             joinRaceButtonRoot.SetActive(shouldShow);
@@ -147,6 +153,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         // Build scene
         GenerateRaceTrack();
+        PopulateRacingWorld();
         CreateRacingTruck();
         SetupRacingCamera();
         SetupRacingHud();
@@ -157,6 +164,7 @@ public partial class GameBootstrap : MonoBehaviour
         racingTruckAngle = raceSegments[0].Rotation.eulerAngles.y;
         racingVelocity   = Vector2.zero;
         racingAngularVel = 0f;
+        racingSteerInput = 0f;
 
         // Start looping music
         AudioClip musicClip = Resources.Load<AudioClip>("Race1");
@@ -196,6 +204,11 @@ public partial class GameBootstrap : MonoBehaviour
         if (racingTruckVisual != null) { Object.Destroy(racingTruckVisual); racingTruckVisual = null; }
         if (racingHudCanvas != null) { Object.Destroy(racingHudCanvas.gameObject); racingHudCanvas = null; }
         racingHudText = null;
+        racingSpeedometerNeedle = null;
+        racingSpeedometerText = null;
+        racingHeadlightL = null;
+        racingHeadlightR = null;
+        racingWorldLights.Clear();
         raceSegments.Clear();
 
         // Restore main camera
@@ -222,14 +235,20 @@ public partial class GameBootstrap : MonoBehaviour
         float dt = Time.unscaledDeltaTime;
 
         // ── Input ────────────────────────────────────────
-        float throttle = 0f, steer = 0f;
+        float throttle = 0f;
+        bool  braking  = false;
         var kb = Keyboard.current;
         if (kb != null)
         {
-            if (kb.wKey.isPressed || kb.upArrowKey.isPressed)    throttle += 1f;
-            if (kb.sKey.isPressed || kb.downArrowKey.isPressed)  throttle -= 0.55f;
-            if (kb.aKey.isPressed || kb.leftArrowKey.isPressed)  steer    -= 1f;
-            if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) steer    += 1f;
+            if (kb.wKey.isPressed || kb.upArrowKey.isPressed)   throttle += 1f;
+            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) braking   = true;
+
+            // Steering wheel ramp — builds up to ±1 over ~0.35s, returns to 0 over ~0.2s
+            bool steerLeft  = kb.aKey.isPressed || kb.leftArrowKey.isPressed;
+            bool steerRight = kb.dKey.isPressed || kb.rightArrowKey.isPressed;
+            float steerTarget = steerLeft ? -1f : steerRight ? 1f : 0f;
+            float steerSpeed  = (steerLeft || steerRight) ? 2.8f : 5.0f; // ramp in slower than ramp out
+            racingSteerInput  = Mathf.MoveTowards(racingSteerInput, steerTarget, steerSpeed * dt);
 
             if (kb.escapeKey.wasPressedThisFrame)
             {
@@ -241,8 +260,8 @@ public partial class GameBootstrap : MonoBehaviour
         // ── Physics ──────────────────────────────────────
         float speed = racingVelocity.magnitude;
 
-        // Steering (speed-proportional, low speed → less steer)
-        float steerAmount = steer * RacingSteerForce * Mathf.Clamp01(speed / 3.5f) * dt;
+        // Steering — uses ramped input, stronger max force
+        float steerAmount = racingSteerInput * RacingSteerForce * Mathf.Clamp01(speed / 3.5f) * dt;
         racingAngularVel += steerAmount;
         racingAngularVel *= Mathf.Pow(RacingAngularDrag, dt * 60f);
 
@@ -253,12 +272,20 @@ public partial class GameBootstrap : MonoBehaviour
         Vector2 forward = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
         Vector2 right   = new Vector2(Mathf.Cos(rad), -Mathf.Sin(rad));
 
-        // Acceleration
-        racingVelocity += forward * throttle * RacingAcceleration * dt;
+        // Acceleration with torque curve — full power at low speed, tapers to 0 at max
+        float torque = Mathf.Pow(1f - Mathf.Clamp01(speed / RacingMaxSpeed), 0.6f);
+        racingVelocity += forward * throttle * RacingAcceleration * torque * dt;
 
         // Lateral friction (simulates grip)
         float lateralSpeed = Vector2.Dot(racingVelocity, right);
         racingVelocity -= right * (lateralSpeed * RacingLateralFriction * dt);
+
+        // Brake — hard deceleration along current velocity direction
+        if (braking && speed > 0.05f)
+        {
+            float brakeFactor = Mathf.Clamp01(1.4f * dt); // full stop from max in ~7s
+            racingVelocity -= racingVelocity.normalized * speed * brakeFactor;
+        }
 
         // Drag
         racingVelocity *= Mathf.Pow(RacingDrag, dt * 60f);
@@ -287,10 +314,13 @@ public partial class GameBootstrap : MonoBehaviour
         // ── Camera follow ─────────────────────────────────
         if (racingCamera != null)
         {
-            Vector3 targetPos = racingTruckPos + Vector3.up * 14f;
+            Quaternion camRot = Quaternion.Euler(14f, racingTruckAngle, 0f);
+            Vector3 camBack   = camRot * Vector3.back * 2.8f;
+            Vector3 targetPos = racingTruckPos + Vector3.up * 1.4f + camBack;
             racingCamera.transform.position = Vector3.Lerp(
-                racingCamera.transform.position, targetPos, 5f * dt);
-            racingCamera.transform.rotation = Quaternion.Euler(90f, racingTruckAngle, 0f);
+                racingCamera.transform.position, targetPos, 6f * dt);
+            racingCamera.transform.rotation = Quaternion.Slerp(
+                racingCamera.transform.rotation, camRot, 6f * dt);
         }
 
         // ── Finish check ──────────────────────────────────
@@ -299,16 +329,54 @@ public partial class GameBootstrap : MonoBehaviour
             new Vector3(raceFinishPos.x, 0f, raceFinishPos.z));
 
         // ── HUD update ────────────────────────────────────
+        float kmh = speed * 3.6f;
+
         if (racingHudText != null)
         {
-            float kmh = speed * 3.6f;
             racingHudText.text =
                 "INTERCITY DELIVERY\n" +
                 "────────────────\n" +
-                $"Speed:   {kmh:F0} km/h\n" +
                 $"Finish:  {distToFinish:F0} m\n" +
                 "────────────────\n" +
                 "[ESC]  Skip";
+        }
+
+        if (racingSpeedometerNeedle != null)
+        {
+            // Sweep: 0 km/h = 150° CCW from up (7 o'clock), 100 km/h = -150° (5 o'clock)
+            float needleZ = 150f - Mathf.Clamp01(kmh / 100f) * 300f;
+            racingSpeedometerNeedle.localEulerAngles = new Vector3(0f, 0f, needleZ);
+        }
+
+        if (racingSpeedometerText != null)
+            racingSpeedometerText.text = $"{kmh:F0}";
+
+        // Headlights — same darkness threshold as regular truck
+        if (racingHeadlightL != null && racingHeadlightR != null)
+        {
+            float darkness         = 1f - currentStylizedDaylight;
+            bool  headlightsOn     = darkness > 0.55f;
+            float headlightIntensity = headlightsOn
+                ? Mathf.Lerp(0.7f, 3.1f, Mathf.InverseLerp(0.55f, 1f, darkness))
+                : 0f;
+            racingHeadlightL.enabled   = headlightsOn;
+            racingHeadlightR.enabled   = headlightsOn;
+            racingHeadlightL.intensity = headlightIntensity;
+            racingHeadlightR.intensity = headlightIntensity;
+        }
+
+        // World lanterns along track
+        if (racingWorldLights.Count > 0)
+        {
+            float wDarkness  = 1f - currentStylizedDaylight;
+            bool  wOn        = wDarkness > 0.55f;
+            float wIntensity = wOn ? Mathf.Lerp(0.3f, 1.2f, Mathf.InverseLerp(0.55f, 1f, wDarkness)) : 0f;
+            foreach (Light wl in racingWorldLights)
+            {
+                if (wl == null) continue;
+                wl.enabled    = wOn;
+                wl.intensity  = wIntensity;
+            }
         }
 
         if (distToFinish < RaceFinishRadius)
@@ -442,6 +510,7 @@ public partial class GameBootstrap : MonoBehaviour
     private void CreateRacingTruck()
     {
         racingTruckVisual = new GameObject("RacingTruck");
+        racingTruckVisual.transform.localScale = Vector3.one * 1.6f;
 
         Color bodyColor   = new Color(0.85f, 0.20f, 0.18f);
         Color cabinColor  = new Color(0.95f, 0.82f, 0.28f);
@@ -468,6 +537,27 @@ public partial class GameBootstrap : MonoBehaviour
         racingTruckWheelFR = CreateRacingWheel(racingTruckVisual.transform, new Vector3( 0.42f, 0.11f,  0.32f), wheelColor);
         racingTruckWheelRL = CreateRacingWheel(racingTruckVisual.transform, new Vector3(-0.42f, 0.11f, -0.32f), wheelColor);
         racingTruckWheelRR = CreateRacingWheel(racingTruckVisual.transform, new Vector3( 0.42f, 0.11f, -0.32f), wheelColor);
+
+        // Headlights (forward-facing, match regular truck threshold)
+        racingHeadlightL = CreateRacingHeadlight(racingTruckVisual.transform, new Vector3(-0.28f, 0.28f, 0.52f));
+        racingHeadlightR = CreateRacingHeadlight(racingTruckVisual.transform, new Vector3( 0.28f, 0.28f, 0.52f));
+    }
+
+    private Light CreateRacingHeadlight(Transform parent, Vector3 localPos)
+    {
+        GameObject go = new("RacingHeadlight");
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localPos;
+        go.transform.localRotation = Quaternion.Euler(10f, 0f, 0f);
+        Light l = go.AddComponent<Light>();
+        l.type      = LightType.Spot;
+        l.spotAngle = 68f;
+        l.range     = 28f;
+        l.color     = new Color(1f, 0.96f, 0.82f);
+        l.intensity = 0f;
+        l.shadows   = LightShadows.None;
+        l.enabled   = false;
+        return l;
     }
 
     private Transform CreateRacingWheel(Transform parent, Vector3 localPos, Color color)
@@ -488,17 +578,18 @@ public partial class GameBootstrap : MonoBehaviour
     {
         GameObject camObj = new("RacingCamera");
         racingCamera = camObj.AddComponent<Camera>();
-        racingCamera.orthographic     = true;
-        racingCamera.orthographicSize = 9f;
-        racingCamera.clearFlags       = CameraClearFlags.SolidColor;
-        racingCamera.backgroundColor  = new Color(0.05f, 0.06f, 0.08f);
-        racingCamera.depth            = mainCamera != null ? mainCamera.depth + 10 : 10;
-        racingCamera.cullingMask      = ~0;
-        racingCamera.nearClipPlane    = 0.1f;
-        racingCamera.farClipPlane     = 200f;
+        racingCamera.orthographic    = false;
+        racingCamera.fieldOfView     = 65f;
+        racingCamera.clearFlags      = CameraClearFlags.SolidColor;
+        racingCamera.backgroundColor = new Color(0.05f, 0.06f, 0.08f);
+        racingCamera.depth           = mainCamera != null ? mainCamera.depth + 10 : 10;
+        racingCamera.cullingMask     = ~0;
+        racingCamera.nearClipPlane   = 0.1f;
+        racingCamera.farClipPlane    = 200f;
 
-        racingCamera.transform.position = racingTruckPos + Vector3.up * 14f;
-        racingCamera.transform.rotation = Quaternion.Euler(90f, racingTruckAngle, 0f);
+        Quaternion initRot = Quaternion.Euler(14f, racingTruckAngle, 0f);
+        racingCamera.transform.position = racingTruckPos + Vector3.up * 1.4f + initRot * Vector3.back * 2.8f;
+        racingCamera.transform.rotation = initRot;
     }
 
     // ── Racing HUD ───────────────────────────────────────────────────────────
@@ -545,5 +636,323 @@ public partial class GameBootstrap : MonoBehaviour
         racingHudText.color     = new Color(0.92f, 0.90f, 0.86f);
         racingHudText.alignment = TextAnchor.UpperLeft;
         racingHudText.text      = "";
+
+        SetupSpeedometer(canvasObj.transform, font);
+    }
+
+    private void SetupSpeedometer(Transform canvasParent, Font font)
+    {
+        const float size   = 160f;
+        const float radius = 62f; // tick ring radius from center
+
+        // Root — bottom-right corner
+        RectTransform root = CreateUiObject("Speedometer", canvasParent).GetComponent<RectTransform>();
+        root.anchorMin        = new Vector2(1f, 0f);
+        root.anchorMax        = new Vector2(1f, 0f);
+        root.pivot            = new Vector2(1f, 0f);
+        root.anchoredPosition = new Vector2(-18f, 18f);
+        root.sizeDelta        = new Vector2(size, size);
+
+        Image bg = root.gameObject.AddComponent<Image>();
+        bg.color = new Color(0.04f, 0.05f, 0.08f, 0.85f);
+        Outline bgOutline = root.gameObject.AddComponent<Outline>();
+        bgOutline.effectColor    = new Color(0.88f, 0.62f, 0.08f, 0.5f);
+        bgOutline.effectDistance = new Vector2(2f, -2f);
+
+        // Arc tick marks: 0–100 km/h → -135° to +135° from vertical (CW positive)
+        Color tickDim    = new Color(0.55f, 0.55f, 0.55f);
+        Color tickBright = new Color(0.95f, 0.82f, 0.20f);
+        int tickCount = 11; // 0, 10, 20 … 100
+        for (int i = 0; i < tickCount; i++)
+        {
+            float t        = i / (float)(tickCount - 1);
+            float angleDeg = -135f + t * 270f; // CW from vertical
+            float angleRad = angleDeg * Mathf.Deg2Rad;
+
+            RectTransform tick = CreateUiObject($"Tick{i}", root).GetComponent<RectTransform>();
+            tick.anchorMin        = new Vector2(0.5f, 0.5f);
+            tick.anchorMax        = new Vector2(0.5f, 0.5f);
+            tick.pivot            = new Vector2(0.5f, 0f); // pivot at rim, extends inward
+            tick.anchoredPosition = new Vector2(Mathf.Sin(angleRad) * radius, Mathf.Cos(angleRad) * radius);
+            bool isMajor          = (i % 2 == 0);
+            tick.sizeDelta        = new Vector2(isMajor ? 3f : 2f, isMajor ? 13f : 8f);
+            tick.localEulerAngles = new Vector3(0f, 0f, -angleDeg);
+
+            Image tickImg = tick.gameObject.AddComponent<Image>();
+            tickImg.color = (i == 0 || i == tickCount - 1) ? tickBright : tickDim;
+        }
+
+        // Speed number labels at 0, 50, 100
+        (int kmh, float angleDeg)[] labels = { (0, -135f), (50, 0f), (100, 135f) };
+        foreach (var (lKmh, lAngle) in labels)
+        {
+            float rad = lAngle * Mathf.Deg2Rad;
+            float lx  = Mathf.Sin(rad) * (radius + 16f);
+            float ly  = Mathf.Cos(rad) * (radius + 16f);
+
+            Text lbl = new GameObject($"Label{lKmh}").AddComponent<Text>();
+            lbl.transform.SetParent(root, false);
+            lbl.rectTransform.anchorMin        = new Vector2(0.5f, 0.5f);
+            lbl.rectTransform.anchorMax        = new Vector2(0.5f, 0.5f);
+            lbl.rectTransform.pivot            = new Vector2(0.5f, 0.5f);
+            lbl.rectTransform.anchoredPosition = new Vector2(lx, ly);
+            lbl.rectTransform.sizeDelta        = new Vector2(34f, 18f);
+            lbl.font      = font;
+            lbl.fontSize  = 11;
+            lbl.color     = new Color(0.68f, 0.68f, 0.68f);
+            lbl.alignment = TextAnchor.MiddleCenter;
+            lbl.text      = lKmh.ToString();
+        }
+
+        // Needle (pivot at bottom-center so it rotates from center of gauge)
+        RectTransform needle = CreateUiObject("Needle", root).GetComponent<RectTransform>();
+        needle.anchorMin        = new Vector2(0.5f, 0.5f);
+        needle.anchorMax        = new Vector2(0.5f, 0.5f);
+        needle.pivot            = new Vector2(0.5f, 0.08f); // slightly below center for tail
+        needle.anchoredPosition = new Vector2(0f, 0f);
+        needle.sizeDelta        = new Vector2(3.5f, 58f);
+        needle.localEulerAngles = new Vector3(0f, 0f, 150f); // starts at 0 km/h
+
+        Image needleImg = needle.gameObject.AddComponent<Image>();
+        needleImg.color = new Color(0.96f, 0.28f, 0.18f);
+
+        racingSpeedometerNeedle = needle;
+
+        // Center cap
+        RectTransform cap = CreateUiObject("Cap", root).GetComponent<RectTransform>();
+        cap.anchorMin        = new Vector2(0.5f, 0.5f);
+        cap.anchorMax        = new Vector2(0.5f, 0.5f);
+        cap.pivot            = new Vector2(0.5f, 0.5f);
+        cap.anchoredPosition = Vector2.zero;
+        cap.sizeDelta        = new Vector2(12f, 12f);
+        cap.gameObject.AddComponent<Image>().color = new Color(0.86f, 0.22f, 0.16f);
+
+        // Speed readout — center-bottom of gauge
+        racingSpeedometerText = new GameObject("SpeedReadout").AddComponent<Text>();
+        racingSpeedometerText.transform.SetParent(root, false);
+        racingSpeedometerText.rectTransform.anchorMin        = new Vector2(0f, 0f);
+        racingSpeedometerText.rectTransform.anchorMax        = new Vector2(1f, 0f);
+        racingSpeedometerText.rectTransform.pivot            = new Vector2(0.5f, 0f);
+        racingSpeedometerText.rectTransform.anchoredPosition = new Vector2(0f, 12f);
+        racingSpeedometerText.rectTransform.sizeDelta        = new Vector2(0f, 28f);
+        racingSpeedometerText.font      = font;
+        racingSpeedometerText.fontSize  = 22;
+        racingSpeedometerText.fontStyle = FontStyle.Bold;
+        racingSpeedometerText.color     = new Color(0.95f, 0.90f, 0.84f);
+        racingSpeedometerText.alignment = TextAnchor.MiddleCenter;
+        racingSpeedometerText.text      = "0";
+
+        // "km/h" sub-label
+        Text unit = new GameObject("UnitLabel").AddComponent<Text>();
+        unit.transform.SetParent(root, false);
+        unit.rectTransform.anchorMin        = new Vector2(0f, 0f);
+        unit.rectTransform.anchorMax        = new Vector2(1f, 0f);
+        unit.rectTransform.pivot            = new Vector2(0.5f, 0f);
+        unit.rectTransform.anchoredPosition = new Vector2(0f, 34f);
+        unit.rectTransform.sizeDelta        = new Vector2(0f, 16f);
+        unit.font      = font;
+        unit.fontSize  = 10;
+        unit.color     = new Color(0.55f, 0.55f, 0.55f);
+        unit.alignment = TextAnchor.MiddleCenter;
+        unit.text      = "km/h";
+    }
+
+    // ── Racing world population ───────────────────────────────────────────────
+
+    private void PopulateRacingWorld()
+    {
+        // Bounding center of the whole track
+        Vector3 center = Vector3.zero;
+        foreach (var seg in raceSegments) center += seg.Center;
+        center /= raceSegments.Count;
+        center.y = 0f;
+
+        // ── Ground ──────────────────────────────────────────────────────────
+        GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        ground.name = "RacingGround";
+        ground.transform.SetParent(racingSceneRoot.transform, false);
+        ground.transform.position  = new Vector3(center.x, -0.06f, center.z);
+        ground.transform.localScale = new Vector3(900f, 0.12f, 900f);
+        ApplyColor(ground, new Color(0.62f, 0.74f, 0.46f));
+        ConfigureShadowVisual(ground);
+
+        // ── Trees, bushes, flowers ──────────────────────────────────────────
+        int placed = 0;
+        for (int attempt = 0; attempt < 1200 && placed < 380; attempt++)
+        {
+            float rx = center.x + Random.Range(-280f, 280f);
+            float rz = center.z + Random.Range(-280f, 280f);
+            Vector3 pos = new Vector3(rx, 0f, rz);
+
+            if (IsPositionOnRaceRoad(pos, 4.5f)) continue;
+
+            int seed = attempt * 7193;
+            float roll = (seed % 100) / 100f;
+
+            GameObject obj = new($"RaceVeg_{placed}");
+            obj.transform.SetParent(racingSceneRoot.transform, false);
+            obj.transform.position  = pos;
+            obj.transform.rotation  = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+
+            if (roll < 0.62f)
+            {
+                // Tree — much bigger
+                obj.transform.localScale = Vector3.one * Random.Range(2.8f, 4.2f);
+                CreateTreeVariant(obj.transform, attempt % 3);
+            }
+            else if (roll < 0.82f)
+            {
+                // Berry bush
+                obj.transform.localScale = Vector3.one * Random.Range(1.8f, 2.6f);
+                CreateRacingBush(obj.transform, attempt);
+            }
+            else
+            {
+                // Flower patch
+                obj.transform.localScale = Vector3.one * Random.Range(1.6f, 2.2f);
+                CreateRacingFlowers(obj.transform, attempt);
+            }
+
+            placed++;
+        }
+
+        // ── Lanterns — one pair every segment, both sides ────────────────
+        for (int i = 0; i < raceSegments.Count; i++)
+        {
+            RaceSegment seg = raceSegments[i];
+            Vector3 fwd   = seg.Rotation * Vector3.forward;
+            Vector3 right = seg.Rotation * Vector3.right;
+            Vector3 segStart = seg.Center - fwd * seg.Length * 0.5f;
+
+            Quaternion lanternRot = seg.Rotation;
+            CreateRacingLantern(segStart + right * 3.2f,  lanternRot);
+            CreateRacingLantern(segStart - right * 3.2f,  lanternRot);
+        }
+    }
+
+    private void CreateRacingLantern(Vector3 worldPos, Quaternion worldRot)
+    {
+        worldPos.y = 0f;
+
+        GameObject root = new("RaceLantern");
+        root.transform.SetParent(racingSceneRoot.transform, false);
+        root.transform.position   = worldPos;
+        root.transform.rotation   = worldRot;
+        root.transform.localScale = Vector3.one * 3f;
+
+        // Pole
+        GameObject pole = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        pole.transform.SetParent(root.transform, false);
+        pole.transform.localPosition = new Vector3(0f, 0.72f, 0f);
+        pole.transform.localScale    = new Vector3(0.08f, 1.42f, 0.08f);
+        ApplyColor(pole, new Color(0.22f, 0.23f, 0.27f));
+        ConfigureShadowVisual(pole);
+
+        // Arm
+        GameObject arm = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        arm.transform.SetParent(root.transform, false);
+        arm.transform.localPosition = new Vector3(0.14f, 1.34f, 0f);
+        arm.transform.localScale    = new Vector3(0.3f, 0.06f, 0.06f);
+        ApplyColor(arm, new Color(0.22f, 0.23f, 0.27f));
+        ConfigureShadowVisual(arm);
+
+        // Lamp head
+        GameObject head = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        head.transform.SetParent(root.transform, false);
+        head.transform.localPosition = new Vector3(0.26f, 1.16f, 0f);
+        head.transform.localScale    = new Vector3(0.16f, 0.22f, 0.16f);
+        ApplyColor(head, new Color(0.3f, 0.28f, 0.2f));
+        ConfigureShadowVisual(head);
+
+        // Glow sphere
+        GameObject glow = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        glow.transform.SetParent(root.transform, false);
+        glow.transform.localPosition = new Vector3(0.26f, 1.05f, 0f);
+        glow.transform.localScale    = new Vector3(0.12f, 0.12f, 0.12f);
+        ApplyColor(glow, new Color(0.26f, 0.22f, 0.18f));
+        ConfigureStaticVisual(glow);
+
+        // Light
+        GameObject lightObj = new("LanternLight");
+        lightObj.transform.SetParent(root.transform, false);
+        lightObj.transform.localPosition = new Vector3(0.26f, 1.02f, 0f);
+        Light l = lightObj.AddComponent<Light>();
+        l.type      = LightType.Point;
+        l.color     = new Color(1f, 0.9f, 0.72f);
+        l.range     = 14f;
+        l.intensity = 0f;
+        l.shadows   = LightShadows.None;
+        l.enabled   = false;
+
+        racingWorldLights.Add(l);
+    }
+
+    private static void CreateRacingBush(Transform parent, int seed)
+    {
+        Color leafA = new Color(0.16f, 0.42f, 0.2f);
+        Color leafB = new Color(0.22f, 0.52f, 0.26f);
+        Vector3[] pos = { new(-0.12f, 0.18f, -0.02f), new(0.14f, 0.22f, 0.04f), new(0.02f, 0.25f, -0.14f) };
+        Vector3[] scl = { new(0.32f, 0.24f, 0.3f),    new(0.36f, 0.28f, 0.32f), new(0.28f, 0.22f, 0.26f) };
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject c = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            c.transform.SetParent(parent, false);
+            c.transform.localPosition = pos[i];
+            c.transform.localScale    = scl[i];
+            ApplyColor(c, i % 2 == 0 ? leafB : leafA);
+            ConfigureStaticVisual(c);
+        }
+    }
+
+    private static void CreateRacingFlowers(Transform parent, int seed)
+    {
+        Color stemCol = new Color(0.2f, 0.5f, 0.24f);
+        Color[] petals = { new(0.94f, 0.88f, 0.24f), new(0.96f, 0.62f, 0.22f), new(0.92f, 0.48f, 0.58f) };
+        for (int i = 0; i < 5; i++)
+        {
+            float a = (i / 5f) * Mathf.PI * 2f + seed * 0.4f;
+            float r = 0.06f + (i % 2) * 0.04f;
+
+            // Stem
+            GameObject stem = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stem.transform.SetParent(parent, false);
+            stem.transform.localPosition = new Vector3(Mathf.Cos(a)*r, 0.09f, Mathf.Sin(a)*r);
+            stem.transform.localScale    = new Vector3(0.025f, 0.09f, 0.025f);
+            ApplyColor(stem, stemCol);
+            ConfigureStaticVisual(stem);
+
+            // Head
+            GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            head.transform.SetParent(parent, false);
+            head.transform.localPosition = new Vector3(Mathf.Cos(a)*r, 0.19f, Mathf.Sin(a)*r);
+            head.transform.localScale    = new Vector3(0.08f, 0.06f, 0.08f);
+            ApplyColor(head, petals[i % petals.Length]);
+            ConfigureStaticVisual(head);
+        }
+    }
+
+    private bool IsPositionOnRaceRoad(Vector3 pos, float margin)
+    {
+        Vector2 p = new Vector2(pos.x, pos.z);
+        foreach (var seg in raceSegments)
+        {
+            Vector3 fwd   = seg.Rotation * Vector3.forward;
+            Vector3 start = seg.Center - fwd * seg.Length * 0.5f;
+            Vector3 end   = seg.Center + fwd * seg.Length * 0.5f;
+            if (DistXZPointToSegment(p,
+                    new Vector2(start.x, start.z),
+                    new Vector2(end.x,   end.z)) < margin)
+                return true;
+        }
+        return false;
+    }
+
+    private static float DistXZPointToSegment(Vector2 p, Vector2 a, Vector2 b)
+    {
+        Vector2 ab = b - a;
+        float sqLen = ab.sqrMagnitude;
+        if (sqLen < 0.0001f) return (p - a).magnitude;
+        float t = Mathf.Clamp01(Vector2.Dot(p - a, ab) / sqLen);
+        return (p - (a + ab * t)).magnitude;
     }
 }
