@@ -1185,15 +1185,18 @@ public partial class GameBootstrap : MonoBehaviour
             Color prevColor = GUI.color;
             bool prevEnabled = GUI.enabled;
 
-            DrawMoneyHud();
-            DrawTimeHud();
-            DrawSpeedHud();
-            DrawPauseOverlay();
-
-            if (!isWorldMapPanelOpen)
+            if (!isRacingActive)
             {
-                DrawMenuBar();
-                if (isFleetPanelOpen) DrawFleetPanel();
+                DrawMoneyHud();
+                DrawTimeHud();
+                DrawSpeedHud();
+                DrawPauseOverlay();
+
+                if (!isWorldMapPanelOpen)
+                {
+                    DrawMenuBar();
+                    if (isFleetPanelOpen) DrawFleetPanel();
+                }
             }
             // Shifts panel is now Canvas-based (ShiftsScreenCanvas)
             // Drivers panel is now Canvas-based (DriversScreenCanvas)

@@ -12,6 +12,25 @@ public partial class GameBootstrap : MonoBehaviour
         public Vector3 Center;
         public Quaternion Rotation;
         public float Length;
+        public float StartY;
+        public float EndY;
+    }
+
+    private struct RacingBusData
+    {
+        public float      T;               // distance from start along track centre (m)
+        public float      Speed;           // m/s (always positive)
+        public int        Direction;       // +1 = same as player, −1 = oncoming
+        public float      LaneOffset;      // world units along road-right from centre
+        public GameObject Root;
+        public float      CollisionRadius;
+    }
+
+    private struct TerrainBump
+    {
+        public Vector2 Center;  // world XZ (Vector2.x = worldX, Vector2.y = worldZ)
+        public float   Radius;  // gaussian sigma (metres)
+        public float   Height;  // peak height above groundY
     }
 
     // Shared struct for any tippable road obstacle (lanterns, trees)
@@ -38,6 +57,7 @@ public partial class GameBootstrap : MonoBehaviour
     private Vector3 racingTruckPos;
     private float racingTruckAngle;   // degrees, Y-up
     private Vector2 racingVelocity;   // X = world X, Y = world Z
+    private float racingTruckVelY;    // vertical velocity (m/s), positive = up
     private float racingAngularVel;   // degrees/s
     private float racingSteerInput;   // -1..1, ramps up/down like a steering wheel
 
@@ -57,6 +77,11 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<RaceSegment>      raceExtensionSegments = new();
     private readonly List<RaceObstacleData> racingLanterns        = new();
     private readonly List<RaceObstacleData> racingTreeObstacles   = new();
+    private readonly List<RacingBusData>    racingBuses           = new();
+    private readonly List<TerrainBump>      terrainBumps          = new();
+    private float racingGroundY;  // base ground Y — set in PopulateRacingWorld
+    private float[]  racingSegCumLen;   // cumulative segment lengths for GetTrackPoint
+    private float    racingTrackLen;    // total track length (m)
     private Vector3 raceFinishPos;
     private Vector3 raceFinishFwd;  // road forward direction at finish — used for strip detection
 
@@ -90,7 +115,9 @@ public partial class GameBootstrap : MonoBehaviour
 
     // ── Steering wheel + pedals (children of racing camera) ─────────────────────
     private GameObject racingSteeringWheelRoot;   // the spinner — rotates around local Y
-    private float      racingSteeringWheelAngle;  // smoothed visual angle, degrees
+    private float      racingWheelAngle;          // current wheel angle, unbounded degrees
+    private float      racingWheelAngularVel;     // degrees/sec — inertia after drag release
+    private bool       racingWheelDragging;       // mouse held in wheel zone
     private Transform  racingPedalGas;            // gas pedal root (tilts on W press)
     private Transform  racingPedalBrake;          // brake pedal root (tilts on S press)
     private Transform  racingGearShift;           // gear stick root (forward/reverse tilt)
@@ -130,7 +157,7 @@ public partial class GameBootstrap : MonoBehaviour
     // Downshift when speed (km/h) falls below this (index = current gear)
     private static readonly float[] GearDownKmh      = { 0f, 0f, 11f, 23f, 37f };
     private const float GearChangeCooldown = 0.5f;    // min seconds between shifts
-    private const int   RaceSegmentCount    = 18;
+    private const int   RaceSegmentCount    = 36;
     private const float RaceTrackOffsetX    = 2000f;   // remote position, away from main world
     private const float RaceFinishRadius    = 2.8f;
 
@@ -140,6 +167,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         if (joinRaceButtonRoot != null) return;
 
+        EnsureFleetEventSystem(); // button won't fire without an EventSystem in the scene
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
         GameObject canvasObj = new("JoinRaceCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
@@ -222,6 +250,9 @@ public partial class GameBootstrap : MonoBehaviour
         Time.timeScale = 0f;
         Time.fixedDeltaTime = 0f;
 
+        // Close all city-mode panels before entering race
+        CloseAllMenus();
+
         // Mute city music during race
         if (cityMusicSource != null) cityMusicSource.Pause();
 
@@ -233,16 +264,22 @@ public partial class GameBootstrap : MonoBehaviour
 
         // Build scene geometry first
         GenerateRaceTrack();
+        BuildTrackSampler();
+        SpawnRacingBuses();
         PopulateRacingWorld();
         CreateRacingTruck();
 
         // Set truck start position BEFORE camera setup so camera initialises at the right location
         racingTruckPos   = raceSegments[0].Center - raceSegments[0].Rotation * Vector3.forward * raceSegments[0].Length * 0.45f;
-        racingTruckPos.y = 0.35f;
+        racingTruckPos.y = raceSegments[0].StartY + 0.35f;
         racingTruckAngle = raceSegments[0].Rotation.eulerAngles.y;
-        racingVelocity      = Vector2.zero;
-        racingAngularVel    = 0f;
-        racingSteerInput    = 0f;
+        racingVelocity          = Vector2.zero;
+        racingTruckVelY         = 0f;
+        racingAngularVel        = 0f;
+        racingSteerInput        = 0f;
+        racingWheelAngle        = 0f;
+        racingWheelAngularVel   = 0f;
+        racingWheelDragging     = false;
         racingCurrentGear   = 1;
         racingGearChangeTimer = 0f;
         racingCameraAngle = racingTruckAngle;
@@ -447,7 +484,10 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         // Wheel returns to center during cinematic; gas stays floored
-        racingSteerInput = Mathf.MoveTowards(racingSteerInput, 0f, 2.5f * dt);
+        racingWheelDragging   = false;
+        racingWheelAngularVel = 0f;
+        racingWheelAngle      = Mathf.MoveTowards(racingWheelAngle, 0f, 2.5f * dt * 180f);
+        racingSteerInput      = Mathf.Clamp(racingWheelAngle / 180f, -1f, 1f);
         UpdateSteeringWheel(dt);
         UpdatePedals(dt, 1f, false);
         racingIsReversing = false;
@@ -482,7 +522,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         // Steering wheel + pedals are children of camera — destroyed with it
         racingSteeringWheelRoot  = null;
-        racingSteeringWheelAngle = 0f;
+        racingWheelAngle = 0f;
         racingPedalGas           = null;
         racingPedalBrake         = null;
         racingGearShift          = null;
@@ -511,6 +551,7 @@ public partial class GameBootstrap : MonoBehaviour
         racingWorldLights.Clear();
         racingLanterns.Clear();
         racingTreeObstacles.Clear();
+        CleanupRacingBuses();
         raceSegments.Clear();
         raceExtensionSegments.Clear();
 
@@ -557,19 +598,26 @@ public partial class GameBootstrap : MonoBehaviour
             if (kb.wKey.isPressed || kb.upArrowKey.isPressed)   throttle += 1f;
             if (kb.sKey.isPressed || kb.downArrowKey.isPressed) sBrakeReverse = true;
 
-            // Steering ramp — fast through first 30% of lock (near-centre response),
-            // then slow toward full lock; return to centre also quick through centre zone.
-            bool steerLeft  = kb.aKey.isPressed || kb.leftArrowKey.isPressed;
-            bool steerRight = kb.dKey.isPressed || kb.rightArrowKey.isPressed;
-            bool steering   = steerLeft || steerRight;
-            float steerTarget = steerLeft ? -1f : steerRight ? 1f : 0f;
-            float absInput  = Mathf.Abs(racingSteerInput);
-            float steerSpeed;
-            if (steering)
-                steerSpeed = absInput < 0.3f ? 4.0f : 0.9f;   // quick near centre, slow to full lock
-            else
-                steerSpeed = absInput > 0.3f ? 1.2f : 3.5f;   // medium outer zone, quick snap to centre
-            racingSteerInput = Mathf.MoveTowards(racingSteerInput, steerTarget, steerSpeed * dt);
+            // Steering — mouse drag on wheel takes priority; keyboard is fallback
+            UpdateWheelMouseDrag(dt);
+
+            if (!racingWheelDragging)
+            {
+                bool steerLeft  = kb.aKey.isPressed || kb.leftArrowKey.isPressed;
+                bool steerRight = kb.dKey.isPressed || kb.rightArrowKey.isPressed;
+                bool steering   = steerLeft || steerRight;
+                if (steering)
+                {
+                    // Keyboard overrides: drive wheel angle directly and zero inertia
+                    float steerTarget = steerLeft ? -1f : steerRight ? 1f : 0f;
+                    float absInput  = Mathf.Abs(racingSteerInput);
+                    float steerSpeed = absInput < 0.3f ? 4.0f : 0.9f;
+                    racingSteerInput    = Mathf.MoveTowards(racingSteerInput, steerTarget, steerSpeed * dt);
+                    racingWheelAngle    = racingSteerInput * 180f;
+                    racingWheelAngularVel = 0f;
+                }
+                // else: wheel inertia + centering handled inside UpdateWheelMouseDrag
+            }
 
             if (kb.escapeKey.wasPressedThisFrame)
             {
@@ -646,8 +694,38 @@ public partial class GameBootstrap : MonoBehaviour
         // Update position
         racingTruckPos.x += racingVelocity.x * dt;
         racingTruckPos.z += racingVelocity.y * dt;
+        {
+            const float Gravity           = 18f;   // m/s² — arcade-strong
+            const float TerminalVelY      = -25f;  // m/s downward cap
+            const float GroundedThreshold = 0.05f; // m above floor → airborne
 
-        // Lantern collision (depenetration + velocity response)
+            Vector3 flatPos = new Vector3(racingTruckPos.x, 0f, racingTruckPos.z);
+            bool  onRoad = IsPositionOnRaceRoad(flatPos, 4.8f);
+            float floorY = onRoad
+                ? SampleRaceRoadY(racingTruckPos.x, racingTruckPos.z)
+                : racingGroundY + SampleTerrainY(racingTruckPos.x, racingTruckPos.z) + 0.35f;
+
+            if (onRoad && floorY > racingTruckPos.y)
+            {
+                // Uphill — lerp up to meet the rising surface
+                racingTruckPos.y = Mathf.Lerp(racingTruckPos.y, floorY, 18f * dt);
+                racingTruckVelY  = 0f;
+            }
+            else
+            {
+                // Downhill or off-road — apply gravity, land on floor
+                racingTruckVelY   = Mathf.Max(racingTruckVelY - Gravity * dt, TerminalVelY);
+                racingTruckPos.y += racingTruckVelY * dt;
+                if (racingTruckPos.y <= floorY + GroundedThreshold)
+                {
+                    racingTruckPos.y = floorY;
+                    racingTruckVelY  = 0f;
+                }
+            }
+        }
+
+        // Bus + lantern collision (depenetration + velocity response)
+        UpdateRacingBuses(dt);
         UpdateLanternCollisions(dt);
 
         // ── Apply truck transform — FWD articulation ─────────────────────
@@ -817,14 +895,309 @@ public partial class GameBootstrap : MonoBehaviour
         Object.Destroy(src.gameObject, duration + 0.5f);
     }
 
+    private void UpdateWheelMouseDrag(float dt)
+    {
+        if (racingCamera == null) return;
+        var mouse = Mouse.current;
+        if (mouse == null) return;
+
+        Vector2 mousePos = mouse.position.ReadValue();
+
+        // On click inside wheel zone — start drag
+        if (mouse.leftButton.wasPressedThisFrame)
+        {
+            racingWheelDragging = false;
+            float wheelRadius = Screen.height * 0.32f;
+            if (racingSteeringWheelRoot != null &&
+                ScreenDist(mousePos, racingCamera, racingSteeringWheelRoot.transform.position) < wheelRadius)
+            {
+                racingWheelDragging   = true;
+                racingWheelAngularVel = 0f;
+            }
+        }
+
+        if (mouse.leftButton.wasReleasedThisFrame)
+            racingWheelDragging = false;
+
+        // ── Wheel drag ────────────────────────────────────────────────────────
+        if (racingWheelDragging && mouse.leftButton.isPressed)
+        {
+            float mouseDX      = mouse.delta.ReadValue().x;
+            float targetAngVel = mouseDX * 0.55f / Mathf.Max(dt, 0.001f);
+            racingWheelAngularVel = Mathf.Lerp(racingWheelAngularVel, targetAngVel, 12f * dt);
+            racingWheelAngle     += racingWheelAngularVel * dt;
+        }
+        else if (!racingWheelDragging)
+        {
+            // Inertia — decays over ~3 s
+            racingWheelAngle     += racingWheelAngularVel * dt;
+            racingWheelAngularVel *= Mathf.Pow(0.975f, dt * 60f);
+            // Spring return — proportional to angle (stronger the further from centre)
+            racingWheelAngle -= racingWheelAngle * 2.8f * dt;
+        }
+
+        racingWheelAngle = Mathf.Clamp(racingWheelAngle, -360f, 360f);   // max ±1 full turn
+        racingSteerInput = Mathf.Clamp(racingWheelAngle / 180f, -1f, 1f);
+    }
+
+    // Distance in screen pixels from mousePos to a world point projected via camera.
+    private static float ScreenDist(Vector2 mousePos, Camera cam, Vector3 worldPos)
+        => Vector2.Distance(mousePos, ScreenProject(cam, worldPos));
+
+    private static Vector2 ScreenProject(Camera cam, Vector3 worldPos)
+    {
+        Vector3 vp = cam.WorldToViewportPoint(worldPos);
+        return new Vector2(vp.x * Screen.width, vp.y * Screen.height);
+    }
+
     private void UpdateSteeringWheel(float dt)
     {
         if (racingSteeringWheelRoot == null) return;
-        // Wheel lies in local XZ plane — spin around local Y (the face normal)
-        // Positive steerInput = right turn = wheel top goes right = positive Y rotation
-        float wheelTarget = racingSteerInput * 180f;
-        racingSteeringWheelAngle = Mathf.Lerp(racingSteeringWheelAngle, wheelTarget, 8f * dt);
-        racingSteeringWheelRoot.transform.localRotation = Quaternion.Euler(0f, racingSteeringWheelAngle, 0f);
+        // Apply current wheel angle directly — driven by mouse drag or keyboard
+        racingSteeringWheelRoot.transform.localRotation = Quaternion.Euler(0f, racingWheelAngle, 0f);
+    }
+
+    // ── Road buses ───────────────────────────────────────────────────────────
+
+    private void BuildTrackSampler()
+    {
+        racingSegCumLen = new float[raceSegments.Count];
+        float cum = 0f;
+        for (int i = 0; i < raceSegments.Count; i++)
+        {
+            racingSegCumLen[i] = cum;
+            cum += raceSegments[i].Length;
+        }
+        racingTrackLen = cum;
+    }
+
+    // Returns road centreline position + segment rotation at distance t from start.
+    // Extrapolates linearly before/after the track.
+    private void GetTrackPoint(float t, out Vector3 pos, out Quaternion rot)
+    {
+        if (raceSegments.Count == 0) { pos = Vector3.zero; rot = Quaternion.identity; return; }
+
+        int   segIdx = 0;
+        float localT = 0f;
+
+        if (t < 0f)
+        {
+            segIdx = 0;
+            localT = t; // negative → extrapolate behind start
+        }
+        else if (t >= racingTrackLen)
+        {
+            segIdx = raceSegments.Count - 1;
+            localT = raceSegments[segIdx].Length + (t - racingTrackLen);
+        }
+        else
+        {
+            for (int i = raceSegments.Count - 1; i >= 0; i--)
+            {
+                if (racingSegCumLen[i] <= t)
+                {
+                    segIdx = i;
+                    localT = t - racingSegCumLen[i];
+                    break;
+                }
+            }
+        }
+
+        RaceSegment seg = raceSegments[segIdx];
+        Vector3 fwd     = seg.Rotation * Vector3.forward;
+        Vector3 segStart = seg.Center - fwd * seg.Length * 0.5f;
+        pos = segStart + fwd * localT;
+        float segFrac = seg.Length > 0.001f ? Mathf.Clamp01(localT / seg.Length) : 0f;
+        pos.y = Mathf.Lerp(seg.StartY, seg.EndY, segFrac) + 0.35f;
+        rot = seg.Rotation;
+    }
+
+    // Returns the terrain bump height at world XZ (add groundY for world Y).
+    private float SampleTerrainY(float x, float z)
+    {
+        float h = 0f;
+        foreach (var b in terrainBumps)
+        {
+            float dx = x - b.Center.x;
+            float dz = z - b.Center.y;   // Center.y stores world Z (Vector2 convention)
+            float denom = 2f * b.Radius * b.Radius;
+            h += b.Height * Mathf.Exp(-(dx * dx + dz * dz) / denom);
+        }
+        return h;
+    }
+
+    // Returns terrain height suppressed to 0 near road segments (for ground mesh vertices).
+    private float SampleTerrainYMasked(float x, float z)
+    {
+        // Compute min XZ distance to any road segment centreline
+        float minDist = float.MaxValue;
+        Vector2 p = new Vector2(x, z);
+        foreach (var seg in raceSegments)
+        {
+            Vector3 fwd   = seg.Rotation * Vector3.forward;
+            Vector3 start = seg.Center - fwd * seg.Length * 0.5f;
+            Vector3 end   = seg.Center + fwd * seg.Length * 0.5f;
+            float d = DistXZPointToSegment(p, new Vector2(start.x, start.z), new Vector2(end.x, end.z));
+            if (d < minDist) minDist = d;
+        }
+        // Blend: full suppression within 5 m of road centre, full terrain at 16 m+
+        float mask = Mathf.Clamp01((minDist - 5f) / 11f);
+        return SampleTerrainY(x, z) * mask;
+    }
+
+    // Find the road surface Y at world XZ by projecting onto the nearest segment.
+    private float SampleRaceRoadY(float wx, float wz)
+    {
+        float bestDistSq = float.MaxValue;
+        float bestY      = 0.35f;
+
+        foreach (RaceSegment seg in raceSegments)
+        {
+            Vector3 fwd    = seg.Rotation * Vector3.forward;
+            float   startX = seg.Center.x - fwd.x * seg.Length * 0.5f;
+            float   startZ = seg.Center.z - fwd.z * seg.Length * 0.5f;
+            float   t      = Mathf.Clamp01(((wx - startX) * fwd.x + (wz - startZ) * fwd.z) / seg.Length);
+            float   cx     = startX + fwd.x * seg.Length * t;
+            float   cz     = startZ + fwd.z * seg.Length * t;
+            float   dSq    = (wx - cx) * (wx - cx) + (wz - cz) * (wz - cz);
+
+            if (dSq < bestDistSq)
+            {
+                bestDistSq = dSq;
+                bestY      = Mathf.Lerp(seg.StartY, seg.EndY, t) + 0.35f;
+            }
+        }
+
+        return bestY;
+    }
+
+    private void SpawnRacingBuses()
+    {
+        racingBuses.Clear();
+        float len = racingTrackLen;
+
+        // Two oncoming (left lane, orange), two same-direction (right lane, blue)
+        SpawnBus(len * 0.25f,  9f, -1, -1.25f, new Color(0.80f, 0.35f, 0.20f));
+        SpawnBus(len * 0.65f, 11f, -1, -1.25f, new Color(0.80f, 0.35f, 0.20f));
+        SpawnBus(len * 0.15f,  5f, +1, +1.25f, new Color(0.20f, 0.38f, 0.65f));
+        SpawnBus(len * 0.55f, 12f, +1, +1.25f, new Color(0.20f, 0.38f, 0.65f));
+    }
+
+    private void SpawnBus(float t, float speed, int dir, float laneOffset, Color bodyColor)
+    {
+        RacingBusData bus = new()
+        {
+            T = t, Speed = speed, Direction = dir,
+            LaneOffset = laneOffset, CollisionRadius = 0.90f
+        };
+
+        // Root GO — positioned every frame
+        bus.Root = new GameObject("RacingBus");
+
+        Color roofColor = Color.Lerp(bodyColor, Color.black, 0.25f);
+        Color wheelColor = new Color(0.14f, 0.14f, 0.16f);
+
+        // Body
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.Destroy(body.GetComponent<Collider>());
+        body.name = "BusBody";
+        body.transform.SetParent(bus.Root.transform, false);
+        body.transform.localPosition = new Vector3(0f, 0.28f, 0f);
+        body.transform.localScale    = new Vector3(0.95f, 0.55f, 2.0f);
+        ApplyColor(body, bodyColor);
+        NoShadow(body);
+
+        // Roof
+        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.Destroy(roof.GetComponent<Collider>());
+        roof.name = "BusRoof";
+        roof.transform.SetParent(bus.Root.transform, false);
+        roof.transform.localPosition = new Vector3(0f, 0.58f, 0f);
+        roof.transform.localScale    = new Vector3(0.90f, 0.08f, 1.95f);
+        ApplyColor(roof, roofColor);
+        NoShadow(roof);
+
+        // Wheels
+        CreateBusWheel(bus.Root.transform, new Vector3(-0.52f, 0.10f,  0.65f), wheelColor);
+        CreateBusWheel(bus.Root.transform, new Vector3(+0.52f, 0.10f,  0.65f), wheelColor);
+        CreateBusWheel(bus.Root.transform, new Vector3(-0.52f, 0.10f, -0.65f), wheelColor);
+        CreateBusWheel(bus.Root.transform, new Vector3(+0.52f, 0.10f, -0.65f), wheelColor);
+
+        racingBuses.Add(bus);
+    }
+
+    private static void CreateBusWheel(Transform parent, Vector3 localPos, Color color)
+    {
+        GameObject w = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        Object.Destroy(w.GetComponent<Collider>());
+        w.name = "BusWheel";
+        w.transform.SetParent(parent, false);
+        w.transform.localPosition = localPos;
+        w.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        w.transform.localScale    = new Vector3(0.18f, 0.06f, 0.18f);
+        ApplyColor(w, color);
+        NoShadow(w);
+    }
+
+    private void UpdateRacingBuses(float dt)
+    {
+        if (racingBuses.Count == 0 || racingSegCumLen == null) return;
+
+        float margin = 40f;
+        float loop   = racingTrackLen + margin * 2f;
+
+        for (int i = 0; i < racingBuses.Count; i++)
+        {
+            RacingBusData bus = racingBuses[i];
+
+            // Advance along track
+            bus.T += bus.Speed * bus.Direction * dt;
+
+            // Wrap around
+            if (bus.T > racingTrackLen + margin) bus.T -= loop;
+            if (bus.T < -margin)                 bus.T += loop;
+
+            // World position + rotation
+            GetTrackPoint(bus.T, out Vector3 centre, out Quaternion segRot);
+            Vector3 roadRight = segRot * Vector3.right;
+            bus.Root.transform.position = centre + roadRight * bus.LaneOffset;
+            bus.Root.transform.rotation = bus.Direction == -1
+                ? segRot * Quaternion.Euler(0f, 180f, 0f)
+                : segRot;
+
+            // Collision with player truck
+            Vector2 busXZ   = new(bus.Root.transform.position.x, bus.Root.transform.position.z);
+            Vector2 truckXZ = new(racingTruckPos.x, racingTruckPos.z);
+            Vector2 delta   = truckXZ - busXZ;
+            float combined  = TruckCollisionRadius + bus.CollisionRadius;
+
+            if (delta.sqrMagnitude < combined * combined)
+            {
+                float dist = delta.magnitude;
+                Vector2 norm = dist > 0.001f ? delta / dist : Vector2.right;
+                float pen = combined - dist;
+                racingTruckPos.x += norm.x * pen;
+                racingTruckPos.z += norm.y * pen;
+                float vDotN = Vector2.Dot(racingVelocity, norm);
+                if (vDotN < 0f)
+                {
+                    racingVelocity -= norm * vDotN;
+                    racingVelocity *= (1f - CollisionEnergyLoss);
+                }
+                racingAngularVel += norm.x * CollisionAngularKick;
+            }
+
+            racingBuses[i] = bus;
+        }
+    }
+
+    private void CleanupRacingBuses()
+    {
+        foreach (RacingBusData bus in racingBuses)
+            if (bus.Root != null) Object.Destroy(bus.Root);
+        racingBuses.Clear();
+        racingSegCumLen = null;
+        racingTrackLen  = 0f;
     }
 
     // ── Lantern collision ─────────────────────────────────────────────────────
@@ -909,6 +1282,16 @@ public partial class GameBootstrap : MonoBehaviour
         racingSceneRoot = new GameObject("RacingScene");
         racingSceneRoot.transform.position = new Vector3(RaceTrackOffsetX, 0f, 0f);
 
+        // Pre-generate joint heights (N+1 joints for N segments)
+        float[] jointY = new float[RaceSegmentCount + 1];
+        jointY[0] = 0f;
+        float heightMomentum = 0f;
+        for (int i = 1; i <= RaceSegmentCount; i++)
+        {
+            heightMomentum = Mathf.Lerp(heightMomentum, Random.Range(-3.0f, 3.0f), 0.45f);
+            jointY[i] = Mathf.Clamp(jointY[i - 1] + heightMomentum, -4f, 7f);
+        }
+
         Vector3 cursor    = new Vector3(RaceTrackOffsetX, 0f, 0f);
         float   direction = 0f; // degrees Y
 
@@ -918,13 +1301,18 @@ public partial class GameBootstrap : MonoBehaviour
 
             Quaternion rot = Quaternion.Euler(0f, direction, 0f);
             Vector3 fwd  = rot * Vector3.forward;
+            float sy = jointY[i];
+            float ey = jointY[i + 1];
             Vector3 segCenter = cursor + fwd * segLen * 0.5f;
+            segCenter.y = (sy + ey) * 0.5f;
 
             RaceSegment seg = new()
             {
                 Center   = segCenter,
                 Rotation = rot,
-                Length   = segLen
+                Length   = segLen,
+                StartY   = sy,
+                EndY     = ey,
             };
             raceSegments.Add(seg);
 
@@ -940,12 +1328,13 @@ public partial class GameBootstrap : MonoBehaviour
         // Start marker (green)
         RaceSegment first = raceSegments[0];
         Vector3 startPos = first.Center - first.Rotation * Vector3.forward * first.Length * 0.45f;
+        startPos.y = first.StartY + 0.14f;
         CreateRaceMarker(startPos, first.Rotation, new Color(0.18f, 0.82f, 0.28f));
 
         // Finish marker (yellow + light)
         RaceSegment last = raceSegments[raceSegments.Count - 1];
         raceFinishPos = last.Center + last.Rotation * Vector3.forward * last.Length * 0.45f;
-        raceFinishPos.y = 0.35f;
+        raceFinishPos.y = last.EndY + 0.35f;
         raceFinishFwd = last.Rotation * Vector3.forward;   // road direction — for strip detection
         CreateRaceMarker(raceFinishPos, last.Rotation, new Color(0.95f, 0.82f, 0.12f));
 
@@ -962,39 +1351,52 @@ public partial class GameBootstrap : MonoBehaviour
 
         // ── Road extension beyond finish (decorative — truck drives into horizon) ──
         raceExtensionSegments.Clear();
+        float extStartY = last.EndY;
         Vector3 extCursor = raceFinishPos;
-        extCursor.y = 0f;
+        extCursor.y = extStartY;
         Quaternion extRot = last.Rotation;
         Vector3 extFwd = extRot * Vector3.forward;
         for (int i = 0; i < 6; i++)
         {
             float extLen = 24f;
             Vector3 extCenter = extCursor + extFwd * extLen * 0.5f;
-            RaceSegment ext = new() { Center = extCenter, Rotation = extRot, Length = extLen };
+            extCenter.y = extStartY;
+            RaceSegment ext = new() { Center = extCenter, Rotation = extRot, Length = extLen, StartY = extStartY, EndY = extStartY };
             CreateRaceSegmentVisuals(ext);
             raceExtensionSegments.Add(ext);
             extCursor += extFwd * extLen;
         }
     }
 
+    // Compute a pitch-corrected rotation for a segment so road tiles slope with the terrain.
+    private static Quaternion GetSegmentPitchedRot(RaceSegment seg)
+    {
+        Vector3 fwdFlat  = seg.Rotation * Vector3.forward;
+        float   dy       = seg.EndY - seg.StartY;
+        Vector3 fwdSloped = new Vector3(fwdFlat.x, dy / seg.Length, fwdFlat.z).normalized;
+        return Quaternion.LookRotation(fwdSloped, Vector3.up);
+    }
+
     private void CreateRaceSegmentVisuals(RaceSegment seg)
     {
         float w = 5.0f;
+        Quaternion pitchedRot = GetSegmentPitchedRot(seg);
+        Vector3 centre = seg.Center;
 
         // Road surface
         GameObject road = GameObject.CreatePrimitive(PrimitiveType.Cube);
         road.name = "RoadSeg";
         road.transform.SetParent(racingSceneRoot.transform, false);
-        road.transform.position = new Vector3(seg.Center.x, 0.06f, seg.Center.z);
-        road.transform.rotation = seg.Rotation;
+        road.transform.position = centre + pitchedRot * new Vector3(0f, 0.06f, 0f);
+        road.transform.rotation = pitchedRot;
         road.transform.localScale = new Vector3(w, 0.12f, seg.Length);
         ApplyColor(road, new Color(0.22f, 0.22f, 0.25f));
         ConfigureShadowVisual(road);
 
         // Left kerb
-        CreateKerb(seg, -w * 0.5f - 0.14f);
+        CreateKerb(seg, pitchedRot, centre, -w * 0.5f - 0.14f);
         // Right kerb
-        CreateKerb(seg, w * 0.5f + 0.14f);
+        CreateKerb(seg, pitchedRot, centre, w * 0.5f + 0.14f);
 
         // Center dashed line (every other segment)
         if (Random.value > 0.5f)
@@ -1002,24 +1404,21 @@ public partial class GameBootstrap : MonoBehaviour
             GameObject dash = GameObject.CreatePrimitive(PrimitiveType.Cube);
             dash.name = "CenterDash";
             dash.transform.SetParent(racingSceneRoot.transform, false);
-            dash.transform.position = new Vector3(seg.Center.x, 0.13f, seg.Center.z);
-            dash.transform.rotation = seg.Rotation;
+            dash.transform.position = centre + pitchedRot * new Vector3(0f, 0.13f, 0f);
+            dash.transform.rotation = pitchedRot;
             dash.transform.localScale = new Vector3(0.12f, 0.01f, seg.Length * 0.6f);
             ApplyColor(dash, new Color(0.92f, 0.88f, 0.56f));
             ConfigureShadowVisual(dash);
         }
     }
 
-    private void CreateKerb(RaceSegment seg, float xOffset)
+    private void CreateKerb(RaceSegment seg, Quaternion pitchedRot, Vector3 centre, float xOffset)
     {
         GameObject kerb = GameObject.CreatePrimitive(PrimitiveType.Cube);
         kerb.name = "Kerb";
         kerb.transform.SetParent(racingSceneRoot.transform, false);
-
-        Vector3 localOffset = new Vector3(xOffset, 0.09f, 0f);
-        Vector3 worldOffset = seg.Rotation * localOffset;
-        kerb.transform.position = new Vector3(seg.Center.x, 0f, seg.Center.z) + worldOffset;
-        kerb.transform.rotation = seg.Rotation;
+        kerb.transform.position = centre + pitchedRot * new Vector3(xOffset, 0.09f, 0f);
+        kerb.transform.rotation = pitchedRot;
         kerb.transform.localScale = new Vector3(0.28f, 0.18f, seg.Length);
         ApplyColor(kerb, new Color(0.72f, 0.72f, 0.72f));
         ConfigureShadowVisual(kerb);
@@ -1030,7 +1429,7 @@ public partial class GameBootstrap : MonoBehaviour
         GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
         marker.name = "RaceMarker";
         marker.transform.SetParent(racingSceneRoot.transform, false);
-        marker.transform.position = new Vector3(worldPos.x, 0.14f, worldPos.z);
+        marker.transform.position = worldPos; // caller supplies correct Y
         marker.transform.rotation = rot;
         marker.transform.localScale = new Vector3(5.2f, 0.06f, 1.1f);
         ApplyColor(marker, color);
@@ -1297,7 +1696,7 @@ public partial class GameBootstrap : MonoBehaviour
             ApplyColor(seg, rimColor);
         }
 
-        racingSteeringWheelAngle = 0f;
+        racingWheelAngle = 0f;
     }
 
     // ── Pedals ────────────────────────────────────────────────────────────────
@@ -1744,14 +2143,129 @@ public partial class GameBootstrap : MonoBehaviour
         center /= raceSegments.Count;
         center.y = 0f;
 
-        // ── Ground ──────────────────────────────────────────────────────────
-        GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        ground.name = "RacingGround";
+        // ── Ground base level ────────────────────────────────────────────────
+        float minSegY = float.MaxValue;
+        foreach (var s in raceSegments)
+        {
+            if (s.StartY < minSegY) minSegY = s.StartY;
+            if (s.EndY   < minSegY) minSegY = s.EndY;
+        }
+        float groundY = (minSegY < float.MaxValue ? minSegY : 0f) - 1.5f;
+        racingGroundY = groundY;
+
+        // ── Terrain bumps (hills + mountains) ───────────────────────────────
+        terrainBumps.Clear();
+
+        // Track bounding radius — used to place mountains well outside the track
+        float trackBoundsRadius = 0f;
+        foreach (var s in raceSegments)
+        {
+            float d = Vector2.Distance(new Vector2(center.x, center.z), new Vector2(s.Center.x, s.Center.z));
+            if (d + s.Length * 0.5f > trackBoundsRadius) trackBoundsRadius = d + s.Length * 0.5f;
+        }
+
+        // Hills — moderate bumps anywhere in the world area
+        for (int i = 0; i < 18; i++)
+        {
+            terrainBumps.Add(new TerrainBump
+            {
+                Center = new Vector2(center.x + Random.Range(-320f, 320f),
+                                     center.z + Random.Range(-320f, 320f)),
+                Radius = Random.Range(22f, 48f),
+                Height = Random.Range(1.8f, 5.5f),
+            });
+        }
+
+        // Mountains — large, tall, placed far from track
+        int mountainsPlaced = 0;
+        for (int attempt = 0; attempt < 300 && mountainsPlaced < 7; attempt++)
+        {
+            float angle  = Random.Range(0f, Mathf.PI * 2f);
+            float dist   = trackBoundsRadius + Random.Range(90f, 230f);
+            Vector2 cand = new Vector2(center.x + Mathf.Cos(angle) * dist,
+                                       center.z + Mathf.Sin(angle) * dist);
+
+            // Reject if too close to any segment centre
+            bool tooClose = false;
+            foreach (var s in raceSegments)
+            {
+                float dx = cand.x - s.Center.x;
+                float dz = cand.y - s.Center.z;
+                if (dx * dx + dz * dz < 95f * 95f) { tooClose = true; break; }
+            }
+            if (tooClose) continue;
+
+            terrainBumps.Add(new TerrainBump
+            {
+                Center = cand,
+                Radius = Random.Range(65f, 125f),
+                Height = Random.Range(10f, 24f),
+            });
+            mountainsPlaced++;
+        }
+
+        // ── Procedural ground mesh ───────────────────────────────────────────
+        const int   GridN     = 88;      // 88×88 quads = 89² = 7921 verts (safely under 65535)
+        const float WorldSize = 900f;
+        float step    = WorldSize / GridN;
+        float originX = center.x - WorldSize * 0.5f;
+        float originZ = center.z - WorldSize * 0.5f;
+        Vector3 rootOfs = racingSceneRoot.transform.position; // parent offset for local coords
+
+        int vCount = (GridN + 1) * (GridN + 1);
+        int tCount = GridN * GridN * 6;
+        Vector3[] verts = new Vector3[vCount];
+        int[]     tris  = new int[tCount];
+
+        for (int j = 0; j <= GridN; j++)
+        {
+            for (int i = 0; i <= GridN; i++)
+            {
+                float wx = originX + i * step;
+                float wz = originZ + j * step;
+                float wy = groundY + SampleTerrainYMasked(wx, wz);
+                // Store in root-local space (root has no rotation/scale, only XZ translation)
+                verts[j * (GridN + 1) + i] = new Vector3(wx - rootOfs.x, wy, wz - rootOfs.z);
+            }
+        }
+
+        int t = 0;
+        for (int j = 0; j < GridN; j++)
+        {
+            for (int i = 0; i < GridN; i++)
+            {
+                int bl = j * (GridN + 1) + i;
+                int br = bl + 1;
+                int tl = bl + (GridN + 1);
+                int tr = tl + 1;
+                tris[t++] = bl; tris[t++] = tl; tris[t++] = br;
+                tris[t++] = br; tris[t++] = tl; tris[t++] = tr;
+            }
+        }
+
+        Mesh groundMesh = new Mesh();
+        groundMesh.name = "RacingGroundMesh";
+        groundMesh.vertices  = verts;
+        groundMesh.triangles = tris;
+        groundMesh.RecalculateNormals();
+        groundMesh.RecalculateBounds();
+
+        GameObject ground = new GameObject("RacingGround");
         ground.transform.SetParent(racingSceneRoot.transform, false);
-        ground.transform.position  = new Vector3(center.x, -0.06f, center.z);
-        ground.transform.localScale = new Vector3(900f, 0.12f, 900f);
-        ApplyColor(ground, new Color(0.62f, 0.74f, 0.46f));
-        ConfigureShadowVisual(ground);
+        ground.transform.localPosition = Vector3.zero;
+        MeshFilter   mf = ground.AddComponent<MeshFilter>();
+        MeshRenderer mr = ground.AddComponent<MeshRenderer>();
+        mf.sharedMesh = groundMesh;
+        Color groundColor = new Color(0.62f, 0.74f, 0.46f);
+        Shader urpLit = ShaderRefs.Lit;
+        Material groundMat = new Material(urpLit);
+        groundMat.color = groundColor;
+        if (groundMat.HasProperty("_BaseColor"))  groundMat.SetColor("_BaseColor", groundColor);
+        if (groundMat.HasProperty("_Smoothness")) groundMat.SetFloat("_Smoothness", 0.14f);
+        if (groundMat.HasProperty("_Metallic"))   groundMat.SetFloat("_Metallic", 0f);
+        mr.sharedMaterial = groundMat;
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        mr.receiveShadows = true;
 
         // ── Trees, bushes, flowers ──────────────────────────────────────────
         int placed = 0;
@@ -1759,7 +2273,7 @@ public partial class GameBootstrap : MonoBehaviour
         {
             float rx = center.x + Random.Range(-280f, 280f);
             float rz = center.z + Random.Range(-280f, 280f);
-            Vector3 pos = new Vector3(rx, 0f, rz);
+            Vector3 pos = new Vector3(rx, groundY + SampleTerrainY(rx, rz), rz);
 
             if (IsPositionOnRaceRoad(pos, 4.5f)) continue;
 
@@ -1818,6 +2332,7 @@ public partial class GameBootstrap : MonoBehaviour
             Vector3 fwd   = seg.Rotation * Vector3.forward;
             Vector3 right = seg.Rotation * Vector3.right;
             Vector3 segStart = seg.Center - fwd * seg.Length * 0.5f;
+            segStart.y = seg.StartY;
 
             Quaternion lanternRot = seg.Rotation;
             CreateRacingLantern(segStart + right * 3.2f,  lanternRot);
@@ -1827,7 +2342,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void CreateRacingLantern(Vector3 worldPos, Quaternion worldRot)
     {
-        worldPos.y = 0f;
+        // worldPos.y already set to road height by caller
 
         GameObject root = new("RaceLantern");
         root.transform.SetParent(racingSceneRoot.transform, false);

@@ -46,6 +46,7 @@ public partial class GameBootstrap
             return;
         }
 
+        EnsureFleetEventSystem(); // buttons require an EventSystem — create it eagerly
         Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         mainMenuHud = new MainMenuHudRefs();
 
