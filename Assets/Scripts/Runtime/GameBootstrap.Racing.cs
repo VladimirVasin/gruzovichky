@@ -95,6 +95,9 @@ public partial class GameBootstrap : MonoBehaviour
     private Transform  racingPedalBrake;          // brake pedal root (tilts on S press)
     private Transform  racingGearShift;           // gear stick root (forward/reverse tilt)
     private bool       racingIsReversing;         // true when truck moving backward
+    private int        racingCurrentGear;         // 0=R, 1–4=forward gears (auto)
+    private float      racingGearChangeTimer;     // cooldown between gear changes (s)
+    private Text       racingGearText;            // HUD gear indicator
 
     private GameObject joinRaceButtonRoot;  // the "JOIN THE RACE" button canvas
     private Button joinRaceButton;
@@ -118,6 +121,15 @@ public partial class GameBootstrap : MonoBehaviour
     private const float RacingAngularDrag   = 0.88f;  // high = angular velocity persists (inertial steering)
     private const float RacingSteerForce    = 300f;   // max turn force (balanced with new angular drag)
     private const float RacingLateralFriction = 28f;  // lower = more drift/slide
+
+    // ── Gear shift ──────────────────────────────────────────────────────────
+    // Lever X-rotation per gear: 0=R, 1=1st, 2=2nd, 3=3rd, 4=4th
+    private static readonly float[] GearShiftAngles  = { -28f, -14f, 0f, 14f, 28f };
+    // Upshift when speed (km/h) exceeds this (index = current gear)
+    private static readonly float[] GearUpKmh        = { 0f, 14f, 27f, 41f, float.MaxValue };
+    // Downshift when speed (km/h) falls below this (index = current gear)
+    private static readonly float[] GearDownKmh      = { 0f, 0f, 11f, 23f, 37f };
+    private const float GearChangeCooldown = 0.5f;    // min seconds between shifts
     private const int   RaceSegmentCount    = 18;
     private const float RaceTrackOffsetX    = 2000f;   // remote position, away from main world
     private const float RaceFinishRadius    = 2.8f;
@@ -228,9 +240,11 @@ public partial class GameBootstrap : MonoBehaviour
         racingTruckPos   = raceSegments[0].Center - raceSegments[0].Rotation * Vector3.forward * raceSegments[0].Length * 0.45f;
         racingTruckPos.y = 0.35f;
         racingTruckAngle = raceSegments[0].Rotation.eulerAngles.y;
-        racingVelocity   = Vector2.zero;
-        racingAngularVel = 0f;
-        racingSteerInput = 0f;
+        racingVelocity      = Vector2.zero;
+        racingAngularVel    = 0f;
+        racingSteerInput    = 0f;
+        racingCurrentGear   = 1;
+        racingGearChangeTimer = 0f;
         racingCameraAngle = racingTruckAngle;
         racingCameraSwayX = 0f;
         racingBodyAngle   = racingTruckAngle;
@@ -437,6 +451,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateSteeringWheel(dt);
         UpdatePedals(dt, 1f, false);
         racingIsReversing = false;
+        racingCurrentGear = 4; // cinematic — full speed, show top gear
         UpdateGearShift(dt);
 
         // Done — clean up
@@ -472,6 +487,9 @@ public partial class GameBootstrap : MonoBehaviour
         racingPedalBrake         = null;
         racingGearShift          = null;
         racingIsReversing        = false;
+        racingCurrentGear        = 0;
+        racingGearChangeTimer    = 0f;
+        racingGearText           = null;
 
         // Destroy racing scene
         if (racingCamera != null) { Object.Destroy(racingCamera.gameObject); racingCamera = null; }
@@ -701,6 +719,8 @@ public partial class GameBootstrap : MonoBehaviour
         // ── HUD update ────────────────────────────────────
         float kmh = speed * 3.6f;
 
+        UpdateAutoGear(fwdDot, kmh, dt);
+
         if (racingHudText != null)
         {
             racingHudText.text =
@@ -720,6 +740,14 @@ public partial class GameBootstrap : MonoBehaviour
 
         if (racingSpeedometerText != null)
             racingSpeedometerText.text = $"{kmh:F0}";
+
+        if (racingGearText != null)
+        {
+            racingGearText.text  = racingCurrentGear == 0 ? "R" : racingCurrentGear.ToString();
+            racingGearText.color = racingCurrentGear == 0
+                ? new Color(1f, 0.3f, 0.2f)
+                : new Color(0.95f, 0.90f, 0.84f);
+        }
 
         // Headlights — always on, brighter at night
         if (racingHeadlightL != null && racingHeadlightR != null)
@@ -1413,18 +1441,56 @@ public partial class GameBootstrap : MonoBehaviour
         fwdDot.transform.localScale    = new Vector3(0.022f, 0.022f, 0.008f);
         NoShadow(fwdDot);
         ApplyColor(fwdDot, new Color(1f, 0.88f, 0.08f)); // yellow = forward
-
-        racingIsReversing = false;
     }
 
     private void UpdateGearShift(float dt)
     {
         if (racingGearShift == null) return;
-        // Forward = stick leans forward (+22°), Reverse = leans back toward driver (-22°)
-        float target = racingIsReversing ? -22f : 22f;
+        float target = GearShiftAngles[Mathf.Clamp(racingCurrentGear, 0, 4)];
         float cur = racingGearShift.localEulerAngles.x;
         if (cur > 180f) cur -= 360f;
         racingGearShift.localRotation = Quaternion.Euler(Mathf.Lerp(cur, target, 6f * dt), 0f, 0f);
+    }
+
+    private void UpdateAutoGear(float fwdDot, float kmh, float dt)
+    {
+        racingGearChangeTimer -= dt;
+
+        // Reversing — triggered by actual velocity direction
+        if (fwdDot < -0.2f)
+        {
+            if (racingCurrentGear != 0)
+            {
+                racingCurrentGear = 0;
+                racingGearChangeTimer = GearChangeCooldown;
+            }
+            return;
+        }
+
+        // Coming out of R — jump to 1st
+        if (racingCurrentGear == 0)
+        {
+            racingCurrentGear = 1;
+            racingGearChangeTimer = GearChangeCooldown;
+            return;
+        }
+
+        if (racingGearChangeTimer > 0f) return;
+
+        // Upshift
+        if (racingCurrentGear < 4 && kmh > GearUpKmh[racingCurrentGear])
+        {
+            racingCurrentGear++;
+            racingGearChangeTimer = GearChangeCooldown;
+            return;
+        }
+
+        // Downshift
+        if (racingCurrentGear > 1 && kmh < GearDownKmh[racingCurrentGear])
+        {
+            racingCurrentGear--;
+            racingGearChangeTimer = GearChangeCooldown;
+        }
     }
 
     private void SetupRacingSkydome()
@@ -1648,6 +1714,21 @@ public partial class GameBootstrap : MonoBehaviour
         unit.color     = new Color(0.55f, 0.55f, 0.55f);
         unit.alignment = TextAnchor.MiddleCenter;
         unit.text      = "km/h";
+
+        // Gear indicator — sits above the speed readout in the center of the dial
+        racingGearText = new GameObject("GearReadout").AddComponent<Text>();
+        racingGearText.transform.SetParent(root, false);
+        racingGearText.rectTransform.anchorMin        = new Vector2(0f, 1f);
+        racingGearText.rectTransform.anchorMax        = new Vector2(1f, 1f);
+        racingGearText.rectTransform.pivot            = new Vector2(0.5f, 1f);
+        racingGearText.rectTransform.anchoredPosition = new Vector2(0f, -14f);
+        racingGearText.rectTransform.sizeDelta        = new Vector2(0f, 30f);
+        racingGearText.font      = font;
+        racingGearText.fontSize  = 22;
+        racingGearText.fontStyle = FontStyle.Bold;
+        racingGearText.color     = new Color(0.95f, 0.90f, 0.84f);
+        racingGearText.alignment = TextAnchor.MiddleCenter;
+        racingGearText.text      = "1";
     }
 
     // ── Racing world population ───────────────────────────────────────────────
