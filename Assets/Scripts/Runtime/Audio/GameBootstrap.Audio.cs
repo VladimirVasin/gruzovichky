@@ -53,7 +53,7 @@ public partial class GameBootstrap
                 truckAgent.TruckLoopAudioSource.Play();
             }
 
-            float targetVolume = truckIsActive ? (isTruckInteracting ? 0.28f : isTruckMoving ? 0.56f : 0.38f) : 0.18f;
+            float targetVolume = truckIsActive ? (isTruckInteracting ? 0.55f : isTruckMoving ? 1.0f : 0.72f) : 0.38f;
             float pitchBias = truckAgent.EngineAudioPitchBias;
             float volumeBias = truckAgent.EngineAudioVolumeBias;
             float wobbleSpeed = truckAgent.EngineAudioWobbleSpeed;
@@ -110,12 +110,12 @@ public partial class GameBootstrap
 
         if (nightWindAudioSource != null)
         {
-            nightWindAudioSource.volume = Mathf.Lerp(nightWindAudioSource.volume, 0.56f * nightBlend, 1.8f * Time.deltaTime);
+            nightWindAudioSource.volume = Mathf.Lerp(nightWindAudioSource.volume, 0.85f * nightBlend, 1.8f * Time.deltaTime);
         }
 
         if (nightCricketsAudioSource != null)
         {
-            nightCricketsAudioSource.volume = Mathf.Lerp(nightCricketsAudioSource.volume, 0.58f * nightBlend, 1.8f * Time.deltaTime);
+            nightCricketsAudioSource.volume = Mathf.Lerp(nightCricketsAudioSource.volume, 0.85f * nightBlend, 1.8f * Time.deltaTime);
         }
 
         if (gasStationAudioSource != null)
@@ -168,7 +168,7 @@ public partial class GameBootstrap
             return;
         }
 
-        truckFxAudioSource.PlayOneShot(clip, volumeScale * 1.62f);
+        truckFxAudioSource.PlayOneShot(clip, volumeScale * 2.4f);
     }
 
     private void PlayForestWorkerFx(AudioClip clip, Vector3 worldPosition, float volumeScale)
@@ -179,7 +179,7 @@ public partial class GameBootstrap
         }
 
         forestWorkerAudioSource.transform.position = worldPosition;
-        forestWorkerAudioSource.PlayOneShot(clip, volumeScale * 1.68f);
+        forestWorkerAudioSource.PlayOneShot(clip, volumeScale * 2.4f);
     }
 
     private void PlayAmbientFx(AudioClip clip, Vector3 worldPosition, float volumeScale)
@@ -190,7 +190,7 @@ public partial class GameBootstrap
         }
 
         ambienceFxAudioSource.transform.position = worldPosition;
-        ambienceFxAudioSource.PlayOneShot(clip, volumeScale * 1.38f);
+        ambienceFxAudioSource.PlayOneShot(clip, volumeScale * 2.4f);
     }
 
     private void UpdateDayNightAmbientOneShots(float dayBlend, float nightBlend)

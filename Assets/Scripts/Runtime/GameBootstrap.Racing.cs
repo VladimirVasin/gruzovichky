@@ -69,6 +69,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<Light> racingWorldLights = new();
 
     private AudioSource racingMusicSource;
+    private float       racingMusicFadeStart; // time when fadeout began (-1 = not fading)
 
     // ── Cinematic finish fields ──────────────────────────────────────────────
     private bool    racingFinishSequenceActive;
@@ -84,6 +85,16 @@ public partial class GameBootstrap : MonoBehaviour
     // ── Skybox ───────────────────────────────────────────────────────────────
     private GameObject racingSkydome;
     private Renderer   racingSkydomeRenderer;
+    private Light      racingDirectionalLight;
+    private float      racingSavedShadowDistance;
+
+    // ── Steering wheel + pedals (children of racing camera) ─────────────────────
+    private GameObject racingSteeringWheelRoot;   // the spinner — rotates around local Y
+    private float      racingSteeringWheelAngle;  // smoothed visual angle, degrees
+    private Transform  racingPedalGas;            // gas pedal root (tilts on W press)
+    private Transform  racingPedalBrake;          // brake pedal root (tilts on S press)
+    private Transform  racingGearShift;           // gear stick root (forward/reverse tilt)
+    private bool       racingIsReversing;         // true when truck moving backward
 
     private GameObject joinRaceButtonRoot;  // the "JOIN THE RACE" button canvas
     private Button joinRaceButton;
@@ -199,20 +210,21 @@ public partial class GameBootstrap : MonoBehaviour
         Time.timeScale = 0f;
         Time.fixedDeltaTime = 0f;
 
+        // Mute city music during race
+        if (cityMusicSource != null) cityMusicSource.Pause();
+
         // Hide join button
         if (joinRaceButtonRoot != null) joinRaceButtonRoot.SetActive(false);
 
         // Disable main camera
         if (mainCamera != null) mainCamera.enabled = false;
 
-        // Build scene
+        // Build scene geometry first
         GenerateRaceTrack();
         PopulateRacingWorld();
         CreateRacingTruck();
-        SetupRacingCamera();
-        SetupRacingHud();
 
-        // Place truck at start
+        // Set truck start position BEFORE camera setup so camera initialises at the right location
         racingTruckPos   = raceSegments[0].Center - raceSegments[0].Rotation * Vector3.forward * raceSegments[0].Length * 0.45f;
         racingTruckPos.y = 0.35f;
         racingTruckAngle = raceSegments[0].Rotation.eulerAngles.y;
@@ -224,11 +236,18 @@ public partial class GameBootstrap : MonoBehaviour
         racingBodyAngle   = racingTruckAngle;
         racingBodyRoll    = 0f;
 
+        SetupRacingCamera();
+        CreateSteeringWheel();
+        CreateRacingPedals();
+        CreateGearShift();
+        SetupRacingHud();
+
         // Start looping music
         AudioClip musicClip = Resources.Load<AudioClip>("Race1");
         if (musicClip != null)
         {
-            racingMusicSource = CreateAudioSource("RacingMusic", null, true, 0.72f, 0f, false);
+            racingMusicSource = CreateAudioSource("RacingMusic", null, true, 0.20f, 0f, false);
+            racingMusicFadeStart = -1f;
             racingMusicSource.ignoreListenerPause = true;
             racingMusicSource.ignoreListenerVolume = false;
             racingMusicSource.clip = musicClip;
@@ -288,11 +307,17 @@ public partial class GameBootstrap : MonoBehaviour
         // Hide normal HUD
         if (racingHudCanvas != null) racingHudCanvas.gameObject.SetActive(false);
 
+        // Victory sound — short upbeat chime built from two sine tones
+        PlayRacingVictorySound();
+
+        // Start music fadeout over 3 seconds
+        racingMusicFadeStart = Time.unscaledTime;
+
         // Create finish overlay canvas
         GameObject overlayObj = new("FinishOverlayCanvas", typeof(Canvas), typeof(CanvasScaler));
         Canvas ovCanvas = overlayObj.GetComponent<Canvas>();
         ovCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        ovCanvas.sortingOrder = 30;
+        ovCanvas.sortingOrder = 110;
 
         CanvasScaler ovScaler = overlayObj.GetComponent<CanvasScaler>();
         ovScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -400,6 +425,20 @@ public partial class GameBootstrap : MonoBehaviour
 
         UpdateRacingSkydome();
 
+        // Music fadeout over 3 seconds
+        if (racingMusicSource != null && racingMusicFadeStart >= 0f)
+        {
+            float elapsed = Time.unscaledTime - racingMusicFadeStart;
+            racingMusicSource.volume = Mathf.Lerp(0.20f, 0f, elapsed / 3f);
+        }
+
+        // Wheel returns to center during cinematic; gas stays floored
+        racingSteerInput = Mathf.MoveTowards(racingSteerInput, 0f, 2.5f * dt);
+        UpdateSteeringWheel(dt);
+        UpdatePedals(dt, 1f, false);
+        racingIsReversing = false;
+        UpdateGearShift(dt);
+
         // Done — clean up
         if (racingFinishSequenceTimer >= RacingFinishDuration)
         {
@@ -419,8 +458,20 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void CleanupRacingScene()
     {
-        // Destroy skydome
+        // Restore shadow distance
+        QualitySettings.shadowDistance = racingSavedShadowDistance;
+
+        // Destroy directional light + skydome
+        if (racingDirectionalLight != null) { Object.Destroy(racingDirectionalLight.gameObject); racingDirectionalLight = null; }
         if (racingSkydome != null) { Object.Destroy(racingSkydome); racingSkydome = null; racingSkydomeRenderer = null; }
+
+        // Steering wheel + pedals are children of camera — destroyed with it
+        racingSteeringWheelRoot  = null;
+        racingSteeringWheelAngle = 0f;
+        racingPedalGas           = null;
+        racingPedalBrake         = null;
+        racingGearShift          = null;
+        racingIsReversing        = false;
 
         // Destroy racing scene
         if (racingCamera != null) { Object.Destroy(racingCamera.gameObject); racingCamera = null; }
@@ -444,6 +495,9 @@ public partial class GameBootstrap : MonoBehaviour
         racingTreeObstacles.Clear();
         raceSegments.Clear();
         raceExtensionSegments.Clear();
+
+        // Resume city music
+        if (cityMusicSource != null) cityMusicSource.UnPause();
 
         // Restore main camera
         if (mainCamera != null) mainCamera.enabled = true;
@@ -517,6 +571,7 @@ public partial class GameBootstrap : MonoBehaviour
         // When reversing, invert steering so controls feel natural (left = go left)
         float fwdDot    = Vector2.Dot(racingVelocity, forward);
         float steerSign = fwdDot >= 0f ? 1f : -1f;
+        racingIsReversing = fwdDot < -0.2f;
 
         // Steering — uses ramped input, stronger max force
         float steerAmount = racingSteerInput * steerSign * RacingSteerForce * Mathf.Clamp01(speed / 3.5f) * dt;
@@ -666,16 +721,14 @@ public partial class GameBootstrap : MonoBehaviour
         if (racingSpeedometerText != null)
             racingSpeedometerText.text = $"{kmh:F0}";
 
-        // Headlights — same darkness threshold as regular truck
+        // Headlights — always on, brighter at night
         if (racingHeadlightL != null && racingHeadlightR != null)
         {
-            float darkness         = 1f - currentStylizedDaylight;
-            bool  headlightsOn     = darkness > 0.55f;
-            float headlightIntensity = headlightsOn
-                ? Mathf.Lerp(0.7f, 3.1f, Mathf.InverseLerp(0.55f, 1f, darkness))
-                : 0f;
-            racingHeadlightL.enabled   = headlightsOn;
-            racingHeadlightR.enabled   = headlightsOn;
+            float darkness = 1f - currentStylizedDaylight;
+            // Day: 1.2,  dusk/night ramps up to 4.5
+            float headlightIntensity = Mathf.Lerp(1.2f, 4.5f, Mathf.Clamp01(darkness * 2f));
+            racingHeadlightL.enabled   = true;
+            racingHeadlightR.enabled   = true;
             racingHeadlightL.intensity = headlightIntensity;
             racingHeadlightR.intensity = headlightIntensity;
         }
@@ -695,11 +748,55 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         UpdateRacingSkydome();
+        UpdateSteeringWheel(dt);
+        UpdatePedals(dt, throttle, sBrakeReverse);
+        UpdateGearShift(dt);
 
         if (crossedLine)
         {
             FinishRace(success: true);
         }
+    }
+
+    private void PlayRacingVictorySound()
+    {
+        // Procedural two-note victory chime: major third (C5 + E5), short attack/decay
+        const int sampleRate = 44100;
+        const float duration = 0.55f;
+        int samples = (int)(sampleRate * duration);
+
+        float[] data = new float[samples * 2]; // stereo
+        float[] freqs = { 523.25f, 659.25f, 783.99f }; // C5, E5, G5
+        for (int i = 0; i < samples; i++)
+        {
+            float t    = (float)i / sampleRate;
+            float env  = Mathf.Clamp01(t / 0.02f) * Mathf.Pow(1f - t / duration, 1.8f);
+            float note = Mathf.Sin(2f * Mathf.PI * freqs[0] * t) * 0.45f
+                       + Mathf.Sin(2f * Mathf.PI * freqs[1] * t) * 0.35f
+                       + Mathf.Sin(2f * Mathf.PI * freqs[2] * t) * 0.25f;
+            float sample = note * env;
+            data[i * 2]     = sample;
+            data[i * 2 + 1] = sample;
+        }
+
+        AudioClip chime = AudioClip.Create("VictoryChime", samples, 2, sampleRate, false);
+        chime.SetData(data, 0);
+
+        AudioSource src = CreateAudioSource("VictorySound", null, false, 0.75f, 0f, false);
+        src.ignoreListenerPause = true;
+        src.clip = chime;
+        src.Play();
+        Object.Destroy(src.gameObject, duration + 0.5f);
+    }
+
+    private void UpdateSteeringWheel(float dt)
+    {
+        if (racingSteeringWheelRoot == null) return;
+        // Wheel lies in local XZ plane — spin around local Y (the face normal)
+        // Positive steerInput = right turn = wheel top goes right = positive Y rotation
+        float wheelTarget = racingSteerInput * 180f;
+        racingSteeringWheelAngle = Mathf.Lerp(racingSteeringWheelAngle, wheelTarget, 8f * dt);
+        racingSteeringWheelRoot.transform.localRotation = Quaternion.Euler(0f, racingSteeringWheelAngle, 0f);
     }
 
     // ── Lantern collision ─────────────────────────────────────────────────────
@@ -976,15 +1073,33 @@ public partial class GameBootstrap : MonoBehaviour
         GameObject go = new("RacingHeadlight");
         go.transform.SetParent(parent, false);
         go.transform.localPosition = localPos;
-        go.transform.localRotation = Quaternion.Euler(10f, 0f, 0f);
+        go.transform.localRotation = Quaternion.Euler(5f, 0f, 0f);
+
+        // Visible lens — unlit bright white disc so it's always visible as a glowing element
+        GameObject lens = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        Object.Destroy(lens.GetComponent<Collider>());
+        lens.name = "HeadlightLens";
+        lens.transform.SetParent(go.transform, false);
+        lens.transform.localPosition = Vector3.zero;
+        lens.transform.localRotation = Quaternion.Euler(90f, 0f, 0f); // face forward
+        lens.transform.localScale    = new Vector3(0.10f, 0.015f, 0.10f);
+        Renderer lensR = lens.GetComponent<Renderer>();
+        Shader unlitShader = Shader.Find("Unlit/Color");
+        Material lensMat = new Material(unlitShader != null ? unlitShader : Shader.Find("Standard"));
+        lensMat.color = new Color(1f, 0.97f, 0.85f);
+        lensR.material = lensMat;
+        lensR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+
+        // Actual spot light
         Light l = go.AddComponent<Light>();
         l.type      = LightType.Spot;
-        l.spotAngle = 68f;
-        l.range     = 28f;
+        l.spotAngle = 55f;
+        l.innerSpotAngle = 22f;
+        l.range     = 32f;
         l.color     = new Color(1f, 0.96f, 0.82f);
-        l.intensity = 0f;
-        l.shadows   = LightShadows.None;
-        l.enabled   = false;
+        l.intensity = 1.2f;
+        l.shadows   = LightShadows.Soft;
+        l.enabled   = true;
         return l;
     }
 
@@ -1022,7 +1137,294 @@ public partial class GameBootstrap : MonoBehaviour
         racingCamera.transform.position = racingTruckPos + Vector3.up * 1.4f + initRot * Vector3.back * 2.8f;
         racingCamera.transform.rotation = initRot;
 
+        // Directional light — provides ambient shadows for the whole race scene
+        GameObject dirObj = new("RacingDirectionalLight");
+        dirObj.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
+        racingDirectionalLight = dirObj.AddComponent<Light>();
+        racingDirectionalLight.type      = LightType.Directional;
+        racingDirectionalLight.intensity = 1.0f;
+        racingDirectionalLight.color     = new Color(1f, 0.95f, 0.82f);
+        racingDirectionalLight.shadows   = LightShadows.Soft;
+
+        // Expand shadow distance so the whole visible road receives shadows
+        racingSavedShadowDistance          = QualitySettings.shadowDistance;
+        QualitySettings.shadowDistance     = 120f;
+
         SetupRacingSkydome();
+    }
+
+    private static void NoShadow(GameObject go)
+    {
+        if (go.TryGetComponent(out Renderer r))
+        {
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows    = false;
+        }
+    }
+
+    // ── 3D Steering wheel — child of racing camera ───────────────────────────
+    //
+    // The wheel is parented directly to racingCamera so it stays fixed
+    // in screen space (bottom-centre) like a dashboard prop.
+    // It lies flat in the camera's local XZ plane, spinning around local Y.
+
+    private void CreateSteeringWheel()
+    {
+        if (racingCamera == null) return;
+
+        // Anchor: child of camera — lower and more tilted forward so it's below the truck visual
+        // X-tilt of -55° means the wheel face tilts toward the player (dashboard angle)
+        GameObject anchor = new("SteeringWheelAnchor");
+        anchor.transform.SetParent(racingCamera.transform, false);
+        anchor.transform.localPosition = new Vector3(0f, -0.80f, 1.1f); // lower, slightly closer
+        anchor.transform.localRotation = Quaternion.Euler(-55f, 0f, 0f); // steep forward tilt
+
+        // Dedicated backlight so the wheel is always visible regardless of scene lighting
+        GameObject lightObj = new("WheelBacklight");
+        lightObj.transform.SetParent(anchor.transform, false);
+        lightObj.transform.localPosition = new Vector3(0f, 0.6f, 0f); // above the wheel face
+        Light wl = lightObj.AddComponent<Light>();
+        wl.type      = LightType.Point;
+        wl.intensity = 2.2f;
+        wl.range     = 1.4f;
+        wl.color     = new Color(1f, 0.92f, 0.78f); // warm dashboard glow
+
+        // Spinner: child of anchor — this is what rotates each frame
+        racingSteeringWheelRoot = new("SteeringWheelRoot");
+        racingSteeringWheelRoot.transform.SetParent(anchor.transform, false);
+        racingSteeringWheelRoot.transform.localPosition = Vector3.zero;
+        racingSteeringWheelRoot.transform.localRotation = Quaternion.identity;
+
+        Color hubColor   = new Color(0.30f, 0.28f, 0.32f);
+        Color spokeColor = new Color(0.25f, 0.23f, 0.26f);
+        Color rimColor   = new Color(0.22f, 0.20f, 0.24f);
+        Transform root   = racingSteeringWheelRoot.transform;
+        float rimRadius  = 0.30f;
+
+        // Yellow dot at top of rim — moves WITH the wheel, shows rotation amount
+        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.Destroy(marker.GetComponent<Collider>());
+        marker.name = "WheelCenterMarker";
+        marker.transform.SetParent(root, false);
+        marker.transform.localPosition = new Vector3(0f, 0.022f, rimRadius);
+        marker.transform.localRotation = Quaternion.identity;
+        marker.transform.localScale    = new Vector3(0.042f, 0.022f, 0.028f);
+        NoShadow(marker);
+        ApplyColor(marker, new Color(1f, 0.88f, 0.08f));
+
+        // Hub — flat cylinder, lies in XZ plane (Y is the face normal)
+        GameObject hub = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        Object.Destroy(hub.GetComponent<Collider>());
+        hub.name = "WheelHub";
+        hub.transform.SetParent(root, false);
+        hub.transform.localPosition = Vector3.zero;
+        hub.transform.localScale    = new Vector3(0.10f, 0.012f, 0.10f);
+        NoShadow(hub);
+        ApplyColor(hub, hubColor);
+
+        // 3 spokes — radiate from hub edge outward to rim, 120° apart
+        // Each spoke's LOCAL position must be computed along its own direction,
+        // otherwise all three shift to the same offset in parent space.
+        float spokeLen    = rimRadius - 0.06f;        // 0.24 units long
+        float spokeCentre = 0.06f + spokeLen * 0.5f; // 0.18: midpoint along spoke axis
+        for (int i = 0; i < 3; i++)
+        {
+            float rad = i * 120f * Mathf.Deg2Rad;
+            // Centre of this spoke in root-local XZ space
+            float sx = Mathf.Sin(rad) * spokeCentre;
+            float sz = Mathf.Cos(rad) * spokeCentre;
+
+            GameObject spoke = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.Destroy(spoke.GetComponent<Collider>());
+            spoke.name = $"Spoke{i}";
+            spoke.transform.SetParent(root, false);
+            spoke.transform.localPosition = new Vector3(sx, 0f, sz);
+            spoke.transform.localRotation = Quaternion.Euler(0f, i * 120f, 0f);
+            spoke.transform.localScale    = new Vector3(0.040f, 0.014f, spokeLen);
+            NoShadow(spoke);
+            ApplyColor(spoke, spokeColor);
+        }
+
+        // Outer rim — 8 flat bars forming a connected octagon
+        // Each bar is placed at the midpoint of its chord and rotated +90° so its
+        // long axis (local Z) is tangential to the circle, not radial.
+        int   rimCount  = 8;
+        // chord length between adjacent vertices: 2r·sin(π/n), +6% overlap for clean joins
+        float chordLen  = 2f * rimRadius * Mathf.Sin(Mathf.PI / rimCount) * 1.06f;
+        for (int i = 0; i < rimCount; i++)
+        {
+            float midA = (i + 0.5f) / rimCount * Mathf.PI * 2f; // angle at mid-chord
+            float mx   = Mathf.Sin(midA) * rimRadius;
+            float mz   = Mathf.Cos(midA) * rimRadius;
+
+            GameObject seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.Destroy(seg.GetComponent<Collider>());
+            seg.name = $"Rim{i}";
+            seg.transform.SetParent(root, false);
+            seg.transform.localPosition = new Vector3(mx, 0f, mz);
+            // +90° makes local Z tangential (along the rim edge) instead of radial
+            seg.transform.localRotation = Quaternion.Euler(0f, midA * Mathf.Rad2Deg + 90f, 0f);
+            seg.transform.localScale    = new Vector3(0.055f, 0.018f, chordLen);
+            NoShadow(seg);
+            ApplyColor(seg, rimColor);
+        }
+
+        racingSteeringWheelAngle = 0f;
+    }
+
+    // ── Pedals ────────────────────────────────────────────────────────────────
+
+    private void CreateRacingPedals()
+    {
+        if (racingCamera == null) return;
+
+        // Anchor: left of the steering wheel, raised so it stays inside camera frustum
+        // Rule: |y/z| < tan(FOV/2=32.5°)=0.637  →  y must be > -0.637*z
+        // With z=1.0: y must be > -0.637, so -0.55 is safe
+        GameObject anchor = new("PedalAnchor");
+        anchor.transform.SetParent(racingCamera.transform, false);
+        anchor.transform.localPosition = new Vector3(-0.54f, -0.55f, 1.0f);
+        anchor.transform.localRotation = Quaternion.Euler(-55f, 5f, 0f); // same tilt as steering wheel
+
+        // Shared backlight
+        GameObject lightObj = new("PedalLight");
+        lightObj.transform.SetParent(anchor.transform, false);
+        lightObj.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+        Light pl = lightObj.AddComponent<Light>();
+        pl.type      = LightType.Point;
+        pl.intensity = 1.8f;
+        pl.range     = 1.2f;
+        pl.color     = new Color(1f, 0.92f, 0.78f);
+
+        // Brake (left) — red tint
+        racingPedalBrake = CreateSinglePedal("BrakePedal", anchor.transform,
+            new Vector3(-0.13f, 0f, 0f), new Color(0.55f, 0.12f, 0.12f));
+
+        // Gas (right) — green tint
+        racingPedalGas = CreateSinglePedal("GasPedal", anchor.transform,
+            new Vector3(0.13f, 0f, 0f), new Color(0.14f, 0.44f, 0.14f));
+    }
+
+    private Transform CreateSinglePedal(string pedName, Transform parent, Vector3 offset, Color surfaceColor)
+    {
+        Color stemColor = new Color(0.18f, 0.18f, 0.20f);
+
+        GameObject root = new(pedName);
+        root.transform.SetParent(parent, false);
+        root.transform.localPosition = offset;
+        root.transform.localRotation = Quaternion.identity;
+
+        // Stem — thin vertical post
+        GameObject stem = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.Destroy(stem.GetComponent<Collider>());
+        stem.name = "Stem";
+        stem.transform.SetParent(root.transform, false);
+        stem.transform.localPosition = new Vector3(0f, -0.08f, -0.02f);
+        stem.transform.localScale    = new Vector3(0.032f, 0.14f, 0.032f);
+        NoShadow(stem);
+        ApplyColor(stem, stemColor);
+
+        // Surface — flat pedal plate
+        GameObject surface = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.Destroy(surface.GetComponent<Collider>());
+        surface.name = "Surface";
+        surface.transform.SetParent(root.transform, false);
+        surface.transform.localPosition = new Vector3(0f, 0f, 0f);
+        surface.transform.localScale    = new Vector3(0.11f, 0.018f, 0.15f);
+        NoShadow(surface);
+        ApplyColor(surface, surfaceColor);
+
+        return root.transform;
+    }
+
+    private void UpdatePedals(float dt, float throttle, bool braking)
+    {
+        UpdateSinglePedal(racingPedalGas,   dt, throttle > 0.05f);
+        UpdateSinglePedal(racingPedalBrake, dt, braking);
+    }
+
+    private void UpdateSinglePedal(Transform pedal, float dt, bool pressed)
+    {
+        if (pedal == null) return;
+        float target = pressed ? 18f : 0f;
+        float cur = pedal.localEulerAngles.x;
+        if (cur > 180f) cur -= 360f;
+        pedal.localRotation = Quaternion.Euler(Mathf.Lerp(cur, target, 14f * dt), 0f, 0f);
+    }
+
+    // ── Gear shift ────────────────────────────────────────────────────────────
+
+    private void CreateGearShift()
+    {
+        if (racingCamera == null) return;
+
+        // Mirror of pedal anchor — right side of steering wheel
+        GameObject anchor = new("GearShiftAnchor");
+        anchor.transform.SetParent(racingCamera.transform, false);
+        anchor.transform.localPosition = new Vector3(0.54f, -0.55f, 1.0f);
+        anchor.transform.localRotation = Quaternion.Euler(-55f, -5f, 0f);
+
+        // Backlight
+        GameObject lightObj = new("GearLight");
+        lightObj.transform.SetParent(anchor.transform, false);
+        lightObj.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+        Light gl = lightObj.AddComponent<Light>();
+        gl.type      = LightType.Point;
+        gl.intensity = 1.8f;
+        gl.range     = 1.0f;
+        gl.color     = new Color(1f, 0.92f, 0.78f);
+
+        // Gear shift root — this tilts forward/backward
+        racingGearShift = new GameObject("GearShiftRoot").transform;
+        racingGearShift.SetParent(anchor.transform, false);
+        racingGearShift.localPosition = Vector3.zero;
+        racingGearShift.localRotation = Quaternion.identity;
+
+        Color stickColor = new Color(0.20f, 0.20f, 0.22f);
+        Color knobColor  = new Color(0.28f, 0.26f, 0.30f);
+
+        // Stick — thin vertical rod
+        GameObject stick = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.Destroy(stick.GetComponent<Collider>());
+        stick.name = "Stick";
+        stick.transform.SetParent(racingGearShift, false);
+        stick.transform.localPosition = new Vector3(0f, 0.05f, 0f);
+        stick.transform.localScale    = new Vector3(0.032f, 0.22f, 0.032f);
+        NoShadow(stick);
+        ApplyColor(stick, stickColor);
+
+        // Knob — sphere-ish cube on top
+        GameObject knob = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        Object.Destroy(knob.GetComponent<Collider>());
+        knob.name = "Knob";
+        knob.transform.SetParent(racingGearShift, false);
+        knob.transform.localPosition = new Vector3(0f, 0.17f, 0f);
+        knob.transform.localScale    = new Vector3(0.07f, 0.07f, 0.07f);
+        NoShadow(knob);
+        ApplyColor(knob, knobColor);
+
+        // Gear label on knob — tiny flat cubes for "D" and "R" indicator
+        // Forward indicator: small yellow stripe on front of knob
+        GameObject fwdDot = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        Object.Destroy(fwdDot.GetComponent<Collider>());
+        fwdDot.name = "GearForwardDot";
+        fwdDot.transform.SetParent(racingGearShift, false);
+        fwdDot.transform.localPosition = new Vector3(0f, 0.17f, 0.04f);
+        fwdDot.transform.localScale    = new Vector3(0.022f, 0.022f, 0.008f);
+        NoShadow(fwdDot);
+        ApplyColor(fwdDot, new Color(1f, 0.88f, 0.08f)); // yellow = forward
+
+        racingIsReversing = false;
+    }
+
+    private void UpdateGearShift(float dt)
+    {
+        if (racingGearShift == null) return;
+        // Forward = stick leans forward (+22°), Reverse = leans back toward driver (-22°)
+        float target = racingIsReversing ? -22f : 22f;
+        float cur = racingGearShift.localEulerAngles.x;
+        if (cur > 180f) cur -= 360f;
+        racingGearShift.localRotation = Quaternion.Euler(Mathf.Lerp(cur, target, 6f * dt), 0f, 0f);
     }
 
     private void SetupRacingSkydome()
@@ -1073,6 +1475,14 @@ public partial class GameBootstrap : MonoBehaviour
         // Also tint camera background to match (visible if dome ever has gaps)
         if (racingCamera != null)
             racingCamera.backgroundColor = skyColor;
+
+        // Directional light intensity follows daylight: night ~0.1, day ~1.1
+        if (racingDirectionalLight != null)
+        {
+            racingDirectionalLight.intensity = Mathf.Lerp(0.10f, 1.10f, dl);
+            // Shift color from cool night to warm day
+            racingDirectionalLight.color = skyColor * 1.1f;
+        }
     }
 
     // ── Racing HUD ───────────────────────────────────────────────────────────
@@ -1084,7 +1494,7 @@ public partial class GameBootstrap : MonoBehaviour
         GameObject canvasObj = new("RacingHudCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         Canvas canvas = canvasObj.GetComponent<Canvas>();
         canvas.renderMode    = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder  = 20;
+        canvas.sortingOrder  = 100;
 
         CanvasScaler scaler = canvasObj.GetComponent<CanvasScaler>();
         scaler.uiScaleMode       = CanvasScaler.ScaleMode.ScaleWithScreenSize;

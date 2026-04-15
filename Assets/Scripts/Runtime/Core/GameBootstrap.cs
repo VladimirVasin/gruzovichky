@@ -160,6 +160,8 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioSource ambienceFxAudioSource;
     private AudioSource townAudioSource;
     private AudioSource truckLoopAudioSource;
+    private AudioSource cityMusicSource;      // looping main theme for city mode
+    private AudioSource mainMenuMusicSource;  // looping music for main menu / pause screen
     private AudioSource truckFxAudioSource;
     private AudioSource riverAmbientAudioSource;
     private Material groundSurfaceMaterial;
@@ -997,6 +999,7 @@ public partial class GameBootstrap : MonoBehaviour
         SessionDebugLogger.Log("BOOT", "Initializing runtime bootstrap.");
         BuildPrototypeScene();
         SessionDebugLogger.Log("BOOT", $"Scene bootstrap complete. Locations={locations.Count}, Roads={roadCells.Count}, Trucks={truckAgents.Count}.");
+        StartMainMenuMusic();
     }
 
     private void OnApplicationQuit()

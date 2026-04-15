@@ -179,6 +179,37 @@ public partial class GameBootstrap
         UpdateMainMenuButtonFx(mainMenuHud.ExitButtonFx);
     }
 
+    private void StartCityMusic()
+    {
+        if (cityMusicSource != null)
+        {
+            if (!cityMusicSource.isPlaying) cityMusicSource.UnPause();
+            return;
+        }
+        AudioClip clip = Resources.Load<AudioClip>("City1");
+        if (clip == null) return;
+        cityMusicSource = CreateAudioSource("CityMusic", null, true, 0.20f, 0f, false);
+        cityMusicSource.clip = clip;
+        cityMusicSource.Play();
+    }
+
+    private void StartMainMenuMusic()
+    {
+        if (mainMenuMusicSource == null)
+        {
+            AudioClip clip = Resources.Load<AudioClip>("MainMenu1");
+            if (clip == null) return;
+            mainMenuMusicSource = CreateAudioSource("MainMenuMusic", null, true, 0.20f, 0f, false);
+            mainMenuMusicSource.ignoreListenerPause = true;
+            mainMenuMusicSource.clip = clip;
+            mainMenuMusicSource.Play();
+        }
+        else if (!mainMenuMusicSource.isPlaying)
+        {
+            mainMenuMusicSource.UnPause();
+        }
+    }
+
     private void StartGameFromMainMenu()
     {
         LogUiInput("Main Menu: clicked New Game");
@@ -189,6 +220,8 @@ public partial class GameBootstrap
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;
         AudioListener.pause = false;
+        mainMenuMusicSource?.Pause();
+        StartCityMusic();
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.9f);
     }
@@ -201,6 +234,8 @@ public partial class GameBootstrap
         Time.timeScale = gameSpeedMultiplier;
         Time.fixedDeltaTime = 0.02f * Time.timeScale;
         AudioListener.pause = false;
+        mainMenuMusicSource?.Pause();
+        StartCityMusic();
         UpdateMainMenuHud();
         PlayUiSound(uiPanelCloseClip, 0.85f);
     }
@@ -213,6 +248,8 @@ public partial class GameBootstrap
         Time.timeScale = 0f;
         Time.fixedDeltaTime = 0f;
         AudioListener.pause = true;
+        cityMusicSource?.Pause();
+        StartMainMenuMusic();
         isMainMenuOpen = true;
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.8f);
