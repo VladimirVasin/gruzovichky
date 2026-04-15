@@ -14,6 +14,19 @@ public partial class GameBootstrap : MonoBehaviour
         public float Length;
     }
 
+    // Shared struct for any tippable road obstacle (lanterns, trees)
+    private struct RaceObstacleData
+    {
+        public Vector2    PoleXZ;           // world XZ of collision centre
+        public Transform  Root;
+        public Quaternion OriginalLocalRot;
+        public float      CollisionRadius;  // pole/trunk radius in world units
+        public float      TiltAngle;        // current degrees
+        public float      TiltTarget;
+        public Vector3    TiltAxisLocal;    // in root local space, set on first hit
+        public bool       IsTipped;
+    }
+
     private Camera racingCamera;
     private GameObject racingSceneRoot;
     private GameObject racingTruckVisual;
@@ -28,8 +41,24 @@ public partial class GameBootstrap : MonoBehaviour
     private float racingAngularVel;   // degrees/s
     private float racingSteerInput;   // -1..1, ramps up/down like a steering wheel
 
-    private readonly List<RaceSegment> raceSegments = new();
+    private float racingCameraAngle;  // lagging camera yaw — trails truck angle for inertial feel
+    private float racingCameraSwayX;  // smoothed lateral offset (camera sways out of corner)
+
+    private float racingBodyAngle;    // visual body/rear lag — trails physics angle for FWD articulation
+    private Transform racingFrontAssembly; // front wheels + cabin assembly, rotated ahead of body
+    private Transform racingBodyGroup;     // cargo cube — receives Z body roll
+    private Transform racingCabinGroup;    // cabin cube inside FrontAssembly — receives same Z roll
+    private float     racingBodyRoll;      // smoothed lean angle, degrees
+
+    private const float RacingRollMax    = 6f;   // peak lean in degrees
+    private const float RacingRollSmooth = 4.0f; // Lerp rate
+
+    private readonly List<RaceSegment>      raceSegments          = new();
+    private readonly List<RaceSegment>      raceExtensionSegments = new();
+    private readonly List<RaceObstacleData> racingLanterns        = new();
+    private readonly List<RaceObstacleData> racingTreeObstacles   = new();
     private Vector3 raceFinishPos;
+    private Vector3 raceFinishFwd;  // road forward direction at finish — used for strip detection
 
     private Canvas racingHudCanvas;
     private Text racingHudText;
@@ -41,18 +70,43 @@ public partial class GameBootstrap : MonoBehaviour
 
     private AudioSource racingMusicSource;
 
+    // ── Cinematic finish fields ──────────────────────────────────────────────
+    private bool    racingFinishSequenceActive;
+    private float   racingFinishSequenceTimer;
+    private Vector3 racingFinishCameraPos;
+    private Quaternion racingFinishCameraRot;
+    private Vector2 racingFinishDriveDir;    // XZ forward of truck at finish moment
+    private float   racingFinishEntrySpeed;  // truck speed at the moment of crossing finish
+    private Canvas  racingFinishOverlayCanvas;
+    private Text    racingFinishOverlayText;
+    private const float RacingFinishDuration = 3.2f;
+
+    // ── Skybox ───────────────────────────────────────────────────────────────
+    private GameObject racingSkydome;
+    private Renderer   racingSkydomeRenderer;
+
     private GameObject joinRaceButtonRoot;  // the "JOIN THE RACE" button canvas
     private Button joinRaceButton;
     private Text joinRaceButtonText;
 
     // ── Constants ────────────────────────────────────────────────────────────
 
-    private const float RacingAcceleration  = 12f;    // raw power, torque curve limits top end
-    private const float RacingMaxSpeed      = 11.5f;  // ~41 km/h — torque → 0 at this speed
+    // ── Lantern collision ────────────────────────────────────────────────────
+    private const float LanternPoleRadius      = 0.12f; // world units (pole local 0.08 × scale 3 × 0.5)
+    private const float TruckCollisionRadius   = 0.60f; // world units — truck XZ footprint
+    private const float LanternCombinedRadius  = LanternPoleRadius + TruckCollisionRadius; // 0.72
+    private const float LanternTiltTargetDeg   = 44f;   // how far lantern tips when hit
+    private const float LanternTiltSpeed       = 140f;  // deg/s (reaches 44° in ~0.3 s)
+    private const float CollisionEnergyLoss    = 0.42f; // fraction of normal velocity lost on hit
+    private const float CollisionAngularKick   = 55f;   // deg/s spin impulse on first contact
+
+    // ── Physics ──────────────────────────────────────────────────────────────
+    private const float RacingAcceleration  = 6f;     // raw power — halved for heavy truck feel
+    private const float RacingMaxSpeed      = 14.5f;  // ~52 km/h — higher ceiling, slow to reach
     private const float RacingDrag          = 0.997f; // very gentle coasting drag
-    private const float RacingAngularDrag   = 0.72f;   // lower = more drift tail
-    private const float RacingSteerForce    = 380f;    // max wheel-turn force
-    private const float RacingLateralFriction = 28f;   // lower = more drift/slide
+    private const float RacingAngularDrag   = 0.88f;  // high = angular velocity persists (inertial steering)
+    private const float RacingSteerForce    = 300f;   // max turn force (balanced with new angular drag)
+    private const float RacingLateralFriction = 28f;  // lower = more drift/slide
     private const int   RaceSegmentCount    = 18;
     private const float RaceTrackOffsetX    = 2000f;   // remote position, away from main world
     private const float RaceFinishRadius    = 2.8f;
@@ -165,6 +219,10 @@ public partial class GameBootstrap : MonoBehaviour
         racingVelocity   = Vector2.zero;
         racingAngularVel = 0f;
         racingSteerInput = 0f;
+        racingCameraAngle = racingTruckAngle;
+        racingCameraSwayX = 0f;
+        racingBodyAngle   = racingTruckAngle;
+        racingBodyRoll    = 0f;
 
         // Start looping music
         AudioClip musicClip = Resources.Load<AudioClip>("Race1");
@@ -183,25 +241,198 @@ public partial class GameBootstrap : MonoBehaviour
     private void FinishRace(bool success)
     {
         if (!isRacingActive) return;
-        isRacingActive = false;
 
-        if (success)
+        if (success && !racingFinishSequenceActive)
         {
+            // Begin cinematic — don't clean up yet
             racingBonusEarned = 50;
             SessionDebugLogger.Log("RACING", "Race completed! Bonus earned: $50.");
+            StartFinishSequence();
+            return;
         }
-        else
-        {
+
+        // Immediate cleanup (skip or already in sequence)
+        isRacingActive = false;
+        racingFinishSequenceActive = false;
+
+        if (!success)
             SessionDebugLogger.Log("RACING", "Race skipped.");
-        }
 
         // Stop music
         if (racingMusicSource != null) { Object.Destroy(racingMusicSource.gameObject); racingMusicSource = null; }
 
+        CleanupRacingScene();
+    }
+
+    private void StartFinishSequence()
+    {
+        racingFinishSequenceActive = true;
+        racingFinishSequenceTimer  = 0f;
+
+        // Freeze camera at current position/rotation
+        if (racingCamera != null)
+        {
+            racingFinishCameraPos = racingCamera.transform.position;
+            racingFinishCameraRot = racingCamera.transform.rotation;
+        }
+
+        // Remember truck's forward direction and entry speed
+        float rad = racingTruckAngle * Mathf.Deg2Rad;
+        racingFinishDriveDir  = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
+        racingFinishEntrySpeed = Mathf.Max(racingVelocity.magnitude, 5f);
+
+        // Align velocity cleanly along heading (no sideways drift)
+        racingVelocity   = racingFinishDriveDir * racingFinishEntrySpeed;
+        racingAngularVel = 0f;
+
+        // Hide normal HUD
+        if (racingHudCanvas != null) racingHudCanvas.gameObject.SetActive(false);
+
+        // Create finish overlay canvas
+        GameObject overlayObj = new("FinishOverlayCanvas", typeof(Canvas), typeof(CanvasScaler));
+        Canvas ovCanvas = overlayObj.GetComponent<Canvas>();
+        ovCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        ovCanvas.sortingOrder = 30;
+
+        CanvasScaler ovScaler = overlayObj.GetComponent<CanvasScaler>();
+        ovScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        ovScaler.referenceResolution = new Vector2(1600f, 900f);
+        ovScaler.matchWidthOrHeight   = 0.5f;
+
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+        // Dark translucent bar behind text
+        GameObject barObj = new("FinishBar");
+        barObj.transform.SetParent(overlayObj.transform, false);
+        RectTransform barRect = barObj.AddComponent<RectTransform>();
+        barRect.anchorMin        = new Vector2(0f, 0.55f);
+        barRect.anchorMax        = new Vector2(1f, 0.75f);
+        barRect.offsetMin        = Vector2.zero;
+        barRect.offsetMax        = Vector2.zero;
+        Image barImg = barObj.AddComponent<Image>();
+        barImg.color = new Color(0f, 0f, 0f, 0.55f);
+
+        // "Вы финишировали!" text
+        GameObject textObj = new("FinishText");
+        textObj.transform.SetParent(overlayObj.transform, false);
+        Text txt = textObj.AddComponent<Text>();
+        txt.font      = font;
+        txt.fontSize  = 52;
+        txt.fontStyle = FontStyle.Bold;
+        txt.alignment = TextAnchor.MiddleCenter;
+        txt.color     = new Color(1f, 0.92f, 0.2f, 1f);
+        txt.text      = "YOU FINISHED!";
+
+        RectTransform txtRect = txt.rectTransform;
+        txtRect.anchorMin        = new Vector2(0f, 0.55f);
+        txtRect.anchorMax        = new Vector2(1f, 0.75f);
+        txtRect.offsetMin        = Vector2.zero;
+        txtRect.offsetMax        = Vector2.zero;
+
+        // Sub-text: bonus info
+        GameObject subObj = new("FinishSubText");
+        subObj.transform.SetParent(overlayObj.transform, false);
+        Text sub = subObj.AddComponent<Text>();
+        sub.font      = font;
+        sub.fontSize  = 26;
+        sub.alignment = TextAnchor.MiddleCenter;
+        sub.color     = new Color(1f, 1f, 1f, 0.85f);
+        sub.text      = "+ $50 bonus on cargo delivery";
+
+        RectTransform subRect = sub.rectTransform;
+        subRect.anchorMin        = new Vector2(0f, 0.47f);
+        subRect.anchorMax        = new Vector2(1f, 0.58f);
+        subRect.offsetMin        = Vector2.zero;
+        subRect.offsetMax        = Vector2.zero;
+
+        racingFinishOverlayCanvas = ovCanvas;
+        racingFinishOverlayText   = txt;
+    }
+
+    private void UpdateFinishSequence()
+    {
+        float dt = Time.unscaledDeltaTime;
+        racingFinishSequenceTimer += dt;
+
+        float t = Mathf.Clamp01(racingFinishSequenceTimer / RacingFinishDuration);
+
+        // Truck floors it past the finish — accelerates into the horizon
+        float coastSpeed = Mathf.Lerp(racingFinishEntrySpeed, RacingMaxSpeed * 1.1f, t * t);
+        racingVelocity = racingFinishDriveDir * coastSpeed;
+
+        racingTruckPos.x += racingVelocity.x * dt;
+        racingTruckPos.z += racingVelocity.y * dt;
+
+        if (racingTruckVisual != null)
+        {
+            racingTruckVisual.transform.position = racingTruckPos;
+            // Spin wheels at coast speed
+            float wheelSpin = coastSpeed * dt * 180f;
+            if (racingTruckWheelFL != null) racingTruckWheelFL.Rotate(Vector3.up, wheelSpin, Space.Self);
+            if (racingTruckWheelFR != null) racingTruckWheelFR.Rotate(Vector3.up, wheelSpin, Space.Self);
+            if (racingTruckWheelRL != null) racingTruckWheelRL.Rotate(Vector3.up, wheelSpin, Space.Self);
+            if (racingTruckWheelRR != null) racingTruckWheelRR.Rotate(Vector3.up, wheelSpin, Space.Self);
+        }
+
+        // Camera frozen at finish position
+        if (racingCamera != null)
+        {
+            racingCamera.transform.position = racingFinishCameraPos;
+            racingCamera.transform.rotation = racingFinishCameraRot;
+        }
+
+        // Overlay: fade in first 0.12 of normalized duration, hold, fade out last 0.18
+        if (racingFinishOverlayCanvas != null)
+        {
+            float groupAlpha;
+            if (t < 0.12f)
+                groupAlpha = Mathf.InverseLerp(0f, 0.12f, t);
+            else if (t > 0.82f)
+                groupAlpha = Mathf.InverseLerp(1f, 0.82f, t);
+            else
+                groupAlpha = 1f;
+
+            // Use CanvasGroup alpha so individual graphic alphas are preserved
+            CanvasGroup cg = racingFinishOverlayCanvas.GetComponent<CanvasGroup>();
+            if (cg == null) cg = racingFinishOverlayCanvas.gameObject.AddComponent<CanvasGroup>();
+            cg.alpha = groupAlpha;
+        }
+
+        UpdateRacingSkydome();
+
+        // Done — clean up
+        if (racingFinishSequenceTimer >= RacingFinishDuration)
+        {
+            isRacingActive             = false;
+            racingFinishSequenceActive = false;
+
+            // Stop music
+            if (racingMusicSource != null) { Object.Destroy(racingMusicSource.gameObject); racingMusicSource = null; }
+
+            // Overlay
+            if (racingFinishOverlayCanvas != null)
+            { Object.Destroy(racingFinishOverlayCanvas.gameObject); racingFinishOverlayCanvas = null; racingFinishOverlayText = null; }
+
+            CleanupRacingScene();
+        }
+    }
+
+    private void CleanupRacingScene()
+    {
+        // Destroy skydome
+        if (racingSkydome != null) { Object.Destroy(racingSkydome); racingSkydome = null; racingSkydomeRenderer = null; }
+
         // Destroy racing scene
         if (racingCamera != null) { Object.Destroy(racingCamera.gameObject); racingCamera = null; }
         if (racingSceneRoot != null) { Object.Destroy(racingSceneRoot); racingSceneRoot = null; }
-        if (racingTruckVisual != null) { Object.Destroy(racingTruckVisual); racingTruckVisual = null; }
+        if (racingTruckVisual != null)
+        {
+            Object.Destroy(racingTruckVisual);
+            racingTruckVisual   = null;
+            racingFrontAssembly = null;
+            racingBodyGroup     = null;
+            racingCabinGroup    = null;
+        }
         if (racingHudCanvas != null) { Object.Destroy(racingHudCanvas.gameObject); racingHudCanvas = null; }
         racingHudText = null;
         racingSpeedometerNeedle = null;
@@ -209,7 +440,10 @@ public partial class GameBootstrap : MonoBehaviour
         racingHeadlightL = null;
         racingHeadlightR = null;
         racingWorldLights.Clear();
+        racingLanterns.Clear();
+        racingTreeObstacles.Clear();
         raceSegments.Clear();
+        raceExtensionSegments.Clear();
 
         // Restore main camera
         if (mainCamera != null) mainCamera.enabled = true;
@@ -231,24 +465,39 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void UpdateRacingMinigame()
     {
-        if (!isRacingActive) return;
+        if (!isRacingActive && !racingFinishSequenceActive) return;
+
+        // Cinematic finish sequence — runs after crossing finish line
+        if (racingFinishSequenceActive)
+        {
+            UpdateFinishSequence();
+            return;
+        }
+
         float dt = Time.unscaledDeltaTime;
 
         // ── Input ────────────────────────────────────────
         float throttle = 0f;
-        bool  braking  = false;
+        bool  sBrakeReverse = false;
         var kb = Keyboard.current;
         if (kb != null)
         {
             if (kb.wKey.isPressed || kb.upArrowKey.isPressed)   throttle += 1f;
-            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) braking   = true;
+            if (kb.sKey.isPressed || kb.downArrowKey.isPressed) sBrakeReverse = true;
 
-            // Steering wheel ramp — builds up to ±1 over ~0.35s, returns to 0 over ~0.2s
+            // Steering ramp — fast through first 30% of lock (near-centre response),
+            // then slow toward full lock; return to centre also quick through centre zone.
             bool steerLeft  = kb.aKey.isPressed || kb.leftArrowKey.isPressed;
             bool steerRight = kb.dKey.isPressed || kb.rightArrowKey.isPressed;
+            bool steering   = steerLeft || steerRight;
             float steerTarget = steerLeft ? -1f : steerRight ? 1f : 0f;
-            float steerSpeed  = (steerLeft || steerRight) ? 2.8f : 5.0f; // ramp in slower than ramp out
-            racingSteerInput  = Mathf.MoveTowards(racingSteerInput, steerTarget, steerSpeed * dt);
+            float absInput  = Mathf.Abs(racingSteerInput);
+            float steerSpeed;
+            if (steering)
+                steerSpeed = absInput < 0.3f ? 4.0f : 0.9f;   // quick near centre, slow to full lock
+            else
+                steerSpeed = absInput > 0.3f ? 1.2f : 3.5f;   // medium outer zone, quick snap to centre
+            racingSteerInput = Mathf.MoveTowards(racingSteerInput, steerTarget, steerSpeed * dt);
 
             if (kb.escapeKey.wasPressedThisFrame)
             {
@@ -260,17 +509,26 @@ public partial class GameBootstrap : MonoBehaviour
         // ── Physics ──────────────────────────────────────
         float speed = racingVelocity.magnitude;
 
+        // Forward direction (from previous frame angle — used for reverse steer check)
+        float rad = racingTruckAngle * Mathf.Deg2Rad;
+        Vector2 forward = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
+        Vector2 right   = new Vector2(Mathf.Cos(rad), -Mathf.Sin(rad));
+
+        // When reversing, invert steering so controls feel natural (left = go left)
+        float fwdDot    = Vector2.Dot(racingVelocity, forward);
+        float steerSign = fwdDot >= 0f ? 1f : -1f;
+
         // Steering — uses ramped input, stronger max force
-        float steerAmount = racingSteerInput * RacingSteerForce * Mathf.Clamp01(speed / 3.5f) * dt;
+        float steerAmount = racingSteerInput * steerSign * RacingSteerForce * Mathf.Clamp01(speed / 3.5f) * dt;
         racingAngularVel += steerAmount;
         racingAngularVel *= Mathf.Pow(RacingAngularDrag, dt * 60f);
 
         racingTruckAngle += racingAngularVel * dt;
 
-        // Forward direction in XZ world
-        float rad = racingTruckAngle * Mathf.Deg2Rad;
-        Vector2 forward = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
-        Vector2 right   = new Vector2(Mathf.Cos(rad), -Mathf.Sin(rad));
+        // Recompute forward/right after angle update
+        rad     = racingTruckAngle * Mathf.Deg2Rad;
+        forward = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
+        right   = new Vector2(Mathf.Cos(rad), -Mathf.Sin(rad));
 
         // Acceleration with torque curve — full power at low speed, tapers to 0 at max
         float torque = Mathf.Pow(1f - Mathf.Clamp01(speed / RacingMaxSpeed), 0.6f);
@@ -280,11 +538,29 @@ public partial class GameBootstrap : MonoBehaviour
         float lateralSpeed = Vector2.Dot(racingVelocity, right);
         racingVelocity -= right * (lateralSpeed * RacingLateralFriction * dt);
 
-        // Brake — hard deceleration along current velocity direction
-        if (braking && speed > 0.05f)
+        // S key — brake while moving forward, then reverse at half speed
+        if (sBrakeReverse)
         {
-            float brakeFactor = Mathf.Clamp01(1.4f * dt); // full stop from max in ~7s
-            racingVelocity -= racingVelocity.normalized * speed * brakeFactor;
+            float fwdSpeed = Vector2.Dot(racingVelocity, forward); // + = moving forward
+
+            if (fwdSpeed > 0.25f)
+            {
+                // Brake
+                racingVelocity -= racingVelocity.normalized * speed * Mathf.Clamp01(1.4f * dt);
+            }
+            else
+            {
+                // Reverse — half max speed, same torque curve
+                float revMax    = RacingMaxSpeed * 0.5f;
+                float revSpeed  = Mathf.Max(0f, -fwdSpeed);
+                float revTorque = Mathf.Pow(1f - Mathf.Clamp01(revSpeed / revMax), 0.6f);
+                racingVelocity -= forward * RacingAcceleration * 0.55f * revTorque * dt;
+
+                // Cap reverse speed
+                float newFwdSpeed = Vector2.Dot(racingVelocity, forward);
+                if (newFwdSpeed < -revMax)
+                    racingVelocity += forward * (-revMax - newFwdSpeed);
+            }
         }
 
         // Drag
@@ -298,35 +574,74 @@ public partial class GameBootstrap : MonoBehaviour
         racingTruckPos.x += racingVelocity.x * dt;
         racingTruckPos.z += racingVelocity.y * dt;
 
-        // ── Apply truck transform ─────────────────────────
+        // Lantern collision (depenetration + velocity response)
+        UpdateLanternCollisions(dt);
+
+        // ── Apply truck transform — FWD articulation ─────────────────────
         if (racingTruckVisual != null)
         {
-            racingTruckVisual.transform.position = racingTruckPos;
-            racingTruckVisual.transform.rotation = Quaternion.Euler(0f, racingTruckAngle, 0f);
+            // Body/rear lags behind physics angle — gives the "rear follows front" look
+            racingBodyAngle = Mathf.LerpAngle(racingBodyAngle, racingTruckAngle, 4.5f * dt);
 
+            racingTruckVisual.transform.position = racingTruckPos;
+            racingTruckVisual.transform.rotation = Quaternion.Euler(0f, racingBodyAngle, 0f);
+
+            // FWD delta — front axle (wheels) + cabin pivot both steer ahead of body
+            float frontDelta = Mathf.DeltaAngle(racingBodyAngle, racingTruckAngle);
+            if (racingFrontAssembly != null)
+                racingFrontAssembly.localRotation = Quaternion.Euler(0f, frontDelta, 0f);
+            if (racingCabinGroup != null)
+                racingCabinGroup.localRotation = Quaternion.Euler(0f, frontDelta, 0f);
+
+            // Body roll — both red body and yellow cabin lean together (suspension)
+            // Terminal angularVel ≈ 36 deg/s, normalise → ±RacingRollMax degrees
+            float rollTarget = Mathf.Clamp(racingAngularVel / 36f, -1f, 1f) * RacingRollMax;
+            racingBodyRoll = Mathf.Lerp(racingBodyRoll, rollTarget, RacingRollSmooth * dt);
+            if (racingBodyGroup != null)
+                racingBodyGroup.localRotation = Quaternion.Euler(0f, 0f, racingBodyRoll);
+
+            // Rotate around the cylinder's local Y (= world X after Euler(0,0,-90)) — rolls forward
             float wheelSpin = speed * dt * 180f;
-            if (racingTruckWheelFL != null) racingTruckWheelFL.Rotate(Vector3.right, wheelSpin, Space.Self);
-            if (racingTruckWheelFR != null) racingTruckWheelFR.Rotate(Vector3.right, wheelSpin, Space.Self);
-            if (racingTruckWheelRL != null) racingTruckWheelRL.Rotate(Vector3.right, wheelSpin, Space.Self);
-            if (racingTruckWheelRR != null) racingTruckWheelRR.Rotate(Vector3.right, wheelSpin, Space.Self);
+            if (racingTruckWheelFL != null) racingTruckWheelFL.Rotate(Vector3.up, wheelSpin, Space.Self);
+            if (racingTruckWheelFR != null) racingTruckWheelFR.Rotate(Vector3.up, wheelSpin, Space.Self);
+            if (racingTruckWheelRL != null) racingTruckWheelRL.Rotate(Vector3.up, wheelSpin, Space.Self);
+            if (racingTruckWheelRR != null) racingTruckWheelRR.Rotate(Vector3.up, wheelSpin, Space.Self);
         }
 
-        // ── Camera follow ─────────────────────────────────
+        // ── Camera follow — lagging yaw + lateral sway ───────────────────────
         if (racingCamera != null)
         {
-            Quaternion camRot = Quaternion.Euler(14f, racingTruckAngle, 0f);
+            // Camera yaw trails truck yaw — lower value = more lag / heavier feel
+            racingCameraAngle = Mathf.LerpAngle(racingCameraAngle, racingTruckAngle, 2.8f * dt);
+
+            // Lateral sway: camera drifts opposite to steering (centrifugal throw)
+            float swayTarget  = racingSteerInput * -0.5f;
+            racingCameraSwayX = Mathf.Lerp(racingCameraSwayX, swayTarget, 3.5f * dt);
+
+            // Small roll tilt into the corner
+            float roll = racingCameraSwayX * -3.0f;
+
+            Quaternion camRot = Quaternion.Euler(14f, racingCameraAngle, roll);
             Vector3 camBack   = camRot * Vector3.back * 2.8f;
-            Vector3 targetPos = racingTruckPos + Vector3.up * 1.4f + camBack;
+            Vector3 swayWorld = camRot * Vector3.right * racingCameraSwayX;
+            Vector3 targetPos = racingTruckPos + Vector3.up * 1.4f + camBack + swayWorld;
+
             racingCamera.transform.position = Vector3.Lerp(
-                racingCamera.transform.position, targetPos, 6f * dt);
+                racingCamera.transform.position, targetPos, 5.5f * dt);
             racingCamera.transform.rotation = Quaternion.Slerp(
-                racingCamera.transform.rotation, camRot, 6f * dt);
+                racingCamera.transform.rotation, camRot, 5.5f * dt);
         }
 
-        // ── Finish check ──────────────────────────────────
-        float distToFinish = Vector3.Distance(
-            new Vector3(racingTruckPos.x, 0f, racingTruckPos.z),
-            new Vector3(raceFinishPos.x, 0f, raceFinishPos.z));
+        // ── Finish check — strip detection ────────────────
+        // Narrow along road direction (±2.5 m), very wide across it (±14 m)
+        // so missing the line by driving off-road still counts.
+        Vector3 toFinish = new Vector3(racingTruckPos.x - raceFinishPos.x, 0f, racingTruckPos.z - raceFinishPos.z);
+        float alongRoad   = Vector3.Dot(toFinish, raceFinishFwd);          // depth through the line
+        float acrossRoad  = Vector3.Cross(toFinish, raceFinishFwd).magnitude; // lateral distance
+        bool  crossedLine = Mathf.Abs(alongRoad) < 2.5f && acrossRoad < 14f;
+
+        // Keep distToFinish for HUD display (visual distance to centre of line)
+        float distToFinish = toFinish.magnitude;
 
         // ── HUD update ────────────────────────────────────
         float kmh = speed * 3.6f;
@@ -379,9 +694,84 @@ public partial class GameBootstrap : MonoBehaviour
             }
         }
 
-        if (distToFinish < RaceFinishRadius)
+        UpdateRacingSkydome();
+
+        if (crossedLine)
         {
             FinishRace(success: true);
+        }
+    }
+
+    // ── Lantern collision ─────────────────────────────────────────────────────
+
+    private void UpdateLanternCollisions(float dt)
+    {
+        ProcessObstacleCollisions(racingLanterns, dt);
+        ProcessObstacleCollisions(racingTreeObstacles, dt);
+    }
+
+    private void ProcessObstacleCollisions(List<RaceObstacleData> obstacles, float dt)
+    {
+        if (obstacles.Count == 0) return;
+
+        Vector2 truckXZ = new Vector2(racingTruckPos.x, racingTruckPos.z);
+
+        for (int i = 0; i < obstacles.Count; i++)
+        {
+            RaceObstacleData obs = obstacles[i];
+
+            float combined = TruckCollisionRadius + obs.CollisionRadius;
+            float dx       = truckXZ.x - obs.PoleXZ.x;
+            float dz       = truckXZ.y - obs.PoleXZ.y;
+            float distSq   = dx * dx + dz * dz;
+
+            if (distSq < combined * combined)
+            {
+                float   dist = Mathf.Sqrt(distSq);
+                Vector2 norm = dist > 0.001f
+                    ? new Vector2(dx / dist, dz / dist)
+                    : new Vector2(1f, 0f);
+                float penetration = combined - dist;
+
+                // Depenetrate
+                racingTruckPos.x += norm.x * penetration;
+                racingTruckPos.z += norm.y * penetration;
+
+                // Velocity deflect
+                float vDotN = Vector2.Dot(racingVelocity, norm);
+                if (vDotN < 0f)
+                {
+                    racingVelocity -= norm * vDotN;
+                    racingVelocity *= (1f - CollisionEnergyLoss);
+                }
+
+                // First contact: spin + tip
+                if (!obs.IsTipped)
+                {
+                    float cross = racingVelocity.x * norm.y - racingVelocity.y * norm.x;
+                    racingAngularVel += (cross >= 0f ? 1f : -1f) * CollisionAngularKick;
+
+                    obs.IsTipped   = true;
+                    obs.TiltTarget = LanternTiltTargetDeg;
+
+                    Vector3 worldAxis = new Vector3(-norm.y, 0f, norm.x);
+                    if (obs.Root != null)
+                        obs.TiltAxisLocal = obs.Root.InverseTransformDirection(worldAxis);
+                }
+            }
+
+            // Tipping animation
+            if (!Mathf.Approximately(obs.TiltAngle, obs.TiltTarget))
+            {
+                obs.TiltAngle = Mathf.MoveTowards(
+                    obs.TiltAngle, obs.TiltTarget, LanternTiltSpeed * dt);
+
+                if (obs.Root != null)
+                    obs.Root.localRotation = obs.OriginalLocalRot
+                        * Quaternion.AngleAxis(obs.TiltAngle, obs.TiltAxisLocal);
+            }
+
+            obstacles[i] = obs;
         }
     }
 
@@ -431,6 +821,7 @@ public partial class GameBootstrap : MonoBehaviour
         RaceSegment last = raceSegments[raceSegments.Count - 1];
         raceFinishPos = last.Center + last.Rotation * Vector3.forward * last.Length * 0.45f;
         raceFinishPos.y = 0.35f;
+        raceFinishFwd = last.Rotation * Vector3.forward;   // road direction — for strip detection
         CreateRaceMarker(raceFinishPos, last.Rotation, new Color(0.95f, 0.82f, 0.12f));
 
         // Finish light
@@ -443,6 +834,22 @@ public partial class GameBootstrap : MonoBehaviour
         fl.intensity = 0.55f;
         fl.range = 7f;
         fl.shadows = LightShadows.None;
+
+        // ── Road extension beyond finish (decorative — truck drives into horizon) ──
+        raceExtensionSegments.Clear();
+        Vector3 extCursor = raceFinishPos;
+        extCursor.y = 0f;
+        Quaternion extRot = last.Rotation;
+        Vector3 extFwd = extRot * Vector3.forward;
+        for (int i = 0; i < 6; i++)
+        {
+            float extLen = 24f;
+            Vector3 extCenter = extCursor + extFwd * extLen * 0.5f;
+            RaceSegment ext = new() { Center = extCenter, Rotation = extRot, Length = extLen };
+            CreateRaceSegmentVisuals(ext);
+            raceExtensionSegments.Add(ext);
+            extCursor += extFwd * extLen;
+        }
     }
 
     private void CreateRaceSegmentVisuals(RaceSegment seg)
@@ -516,31 +923,52 @@ public partial class GameBootstrap : MonoBehaviour
         Color cabinColor  = new Color(0.95f, 0.82f, 0.28f);
         Color wheelColor  = new Color(0.14f, 0.14f, 0.14f);
 
-        // Body
+        // ── BodyGroup — both body cubes roll together (suspension) ────────
+        // Wheels are outside this group so they stay flat.
+        GameObject bodyGroupObj = new("BodyGroup");
+        bodyGroupObj.transform.SetParent(racingTruckVisual.transform, false);
+        bodyGroupObj.transform.localPosition = Vector3.zero;
+        racingBodyGroup = bodyGroupObj.transform;
+
+        // Red cargo body — child of BodyGroup
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        body.transform.SetParent(racingTruckVisual.transform, false);
+        body.transform.SetParent(racingBodyGroup, false);
         body.transform.localPosition = new Vector3(0f, 0.22f, 0f);
         body.transform.localScale    = new Vector3(0.72f, 0.30f, 1.0f);
         ApplyColor(body, bodyColor);
         ConfigureShadowVisual(body);
 
-        // Cabin
+        // CabinPivot inside BodyGroup — receives FWD delta Y so cabin steers ahead
+        GameObject cabinPivotObj = new("CabinPivot");
+        cabinPivotObj.transform.SetParent(racingBodyGroup, false);
+        cabinPivotObj.transform.localPosition = Vector3.zero;
+        racingCabinGroup = cabinPivotObj.transform;
+
+        // Yellow cabin — child of CabinPivot (rolls with body, steers ahead)
         GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        cabin.transform.SetParent(racingTruckVisual.transform, false);
+        cabin.transform.SetParent(racingCabinGroup, false);
         cabin.transform.localPosition = new Vector3(0f, 0.40f, 0.20f);
         cabin.transform.localScale    = new Vector3(0.58f, 0.34f, 0.44f);
         ApplyColor(cabin, cabinColor);
         ConfigureShadowVisual(cabin);
 
-        // Wheels
-        racingTruckWheelFL = CreateRacingWheel(racingTruckVisual.transform, new Vector3(-0.42f, 0.11f,  0.32f), wheelColor);
-        racingTruckWheelFR = CreateRacingWheel(racingTruckVisual.transform, new Vector3( 0.42f, 0.11f,  0.32f), wheelColor);
-        racingTruckWheelRL = CreateRacingWheel(racingTruckVisual.transform, new Vector3(-0.42f, 0.11f, -0.32f), wheelColor);
-        racingTruckWheelRR = CreateRacingWheel(racingTruckVisual.transform, new Vector3( 0.42f, 0.11f, -0.32f), wheelColor);
+        // ── FrontAxle — front wheels + headlights, steers for FWD visual ─
+        // NOT a parent of body parts, so steering here doesn't tilt the body
+        GameObject frontObj = new("FrontAxle");
+        frontObj.transform.SetParent(racingTruckVisual.transform, false);
+        frontObj.transform.localPosition = Vector3.zero;
+        racingFrontAssembly = frontObj.transform;
 
-        // Headlights (forward-facing, match regular truck threshold)
-        racingHeadlightL = CreateRacingHeadlight(racingTruckVisual.transform, new Vector3(-0.28f, 0.28f, 0.52f));
-        racingHeadlightR = CreateRacingHeadlight(racingTruckVisual.transform, new Vector3( 0.28f, 0.28f, 0.52f));
+        racingTruckWheelFL = CreateRacingWheel(racingFrontAssembly, new Vector3(-0.40f, 0.12f,  0.32f), wheelColor);
+        racingTruckWheelFR = CreateRacingWheel(racingFrontAssembly, new Vector3( 0.40f, 0.12f,  0.32f), wheelColor);
+
+        // Headlights on FrontAxle — point forward regardless of body roll
+        racingHeadlightL = CreateRacingHeadlight(racingFrontAssembly, new Vector3(-0.28f, 0.28f, 0.52f));
+        racingHeadlightR = CreateRacingHeadlight(racingFrontAssembly, new Vector3( 0.28f, 0.28f, 0.52f));
+
+        // ── Rear wheels — on root, flat ───────────────────────────────────
+        racingTruckWheelRL = CreateRacingWheel(racingTruckVisual.transform, new Vector3(-0.40f, 0.12f, -0.32f), wheelColor);
+        racingTruckWheelRR = CreateRacingWheel(racingTruckVisual.transform, new Vector3( 0.40f, 0.12f, -0.32f), wheelColor);
     }
 
     private Light CreateRacingHeadlight(Transform parent, Vector3 localPos)
@@ -565,8 +993,11 @@ public partial class GameBootstrap : MonoBehaviour
         GameObject wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         wheel.transform.SetParent(parent, false);
         wheel.transform.localPosition = localPos;
-        wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        wheel.transform.localScale    = new Vector3(0.20f, 0.06f, 0.20f);
+        // Euler(0, 0, -90): cylinder axis (local Y) points along world X (left-right)
+        // flat circles face sideways, curved surface rolls forward/back correctly
+        wheel.transform.localRotation = Quaternion.Euler(0f, 0f, -90f);
+        // x = z = radius scale (0.28 → diameter 0.28), y = half-thickness (0.065 → 0.13 wide)
+        wheel.transform.localScale    = new Vector3(0.28f, 0.065f, 0.28f);
         ApplyColor(wheel, color);
         ConfigureShadowVisual(wheel);
         return wheel.transform;
@@ -581,15 +1012,67 @@ public partial class GameBootstrap : MonoBehaviour
         racingCamera.orthographic    = false;
         racingCamera.fieldOfView     = 65f;
         racingCamera.clearFlags      = CameraClearFlags.SolidColor;
-        racingCamera.backgroundColor = new Color(0.05f, 0.06f, 0.08f);
+        racingCamera.backgroundColor = new Color(0.38f, 0.62f, 0.92f);
         racingCamera.depth           = mainCamera != null ? mainCamera.depth + 10 : 10;
         racingCamera.cullingMask     = ~0;
         racingCamera.nearClipPlane   = 0.1f;
-        racingCamera.farClipPlane    = 200f;
+        racingCamera.farClipPlane    = 600f;
 
         Quaternion initRot = Quaternion.Euler(14f, racingTruckAngle, 0f);
         racingCamera.transform.position = racingTruckPos + Vector3.up * 1.4f + initRot * Vector3.back * 2.8f;
         racingCamera.transform.rotation = initRot;
+
+        SetupRacingSkydome();
+    }
+
+    private void SetupRacingSkydome()
+    {
+        racingSkydome = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        racingSkydome.name = "RacingSkydome";
+        Object.Destroy(racingSkydome.GetComponent<Collider>());
+
+        // Negative X scale flips winding order — renders from the inside
+        racingSkydome.transform.localScale = new Vector3(-480f, 480f, 480f);
+
+        racingSkydomeRenderer = racingSkydome.GetComponent<Renderer>();
+        racingSkydomeRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        racingSkydomeRenderer.receiveShadows    = false;
+
+        // Unlit material so it isn't affected by scene lighting
+        Shader unlitShader = Shader.Find("Unlit/Color");
+        Material mat = unlitShader != null
+            ? new Material(unlitShader)
+            : new Material(Shader.Find("Standard"));
+        racingSkydomeRenderer.material = mat;
+    }
+
+    private void UpdateRacingSkydome()
+    {
+        if (racingSkydome == null || racingSkydomeRenderer == null) return;
+
+        // Follow camera so the dome is always around us
+        if (racingCamera != null)
+            racingSkydome.transform.position = racingCamera.transform.position;
+
+        // 4-stop sky gradient keyed to daylight
+        //  0 = full night,  1 = full day
+        float dl = Mathf.Clamp01(currentStylizedDaylight);
+
+        Color nightColor   = new Color(0.03f, 0.04f, 0.09f);  // deep navy
+        Color dawnColor    = new Color(0.72f, 0.32f, 0.12f);  // burnt orange
+        Color morningColor = new Color(0.82f, 0.56f, 0.28f);  // warm gold
+        Color dayColor     = new Color(0.38f, 0.62f, 0.92f);  // clear blue
+
+        Color skyColor;
+        if      (dl < 0.25f) skyColor = Color.Lerp(nightColor,   dawnColor,    dl / 0.25f);
+        else if (dl < 0.55f) skyColor = Color.Lerp(dawnColor,    morningColor, (dl - 0.25f) / 0.30f);
+        else                 skyColor = Color.Lerp(morningColor,  dayColor,     (dl - 0.55f) / 0.45f);
+
+        racingSkydomeRenderer.material.color = skyColor;
+
+        // Also tint camera background to match (visible if dome ever has gaps)
+        if (racingCamera != null)
+            racingCamera.backgroundColor = skyColor;
     }
 
     // ── Racing HUD ───────────────────────────────────────────────────────────
@@ -761,6 +1244,9 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void PopulateRacingWorld()
     {
+        racingLanterns.Clear();
+        racingTreeObstacles.Clear();
+
         // Bounding center of the whole track
         Vector3 center = Vector3.zero;
         foreach (var seg in raceSegments) center += seg.Center;
@@ -797,8 +1283,26 @@ public partial class GameBootstrap : MonoBehaviour
             if (roll < 0.62f)
             {
                 // Tree — much bigger
-                obj.transform.localScale = Vector3.one * Random.Range(2.8f, 4.2f);
+                float treeScale = Random.Range(2.8f, 4.2f);
+                obj.transform.localScale = Vector3.one * treeScale;
                 CreateTreeVariant(obj.transform, attempt % 3);
+
+                // Register near-road trees as collideable obstacles
+                if (IsPositionOnRaceRoad(pos, 10f)) // within 10 u of road centre
+                {
+                    float trunkRadius = 0.18f * treeScale; // trunk ~0.18 local at scale 1
+                    racingTreeObstacles.Add(new RaceObstacleData
+                    {
+                        PoleXZ           = new Vector2(pos.x, pos.z),
+                        Root             = obj.transform,
+                        OriginalLocalRot = obj.transform.localRotation,
+                        CollisionRadius  = Mathf.Clamp(trunkRadius, 0.35f, 0.70f),
+                        TiltAngle        = 0f,
+                        TiltTarget       = 0f,
+                        TiltAxisLocal    = Vector3.right,
+                        IsTipped         = false,
+                    });
+                }
             }
             else if (roll < 0.82f)
             {
@@ -885,6 +1389,19 @@ public partial class GameBootstrap : MonoBehaviour
         l.enabled   = false;
 
         racingWorldLights.Add(l);
+
+        // Register lantern for manual collision
+        racingLanterns.Add(new RaceObstacleData
+        {
+            PoleXZ           = new Vector2(worldPos.x, worldPos.z),
+            Root             = root.transform,
+            OriginalLocalRot = root.transform.localRotation,
+            CollisionRadius  = LanternPoleRadius,
+            TiltAngle        = 0f,
+            TiltTarget       = 0f,
+            TiltAxisLocal    = Vector3.right,
+            IsTipped         = false,
+        });
     }
 
     private static void CreateRacingBush(Transform parent, int seed)
@@ -935,6 +1452,16 @@ public partial class GameBootstrap : MonoBehaviour
     {
         Vector2 p = new Vector2(pos.x, pos.z);
         foreach (var seg in raceSegments)
+        {
+            Vector3 fwd   = seg.Rotation * Vector3.forward;
+            Vector3 start = seg.Center - fwd * seg.Length * 0.5f;
+            Vector3 end   = seg.Center + fwd * seg.Length * 0.5f;
+            if (DistXZPointToSegment(p,
+                    new Vector2(start.x, start.z),
+                    new Vector2(end.x,   end.z)) < margin)
+                return true;
+        }
+        foreach (var seg in raceExtensionSegments)
         {
             Vector3 fwd   = seg.Rotation * Vector3.forward;
             Vector3 start = seg.Center - fwd * seg.Length * 0.5f;
