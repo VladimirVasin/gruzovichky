@@ -21,6 +21,12 @@ public partial class GameBootstrap
     private static readonly Color ShiftsCardSelected = new(0.29f, 0.25f, 0.13f, 0.98f);
     private ShiftsScreenUiRefs shiftsScreenUi;
     private bool isShiftsScreenDirty = true;
+    private bool isLogisticsTabActive = false;
+    private Button shiftsLogisticsTabBtn;
+    private Button shiftsTransportTabBtn;
+    private RectTransform shiftsLogisticsPanel;
+    private RectTransform shiftsTransportPanel;
+    private readonly LogisticsSlotUi[] logisticsSlots = new LogisticsSlotUi[4];
     private BuildScreenUiRefs buildScreenUi;
     private bool isBuildScreenDirty = true;
     private WorldMapScreenUiRefs worldMapScreenUi;
@@ -93,10 +99,22 @@ public partial class GameBootstrap
         public Text FurnitureFactoryButtonText;
         public Text FurnitureFactoryTitleText;
         public Text FurnitureFactoryDescriptionText;
+        public Button SawmillButton;
+        public Text SawmillButtonText;
+        public Text SawmillTitleText;
+        public Text SawmillDescriptionText;
+        public Button MotelButton;
+        public Text MotelButtonText;
+        public Text MotelTitleText;
+        public Text MotelDescriptionText;
         public Button BarButton;
         public Text BarButtonText;
         public Text BarTitleText;
         public Text BarDescriptionText;
+        public Button CanteenButton;
+        public Text CanteenButtonText;
+        public Text CanteenTitleText;
+        public Text CanteenDescriptionText;
     }
 
     private sealed class DriverCardUi
@@ -107,6 +125,7 @@ public partial class GameBootstrap
         public Image StatusBadgeBackground;
         public Text  NameText;
         public Text  StatusText;
+        public Text  TruckLabelText;
         public Text  TruckText;
         public Text  EnergyText;
         public Text  SalaryText;
@@ -221,6 +240,19 @@ public partial class GameBootstrap
         public Text ReasonText;
     }
 
+    private sealed class LogisticsSlotUi
+    {
+        public LocationType BuildingType;
+        public Text         BuildingNameText;
+        public Text         AssignedWorkerText;
+        public Text         ShiftCycleText;
+        public Button       ShiftCycleButton;
+        public Button       AssignButton;
+        public Text         AssignButtonText;
+        public Button       RemoveButton;
+        public int          PendingShiftHour = -1;  // -1 = no shift selected yet
+    }
+
     private ResourcesScreenUiRefs resourcesScreenUi;
     private EconomyScreenUiRefs economyScreenUi;
 
@@ -264,7 +296,7 @@ public partial class GameBootstrap
 
         // Header
         RectTransform headerRow = CreateLayoutRow("DriversHeaderRow", windowRoot.transform, 40f, 0f);
-        Text driversTitleText = CreateHeaderText("DriversTitle", headerRow, font, "Drivers", 24, TextAnchor.MiddleLeft, Color.white);
+        Text driversTitleText = CreateHeaderText("DriversTitle", headerRow, font, "Workers", 24, TextAnchor.MiddleLeft, Color.white);
         driversTitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         driversScreenUi.HeaderCountText = CreateHeaderText("DriversCount", headerRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
 
@@ -327,13 +359,14 @@ public partial class GameBootstrap
         hireLayout.childForceExpandWidth = true;
         hireLayout.childForceExpandHeight = false;
 
-        driversScreenUi.HireButton = CreateButton("HireDriverButton", hireSection, font, out driversScreenUi.HireButtonText, "Hire New Driver", 16, FleetPrimaryButtonColor, Color.white);
+        driversScreenUi.HireButton = CreateButton("HireDriverButton", hireSection, font, out driversScreenUi.HireButtonText, "Hire New Worker", 16, FleetPrimaryButtonColor, Color.white);
         LayoutElement hireButtonLayout = driversScreenUi.HireButton.gameObject.AddComponent<LayoutElement>();
         hireButtonLayout.preferredHeight = 44f;
         hireButtonLayout.minWidth = 320f;
         driversScreenUi.HireButton.onClick.AddListener(() =>
         {
             LogUiInput("Drivers Canvas: clicked Hire New Driver");
+            isHireWorkerHighlightPersistent = false;
             HireNewDriver();
             isDriversScreenDirty = true;
         });
@@ -507,8 +540,8 @@ public partial class GameBootstrap
         truckPanelLayout.childControlHeight = true;
         truckPanelLayout.childForceExpandWidth = true;
         truckPanelLayout.childForceExpandHeight = false;
-        CreateBodyText("TruckLabel", truckPanel, font, "Truck", 11, TextAnchor.MiddleLeft, FleetMutedTextColor)
-            .gameObject.AddComponent<LayoutElement>().preferredHeight = 14f;
+        card.TruckLabelText = CreateBodyText("TruckLabel", truckPanel, font, "Truck", 11, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        card.TruckLabelText.gameObject.AddComponent<LayoutElement>().preferredHeight = 14f;
         card.TruckText = CreateBodyText("TruckValue", truckPanel, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         card.TruckText.fontStyle = FontStyle.Bold;
         card.TruckText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
@@ -629,23 +662,38 @@ public partial class GameBootstrap
             {
                 card.StatusBadgeBackground.color = d.IsArrivingByBus
                     ? new Color(0.22f, 0.36f, 0.54f, 1f)
+                    : d.DutyMode == DriverDutyMode.Logistics
+                    ? new Color(0.20f, 0.38f, 0.26f, 1f)
                     : truck != null
                     ? new Color(0.35f, 0.29f, 0.14f, 1f)
                     : new Color(0.24f, 0.29f, 0.36f, 1f);
             }
 
             card.NameText.text = d.DriverName;
+
+            bool isLogistics = d.DutyMode == DriverDutyMode.Logistics;
             card.StatusText.text = d.IsArrivingByBus
                 ? "Arriving by Bus"
                 : IsDriverOnActiveTradeRun(d)
                     ? "Trade Run"
                     : IsDriverIntercity(d)
                         ? "Intercity"
-                        : truck != null
-                            ? "Assigned"
-                            : "Idle";
+                        : isLogistics
+                            ? "Production"
+                            : truck != null
+                                ? "Assigned"
+                                : "Idle";
 
-            card.TruckText.text = truck != null ? truck.DisplayName : "Unassigned";
+            if (isLogistics && d.AssignedBuildingType.HasValue)
+            {
+                if (card.TruckLabelText != null) card.TruckLabelText.text = "Building";
+                card.TruckText.text = GetSelectedLocationDisplayName(d.AssignedBuildingType.Value);
+            }
+            else
+            {
+                if (card.TruckLabelText != null) card.TruckLabelText.text = "Truck";
+                card.TruckText.text = truck != null ? truck.DisplayName : "Unassigned";
+            }
 
             string energyMark = d.Energy <= DriverEnergyCriticalThreshold ? "  ⚠" : "";
             card.EnergyText.text = $"{Mathf.CeilToInt(d.Energy)} / {Mathf.CeilToInt(DriverEnergyMax)}{energyMark}";
@@ -654,11 +702,14 @@ public partial class GameBootstrap
             card.BalanceText.text = $"${d.Money}";
         }
 
-        bool canHire = money >= HireDriverCost && hiringDriverArrival == null;
+        bool hasMotel = locations.ContainsKey(LocationType.Motel);
+        bool canHire = hasMotel && money >= HireDriverCost && hiringDriverArrival == null;
         driversScreenUi.HireButton.interactable = canHire;
-        driversScreenUi.HireButtonText.text = $"Hire New Driver — ${HireDriverCost}";
+        driversScreenUi.HireButtonText.text = $"Hire New Worker — ${HireDriverCost}";
         driversScreenUi.HireStatusText.text = hiringDriverArrival != null
             ? "Another driver is currently arriving by bus."
+            : !hasMotel
+                ? "Build a Motel first so new drivers have somewhere to check in."
             : canHire
                 ? "New hires arrive at the bus stop before checking in at the motel."
                 : $"Need ${HireDriverCost} to hire a new driver.";
@@ -815,22 +866,56 @@ public partial class GameBootstrap
             shiftsScreenUi.DriverRows.Add(row);
         }
 
+        // ── Right panel ─────────────────────────────────────────────────────
         RectTransform rightPanel = CreateStyledPanel("ShiftsCardsPanel", windowRoot.transform, FleetPanelColor);
         LayoutElement rightPanelLayout = rightPanel.gameObject.AddComponent<LayoutElement>();
         rightPanelLayout.flexibleWidth = 1f;
         VerticalLayoutGroup rightLayout = rightPanel.gameObject.AddComponent<VerticalLayoutGroup>();
-        rightLayout.padding = new RectOffset(16, 16, 16, 16);
-        rightLayout.spacing = 14;
+        rightLayout.padding = new RectOffset(16, 16, 14, 16);
+        rightLayout.spacing = 12;
         rightLayout.childControlWidth = true;
         rightLayout.childControlHeight = true;
         rightLayout.childForceExpandWidth = true;
         rightLayout.childForceExpandHeight = false;
 
+        // ── Tab toggle row ───────────────────────────────────────────────────
+        RectTransform tabRow = CreateLayoutRow("ShiftsTabRow", rightPanel, 36f, 8f);
+        HorizontalLayoutGroup tabRowLayout = tabRow.GetComponent<HorizontalLayoutGroup>();
+        tabRowLayout.childForceExpandWidth = true;
+        tabRowLayout.childForceExpandHeight = true;   // buttons must have nonzero height to be clickable
+        shiftsTransportTabBtn = CreateButton("LogisticsTabBtn", tabRow, font, out Text logTabText, "Logistics", 13, FleetPrimaryButtonColor, Color.white);
+        logTabText.fontStyle = FontStyle.Bold;
+        shiftsTransportTabBtn.onClick.AddListener(() =>
+        {
+            isLogisticsTabActive = false;
+            isShiftsScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.8f);
+        });
+        shiftsLogisticsTabBtn = CreateButton("ProductionsTabBtn", tabRow, font, out Text transTabText, "Productions", 13, new Color(0.22f, 0.26f, 0.32f, 1f), Color.white);
+        transTabText.fontStyle = FontStyle.Bold;
+        shiftsLogisticsTabBtn.onClick.AddListener(() =>
+        {
+            isLogisticsTabActive = true;
+            isShiftsScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.8f);
+        });
+
+        // ── Transportation panel (existing shift cards + intercity) ──────────
+        GameObject transportPanelObj = CreateUiObject("TransportPanel", rightPanel);
+        shiftsTransportPanel = transportPanelObj.GetComponent<RectTransform>();
+        transportPanelObj.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        VerticalLayoutGroup transportLayout = transportPanelObj.AddComponent<VerticalLayoutGroup>();
+        transportLayout.spacing = 14;
+        transportLayout.childControlWidth = true;
+        transportLayout.childControlHeight = true;
+        transportLayout.childForceExpandWidth = true;
+        transportLayout.childForceExpandHeight = false;
+
         for (int i = 0; i < ShiftPresetHours.Length; i++)
         {
             int shiftHour = ShiftPresetHours[i];
             ShiftCardUi card = new() { ShiftHour = shiftHour };
-            RectTransform cardRoot = CreateSectionCard(rightPanel, font, string.Empty, out RectTransform cardBody, false);
+            RectTransform cardRoot = CreateSectionCard(shiftsTransportPanel, font, string.Empty, out RectTransform cardBody, false);
             cardRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 158f;
             VerticalLayoutGroup cardBodyLayout = cardBody.GetComponent<VerticalLayoutGroup>();
             cardBodyLayout.spacing = 8;
@@ -951,7 +1036,7 @@ public partial class GameBootstrap
         }
 
         shiftsScreenUi.IntercitySlot = new IntercitySlotUi();
-        RectTransform intercityCard = CreateSectionCard(rightPanel, font, string.Empty, out RectTransform intercityBody, false);
+        RectTransform intercityCard = CreateSectionCard(shiftsTransportPanel, font, string.Empty, out RectTransform intercityBody, false);
         intercityCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 142f;
         VerticalLayoutGroup intercityLayout = intercityBody.GetComponent<VerticalLayoutGroup>();
         intercityLayout.spacing = 8;
@@ -985,6 +1070,75 @@ public partial class GameBootstrap
         intercityRemoveLayout.preferredHeight = 30f;
         shiftsScreenUi.IntercitySlot.RemoveButton.onClick.AddListener(RemoveIntercityDriverAssignment);
 
+        // ── Logistics panel ──────────────────────────────────────────────────
+        GameObject logisticsPanelObj = CreateUiObject("LogisticsPanel", rightPanel);
+        shiftsLogisticsPanel = logisticsPanelObj.GetComponent<RectTransform>();
+        logisticsPanelObj.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        VerticalLayoutGroup logLayout = logisticsPanelObj.AddComponent<VerticalLayoutGroup>();
+        logLayout.spacing = 14;
+        logLayout.childControlWidth = true;
+        logLayout.childControlHeight = true;
+        logLayout.childForceExpandWidth = true;
+        logLayout.childForceExpandHeight = false;
+
+        LocationType[] productionTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory, LocationType.Warehouse };
+        string[] productionNames = { "Forest", "Sawmill", "Furniture Factory", "Warehouse" };
+        for (int si = 0; si < productionTypes.Length; si++)
+        {
+            LogisticsSlotUi slot = new() { BuildingType = productionTypes[si] };
+            RectTransform slotCard = CreateSectionCard(shiftsLogisticsPanel, font, string.Empty, out RectTransform slotBody, false);
+            slotCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 154f;
+            VerticalLayoutGroup slotBodyLayout = slotBody.GetComponent<VerticalLayoutGroup>();
+            slotBodyLayout.spacing = 8;
+
+            slot.BuildingNameText = CreateHeaderText($"LogBldgName{si}", slotBody, font, productionNames[si], 16, TextAnchor.MiddleLeft, Color.white);
+            slot.AssignedWorkerText = CreateHeaderText($"LogWorker{si}", slotBody, font, "No worker assigned", 14, TextAnchor.MiddleLeft, FleetAccentColor);
+            slot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+
+            RectTransform shiftRow = CreateLayoutRow($"LogShiftRow{si}", slotBody, 28f, 8f);
+            shiftRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+            CreateBodyText($"LogShiftLabel{si}", shiftRow, font, "Shift:", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            slot.ShiftCycleButton = CreateButton($"LogShiftCycle{si}", shiftRow, font, out slot.ShiftCycleText, "—", 12, new Color(0.22f, 0.26f, 0.32f, 1f), Color.white);
+            slot.ShiftCycleButton.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            int slotIndex = si;
+            slot.ShiftCycleButton.onClick.AddListener(() =>
+            {
+                logisticsSlots[slotIndex].PendingShiftHour = logisticsSlots[slotIndex].PendingShiftHour switch
+                {
+                    -1 => 6,
+                    6  => 14,
+                    14 => 22,
+                    _  => -1
+                };
+                isShiftsScreenDirty = true;
+            });
+
+            RectTransform actionRow = CreateLayoutRow($"LogActionRow{si}", slotBody, 30f, 8f);
+            actionRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+            slot.AssignButton = CreateButton($"LogAssignBtn{si}", actionRow, font, out slot.AssignButtonText, "Assign Worker", 12, FleetPrimaryButtonColor, Color.white);
+            slot.AssignButton.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            slot.RemoveButton = CreateButton($"LogRemoveBtn{si}", actionRow, font, out _, "Remove", 12, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
+            slot.RemoveButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
+            int capturedIndex = si;
+            slot.AssignButton.onClick.AddListener(() =>
+            {
+                DriverAgent selectedDriver = driverAgents.Find(d => d.DriverId == selectedShiftDriverId);
+                if (selectedDriver == null) return;
+                AssignWorkerToBuilding(selectedDriver, logisticsSlots[capturedIndex]);
+                PlayUiSound(uiSelectClip, 0.85f);
+            });
+            slot.RemoveButton.onClick.AddListener(() =>
+            {
+                RemoveWorkerFromBuilding(logisticsSlots[capturedIndex]);
+                PlayUiSound(uiSelectClip, 0.85f);
+            });
+
+            logisticsSlots[si] = slot;
+        }
+
+        // Start with Transport tab visible
+        shiftsLogisticsPanel.gameObject.SetActive(false);
+
         AddOverlayCloseButton(windowRect, font);
         shiftsScreenUi.CanvasRoot.SetActive(false);
         UpdateShiftsScreenUi();
@@ -1006,6 +1160,22 @@ public partial class GameBootstrap
 
         shiftsScreenUi.HeaderCountText.text = $"{driverAgents.Count} Driver{(driverAgents.Count == 1 ? "" : "s")}";
 
+        // Tab button highlight
+        if (shiftsLogisticsTabBtn != null)
+        {
+            ColorBlock lc = shiftsLogisticsTabBtn.colors;
+            lc.normalColor = isLogisticsTabActive ? FleetPrimaryButtonColor : new Color(0.22f, 0.26f, 0.32f, 1f);
+            shiftsLogisticsTabBtn.colors = lc;
+        }
+        if (shiftsTransportTabBtn != null)
+        {
+            ColorBlock tc = shiftsTransportTabBtn.colors;
+            tc.normalColor = !isLogisticsTabActive ? FleetPrimaryButtonColor : new Color(0.22f, 0.26f, 0.32f, 1f);
+            shiftsTransportTabBtn.colors = tc;
+        }
+        if (shiftsLogisticsPanel != null) shiftsLogisticsPanel.gameObject.SetActive(isLogisticsTabActive);
+        if (shiftsTransportPanel  != null) shiftsTransportPanel.gameObject.SetActive(!isLogisticsTabActive);
+
         for (int i = 0; i < shiftsScreenUi.DriverRows.Count; i++)
         {
             ShiftDriverRowUi row = shiftsScreenUi.DriverRows[i];
@@ -1020,12 +1190,15 @@ public partial class GameBootstrap
             row.NameText.text = driver.DriverName;
             bool isAssigned = driver.ShiftStartHour >= 0;
             bool isIntercity = IsDriverIntercity(driver);
+            bool isLogistics = driver.DutyMode == DriverDutyMode.Logistics;
             row.StatusText.text = isIntercity
                 ? "Intercity"
-                : isAssigned
-                    ? $"Assigned: {GetShiftRangeLabel(driver.ShiftStartHour)}"
-                    : "Idle";
-            row.StatusText.color = isIntercity
+                : isLogistics
+                    ? "Productions"
+                    : isAssigned
+                        ? $"Assigned: {GetShiftRangeLabel(driver.ShiftStartHour)}"
+                        : "Idle";
+            row.StatusText.color = isIntercity || isLogistics
                 ? FleetAccentColor
                 : isAssigned ? new Color(0.62f, 0.92f, 0.62f, 1f) : FleetMutedTextColor;
         }
@@ -1038,7 +1211,7 @@ public partial class GameBootstrap
             List<DriverAgent> assignedDrivers = new();
             foreach (DriverAgent driver in driverAgents)
             {
-                if (!IsDriverIntercity(driver) && driver.ShiftStartHour == card.ShiftHour)
+                if (driver.DutyMode == DriverDutyMode.Local && driver.ShiftStartHour == card.ShiftHour)
                 {
                     assignedDrivers.Add(driver);
                 }
@@ -1054,13 +1227,14 @@ public partial class GameBootstrap
                 card.AssignedDriverTexts[rowIndex].text = assignedDrivers[rowIndex].DriverName;
             }
 
-            bool alreadyAssigned = selectedDriver != null && selectedDriver.ShiftStartHour == card.ShiftHour;
+            bool alreadyAssigned = selectedDriver != null && selectedDriver.DutyMode == DriverDutyMode.Local && selectedDriver.ShiftStartHour == card.ShiftHour;
             bool intercitySelected = IsDriverIntercity(selectedDriver);
-            card.AssignButton.interactable = selectedDriver != null && !alreadyAssigned && !intercitySelected;
+            bool logisticsSelected = selectedDriver?.DutyMode == DriverDutyMode.Logistics;
+            card.AssignButton.interactable = selectedDriver != null && !alreadyAssigned && !intercitySelected && !logisticsSelected;
             card.AssignButtonText.text = selectedDriver == null
-                ? "Select a driver to assign"
-                : intercitySelected
-                    ? $"{selectedDriver.DriverName} is Intercity"
+                ? "Select a worker to assign"
+                : (intercitySelected || logisticsSelected)
+                    ? "Worker not available"
                     : alreadyAssigned
                         ? $"{selectedDriver.DriverName} already assigned"
                         : $"Assign {selectedDriver.DriverName} -> {ShiftNames[i]}";
@@ -1068,9 +1242,96 @@ public partial class GameBootstrap
 
         UpdateIntercitySlotUi(selectedDriver);
 
+        if (isLogisticsTabActive)
+        {
+            UpdateLogisticsTabUi(selectedDriver);
+        }
+
         LayoutRebuilder.ForceRebuildLayoutImmediate(shiftsScreenUi.DriverListContent);
         LayoutRebuilder.ForceRebuildLayoutImmediate(shiftsScreenUi.WindowRoot);
         isShiftsScreenDirty = false;
+    }
+
+    private void UpdateLogisticsTabUi(DriverAgent selectedDriver)
+    {
+        for (int i = 0; i < logisticsSlots.Length; i++)
+        {
+            LogisticsSlotUi slot = logisticsSlots[i];
+            if (slot == null) continue;
+
+            DriverAgent assigned = driverAgents.Find(d =>
+                d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == slot.BuildingType);
+
+            string workerLabel = assigned != null
+                ? $"{assigned.DriverName}  —  {(assigned.ShiftStartHour >= 0 ? GetShiftRangeLabel(assigned.ShiftStartHour) : "No shift")}"
+                : "No worker assigned";
+            slot.AssignedWorkerText.text = workerLabel;
+            slot.AssignedWorkerText.color = assigned != null ? FleetAccentColor : FleetSecondaryTextColor;
+
+            // Shift cycle button: show pending (if no assignment) or assigned worker's shift
+            string shiftLabel = assigned != null && assigned.ShiftStartHour >= 0
+                ? GetShiftRangeLabel(assigned.ShiftStartHour)
+                : slot.PendingShiftHour >= 0
+                    ? GetShiftRangeLabel(slot.PendingShiftHour)
+                    : "—";
+            slot.ShiftCycleText.text = shiftLabel;
+            slot.ShiftCycleButton.interactable = assigned == null;  // Can only change shift before assignment
+
+            bool selectedIsIdle = selectedDriver != null
+                && selectedDriver.DutyMode == DriverDutyMode.Local
+                && selectedDriver.AssignedTruckNumber == 0
+                && selectedDriver.ShiftStartHour < 0
+                && !selectedDriver.IsArrivingByBus;
+            bool canAssign = selectedIsIdle && assigned == null && slot.PendingShiftHour >= 0;
+            slot.AssignButton.interactable = canAssign;
+            slot.AssignButtonText.text = selectedDriver == null
+                ? "Select a worker"
+                : assigned != null
+                    ? "Slot occupied"
+                    : slot.PendingShiftHour < 0
+                        ? "Pick a shift first"
+                        : !selectedIsIdle
+                            ? $"{selectedDriver.DriverName} is not Idle"
+                            : $"Assign {selectedDriver.DriverName}";
+
+            slot.RemoveButton.interactable = assigned != null;
+        }
+    }
+
+    private void AssignWorkerToBuilding(DriverAgent driver, LogisticsSlotUi slot)
+    {
+        if (driver == null || slot == null || slot.PendingShiftHour < 0) return;
+        bool isIdle = driver.DutyMode == DriverDutyMode.Local
+            && driver.AssignedTruckNumber == 0
+            && driver.ShiftStartHour < 0
+            && !driver.IsArrivingByBus;
+        if (!isIdle) return;
+
+        // Remove from any existing building assignment first
+        if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
+        {
+            SetDriverDutyMode(driver, DriverDutyMode.Local);
+        }
+
+        SetDriverDutyMode(driver, DriverDutyMode.Logistics);
+        driver.AssignedBuildingType = slot.BuildingType;
+        driver.ShiftStartHour = slot.PendingShiftHour;
+        LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {slot.BuildingType} ({GetShiftRangeLabel(slot.PendingShiftHour)})");
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType} ({GetShiftRangeLabel(slot.PendingShiftHour)}) as logistics worker.");
+        isShiftsScreenDirty = true;
+        isDriversScreenDirty = true;
+    }
+
+    private void RemoveWorkerFromBuilding(LogisticsSlotUi slot)
+    {
+        if (slot == null) return;
+        DriverAgent assigned = driverAgents.Find(d =>
+            d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == slot.BuildingType);
+        if (assigned == null) return;
+        LogUiInput($"Shifts Canvas: removed {assigned.DriverName} from {slot.BuildingType}");
+        SetDriverDutyMode(assigned, DriverDutyMode.Local);  // clears building, fixes Workers counter
+        isShiftsScreenDirty = true;
+        isDriversScreenDirty = true;
     }
 
     private void UpdateIntercitySlotUi(DriverAgent selectedDriver)
@@ -1082,15 +1343,20 @@ public partial class GameBootstrap
 
         DriverAgent intercityDriver = GetIntercityAssignedDriver();
         bool selectedIsIntercity = IsDriverIntercity(selectedDriver);
-        shiftsScreenUi.IntercitySlot.AssignedDriverText.text = intercityDriver != null ? intercityDriver.DriverName : "No driver assigned";
+        bool selectedIsIdleForIntercity = selectedDriver != null
+            && selectedDriver.DutyMode == DriverDutyMode.Local
+            && selectedDriver.AssignedTruckNumber == 0
+            && selectedDriver.ShiftStartHour < 0
+            && !selectedDriver.IsArrivingByBus;
+        shiftsScreenUi.IntercitySlot.AssignedDriverText.text = intercityDriver != null ? intercityDriver.DriverName : "No worker assigned";
         shiftsScreenUi.IntercitySlot.StatusText.text = intercityDriver != null
             ? "Reserved for future trade runs"
             : "Assign one dedicated driver to intercity duty";
-        shiftsScreenUi.IntercitySlot.AssignButton.interactable = selectedDriver != null && !selectedIsIntercity;
+        shiftsScreenUi.IntercitySlot.AssignButton.interactable = selectedIsIdleForIntercity && !selectedIsIntercity;
         shiftsScreenUi.IntercitySlot.AssignButtonText.text = selectedDriver == null
-            ? "Select a driver"
-            : selectedIsIntercity
-                ? $"{selectedDriver.DriverName} already Intercity"
+            ? "Select a worker"
+            : (selectedIsIntercity || !selectedIsIdleForIntercity)
+                ? "Worker not available"
                 : $"Assign {selectedDriver.DriverName}";
         shiftsScreenUi.IntercitySlot.RemoveButton.interactable = intercityDriver != null;
     }
@@ -1102,10 +1368,12 @@ public partial class GameBootstrap
 
     private void AssignDriverToIntercitySlot(DriverAgent driver)
     {
-        if (driver == null)
-        {
-            return;
-        }
+        if (driver == null) return;
+        bool isIdle = driver.DutyMode == DriverDutyMode.Local
+            && driver.AssignedTruckNumber == 0
+            && driver.ShiftStartHour < 0
+            && !driver.IsArrivingByBus;
+        if (!isIdle) return;
 
         if (HasActiveTradeRun())
         {

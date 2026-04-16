@@ -85,6 +85,15 @@ public partial class GameBootstrap
             return;
         }
 
+        if (Keyboard.current.rKey.wasPressedThisFrame && IsBuildingBuildTool(activeBuildTool))
+        {
+            buildPlacementRotationIndex = (buildPlacementRotationIndex + 1) % 4;
+            isBuildScreenDirty = true;
+            SessionDebugLogger.Log("BUILD", $"Build placement rotation changed to {GetBuildRotationLabel()}.");
+            PlayUiSound(uiSelectClip, 0.72f);
+            return;
+        }
+
         if (Keyboard.current.mKey.wasPressedThisFrame)
         {
             isWorldMapPanelOpen = !isWorldMapPanelOpen;
@@ -169,6 +178,26 @@ public partial class GameBootstrap
             5 => (Keyboard.current.digit5Key != null && Keyboard.current.digit5Key.wasPressedThisFrame) ||
                  (Keyboard.current.numpad5Key != null && Keyboard.current.numpad5Key.wasPressedThisFrame),
             _ => false
+        };
+    }
+
+    private static bool IsBuildingBuildTool(BuildTool tool)
+    {
+        return tool == BuildTool.FurnitureFactory ||
+               tool == BuildTool.Sawmill ||
+               tool == BuildTool.Motel ||
+               tool == BuildTool.Bar ||
+               tool == BuildTool.Canteen;
+    }
+
+    private string GetBuildRotationLabel()
+    {
+        return (buildPlacementRotationIndex % 4) switch
+        {
+            1 => "East",
+            2 => "South",
+            3 => "West",
+            _ => "North"
         };
     }
 
@@ -566,11 +595,15 @@ public partial class GameBootstrap
             return;
         }
 
-        bool buildActionSucceeded = activeBuildTool switch
+        BuildTool placementTool = activeBuildTool;
+        bool buildActionSucceeded = placementTool switch
         {
             BuildTool.Road => TryPlaceRoadAtCell(cell),
             BuildTool.FurnitureFactory => TryPlaceFurnitureFactoryAtAnchor(cell),
+            BuildTool.Sawmill => TryPlaceSawmillAtAnchor(cell),
+            BuildTool.Motel => TryPlaceMotelAtAnchor(cell),
             BuildTool.Bar => TryPlaceBarAtAnchor(cell),
+            BuildTool.Canteen => TryPlaceCanteenAtAnchor(cell),
             _ => false
         };
 
@@ -588,7 +621,13 @@ public partial class GameBootstrap
         ClearSelectedDebugCell();
         isTruckDetailsOpen = false;
         DisableTruckCameraFocus();
-        if (activeBuildTool == BuildTool.Road)
+        if (IsBuildingBuildTool(placementTool))
+        {
+            CompleteBuildingPlacementFlow(placementTool, cell);
+            return;
+        }
+
+        if (placementTool == BuildTool.Road)
         {
             selectedLocation = null;
             RefreshSelectionVisuals();
@@ -610,6 +649,15 @@ public partial class GameBootstrap
         ApplyColor(buildHoverHighlight, new Color(0.22f, 0.9f, 0.32f));
         ConfigureStaticVisual(buildHoverHighlight);
         buildHoverHighlight.SetActive(false);
+
+        buildHoverDrivewayHighlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        buildHoverDrivewayHighlight.name = "BuildHoverDrivewayHighlight";
+        buildHoverDrivewayHighlight.transform.SetParent(worldRoot, false);
+        buildHoverDrivewayHighlight.transform.localScale = new Vector3(0.86f, 0.045f, 0.86f);
+        buildHoverDrivewayHighlight.GetComponent<Collider>().enabled = false;
+        ApplyColor(buildHoverDrivewayHighlight, new Color(0.32f, 0.62f, 1f));
+        ConfigureStaticVisual(buildHoverDrivewayHighlight);
+        buildHoverDrivewayHighlight.SetActive(false);
     }
 
     private void UpdateBuildHoverHighlight()
@@ -622,14 +670,14 @@ public partial class GameBootstrap
         hoveredBuildCell = null;
         if (activeBuildTool == BuildTool.None || mainCamera == null || Mouse.current == null || isTruckCameraFocused || isRightMouseDragging)
         {
-            buildHoverHighlight.SetActive(false);
+            HideBuildHoverHighlights();
             return;
         }
 
         Vector2 mousePosition = Mouse.current.position.ReadValue();
         if (IsPointerOverHud(mousePosition))
         {
-            buildHoverHighlight.SetActive(false);
+            HideBuildHoverHighlights();
             return;
         }
 
@@ -637,19 +685,26 @@ public partial class GameBootstrap
         Plane plane = new(Vector3.up, Vector3.zero);
         if (!plane.Raycast(ray, out float distance))
         {
-            buildHoverHighlight.SetActive(false);
+            HideBuildHoverHighlights();
             return;
         }
 
         Vector2Int cell = WorldToCell(ray.GetPoint(distance));
         if (!IsInsideGrid(cell))
         {
-            buildHoverHighlight.SetActive(false);
+            HideBuildHoverHighlights();
             return;
         }
 
         hoveredBuildCell = cell;
         bool canBuild = GetBuildPreviewAtCell(cell, out Vector3 previewPosition, out Vector3 previewScale);
+        if (IsBuildingBuildTool(activeBuildTool))
+        {
+            UpdateBuildFootprintHoverHighlights(canBuild);
+            return;
+        }
+
+        HideBuildFootprintHoverHighlights();
         buildHoverHighlight.SetActive(true);
         buildHoverHighlight.transform.position = previewPosition;
         buildHoverHighlight.transform.localScale = previewScale;
@@ -660,6 +715,97 @@ public partial class GameBootstrap
             renderer.sharedMaterial.color = canBuild
                 ? new Color(0.22f, 0.9f, 0.32f)
                 : new Color(0.92f, 0.28f, 0.22f);
+        }
+    }
+
+    private void HideBuildHoverHighlights()
+    {
+        if (buildHoverHighlight != null)
+        {
+            buildHoverHighlight.SetActive(false);
+        }
+
+        HideBuildFootprintHoverHighlights();
+    }
+
+    private void HideBuildFootprintHoverHighlights()
+    {
+        if (buildHoverDrivewayHighlight != null)
+        {
+            buildHoverDrivewayHighlight.SetActive(false);
+        }
+
+        for (int i = 0; i < buildHoverCellHighlights.Count; i++)
+        {
+            if (buildHoverCellHighlights[i] != null)
+            {
+                buildHoverCellHighlights[i].SetActive(false);
+            }
+        }
+    }
+
+    private void EnsureBuildFootprintHoverCount(int count)
+    {
+        while (buildHoverCellHighlights.Count < count)
+        {
+            GameObject highlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            highlight.name = $"BuildHoverFootprintCell_{buildHoverCellHighlights.Count}";
+            highlight.transform.SetParent(worldRoot, false);
+            highlight.transform.localScale = new Vector3(0.86f, 0.045f, 0.86f);
+            highlight.GetComponent<Collider>().enabled = false;
+            ApplyColor(highlight, new Color(0.22f, 0.9f, 0.32f));
+            ConfigureStaticVisual(highlight);
+            highlight.SetActive(false);
+            buildHoverCellHighlights.Add(highlight);
+        }
+    }
+
+    private void UpdateBuildFootprintHoverHighlights(bool canBuild)
+    {
+        if (buildHoverHighlight != null)
+        {
+            buildHoverHighlight.SetActive(false);
+        }
+
+        EnsureBuildFootprintHoverCount(buildPreviewFootprintCells.Count);
+        Color footprintColor = canBuild ? new Color(0.22f, 0.9f, 0.32f) : new Color(0.92f, 0.28f, 0.22f);
+        for (int i = 0; i < buildHoverCellHighlights.Count; i++)
+        {
+            GameObject highlight = buildHoverCellHighlights[i];
+            bool active = i < buildPreviewFootprintCells.Count && IsInsideGrid(buildPreviewFootprintCells[i]);
+            highlight.SetActive(active);
+            if (!active)
+            {
+                continue;
+            }
+
+            Vector2Int cell = buildPreviewFootprintCells[i];
+            Vector3 center = GetCellCenter(cell);
+            highlight.transform.position = new Vector3(center.x, SampleTerrainHeight(center.x, center.z) + RoadHeight + 0.05f, center.z);
+            Renderer renderer = highlight.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial.color = footprintColor;
+            }
+        }
+
+        if (buildHoverDrivewayHighlight != null)
+        {
+            bool showDriveway = buildPreviewDrivewayCell.HasValue && IsInsideGrid(buildPreviewDrivewayCell.Value);
+            buildHoverDrivewayHighlight.SetActive(showDriveway);
+            if (showDriveway)
+            {
+                Vector2Int drivewayCell = buildPreviewDrivewayCell.Value;
+                Vector3 center = GetCellCenter(drivewayCell);
+                buildHoverDrivewayHighlight.transform.position = new Vector3(center.x, SampleTerrainHeight(center.x, center.z) + RoadHeight + 0.065f, center.z);
+                Renderer renderer = buildHoverDrivewayHighlight.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.sharedMaterial.color = canBuild
+                        ? new Color(0.28f, 0.58f, 1f)
+                        : new Color(1f, 0.58f, 0.18f);
+                }
+            }
         }
     }
 
@@ -674,8 +820,51 @@ public partial class GameBootstrap
         return true;
     }
 
+    private void CompleteBuildingPlacementFlow(BuildTool placedTool, Vector2Int anchorCell)
+    {
+        bool entranceConnected = IsBuildingEntranceConnectedToRoad(anchorCell);
+        if (entranceConnected)
+        {
+            activeBuildTool = BuildTool.None;
+            hoveredBuildCell = null;
+            HideBuildHoverHighlights();
+            isBuildScreenDirty = true;
+            RefreshSelectionVisuals();
+            SessionDebugLogger.Log("BUILD", $"{placedTool} entrance at ({anchorCell.x},{anchorCell.y}) is connected to road. Build mode cleared.");
+            return;
+        }
+
+        activeBuildTool = BuildTool.Road;
+        hoveredBuildCell = null;
+        isBuildPanelOpen = true;
+        isBuildScreenDirty = true;
+        UpdateBuildHoverHighlight();
+        RefreshSelectionVisuals();
+        SessionDebugLogger.Log("BUILD", $"{placedTool} entrance at ({anchorCell.x},{anchorCell.y}) is not connected to road. Switched to Road build tool.");
+    }
+
+    private bool IsBuildingEntranceConnectedToRoad(Vector2Int anchorCell)
+    {
+        foreach (Vector2Int neighbor in GridPathService.GetCardinalNeighbors(anchorCell))
+        {
+            if (!IsInsideGrid(neighbor))
+            {
+                continue;
+            }
+
+            if (roadCells.Contains(neighbor) || edgeHighwayCells.Contains(neighbor))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool GetBuildPreviewAtCell(Vector2Int cell, out Vector3 previewPosition, out Vector3 previewScale)
     {
+        buildPreviewFootprintCells.Clear();
+        buildPreviewDrivewayCell = null;
         previewPosition = GetCellCenter(cell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.92f, 0.04f, 0.92f);
 
@@ -695,9 +884,24 @@ public partial class GameBootstrap
             return GetFurnitureFactoryPlacementPreview(cell, out previewPosition, out previewScale);
         }
 
+        if (activeBuildTool == BuildTool.Sawmill)
+        {
+            return GetSawmillPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
+        if (activeBuildTool == BuildTool.Motel)
+        {
+            return GetMotelPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
         if (activeBuildTool == BuildTool.Bar)
         {
             return GetBarPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
+        if (activeBuildTool == BuildTool.Canteen)
+        {
+            return GetCanteenPlacementPreview(cell, out previewPosition, out previewScale);
         }
 
         return false;

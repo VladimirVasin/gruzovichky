@@ -35,19 +35,6 @@ public partial class GameBootstrap : MonoBehaviour
         public float   Height;  // peak height above groundY
     }
 
-    private struct RacingCloudData
-    {
-        public Transform Root;
-        public Vector3   SpawnPos;
-        public Vector3   TravelDir;
-        public float     TravelRange;
-        public float     TravelOffset;
-        public float     TravelSpeed;
-        public float     BobAmplitude;
-        public float     BobSpeed;
-        public float     PhaseOffset;
-    }
-
     private struct RacingBirdData
     {
         public Transform Root;
@@ -135,9 +122,14 @@ public partial class GameBootstrap : MonoBehaviour
     private Transform racingBodyGroup;     // cargo cube — receives Z body roll
     private Transform racingCabinGroup;    // cabin cube inside FrontAssembly — receives same Z roll
     private float     racingBodyRoll;      // smoothed lean angle, degrees
+    private float     racingBodyPitch;     // smoothed terrain pitch (X-axis), degrees
+    private float     racingBodyTiltZ;     // smoothed terrain lateral tilt (Z-axis), degrees
 
-    private const float RacingRollMax    = 6f;   // peak lean in degrees
-    private const float RacingRollSmooth = 4.0f; // Lerp rate
+    private const float RacingRollMax        = 6f;   // peak lean in degrees
+    private const float RacingRollSmooth     = 4.0f; // Lerp rate
+    private const float RacingPitchMax       = 20f;  // max terrain pitch +-degrees
+    private const float RacingTerrainTiltMax = 14f;  // max terrain lateral tilt +-degrees
+    private const float RacingTerrainSmooth  =  6f;  // terrain pitch/tilt lerp rate
 
     private readonly List<RaceSegment>      raceSegments          = new();
     private readonly List<RaceSegment>      raceExtensionSegments = new();
@@ -193,7 +185,6 @@ public partial class GameBootstrap : MonoBehaviour
     private Text       racingGearText;            // HUD gear indicator
 
     // ── Racing atmosphere ────────────────────────────────────────────────────
-    private readonly List<RacingCloudData> racingClouds      = new();
     private readonly List<RacingBirdData>  racingBirds       = new();
     private readonly List<RacingBeeData>   racingBees        = new();
     private readonly List<RacingMothData>  racingMoths       = new();
@@ -304,8 +295,8 @@ public partial class GameBootstrap : MonoBehaviour
 
         bool shouldShow = isGameStarted &&
                           !isRacingActive &&
-                          (activeTradeRun != null && activeTradeRun.Phase == TradeRunPhase.OutOfMap
-                           || UnityEngine.Debug.isDebugBuild || Application.isEditor);
+                          (selectedGameStartMode == GameStartMode.Debug ||
+                           (activeTradeRun != null && activeTradeRun.Phase == TradeRunPhase.OutOfMap));
 
         if (joinRaceButtonRoot.activeSelf != shouldShow)
             joinRaceButtonRoot.SetActive(shouldShow);
@@ -360,6 +351,8 @@ public partial class GameBootstrap : MonoBehaviour
         racingCameraSwayX = 0f;
         racingBodyAngle   = racingTruckAngle;
         racingBodyRoll    = 0f;
+        racingBodyPitch   = 0f;
+        racingBodyTiltZ   = 0f;
 
         SetupRacingCamera();
         CreateSteeringWheel();
@@ -597,7 +590,9 @@ public partial class GameBootstrap : MonoBehaviour
 
         // Steering wheel + pedals are children of camera — destroyed with it
         racingSteeringWheelRoot  = null;
-        racingWheelAngle = 0f;
+        racingWheelAngle  = 0f;
+        racingBodyPitch   = 0f;
+        racingBodyTiltZ   = 0f;
         racingPedalGas           = null;
         racingPedalBrake         = null;
         racingGearShift          = null;
@@ -626,7 +621,6 @@ public partial class GameBootstrap : MonoBehaviour
         racingWorldLights.Clear();
         racingLanterns.Clear();
         racingTreeObstacles.Clear();
-        racingClouds.Clear();
         racingBirds.Clear();
         racingBees.Clear();
         racingMoths.Clear();
@@ -784,7 +778,7 @@ public partial class GameBootstrap : MonoBehaviour
             bool  onRoad = IsPositionOnRaceRoad(flatPos, 4.8f);
             float floorY = onRoad
                 ? SampleRaceRoadY(racingTruckPos.x, racingTruckPos.z)
-                : racingGroundY + SampleTerrainY(racingTruckPos.x, racingTruckPos.z) + 0.35f;
+                : SampleGroundMeshY(racingTruckPos.x, racingTruckPos.z, racingGroundY) + 0.35f;
 
             if (onRoad && floorY > racingTruckPos.y)
             {
@@ -816,8 +810,23 @@ public partial class GameBootstrap : MonoBehaviour
             // Body/rear lags behind physics angle — gives the "rear follows front" look
             racingBodyAngle = Mathf.LerpAngle(racingBodyAngle, racingTruckAngle, 4.5f * dt);
 
+            // ── Terrain pitch + lateral tilt (4-point finite difference) ─────
+            const float ProbeD = 0.8f;
+            float sinY = Mathf.Sin(racingBodyAngle * Mathf.Deg2Rad);
+            float cosY = Mathf.Cos(racingBodyAngle * Mathf.Deg2Rad);
+            float yFwd   = SampleSurfaceY(racingTruckPos.x + sinY * ProbeD, racingTruckPos.z + cosY * ProbeD);
+            float yBack  = SampleSurfaceY(racingTruckPos.x - sinY * ProbeD, racingTruckPos.z - cosY * ProbeD);
+            float yRight = SampleSurfaceY(racingTruckPos.x + cosY * ProbeD, racingTruckPos.z - sinY * ProbeD);
+            float yLeft  = SampleSurfaceY(racingTruckPos.x - cosY * ProbeD, racingTruckPos.z + sinY * ProbeD);
+            float slopeF = (yFwd - yBack)   / (2f * ProbeD);
+            float slopeR = (yRight - yLeft)  / (2f * ProbeD);
+            float pitchTarget = Mathf.Clamp(-Mathf.Atan(slopeF) * Mathf.Rad2Deg, -RacingPitchMax, RacingPitchMax);
+            float tiltTarget  = Mathf.Clamp(-Mathf.Atan(slopeR) * Mathf.Rad2Deg, -RacingTerrainTiltMax, RacingTerrainTiltMax);
+            racingBodyPitch = Mathf.Lerp(racingBodyPitch, pitchTarget, RacingTerrainSmooth * dt);
+            racingBodyTiltZ = Mathf.Lerp(racingBodyTiltZ, tiltTarget,  RacingTerrainSmooth * dt);
+
             racingTruckVisual.transform.position = racingTruckPos;
-            racingTruckVisual.transform.rotation = Quaternion.Euler(0f, racingBodyAngle, 0f);
+            racingTruckVisual.transform.rotation = Quaternion.Euler(racingBodyPitch, racingBodyAngle, racingBodyTiltZ);
 
             // FWD delta — front axle (wheels) + cabin pivot both steer ahead of body
             float frontDelta = Mathf.DeltaAngle(racingBodyAngle, racingTruckAngle);
@@ -854,10 +863,10 @@ public partial class GameBootstrap : MonoBehaviour
             // Small roll tilt into the corner
             float roll = racingCameraSwayX * -3.0f;
 
-            Quaternion camRot = Quaternion.Euler(14f, racingCameraAngle, roll);
-            Vector3 camBack   = camRot * Vector3.back * 2.8f;
+            Quaternion camRot = Quaternion.Euler(26f, racingCameraAngle, roll);
+            Vector3 camBack   = camRot * Vector3.back * 5f;
             Vector3 swayWorld = camRot * Vector3.right * racingCameraSwayX;
-            Vector3 targetPos = racingTruckPos + Vector3.up * 1.4f + camBack + swayWorld;
+            Vector3 targetPos = racingTruckPos + Vector3.up * 1f + camBack + swayWorld;
 
             racingCamera.transform.position = Vector3.Lerp(
                 racingCamera.transform.position, targetPos, 5.5f * dt);
@@ -2552,6 +2561,28 @@ public partial class GameBootstrap : MonoBehaviour
         }
     }
 
+    // Returns raw surface Y (no +0.35 truck-centre offset) — on-road or off-road.
+    private float SampleSurfaceY(float x, float z)
+    {
+        if (IsPositionOnRaceRoad(new Vector3(x, 0f, z), 4.8f))
+        {
+            float bestDSq = float.MaxValue, bestY = 0f;
+            foreach (var seg in raceSegments)
+            {
+                Vector3 fwd = seg.Rotation * Vector3.forward;
+                float sx = seg.Center.x - fwd.x * seg.Length * 0.5f;
+                float sz = seg.Center.z - fwd.z * seg.Length * 0.5f;
+                float t  = Mathf.Clamp01(((x - sx) * fwd.x + (z - sz) * fwd.z) / seg.Length);
+                float cx = sx + fwd.x * seg.Length * t;
+                float cz = sz + fwd.z * seg.Length * t;
+                float dSq = (x - cx) * (x - cx) + (z - cz) * (z - cz);
+                if (dSq < bestDSq) { bestDSq = dSq; bestY = Mathf.Lerp(seg.StartY, seg.EndY, t); }
+            }
+            return bestY;
+        }
+        return SampleGroundMeshY(x, z, racingGroundY);
+    }
+
     // ── Racing atmosphere ─────────────────────────────────────────────────────
 
     private void PopulateRacingAtmosphere()
@@ -2566,18 +2597,6 @@ public partial class GameBootstrap : MonoBehaviour
 
         // ── Post-processing on racing camera ─────────────────────────────────
         SetupRacingPostProcessing();
-
-        // ── Clouds ───────────────────────────────────────────────────────────
-        Vector3 travelDir = new Vector3(0.68f, 0f, 0.32f).normalized;
-        float cloudBaseY  = racingGroundY + 20f;
-        Vector3 spawnBase = new Vector3(center.x - 65f, cloudBaseY, center.z - 25f);
-
-        CreateRacingCloud(spawnBase + new Vector3(0f,  0f, -18f), travelDir, 0.8f,  0.9f,  0.30f, 0.40f, 1.8f,   0f);
-        CreateRacingCloud(spawnBase + new Vector3(0f,  3f,  -6f), travelDir, 1.1f,  0.75f, 0.28f, 1.20f, 2.1f,  22f);
-        CreateRacingCloud(spawnBase + new Vector3(0f,  1f,   9f), travelDir, 0.9f,  1.0f,  0.35f, 0.70f, 2.3f,  45f);
-        CreateRacingCloud(spawnBase + new Vector3(0f,  4f,  22f), travelDir, 1.2f,  0.85f, 0.32f, 2.00f, 1.95f, 12f);
-        CreateRacingCloud(spawnBase + new Vector3(0f,  2f,  35f), travelDir, 1.0f,  0.9f,  0.42f, 0.50f, 2.2f,  58f);
-        CreateRacingCloud(spawnBase + new Vector3(0f, -1f,  50f), travelDir, 0.85f, 0.78f, 0.38f, 1.80f, 2.05f, 31f);
 
         // ── Birds on tree tops ───────────────────────────────────────────────
         int birdCount = Mathf.Min(racingTreeObstacles.Count, 6);
@@ -2679,33 +2698,6 @@ public partial class GameBootstrap : MonoBehaviour
         bloom.intensity.Override(0.08f);
         bloom.scatter.Override(0.48f);
         bloom.tint.Override(new Color(1f, 0.96f, 0.88f, 1f));
-    }
-
-    private void CreateRacingCloud(Vector3 spawnPos, Vector3 travelDir, float speed,
-                                   float bobAmp, float bobSpeed, float phase, float scale, float initialOffset)
-    {
-        GameObject root = new("RacingCloud");
-        root.transform.SetParent(racingSceneRoot.transform, false);
-        root.transform.position   = spawnPos + travelDir * initialOffset;
-        root.transform.localScale = Vector3.one * scale;
-
-        CreateCloudLump(root.transform, new Vector3(-0.95f,  0f,    0f),   new Vector3(1.5f,  0.8f, 0.9f));
-        CreateCloudLump(root.transform, new Vector3( 0f,     0.18f, 0f),   new Vector3(1.9f,  1.0f, 1.0f));
-        CreateCloudLump(root.transform, new Vector3( 1.02f,  0.02f, 0.08f), new Vector3(1.4f, 0.74f, 0.86f));
-        CreateCloudLump(root.transform, new Vector3( 0.18f, -0.12f, 0.18f), new Vector3(1.7f, 0.54f, 0.86f));
-
-        racingClouds.Add(new RacingCloudData
-        {
-            Root          = root.transform,
-            SpawnPos      = spawnPos,
-            TravelDir     = travelDir,
-            TravelRange   = 130f,
-            TravelOffset  = initialOffset,
-            TravelSpeed   = speed,
-            BobAmplitude  = bobAmp,
-            BobSpeed      = bobSpeed,
-            PhaseOffset   = phase,
-        });
     }
 
     private void CreateRacingBird(Vector3 perchPos)
@@ -2908,18 +2900,6 @@ public partial class GameBootstrap : MonoBehaviour
     private void UpdateRacingAtmosphere(float dt)
     {
         float t = Time.unscaledTime;
-
-        // ── Clouds ────────────────────────────────────────────────────────────
-        for (int i = racingClouds.Count - 1; i >= 0; i--)
-        {
-            RacingCloudData c = racingClouds[i];
-            if (c.Root == null) { racingClouds.RemoveAt(i); continue; }
-            c.TravelOffset += c.TravelSpeed * dt;
-            if (c.TravelOffset > c.TravelRange) c.TravelOffset -= c.TravelRange;
-            float bob = Mathf.Sin(t * c.BobSpeed + c.PhaseOffset) * c.BobAmplitude;
-            c.Root.position = c.SpawnPos + c.TravelDir * c.TravelOffset + new Vector3(0f, bob, 0f);
-            racingClouds[i] = c;
-        }
 
         // ── Birds (idle perch bob + wing twitch) ──────────────────────────────
         for (int i = 0; i < racingBirds.Count; i++)

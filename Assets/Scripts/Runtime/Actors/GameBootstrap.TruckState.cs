@@ -164,8 +164,17 @@ public partial class GameBootstrap
 
     private Vector3 GetDriverIdleMotelWanderPosition(int driverIndex, int pointIndex)
     {
-        Vector3 frontageBase = GetDriverStandPointNearLocation(LocationType.Motel);
         if (!locations.TryGetValue(LocationType.Motel, out LocationData motel))
+        {
+            Vector3 fallback = locations.ContainsKey(LocationType.Parking)
+                ? GetLocationCenter(LocationType.Parking) + new Vector3(1.25f, 0f, 1.25f)
+                : new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
+            fallback.y = SampleTerrainHeight(fallback.x, fallback.z);
+            return fallback;
+        }
+
+        Vector3 frontageBase = GetDriverStandPointNearLocation(LocationType.Motel);
+        if (frontageBase == Vector3.zero)
         {
             frontageBase.y = SampleTerrainHeight(frontageBase.x, frontageBase.z);
             return frontageBase;

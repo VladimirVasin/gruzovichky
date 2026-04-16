@@ -19,21 +19,36 @@ public partial class GameBootstrap
         CreateLocation(LocationType.GasStation, "Gas Station", layout.GasStation.Min, layout.GasStation.Max, layout.GasStation.Anchor, new Color(0.84f, 0.68f, 0.26f));
         CreateLocation(LocationType.Forest, "Forest", layout.Forest.Min, layout.Forest.Max, layout.Forest.Anchor, new Color(0.22f, 0.55f, 0.24f));
         CreateLocation(LocationType.Warehouse, "Warehouse", layout.Warehouse.Min, layout.Warehouse.Max, layout.Warehouse.Anchor, new Color(0.7f, 0.52f, 0.3f));
-        CreateLocation(LocationType.Sawmill, "Sawmill", layout.Sawmill.Min, layout.Sawmill.Max, layout.Sawmill.Anchor, new Color(0.3f, 0.52f, 0.8f));
-        CreateLocation(LocationType.Motel, "Motel", layout.Motel.Min, layout.Motel.Max, layout.Motel.Anchor, new Color(0.91f, 0.87f, 0.74f));
+        if (selectedGameStartMode == GameStartMode.Debug)
+        {
+            CreateLocation(LocationType.Sawmill, "Sawmill", layout.Sawmill.Min, layout.Sawmill.Max, layout.Sawmill.Anchor, new Color(0.3f, 0.52f, 0.8f));
+            CreateLocation(LocationType.Motel, "Motel", layout.Motel.Min, layout.Motel.Max, layout.Motel.Anchor, new Color(0.91f, 0.87f, 0.74f));
+        }
+
         CreateLocation(LocationType.BusStop, "Bus Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f));
 
         SessionDebugLogger.Log(
             "WORLD",
-            $"Generated layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, Sawmill {FormatPlacement(layout.Sawmill)}, Motel {FormatPlacement(layout.Motel)}, BusStop {FormatPlacement(layout.BusStop)}.");
+            selectedGameStartMode == GameStartMode.Debug
+                ? $"Generated debug layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, Sawmill {FormatPlacement(layout.Sawmill)}, Motel {FormatPlacement(layout.Motel)}, BusStop {FormatPlacement(layout.BusStop)}."
+                : $"Generated user layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, BusStop {FormatPlacement(layout.BusStop)}. Motel/Sawmill skipped for Build menu.");
     }
 
     private bool HasRequiredLayoutRoads(GeneratedWorldLayout layout)
     {
-        return FindRoadBuildPath(layout.Parking.Anchor, layout.GasStation.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
-               FindRoadBuildPath(layout.GasStation.Anchor, layout.Warehouse.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
-               FindRoadBuildPath(layout.Warehouse.Anchor, layout.Forest.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
-               FindRoadBuildPath(layout.Forest.Anchor, layout.Sawmill.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
+        if (FindRoadBuildPath(layout.Parking.Anchor, layout.GasStation.Anchor, cell => IsPlacementCell(layout, cell)) == null ||
+            FindRoadBuildPath(layout.GasStation.Anchor, layout.Warehouse.Anchor, cell => IsPlacementCell(layout, cell)) == null ||
+            FindRoadBuildPath(layout.Warehouse.Anchor, layout.Forest.Anchor, cell => IsPlacementCell(layout, cell)) == null)
+        {
+            return false;
+        }
+
+        if (selectedGameStartMode == GameStartMode.User)
+        {
+            return FindRoadBuildPath(layout.Warehouse.Anchor, layout.BusStop.Anchor, cell => IsPlacementCell(layout, cell)) != null;
+        }
+
+        return FindRoadBuildPath(layout.Forest.Anchor, layout.Sawmill.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.Sawmill.Anchor, layout.Warehouse.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.Warehouse.Anchor, layout.Motel.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
                FindRoadBuildPath(layout.Motel.Anchor, layout.BusStop.Anchor, cell => IsPlacementCell(layout, cell)) != null;
@@ -141,6 +156,8 @@ public partial class GameBootstrap
     {
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
+        GetRotatedBuildingFootprint(anchorCell, 3, 2, out Vector2Int previewMin, out Vector2Int previewMax);
+        SetBuildFootprintPreviewCells(previewMin, previewMax, anchorCell);
         bool canPlace = TryGetFurnitureFactoryPlacement(anchorCell, out Vector2Int min, out Vector2Int max);
         if (!canPlace)
         {
@@ -204,19 +221,113 @@ public partial class GameBootstrap
         return true;
     }
 
+    private bool TryPlaceCanteenAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.Canteen))
+        {
+            SessionDebugLogger.Log("BUILD", "Canteen placement rejected: canteen already exists.");
+            return false;
+        }
+
+        if (!TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Canteen, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Canteen placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.Canteen, "Canteen", min, max, anchorCell, new Color(0.58f, 0.42f, 0.24f));
+        selectedLocation = LocationType.Canteen;
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RefreshSelectionVisuals();
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        SessionDebugLogger.Log("BUILD", $"Placed Canteen at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool TryPlaceSawmillAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.Sawmill))
+        {
+            SessionDebugLogger.Log("BUILD", "Sawmill placement rejected: sawmill already exists.");
+            return false;
+        }
+
+        if (!TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Sawmill, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Sawmill placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.Sawmill, "Sawmill", min, max, anchorCell, new Color(0.3f, 0.52f, 0.8f));
+        selectedLocation = LocationType.Sawmill;
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RefreshSelectionVisuals();
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        SessionDebugLogger.Log("BUILD", $"Placed Sawmill at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool TryPlaceMotelAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.Motel))
+        {
+            SessionDebugLogger.Log("BUILD", "Motel placement rejected: motel already exists.");
+            return false;
+        }
+
+        if (!TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Motel, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Motel placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.Motel, "Motel", min, max, anchorCell, new Color(0.91f, 0.87f, 0.74f));
+        selectedLocation = LocationType.Motel;
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        isDriversScreenDirty = true;
+        RefreshSelectionVisuals();
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        TryShowTutorial(TutorialTrigger.FirstMotelBuilt);
+        SessionDebugLogger.Log("BUILD", $"Placed Motel at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
     private bool TryGetBarPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
         // Anchor is on the road side; building footprint is 2×2 one row north of anchor
-        min = new Vector2Int(anchorCell.x - 1, anchorCell.y + 1);
-        max = new Vector2Int(anchorCell.x,     anchorCell.y + 2);
+        return TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Bar, out min, out max);
+    }
 
-        if (locations.ContainsKey(LocationType.Bar)) return false;
+    private bool TryGetTwoByTwoBuildingPlacement(Vector2Int anchorCell, LocationType type, out Vector2Int min, out Vector2Int max)
+    {
+        return TryGetRotatedBuildingPlacement(anchorCell, type, 2, 2, out min, out max);
+    }
 
-        if (!IsInsideGrid(anchorCell) || !IsInsideGrid(min) || !IsInsideGrid(max)) return false;
+    private bool TryGetRotatedBuildingPlacement(Vector2Int anchorCell, LocationType type, int width, int depth, out Vector2Int min, out Vector2Int max)
+    {
+        GetRotatedBuildingFootprint(anchorCell, width, depth, out min, out max);
+
+        if (locations.ContainsKey(type))
+        {
+            return false;
+        }
+
+        if (!IsInsideGrid(anchorCell) || !IsInsideGrid(min) || !IsInsideGrid(max))
+        {
+            return false;
+        }
 
         if (roadCells.Contains(anchorCell) || edgeHighwayCells.Contains(anchorCell) ||
             miscOccupiedCells.Contains(anchorCell) || IsLocationCell(anchorCell) || IsWaterOrBeachCell(anchorCell))
+        {
             return false;
+        }
 
         for (int x = min.x; x <= max.x; x++)
         {
@@ -225,19 +336,94 @@ public partial class GameBootstrap
                 Vector2Int cell = new(x, y);
                 if (!IsInsideGrid(cell) || roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) ||
                     miscOccupiedCells.Contains(cell) || IsLocationCell(cell) || IsWaterOrBeachCell(cell))
+                {
                     return false;
+                }
             }
         }
 
         return true;
     }
 
+    private void GetRotatedBuildingFootprint(Vector2Int anchorCell, int width, int depth, out Vector2Int min, out Vector2Int max)
+    {
+        int left = width / 2;
+        int right = width - left - 1;
+        switch (buildPlacementRotationIndex % 4)
+        {
+            case 1:
+                min = new Vector2Int(anchorCell.x + 1, anchorCell.y - left);
+                max = new Vector2Int(anchorCell.x + depth, anchorCell.y + right);
+                break;
+            case 2:
+                min = new Vector2Int(anchorCell.x - left, anchorCell.y - depth);
+                max = new Vector2Int(anchorCell.x + right, anchorCell.y - 1);
+                break;
+            case 3:
+                min = new Vector2Int(anchorCell.x - depth, anchorCell.y - left);
+                max = new Vector2Int(anchorCell.x - 1, anchorCell.y + right);
+                break;
+            default:
+                min = new Vector2Int(anchorCell.x - left, anchorCell.y + 1);
+                max = new Vector2Int(anchorCell.x + right, anchorCell.y + depth);
+                break;
+        }
+    }
+
+    private void SetBuildFootprintPreviewCells(Vector2Int min, Vector2Int max, Vector2Int drivewayCell)
+    {
+        buildPreviewFootprintCells.Clear();
+        buildPreviewDrivewayCell = drivewayCell;
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                buildPreviewFootprintCells.Add(new Vector2Int(x, y));
+            }
+        }
+    }
+
     private bool GetBarPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
     {
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
+        GetRotatedBuildingFootprint(anchorCell, 2, 2, out Vector2Int previewMin, out Vector2Int previewMax);
+        SetBuildFootprintPreviewCells(previewMin, previewMax, anchorCell);
         bool canPlace = TryGetBarPlacement(anchorCell, out Vector2Int min, out Vector2Int max);
         if (!canPlace) return false;
+
+        float centerX = (min.x + max.x + 1) * 0.5f;
+        float centerZ = (min.y + max.y + 1) * 0.5f;
+        previewPosition = new Vector3(centerX, SampleTerrainHeight(centerX, centerZ) + RoadHeight + 0.03f, centerZ);
+        previewScale = new Vector3((max.x - min.x + 1) * 0.94f, 0.04f, (max.y - min.y + 1) * 0.94f);
+        return true;
+    }
+
+    private bool GetSawmillPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.Sawmill, out previewPosition, out previewScale);
+    }
+
+    private bool GetMotelPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.Motel, out previewPosition, out previewScale);
+    }
+
+    private bool GetCanteenPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.Canteen, out previewPosition, out previewScale);
+    }
+
+    private bool GetTwoByTwoBuildingPlacementPreview(Vector2Int anchorCell, LocationType type, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
+        previewScale = new Vector3(0.98f, 0.04f, 0.98f);
+        GetRotatedBuildingFootprint(anchorCell, 2, 2, out Vector2Int previewMin, out Vector2Int previewMax);
+        SetBuildFootprintPreviewCells(previewMin, previewMax, anchorCell);
+        if (!TryGetTwoByTwoBuildingPlacement(anchorCell, type, out Vector2Int min, out Vector2Int max))
+        {
+            return false;
+        }
 
         float centerX = (min.x + max.x + 1) * 0.5f;
         float centerZ = (min.y + max.y + 1) * 0.5f;
@@ -314,44 +500,73 @@ public partial class GameBootstrap
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
     }
 
+    private void CreateCanteenDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        float scale = BuildingDecorScale;
+        Color wallColor = new Color(0.66f, 0.48f, 0.27f);
+        Color roofColor = new Color(0.85f, 0.32f, 0.16f);
+
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        body.transform.SetParent(parent, false);
+        body.transform.position = center + new Vector3(0f, 0.4f * scale, 0f);
+        body.transform.localScale = new Vector3(1.65f * scale, 0.8f * scale, 1.45f * scale);
+        ApplyColor(body, wallColor);
+        ConfigureStaticVisual(body);
+
+        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roof.transform.SetParent(parent, false);
+        roof.transform.position = center + new Vector3(0f, 0.86f * scale, 0f);
+        roof.transform.localScale = new Vector3(1.9f * scale, 0.1f * scale, 1.7f * scale);
+        ApplyColor(roof, roofColor);
+        ConfigureStaticVisual(roof);
+
+        GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        door.transform.SetParent(parent, false);
+        door.transform.position = center + new Vector3(-0.28f * scale, 0.2f * scale, -0.74f * scale);
+        door.transform.localScale = new Vector3(0.34f * scale, 0.48f * scale, 0.04f * scale);
+        ApplyColor(door, new Color(0.22f, 0.13f, 0.07f));
+        ConfigureStaticVisual(door);
+
+        GameObject servingWindow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        servingWindow.transform.SetParent(parent, false);
+        servingWindow.transform.position = center + new Vector3(0.38f * scale, 0.48f * scale, -0.75f * scale);
+        servingWindow.transform.localScale = new Vector3(0.56f * scale, 0.3f * scale, 0.04f * scale);
+        ApplyColor(servingWindow, new Color(0.95f, 0.88f, 0.58f));
+        ConfigureStaticVisual(servingWindow);
+
+        GameObject sign = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        sign.transform.SetParent(parent, false);
+        sign.transform.position = center + new Vector3(0f, 0.69f * scale, -0.77f * scale);
+        sign.transform.localScale = new Vector3(0.82f * scale, 0.18f * scale, 0.04f * scale);
+        ApplyColor(sign, new Color(0.98f, 0.86f, 0.34f));
+        ConfigureStaticVisual(sign);
+
+        for (int i = 0; i < 2; i++)
+        {
+            GameObject table = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            table.transform.SetParent(parent, false);
+            table.transform.position = center + new Vector3((-0.38f + i * 0.76f) * scale, 0.11f * scale, 0.62f * scale);
+            table.transform.localScale = new Vector3(0.46f * scale, 0.1f * scale, 0.28f * scale);
+            ApplyColor(table, new Color(0.55f, 0.34f, 0.16f));
+            ConfigureStaticVisual(table);
+        }
+
+        GameObject lightObj = new("CanteenLight");
+        lightObj.transform.SetParent(parent, false);
+        lightObj.transform.position = center + new Vector3(0.35f * scale, 0.88f * scale, -0.9f * scale);
+        Light canteenLight = lightObj.AddComponent<Light>();
+        canteenLight.type = LightType.Point;
+        canteenLight.color = new Color(1f, 0.78f, 0.42f);
+        canteenLight.intensity = 0.32f;
+        canteenLight.range = 2.8f;
+        canteenLight.shadows = LightShadows.None;
+
+        CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
+    }
+
     private bool TryGetFurnitureFactoryPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
-        min = new Vector2Int(anchorCell.x - 1, anchorCell.y + 1);
-        max = new Vector2Int(anchorCell.x + 1, anchorCell.y + 2);
-
-        if (locations.ContainsKey(LocationType.FurnitureFactory))
-        {
-            return false;
-        }
-
-        if (!IsInsideGrid(anchorCell) || !IsInsideGrid(min) || !IsInsideGrid(max))
-        {
-            return false;
-        }
-
-        if (roadCells.Contains(anchorCell) || edgeHighwayCells.Contains(anchorCell) || miscOccupiedCells.Contains(anchorCell) || IsLocationCell(anchorCell) || IsWaterOrBeachCell(anchorCell))
-        {
-            return false;
-        }
-
-        for (int x = min.x; x <= max.x; x++)
-        {
-            for (int y = min.y; y <= max.y; y++)
-            {
-                Vector2Int cell = new Vector2Int(x, y);
-                if (!IsInsideGrid(cell) ||
-                    roadCells.Contains(cell) ||
-                    edgeHighwayCells.Contains(cell) ||
-                    miscOccupiedCells.Contains(cell) ||
-                    IsLocationCell(cell) ||
-                    IsWaterOrBeachCell(cell))
-                {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        return TryGetRotatedBuildingPlacement(anchorCell, LocationType.FurnitureFactory, 3, 2, out min, out max);
     }
 
     private void CreateMiscTree(Vector2Int cell, int variantIndex)

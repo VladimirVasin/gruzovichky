@@ -28,7 +28,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("BuildWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 560f, 390f, -16f);
+        SetCenteredWindow(windowRect, 620f, 610f, -16f);
         buildScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();
@@ -50,7 +50,7 @@ public partial class GameBootstrap
         buildTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
         RectTransform toolCard = CreateSectionCard(windowRoot.transform, font, string.Empty, out RectTransform toolBody, false);
-        toolCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 260f;
+        toolCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 480f;
         VerticalLayoutGroup toolBodyLayout = toolBody.gameObject.GetComponent<VerticalLayoutGroup>();
         toolBodyLayout.spacing = 14f;
         toolBodyLayout.childControlWidth = true;
@@ -93,6 +93,78 @@ public partial class GameBootstrap
 
         buildScreenUi.RoadTitleText = CreateHeaderText("RoadTitle", roadInfo, font, "Road", 18, TextAnchor.MiddleLeft, Color.white);
         buildScreenUi.RoadDescriptionText = CreateBodyText("RoadDescription", roadInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
+
+        RectTransform sawmillRow = CreateUiObject("BuildSawmillRow", toolBody).GetComponent<RectTransform>();
+        HorizontalLayoutGroup sawmillLayout = sawmillRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        sawmillLayout.spacing = 14;
+        sawmillLayout.childControlWidth = true;
+        sawmillLayout.childControlHeight = true;
+        sawmillLayout.childForceExpandWidth = false;
+        sawmillLayout.childForceExpandHeight = false;
+
+        buildScreenUi.SawmillButton = CreateButton("BuildSawmillButton", sawmillRow, font, out Text sawmillButtonText, "SAWMILL", 16, FleetPrimaryButtonColor, Color.white);
+        buildScreenUi.SawmillButtonText = sawmillButtonText;
+        LayoutElement sawmillButtonLayout = buildScreenUi.SawmillButton.gameObject.AddComponent<LayoutElement>();
+        sawmillButtonLayout.preferredWidth = 96f;
+        sawmillButtonLayout.preferredHeight = 56f;
+        buildScreenUi.SawmillButton.onClick.AddListener(() =>
+        {
+            bool sawmillModeActive = activeBuildTool == BuildTool.Sawmill;
+            activeBuildTool = sawmillModeActive ? BuildTool.None : BuildTool.Sawmill;
+            isBuildPanelOpen = false;
+            LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
+            PlayUiSound(uiSelectClip, 0.85f);
+            SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
+            isBuildScreenDirty = true;
+        });
+
+        RectTransform sawmillInfo = CreateUiObject("SawmillInfo", sawmillRow).GetComponent<RectTransform>();
+        sawmillInfo.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup sawmillInfoLayout = sawmillInfo.gameObject.AddComponent<VerticalLayoutGroup>();
+        sawmillInfoLayout.spacing = 6;
+        sawmillInfoLayout.childControlWidth = true;
+        sawmillInfoLayout.childControlHeight = true;
+        sawmillInfoLayout.childForceExpandWidth = true;
+        sawmillInfoLayout.childForceExpandHeight = false;
+
+        buildScreenUi.SawmillTitleText = CreateHeaderText("SawmillTitle", sawmillInfo, font, "Sawmill", 18, TextAnchor.MiddleLeft, Color.white);
+        buildScreenUi.SawmillDescriptionText = CreateBodyText("SawmillDescription", sawmillInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
+
+        RectTransform motelRow = CreateUiObject("BuildMotelRow", toolBody).GetComponent<RectTransform>();
+        HorizontalLayoutGroup motelLayout = motelRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        motelLayout.spacing = 14;
+        motelLayout.childControlWidth = true;
+        motelLayout.childControlHeight = true;
+        motelLayout.childForceExpandWidth = false;
+        motelLayout.childForceExpandHeight = false;
+
+        buildScreenUi.MotelButton = CreateButton("BuildMotelButton", motelRow, font, out Text motelButtonText, "MOTEL", 16, FleetPrimaryButtonColor, Color.white);
+        buildScreenUi.MotelButtonText = motelButtonText;
+        LayoutElement motelButtonLayout = buildScreenUi.MotelButton.gameObject.AddComponent<LayoutElement>();
+        motelButtonLayout.preferredWidth = 96f;
+        motelButtonLayout.preferredHeight = 56f;
+        buildScreenUi.MotelButton.onClick.AddListener(() =>
+        {
+            bool motelModeActive = activeBuildTool == BuildTool.Motel;
+            activeBuildTool = motelModeActive ? BuildTool.None : BuildTool.Motel;
+            isBuildPanelOpen = false;
+            LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
+            PlayUiSound(uiSelectClip, 0.85f);
+            SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
+            isBuildScreenDirty = true;
+        });
+
+        RectTransform motelInfo = CreateUiObject("MotelInfo", motelRow).GetComponent<RectTransform>();
+        motelInfo.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup motelInfoLayout = motelInfo.gameObject.AddComponent<VerticalLayoutGroup>();
+        motelInfoLayout.spacing = 6;
+        motelInfoLayout.childControlWidth = true;
+        motelInfoLayout.childControlHeight = true;
+        motelInfoLayout.childForceExpandWidth = true;
+        motelInfoLayout.childForceExpandHeight = false;
+
+        buildScreenUi.MotelTitleText = CreateHeaderText("MotelTitle", motelInfo, font, "Motel", 18, TextAnchor.MiddleLeft, Color.white);
+        buildScreenUi.MotelDescriptionText = CreateBodyText("MotelDescription", motelInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
 
         RectTransform factoryRow = CreateUiObject("BuildFurnitureFactoryRow", toolBody).GetComponent<RectTransform>();
         HorizontalLayoutGroup factoryLayout = factoryRow.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -166,6 +238,42 @@ public partial class GameBootstrap
         buildScreenUi.BarTitleText = CreateHeaderText("BarTitle", barInfo, font, "Bar", 18, TextAnchor.MiddleLeft, Color.white);
         buildScreenUi.BarDescriptionText = CreateBodyText("BarDescription", barInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
 
+        RectTransform canteenRow = CreateUiObject("BuildCanteenRow", toolBody).GetComponent<RectTransform>();
+        HorizontalLayoutGroup canteenLayout = canteenRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        canteenLayout.spacing = 14;
+        canteenLayout.childControlWidth = true;
+        canteenLayout.childControlHeight = true;
+        canteenLayout.childForceExpandWidth = false;
+        canteenLayout.childForceExpandHeight = false;
+
+        buildScreenUi.CanteenButton = CreateButton("BuildCanteenButton", canteenRow, font, out Text canteenButtonText, "CANTEEN", 16, FleetPrimaryButtonColor, Color.white);
+        buildScreenUi.CanteenButtonText = canteenButtonText;
+        LayoutElement canteenButtonLayout = buildScreenUi.CanteenButton.gameObject.AddComponent<LayoutElement>();
+        canteenButtonLayout.preferredWidth = 96f;
+        canteenButtonLayout.preferredHeight = 56f;
+        buildScreenUi.CanteenButton.onClick.AddListener(() =>
+        {
+            bool canteenModeActive = activeBuildTool == BuildTool.Canteen;
+            activeBuildTool = canteenModeActive ? BuildTool.None : BuildTool.Canteen;
+            isBuildPanelOpen = false;
+            LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
+            PlayUiSound(uiSelectClip, 0.85f);
+            SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
+            isBuildScreenDirty = true;
+        });
+
+        RectTransform canteenInfo = CreateUiObject("CanteenInfo", canteenRow).GetComponent<RectTransform>();
+        canteenInfo.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup canteenInfoLayout = canteenInfo.gameObject.AddComponent<VerticalLayoutGroup>();
+        canteenInfoLayout.spacing = 6;
+        canteenInfoLayout.childControlWidth = true;
+        canteenInfoLayout.childControlHeight = true;
+        canteenInfoLayout.childForceExpandWidth = true;
+        canteenInfoLayout.childForceExpandHeight = false;
+
+        buildScreenUi.CanteenTitleText = CreateHeaderText("CanteenTitle", canteenInfo, font, "Canteen", 18, TextAnchor.MiddleLeft, Color.white);
+        buildScreenUi.CanteenDescriptionText = CreateBodyText("CanteenDescription", canteenInfo, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
+
         AddOverlayCloseButton(windowRect, font);
         buildScreenUi.CanvasRoot.SetActive(false);
         UpdateBuildScreenUi();
@@ -187,11 +295,26 @@ public partial class GameBootstrap
 
         bool roadModeActive = activeBuildTool == BuildTool.Road;
         bool factoryModeActive = activeBuildTool == BuildTool.FurnitureFactory;
+        bool sawmillModeActive = activeBuildTool == BuildTool.Sawmill;
+        bool motelModeActive = activeBuildTool == BuildTool.Motel;
         bool barModeActive = activeBuildTool == BuildTool.Bar;
+        bool canteenModeActive = activeBuildTool == BuildTool.Canteen;
         Image roadButtonImage = buildScreenUi.RoadButton.GetComponent<Image>();
         if (roadButtonImage != null)
         {
             roadButtonImage.color = roadModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
+        }
+
+        Image sawmillButtonImage = buildScreenUi.SawmillButton.GetComponent<Image>();
+        if (sawmillButtonImage != null)
+        {
+            sawmillButtonImage.color = sawmillModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
+        }
+
+        Image motelButtonImage = buildScreenUi.MotelButton.GetComponent<Image>();
+        if (motelButtonImage != null)
+        {
+            motelButtonImage.color = motelModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
         }
 
         Image factoryButtonImage = buildScreenUi.FurnitureFactoryButton.GetComponent<Image>();
@@ -200,15 +323,35 @@ public partial class GameBootstrap
             factoryButtonImage.color = factoryModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
         }
 
+        Image canteenButtonImage = buildScreenUi.CanteenButton.GetComponent<Image>();
+        if (canteenButtonImage != null)
+        {
+            canteenButtonImage.color = canteenModeActive ? FleetAccentColor : FleetPrimaryButtonColor;
+        }
+
         buildScreenUi.RoadButtonText.text = "ROAD";
         buildScreenUi.RoadTitleText.text = "Road";
         buildScreenUi.RoadDescriptionText.text = roadModeActive
             ? "Mode active: left click builds, right click removes."
             : "Click to enter road building mode.";
+        buildScreenUi.SawmillButtonText.text = "SAWMILL";
+        buildScreenUi.SawmillTitleText.text = "Sawmill";
+        buildScreenUi.SawmillDescriptionText.text = sawmillModeActive
+            ? $"Mode active: place one 2x2 sawmill from its driveway cell. R rotates ({GetBuildRotationLabel()})."
+            : locations.ContainsKey(LocationType.Sawmill)
+                ? "Already built on this map."
+                : "Place a 2x2 production building that turns logs into boards.";
+        buildScreenUi.MotelButtonText.text = "MOTEL";
+        buildScreenUi.MotelTitleText.text = "Motel";
+        buildScreenUi.MotelDescriptionText.text = motelModeActive
+            ? $"Mode active: place one 2x2 motel from its driveway cell. R rotates ({GetBuildRotationLabel()})."
+            : locations.ContainsKey(LocationType.Motel)
+                ? "Already built on this map."
+                : "Place a 2x2 driver hub. Drivers can idle and be hired after it exists.";
         buildScreenUi.FurnitureFactoryButtonText.text = "FACTORY";
         buildScreenUi.FurnitureFactoryTitleText.text = "Furniture Factory";
         buildScreenUi.FurnitureFactoryDescriptionText.text = factoryModeActive
-            ? "Mode active: place one 3x2 furniture factory from its roadside anchor."
+            ? $"Mode active: place one 3x2 furniture factory from its driveway cell. R rotates ({GetBuildRotationLabel()})."
             : locations.ContainsKey(LocationType.FurnitureFactory)
                 ? "Already built on this map."
                 : "Place a 3x2 factory that turns 1 Board + 1 Textile into 1 Furniture.";
@@ -222,10 +365,18 @@ public partial class GameBootstrap
         buildScreenUi.BarButtonText.text = "BAR";
         buildScreenUi.BarTitleText.text = "Bar";
         buildScreenUi.BarDescriptionText.text = barModeActive
-            ? "Mode active: place bar from its roadside anchor."
+            ? $"Mode active: place bar from its driveway cell. R rotates ({GetBuildRotationLabel()})."
             : locations.ContainsKey(LocationType.Bar)
                 ? "Already built on this map."
                 : "Social hub — idle drivers gather here to rest.";
+
+        buildScreenUi.CanteenButtonText.text = "CANTEEN";
+        buildScreenUi.CanteenTitleText.text = "Canteen";
+        buildScreenUi.CanteenDescriptionText.text = canteenModeActive
+            ? $"Mode active: place one 2x2 canteen from its driveway cell. R rotates ({GetBuildRotationLabel()})."
+            : locations.ContainsKey(LocationType.Canteen)
+                ? "Already built on this map."
+                : "Service building: visiting drivers/workers pay $10 for a quick meal.";
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(buildScreenUi.WindowRoot);
         isBuildScreenDirty = false;

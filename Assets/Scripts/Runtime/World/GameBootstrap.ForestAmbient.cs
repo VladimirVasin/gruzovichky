@@ -21,6 +21,7 @@ public partial class GameBootstrap
             worker.StateTimer = Random.Range(2.4f, 3.8f);
             worker.AnimationTime = Random.Range(0f, 1.5f);
             worker.ChopSoundCooldown = Random.Range(0.08f, 0.32f);
+            worker.RootObject.SetActive(false);   // hidden until a logistics worker enters
             forestWorkers.Add(worker);
         }
 
@@ -34,19 +35,17 @@ public partial class GameBootstrap
             return;
         }
 
-        if (AreProductionsPausedAtNight())
+        bool workActive = IsLocationOperational(LocationType.Forest);
+
+        foreach (ForestWorkerAmbient fw in forestWorkers)
         {
-            StopForestWorkerAudioForNight();
-            foreach (ForestWorkerAmbient pausedWorker in forestWorkers)
-            {
-                if (pausedWorker?.RootObject == null)
-                {
-                    continue;
-                }
+            if (fw?.RootObject != null && fw.RootObject.activeSelf != workActive)
+                fw.RootObject.SetActive(workActive);
+        }
 
-                ApplyForestWorkerNightPause(pausedWorker);
-            }
-
+        if (!workActive)
+        {
+            StopForestWorkerAudio();
             return;
         }
 
@@ -503,7 +502,7 @@ public partial class GameBootstrap
 
     private void UpdateForestTreeWobbles()
     {
-        if (AreProductionsPausedAtNight())
+        if (!IsLocationOperational(LocationType.Forest))
         {
             for (int i = forestTreeWobbles.Count - 1; i >= 0; i--)
             {
@@ -558,27 +557,7 @@ public partial class GameBootstrap
         return limb.transform;
     }
 
-    private void ApplyForestWorkerNightPause(ForestWorkerAmbient worker)
-    {
-        if (worker == null)
-        {
-            return;
-        }
-
-        ApplyForestWorkerPose(worker, 0f, 0f, -1.5f, false);
-        if (worker.FlashlightLight != null)
-        {
-            worker.FlashlightLight.enabled = false;
-            worker.FlashlightLight.intensity = 0f;
-        }
-
-        if (worker.FlashlightMaterial != null)
-        {
-            worker.FlashlightMaterial.color = new Color(0.24f, 0.22f, 0.18f);
-        }
-    }
-
-    private void StopForestWorkerAudioForNight()
+    private void StopForestWorkerAudio()
     {
         if (forestWorkerAudioSource != null && forestWorkerAudioSource.isPlaying)
         {
@@ -590,18 +569,6 @@ public partial class GameBootstrap
     {
         if (worker?.FlashlightLight == null)
         {
-            return;
-        }
-
-        if (AreProductionsPausedAtNight())
-        {
-            worker.FlashlightLight.enabled = false;
-            worker.FlashlightLight.intensity = 0f;
-            if (worker.FlashlightMaterial != null)
-            {
-                worker.FlashlightMaterial.color = new Color(0.24f, 0.22f, 0.18f);
-            }
-
             return;
         }
 

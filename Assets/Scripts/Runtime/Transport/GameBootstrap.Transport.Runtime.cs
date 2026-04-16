@@ -66,7 +66,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (AreProductionsPausedAtNight())
+        if (!IsLocationOperational(LocationType.Sawmill))
         {
             return;
         }
@@ -99,7 +99,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (AreProductionsPausedAtNight())
+        if (!IsLocationOperational(LocationType.FurnitureFactory))
         {
             return;
         }
@@ -244,10 +244,9 @@ public partial class GameBootstrap
             case DriverRescuePhase.ToGasStation:
                 driver.WalkPhase = DriverRescuePhase.ToTruck;
                 if (driver.DriverFuelCanTransform != null)
-                {
                     driver.DriverFuelCanTransform.gameObject.SetActive(true);
-                }
-
+                if (locations.TryGetValue(LocationType.GasStation, out LocationData gsEmergency))
+                    gsEmergency.FuelStored = Mathf.Max(0, gsEmergency.FuelStored - 1);
                 SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} driver reached Gas Station and is returning with fuel.");
                 driver.WalkTargetWorld = GetDriverStandPointNearTruck();
                 BuildDriverWalkPath(driver, currentPosition, driver.WalkTargetWorld);
@@ -284,15 +283,25 @@ public partial class GameBootstrap
             case DriverRescuePhase.ToMotelEntrance:
                 isDriverRescueActive = false;
                 driver.WalkPhase = DriverRescuePhase.None;
-                driver.DriverObject.SetActive(false);
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
-                driver.SleepStartEnergy = driver.Energy;
-                driver.SleepTimer = DriverSleepDuration;
-                driver.RestPhase = DriverRestPhase.Sleeping;
                 driver.DriverObject.transform.position = driver.MotelIdlePosition;
-                SessionDebugLogger.Log("REST", $"{driver.DriverName} entered motel. Sleeping for {DriverSleepDuration}s.");
+                if (locations.TryGetValue(LocationType.Motel, out LocationData motelData) && driver.Money >= motelData.ServiceFee)
+                {
+                    driver.Money -= motelData.ServiceFee;
+                    SpawnMoneySpendPopup(driver.MotelIdlePosition, motelData.ServiceFee);
+                    driver.DriverObject.SetActive(false);
+                    driver.SleepStartEnergy = driver.Energy;
+                    driver.SleepTimer = DriverSleepDuration;
+                    driver.RestPhase = DriverRestPhase.Sleeping;
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} checked into motel — paid ${motelData.ServiceFee} (balance: ${driver.Money}). Sleeping for {DriverSleepDuration}s.");
+                }
+                else
+                {
+                    driver.RestPhase = DriverRestPhase.None;
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} couldn't afford motel (${driver.Money} < ${motelData?.ServiceFee ?? 0}) — staying outside.");
+                }
                 return;
 
             case DriverRescuePhase.ToTruckAtMotel:
@@ -347,11 +356,141 @@ public partial class GameBootstrap
                 return;
 
             case DriverRescuePhase.IdleWalkToBar:
-                driver.WalkPhase = DriverRescuePhase.IdleAtBar;
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
-                SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar.");
+                if (locations.TryGetValue(LocationType.Bar, out LocationData barData) && barData.AlcoholStored > 0)
+                {
+                    driver.WalkPhase = DriverRescuePhase.IdleAtBar;
+                    barData.AlcoholStored = Mathf.Max(0, barData.AlcoholStored - 1);
+                    if (barData.ServiceFee > 0)
+                    {
+                        driver.Money -= barData.ServiceFee;
+                        SpawnMoneySpendPopup(driver.DriverObject.transform.position, barData.ServiceFee);
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar — paid ${barData.ServiceFee}, consumed 1 Alcohol (balance: ${driver.Money}).");
+                    }
+                    else
+                    {
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar — consumed 1 Alcohol.");
+                    }
+                }
+                else
+                {
+                    driver.WalkPhase = DriverRescuePhase.IdleWander;
+                    driver.IdleWanderPointIndex++;
+                    BuildDriverWalkPath(driver, currentPosition, driver.MotelIdlePosition);
+                    SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at Bar — no Alcohol left, wandering back.");
+                }
+                return;
+
+            case DriverRescuePhase.IdleWalkToCanteen:
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                if (locations.TryGetValue(LocationType.Canteen, out LocationData canteenData) && canteenData.FoodStored > 0)
+                {
+                    driver.WalkPhase = DriverRescuePhase.IdleAtCanteen;
+                    canteenData.FoodStored = Mathf.Max(0, canteenData.FoodStored - 1);
+                    if (canteenData.ServiceFee > 0)
+                    {
+                        driver.Money -= canteenData.ServiceFee;
+                        SpawnMoneySpendPopup(driver.DriverObject.transform.position, canteenData.ServiceFee);
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen — paid ${canteenData.ServiceFee}, consumed 1 Food (balance: ${driver.Money}).");
+                    }
+                    else
+                    {
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen — consumed 1 Food.");
+                    }
+                }
+                else
+                {
+                    driver.WalkPhase = DriverRescuePhase.IdleWander;
+                    driver.IdleWanderPointIndex++;
+                    BuildDriverWalkPath(driver, currentPosition, driver.MotelIdlePosition);
+                    SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at Canteen — no Food left, wandering back.");
+                }
+                return;
+
+            case DriverRescuePhase.WarehouseDeliveryToService:
+                // Arrived at service building — unload 1 unit
+                if (driver.WarehouseDeliveryTarget.HasValue &&
+                    locations.TryGetValue(driver.WarehouseDeliveryTarget.Value, out LocationData serviceBuilding))
+                {
+                    switch (driver.WarehouseDeliveryTarget.Value)
+                    {
+                        case LocationType.GasStation:
+                            serviceBuilding.FuelStored = Mathf.Min(serviceBuilding.FuelStored + 1, GasStationMaxFuelStorage);
+                            break;
+                        case LocationType.Bar:
+                            serviceBuilding.AlcoholStored = Mathf.Min(serviceBuilding.AlcoholStored + 1, BarMaxAlcoholStorage);
+                            break;
+                        case LocationType.Canteen:
+                            serviceBuilding.FoodStored = Mathf.Min(serviceBuilding.FoodStored + 1, CanteenMaxFoodStorage);
+                            break;
+                    }
+                    SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} delivered 1 unit to {serviceBuilding.Label}.");
+                }
+                // Walk back to Warehouse
+                if (driver.AssignedBuildingType.HasValue &&
+                    locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData warehouseReturn))
+                {
+                    Vector3 returnTarget = GetCellCenter(warehouseReturn.Anchor);
+                    returnTarget.y += 0.05f;
+                    driver.WalkTargetWorld = returnTarget;
+                    driver.WalkPhase = DriverRescuePhase.WarehouseDeliveryReturn;
+                    BuildDriverWalkPath(driver, currentPosition, returnTarget);
+                }
+                return;
+
+            case DriverRescuePhase.WarehouseDeliveryReturn:
+                // Back at Warehouse — become invisible, ready for next delivery
+                driver.WalkPhase         = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.IsInsideBuilding  = true;
+                driver.WarehouseDeliveryTarget = null;
+                driver.DriverObject.SetActive(false);
+                SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} returned to Warehouse — ready for next delivery.");
+                return;
+
+            case DriverRescuePhase.ToBuildingForShift:
+                driver.WalkPhase        = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.IsOnActiveShift   = true;
+                driver.IsInsideBuilding  = true;
+                driver.IsShiftSalaryPending = true;
+                driver.DriverObject.SetActive(false);
+                if (driver.AssignedBuildingType.HasValue && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData enteredBuilding))
+                {
+                    enteredBuilding.Workers = 1;
+                    SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} entered {enteredBuilding.Label} — building operational.");
+                }
+                return;
+
+            case DriverRescuePhase.ToMotelFromBuilding:
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.DriverObject.transform.position = driver.MotelIdlePosition;
+                if (locations.TryGetValue(LocationType.Motel, out LocationData motelFromBldg) && driver.Money >= motelFromBldg.ServiceFee)
+                {
+                    driver.Money -= motelFromBldg.ServiceFee;
+                    SpawnMoneySpendPopup(driver.MotelIdlePosition, motelFromBldg.ServiceFee);
+                    driver.DriverObject.SetActive(false);
+                    driver.SleepStartEnergy = driver.Energy;
+                    driver.SleepTimer       = DriverSleepDuration;
+                    driver.RestPhase        = DriverRestPhase.Sleeping;
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} checked into motel after logistics shift — paid ${motelFromBldg.ServiceFee} (balance: ${driver.Money}).");
+                }
+                else
+                {
+                    driver.RestPhase = DriverRestPhase.None;
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} couldn't afford motel after logistics shift (${driver.Money} < ${motelFromBldg?.ServiceFee ?? 0}) — staying outside.");
+                }
                 return;
         }
     }

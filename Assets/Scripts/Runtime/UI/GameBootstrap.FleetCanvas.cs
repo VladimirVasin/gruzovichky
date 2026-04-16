@@ -961,7 +961,7 @@ public partial class GameBootstrap
         GameObject go = CreateUiObject(name, parent);
         Text text = go.AddComponent<Text>();
         text.font = font;
-        text.text = value;
+        text.text = L(value);
         text.fontSize = fontSize;
         text.alignment = alignment;
         text.color = color;
@@ -1006,7 +1006,7 @@ public partial class GameBootstrap
 
     private static string FormatValueLine(string label, string value)
     {
-        return $"<color=#{ColorUtility.ToHtmlStringRGB(FleetMutedTextColor)}>{label}:</color>  <color=#FFFFFF>{value}</color>";
+        return $"<color=#{ColorUtility.ToHtmlStringRGB(FleetMutedTextColor)}>{L(label)}:</color>  <color=#FFFFFF>{L(value)}</color>";
     }
 
     private static void StretchRect(RectTransform rect, float left, float top, float right, float bottom)

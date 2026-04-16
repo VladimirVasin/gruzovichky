@@ -188,14 +188,30 @@ public partial class GameBootstrap
 
     private void GenerateInitialRoadNetwork()
     {
-        CreateGuaranteedRoadConnection(locations[LocationType.Parking].Anchor, locations[LocationType.GasStation].Anchor);
-        CreateGuaranteedRoadConnection(locations[LocationType.GasStation].Anchor, locations[LocationType.Warehouse].Anchor);
-        CreateGuaranteedRoadConnection(locations[LocationType.Warehouse].Anchor, locations[LocationType.Forest].Anchor);
-        CreateGuaranteedRoadConnection(locations[LocationType.Forest].Anchor, locations[LocationType.Sawmill].Anchor);
-        CreateGuaranteedRoadConnection(locations[LocationType.Sawmill].Anchor, locations[LocationType.Warehouse].Anchor);
-        CreateGuaranteedRoadConnection(locations[LocationType.Warehouse].Anchor, locations[LocationType.Motel].Anchor);
-        CreateGuaranteedRoadConnection(locations[LocationType.Motel].Anchor, locations[LocationType.BusStop].Anchor);
+        CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Parking, LocationType.GasStation);
+        CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.GasStation, LocationType.Warehouse);
+        CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Warehouse, LocationType.Forest);
+        CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Forest, LocationType.Sawmill);
+        CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Sawmill, LocationType.Warehouse);
+        CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Warehouse, LocationType.Motel);
+        CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Motel, LocationType.BusStop);
+        if (!locations.ContainsKey(LocationType.Motel))
+        {
+            CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Warehouse, LocationType.BusStop);
+        }
+
         SessionDebugLogger.Log("ROAD", $"Generated starter road network with {roadCells.Count} road cells.");
+    }
+
+    private void CreateGuaranteedRoadConnectionIfLocationsExist(LocationType startType, LocationType endType)
+    {
+        if (!locations.TryGetValue(startType, out LocationData start) ||
+            !locations.TryGetValue(endType, out LocationData end))
+        {
+            return;
+        }
+
+        CreateGuaranteedRoadConnection(start.Anchor, end.Anchor);
     }
 
     private void CreateGuaranteedRoadConnection(Vector2Int start, Vector2Int end)

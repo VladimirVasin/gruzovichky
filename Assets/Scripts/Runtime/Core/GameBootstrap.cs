@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -17,6 +18,13 @@ public partial class GameBootstrap : MonoBehaviour
     private const int FurnitureFactoryMaxTextileStorage = 6;
     private const int FurnitureFactoryMaxFurnitureStorage = 6;
     private const float FurnitureFactoryProcessingDuration = 5.5f;
+    private const int WarehouseMaxFuelStorage    = 20;
+    private const int WarehouseMaxAlcoholStorage = 20;
+    private const int WarehouseMaxFoodStorage    = 20;
+    private const int WarehouseResourceStartAmount = 5;
+    private const int GasStationMaxFuelStorage   = 5;
+    private const int BarMaxAlcoholStorage       = 5;
+    private const int CanteenMaxFoodStorage      = 5;
     private const float ForestLogProgressPerChop = 0.08f;
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
@@ -178,6 +186,11 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<TextMesh> selectedLocationLabelOutlines = new();
     private GameObject cargoTransferCrate;
     private GameObject buildHoverHighlight;
+    private GameObject buildHoverDrivewayHighlight;
+    private readonly List<GameObject> buildHoverCellHighlights = new();
+    private readonly List<Vector2Int> buildPreviewFootprintCells = new();
+    private Vector2Int? buildPreviewDrivewayCell;
+    private int buildPlacementRotationIndex;
     private GameObject selectedDebugCellHighlight;
     private GameObject selectedDebugCellOutline;
     private Transform edgeHighwayBusRoot;
@@ -400,6 +413,7 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip gasStationRefuelCueClip;
     private AudioClip parkingReturnCueClip;
     private AudioClip moneyRewardClip;
+    private AudioClip moneySpendClip;
     private AudioClip edgeHighwayBusPassbyClip;
     private AudioClip riverAmbientClip;
     private AudioClip riverSplashClip;
@@ -423,8 +437,28 @@ public partial class GameBootstrap : MonoBehaviour
         FurnitureFactory,
         Motel,
         BusStop,
-        Bar
+        Bar,
+        Canteen
     }
+
+    /// <summary>
+    /// Production locations generate or process cargo.
+    /// Service locations support the truck route (fuel, rest, loading/unloading).
+    /// </summary>
+    private static bool IsProductionLocation(LocationType type) => type switch
+    {
+        LocationType.Forest           => true,
+        LocationType.Sawmill          => true,
+        LocationType.FurnitureFactory => true,
+        LocationType.Warehouse        => true,
+        _                             => false
+    };
+
+    private static bool IsServiceLocation(LocationType type) => !IsProductionLocation(type);
+
+    private bool IsLocationOperational(LocationType type) =>
+        !IsProductionLocation(type) ||
+        (locations.TryGetValue(type, out LocationData d) && d.Workers > 0);
 
     private enum CargoType
     {
@@ -483,7 +517,16 @@ public partial class GameBootstrap : MonoBehaviour
         None,
         Road,
         FurnitureFactory,
-        Bar
+        Sawmill,
+        Motel,
+        Bar,
+        Canteen
+    }
+
+    private enum GameStartMode
+    {
+        Debug,
+        User
     }
 
     private enum TripPhase
@@ -518,8 +561,14 @@ public partial class GameBootstrap : MonoBehaviour
         IdleSittingOnBench,
         IdleWalkToBar,
         IdleAtBar,
+        IdleWalkToCanteen,
+        IdleAtCanteen,
         IdleSmoking,
-        IdlePhoneCall
+        IdlePhoneCall,
+        ToBuildingForShift,        // walking motel -> production building (logistics pre-shift)
+        ToMotelFromBuilding,       // walking building -> motel (logistics post-shift)
+        WarehouseDeliveryToService, // walking Warehouse -> service building (carrying resource)
+        WarehouseDeliveryReturn    // walking service building -> Warehouse (empty-handed)
     }
 
     private enum DriverRestPhase
@@ -536,7 +585,8 @@ public partial class GameBootstrap : MonoBehaviour
     private enum DriverDutyMode
     {
         Local,
-        Intercity
+        Intercity,
+        Logistics   // assigned to a production building
     }
 
     private enum TradeResourceType
@@ -554,6 +604,13 @@ public partial class GameBootstrap : MonoBehaviour
         Sell
     }
 
+    private enum WarehouseResourceType
+    {
+        Fuel,
+        Alcohol,
+        Food
+    }
+
 
     private sealed class LocationData
     {
@@ -566,10 +623,17 @@ public partial class GameBootstrap : MonoBehaviour
         public int BoardsStored;
         public int TextileStored;
         public int FurnitureStored;
+        // Warehouse consumable resources
+        public int FuelStored;
+        public int AlcoholStored;
+        public int FoodStored;
         public GameObject RootObject;
         public Renderer BaseRenderer;
         public readonly List<GameObject> StoredLogVisuals = new();
         public readonly List<GameObject> StoredBoardVisuals = new();
+
+        public int Workers;     // production buildings only: >0 = operational, 0 = offline
+        public int ServiceFee;  // Service buildings deduct from driver.Money on entry.
 
         public bool Contains(Vector2Int cell)
         {
@@ -920,7 +984,7 @@ public partial class GameBootstrap : MonoBehaviour
         public Vector3 MotelIdlePosition;
         public int AssignedTruckNumber;
         public int Salary = 25;
-        public int Money;
+        public int Money  = 30;
         public bool WaitingForShiftAtParking;
         public bool NeedsShiftEndReturn;
         public bool IsShiftSalaryPending;
@@ -937,6 +1001,9 @@ public partial class GameBootstrap : MonoBehaviour
         public bool IsArrivingByBus;
         public int SittingBenchIndex = -1;
         public float IdleActivityTimer;
+        public LocationType? AssignedBuildingType;      // logistics only: building this worker is assigned to
+        public bool IsInsideBuilding;                   // true while physically inside the assigned building
+        public LocationType? WarehouseDeliveryTarget;   // warehouse worker: current delivery destination
     }
 
     private int GetCurrentHour()
@@ -949,11 +1016,6 @@ public partial class GameBootstrap : MonoBehaviour
     {
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
         return normalizedTime < 0.25f;
-    }
-
-    private bool AreProductionsPausedAtNight()
-    {
-        return IsNightTime();
     }
 
     private int GetCurrentTotalMinutes()
@@ -996,10 +1058,11 @@ public partial class GameBootstrap : MonoBehaviour
         gameSpeedMultiplier = 0;
         lastActiveGameSpeedMultiplier = 1;
         AudioListener.pause = true;
-        SessionDebugLogger.Log("BOOT", "Initializing runtime bootstrap.");
-        BuildPrototypeScene();
-        SessionDebugLogger.Log("BOOT", $"Scene bootstrap complete. Locations={locations.Count}, Roads={roadCells.Count}, Trucks={truckAgents.Count}.");
+        SessionDebugLogger.Log("BOOT", "Initializing main menu bootstrap.");
+        SetupMainMenuHud();
+        SessionDebugLogger.Log("BOOT", "Main menu ready. World generation waits for selected new game mode.");
         StartMainMenuMusic();
+        TryConsumePendingAutoStartMode();
     }
 
     private void OnApplicationQuit()
@@ -1016,7 +1079,13 @@ public partial class GameBootstrap : MonoBehaviour
     {
         bool shouldUpdateWaterEffects = ConsumeThrottledUpdate(ref waterEffectsUpdateTimer, WaterEffectsUpdateInterval);
         UpdateMainMenuHud();
-        if (isMainMenuOpen)
+        if (isLoadingWorld || isMainMenuOpen)
+        {
+            return;
+        }
+
+        UpdateTutorialUi();
+        if (isTutorialOpen)
         {
             return;
         }
@@ -1051,6 +1120,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateRiverBoats();
         UpdateDistantClouds();
         UpdateAmbientAirParticles();
+        UpdateMoneyPopups();
         UpdateForestWorkers();
         UpdateActiveTradeRun();
         tradeThresholdCheckTimer -= Time.deltaTime;
@@ -1109,6 +1179,8 @@ public partial class GameBootstrap : MonoBehaviour
 
             UpdateDriverShiftPreparation(driver);
             UpdateDriverShiftActivation(driver);
+            UpdateLogisticsShiftEnd(driver);
+            UpdateWarehouseDelivery(driver);
             UpdateDriverRest(driver);
             UpdateDriverIdleWander(driver);
             UpdateDriverWalk(driver);
@@ -1128,6 +1200,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateDriverQuickHud();
         UpdateBuildingQuickHud();
         UpdateCellQuickHud();
+        UpdateRuntimeLocalizationTick();
     }
 
     private static bool ConsumeThrottledUpdate(ref float accumulator, float interval)
@@ -1195,6 +1268,7 @@ public partial class GameBootstrap : MonoBehaviour
                 if (!isWorldMapPanelOpen)
                 {
                     DrawMenuBar();
+                    DrawBuildModeLegend();
                     if (isFleetPanelOpen) DrawFleetPanel();
                 }
             }
@@ -1215,66 +1289,38 @@ public partial class GameBootstrap : MonoBehaviour
         }
     }
 
-    private void BuildPrototypeScene()
+    private void DrawBuildModeLegend()
     {
-        worldRoot = new GameObject("PrototypeWorld").transform;
-        roadsRoot = new GameObject("Roads").transform;
-        roadsRoot.SetParent(worldRoot, false);
-        lanternsRoot = new GameObject("RoadLanterns").transform;
-        lanternsRoot.SetParent(worldRoot, false);
-        roadsidePropsRoot = new GameObject("RoadsideProps").transform;
-        roadsidePropsRoot.SetParent(worldRoot, false);
-        miscRoot = new GameObject("Misc").transform;
-        miscRoot.SetParent(worldRoot, false);
+        if (!IsBuildingBuildTool(activeBuildTool))
+        {
+            return;
+        }
 
-        SetupCamera();
-        SetupLighting();
-        SetupDioramaPostProcessing();
-        SetupSurfaceMaterials();
-        PopulateWaterCells();
-        SetupLocations();
-        GenerateInitialRoadNetwork();
-        GenerateTerrainHeights();
-        FlattenTerrainNearWater();
-        ApplyTerrainHeightsToWorld();
-        SetupGround();
-        CreateWaterLayer();
-        SetupGrid();
-        SetupEdgeHighway();
-        SetupEdgeHighwayBuses();
-        SetupRiverBoats();
-        SetupDistantClouds();
-        SetupAmbientAirParticles();
-        RebuildRoadLanterns();
-        PopulateMiscTrees();
-        RebuildRoadsideBenches();
-        SetupMiscBirds();
-        SetupAmbientCats();
-        SetupAmbientBees();
-        SetupAmbientLanternMoths();
-        SetupRiverFish();
-        waterVisualLodLevel = -1;
-        UpdateWaterVisualLod();
-        SetupBuildHoverHighlight();
-        SetupForestWorkers();
-        SetupSelectionVisuals();
-        SetupTruck();
-        money = StartingTreasury;
-        SetupCargoTransferVisual();
-        SetupAudio();
-        SetupFleetScreenUi();
-        SetupDriversScreenUi();
-        SetupShiftsScreenUi();
-        SetupResourcesScreenUi();
-        SetupEconomyScreenUi();
-        SetupBuildScreenUi();
-        SetupWorldMapScreenUi();
-        SetupTruckQuickHud();
-        SetupDriverQuickHud();
-        SetupBuildingQuickHud();
-        SetupCellQuickHud();
-        SetupMainMenuHud();
-        SetupJoinRaceButton();
+        Rect rect = new(Screen.width - 242f, Screen.height - 86f, 212f, 56f);
+        Color prevColor = GUI.color;
+        Color prevContentColor = GUI.contentColor;
+
+        try
+        {
+            GUI.color = new Color(0.05f, 0.07f, 0.1f, 0.82f);
+            GUI.Box(rect, string.Empty);
+
+            GUI.contentColor = new Color(0.96f, 0.82f, 0.36f, 1f);
+            GUI.Label(
+                new Rect(rect.x + 16f, rect.y + 12f, rect.width - 32f, rect.height - 24f),
+                L("R - rotate"),
+                new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 18,
+                    fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleCenter
+                });
+        }
+        finally
+        {
+            GUI.color = prevColor;
+            GUI.contentColor = prevContentColor;
+        }
     }
 
     private void SetupCamera()
@@ -1318,7 +1364,7 @@ public partial class GameBootstrap : MonoBehaviour
         keyLight.shadowBias = 0.04f;
         keyLight.shadowNormalBias = 0.32f;
         keyLight.shadowNearPlane = 0.2f;
-        keyLight.shadowResolution = UnityEngine.Rendering.LightShadowResolution.VeryHigh;
+        // shadowResolution is Built-In RP only — shadow quality in URP is set via the renderer asset
 
         Light[] allLights = FindObjectsByType<Light>();
         foreach (Light lightComponent in allLights)
@@ -1330,14 +1376,15 @@ public partial class GameBootstrap : MonoBehaviour
         RenderSettings.ambientLight = new Color(0.84f, 0.84f, 0.8f);
     }
 
-    private void UpdateDayNightCycle()
+    private void UpdateDayNightCycle(float deltaTime = -1f)
     {
         if (mainDirectionalLight == null || mainCamera == null)
         {
             return;
         }
 
-        dayNightCycleTimer = Mathf.Repeat(dayNightCycleTimer + Time.deltaTime, DayNightCycleDuration);
+        float cycleDeltaTime = deltaTime >= 0f ? deltaTime : Time.deltaTime;
+        dayNightCycleTimer = Mathf.Repeat(dayNightCycleTimer + cycleDeltaTime, DayNightCycleDuration);
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
         float dayHour = normalizedTime * 24f;
         float sunriseBlend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(4.8f, 7.2f, dayHour));

@@ -125,6 +125,14 @@ public partial class GameBootstrap
         switch (currentRefuelPhase)
         {
             case RefuelPhase.ToGasStation:
+                // Abort refuel trip if gas station has run out of fuel
+                if (locations.TryGetValue(LocationType.GasStation, out LocationData gsRefuel) && gsRefuel.FuelStored <= 0)
+                {
+                    SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} aborted refuel trip — Gas Station out of Fuel.");
+                    currentRefuelPhase = RefuelPhase.ReturnToParking;
+                    return;
+                }
+
                 if (truckCell != locations[LocationType.GasStation].Anchor)
                 {
                     StartMoveTo(locations[LocationType.GasStation].Anchor);

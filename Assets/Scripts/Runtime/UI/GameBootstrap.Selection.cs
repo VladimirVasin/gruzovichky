@@ -41,8 +41,8 @@ public partial class GameBootstrap
             GetSelectedLocationDisplayName(selectedLocation.Value),
             labelPosition,
             mainCamera.transform.position,
-            12f,
-            22f);
+            34f,
+            58f);
     }
 
     private bool TryHandleLocationSelection(Vector2Int cell)

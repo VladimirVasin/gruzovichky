@@ -13,9 +13,19 @@ public partial class GameBootstrap
             Label = label,
             Min = min,
             Max = max,
-            Anchor = anchor
-            ,
-            BaseColor = baseColor
+            Anchor = anchor,
+            BaseColor = baseColor,
+            Workers = 0,
+            ServiceFee = type switch
+            {
+                LocationType.Motel   => 20,
+                LocationType.Bar     => 10,
+                LocationType.Canteen => 10,
+                _                    => 0
+            },
+            FuelStored    = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
+            AlcoholStored = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
+            FoodStored    = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
         };
 
         GameObject root = new(label);
@@ -102,12 +112,37 @@ public partial class GameBootstrap
         {
             CreateBarDecoration(root.transform, center, min, max, anchor);
         }
+        else if (type == LocationType.Canteen)
+        {
+            CreateCanteenDecoration(root.transform, center, min, max, anchor);
+        }
         else
         {
             CreateMotelDecoration(root.transform, center, min, max, anchor);
         }
 
         CreateLocationNightLights(type, root.transform, center, size);
+
+        // ── Category indicator stripe ────────────────────────────────────────
+        // Production (Forest / Sawmill / FurnitureFactory) = amber
+        // Service (everything else) = slate blue
+        // Forest and BusStop have no upright base block — skip.
+        if (type != LocationType.Forest && type != LocationType.BusStop)
+        {
+            bool isProduction = IsProductionLocation(type);
+            Color stripeColor = isProduction
+                ? new Color(0.95f, 0.58f, 0.10f)   // amber  — production
+                : new Color(0.28f, 0.55f, 0.84f);   // blue   — service
+
+            GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            stripe.name = "CategoryStripe";
+            stripe.transform.SetParent(root.transform, false);
+            stripe.transform.position   = center + new Vector3(0f, 0.38f, 0f);
+            stripe.transform.localScale = new Vector3(size.x * 0.97f, 0.06f, size.y * 0.97f);
+            ApplyColor(stripe, stripeColor);
+            ConfigureStaticVisual(stripe);
+            if (stripe.TryGetComponent(out Collider sc)) sc.enabled = false;
+        }
 
         GameObject anchorMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         anchorMarker.transform.SetParent(root.transform, false);

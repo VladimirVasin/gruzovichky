@@ -6,14 +6,79 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
+    private static readonly string[] WorkerFirstNames =
+    {
+        // Disco Elysium style
+        "Raul",
+        "Villem",
+        "Tomas",
+        "Egor",
+        "Doru",
+        "Remy",
+        "Jovan",
+        "Petyr",
+        "Kuno",
+        "Matis",
+        "Aldor",
+        "Bas",
+        "Iosef",
+        "Harko",
+        "Denes",
+        // Armenian
+        "Armen",
+        "Vardan",
+        "Tigran",
+        "Hayk",
+        "Sargis"
+    };
+
+    private static readonly string[] WorkerLastNames =
+    {
+        // Disco Elysium style
+        "Drost",
+        "Kvelj",
+        "Muren",
+        "Vannek",
+        "Tache",
+        "Vollaers",
+        "Struik",
+        "Pemmick",
+        "Larnac",
+        "Renne",
+        "Faroul",
+        "Clauber",
+        "Trant",
+        "Brúk",
+        "Odors",
+        // Armenian
+        "Petrosyan",
+        "Grigoryan",
+        "Mkrtchyan",
+        "Hovhannisyan",
+        "Sargsyan"
+    };
+
+    private string GenerateWorkerName()
+    {
+        string first = WorkerFirstNames[Random.Range(0, WorkerFirstNames.Length)];
+        string last  = WorkerLastNames[Random.Range(0, WorkerLastNames.Length)];
+        return $"{first} {last}";
+    }
+
     private void SetupTruck()
     {
         TruckAgent firstTruck = CreateAndRegisterTruckAgent(1, 0);
-        DriverAgent firstDriver = CreateAndRegisterDriverAgent();
-        AssignDriverToTruckRoster(firstTruck, firstDriver);
         LoadTruckState(firstTruck);
         SessionDebugLogger.Log("TRUCK", $"Spawned initial {firstTruck.DisplayName} in parking slot {firstTruck.ParkingSlotIndex}.");
-        SessionDebugLogger.Log("DRIVER", $"{firstDriver.DriverName} hired and assigned to {firstTruck.DisplayName} roster.");
+        if (locations.ContainsKey(LocationType.Motel))
+        {
+            DriverAgent firstDriver = CreateAndRegisterDriverAgent();
+            SessionDebugLogger.Log("DRIVER", $"{firstDriver.DriverName} hired (unassigned, idle).");
+        }
+        else
+        {
+            SessionDebugLogger.Log("DRIVER", "Initial driver skipped: Motel is not generated in this mode.");
+        }
     }
 
     private TruckAgent CreateAndRegisterTruckAgent(int truckNumber, int parkingSlotIndex)
@@ -325,7 +390,7 @@ public partial class GameBootstrap
         DriverAgent driver = new()
         {
             DriverId = nextDriverId,
-            DriverName = $"Driver #{nextDriverId}",
+            DriverName = GenerateWorkerName(),
             ShiftStartHour = -1,
             IsOnActiveShift = false
         };
@@ -461,6 +526,7 @@ public partial class GameBootstrap
         gasStationRefuelCueClip = CreatePentatonicMotifClip("GasStation_Refuel", 0.38f, 0.076f, new[] { PentatonicG4, PentatonicC5 }, new[] { 0f, 0.12f });
         parkingReturnCueClip = CreatePentatonicMotifClip("Parking_Return", 0.36f, 0.068f, new[] { PentatonicC4, PentatonicE4 }, new[] { 0f, 0.1f });
         moneyRewardClip = CreateMoneyRewardClip("Money_Reward", 0.6f, 0.1f);
+        moneySpendClip  = CreatePentatonicMotifClip("Money_Spend", 0.45f, 0.08f, new[] { PentatonicC5, PentatonicA4, PentatonicE4 }, new[] { 0f, 0.1f, 0.22f });
         edgeHighwayBusPassbyClip = CreateBusPassbyClip("EdgeHighway_BusPassby", 1.15f, 0.055f);
         riverAmbientClip = CreateRiverAmbientClip("River_Ambient", 8f, 0.034f);
         riverSplashClip  = CreateWaterSplashClip("River_Splash", 0.28f, 0.075f);
@@ -475,7 +541,10 @@ public partial class GameBootstrap
         nightWindAudioSource = CreateAudioSource("NightWind", worldRoot, true, 0.34f, 0f, false);
         nightCricketsAudioSource = CreateAudioSource("NightCrickets", locations[LocationType.Forest].RootObject.transform, true, 0.33f, 0.82f, false);
         gasStationAudioSource = CreateAudioSource("GasStationHum", locations[LocationType.GasStation].RootObject.transform, true, 0.28f, 0.84f, false);
-        townAudioSource = CreateAudioSource("SawmillAmbience", locations[LocationType.Sawmill].RootObject.transform, true, 0.44f, 0.9f, false);
+        Transform sawmillAudioParent = locations.TryGetValue(LocationType.Sawmill, out LocationData sawmillLocation)
+            ? sawmillLocation.RootObject.transform
+            : worldRoot;
+        townAudioSource = CreateAudioSource("SawmillAmbience", sawmillAudioParent, true, 0.44f, 0.9f, false);
         warehouseAudioSource = CreateAudioSource("WarehouseAmbience", locations[LocationType.Warehouse].RootObject.transform, false, 0.26f, 0.88f, false);
         ambienceFxAudioSource = CreateAudioSource("AmbienceFX", worldRoot, false, 0.34f, 0f, false);
         riverAmbientAudioSource = CreateAudioSource("RiverAmbient", worldRoot, true, 0.38f, 0f, false);

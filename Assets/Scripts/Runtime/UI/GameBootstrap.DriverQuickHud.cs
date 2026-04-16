@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 
 public partial class GameBootstrap
@@ -8,6 +8,7 @@ public partial class GameBootstrap
         public GameObject CanvasRoot;
         public RectTransform Root;
         public Text HeaderText;
+        public Text OccupationText;
         public Text StatusText;
         public Text TruckText;
         public Text ModeText;
@@ -47,7 +48,7 @@ public partial class GameBootstrap
         root.anchorMax = new Vector2(1f, 0f);
         root.pivot = new Vector2(1f, 0f);
         root.anchoredPosition = new Vector2(-18f, 104f);
-        root.sizeDelta = new Vector2(300f, 244f);
+        root.sizeDelta = new Vector2(300f, 264f);
         VerticalLayoutGroup rootLayout = root.gameObject.AddComponent<VerticalLayoutGroup>();
         rootLayout.padding = new RectOffset(16, 16, 16, 16);
         rootLayout.spacing = 12;
@@ -65,6 +66,9 @@ public partial class GameBootstrap
         closeLayout.preferredWidth = 28f;
         closeLayout.preferredHeight = 28f;
         driverQuickHud.CloseButton.onClick.AddListener(ClearDriverFocus);
+
+        driverQuickHud.OccupationText = CreateBodyText("OccupationText", root, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, new Color(0.55f, 0.65f, 0.80f, 1f));
+        driverQuickHud.OccupationText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
         RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
         summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 124f;
@@ -128,6 +132,7 @@ public partial class GameBootstrap
         TruckAgent truck = GetAssignedTruckForDriver(driver);
 
         driverQuickHud.HeaderText.text = driver.DriverName;
+        driverQuickHud.OccupationText.text = GetWorkerOccupationLabel(driver);
 
         string statusLabel;
         if (IsDriverOnActiveTradeRun(driver))
@@ -148,6 +153,8 @@ public partial class GameBootstrap
             statusLabel = "Walking from Bus Stop";
         else if (driver.WalkPhase == DriverRescuePhase.IdleWander)
             statusLabel = "Wandering";
+        else if (driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen || driver.WalkPhase == DriverRescuePhase.IdleAtCanteen)
+            statusLabel = "At Canteen";
         else if (driver.ShiftStartHour >= 0)
             statusLabel = $"Shift at {driver.ShiftStartHour:00}:00";
         else
@@ -155,8 +162,8 @@ public partial class GameBootstrap
 
         driverQuickHud.StatusText.text = statusLabel;
         driverQuickHud.TruckText.text = FormatValueLine("Truck", truck != null ? truck.DisplayName : "None");
-        driverQuickHud.ModeText.text = FormatValueLine("Mode", IsDriverIntercity(driver) ? "Intercity" : "Local");
-        driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—");
+        driverQuickHud.ModeText.text = string.Empty;
+        driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "ï¿½");
         driverQuickHud.EnergyText.text = FormatValueLine("Energy", $"{Mathf.CeilToInt(driver.Energy)} / {Mathf.CeilToInt(DriverEnergyMax)}");
         driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
     }
@@ -174,6 +181,29 @@ public partial class GameBootstrap
             LogUiInput($"Selection: focused {driver.DriverName}");
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelOpenClip, 0.9f);
+    }
+
+    private string GetWorkerOccupationLabel(DriverAgent driver)
+    {
+        if (driver.DutyMode == DriverDutyMode.Intercity)
+            return "Intercity Driver";
+
+        if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
+        {
+            return driver.AssignedBuildingType.Value switch
+            {
+                LocationType.Forest           => "Lumberjack",
+                LocationType.Sawmill          => "Sawmill Worker",
+                LocationType.FurnitureFactory => "Carpenter",
+                LocationType.Warehouse        => "Warehouse Loader",
+                _                             => "Production Worker"
+            };
+        }
+
+        if (driver.AssignedTruckNumber > 0)
+            return "Truck Driver";
+
+        return "Unemployed";
     }
 
     private void ClearDriverFocus()

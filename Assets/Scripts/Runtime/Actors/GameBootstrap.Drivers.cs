@@ -26,8 +26,21 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        // Leaving Logistics: release building slot
+        if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
+        {
+            if (driver.IsInsideBuilding && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData bd))
+            {
+                bd.Workers = 0;
+                driver.IsInsideBuilding = false;
+                driver.DriverObject?.SetActive(true);
+                driver.DriverObject.transform.position = driver.MotelIdlePosition;
+            }
+            driver.AssignedBuildingType = null;
+        }
+
         driver.DutyMode = dutyMode;
-        if (dutyMode == DriverDutyMode.Intercity)
+        if (dutyMode == DriverDutyMode.Intercity || dutyMode == DriverDutyMode.Logistics)
         {
             driver.ShiftStartHour = -1;
             driver.IsOnActiveShift = false;
@@ -57,6 +70,7 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase != DriverRescuePhase.IdleWander &&
                driver.WalkPhase != DriverRescuePhase.IdleSittingOnBench &&
                driver.WalkPhase != DriverRescuePhase.IdleAtBar &&
+               driver.WalkPhase != DriverRescuePhase.IdleAtCanteen &&
                driver.WalkPhase != DriverRescuePhase.IdleSmoking &&
                driver.WalkPhase != DriverRescuePhase.IdlePhoneCall;
     }
@@ -77,6 +91,8 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToBar ||
                driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
+               driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen ||
+               driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
                driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
                driver.WalkPhase == DriverRescuePhase.IdlePhoneCall;
     }
@@ -188,8 +204,39 @@ public partial class GameBootstrap : MonoBehaviour
         SessionDebugLogger.Log("REST", $"{driver.DriverName} left {truckAgent.DisplayName} in Parking and is walking to Motel.");
     }
 
+    private bool ShouldLogisticsWorkerHeadToBuilding(DriverAgent driver)
+    {
+        if (driver == null || driver.DutyMode != DriverDutyMode.Logistics || !driver.AssignedBuildingType.HasValue || driver.ShiftStartHour < 0)
+        {
+            return false;
+        }
+
+        int minutesUntilShiftStart = GetMinutesUntilShiftStart(driver);
+        return minutesUntilShiftStart > 0 && minutesUntilShiftStart <= Mathf.RoundToInt(DriverShiftArrivalLeadHours * 60f);
+    }
+
     private void UpdateDriverShiftPreparation(DriverAgent driver)
     {
+        // Logistics workers: commute to building instead of parking
+        if (driver?.DutyMode == DriverDutyMode.Logistics)
+        {
+            if (driver.IsArrivingByBus || driver.IsOnActiveShift ||
+                driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) ||
+                !driver.AssignedBuildingType.HasValue || driver.ShiftStartHour < 0)
+            {
+                return;
+            }
+
+            bool shouldHead = ShouldLogisticsWorkerHeadToBuilding(driver) ||
+                              IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour);
+            if (shouldHead)
+            {
+                StartDriverBuildingCommute(driver);
+            }
+
+            return;
+        }
+
         if (driver == null || IsDriverIntercity(driver) || driver.IsArrivingByBus || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || driver.AssignedTruckNumber <= 0)
         {
             return;
@@ -214,6 +261,184 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         StartDriverShiftCommute(driver);
+    }
+
+    private void StartDriverBuildingCommute(DriverAgent driver)
+    {
+        if (driver == null || !driver.AssignedBuildingType.HasValue || driver.DriverObject == null)
+        {
+            return;
+        }
+
+        if (!locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData building))
+        {
+            return;
+        }
+
+        if (!driver.DriverObject.activeSelf)
+        {
+            driver.DriverObject.SetActive(true);
+            driver.DriverObject.transform.position = driver.MotelIdlePosition;
+            driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        }
+
+        driver.IdleWanderPauseTimer = 0f;
+        driver.IdleWanderPointIndex = -1;
+        driver.IdleConversationTimer = 0f;
+        driver.IdleConversationPartnerId = -1;
+        driver.WalkAnimationTime = 0f;
+        ReleaseBench(driver);
+        ApplyDriverPose(driver, 0f, 0f);
+
+        Vector3 target = GetCellCenter(building.Anchor);
+        target.y += 0.05f;
+        driver.WalkPhase = DriverRescuePhase.ToBuildingForShift;
+        driver.WalkTargetWorld = target;
+        BuildDriverWalkPath(driver, driver.DriverObject.transform.position, target);
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} started commute to {building.Label}.");
+    }
+
+    private void UpdateLogisticsShiftEnd(DriverAgent driver)
+    {
+        if (driver == null || driver.DutyMode != DriverDutyMode.Logistics ||
+            !driver.IsOnActiveShift || driver.ShiftStartHour < 0 ||
+            !driver.AssignedBuildingType.HasValue)
+        {
+            return;
+        }
+
+        if (IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour))
+        {
+            return;
+        }
+
+        bool onDeliveryWalk = driver.WalkPhase == DriverRescuePhase.WarehouseDeliveryToService ||
+                              driver.WalkPhase == DriverRescuePhase.WarehouseDeliveryReturn;
+
+        if (driver.IsInsideBuilding && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData building))
+        {
+            // Normal exit: worker is invisible inside the building
+            locations[driver.AssignedBuildingType.Value].Workers = 0;
+            driver.IsInsideBuilding = false;
+            driver.IsOnActiveShift = false;
+            driver.IsShiftSalaryPending = true;
+            PayDriverSalary(driver);
+
+            Vector3 exitPos = GetCellCenter(building.Anchor);
+            exitPos.y += 0.05f;
+            driver.DriverObject.SetActive(true);
+            driver.DriverObject.transform.position = exitPos;
+            driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            driver.WalkAnimationTime = 0f;
+            ApplyDriverPose(driver, 0f, 0f);
+
+            Vector3 motelTarget = GetDriverStandPointNearLocation(LocationType.Motel);
+            driver.WalkTargetWorld = motelTarget;
+            BuildDriverWalkPath(driver, exitPos, motelTarget);
+            driver.WalkPhase = DriverRescuePhase.ToMotelFromBuilding;
+            driver.RestPhase = DriverRestPhase.DriverWalkToMotel;
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} left {building.Label} after shift and is walking to Motel.");
+        }
+        else if (onDeliveryWalk)
+        {
+            // Shift ended mid-delivery: cancel delivery, walk to motel from current position
+            if (locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData deliveryBuilding))
+                locations[driver.AssignedBuildingType.Value].Workers = 0;
+
+            driver.IsInsideBuilding = false;
+            driver.IsOnActiveShift = false;
+            driver.IsShiftSalaryPending = true;
+            driver.WarehouseDeliveryTarget = null;
+            PayDriverSalary(driver);
+
+            Vector3 motelTarget = GetDriverStandPointNearLocation(LocationType.Motel);
+            driver.WalkTargetWorld = motelTarget;
+            BuildDriverWalkPath(driver, driver.DriverObject.transform.position, motelTarget);
+            driver.WalkPhase = DriverRescuePhase.ToMotelFromBuilding;
+            driver.RestPhase = DriverRestPhase.DriverWalkToMotel;
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} shift ended mid-delivery — rerouted to Motel.");
+        }
+        else
+        {
+            // Safety: shift ended but driver not inside (edge case)
+            driver.IsOnActiveShift = false;
+        }
+    }
+
+    private void UpdateWarehouseDelivery(DriverAgent driver)
+    {
+        if (driver == null ||
+            driver.DutyMode != DriverDutyMode.Logistics ||
+            driver.AssignedBuildingType != LocationType.Warehouse ||
+            !driver.IsOnActiveShift ||
+            !driver.IsInsideBuilding ||
+            driver.WalkPhase != DriverRescuePhase.None)
+        {
+            return;
+        }
+
+        if (!IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour))
+        {
+            return;
+        }
+
+        if (!locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse))
+        {
+            return;
+        }
+
+        // Find a service building that needs resupply
+        LocationType? deliveryTarget = null;
+        if (warehouse.FuelStored > 0 &&
+            locations.TryGetValue(LocationType.GasStation, out LocationData gs) &&
+            gs.FuelStored < GasStationMaxFuelStorage)
+        {
+            deliveryTarget = LocationType.GasStation;
+        }
+        else if (warehouse.AlcoholStored > 0 &&
+                 locations.TryGetValue(LocationType.Bar, out LocationData bar) &&
+                 bar.AlcoholStored < BarMaxAlcoholStorage)
+        {
+            deliveryTarget = LocationType.Bar;
+        }
+        else if (warehouse.FoodStored > 0 &&
+                 locations.TryGetValue(LocationType.Canteen, out LocationData canteen) &&
+                 canteen.FoodStored < CanteenMaxFoodStorage)
+        {
+            deliveryTarget = LocationType.Canteen;
+        }
+
+        if (!deliveryTarget.HasValue)
+        {
+            return;
+        }
+
+        // Deduct resource from Warehouse
+        switch (deliveryTarget.Value)
+        {
+            case LocationType.GasStation: warehouse.FuelStored--;    break;
+            case LocationType.Bar:        warehouse.AlcoholStored--; break;
+            case LocationType.Canteen:    warehouse.FoodStored--;    break;
+        }
+
+        driver.WarehouseDeliveryTarget = deliveryTarget;
+        driver.IsInsideBuilding = false;
+
+        // Spawn visible at Warehouse anchor
+        Vector3 spawnPos = GetCellCenter(locations[LocationType.Warehouse].Anchor);
+        spawnPos.y += 0.05f;
+        driver.DriverObject.SetActive(true);
+        driver.DriverObject.transform.position = spawnPos;
+        driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        driver.WalkAnimationTime = 0f;
+        ApplyDriverPose(driver, 0f, 0f);
+
+        Vector3 targetPos = GetCellCenter(locations[deliveryTarget.Value].Anchor);
+        targetPos.y += 0.05f;
+        driver.WalkTargetWorld = targetPos;
+        driver.WalkPhase = DriverRescuePhase.WarehouseDeliveryToService;
+        BuildDriverWalkPath(driver, spawnPos, targetPos);
+        SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} started delivery of {deliveryTarget.Value} resource to {locations[deliveryTarget.Value].Label}.");
     }
 
     private void UpdateDriverIdleWander(DriverAgent driver)
@@ -278,6 +503,7 @@ public partial class GameBootstrap : MonoBehaviour
         // Handle stationary idle activities
         if (driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench ||
             driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
+            driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
             driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
             driver.WalkPhase == DriverRescuePhase.IdlePhoneCall)
         {
@@ -347,10 +573,9 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPhase = DriverRescuePhase.IdleWalkToBench;
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading to bench {bIdx}.");
         }
-        else if (roll < 0.70f && locations.ContainsKey(LocationType.Bar))
+        else if (roll < 0.70f && locations.TryGetValue(LocationType.Bar, out LocationData bar) && driver.Money >= bar.ServiceFee && bar.AlcoholStored > 0)
         {
             driver.IdleActivityTimer = Random.Range(180f, 480f);
-            LocationData bar = locations[LocationType.Bar];
             float bx = (bar.Min.x + bar.Max.x + 1) * 0.5f;
             float bz = (bar.Min.y + bar.Max.y + 1) * 0.5f;
             Vector3 barPos = new Vector3(bx + Random.Range(-0.2f, 0.2f), 0f, bz + Random.Range(-0.2f, 0.2f));
@@ -359,7 +584,18 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPhase = DriverRescuePhase.IdleWalkToBar;
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading to Bar.");
         }
-        else if (roll < 0.85f)
+        else if (roll < 0.82f && locations.TryGetValue(LocationType.Canteen, out LocationData canteen) && driver.Money >= canteen.ServiceFee && canteen.FoodStored > 0)
+        {
+            driver.IdleActivityTimer = Random.Range(60f, 150f);
+            float cx = (canteen.Min.x + canteen.Max.x + 1) * 0.5f;
+            float cz = (canteen.Min.y + canteen.Max.y + 1) * 0.5f;
+            Vector3 canteenPos = new(cx + Random.Range(-0.2f, 0.2f), 0f, cz + Random.Range(-0.2f, 0.2f));
+            driver.WalkTargetWorld = canteenPos;
+            BuildDriverWalkPath(driver, startPosition, canteenPos);
+            driver.WalkPhase = DriverRescuePhase.IdleWalkToCanteen;
+            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading to Canteen.");
+        }
+        else if (roll < 0.90f)
         {
             driver.IdleActivityTimer = Random.Range(20f, 45f);
             driver.WalkPhase = DriverRescuePhase.IdleSmoking;

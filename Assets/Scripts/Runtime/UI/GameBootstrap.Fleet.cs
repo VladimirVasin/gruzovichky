@@ -61,6 +61,22 @@ public partial class GameBootstrap
         isBuildPanelOpen = false;
         isWorldMapPanelOpen = false;
         target = !wasOpen;
+        // Clear persistent tutorial highlights when the highlighted button is clicked
+        if (panelName == "Building")
+        {
+            isBuildHighlightPersistent = false;
+            // If tutorial 2 is open, dismiss it — user found the button themselves
+            if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.BuildMotelPrompt)
+            {
+                isTutorialOpen     = false;
+                isTutorialSideMode = false;
+            }
+        }
+        if (panelName == "Workers")
+        {
+            isWorkersHighlightPersistent = false;
+            ScheduleTutorial(TutorialTrigger.WorkersPanelOpened);
+        }
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isShiftsScreenDirty = true;
@@ -88,20 +104,32 @@ public partial class GameBootstrap
 
         try
         {
-            void MenuBtn(string label, ref bool state, float x)
+            void MenuBtn(string label, ref bool state, float x, bool highlight = false)
             {
                 GUI.color = state ? Color.yellow : Color.white;
-                if (GUI.Button(new Rect(x, btnY, MenuBtnW, MenuBtnH), label, btnStyle))
+                Rect buttonRect = new Rect(x, btnY, MenuBtnW, MenuBtnH);
+                if (GUI.Button(buttonRect, L(label), btnStyle))
                     ToggleMenuPanel(label, ref state);
+
+                if (highlight)
+                {
+                    Color outlineColor = GUI.color;
+                    GUI.color = new Color(1f, 0.12f, 0.08f, 1f);
+                    GUI.Box(new Rect(buttonRect.x - 3f, buttonRect.y - 3f, buttonRect.width + 6f, 3f), string.Empty);
+                    GUI.Box(new Rect(buttonRect.x - 3f, buttonRect.yMax, buttonRect.width + 6f, 3f), string.Empty);
+                    GUI.Box(new Rect(buttonRect.x - 3f, buttonRect.y - 3f, 3f, buttonRect.height + 6f), string.Empty);
+                    GUI.Box(new Rect(buttonRect.xMax, buttonRect.y - 3f, 3f, buttonRect.height + 6f), string.Empty);
+                    GUI.color = outlineColor;
+                }
             }
 
             float x = bar.x + MenuBtnGap;
             MenuBtn("Fleet",     ref isFleetPanelOpen,     x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Drivers",   ref isDriversPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Workers",   ref isDriversPanelOpen,   x, IsWorkersTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Shifts",    ref isShiftsPanelOpen,    x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Economy",   ref isEconomyPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Build",     ref isBuildPanelOpen,     x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Building",  ref isBuildPanelOpen,     x, IsBuildMenuTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Map",       ref isWorldMapPanelOpen,  x);
         }
         finally
@@ -139,11 +167,11 @@ public partial class GameBootstrap
         GUIStyle idleColor   = new GUIStyle(labelSm)  { normal = { textColor = new Color(0.65f, 0.65f, 0.65f) } };
         GUIStyle assignColor = new GUIStyle(labelSm)  { normal = { textColor = new Color(0.45f, 0.9f,  0.45f) } };
 
-        GUI.Box(panelRect, "Shift Management", titleStyle);
+        GUI.Box(panelRect, L("Shift Management"), titleStyle);
 
         // ── Left column: driver list ──────────────────────────────────────────
         Rect leftRect = new Rect(panelRect.x + pad, panelRect.y + 38f, leftW, panelRect.height - 46f);
-        GUI.Box(leftRect, "Drivers", secStyle);
+        GUI.Box(leftRect, L("Drivers"), secStyle);
 
         float dy = leftRect.y + 32f;
         foreach (DriverAgent d in driverAgents)
@@ -160,7 +188,7 @@ public partial class GameBootstrap
             GUI.Label(new Rect(rowRect.x + 8f, rowRect.y + 6f,  rowRect.width - 16f, 20f), d.DriverName, labelBold);
 
             bool isAssigned = d.ShiftStartHour >= 0;
-            string statusText = isAssigned ? $"Assigned: {GetShiftRangeLabel(d.ShiftStartHour)}" : "Idle";
+            string statusText = isAssigned ? $"{L("Assigned")}: {GetShiftRangeLabel(d.ShiftStartHour)}" : L("Idle");
             GUI.Label(new Rect(rowRect.x + 8f, rowRect.y + 27f, rowRect.width - 16f, 16f), statusText,
                 isAssigned ? assignColor : idleColor);
 
@@ -194,7 +222,7 @@ public partial class GameBootstrap
             GUI.Box(card, string.Empty);
 
             // Card header
-            string header = $"{ShiftNames[c]}   {GetShiftRangeLabel(ShiftPresetHours[c])}";
+            string header = $"{L(ShiftNames[c])}   {GetShiftRangeLabel(ShiftPresetHours[c])}";
             GUI.Label(new Rect(card.x + 10f, card.y + 7f, card.width - 20f, 22f), header, labelBold);
 
             // Separator line (thin box)
@@ -232,13 +260,13 @@ public partial class GameBootstrap
 
             if (!hasDrivers)
             {
-                GUI.Label(new Rect(card.x + 12f, ry, card.width - 24f, 18f), "No drivers assigned", idleColor);
+                GUI.Label(new Rect(card.x + 12f, ry, card.width - 24f, 18f), "No workers assigned", idleColor);
             }
 
             // Assign button
             bool alreadyHere = selDriver != null && selDriver.ShiftStartHour == ShiftPresetHours[c];
             bool canAssign   = selDriver != null && !alreadyHere;
-            string assignLabel = selDriver == null      ? "Select a driver to assign"
+            string assignLabel = selDriver == null      ? "Select a worker to assign"
                                : alreadyHere            ? $"{selDriver.DriverName} already assigned"
                                :                          $"Assign  {selDriver.DriverName}  →  {ShiftNames[c]}";
 
@@ -412,8 +440,11 @@ public partial class GameBootstrap
         DrawResourceRow(ref y, panelRect, LocationType.Forest,
             $"Logs ready: {locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}", labelName, labelVal);
 
-        DrawResourceRow(ref y, panelRect, LocationType.Sawmill,
-            $"Boards ready: {locations[LocationType.Sawmill].BoardsStored}", labelName, labelVal);
+        if (locations.ContainsKey(LocationType.Sawmill))
+        {
+            DrawResourceRow(ref y, panelRect, LocationType.Sawmill,
+                $"Boards ready: {locations[LocationType.Sawmill].BoardsStored}", labelName, labelVal);
+        }
 
         DrawResourceRow(ref y, panelRect, LocationType.Warehouse,
             $"Boards stored: {locations[LocationType.Warehouse].BoardsStored}", labelName, labelVal);
@@ -476,10 +507,11 @@ public partial class GameBootstrap
     {
         List<TripOption> trips = new();
 
-        bool canReachForestTrip =
+        bool hasSawmill = locations.TryGetValue(LocationType.Sawmill, out LocationData sawmill);
+        bool canReachForestTrip = hasSawmill &&
             HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Forest].Anchor) &&
-            HasPath(locations[LocationType.Forest].Anchor, locations[LocationType.Sawmill].Anchor);
-        if (locations[LocationType.Forest].LogsStored > 0 && canReachForestTrip)
+            HasPath(locations[LocationType.Forest].Anchor, sawmill.Anchor);
+        if (hasSawmill && locations[LocationType.Forest].LogsStored > 0 && canReachForestTrip)
         {
             trips.Add(new TripOption
             {
@@ -491,10 +523,10 @@ public partial class GameBootstrap
             });
         }
 
-        bool canReachWarehouseTrip =
-            HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Sawmill].Anchor) &&
-            HasPath(locations[LocationType.Sawmill].Anchor, locations[LocationType.Warehouse].Anchor);
-        if (locations[LocationType.Sawmill].BoardsStored > 0 && canReachWarehouseTrip)
+        bool canReachWarehouseTrip = hasSawmill &&
+            HasPath(locations[LocationType.Parking].Anchor, sawmill.Anchor) &&
+            HasPath(sawmill.Anchor, locations[LocationType.Warehouse].Anchor);
+        if (hasSawmill && sawmill.BoardsStored > 0 && canReachWarehouseTrip)
         {
             trips.Add(new TripOption
             {
@@ -585,7 +617,7 @@ public partial class GameBootstrap
 
     private string GetTripTitle(TripType tripType)
     {
-        return tripType switch
+        return L(tripType switch
         {
             TripType.ForestToSawmill => "Forest -> Sawmill",
             TripType.SawmillToWarehouse => "Sawmill -> Warehouse",
@@ -593,7 +625,7 @@ public partial class GameBootstrap
             TripType.WarehouseToFurnitureFactoryTextile => "Warehouse -> Furniture Factory (Textile)",
             TripType.FurnitureFactoryToWarehouse => "Furniture Factory -> Warehouse",
             _ => "None"
-        };
+        });
     }
 
     private bool IsPointerOverHud(Vector2 screenPosition)

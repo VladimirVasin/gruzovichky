@@ -66,11 +66,13 @@ public partial class GameBootstrap
         }
         if (driver == null || driver.DriverObject == null) return;
 
-        // If driver is already on a rest journey, silently refuel and continue — no walk rescue
-        if (driver.RestPhase != DriverRestPhase.None)
+        // If driver is already on a rest journey, or Gas Station has no fuel — silently refuel and continue
+        bool gasStationEmpty = locations.TryGetValue(LocationType.GasStation, out LocationData gsCheck) && gsCheck.FuelStored <= 0;
+        if (driver.RestPhase != DriverRestPhase.None || gasStationEmpty)
         {
             truckFuel = TruckFuelCapacity;
-            SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} refueled silently during rest journey (was at {truckCell.x},{truckCell.y}).");
+            string reason = gasStationEmpty ? "Gas Station out of Fuel" : "rest journey";
+            SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} refueled silently ({reason}) at ({truckCell.x},{truckCell.y}).");
             if (activePath.Count > 0)
             {
                 isTruckMoving = true;
@@ -456,6 +458,12 @@ public partial class GameBootstrap
             return;
         }
 
+        if (!locations.ContainsKey(LocationType.Motel))
+        {
+            SessionDebugLogger.Log("DRIVER_REACTION", "Hire new driver rejected: build a Motel first.");
+            return;
+        }
+
         if (hiringDriverArrival != null)
         {
             SessionDebugLogger.Log("DRIVER_REACTION", "Hire new driver rejected: another driver is already arriving by bus.");
@@ -472,6 +480,10 @@ public partial class GameBootstrap
         };
         SessionDebugLogger.Log("DRIVER", $"Hired {hiredDriver.DriverName} for ${HireDriverCost}. Money now ${money}.");
         LogDriverReaction(hiredDriver, $"hired for ${HireDriverCost} and arriving by bus");
+        isHireWorkerHighlightPersistent = false;
+        isDriversPanelOpen = false;
+        isDriversScreenDirty = true;
+        ScheduleTutorial(TutorialTrigger.FirstDriverHired);
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isEconomyScreenDirty = true;
@@ -715,20 +727,20 @@ public partial class GameBootstrap
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
         if (normalizedTime < 0.25f)
         {
-            return "Night";
+            return L("Night");
         }
 
         if (normalizedTime < 0.5f)
         {
-            return "Morning";
+            return L("Morning");
         }
 
         if (normalizedTime < 0.75f)
         {
-            return "Day";
+            return L("Day");
         }
 
-        return "Evening";
+        return L("Evening");
     }
 
     private string GetDayNightClockLabel()
@@ -743,7 +755,7 @@ public partial class GameBootstrap
     private void DrawMoneyHud()
     {
         Rect panelRect = GetMoneyHudRect();
-        GUI.Box(panelRect, "Treasury");
+        GUI.Box(panelRect, L("Treasury"));
         GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
         {
             alignment = TextAnchor.MiddleCenter,
@@ -769,7 +781,7 @@ public partial class GameBootstrap
     private void DrawTimeHud()
     {
         Rect panelRect = GetTimeHudRect();
-        GUI.Box(panelRect, "Time");
+        GUI.Box(panelRect, L("Time"));
         GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
         {
             alignment = TextAnchor.MiddleCenter,
@@ -782,8 +794,8 @@ public partial class GameBootstrap
     private void DrawSpeedHud()
     {
         Rect panelRect = GetSpeedHudRect();
-        GUI.Box(panelRect, "Speed");
-        string speedLabel = gameSpeedMultiplier == 0 ? "Paused" : $"{gameSpeedMultiplier}x";
+        GUI.Box(panelRect, L("Speed"));
+        string speedLabel = gameSpeedMultiplier == 0 ? L("Paused") : $"{gameSpeedMultiplier}x";
         GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
         {
             alignment = TextAnchor.MiddleCenter,
@@ -813,16 +825,16 @@ public partial class GameBootstrap
             fontStyle = FontStyle.Bold
         };
 
-        GUI.Label(overlayRect, "PAUSE", pausedStyle);
+        GUI.Label(overlayRect, L("PAUSE"), pausedStyle);
         GUI.color = previousColor;
     }
 
     private void DrawSelectedBuildingHud(LocationType locationType)
     {
         Rect panelRect = GetSelectedBuildingHudRect();
-        GUI.Box(panelRect, $"{locations[locationType].Label} HUD");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 32, 220, 22), $"Selected building: {locations[locationType].Label}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 58, 220, 22), GetBuildingResourceLabel(locationType));
+        GUI.Box(panelRect, $"{L(locations[locationType].Label)} HUD");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 32, 220, 22), $"{L("Selected building")}: {L(locations[locationType].Label)}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 58, 220, 22), L(GetBuildingResourceLabel(locationType)));
     }
 
     private string GetBuildingResourceLabel(LocationType locationType)
@@ -837,6 +849,8 @@ public partial class GameBootstrap
             LocationType.FurnitureFactory => $"Boards: {locations[LocationType.FurnitureFactory].BoardsStored} | Textile: {locations[LocationType.FurnitureFactory].TextileStored} | Furniture: {locations[LocationType.FurnitureFactory].FurnitureStored}",
             LocationType.Motel => "Roadside stop",
             LocationType.BusStop => "Bus stop by the highway",
+            LocationType.Bar => "Service fee: $10",
+            LocationType.Canteen => "Service fee: $10",
             _ => string.Empty
         };
     }
@@ -845,16 +859,17 @@ public partial class GameBootstrap
     {
         return locationType switch
         {
-            LocationType.Parking => "Parking",
-            LocationType.GasStation => "Fuel Stop",
-            LocationType.Forest => "Forest",
-            LocationType.Warehouse => "Warehouse",
-            LocationType.Sawmill => "Sawmill",
-            LocationType.FurnitureFactory => "Furniture Factory",
-            LocationType.Motel => "Motel",
-            LocationType.BusStop => "Bus Stop",
-            LocationType.Bar => "Bar",
-            _ => "Location"
+            LocationType.Parking => L("Parking"),
+            LocationType.GasStation => L("Fuel Stop"),
+            LocationType.Forest => L("Forest"),
+            LocationType.Warehouse => L("Warehouse"),
+            LocationType.Sawmill => L("Sawmill"),
+            LocationType.FurnitureFactory => L("Furniture Factory"),
+            LocationType.Motel => L("Motel"),
+            LocationType.BusStop => L("Bus Stop"),
+            LocationType.Bar => L("Bar"),
+            LocationType.Canteen => L("Canteen"),
+            _ => L("Location")
         };
     }
 
