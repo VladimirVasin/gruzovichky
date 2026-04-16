@@ -367,6 +367,11 @@ public partial class GameBootstrap
         {
             LogUiInput("Drivers Canvas: clicked Hire New Driver");
             isHireWorkerHighlightPersistent = false;
+            if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.WorkersPanelOpened)
+            {
+                isTutorialOpen     = false;
+                isTutorialSideMode = false;
+            }
             HireNewDriver();
             isDriversScreenDirty = true;
         });

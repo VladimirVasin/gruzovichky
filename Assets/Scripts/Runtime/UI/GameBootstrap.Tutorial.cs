@@ -12,6 +12,7 @@ public partial class GameBootstrap
         FirstMotelBuilt,
         WorkersPanelOpened,
         FirstDriverHired,
+        ForestIntroduction,
         FirstTradeOpened
     }
 
@@ -28,19 +29,23 @@ public partial class GameBootstrap
         public GameObject BuildMenuOutlineRoot;
         public GameObject WorkersMenuOutlineRoot;
         public GameObject HireWorkerOutlineRoot;
+        public GameObject ShiftsMenuOutlineRoot;
         public Toggle SkipToggle;
         public Text SkipToggleText;
         public Button OkButton;
         public Text OkButtonText;
     }
 
-    private const float TutorialSidePanelBaseX = 570f;   // right of the 760-wide Drivers panel
+    private const float TutorialSidePanelBaseX  = 570f;   // right of the 760-wide Drivers panel
+    private const float TutorialSidePanelLeftX  = -340f;  // left of center for Forest tutorial
+    private static readonly Vector3 TutorialCinematicZoomOffset = new(-5f, 8f, -5f); // close-up during hire cinematic
     private bool  isTutorialSideMode;
+    private bool  tutorialSideOnLeft;   // side card on left side instead of right
     private float tutorialBobTime;
 
     private TutorialHudRefs tutorialHud;
     private TutorialTrigger activeTutorialTrigger;
-    private const int TutorialStepCount = 5;
+    private const int TutorialStepCount = 6;
 
     private bool IsTutorialEnabledForCurrentMode()
     {
@@ -92,7 +97,7 @@ public partial class GameBootstrap
                 ShowTutorialWindow(
                     TutorialTrigger.FirstMotelBuilt,
                     3,
-                    "Hire Your First Worker",
+                    "Open the Workers Panel",
                     "The motel stands. Structurally sound, morally ambiguous - the usual.\n\nNow it needs a person inside it. Someone to drive the truck, carry the crates, and ask no questions about where the money went.\n\nOpen the Workers panel at the top of the screen.");
                 break;
             case TutorialTrigger.WorkersPanelOpened:
@@ -102,7 +107,7 @@ public partial class GameBootstrap
                 ShowTutorialWindow(
                     TutorialTrigger.WorkersPanelOpened,
                     4,
-                    "Hire Your First Worker",
+                    "Hire a Worker",
                     "The Workers panel is open. Good. You are further along than most people get.\n\nThere is a button at the bottom. Hire New Worker. It costs money — some of which you still have.\n\nPress it.");
                 break;
             case TutorialTrigger.FirstDriverHired:
@@ -111,8 +116,30 @@ public partial class GameBootstrap
                 ShowTutorialWindow(
                     TutorialTrigger.FirstDriverHired,
                     5,
-                    "Hire Your First Worker",
+                    "The Worker is on Their Way!",
                     "A human being will arrive by bus, already wearing the expression of someone who has made several poor decisions to get here.\n\nThat is your employee now. Treat them accordingly.");
+                break;
+            case TutorialTrigger.ForestIntroduction:
+                if (hasShownForestIntroTutorial) return;
+                hasShownForestIntroTutorial = true;
+                // Focus camera on Forest and select it (microhud appears)
+                if (locations.ContainsKey(LocationType.Forest))
+                {
+                    Vector3 forestCenter = GetLocationCenter(LocationType.Forest);
+                    forestCenter.y = 0f;
+                    cameraFocusPoint = forestCenter;
+                    isCameraReturningToDiorama = true;
+                    isCameraRotatingToTarget   = false;
+                    selectedLocation = LocationType.Forest;
+                }
+                isShiftsHighlightPersistent = true;
+                isTutorialSideMode = true;
+                tutorialSideOnLeft = true;
+                ShowTutorialWindow(
+                    TutorialTrigger.ForestIntroduction,
+                    6,
+                    "Your Land is Rich in Timber",
+                    "Our region is blessed with magnificent forests that have been patiently waiting to be logged.\n\nA Forest provides raw logs. A Sawmill turns them into boards. That is where the money starts.\n\nPut your new worker to work — assign them a shift at the Forest so the timber starts moving.");
                 break;
         }
     }
@@ -121,7 +148,10 @@ public partial class GameBootstrap
     {
         SetupTutorialUi();
         activeTutorialTrigger = trigger;
-        isTutorialSideMode = isDriversPanelOpen;   // side card when Workers panel is open
+        // isTutorialSideMode / tutorialSideOnLeft may have been pre-set by the caller; only
+        // auto-assign when the caller left them at their default (right-side = drivers panel open).
+        if (!tutorialSideOnLeft)
+            isTutorialSideMode = isDriversPanelOpen;
         ApplyTutorialWindowLayout();
         tutorialHud.TitleText.text = L(title);
         tutorialHud.StepText.text = $"{stepNumber}/{TutorialStepCount}";
@@ -131,6 +161,22 @@ public partial class GameBootstrap
         tutorialHud.CanvasRoot.SetActive(true);
         PlayUiSound(uiPanelOpenClip, 0.82f);
         SessionDebugLogger.Log("TUTORIAL", $"Shown tutorial window: {title} (side={isTutorialSideMode}).");
+    }
+
+    private void OpenWorkersPanelFromTutorial()
+    {
+        isFleetPanelOpen     = false;
+        isShiftsPanelOpen    = false;
+        isResourcesPanelOpen = false;
+        isEconomyPanelOpen   = false;
+        isBuildPanelOpen     = false;
+        isWorldMapPanelOpen  = false;
+        isDriversPanelOpen   = true;
+        isWorkersHighlightPersistent = false;
+        isDriversScreenDirty = true;
+        ScheduleTutorial(TutorialTrigger.WorkersPanelOpened);
+        LogUiInput("Tutorial: auto-opened Workers panel after tutorial 3 OK");
+        PlayUiSound(uiPanelOpenClip, 0.9f);
     }
 
     private void OpenBuildPanelFromTutorial()
@@ -157,9 +203,14 @@ public partial class GameBootstrap
         if (tutorialHud?.WindowRect == null) return;
         if (isTutorialSideMode)
         {
-            tutorialHud.WindowRect.sizeDelta      = new Vector2(360f, 290f);
-            tutorialHud.WindowRect.anchoredPosition = new Vector2(TutorialSidePanelBaseX, 0f);
-            if (tutorialHud.BodyPanelLayout != null) tutorialHud.BodyPanelLayout.preferredHeight = 148f;
+            float xBase = tutorialSideOnLeft ? TutorialSidePanelLeftX : TutorialSidePanelBaseX;
+            // Left-offset mode needs full-size window to fit longer text; right side uses compact card
+            float w          = tutorialSideOnLeft ? 480f  : 360f;
+            float h          = tutorialSideOnLeft ? 380f  : 290f;
+            float bodyH      = tutorialSideOnLeft ? 200f  : 148f;
+            tutorialHud.WindowRect.sizeDelta        = new Vector2(w, h);
+            tutorialHud.WindowRect.anchoredPosition = new Vector2(xBase, 0f);
+            if (tutorialHud.BodyPanelLayout != null) tutorialHud.BodyPanelLayout.preferredHeight = bodyH;
             if (tutorialHud.OverlayImage    != null) tutorialHud.OverlayImage.color = OverlayColorTransparent;
             tutorialBobTime = 0f;
         }
@@ -202,6 +253,7 @@ public partial class GameBootstrap
         tutorialHud.OverlayImage.raycastTarget = false;   // window button handles its own input
         tutorialHud.BuildMenuOutlineRoot   = CreateTutorialMenuButtonOutline("TutorialBuildMenuOutline",   canvasObject.transform, 397f);
         tutorialHud.WorkersMenuOutlineRoot = CreateTutorialMenuButtonOutline("TutorialWorkersMenuOutline", canvasObject.transform, 112f);
+        tutorialHud.ShiftsMenuOutlineRoot  = CreateTutorialMenuButtonOutline("TutorialShiftsMenuOutline",  canvasObject.transform, 207f);
         tutorialHud.HireWorkerOutlineRoot  = CreateTutorialHireButtonOutline("TutorialHireWorkerOutline",  canvasObject.transform);
 
         // Window stays a child of the overlay (same coordinate space = full canvas)
@@ -333,8 +385,9 @@ public partial class GameBootstrap
             SessionDebugLogger.Log("TUTORIAL", "Tutorial skipped by player.");
         }
 
-        isTutorialOpen = false;
+        isTutorialOpen     = false;
         isTutorialSideMode = false;
+        tutorialSideOnLeft = false;
         PlayUiSound(uiPanelCloseClip, 0.82f);
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.GameStarted)
@@ -346,6 +399,126 @@ public partial class GameBootstrap
         {
             OpenBuildPanelFromTutorial();
         }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.FirstMotelBuilt)
+        {
+            OpenWorkersPanelFromTutorial();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.WorkersPanelOpened)
+        {
+            HireNewDriver();
+        }
+
+        if (activeTutorialTrigger == TutorialTrigger.FirstDriverHired)
+        {
+            StartHireArrivalCinematic();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
+        {
+            selectedLocation            = null;       // close microhud
+            isShiftsHighlightPersistent = false;
+            isShiftsPanelOpen           = true;
+            isShiftsScreenDirty         = true;
+            LogUiInput("Tutorial: auto-opened Shifts panel after tutorial 6 OK");
+            PlayUiSound(uiPanelOpenClip, 0.9f);
+        }
+    }
+
+    private void StartHireArrivalCinematic()
+    {
+        if (hiringDriverArrival == null) return;   // bus already gone — nothing to track
+        tutorialCinematicDriver = hiringDriverArrival.Driver;
+        tutorialCinematicPhase  = TutorialCinematicPhase.TrackingBus;
+        isTruckCameraFocused        = false;
+        isCameraReturningToDiorama  = false;
+        isCameraRotatingToTarget    = false;
+        SessionDebugLogger.Log("TUTORIAL", "Started hire-arrival cinematic.");
+    }
+
+    private void UpdateTutorialCinematic(float dt)
+    {
+        Vector3 worldCenter = new(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
+
+        switch (tutorialCinematicPhase)
+        {
+            case TutorialCinematicPhase.TrackingBus:
+            {
+                if (hiringDriverArrival?.BusRootTransform != null)
+                {
+                    Vector3 busPos = hiringDriverArrival.BusRootTransform.position;
+                    busPos.y = 0f;
+                    // Faster lock-on once bus has stopped for dropoff
+                    float busLerp = hiringDriverArrival.Phase == HiringDriverArrivalPhase.StoppedForDropoff ? 8f : 3.5f;
+                    cameraFocusPoint = Vector3.Lerp(cameraFocusPoint, busPos, busLerp * dt);
+                }
+                // Zoom in toward bus/worker
+                cameraOffset       = Vector3.Lerp(cameraOffset,       TutorialCinematicZoomOffset, 2.5f * dt);
+                cameraTargetOffset = cameraOffset;
+
+                bool driverSpawned = hiringDriverArrival == null
+                    || hiringDriverArrival.Phase == HiringDriverArrivalPhase.DriverWalkingToMotel
+                    || hiringDriverArrival.Phase == HiringDriverArrivalPhase.Departing;
+                if (driverSpawned)
+                {
+                    if (tutorialCinematicDriver?.DriverObject != null)
+                    {
+                        // Snap focus to worker spawn position for a seamless cut
+                        Vector3 spawnPos = tutorialCinematicDriver.DriverObject.transform.position;
+                        spawnPos.y = 0f;
+                        cameraFocusPoint = spawnPos;
+                        tutorialCinematicPhase = TutorialCinematicPhase.TrackingWorker;
+                    }
+                    else
+                    {
+                        tutorialCinematicPhase = TutorialCinematicPhase.Returning;
+                    }
+                }
+                break;
+            }
+
+            case TutorialCinematicPhase.TrackingWorker:
+            {
+                if (tutorialCinematicDriver?.DriverObject != null && tutorialCinematicDriver.DriverObject.activeSelf)
+                {
+                    Vector3 workerPos = tutorialCinematicDriver.DriverObject.transform.position;
+                    workerPos.y = 0f;
+                    cameraFocusPoint = Vector3.Lerp(cameraFocusPoint, workerPos, 4f * dt);
+                }
+                // Keep zoom in while following worker
+                cameraOffset       = Vector3.Lerp(cameraOffset,       TutorialCinematicZoomOffset, 2.5f * dt);
+                cameraTargetOffset = cameraOffset;
+
+                if (tutorialCinematicDriver == null || !tutorialCinematicDriver.IsArrivingByBus)
+                    tutorialCinematicPhase = TutorialCinematicPhase.Returning;
+                break;
+            }
+
+            case TutorialCinematicPhase.Returning:
+            {
+                cameraFocusPoint   = Vector3.Lerp(cameraFocusPoint,   worldCenter,        2f   * dt);
+                cameraOffset       = Vector3.Lerp(cameraOffset,       DioramaCameraOffset, 2.5f * dt);
+                cameraTargetOffset = cameraOffset;
+                bool focusDone  = (cameraFocusPoint - worldCenter).sqrMagnitude        < 0.5f;
+                bool offsetDone = (cameraOffset     - DioramaCameraOffset).sqrMagnitude < 0.01f;
+                if (focusDone && offsetDone)
+                {
+                    cameraFocusPoint        = worldCenter;
+                    cameraOffset            = DioramaCameraOffset;
+                    cameraTargetOffset      = DioramaCameraOffset;
+                    tutorialCinematicDriver = null;
+                    tutorialCinematicPhase  = TutorialCinematicPhase.None;
+                    // Show tutorial 6 immediately — camera pan to Forest happens inside TryShowTutorial
+                    ScheduleTutorial(TutorialTrigger.ForestIntroduction);
+                    SessionDebugLogger.Log("TUTORIAL", "Hire-arrival cinematic ended.");
+                }
+                break;
+            }
+        }
+
+        mainCamera.transform.position = cameraFocusPoint + cameraOffset;
+        mainCamera.transform.rotation = GetDioramaCameraRotation();
     }
 
     private bool IsBuildMenuTutorialHighlightActive()
@@ -365,6 +538,12 @@ public partial class GameBootstrap
     {
         return (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.WorkersPanelOpened)
                || isHireWorkerHighlightPersistent;
+    }
+
+    private bool IsShiftsTutorialHighlightActive()
+    {
+        return (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
+               || isShiftsHighlightPersistent;
     }
 
     private void UpdateTutorialUi()
@@ -391,7 +570,8 @@ public partial class GameBootstrap
 
         bool anyHighlight = IsBuildMenuTutorialHighlightActive()
                          || IsWorkersTutorialHighlightActive()
-                         || IsHireWorkerTutorialHighlightActive();
+                         || IsHireWorkerTutorialHighlightActive()
+                         || IsShiftsTutorialHighlightActive();
         bool canvasNeeded = isTutorialOpen || anyHighlight;
         if (tutorialHud.CanvasRoot.activeSelf != canvasNeeded)
             tutorialHud.CanvasRoot.SetActive(canvasNeeded);
@@ -400,9 +580,10 @@ public partial class GameBootstrap
         if (isTutorialOpen && isTutorialSideMode && tutorialHud.WindowRect != null)
         {
             tutorialBobTime += Time.unscaledDeltaTime;
-            float bobX = Mathf.Sin(tutorialBobTime * 0.65f) * 3.5f;
-            float bobY = Mathf.Sin(tutorialBobTime * 1.15f) * 5f;
-            tutorialHud.WindowRect.anchoredPosition = new Vector2(TutorialSidePanelBaseX + bobX, bobY);
+            float xBase = tutorialSideOnLeft ? TutorialSidePanelLeftX : TutorialSidePanelBaseX;
+            float bobX  = Mathf.Sin(tutorialBobTime * 0.65f) * 3.5f;
+            float bobY  = Mathf.Sin(tutorialBobTime * 1.15f) * 5f;
+            tutorialHud.WindowRect.anchoredPosition = new Vector2(xBase + bobX, bobY);
         }
 
         if (tutorialHud.BuildMenuOutlineRoot != null)
@@ -413,6 +594,9 @@ public partial class GameBootstrap
 
         if (tutorialHud.HireWorkerOutlineRoot != null)
             tutorialHud.HireWorkerOutlineRoot.SetActive(IsHireWorkerTutorialHighlightActive());
+
+        if (tutorialHud.ShiftsMenuOutlineRoot != null)
+            tutorialHud.ShiftsMenuOutlineRoot.SetActive(IsShiftsTutorialHighlightActive());
     }
 
     private GameObject CreateTutorialMenuButtonOutline(string name, Transform parent, float anchorX)

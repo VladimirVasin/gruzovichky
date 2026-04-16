@@ -75,7 +75,23 @@ public partial class GameBootstrap
         if (panelName == "Workers")
         {
             isWorkersHighlightPersistent = false;
+            if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FirstMotelBuilt)
+            {
+                isTutorialOpen     = false;
+                isTutorialSideMode = false;
+            }
             ScheduleTutorial(TutorialTrigger.WorkersPanelOpened);
+        }
+        if (panelName == "Shifts")
+        {
+            isShiftsHighlightPersistent = false;
+            selectedLocation = null;   // close building microhud (Forest was selected by tutorial 6)
+            if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
+            {
+                isTutorialOpen     = false;
+                isTutorialSideMode = false;
+                tutorialSideOnLeft = false;
+            }
         }
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
@@ -126,7 +142,7 @@ public partial class GameBootstrap
             float x = bar.x + MenuBtnGap;
             MenuBtn("Fleet",     ref isFleetPanelOpen,     x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Workers",   ref isDriversPanelOpen,   x, IsWorkersTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Shifts",    ref isShiftsPanelOpen,    x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Shifts",    ref isShiftsPanelOpen,    x, IsShiftsTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Economy",   ref isEconomyPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Building",  ref isBuildPanelOpen,     x, IsBuildMenuTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;

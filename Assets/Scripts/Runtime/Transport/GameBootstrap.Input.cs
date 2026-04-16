@@ -269,6 +269,12 @@ public partial class GameBootstrap
 
         float cameraDeltaTime = Time.unscaledDeltaTime;
 
+        if (tutorialCinematicPhase != TutorialCinematicPhase.None)
+        {
+            UpdateTutorialCinematic(cameraDeltaTime);
+            return;
+        }
+
         if (isTruckCameraFocused)
         {
             UpdateTruckFollowCamera(cameraDeltaTime);

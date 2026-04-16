@@ -65,6 +65,11 @@ public partial class GameBootstrap
     private TutorialTrigger? pendingTutorialTrigger;
     private float pendingTutorialDelay;
     private bool hasShownFirstDriverHiredTutorial;
+    private bool hasShownForestIntroTutorial;
+    private bool isShiftsHighlightPersistent;
+    private enum TutorialCinematicPhase { None, TrackingBus, TrackingWorker, Returning }
+    private TutorialCinematicPhase tutorialCinematicPhase;
+    private DriverAgent             tutorialCinematicDriver;
     private bool isLoadingWorld;
     private static GameStartMode? pendingAutoStartMode;
     // mainMenuMusicLoadCoroutine removed (music disabled)
@@ -383,7 +388,7 @@ public partial class GameBootstrap
         loadingOverlayCanvas = new GameObject("LoadingOverlayCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         Canvas canvas = loadingOverlayCanvas.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 50;
+        canvas.sortingOrder = 100;  // above main menu (90) so bar shows on top of it
 
         CanvasScaler scaler = loadingOverlayCanvas.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -391,12 +396,11 @@ public partial class GameBootstrap
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
-        // Semi-transparent full-screen dark overlay
-        RectTransform overlay = CreateStyledPanel("LoadingOverlay", loadingOverlayCanvas.transform, new Color(0f, 0f, 0f, 0.55f));
-        StretchRect(overlay, 0f, 0f, 0f, 0f);
+        // No full-screen overlay — main menu stays visible underneath
+        Transform canvasRoot = loadingOverlayCanvas.transform;
 
         // Bottom bar background (full width, 14px tall)
-        RectTransform barBg = CreateUiObject("LoadingBarBg", overlay).GetComponent<RectTransform>();
+        RectTransform barBg = CreateUiObject("LoadingBarBg", canvasRoot).GetComponent<RectTransform>();
         barBg.anchorMin = new Vector2(0f, 0f);
         barBg.anchorMax = new Vector2(1f, 0f);
         barBg.pivot = new Vector2(0.5f, 0f);
@@ -415,7 +419,7 @@ public partial class GameBootstrap
         loadingBarFill.color = FleetPrimaryButtonColor;
 
         // "Loading..." label just above the bar
-        RectTransform labelRect = CreateUiObject("LoadingLabel", overlay).GetComponent<RectTransform>();
+        RectTransform labelRect = CreateUiObject("LoadingLabel", canvasRoot).GetComponent<RectTransform>();
         labelRect.anchorMin = new Vector2(0f, 0f);
         labelRect.anchorMax = new Vector2(1f, 0f);
         labelRect.pivot = new Vector2(0.5f, 0f);

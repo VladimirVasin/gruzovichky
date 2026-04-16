@@ -286,7 +286,6 @@ public partial class GameBootstrap
         }
 
         CreateLocation(LocationType.Motel, "Motel", min, max, anchorCell, new Color(0.91f, 0.87f, 0.74f));
-        selectedLocation = LocationType.Motel;
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;

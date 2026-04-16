@@ -11,6 +11,8 @@ Build_09.04/
 Build_09.04.zip
 Assets/_Recovery/
 .claude/
+*.asd
+*.asd.meta
 
 # Unity generated
 *.csproj
