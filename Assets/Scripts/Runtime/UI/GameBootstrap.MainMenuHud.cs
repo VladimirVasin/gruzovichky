@@ -66,10 +66,19 @@ public partial class GameBootstrap
     private float pendingTutorialDelay;
     private bool hasShownFirstDriverHiredTutorial;
     private bool hasShownForestIntroTutorial;
+    private bool hasShownForestWorkerStartedTutorial;
+    private bool hasShownNeedSawmillTutorial;
+    private bool hasShownSawmillBuiltTutorial;
+    private bool hasShownFleetIntroTutorial;
+    private bool hasShownFleetSelectTruckTutorial;
+    private bool hasShownFleetAssignDriverTutorial;
+    private bool hasShownFleetPickDriverTutorial;
     private bool isShiftsHighlightPersistent;
-    private enum TutorialCinematicPhase { None, TrackingBus, TrackingWorker, Returning }
+    private bool isFleetHighlightPersistent;
+    private enum TutorialCinematicPhase { None, TrackingBus, TrackingWorker, TrackingWorkerBackCloseup, Returning }
     private TutorialCinematicPhase tutorialCinematicPhase;
     private DriverAgent             tutorialCinematicDriver;
+    private bool tutorialCinematicShouldShowForestIntro;
     private bool isLoadingWorld;
     private static GameStartMode? pendingAutoStartMode;
     // mainMenuMusicLoadCoroutine removed (music disabled)
@@ -377,6 +386,13 @@ public partial class GameBootstrap
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.9f);
         TryShowTutorial(TutorialTrigger.GameStarted);
+        if (selectedGameStartMode == GameStartMode.Debug)
+        {
+            foreach (TradeResourceType res in System.Enum.GetValues(typeof(TradeResourceType)))
+                AddStoredTradeResource(res, 5);
+            if (locations.TryGetValue(LocationType.Forest, out LocationData debugForest))
+                debugForest.LogsStored += 5;
+        }
     }
 
     private void SetupLoadingOverlay()

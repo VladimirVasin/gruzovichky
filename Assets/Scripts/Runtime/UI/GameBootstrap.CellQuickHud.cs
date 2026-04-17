@@ -157,6 +157,7 @@ public partial class GameBootstrap
         cellQuickHud.HeaderText.text = $"Cell {cell.x};{cell.y}";
         cellQuickHud.StatusText.text = GetCellQuickHudStatus(cell);
         cellQuickHud.DetailsText.text = GetCellQuickHudDetails(cell);
+        LocalizeCanvas(cellQuickHud.CanvasRoot);
     }
 
     private void SelectDebugCell(Vector2Int cell)

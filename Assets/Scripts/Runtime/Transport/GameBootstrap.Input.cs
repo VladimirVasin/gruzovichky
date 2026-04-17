@@ -625,7 +625,9 @@ public partial class GameBootstrap
         }
 
         ClearSelectedDebugCell();
+        selectedLocation = null;
         isTruckDetailsOpen = false;
+        isDriverDetailsOpen = false;
         DisableTruckCameraFocus();
         if (IsBuildingBuildTool(placementTool))
         {

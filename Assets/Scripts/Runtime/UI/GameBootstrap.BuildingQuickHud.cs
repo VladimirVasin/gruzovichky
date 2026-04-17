@@ -19,6 +19,55 @@ public partial class GameBootstrap
 
     private BuildingQuickHudRefs buildingQuickHud;
 
+    private bool HasBlockingHudOpenForQuickHuds()
+    {
+        return isFleetPanelOpen ||
+               isDriversPanelOpen ||
+               isShiftsPanelOpen ||
+               isResourcesPanelOpen ||
+               isEconomyPanelOpen ||
+               isBuildPanelOpen ||
+               isWorldMapPanelOpen ||
+               activeBuildTool != BuildTool.None;
+    }
+
+    private void CloseQuickHudsWhenBlockingHudIsOpen()
+    {
+        if (!HasBlockingHudOpenForQuickHuds())
+        {
+            return;
+        }
+
+        bool hadAnyQuickHud =
+            isTruckDetailsOpen ||
+            isDriverDetailsOpen ||
+            selectedLocation.HasValue ||
+            selectedDebugCell.HasValue;
+
+        if (!hadAnyQuickHud)
+        {
+            return;
+        }
+
+        isTruckDetailsOpen = false;
+        isDriverDetailsOpen = false;
+        selectedDriverId = 0;
+        selectedLocation = null;
+        selectedDebugCell = null;
+
+        if (truckQuickHud?.CanvasRoot != null) truckQuickHud.CanvasRoot.SetActive(false);
+        if (driverQuickHud?.CanvasRoot != null) driverQuickHud.CanvasRoot.SetActive(false);
+        if (buildingQuickHud?.CanvasRoot != null) buildingQuickHud.CanvasRoot.SetActive(false);
+        if (cellQuickHud?.CanvasRoot != null) cellQuickHud.CanvasRoot.SetActive(false);
+        if (selectedDebugCellHighlight != null) selectedDebugCellHighlight.SetActive(false);
+        if (selectedDebugCellOutline != null) selectedDebugCellOutline.SetActive(false);
+
+        DisableTruckCameraFocus();
+        RefreshSelectionVisuals();
+        isFleetScreenDirty = true;
+        isDriversScreenDirty = true;
+    }
+
     private void SetupBuildingQuickHud()
     {
         if (buildingQuickHud != null)
@@ -134,6 +183,7 @@ public partial class GameBootstrap
         buildingQuickHud.StatusText.text = GetBuildingQuickStatusText(selectedLocation.Value);
         buildingQuickHud.ResourceText.text = GetBuildingQuickResourceText(selectedLocation.Value);
         buildingQuickHud.ContextButtonText.text = GetBuildingQuickContextButtonText(selectedLocation.Value);
+        LocalizeCanvas(buildingQuickHud.CanvasRoot);
     }
 
     private void OpenContextPanelFromBuildingQuickHud()
@@ -277,20 +327,8 @@ public partial class GameBootstrap
     private string GetWarehouseQuickResourceText()
     {
         locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse);
-        int logs      = warehouse != null ? warehouse.LogsStored      : 0;
-        int boards    = warehouse != null ? warehouse.BoardsStored    : 0;
         int workers   = warehouse != null ? warehouse.Workers         : 0;
-        int fuel      = warehouse != null ? warehouse.FuelStored      : 0;
-        int alcohol   = warehouse != null ? warehouse.AlcoholStored   : 0;
-        int food      = warehouse != null ? warehouse.FoodStored      : 0;
-        return $"{FormatValueLine("Workers",  $"{workers} / 1")}\n" +
-               $"{FormatValueLine("Fuel",     $"{fuel} / {WarehouseMaxFuelStorage}")}\n" +
-               $"{FormatValueLine("Alcohol",  $"{alcohol} / {WarehouseMaxAlcoholStorage}")}\n" +
-               $"{FormatValueLine("Food",     $"{food} / {WarehouseMaxFoodStorage}")}\n" +
-               $"{FormatValueLine("Logs",     logs.ToString())}\n" +
-               $"{FormatValueLine("Boards",   boards.ToString())}\n" +
-               $"{FormatValueLine("Textile",  textileStored.ToString())}\n" +
-               $"{FormatValueLine("Furniture", furnitureStored.ToString())}";
+        return FormatValueLine("Workers", $"{workers} / 1");
     }
 
     private string GetBuildingQuickContextButtonText(LocationType locationType)

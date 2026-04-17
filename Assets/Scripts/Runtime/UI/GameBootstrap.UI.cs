@@ -542,7 +542,7 @@ public partial class GameBootstrap
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 98, 220, 22), $"Fuel: {Mathf.CeilToInt(truckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)}");
         string energyLabel = driver.NeedsRestAfterTrip ? " [rest queued]" : driver.RestPhase == DriverRestPhase.Sleeping ? $" [sleeping {Mathf.CeilToInt(driver.SleepTimer)}s]" : "";
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 122, 260, 22), $"Energy: {Mathf.CeilToInt(driver.Energy)}/{Mathf.CeilToInt(DriverEnergyMax)}{energyLabel}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 146, 220, 22), $"Cargo: {truckCargoAmount}/1 ({truckCargoType})");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 146, 220, 22), $"Cargo: {truckCargoAmount}/5 ({truckCargoType})");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 170, 220, 22), $"Grid cell: {truckCell.x}, {truckCell.y}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 194, 240, 22), $"Assigned route: {GetTripTitle(currentAssignedTrip)}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 216, 240, 22), $"Trip payout: ${currentAssignedTripReward}");

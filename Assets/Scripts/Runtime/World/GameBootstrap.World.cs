@@ -186,10 +186,8 @@ public partial class GameBootstrap
         }
 
         CreateLocation(LocationType.FurnitureFactory, "Furniture Factory", min, max, anchorCell, new Color(0.74f, 0.62f, 0.42f));
-        selectedLocation = LocationType.FurnitureFactory;
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
-        RefreshSelectionVisuals();
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         SessionDebugLogger.Log("BUILD", $"Placed Furniture Factory at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
@@ -211,10 +209,8 @@ public partial class GameBootstrap
         }
 
         CreateLocation(LocationType.Bar, "Bar", min, max, anchorCell, new Color(0.38f, 0.18f, 0.12f));
-        selectedLocation = LocationType.Bar;
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
-        RefreshSelectionVisuals();
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         SessionDebugLogger.Log("BUILD", $"Placed Bar at anchor ({anchorCell.x},{anchorCell.y}).");
@@ -236,10 +232,8 @@ public partial class GameBootstrap
         }
 
         CreateLocation(LocationType.Canteen, "Canteen", min, max, anchorCell, new Color(0.58f, 0.42f, 0.24f));
-        selectedLocation = LocationType.Canteen;
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
-        RefreshSelectionVisuals();
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         SessionDebugLogger.Log("BUILD", $"Placed Canteen at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
@@ -261,13 +255,12 @@ public partial class GameBootstrap
         }
 
         CreateLocation(LocationType.Sawmill, "Sawmill", min, max, anchorCell, new Color(0.3f, 0.52f, 0.8f));
-        selectedLocation = LocationType.Sawmill;
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
-        RefreshSelectionVisuals();
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         SessionDebugLogger.Log("BUILD", $"Placed Sawmill at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        NotifyTutorialSawmillBuilt();
         return true;
     }
 
@@ -289,7 +282,6 @@ public partial class GameBootstrap
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
-        RefreshSelectionVisuals();
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         TryShowTutorial(TutorialTrigger.FirstMotelBuilt);

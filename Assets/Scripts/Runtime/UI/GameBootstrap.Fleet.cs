@@ -93,6 +93,10 @@ public partial class GameBootstrap
                 tutorialSideOnLeft = false;
             }
         }
+        if (panelName == "Fleet")
+        {
+            isFleetHighlightPersistent = false;
+        }
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isShiftsScreenDirty = true;
@@ -140,11 +144,11 @@ public partial class GameBootstrap
             }
 
             float x = bar.x + MenuBtnGap;
-            MenuBtn("Fleet",     ref isFleetPanelOpen,     x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Fleet",     ref isFleetPanelOpen,     x, IsFleetTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Workers",   ref isDriversPanelOpen,   x, IsWorkersTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Shifts",    ref isShiftsPanelOpen,    x, IsShiftsTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Economy",   ref isEconomyPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Trade",     ref isEconomyPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Building",  ref isBuildPanelOpen,     x, IsBuildMenuTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Map",       ref isWorldMapPanelOpen,  x);
         }
@@ -168,6 +172,12 @@ public partial class GameBootstrap
 
     private void DrawShiftsPanel()
     {
+        if (!hasLoggedLegacyShiftsHudDraw)
+        {
+            hasLoggedLegacyShiftsHudDraw = true;
+            SessionDebugLogger.Log("SHIFTS_HUD", "Legacy OnGUI DrawShiftsPanel was called. This should be inactive while ShiftsScreenCanvas owns the HUD.");
+        }
+
         const float leftW = 210f, rightW = 476f, pad = 8f, gap = 8f;
 
         Rect panelRect = GetShiftsPanelRect();
@@ -756,5 +766,3 @@ public partial class GameBootstrap
         PlayUiSound(clip, volumeScale);
     }
 }
-
-

@@ -10,6 +10,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         if (driver == null) return false;
         if (IsDriverIntercity(driver)) return false;
+        if (driver.DutyMode == DriverDutyMode.Logistics) return driver.IsOnActiveShift;
         if (driver.ShiftStartHour < 0) return false; // Idle вЂ” no shift assigned
         return driver.IsOnActiveShift;
     }
@@ -99,7 +100,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private bool ShouldDriverHeadToShift(DriverAgent driver)
     {
-        if (driver == null || IsDriverIntercity(driver) || driver.ShiftStartHour < 0 || driver.AssignedTruckNumber <= 0)
+        if (driver == null || IsDriverIntercity(driver) || driver.DutyMode == DriverDutyMode.Logistics || driver.ShiftStartHour < 0 || driver.AssignedTruckNumber <= 0)
         {
             return false;
         }
@@ -206,13 +207,12 @@ public partial class GameBootstrap : MonoBehaviour
 
     private bool ShouldLogisticsWorkerHeadToBuilding(DriverAgent driver)
     {
-        if (driver == null || driver.DutyMode != DriverDutyMode.Logistics || !driver.AssignedBuildingType.HasValue || driver.ShiftStartHour < 0)
+        if (driver == null || driver.DutyMode != DriverDutyMode.Logistics || !driver.AssignedBuildingType.HasValue)
         {
             return false;
         }
 
-        int minutesUntilShiftStart = GetMinutesUntilShiftStart(driver);
-        return minutesUntilShiftStart > 0 && minutesUntilShiftStart <= Mathf.RoundToInt(DriverShiftArrivalLeadHours * 60f);
+        return IsProductionWorkHour(GetCurrentHour());
     }
 
     private void UpdateDriverShiftPreparation(DriverAgent driver)
@@ -222,13 +222,13 @@ public partial class GameBootstrap : MonoBehaviour
         {
             if (driver.IsArrivingByBus || driver.IsOnActiveShift ||
                 driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) ||
-                !driver.AssignedBuildingType.HasValue || driver.ShiftStartHour < 0)
+                !driver.AssignedBuildingType.HasValue)
             {
                 return;
             }
 
             bool shouldHead = ShouldLogisticsWorkerHeadToBuilding(driver) ||
-                              IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour);
+                              IsProductionWorkHour(GetCurrentHour());
             if (shouldHead)
             {
                 StartDriverBuildingCommute(driver);
@@ -237,7 +237,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        if (driver == null || IsDriverIntercity(driver) || driver.IsArrivingByBus || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || driver.AssignedTruckNumber <= 0)
+        if (driver == null || IsDriverIntercity(driver) || driver.DutyMode == DriverDutyMode.Logistics || driver.IsArrivingByBus || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || driver.AssignedTruckNumber <= 0)
         {
             return;
         }
@@ -301,13 +301,12 @@ public partial class GameBootstrap : MonoBehaviour
     private void UpdateLogisticsShiftEnd(DriverAgent driver)
     {
         if (driver == null || driver.DutyMode != DriverDutyMode.Logistics ||
-            !driver.IsOnActiveShift || driver.ShiftStartHour < 0 ||
-            !driver.AssignedBuildingType.HasValue)
+            !driver.IsOnActiveShift || !driver.AssignedBuildingType.HasValue)
         {
             return;
         }
 
-        if (IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour))
+        if (IsProductionWorkHour(GetCurrentHour()))
         {
             return;
         }
@@ -377,7 +376,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        if (!IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour))
+        if (!IsProductionWorkHour(GetCurrentHour()))
         {
             return;
         }
@@ -519,6 +518,12 @@ public partial class GameBootstrap : MonoBehaviour
                 driver.IdleWanderPauseTimer = Random.Range(0.5f, 1.5f);
             }
 
+            return;
+        }
+
+        if (driver.DutyMode == DriverDutyMode.Logistics &&
+            (ShouldLogisticsWorkerHeadToBuilding(driver) || IsProductionWorkHour(GetCurrentHour())))
+        {
             return;
         }
 
@@ -964,6 +969,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         if (driver == null) return;
         if (IsDriverIntercity(driver)) return;
+        if (driver.DutyMode == DriverDutyMode.Logistics) return;
         if (driver.IsArrivingByBus) return;
         if (driver.ShiftStartHour < 0) return;
         if (driver.IsOnActiveShift) return;
@@ -1050,7 +1056,9 @@ public partial class GameBootstrap : MonoBehaviour
             actualTreasuryDelta,
             "Treasury",
             driver.DriverName,
-            $"Salary payout ({GetShiftRangeLabel(driver.ShiftStartHour)})",
+            driver.DutyMode == DriverDutyMode.Logistics
+                ? $"Salary payout ({GetProductionWorkRangeLabel()})"
+                : $"Salary payout ({GetShiftRangeLabel(driver.ShiftStartHour)})",
             money,
             driver.Money);
         isFleetScreenDirty = true;
@@ -1104,6 +1112,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         // Driver has no shift assigned — ensure truck returns to parking
+        if (driver.DutyMode != DriverDutyMode.Local) return;
         if (driver.ShiftStartHour >= 0) return;
         if (driver.RestPhase != DriverRestPhase.None) return;
         if (isDriverRescueActive) return;

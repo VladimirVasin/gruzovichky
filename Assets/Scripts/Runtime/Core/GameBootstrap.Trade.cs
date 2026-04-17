@@ -7,6 +7,8 @@ public partial class GameBootstrap
     {
         None,
         DriverToParking,
+        DrivingToWarehouse,
+        LoadingAtWarehouse,
         DrivingToHighway,
         DrivingOffMap,
         OutOfMap,
@@ -31,7 +33,9 @@ public partial class GameBootstrap
     }
 
     private ActiveTradeRunData activeTradeRun;
-    private static readonly TradeResourceType[] TradeImportCatalog = { TradeResourceType.Cotton, TradeResourceType.Textile, TradeResourceType.Furniture };
+    private float tradeAutoDispatchRetryTimer;
+    private const float TradeAutoDispatchRetryInterval = 2f;
+    private static readonly TradeResourceType[] TradeImportCatalog = { TradeResourceType.Cotton, TradeResourceType.Textile, TradeResourceType.Furniture, TradeResourceType.Fuel, TradeResourceType.Alcohol, TradeResourceType.Food };
     private static readonly TradeResourceType[] TradeExportCatalog = { TradeResourceType.Logs, TradeResourceType.Boards, TradeResourceType.Furniture };
 
     private bool HasActiveTradeRun()
@@ -107,8 +111,10 @@ public partial class GameBootstrap
         string orderLabel = activeTradeRun.OrderType == TradeOrderType.Buy ? "Buying" : "Selling";
         return activeTradeRun.Phase switch
         {
-            TradeRunPhase.DriverToParking => $"{orderLabel} {resourceLabel}: driver walking to parking",
-            TradeRunPhase.DrivingToHighway => $"{orderLabel} {resourceLabel}: driving to highway",
+            TradeRunPhase.DriverToParking    => $"{orderLabel} {resourceLabel}: driver walking to parking",
+            TradeRunPhase.DrivingToWarehouse => $"{orderLabel} {resourceLabel}: loading at warehouse",
+            TradeRunPhase.LoadingAtWarehouse => $"{orderLabel} {resourceLabel}: loading cargo",
+            TradeRunPhase.DrivingToHighway   => $"{orderLabel} {resourceLabel}: driving to highway",
             TradeRunPhase.DrivingOffMap => $"{orderLabel} {resourceLabel}: leaving the map",
             TradeRunPhase.OutOfMap => $"{orderLabel} {resourceLabel}: away {Mathf.CeilToInt(activeTradeRun.OutOfMapTimer)}s",
             TradeRunPhase.ReturningFromOffMap => $"{orderLabel} {resourceLabel}: entering from highway",
@@ -123,9 +129,11 @@ public partial class GameBootstrap
     {
         return phase switch
         {
-            TradeRunPhase.None => "None",
-            TradeRunPhase.DriverToParking => "DriverToParking",
-            TradeRunPhase.DrivingToHighway => "DrivingToHighway",
+            TradeRunPhase.None               => "None",
+            TradeRunPhase.DriverToParking    => "DriverToParking",
+            TradeRunPhase.DrivingToWarehouse => "DrivingToWarehouse",
+            TradeRunPhase.LoadingAtWarehouse => "LoadingAtWarehouse",
+            TradeRunPhase.DrivingToHighway   => "DrivingToHighway",
             TradeRunPhase.DrivingOffMap => "DrivingOffMap",
             TradeRunPhase.OutOfMap => "OutOfMap",
             TradeRunPhase.ReturningFromOffMap => "ReturningFromOffMap",
@@ -396,12 +404,28 @@ public partial class GameBootstrap
 
     private string GetTradeModeLabel(TradeOrderType orderType)
     {
-        return orderType == TradeOrderType.Buy ? "Buy / Imports" : "Sell / Exports";
+        return orderType == TradeOrderType.Buy ? "Buy" : "Sell";
     }
 
     private int GetTradeRunQuantity(TradeResourceType resourceType)
     {
-        return 1;
+        return Mathf.Clamp(selectedTradeOrderAmount, 1, 5);
+    }
+
+    private static CargoType TradeResourceTypeToCargoType(TradeResourceType resourceType)
+    {
+        return resourceType switch
+        {
+            TradeResourceType.Logs      => CargoType.Logs,
+            TradeResourceType.Boards    => CargoType.Boards,
+            TradeResourceType.Cotton    => CargoType.Cotton,
+            TradeResourceType.Textile   => CargoType.Textile,
+            TradeResourceType.Furniture => CargoType.Furniture,
+            TradeResourceType.Fuel      => CargoType.Fuel,
+            TradeResourceType.Alcohol   => CargoType.Alcohol,
+            TradeResourceType.Food      => CargoType.Food,
+            _                           => CargoType.None
+        };
     }
 
     private int GetTradeRunPrice(TradeResourceType resourceType, TradeOrderType orderType)
@@ -424,13 +448,17 @@ public partial class GameBootstrap
 
     private int GetStoredTradeResourceAmount(TradeResourceType resourceType)
     {
+        locations.TryGetValue(LocationType.Warehouse, out LocationData wh);
         return resourceType switch
         {
-            TradeResourceType.Logs => GetTotalLogsResourceAmount(),
-            TradeResourceType.Boards => GetTotalBoardsResourceAmount(),
-            TradeResourceType.Cotton => cottonStored,
-            TradeResourceType.Textile => textileStored,
+            TradeResourceType.Logs      => GetTotalLogsResourceAmount(),
+            TradeResourceType.Boards    => GetTotalBoardsResourceAmount(),
+            TradeResourceType.Cotton    => cottonStored,
+            TradeResourceType.Textile   => textileStored,
             TradeResourceType.Furniture => furnitureStored,
+            TradeResourceType.Fuel      => wh?.FuelStored ?? 0,
+            TradeResourceType.Alcohol   => wh?.AlcoholStored ?? 0,
+            TradeResourceType.Food      => wh?.FoodStored ?? 0,
             _ => 0
         };
     }
@@ -464,6 +492,18 @@ public partial class GameBootstrap
                 break;
             case TradeResourceType.Furniture:
                 furnitureStored += amount;
+                break;
+            case TradeResourceType.Fuel:
+                if (locations.TryGetValue(LocationType.Warehouse, out LocationData whFuel))
+                    whFuel.FuelStored = Mathf.Min(whFuel.FuelStored + amount, WarehouseMaxFuelStorage);
+                break;
+            case TradeResourceType.Alcohol:
+                if (locations.TryGetValue(LocationType.Warehouse, out LocationData whAlcohol))
+                    whAlcohol.AlcoholStored = Mathf.Min(whAlcohol.AlcoholStored + amount, WarehouseMaxAlcoholStorage);
+                break;
+            case TradeResourceType.Food:
+                if (locations.TryGetValue(LocationType.Warehouse, out LocationData whFood))
+                    whFood.FoodStored = Mathf.Min(whFood.FoodStored + amount, WarehouseMaxFoodStorage);
                 break;
         }
     }
@@ -632,6 +672,31 @@ public partial class GameBootstrap
         return true;
     }
 
+    private void TryAutoDispatchNextHudOrder()
+    {
+        if (HasActiveTradeRun() || activeTradeHudOrders.Count == 0) return;
+        TradeHudOrder next = activeTradeHudOrders[0];
+        selectedTradeResourceType  = next.ResourceType;
+        selectedTradeOrderType     = next.OrderType;
+        selectedTradeOrderAmount   = Mathf.Clamp(next.Amount, 1, 5);
+        bool dispatched = BeginTradeRun();
+        isEconomyScreenDirty = true;
+        if (dispatched) tradeAutoDispatchRetryTimer = 0f;
+    }
+
+    private void UpdateTradeAutoDispatch()
+    {
+        if (HasActiveTradeRun() || activeTradeHudOrders.Count == 0)
+        {
+            tradeAutoDispatchRetryTimer = 0f;
+            return;
+        }
+        tradeAutoDispatchRetryTimer += Time.deltaTime;
+        if (tradeAutoDispatchRetryTimer < TradeAutoDispatchRetryInterval) return;
+        tradeAutoDispatchRetryTimer = 0f;
+        TryAutoDispatchNextHudOrder();
+    }
+
     private bool BeginTradeRun()
     {
         EnsureTradeSelectionMatchesCurrentZone();
@@ -650,11 +715,7 @@ public partial class GameBootstrap
             money -= price;
             RecordMoneyMovement(-price, "Treasury", "Trade Market", $"Dispatch trade buy: {resourceLabel} x{quantity}", money);
         }
-        else if (!TryConsumeStoredTradeResource(selectedTradeResourceType, quantity))
-        {
-            tradeDispatchStatusText = $"Need {quantity} {resourceLabel} to sell";
-            return false;
-        }
+        // For Sell: resources are consumed at warehouse loading, not here
 
         bool driverNeedsBoarding = truckAgent.Driver != driver;
         if (driverNeedsBoarding)
@@ -666,13 +727,21 @@ public partial class GameBootstrap
             driver.IdleConversationPartnerId = -1;
         }
 
+        TradeRunPhase initialPhase;
+        if (driverNeedsBoarding)
+            initialPhase = TradeRunPhase.DriverToParking;
+        else if (selectedTradeOrderType == TradeOrderType.Sell)
+            initialPhase = TradeRunPhase.DrivingToWarehouse;
+        else
+            initialPhase = TradeRunPhase.DrivingToHighway;
+
         activeTradeRun = new ActiveTradeRunData
         {
             DriverId = driver.DriverId,
             TruckNumber = truckAgent.TruckNumber,
             ResourceType = selectedTradeResourceType,
             OrderType = selectedTradeOrderType,
-            Phase = driverNeedsBoarding ? TradeRunPhase.DriverToParking : TradeRunPhase.DrivingToHighway,
+            Phase = initialPhase,
             Quantity = quantity,
             Price = price,
             OutOfMapDuration = GetTradeRunDuration(selectedTradeResourceType),
@@ -701,23 +770,6 @@ public partial class GameBootstrap
         return true;
     }
 
-    private void CheckTradeThresholds()
-    {
-        if (HasActiveTradeRun()) return;
-        foreach (KeyValuePair<TradeResourceType, TradeThresholdConfig> kvp in tradeThresholds)
-        {
-            TradeThresholdConfig cfg = kvp.Value;
-            if (cfg.Mode != TradeThresholdMode.Buy) continue; // Sell auto-trigger: next iteration
-            if (cfg.Threshold <= 0) continue;
-            int stock = GetStoredTradeResourceAmount(kvp.Key);
-            if (stock >= cfg.Threshold) continue;
-            selectedTradeResourceType = kvp.Key;
-            selectedTradeOrderType = TradeOrderType.Buy;
-            BeginTradeRun(); // silently fails if driver/truck not available
-            return;
-        }
-    }
-
     private void UpdateActiveTradeRun()
     {
         if (!HasActiveTradeRun())
@@ -739,6 +791,12 @@ public partial class GameBootstrap
         {
             case TradeRunPhase.DriverToParking:
                 UpdateTradeRunDriverToParking(driver, truckAgent);
+                break;
+            case TradeRunPhase.DrivingToWarehouse:
+                UpdateTradeRunDrivingToWarehouse(driver, truckAgent);
+                break;
+            case TradeRunPhase.LoadingAtWarehouse:
+                UpdateTradeRunLoadingAtWarehouse(driver, truckAgent);
                 break;
             case TradeRunPhase.DrivingToHighway:
                 UpdateTradeRunDrivingToHighway(driver, truckAgent);
@@ -768,7 +826,10 @@ public partial class GameBootstrap
     {
         if (truckAgent.Driver == driver)
         {
-            SetTradeRunPhase(TradeRunPhase.DrivingToHighway, $"{driver.DriverName} already boarded {truckAgent.DisplayName}.");
+            TradeRunPhase nextPhase = activeTradeRun.OrderType == TradeOrderType.Sell
+                ? TradeRunPhase.DrivingToWarehouse
+                : TradeRunPhase.DrivingToHighway;
+            SetTradeRunPhase(nextPhase, $"{driver.DriverName} already boarded {truckAgent.DisplayName}.");
             tradeDispatchStatusText = GetTradeRunStatusLabel();
             return;
         }
@@ -785,11 +846,59 @@ public partial class GameBootstrap
             TryBoardDriverToAssignedTruck(driver);
             if (truckAgent.Driver == driver)
             {
-                SetTradeRunPhase(TradeRunPhase.DrivingToHighway, $"{driver.DriverName} boarded {truckAgent.DisplayName} at Parking.");
+                TradeRunPhase nextPhase = activeTradeRun.OrderType == TradeOrderType.Sell
+                    ? TradeRunPhase.DrivingToWarehouse
+                    : TradeRunPhase.DrivingToHighway;
+                SetTradeRunPhase(nextPhase, $"{driver.DriverName} boarded {truckAgent.DisplayName} at Parking.");
                 tradeDispatchStatusText = GetTradeRunStatusLabel();
                 SessionDebugLogger.Log("TRADE", $"{driver.DriverName} boarded {truckAgent.DisplayName} for Intercity trade.");
             }
         }
+    }
+
+    private void UpdateTradeRunDrivingToWarehouse(DriverAgent driver, TruckAgent truckAgent)
+    {
+        Vector2Int warehouseAnchor = locations[LocationType.Warehouse].Anchor;
+        if (truckAgent.TruckCell == warehouseAnchor && !truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        {
+            LoadTruckState(truckAgent);
+            if (TryStartTruckInteraction(TruckInteractionType.TradeLoadAtWarehouse, LocationType.Warehouse))
+            {
+                SetTradeRunPhase(TradeRunPhase.LoadingAtWarehouse, $"{truckAgent.DisplayName} reached Warehouse for sell loading.");
+            }
+            SaveTruckState(truckAgent);
+            tradeDispatchStatusText = GetTradeRunStatusLabel();
+            return;
+        }
+
+        if (!truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        {
+            LoadTruckState(truckAgent);
+            StartMoveTo(warehouseAnchor);
+            SaveTruckState(truckAgent);
+        }
+
+        tradeDispatchStatusText = GetTradeRunStatusLabel();
+    }
+
+    private void UpdateTradeRunLoadingAtWarehouse(DriverAgent driver, TruckAgent truckAgent)
+    {
+        if (truckAgent.IsTruckInteracting)
+        {
+            tradeDispatchStatusText = GetTradeRunStatusLabel();
+            return;
+        }
+
+        string resourceLabel = GetTradeResourceLabel(activeTradeRun.ResourceType);
+        int logsAfter = GetTotalLogsResourceAmount();
+        int boardsAfter = GetTotalBoardsResourceAmount();
+        Debug.Log($"[TRADE] {truckAgent.DisplayName} finished loading {resourceLabel} x{activeTradeRun.Quantity}. " +
+                  $"Truck cargo: {truckAgent.TruckCargoAmount} {truckAgent.TruckCargoType}. " +
+                  $"Resource totals after load — Logs:{logsAfter} Boards:{boardsAfter}");
+        SessionDebugLogger.Log("TRADE", $"{truckAgent.DisplayName} loaded {resourceLabel} x{activeTradeRun.Quantity} from Warehouse.");
+        SetTradeRunPhase(TradeRunPhase.DrivingToHighway, $"{truckAgent.DisplayName} finished Warehouse loading.");
+        tradeDispatchStatusText = GetTradeRunStatusLabel();
+        isEconomyScreenDirty = true;
     }
 
     private void UpdateTradeRunDrivingToHighway(DriverAgent driver, TruckAgent truckAgent)
@@ -815,6 +924,8 @@ public partial class GameBootstrap
             {
                 truckAgent.TruckObject.SetActive(false);
             }
+            truckAgent.TruckCargoAmount = 0;
+            truckAgent.TruckCargoType   = CargoType.None;
             activeTradeRun.OutOfMapTimer = activeTradeRun.OutOfMapDuration;
             isEconomyScreenDirty = true;
             return;
@@ -985,11 +1096,14 @@ public partial class GameBootstrap
         StartDriverMotelRest(truckAgent, driver);
         activeTradeRun = null;
         RemoveCompletedTradeDispatchLedgerEntry(completedOrderType, completedResourceType, completedQuantity);
+        if (activeTradeHudOrders.Count > 0)
+            activeTradeHudOrders.RemoveAt(0);
         tradeDispatchStatusText = "Ready to dispatch via edge highway";
         isEconomyScreenDirty = true;
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isShiftsScreenDirty = true;
+        TryAutoDispatchNextHudOrder();
     }
 
     private string GetTradeOfferLabel(TradeResourceType resourceType, TradeOrderType orderType)

@@ -19,13 +19,23 @@ public partial class GameBootstrap
     private static readonly Color ShiftsScreenTint = new(0.06f, 0.08f, 0.11f, 0.76f);
     private static readonly Color ShiftsCardColor = new(0.13f, 0.16f, 0.21f, 0.98f);
     private static readonly Color ShiftsCardSelected = new(0.29f, 0.25f, 0.13f, 0.98f);
+    private const float ShiftsWindowWidth = 980f;
+    private const float ShiftsWindowHeight = 600f;
+    private const float ShiftsLeftPanelWidth = 467f;
+    private const float ShiftsRightPanelWidth = 461f;
+    private const float ShiftsInnerPanelHeight = 564f;
+    private const float ShiftsTabContentHeight = 486f;
     private ShiftsScreenUiRefs shiftsScreenUi;
     private bool isShiftsScreenDirty = true;
     private bool isLogisticsTabActive = false;
     private Button shiftsLogisticsTabBtn;
     private Button shiftsTransportTabBtn;
+    private Text shiftsLogisticsTabText;
+    private Text shiftsTransportTabText;
     private RectTransform shiftsLogisticsPanel;
     private RectTransform shiftsTransportPanel;
+    private string lastShiftsHudDebugState = string.Empty;
+    private bool hasLoggedLegacyShiftsHudDraw;
     private readonly LogisticsSlotUi[] logisticsSlots = new LogisticsSlotUi[4];
     private BuildScreenUiRefs buildScreenUi;
     private bool isBuildScreenDirty = true;
@@ -48,6 +58,8 @@ public partial class GameBootstrap
     {
         public GameObject CanvasRoot;
         public RectTransform WindowRoot;
+        public RectTransform LeftPanel;
+        public RectTransform RightPanel;
         public RectTransform DriverListContent;
         public Text HeaderCountText;
         public readonly List<ShiftDriverRowUi> DriverRows = new();
@@ -151,13 +163,6 @@ public partial class GameBootstrap
         public string LastName;
         public string LastValue;
         public TradeResourceType ResourceType;
-        public Button ModeButton;
-        public Text ModeButtonText;
-        public LayoutElement ThresholdRootLayout;
-        public RectTransform ThresholdControls;
-        public Button DecrBtn;
-        public Text ThresholdText;
-        public Button IncrBtn;
     }
 
     private sealed class EconomyScreenUiRefs
@@ -166,18 +171,34 @@ public partial class GameBootstrap
         public RectTransform WindowRoot;
         public Text HeaderCountText;
         public Text TradeResourceText;
-        public Text TradeModeText;
-        public Text TradePriceText;
-        public Text TradeEtaText;
-        public Text TradeStatusText;
-        public Button TradePrevButton;
-        public Button TradeNextButton;
-        public Button TradeModeButton;
-        public Button TradeDispatchButton;
-        public Text TradeDispatchButtonText;
-        public RectTransform EntryListContent;
-        public Text EmptyText;
-        public readonly List<EconomyEntryRowUi> Rows = new();
+        public Button TradeResourceDropdownButton;
+        public RectTransform TradeResourceOptionsPanel;
+        public readonly List<Button> TradeResourceOptionButtons = new();
+        public readonly List<Text> TradeResourceOptionTexts = new();
+        public readonly List<Text> TradeResourceOptionAmountTexts = new();
+        public Text TradeActionText;
+        public Button TradeActionDropdownButton;
+        public RectTransform TradeActionOptionsPanel;
+        public readonly List<Button> TradeActionOptionButtons = new();
+        public readonly List<Text> TradeActionOptionTexts = new();
+        public Button TradeAmountMinusButton;
+        public Button TradeAmountPlusButton;
+        public Text TradeAmountText;
+        public Button TradePlaceOrderButton;
+        public Text TradePlaceOrderButtonText;
+        public RectTransform ActiveOrdersContent;
+        public Text EmptyOrdersText;
+        public readonly List<TradeOrderRowUi> TradeOrderRows = new();
+    }
+
+    private sealed class TradeOrderRowUi
+    {
+        public RectTransform Root;
+        public Image TagBackground;
+        public Text TagText;
+        public Text OrderText;
+        public Button RemoveButton;
+        public int OrderId;
     }
 
     private sealed class WorldMapScreenUiRefs
@@ -231,26 +252,15 @@ public partial class GameBootstrap
         public Image HighwayDashC;
     }
 
-    private sealed class EconomyEntryRowUi
-    {
-        public RectTransform Root;
-        public Text TimeText;
-        public Text AmountText;
-        public Text FlowText;
-        public Text ReasonText;
-    }
-
     private sealed class LogisticsSlotUi
     {
         public LocationType BuildingType;
         public Text         BuildingNameText;
         public Text         AssignedWorkerText;
-        public Text         ShiftCycleText;
-        public Button       ShiftCycleButton;
+        public Text         WorkHoursText;
         public Button       AssignButton;
         public Text         AssignButtonText;
         public Button       RemoveButton;
-        public int          PendingShiftHour = -1;  // -1 = no shift selected yet
     }
 
     private ResourcesScreenUiRefs resourcesScreenUi;
@@ -722,6 +732,7 @@ public partial class GameBootstrap
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.CardListContent);
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WindowRoot);
+        LocalizeCanvas(driversScreenUi.CanvasRoot);
         isDriversScreenDirty = false;
     }
 
@@ -747,7 +758,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("ShiftsWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 980f, 600f, -16f);
+        SetCenteredWindow(windowRect, ShiftsWindowWidth, ShiftsWindowHeight, -16f);
         shiftsScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();
@@ -761,13 +772,18 @@ public partial class GameBootstrap
         rootLayout.spacing = 16;
         rootLayout.childControlWidth = true;
         rootLayout.childControlHeight = true;
-        rootLayout.childForceExpandWidth = true;
+        rootLayout.childForceExpandWidth = false;
         rootLayout.childForceExpandHeight = true;
 
         RectTransform leftPanel = CreateStyledPanel("ShiftsDriverListPanel", windowRoot.transform, FleetPanelColor);
+        shiftsScreenUi.LeftPanel = leftPanel;
         LayoutElement leftPanelLayout = leftPanel.gameObject.AddComponent<LayoutElement>();
-        leftPanelLayout.preferredWidth = 300f;
+        leftPanelLayout.preferredWidth = ShiftsLeftPanelWidth;
+        leftPanelLayout.minWidth = ShiftsLeftPanelWidth;
+        leftPanelLayout.preferredHeight = ShiftsInnerPanelHeight;
+        leftPanelLayout.minHeight = ShiftsInnerPanelHeight;
         leftPanelLayout.flexibleWidth = 0f;
+        leftPanelLayout.flexibleHeight = 0f;
         VerticalLayoutGroup leftLayout = leftPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         leftLayout.padding = new RectOffset(16, 16, 16, 16);
         leftLayout.spacing = 14;
@@ -866,6 +882,10 @@ public partial class GameBootstrap
                 PlayUiSound(uiSelectClip, 0.8f);
                 isShiftsScreenDirty = true;
                 isDriversScreenDirty = true;
+                if (!isSelected)
+                {
+                    CompleteProductionWorkerSelectionTutorial(driver);
+                }
             });
 
             shiftsScreenUi.DriverRows.Add(row);
@@ -873,8 +893,14 @@ public partial class GameBootstrap
 
         // ── Right panel ─────────────────────────────────────────────────────
         RectTransform rightPanel = CreateStyledPanel("ShiftsCardsPanel", windowRoot.transform, FleetPanelColor);
+        shiftsScreenUi.RightPanel = rightPanel;
         LayoutElement rightPanelLayout = rightPanel.gameObject.AddComponent<LayoutElement>();
-        rightPanelLayout.flexibleWidth = 1f;
+        rightPanelLayout.preferredWidth = ShiftsRightPanelWidth;
+        rightPanelLayout.minWidth = ShiftsRightPanelWidth;
+        rightPanelLayout.flexibleWidth = 0f;
+        rightPanelLayout.preferredHeight = ShiftsInnerPanelHeight;
+        rightPanelLayout.minHeight = ShiftsInnerPanelHeight;
+        rightPanelLayout.flexibleHeight = 0f;
         VerticalLayoutGroup rightLayout = rightPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         rightLayout.padding = new RectOffset(16, 16, 14, 16);
         rightLayout.spacing = 12;
@@ -885,22 +911,33 @@ public partial class GameBootstrap
 
         // ── Tab toggle row ───────────────────────────────────────────────────
         RectTransform tabRow = CreateLayoutRow("ShiftsTabRow", rightPanel, 36f, 8f);
+        LayoutElement tabRowLE = tabRow.GetComponent<LayoutElement>();
+        tabRowLE.minHeight = 36f;
+        tabRowLE.flexibleHeight = 0f;
         HorizontalLayoutGroup tabRowLayout = tabRow.GetComponent<HorizontalLayoutGroup>();
         tabRowLayout.childForceExpandWidth = true;
-        tabRowLayout.childForceExpandHeight = true;   // buttons must have nonzero height to be clickable
-        shiftsTransportTabBtn = CreateButton("LogisticsTabBtn", tabRow, font, out Text logTabText, "Logistics", 13, FleetPrimaryButtonColor, Color.white);
-        logTabText.fontStyle = FontStyle.Bold;
+        tabRowLayout.childForceExpandHeight = true;
+        shiftsTransportTabBtn = CreateButton("LogisticsTabBtn", tabRow, font, out shiftsTransportTabText, "Logistics", 13, FleetPrimaryButtonColor, Color.white);
+        shiftsTransportTabText.fontStyle = FontStyle.Bold;
+        shiftsTransportTabBtn.transition = Selectable.Transition.None;
         shiftsTransportTabBtn.onClick.AddListener(() =>
         {
             isLogisticsTabActive = false;
+            ApplyShiftsTabVisuals();
+            EnforceShiftsWindowLayout();
+            LogShiftsHudState("clicked Logistics tab", force: true);
             isShiftsScreenDirty = true;
             PlayUiSound(uiSelectClip, 0.8f);
         });
-        shiftsLogisticsTabBtn = CreateButton("ProductionsTabBtn", tabRow, font, out Text transTabText, "Productions", 13, new Color(0.22f, 0.26f, 0.32f, 1f), Color.white);
-        transTabText.fontStyle = FontStyle.Bold;
+        shiftsLogisticsTabBtn = CreateButton("ProductionsTabBtn", tabRow, font, out shiftsLogisticsTabText, "Productions", 13, new Color(0.22f, 0.26f, 0.32f, 1f), Color.white);
+        shiftsLogisticsTabText.fontStyle = FontStyle.Bold;
+        shiftsLogisticsTabBtn.transition = Selectable.Transition.None;
         shiftsLogisticsTabBtn.onClick.AddListener(() =>
         {
             isLogisticsTabActive = true;
+            ApplyShiftsTabVisuals();
+            EnforceShiftsWindowLayout();
+            LogShiftsHudState("clicked Productions tab", force: true);
             isShiftsScreenDirty = true;
             PlayUiSound(uiSelectClip, 0.8f);
         });
@@ -908,7 +945,10 @@ public partial class GameBootstrap
         // ── Transportation panel (existing shift cards + intercity) ──────────
         GameObject transportPanelObj = CreateUiObject("TransportPanel", rightPanel);
         shiftsTransportPanel = transportPanelObj.GetComponent<RectTransform>();
-        transportPanelObj.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        LayoutElement transportPanelLayout = transportPanelObj.AddComponent<LayoutElement>();
+        transportPanelLayout.preferredHeight = ShiftsTabContentHeight;
+        transportPanelLayout.minHeight = ShiftsTabContentHeight;
+        transportPanelLayout.flexibleHeight = 0f;
         VerticalLayoutGroup transportLayout = transportPanelObj.AddComponent<VerticalLayoutGroup>();
         transportLayout.spacing = 14;
         transportLayout.childControlWidth = true;
@@ -1078,7 +1118,10 @@ public partial class GameBootstrap
         // ── Logistics panel ──────────────────────────────────────────────────
         GameObject logisticsPanelObj = CreateUiObject("LogisticsPanel", rightPanel);
         shiftsLogisticsPanel = logisticsPanelObj.GetComponent<RectTransform>();
-        logisticsPanelObj.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        LayoutElement logisticsPanelLayout = logisticsPanelObj.AddComponent<LayoutElement>();
+        logisticsPanelLayout.preferredHeight = ShiftsTabContentHeight;
+        logisticsPanelLayout.minHeight = ShiftsTabContentHeight;
+        logisticsPanelLayout.flexibleHeight = 0f;
         VerticalLayoutGroup logLayout = logisticsPanelObj.AddComponent<VerticalLayoutGroup>();
         logLayout.spacing = 14;
         logLayout.childControlWidth = true;
@@ -1092,33 +1135,21 @@ public partial class GameBootstrap
         {
             LogisticsSlotUi slot = new() { BuildingType = productionTypes[si] };
             RectTransform slotCard = CreateSectionCard(shiftsLogisticsPanel, font, string.Empty, out RectTransform slotBody, false);
-            slotCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 154f;
+            slotCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 120f;
             VerticalLayoutGroup slotBodyLayout = slotBody.GetComponent<VerticalLayoutGroup>();
-            slotBodyLayout.spacing = 8;
+            slotBodyLayout.spacing = 4;
 
             slot.BuildingNameText = CreateHeaderText($"LogBldgName{si}", slotBody, font, productionNames[si], 16, TextAnchor.MiddleLeft, Color.white);
             slot.AssignedWorkerText = CreateHeaderText($"LogWorker{si}", slotBody, font, "No worker assigned", 14, TextAnchor.MiddleLeft, FleetAccentColor);
-            slot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+            slot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
-            RectTransform shiftRow = CreateLayoutRow($"LogShiftRow{si}", slotBody, 28f, 8f);
-            shiftRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
-            CreateBodyText($"LogShiftLabel{si}", shiftRow, font, "Shift:", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-            slot.ShiftCycleButton = CreateButton($"LogShiftCycle{si}", shiftRow, font, out slot.ShiftCycleText, "—", 12, new Color(0.22f, 0.26f, 0.32f, 1f), Color.white);
-            slot.ShiftCycleButton.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-            int slotIndex = si;
-            slot.ShiftCycleButton.onClick.AddListener(() =>
-            {
-                logisticsSlots[slotIndex].PendingShiftHour = logisticsSlots[slotIndex].PendingShiftHour switch
-                {
-                    -1 => 6,
-                    6  => 14,
-                    14 => 22,
-                    _  => -1
-                };
-                isShiftsScreenDirty = true;
-            });
+            RectTransform workRow = CreateLayoutRow($"LogWorkRow{si}", slotBody, 22f, 8f);
+            workRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+            CreateBodyText($"LogWorkLabel{si}", workRow, font, "Hours:", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            slot.WorkHoursText = CreateHeaderText($"LogWorkHours{si}", workRow, font, GetProductionWorkRangeLabel(), 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            slot.WorkHoursText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-            RectTransform actionRow = CreateLayoutRow($"LogActionRow{si}", slotBody, 30f, 8f);
+            RectTransform actionRow = CreateLayoutRow($"LogActionRow{si}", slotBody, 26f, 8f);
             actionRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
             slot.AssignButton = CreateButton($"LogAssignBtn{si}", actionRow, font, out slot.AssignButtonText, "Assign Worker", 12, FleetPrimaryButtonColor, Color.white);
             slot.AssignButton.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -1131,6 +1162,10 @@ public partial class GameBootstrap
                 if (selectedDriver == null) return;
                 AssignWorkerToBuilding(selectedDriver, logisticsSlots[capturedIndex]);
                 PlayUiSound(uiSelectClip, 0.85f);
+                if (capturedIndex == 0)
+                {
+                    CompleteForestAssignmentTutorial();
+                }
             });
             slot.RemoveButton.onClick.AddListener(() =>
             {
@@ -1143,6 +1178,8 @@ public partial class GameBootstrap
 
         // Start with Transport tab visible
         shiftsLogisticsPanel.gameObject.SetActive(false);
+        ApplyShiftsTabVisuals();
+        EnforceShiftsWindowLayout();
 
         AddOverlayCloseButton(windowRect, font);
         shiftsScreenUi.CanvasRoot.SetActive(false);
@@ -1158,6 +1195,7 @@ public partial class GameBootstrap
         {
             shiftsScreenUi.CanvasRoot.SetActive(shouldShow);
             isShiftsScreenDirty = true;
+            LogShiftsHudState(shouldShow ? "canvas shown" : "canvas hidden", force: true);
         }
 
         if (!shouldShow) return;
@@ -1165,19 +1203,8 @@ public partial class GameBootstrap
 
         shiftsScreenUi.HeaderCountText.text = $"{driverAgents.Count} Driver{(driverAgents.Count == 1 ? "" : "s")}";
 
-        // Tab button highlight
-        if (shiftsLogisticsTabBtn != null)
-        {
-            ColorBlock lc = shiftsLogisticsTabBtn.colors;
-            lc.normalColor = isLogisticsTabActive ? FleetPrimaryButtonColor : new Color(0.22f, 0.26f, 0.32f, 1f);
-            shiftsLogisticsTabBtn.colors = lc;
-        }
-        if (shiftsTransportTabBtn != null)
-        {
-            ColorBlock tc = shiftsTransportTabBtn.colors;
-            tc.normalColor = !isLogisticsTabActive ? FleetPrimaryButtonColor : new Color(0.22f, 0.26f, 0.32f, 1f);
-            shiftsTransportTabBtn.colors = tc;
-        }
+        EnforceShiftsWindowLayout();
+        ApplyShiftsTabVisuals();
         if (shiftsLogisticsPanel != null) shiftsLogisticsPanel.gameObject.SetActive(isLogisticsTabActive);
         if (shiftsTransportPanel  != null) shiftsTransportPanel.gameObject.SetActive(!isLogisticsTabActive);
 
@@ -1254,7 +1281,173 @@ public partial class GameBootstrap
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(shiftsScreenUi.DriverListContent);
         LayoutRebuilder.ForceRebuildLayoutImmediate(shiftsScreenUi.WindowRoot);
+        EnforceShiftsWindowLayout();
+        ApplyShiftsTabVisuals();
+        LogShiftsHudState("rebuilt Shifts canvas");
+        LocalizeCanvas(shiftsScreenUi.CanvasRoot);
         isShiftsScreenDirty = false;
+    }
+
+    private void EnforceShiftsWindowLayout()
+    {
+        if (shiftsScreenUi?.WindowRoot == null)
+        {
+            return;
+        }
+
+        SetCenteredWindow(shiftsScreenUi.WindowRoot, ShiftsWindowWidth, ShiftsWindowHeight, -16f);
+        ApplyFixedLayoutSize(shiftsScreenUi.LeftPanel, ShiftsLeftPanelWidth, ShiftsInnerPanelHeight);
+        ApplyFixedLayoutSize(shiftsScreenUi.RightPanel, ShiftsRightPanelWidth, ShiftsInnerPanelHeight);
+        ApplyFixedLayoutHeight(shiftsTransportPanel, ShiftsTabContentHeight);
+        ApplyFixedLayoutHeight(shiftsLogisticsPanel, ShiftsTabContentHeight);
+    }
+
+    private static void ApplyFixedLayoutSize(RectTransform rect, float width, float height)
+    {
+        if (rect == null)
+        {
+            return;
+        }
+
+        LayoutElement layout = rect.GetComponent<LayoutElement>();
+        if (layout == null)
+        {
+            return;
+        }
+
+        layout.minWidth = width;
+        layout.preferredWidth = width;
+        layout.flexibleWidth = 0f;
+        layout.minHeight = height;
+        layout.preferredHeight = height;
+        layout.flexibleHeight = 0f;
+    }
+
+    private static void ApplyFixedLayoutHeight(RectTransform rect, float height)
+    {
+        if (rect == null)
+        {
+            return;
+        }
+
+        LayoutElement layout = rect.GetComponent<LayoutElement>();
+        if (layout == null)
+        {
+            return;
+        }
+
+        layout.minHeight = height;
+        layout.preferredHeight = height;
+        layout.flexibleHeight = 0f;
+    }
+
+    private void LogShiftsHudState(string reason, bool force = false)
+    {
+        string state = BuildShiftsHudDebugState(reason);
+        if (!force && state == lastShiftsHudDebugState)
+        {
+            return;
+        }
+
+        lastShiftsHudDebugState = state;
+        SessionDebugLogger.Log("SHIFTS_HUD", state);
+    }
+
+    private string BuildShiftsHudDebugState(string reason)
+    {
+        string canvasActive = shiftsScreenUi?.CanvasRoot != null ? shiftsScreenUi.CanvasRoot.activeSelf.ToString() : "null";
+        string windowSize = FormatRectSize(shiftsScreenUi?.WindowRoot);
+        string leftSize = FormatRectSize(shiftsScreenUi?.LeftPanel);
+        string rightSize = FormatRectSize(shiftsScreenUi?.RightPanel);
+        string transportPanel = FormatPanelState(shiftsTransportPanel);
+        string productionPanel = FormatPanelState(shiftsLogisticsPanel);
+        string logisticsTabColor = FormatButtonColor(shiftsTransportTabBtn);
+        string productionsTabColor = FormatButtonColor(shiftsLogisticsTabBtn);
+        string logisticsTextColor = FormatTextColor(shiftsTransportTabText);
+        string productionsTextColor = FormatTextColor(shiftsLogisticsTabText);
+        string activeTab = isLogisticsTabActive ? "Productions" : "Logistics";
+        string labels = $"labels(L='{shiftsTransportTabText?.text ?? "null"}', P='{shiftsLogisticsTabText?.text ?? "null"}')";
+
+        return $"{reason}: open={isShiftsPanelOpen}, dirty={isShiftsScreenDirty}, activeTab={activeTab}, " +
+               $"canvasActive={canvasActive}, window={windowSize}, left={leftSize}, right={rightSize}, " +
+               $"transport={transportPanel}, productions={productionPanel}, " +
+               $"tabColors(Logistics={logisticsTabColor}, Productions={productionsTabColor}), " +
+               $"textColors(Logistics=#{logisticsTextColor}, Productions=#{productionsTextColor}), {labels}";
+    }
+
+    private static string FormatPanelState(RectTransform rect)
+    {
+        if (rect == null)
+        {
+            return "null";
+        }
+
+        return $"{rect.gameObject.activeSelf}/{FormatRectSize(rect)}";
+    }
+
+    private static string FormatRectSize(RectTransform rect)
+    {
+        if (rect == null)
+        {
+            return "null";
+        }
+
+        return $"{rect.rect.width:0.#}x{rect.rect.height:0.#}/delta({rect.sizeDelta.x:0.#},{rect.sizeDelta.y:0.#})";
+    }
+
+    private static string FormatButtonColor(Button button)
+    {
+        if (button == null)
+        {
+            return "null";
+        }
+
+        Image image = button.targetGraphic as Image ?? button.image;
+        string imageColor = image != null ? ColorUtility.ToHtmlStringRGBA(image.color) : "no-image";
+        return $"image=#{imageColor}, normal=#{ColorUtility.ToHtmlStringRGBA(button.colors.normalColor)}";
+    }
+
+    private static string FormatTextColor(Text text)
+    {
+        return text != null ? ColorUtility.ToHtmlStringRGBA(text.color) : "null";
+    }
+
+    private void ApplyShiftsTabVisuals()
+    {
+        ApplyShiftsTabVisual(shiftsTransportTabBtn, shiftsTransportTabText, !isLogisticsTabActive);
+        ApplyShiftsTabVisual(shiftsLogisticsTabBtn, shiftsLogisticsTabText, isLogisticsTabActive);
+    }
+
+    private static void ApplyShiftsTabVisual(Button button, Text label, bool isActive)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Color activeColor = FleetPrimaryButtonColor;
+        Color inactiveColor = new(0.08f, 0.10f, 0.14f, 1f);
+        Color targetColor = isActive ? activeColor : inactiveColor;
+        Image image = button.targetGraphic as Image ?? button.image;
+        if (image != null)
+        {
+            image.color = targetColor;
+        }
+
+        ColorBlock colors = button.colors;
+        colors.normalColor = targetColor;
+        colors.highlightedColor = isActive ? activeColor : Color.Lerp(inactiveColor, FleetPrimaryButtonColor, 0.24f);
+        colors.pressedColor = Color.Lerp(targetColor, Color.black, 0.14f);
+        colors.selectedColor = targetColor;
+        colors.disabledColor = targetColor;
+        colors.colorMultiplier = 1f;
+        button.colors = colors;
+
+        if (label != null)
+        {
+            label.color = isActive ? FleetAccentColor : Color.white;
+            label.fontStyle = isActive ? FontStyle.BoldAndItalic : FontStyle.Bold;
+        }
     }
 
     private void UpdateLogisticsTabUi(DriverAgent selectedDriver)
@@ -1268,36 +1461,26 @@ public partial class GameBootstrap
                 d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == slot.BuildingType);
 
             string workerLabel = assigned != null
-                ? $"{assigned.DriverName}  —  {(assigned.ShiftStartHour >= 0 ? GetShiftRangeLabel(assigned.ShiftStartHour) : "No shift")}"
+                ? $"{assigned.DriverName}  —  {GetProductionWorkRangeLabel()}"
                 : "No worker assigned";
             slot.AssignedWorkerText.text = workerLabel;
             slot.AssignedWorkerText.color = assigned != null ? FleetAccentColor : FleetSecondaryTextColor;
+            if (slot.WorkHoursText != null)
+            {
+                slot.WorkHoursText.text = GetProductionWorkRangeLabel();
+                slot.WorkHoursText.color = IsProductionWorkHour(GetCurrentHour()) ? FleetAccentColor : FleetSecondaryTextColor;
+            }
 
-            // Shift cycle button: show pending (if no assignment) or assigned worker's shift
-            string shiftLabel = assigned != null && assigned.ShiftStartHour >= 0
-                ? GetShiftRangeLabel(assigned.ShiftStartHour)
-                : slot.PendingShiftHour >= 0
-                    ? GetShiftRangeLabel(slot.PendingShiftHour)
-                    : "—";
-            slot.ShiftCycleText.text = shiftLabel;
-            slot.ShiftCycleButton.interactable = assigned == null;  // Can only change shift before assignment
-
-            bool selectedIsIdle = selectedDriver != null
-                && selectedDriver.DutyMode == DriverDutyMode.Local
-                && selectedDriver.AssignedTruckNumber == 0
-                && selectedDriver.ShiftStartHour < 0
-                && !selectedDriver.IsArrivingByBus;
-            bool canAssign = selectedIsIdle && assigned == null && slot.PendingShiftHour >= 0;
+            bool selectedIsIdle = selectedDriver != null && !selectedDriver.IsArrivingByBus;
+            bool canAssign = selectedIsIdle && assigned == null;
             slot.AssignButton.interactable = canAssign;
             slot.AssignButtonText.text = selectedDriver == null
                 ? "Select a worker"
                 : assigned != null
                     ? "Slot occupied"
-                    : slot.PendingShiftHour < 0
-                        ? "Pick a shift first"
-                        : !selectedIsIdle
-                            ? $"{selectedDriver.DriverName} is not Idle"
-                            : $"Assign {selectedDriver.DriverName}";
+                    : !selectedIsIdle
+                        ? $"{selectedDriver.DriverName} is not Idle"
+                        : $"Assign {selectedDriver.DriverName}";
 
             slot.RemoveButton.interactable = assigned != null;
         }
@@ -1305,12 +1488,8 @@ public partial class GameBootstrap
 
     private void AssignWorkerToBuilding(DriverAgent driver, LogisticsSlotUi slot)
     {
-        if (driver == null || slot == null || slot.PendingShiftHour < 0) return;
-        bool isIdle = driver.DutyMode == DriverDutyMode.Local
-            && driver.AssignedTruckNumber == 0
-            && driver.ShiftStartHour < 0
-            && !driver.IsArrivingByBus;
-        if (!isIdle) return;
+        if (driver == null || slot == null) return;
+        if (driver.IsArrivingByBus) return;
 
         // Remove from any existing building assignment first
         if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
@@ -1320,9 +1499,9 @@ public partial class GameBootstrap
 
         SetDriverDutyMode(driver, DriverDutyMode.Logistics);
         driver.AssignedBuildingType = slot.BuildingType;
-        driver.ShiftStartHour = slot.PendingShiftHour;
-        LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {slot.BuildingType} ({GetShiftRangeLabel(slot.PendingShiftHour)})");
-        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType} ({GetShiftRangeLabel(slot.PendingShiftHour)}) as logistics worker.");
+        driver.ShiftStartHour = -1;
+        LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {slot.BuildingType} ({GetProductionWorkRangeLabel()})");
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType} production work ({GetProductionWorkRangeLabel()}).");
         isShiftsScreenDirty = true;
         isDriversScreenDirty = true;
     }
@@ -1348,11 +1527,7 @@ public partial class GameBootstrap
 
         DriverAgent intercityDriver = GetIntercityAssignedDriver();
         bool selectedIsIntercity = IsDriverIntercity(selectedDriver);
-        bool selectedIsIdleForIntercity = selectedDriver != null
-            && selectedDriver.DutyMode == DriverDutyMode.Local
-            && selectedDriver.AssignedTruckNumber == 0
-            && selectedDriver.ShiftStartHour < 0
-            && !selectedDriver.IsArrivingByBus;
+        bool selectedIsIdleForIntercity = selectedDriver != null && !selectedDriver.IsArrivingByBus && !selectedIsIntercity;
         shiftsScreenUi.IntercitySlot.AssignedDriverText.text = intercityDriver != null ? intercityDriver.DriverName : "No worker assigned";
         shiftsScreenUi.IntercitySlot.StatusText.text = intercityDriver != null
             ? "Reserved for future trade runs"
@@ -1374,11 +1549,7 @@ public partial class GameBootstrap
     private void AssignDriverToIntercitySlot(DriverAgent driver)
     {
         if (driver == null) return;
-        bool isIdle = driver.DutyMode == DriverDutyMode.Local
-            && driver.AssignedTruckNumber == 0
-            && driver.ShiftStartHour < 0
-            && !driver.IsArrivingByBus;
-        if (!isIdle) return;
+        if (driver.IsArrivingByBus || driver.DutyMode == DriverDutyMode.Intercity) return;
 
         if (HasActiveTradeRun())
         {

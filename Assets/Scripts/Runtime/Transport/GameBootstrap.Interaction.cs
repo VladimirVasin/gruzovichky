@@ -115,7 +115,8 @@ public partial class GameBootstrap
             interactionType == TruckInteractionType.LoadAtSawmill ||
             interactionType == TruckInteractionType.LoadBoardsAtWarehouse ||
             interactionType == TruckInteractionType.LoadTextileAtWarehouse ||
-            interactionType == TruckInteractionType.LoadAtFurnitureFactory;
+            interactionType == TruckInteractionType.LoadAtFurnitureFactory ||
+            interactionType == TruckInteractionType.TradeLoadAtWarehouse;
         if (isCargoTransfer)
         {
             PlayTruckFx(loading ? cargoPickupClip : cargoDropClip, 0.8f);
@@ -134,7 +135,8 @@ public partial class GameBootstrap
             activeTruckInteraction == TruckInteractionType.LoadAtSawmill ||
             activeTruckInteraction == TruckInteractionType.LoadBoardsAtWarehouse ||
             activeTruckInteraction == TruckInteractionType.LoadTextileAtWarehouse ||
-            activeTruckInteraction == TruckInteractionType.LoadAtFurnitureFactory;
+            activeTruckInteraction == TruckInteractionType.LoadAtFurnitureFactory ||
+            activeTruckInteraction == TruckInteractionType.TradeLoadAtWarehouse;
 
         switch (activeTruckInteraction)
         {
@@ -202,6 +204,15 @@ public partial class GameBootstrap
             case TruckInteractionType.TradeUnloadAtWarehouse:
                 truckCargoAmount = 0;
                 truckCargoType = CargoType.None;
+                break;
+
+            case TruckInteractionType.TradeLoadAtWarehouse:
+                if (activeTradeRun != null)
+                {
+                    TryConsumeStoredTradeResource(activeTradeRun.ResourceType, activeTradeRun.Quantity);
+                    truckCargoAmount = activeTradeRun.Quantity;
+                    truckCargoType   = TradeResourceTypeToCargoType(activeTradeRun.ResourceType);
+                }
                 break;
 
             case TruckInteractionType.RefuelAtGasStation:

@@ -163,9 +163,10 @@ public partial class GameBootstrap
         driverQuickHud.StatusText.text = statusLabel;
         driverQuickHud.TruckText.text = FormatValueLine("Truck", truck != null ? truck.DisplayName : "None");
         driverQuickHud.ModeText.text = string.Empty;
-        driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "�");
+        driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—");
         driverQuickHud.EnergyText.text = FormatValueLine("Energy", $"{Mathf.CeilToInt(driver.Energy)} / {Mathf.CeilToInt(DriverEnergyMax)}");
         driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
+        LocalizeCanvas(driverQuickHud.CanvasRoot);
     }
 
     private void FocusDriver(int driverId)

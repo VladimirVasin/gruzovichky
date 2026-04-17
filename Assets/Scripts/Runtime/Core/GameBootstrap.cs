@@ -85,6 +85,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const int MaxMoneyLedgerEntries = 128;
     private const float DayNightCycleDuration = 300f;
     private const float DriverShiftArrivalLeadHours = 1f;
+    private const int ProductionWorkStartHour = 8;
+    private const int ProductionWorkEndHour = 18;
     private const float DioramaCameraPitch = 42f;
     private static readonly Vector3 DioramaCameraOffset = new(-16f, 20f, -16f);
     private static readonly Vector3 CloudTravelDir = new Vector3(1f, 0f, 0.4f).normalized;
@@ -252,27 +254,23 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isDriversPanelOpen;
     private int selectedShiftDriverId; // DriverId, 0 = none
     private int intercityDriverId;
-    private TradeResourceType selectedTradeResourceType = TradeResourceType.Cotton;
+    private TradeResourceType selectedTradeResourceType = TradeResourceType.Logs;
     private TradeOrderType selectedTradeOrderType = TradeOrderType.Buy;
+    private int selectedTradeOrderAmount = 5;
+    private bool isTradeResourceDropdownOpen;
+    private bool isTradeActionDropdownOpen;
+    private int nextTradeOrderId = 1;
 
-    private enum TradeThresholdMode { Off, Buy, Sell }
-
-    private sealed class TradeThresholdConfig
+    private sealed class TradeHudOrder
     {
-        public TradeThresholdMode Mode = TradeThresholdMode.Off;
-        public int Threshold = 0;
+        public int Id;
+        public TradeResourceType ResourceType;
+        public TradeOrderType OrderType;
+        public int Amount;
     }
 
-    private readonly Dictionary<TradeResourceType, TradeThresholdConfig> tradeThresholds = new()
-    {
-        { TradeResourceType.Logs,      new TradeThresholdConfig() },
-        { TradeResourceType.Boards,    new TradeThresholdConfig() },
-        { TradeResourceType.Cotton,    new TradeThresholdConfig() },
-        { TradeResourceType.Textile,   new TradeThresholdConfig() },
-        { TradeResourceType.Furniture, new TradeThresholdConfig() },
-    };
+    private readonly List<TradeHudOrder> activeTradeHudOrders = new();
 
-    private float tradeThresholdCheckTimer;
     private string tradeDispatchStatusText = "Assign an Intercity driver to unlock trade dispatch.";
     private bool isResourcesPanelOpen;
     private bool isEconomyPanelOpen;
@@ -465,8 +463,12 @@ public partial class GameBootstrap : MonoBehaviour
         None,
         Logs,
         Boards,
+        Cotton,
         Textile,
-        Furniture
+        Furniture,
+        Fuel,
+        Alcohol,
+        Food
     }
 
     private enum TransportTask
@@ -499,6 +501,7 @@ public partial class GameBootstrap : MonoBehaviour
         LoadAtFurnitureFactory,
         UnloadFurnitureAtWarehouse,
         TradeUnloadAtWarehouse,
+        TradeLoadAtWarehouse,
         RefuelAtGasStation
     }
 
@@ -595,7 +598,10 @@ public partial class GameBootstrap : MonoBehaviour
         Boards,
         Cotton,
         Textile,
-        Furniture
+        Furniture,
+        Fuel,
+        Alcohol,
+        Food
     }
 
     private enum TradeOrderType
@@ -1042,6 +1048,16 @@ public partial class GameBootstrap : MonoBehaviour
         return (hour - shiftStart + 24) % 24 < 8;
     }
 
+    private static bool IsProductionWorkHour(int hour)
+    {
+        return hour >= ProductionWorkStartHour && hour < ProductionWorkEndHour;
+    }
+
+    private static string GetProductionWorkRangeLabel()
+    {
+        return $"{ProductionWorkStartHour:00}:00 - {ProductionWorkEndHour:00}:00";
+    }
+
     // Shift display string: "06:00 – 14:00"
     private static string GetShiftRangeLabel(int shiftStart)
     {
@@ -1123,12 +1139,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateMoneyPopups();
         UpdateForestWorkers();
         UpdateActiveTradeRun();
-        tradeThresholdCheckTimer -= Time.deltaTime;
-        if (tradeThresholdCheckTimer <= 0f)
-        {
-            tradeThresholdCheckTimer = 5f;
-            CheckTradeThresholds();
-        }
+        UpdateTradeAutoDispatch();
         for (int i = 0; i < truckAgents.Count; i++)
         {
             TruckAgent ta = truckAgents[i];
@@ -1196,6 +1207,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateEconomyScreenUi();
         UpdateBuildScreenUi();
         UpdateWorldMapScreenUi();
+        CloseQuickHudsWhenBlockingHudIsOpen();
         UpdateTruckQuickHud();
         UpdateDriverQuickHud();
         UpdateBuildingQuickHud();

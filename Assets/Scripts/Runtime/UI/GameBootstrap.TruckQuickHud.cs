@@ -170,10 +170,11 @@ public partial class GameBootstrap
         truckQuickHud.DriverButton.interactable = driver != null;
         truckQuickHud.FuelText.text = FormatValueLine("Fuel", $"{Mathf.CeilToInt(truckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}");
         truckQuickHud.EnergyText.text = FormatValueLine("Energy", driver != null ? $"{Mathf.CeilToInt(driver.Energy)} / {Mathf.CeilToInt(DriverEnergyMax)}" : "None");
-        truckQuickHud.CargoText.text = FormatValueLine("Cargo", $"{truckCargoAmount}/1 ({truckCargoType})");
+        truckQuickHud.CargoText.text = FormatValueLine("Cargo", truckCargoAmount > 0 ? $"{truckCargoAmount}/5 ({truckCargoType})" : "Empty");
         truckQuickHud.RouteText.text = FormatValueLine("Route", IsTruckOnActiveTradeRun(selectedTruck) ? GetTradeRunStatusLabel() : GetTripTitle(currentAssignedTrip));
         truckQuickHud.CameraButtonText.text = isTruckCameraFocused ? "Exit Follow" : "Follow Camera";
         SaveTruckState(selectedTruck);
+        LocalizeCanvas(truckQuickHud.CanvasRoot);
     }
 
     private void OpenFleetFromQuickHud()

@@ -466,6 +466,7 @@ public partial class GameBootstrap
                 if (driver.AssignedBuildingType.HasValue && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData enteredBuilding))
                 {
                     enteredBuilding.Workers = 1;
+                    NotifyTutorialProductionWorkerEntered(driver.AssignedBuildingType.Value);
                     SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} entered {enteredBuilding.Label} — building operational.");
                 }
                 return;
@@ -519,6 +520,13 @@ public partial class GameBootstrap
 
     private void UpdateDriverEnergy(DriverAgent driver)
     {
+        if (driver != null && driver.DutyMode == DriverDutyMode.Logistics)
+        {
+            if (!driver.IsOnActiveShift) return;
+            driver.Energy = Mathf.Max(0f, driver.Energy - DriverEnergyDrainPerSecond * Time.deltaTime * gameSpeedMultiplier);
+            return;
+        }
+
         if (driver == null)
         {
             return;

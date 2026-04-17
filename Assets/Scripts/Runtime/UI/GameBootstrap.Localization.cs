@@ -60,8 +60,27 @@ public partial class GameBootstrap
         { "The Workers panel is open. Good. You are further along than most people get.\n\nThere is a button at the bottom. Hire New Worker. It costs money — some of which you still have.\n\nPress it.", "Панель Workers открыта. Хорошо. Ты уже дальше, чем большинство.\n\nВнизу есть кнопка. Hire New Worker. Она стоит денег — часть которых у тебя ещё есть.\n\nНажми её." },
         { "The Worker is on Their Way!", "Рабочий уже едет!" },
         { "A human being will arrive by bus, already wearing the expression of someone who has made several poor decisions to get here.\n\nThat is your employee now. Treat them accordingly.", "Приедет автобус. Из него выйдет человек с видом того, кто принял несколько плохих решений, чтобы оказаться здесь.\n\nТеперь это твой сотрудник. Обращайся соответственно." },
-        { "Your Land is Rich in Timber", "Наш край богат лесами" },
-        { "Our region is blessed with magnificent forests that have been patiently waiting to be logged.\n\nA Forest provides raw logs. A Sawmill turns them into boards. That is where the money starts.\n\nPut your new worker to work — assign them a shift at the Forest so the timber starts moving.", "Наш край славится своими прекрасными лесами, которые давно ждут, чтобы их пустили в дело.\n\nЛес даёт брёвна. Лесопилка превращает их в доски. Вот откуда берутся деньги.\n\nПусти нового рабочего в дело — назначь ему смену в Лесу, чтобы лес начал двигаться." },
+        { "Timber, Unfortunately", "Древесина, к сожалению" },
+        { "See that Forest? It is not scenery. It is inventory with leaves.\n\nA Forest produces logs. Later, a Sawmill turns those logs into boards. That is the first honest-looking lie your economy will tell.\n\nNext, assign your worker to the Forest in the Productions tab.", "Видишь этот Лес? Это не пейзаж. Это склад с листьями.\n\nЛес производит брёвна. Потом Лесопилка превратит их в доски. Так экономика впервые сделает вид, что всё честно.\n\nТеперь назначь рабочего в Лес во вкладке Производство." },
+        { "Choose the Person", "Выбери человека" },
+        { "Before a building can pretend to be productive, it needs a person to blame.\n\nSelect your first worker in the list on the left. Or press OK and I will perform this tiny ceremony for you.", "Прежде чем здание сможет изображать продуктивность, ему нужен человек, на которого всё можно списать.\n\nВыдели первого рабочего в списке слева. Или нажми OK, и я проведу этот крошечный ритуал за тебя." },
+        { "Send Them to the Trees", "Отправь его к деревьям" },
+        { "There. A worker, selected and vulnerable to management.\n\nPress Assign on the Forest row. Or press OK, and the bureaucracy will complete itself.", "Вот он. Рабочий, выделенный и беззащитный перед управлением.\n\nНажми Assign в строке Леса. Или нажми OK, и бюрократия завершит себя сама." },
+        { "Look at Them Go", "Посмотри, трудится" },
+        { "Observe our small hero at work. A person, a forest, and the ancient agreement between wage labor and questionable planning.\n\nIt is almost adorable. Do not say that out loud. Management has a reputation to maintain.", "Посмотри на нашего маленького героя за работой. Человек, лес и древний договор между наёмным трудом и сомнительным планированием.\n\nПочти умилительно. Только не говори это вслух. У управления есть репутация." },
+        { "Trucks Don't Drive Themselves", "Грузовики сами не ездят" },
+        { "The Forest worker is settled in. But logs in a forest are just expensive scenery.\n\nOpen Fleet, assign a driver to a truck, and set a route. That is how cargo starts moving.", "Рабочий обустроился в Лесу. Но брёвна в лесу — это просто дорогой пейзаж.\n\nОткрой Автопарк, назначь водителя в грузовик и задай маршрут. Вот так грузы начинают двигаться." },
+        { "Logs Are Not Boards", "Брёвна — не доски" },
+        { "A log is only furniture in its larval form.\n\nTo turn Logs into Boards, you need a Sawmill. Open Building, choose Sawmill, and place it where the roads can eventually make peace with it.", "Бревно — это мебель в личиночной стадии.\n\nЧтобы превратить Logs в Boards, нужна Лесопилка. Открой Стройку, выбери Sawmill и поставь её там, где дороги однажды смогут с ней договориться." },
+        { "Sawmill Placed", "Лесопилка поставлена" },
+        { "The Sawmill stands. A box with teeth, waiting for logs to become boards and for everyone involved to call that progress.\n\nOne delicate problem remains: resources do not teleport. Tragically. Trucks will have to carry them between buildings, because civilization is mostly moving piles from one rectangle to another.", "Лесопилка стоит. Коробка с зубами, ожидающая, когда брёвна станут досками, а все участники назовут это прогрессом.\n\nОстаётся одна деликатная проблема: ресурсы не телепортируются. Трагедия. Грузовикам придётся возить их между зданиями, потому что цивилизация — это в основном перекладывание куч из одного прямоугольника в другой." },
+        { "Two new workers have appeared.\n\nTime to put someone in a truck — open Fleet and assign a driver to a route.", "Появились два новых рабочих.\n\nПора посадить кого-нибудь в грузовик — открой Автопарк и назначь водителя на маршрут." },
+        { "Select the Truck", "Выбери грузовик" },
+        { "The Fleet panel is open. Somewhere inside it sits Truck 1, a loyal rectangle with wheels and no opinions worth recording.\n\nSelect Truck 1 in the list. Or press OK, and I will gently point your attention at the machine that will soon inherit all our logistical sins.", "Автопарк открыт. Где-то внутри сидит Truck 1 — верный прямоугольник на колёсах, чьё мнение лучше не заносить в протокол.\n\nВыбери Truck 1 в списке. Или нажми OK, и я мягко укажу на машину, которая скоро унаследует все наши логистические грехи." },
+        { "Give It a Driver", "Дай ему водителя" },
+        { "A truck without a driver is just furniture with fuel anxiety.\n\nNow assign a free worker to Truck 1. Press Assign in the first driver slot, or press OK and I will open the little personnel drawer for you.", "Грузовик без водителя — это мебель с топливной тревожностью.\n\nТеперь назначь свободного рабочего на Truck 1. Нажми Назначить в первом слоте водителя или нажми OK, и я открою этот маленький кадровый ящик за тебя." },
+        { "Choose a Driver", "Выбери водителя" },
+        { "There they are: the available souls. Not the one currently serving the trees. We do not rip people out of production just because a dropdown got lonely.\n\nSelect a free worker from the list. Or press OK, and the first available volunteer will become Truck 1's problem.", "Вот они: доступные души. Не тот, кто сейчас служит деревьям. Мы не выдёргиваем людей из производства только потому, что выпадающему списку стало одиноко.\n\nВыбери свободного рабочего из списка. Или нажми OK, и первый доступный доброволец станет проблемой Truck 1." },
 
         { "Fleet", "Автопарк" },
         { "Workers", "Рабочие" },
@@ -69,6 +88,7 @@ public partial class GameBootstrap
         { "Shifts", "Смены" },
         { "Resources", "Ресурсы" },
         { "Economy", "Экономика" },
+        { "Trade", "Торговля" },
         { "Build", "Стройка" },
         { "Building", "Стройка" },
         { "R - rotate", "R - повернуть" },
@@ -91,6 +111,14 @@ public partial class GameBootstrap
         { "Intercity", "Межгород" },
         { "No driver assigned", "Водитель не назначен" },
         { "Assign one dedicated driver to inter city duty", "Назначьте одного водителя на междугородние рейсы" },
+        { "Logistics", "Логистика" },
+        { "Productions", "Производство" },
+        { "Hours:", "Часы:" },
+        { "No worker assigned", "Рабочий не назначен" },
+        { "Select a worker", "Выберите рабочего" },
+        { "Select a worker to assign", "Выберите рабочего для назначения" },
+        { "Slot occupied", "Слот занят" },
+        { "Worker not available", "Рабочий недоступен" },
 
         { "Truck Details", "Грузовик" },
         { "Truck Overview", "Обзор грузовика" },
@@ -118,7 +146,6 @@ public partial class GameBootstrap
         { "Status", "Статус" },
         { "Duty", "Роль" },
         { "Local", "Локальный" },
-        { "Logistics", "Логистика" },
 
         { "Build Menu", "Строительство" },
         { "Road", "Дорога" },
@@ -147,6 +174,14 @@ public partial class GameBootstrap
         { "Furniture", "Мебель" },
 
         { "Economy & Trade", "Экономика и торговля" },
+        { "Create Order", "Создать заказ" },
+        { "Resource:", "Ресурс:" },
+        { "Action:", "Действие:" },
+        { "Buy", "Купить" },
+        { "Sell", "Продать" },
+        { "PLACE ORDER", "РАЗМЕСТИТЬ ЗАКАЗ" },
+        { "Active Orders", "Активные заказы" },
+        { "No active trade orders.", "Активных торговых заказов нет." },
         { "Trade Dispatch", "Торговый рейс" },
         { "Resource", "Ресурс" },
         { "Offer", "Предложение" },
@@ -309,26 +344,19 @@ public partial class GameBootstrap
         }
     }
 
-    private void UpdateRuntimeLocalizationTick()
+    private void LocalizeCanvas(GameObject canvasRoot)
     {
-        if (!IsRussianLanguage())
+        if (!IsRussianLanguage() || canvasRoot == null) return;
+        foreach (Text text in canvasRoot.GetComponentsInChildren<Text>(true))
         {
-            return;
-        }
-
-        localizationRefreshTimer -= Time.unscaledDeltaTime;
-        if (localizationRefreshTimer > 0f)
-        {
-            return;
-        }
-
-        localizationRefreshTimer = 0.35f;
-        Text[] texts = FindObjectsByType<Text>(FindObjectsInactive.Exclude);
-        foreach (Text text in texts)
-        {
-            text.text = L(text.text);
+            if (text != null)
+                text.text = L(text.text);
         }
     }
+
+    private void UpdateRuntimeLocalizationTick()
+    {
+        // Localization is now applied inline via LocalizeCanvas() at the end of each
+        // UI update function, so the periodic full-scene scan is no longer needed.
+    }
 }
-
-

@@ -275,6 +275,12 @@ public partial class GameBootstrap
                 }
 
                 fleetAssignDriverTargetSlot = assignSlotIndex;
+                if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetAssignDriver && assignSlotIndex == 0)
+                {
+                    CompleteFleetAssignDriverTutorial();
+                    return;
+                }
+
                 ToggleFleetDriverAssignmentPicker();
             });
             fleetScreenUi.AssignDriverButtons.Add(assignButton);
@@ -370,6 +376,7 @@ public partial class GameBootstrap
         EnsureFleetTruckRows();
         UpdateFleetListPanel();
         UpdateFleetDetailsPanel();
+        LocalizeCanvas(fleetScreenUi.CanvasRoot);
         isFleetScreenDirty = false;
     }
 
@@ -451,7 +458,7 @@ public partial class GameBootstrap
         }
         fleetScreenUi.ResourcesFuelText.text = FormatValueLine("Fuel", $"{Mathf.CeilToInt(truckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}");
         fleetScreenUi.ResourcesEnergyText.text = FormatValueLine("Energy", $"{(driver != null ? Mathf.CeilToInt(driver.Energy) : 0)} / {Mathf.CeilToInt(DriverEnergyMax)}");
-        fleetScreenUi.ResourcesCargoText.text = FormatValueLine("Cargo", $"{truckCargoAmount}/1 ({truckCargoType})");
+        fleetScreenUi.ResourcesCargoText.text = FormatValueLine("Cargo", truckCargoAmount > 0 ? $"{truckCargoAmount}/5 ({truckCargoType})" : "Empty");
         fleetScreenUi.NavigationCellText.text = FormatValueLine("Grid Cell", $"{truckCell.x}, {truckCell.y}");
         fleetScreenUi.NavigationRouteText.text = FormatValueLine("Assigned Route", GetTripTitle(currentAssignedTrip));
         fleetScreenUi.NavigationPayoutText.text = FormatValueLine("Trip Payout", $"${currentAssignedTripReward}");
@@ -500,7 +507,7 @@ public partial class GameBootstrap
             return "Cargo Empty";
         }
 
-        return $"Cargo {truckAgent.TruckCargoType} {truckAgent.TruckCargoAmount}/1";
+        return $"Cargo {truckAgent.TruckCargoType} {truckAgent.TruckCargoAmount}/5";
     }
 
     private string GetFleetBuyStatusLabel()
@@ -630,12 +637,7 @@ public partial class GameBootstrap
 
         foreach (DriverAgent driver in driverAgents)
         {
-            if (driver == null || driver.AssignedTruckNumber > 0)
-            {
-                continue;
-            }
-
-            if (driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver))
+            if (!CanAssignDriverToTruckRoster(selectedTruck, driver))
             {
                 continue;
             }
@@ -644,6 +646,41 @@ public partial class GameBootstrap
         }
 
         return candidates;
+    }
+
+    private bool CanAssignDriverToTruckRoster(TruckAgent targetTruck, DriverAgent driver)
+    {
+        if (targetTruck == null || driver == null)
+        {
+            return false;
+        }
+
+        if (targetTruck.AssignedDrivers.Count >= 2)
+        {
+            return false;
+        }
+
+        if (driver.DutyMode == DriverDutyMode.Logistics || driver.AssignedBuildingType.HasValue)
+        {
+            return false;
+        }
+
+        if (driver.AssignedTruckNumber > 0)
+        {
+            return false;
+        }
+
+        if (driver.IsArrivingByBus || IsDriverOnActiveTradeRun(driver))
+        {
+            return false;
+        }
+
+        if (driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver))
+        {
+            return false;
+        }
+
+        return driver.DutyMode == DriverDutyMode.Local || driver.DutyMode == DriverDutyMode.Intercity;
     }
 
     private void OnFleetDriverOptionPressed(int optionIndex)
@@ -668,6 +705,7 @@ public partial class GameBootstrap
             if (fleetScreenUi.InfoCardLayout != null) fleetScreenUi.InfoCardLayout.preferredHeight = 232f;
             fleetAssignDriverTargetSlot = -1;
             isFleetScreenDirty = true;
+            CompleteFleetPickDriverTutorial();
         }
     }
 
@@ -689,9 +727,9 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (targetTruck.AssignedDrivers.Count >= 2)
+        if (!CanAssignDriverToTruckRoster(targetTruck, driver))
         {
-            LogTruckReaction(targetTruck, "driver assignment rejected: roster already full");
+            LogTruckReaction(targetTruck, $"driver assignment rejected for {driver.DriverName}: driver is not free");
             return false;
         }
 
@@ -859,6 +897,7 @@ public partial class GameBootstrap
         {
             LogUiInput($"Fleet Canvas: selected {GetTruckDisplayName(row.TruckNumber)} from fleet list");
             FocusTruck(row.TruckNumber);
+            CompleteFleetTruckSelectionTutorial(row.TruckNumber);
         });
 
         GameObject accentObject = CreateUiObject("Accent", row.Root);
