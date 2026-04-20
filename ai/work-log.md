@@ -6,6 +6,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Detailed Work
 
+- 2026-04-20: Fixed standalone Build And Run freeze when pressing `Join the race`. `Player.log` showed `ArgumentNullException: shader` in `CreateRacingHeadlight`; racing headlights/skydome now use packaged `ShaderRefs` fallbacks instead of `Shader.Find("Standard")`, and racing bootstrap is wrapped in exception logging plus cleanup so future startup errors restore the city instead of leaving `Time.timeScale = 0`. `Time.fixedDeltaTime` is also kept valid during racing pause. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors; one pre-existing legacy `DriverCardUi.DriverId` warning remains.
+
 - 2026-04-20: Updated Racing controls HUD and steering input. Racing steering is now mouse-wheel-drag only; keyboard `A/D` and left/right arrow steering fallback were removed while `W`/up, `S`/down, and `ESC` remain active. Added a readable top-right Russian control legend covering mouse steering, throttle, brake/reverse, and exit. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors; one pre-existing legacy `DriverCardUi.DriverId` warning remains.
 
 - 2026-04-20: Removed the old worker/driver Energy attribute after the needs-system rewrite. DriverAgent no longer stores Energy/SleepStartEnergy/rest-queued state, runtime no longer drains/restores energy during shifts or motel sleep, Fleet/Workers/Truck/Driver quick HUDs no longer display energy rows, and Stamina tooltip copy now refers to tiredness/needs instead of energy. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors; one pre-existing legacy `DriverCardUi.DriverId` warning remains.

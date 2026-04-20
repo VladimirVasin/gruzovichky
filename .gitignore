@@ -9,6 +9,7 @@
 debug.log
 Build_09.04/
 Build_09.04.zip
+*.zip
 Assets/_Recovery/
 .claude/
 *.asd

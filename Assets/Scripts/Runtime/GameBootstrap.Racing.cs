@@ -340,73 +340,85 @@ public partial class GameBootstrap : MonoBehaviour
     private void StartRacingMinigame()
     {
         if (isRacingActive) return;
-        isRacingActive = true;
-
-        // Pause main game
-        lastActiveGameSpeedMultiplier = gameSpeedMultiplier > 0 ? gameSpeedMultiplier : 1;
-        gameSpeedMultiplier = 0;
-        Time.timeScale = 0f;
-        Time.fixedDeltaTime = 0f;
-
-        // Close all city-mode panels before entering race
-        CloseAllMenus();
-
-        // Mute city music during race
-        if (cityMusicSource != null) cityMusicSource.Pause();
-
-        // Hide join button
-        if (joinRaceButtonRoot != null) joinRaceButtonRoot.SetActive(false);
-
-        // Disable main camera
-        if (mainCamera != null) mainCamera.enabled = false;
-
-        // Build scene geometry first
-        GenerateRaceTrack();
-        BuildTrackSampler();
-        SpawnRacingBuses();
-        PopulateRacingWorld();
-        CreateRacingTruck();
-
-        // Set truck start position BEFORE camera setup so camera initialises at the right location
-        racingTruckPos   = raceSegments[0].Center - raceSegments[0].Rotation * Vector3.forward * raceSegments[0].Length * 0.45f;
-        racingTruckPos.y = raceSegments[0].StartY + 0.35f;
-        racingTruckAngle = raceSegments[0].Rotation.eulerAngles.y;
-        racingVelocity          = Vector2.zero;
-        racingTruckVelY         = 0f;
-        racingAngularVel        = 0f;
-        racingSteerInput        = 0f;
-        racingWheelAngle        = 0f;
-        racingWheelAngularVel   = 0f;
-        racingWheelDragging     = false;
-        racingCurrentGear   = 1;
-        racingGearChangeTimer = 0f;
-        racingCameraAngle = racingTruckAngle;
-        racingCameraSwayX = 0f;
-        racingBodyAngle   = racingTruckAngle;
-        racingBodyRoll    = 0f;
-        racingBodyPitch   = 0f;
-        racingBodyTiltZ   = 0f;
-
-        SetupRacingCamera();
-        CreateSteeringWheel();
-        CreateRacingPedals();
-        CreateGearShift();
-        SetupRacingHud();
-        PopulateRacingAtmosphere();
-
-        // Start looping music
-        AudioClip musicClip = Resources.Load<AudioClip>("Race1");
-        if (musicClip != null)
+        try
         {
-            racingMusicSource = CreateAudioSource("RacingMusic", null, true, 0.20f, 0f, false);
-            racingMusicFadeStart = -1f;
-            racingMusicSource.ignoreListenerPause = true;
-            racingMusicSource.ignoreListenerVolume = false;
-            racingMusicSource.clip = musicClip;
-            racingMusicSource.Play();
-        }
+            isRacingActive = true;
 
-        SessionDebugLogger.Log("RACING", "Racing minigame started.");
+            // Pause main game. Keep fixedDeltaTime valid so standalone builds do not enter a fragile physics state.
+            lastActiveGameSpeedMultiplier = gameSpeedMultiplier > 0 ? gameSpeedMultiplier : 1;
+            gameSpeedMultiplier = 0;
+            Time.timeScale = 0f;
+            Time.fixedDeltaTime = 0.02f;
+
+            // Close all city-mode panels before entering race
+            CloseAllMenus();
+
+            // Mute city music during race
+            if (cityMusicSource != null) cityMusicSource.Pause();
+
+            // Hide join button
+            if (joinRaceButtonRoot != null) joinRaceButtonRoot.SetActive(false);
+
+            // Disable main camera
+            if (mainCamera != null) mainCamera.enabled = false;
+
+            SessionDebugLogger.Log("RACING", "Racing minigame bootstrap started.");
+
+            // Build scene geometry first
+            GenerateRaceTrack();
+            BuildTrackSampler();
+            SpawnRacingBuses();
+            PopulateRacingWorld();
+            CreateRacingTruck();
+
+            // Set truck start position BEFORE camera setup so camera initialises at the right location
+            racingTruckPos   = raceSegments[0].Center - raceSegments[0].Rotation * Vector3.forward * raceSegments[0].Length * 0.45f;
+            racingTruckPos.y = raceSegments[0].StartY + 0.35f;
+            racingTruckAngle = raceSegments[0].Rotation.eulerAngles.y;
+            racingVelocity          = Vector2.zero;
+            racingTruckVelY         = 0f;
+            racingAngularVel        = 0f;
+            racingSteerInput        = 0f;
+            racingWheelAngle        = 0f;
+            racingWheelAngularVel   = 0f;
+            racingWheelDragging     = false;
+            racingCurrentGear   = 1;
+            racingGearChangeTimer = 0f;
+            racingCameraAngle = racingTruckAngle;
+            racingCameraSwayX = 0f;
+            racingBodyAngle   = racingTruckAngle;
+            racingBodyRoll    = 0f;
+            racingBodyPitch   = 0f;
+            racingBodyTiltZ   = 0f;
+
+            SetupRacingCamera();
+            CreateSteeringWheel();
+            CreateRacingPedals();
+            CreateGearShift();
+            SetupRacingHud();
+            PopulateRacingAtmosphere();
+
+            // Start looping music
+            AudioClip musicClip = Resources.Load<AudioClip>("Race1");
+            if (musicClip != null)
+            {
+                racingMusicSource = CreateAudioSource("RacingMusic", null, true, 0.20f, 0f, false);
+                racingMusicFadeStart = -1f;
+                racingMusicSource.ignoreListenerPause = true;
+                racingMusicSource.ignoreListenerVolume = false;
+                racingMusicSource.clip = musicClip;
+                racingMusicSource.Play();
+            }
+
+            SessionDebugLogger.Log("RACING", "Racing minigame started.");
+        }
+        catch (System.Exception ex)
+        {
+            SessionDebugLogger.Log("RACING", $"Racing minigame failed during bootstrap: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+            isRacingActive = false;
+            racingFinishSequenceActive = false;
+            CleanupRacingScene();
+        }
     }
 
     private void FinishRace(bool success)
@@ -1632,9 +1644,10 @@ public partial class GameBootstrap : MonoBehaviour
         lens.transform.localRotation = Quaternion.Euler(90f, 0f, 0f); // face forward
         lens.transform.localScale    = new Vector3(0.10f, 0.015f, 0.10f);
         Renderer lensR = lens.GetComponent<Renderer>();
-        Shader unlitShader = Shader.Find("Unlit/Color");
-        Material lensMat = new Material(unlitShader != null ? unlitShader : Shader.Find("Standard"));
+        Shader unlitShader = ShaderRefs.Unlit ?? ShaderRefs.Sprites;
+        Material lensMat = unlitShader != null ? new Material(unlitShader) : lensR.material;
         lensMat.color = new Color(1f, 0.97f, 0.85f);
+        if (lensMat.HasProperty("_BaseColor")) lensMat.SetColor("_BaseColor", lensMat.color);
         lensR.material = lensMat;
         lensR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
@@ -2027,10 +2040,10 @@ public partial class GameBootstrap : MonoBehaviour
         racingSkydomeRenderer.receiveShadows    = false;
 
         // Unlit material so it isn't affected by scene lighting
-        Shader unlitShader = Shader.Find("Unlit/Color");
+        Shader unlitShader = ShaderRefs.Unlit ?? ShaderRefs.Sprites;
         Material mat = unlitShader != null
             ? new Material(unlitShader)
-            : new Material(Shader.Find("Standard"));
+            : racingSkydomeRenderer.material;
         racingSkydomeRenderer.material = mat;
     }
 
