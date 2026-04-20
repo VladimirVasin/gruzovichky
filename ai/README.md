@@ -14,6 +14,8 @@ This folder is intentionally small. Code remains the source of truth. These file
   Actual implemented architecture, complexity hotspots, and likely refactor seams.
 - `work-log.md`
   Active and recently completed work. Use this for task state and short implementation notes.
+- `release-notes.md`
+  Stable baseline for in-game Patch Notes by version. Use it to compare documented releases against current code when updating patch notes.
 
 ## Memory Types
 
@@ -26,6 +28,7 @@ Stable memory:
 Volatile memory:
 
 - `work-log.md`
+- `release-notes.md`
 
 Rule:
 
@@ -40,7 +43,8 @@ Rule:
 3. Read `systems-map.md`.
 4. Read `architecture-notes.md`.
 5. Read `work-log.md`.
-6. Scan only the code relevant to the requested change.
+6. Read `release-notes.md` when the task involves version labels, changelogs, release contents, or Patch Notes.
+7. Scan only the code relevant to the requested change.
 
 ## Workflow Contract
 

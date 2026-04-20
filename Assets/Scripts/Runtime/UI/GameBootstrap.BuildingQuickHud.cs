@@ -49,7 +49,12 @@ public partial class GameBootstrap
             return;
         }
 
-        isTruckDetailsOpen = false;
+        bool preserveFleetTruckSelection = isFleetPanelOpen;
+        if (!preserveFleetTruckSelection)
+        {
+            isTruckDetailsOpen = false;
+        }
+
         isDriverDetailsOpen = false;
         selectedDriverId = 0;
         selectedLocation = null;
@@ -62,7 +67,11 @@ public partial class GameBootstrap
         if (selectedDebugCellHighlight != null) selectedDebugCellHighlight.SetActive(false);
         if (selectedDebugCellOutline != null) selectedDebugCellOutline.SetActive(false);
 
-        DisableTruckCameraFocus();
+        if (!preserveFleetTruckSelection)
+        {
+            DisableTruckCameraFocus();
+        }
+
         RefreshSelectionVisuals();
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;

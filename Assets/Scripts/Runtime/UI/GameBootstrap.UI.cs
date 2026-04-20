@@ -540,14 +540,12 @@ public partial class GameBootstrap
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 52, 260, 18), $"{driver.DriverName}  |  Shift: {shiftStatus}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 74, 220, 22), $"State: {GetTruckDetailStatus(driver)}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 98, 220, 22), $"Fuel: {Mathf.CeilToInt(truckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)}");
-        string energyLabel = driver.NeedsRestAfterTrip ? " [rest queued]" : driver.RestPhase == DriverRestPhase.Sleeping ? $" [sleeping {Mathf.CeilToInt(driver.SleepTimer)}s]" : "";
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 122, 260, 22), $"Energy: {Mathf.CeilToInt(driver.Energy)}/{Mathf.CeilToInt(DriverEnergyMax)}{energyLabel}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 146, 220, 22), $"Cargo: {truckCargoAmount}/5 ({truckCargoType})");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 170, 220, 22), $"Grid cell: {truckCell.x}, {truckCell.y}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 194, 240, 22), $"Assigned route: {GetTripTitle(currentAssignedTrip)}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 216, 240, 22), $"Trip payout: ${currentAssignedTripReward}");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 238, 240, 22), isDriverRescueActive ? "Driver: On foot fuel rescue" : "Driver: In truck");
-        if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + 262, panelRect.width - 24, 26), selectedTruck.IsTruckAutoModeEnabled ? "Auto Mode: ON" : "Auto Mode: OFF"))
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 122, 220, 22), $"{L("Cargo")}: {FormatTruckCargoValue(truckCargoAmount, truckCargoType)}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 146, 220, 22), $"Grid cell: {truckCell.x}, {truckCell.y}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 170, 240, 22), $"Assigned route: {GetTripTitle(currentAssignedTrip)}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 192, 240, 22), $"Trip payout: ${currentAssignedTripReward}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 214, 240, 22), isDriverRescueActive ? "Driver: On foot fuel rescue" : "Driver: In truck");
+        if (GUI.Button(new Rect(panelRect.x + 12, panelRect.y + 238, panelRect.width - 24, 26), selectedTruck.IsTruckAutoModeEnabled ? "Auto Mode: ON" : "Auto Mode: OFF"))
         {
             SetTruckAutoMode(selectedTruck, !selectedTruck.IsTruckAutoModeEnabled);
             LoadTruckState(selectedTruck);
@@ -556,7 +554,7 @@ public partial class GameBootstrap
 
         List<TripOption> trips = GetAvailableTrips();
         bool truckAvailable = CanIssueOrdersToTruck(selectedTruck);
-        float y = panelRect.y + 296f;
+        float y = panelRect.y + 272f;
         if (!truckAvailable)
         {
             GUI.Label(new Rect(panelRect.x + 12, y - 18f, panelRect.width - 24, 18), GetTruckCommandBlockReason(selectedTruck));
@@ -896,4 +894,3 @@ public partial class GameBootstrap
     }
 
 }
-

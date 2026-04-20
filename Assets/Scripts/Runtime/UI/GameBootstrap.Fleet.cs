@@ -349,9 +349,6 @@ public partial class GameBootstrap
             string status = GetDriverWorkforceStatus(assignedTruck, d);
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 44f, cardRect.width - 120f, 18f), $"Status: {status}", labelMid);
 
-            string energyMark = d.Energy <= DriverEnergyCriticalThreshold ? "!" : "";
-            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 62f, 140f, 18f), $"Energy: {Mathf.CeilToInt(d.Energy)}{energyMark}/{Mathf.CeilToInt(DriverEnergyMax)}", labelMid);
-
             // Salary row
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 82f, 90f, 18f), $"Salary: ${d.Salary}", labelMid);
             if (GUI.Button(new Rect(cardRect.x + 100f, cardRect.y + 80f, 22f, 20f), "–", btnSmall))

@@ -971,6 +971,11 @@ public partial class GameBootstrap
         truckAgent.IsTruckInteracting = false;
         truckAgent.IsDriverRescueActive = false;
         truckAgent.ActivePath.Clear();
+        if (activeTradeRun.OrderType == TradeOrderType.Buy)
+        {
+            truckAgent.TruckCargoAmount = activeTradeRun.Quantity;
+            truckAgent.TruckCargoType = TradeResourceTypeToCargoType(activeTradeRun.ResourceType);
+        }
         if (truckAgent.TruckObject != null)
         {
             truckAgent.TruckObject.SetActive(true);
@@ -980,8 +985,11 @@ public partial class GameBootstrap
 
         SetTradeRunPhase(TradeRunPhase.ReturningFromOffMap, $"{truckAgent.DisplayName} re-entered map at highway cell ({highwayReturnCell.x},{highwayReturnCell.y}).");
         tradeDispatchStatusText = GetTradeRunStatusLabel();
-        SessionDebugLogger.Log("TRADE", $"{truckAgent.DisplayName} returned to the map from edge highway.");
+        SessionDebugLogger.Log(
+            "TRADE",
+            $"{truckAgent.DisplayName} returned to the map from edge highway with cargo {truckAgent.TruckCargoAmount} {truckAgent.TruckCargoType}.");
         isEconomyScreenDirty = true;
+        isFleetScreenDirty = true;
     }
 
     private void UpdateTradeRunReturningFromOffMap(DriverAgent driver, TruckAgent truckAgent)

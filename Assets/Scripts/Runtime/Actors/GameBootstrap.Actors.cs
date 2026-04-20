@@ -394,6 +394,8 @@ public partial class GameBootstrap
             ShiftStartHour = -1,
             IsOnActiveShift = false
         };
+        AssignWorkerPortrait(driver);
+        AssignWorkerStats(driver);
         nextDriverId++;
 
         driver.DriverObject = new GameObject("Driver");

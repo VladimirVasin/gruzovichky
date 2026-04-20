@@ -12,7 +12,6 @@ public partial class GameBootstrap
         public Button DriverButton;
         public Text DriverButtonText;
         public Text FuelText;
-        public Text EnergyText;
         public Text CargoText;
         public Text RouteText;
         public Button FleetButton;
@@ -52,7 +51,7 @@ public partial class GameBootstrap
         root.anchorMax = new Vector2(1f, 0f);
         root.pivot = new Vector2(1f, 0f);
         root.anchoredPosition = new Vector2(-18f, 104f);
-        root.sizeDelta = new Vector2(340f, 248f);
+        root.sizeDelta = new Vector2(390f, 316f);
         VerticalLayoutGroup rootLayout = root.gameObject.AddComponent<VerticalLayoutGroup>();
         rootLayout.padding = new RectOffset(16, 16, 16, 16);
         rootLayout.spacing = 14;
@@ -77,7 +76,7 @@ public partial class GameBootstrap
         });
 
         RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
-        summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 136f;
+        summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 166f;
         truckQuickHud.StateText = CreateBodyText("State", summaryBody, uiFont, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
         truckQuickHud.StateText.fontStyle = FontStyle.Bold;
         truckQuickHud.StateText.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
@@ -103,13 +102,12 @@ public partial class GameBootstrap
 
         RectTransform statsGrid = CreateUiObject("StatsGrid", summaryBody).GetComponent<RectTransform>();
         GridLayoutGroup statsLayout = statsGrid.gameObject.AddComponent<GridLayoutGroup>();
-        statsLayout.cellSize = new Vector2(144f, 28f);
-        statsLayout.spacing = new Vector2(8f, 8f);
+        statsLayout.cellSize = new Vector2(318f, 26f);
+        statsLayout.spacing = new Vector2(0f, 6f);
         statsLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        statsLayout.constraintCount = 2;
-        statsGrid.gameObject.AddComponent<LayoutElement>().preferredHeight = 64f;
+        statsLayout.constraintCount = 1;
+        statsGrid.gameObject.AddComponent<LayoutElement>().preferredHeight = 92f;
         truckQuickHud.FuelText = CreateBodyText("FuelText", statsGrid, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
-        truckQuickHud.EnergyText = CreateBodyText("EnergyText", statsGrid, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         truckQuickHud.CargoText = CreateBodyText("CargoText", statsGrid, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         truckQuickHud.RouteText = CreateBodyText("RouteText", statsGrid, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
 
@@ -165,16 +163,52 @@ public partial class GameBootstrap
         LoadTruckState(selectedTruck);
         DriverAgent driver = selectedTruck.Driver;
         truckQuickHud.HeaderText.text = selectedTruck.DisplayName;
-        truckQuickHud.StateText.text = GetTruckFleetStatusLabel();
-        truckQuickHud.DriverButtonText.text = driver != null ? driver.DriverName : "None";
+        truckQuickHud.StateText.text = L(GetTruckFleetStatusLabel());
+        truckQuickHud.DriverButtonText.text = driver != null ? driver.DriverName : L("None");
         truckQuickHud.DriverButton.interactable = driver != null;
         truckQuickHud.FuelText.text = FormatValueLine("Fuel", $"{Mathf.CeilToInt(truckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}");
-        truckQuickHud.EnergyText.text = FormatValueLine("Energy", driver != null ? $"{Mathf.CeilToInt(driver.Energy)} / {Mathf.CeilToInt(DriverEnergyMax)}" : "None");
-        truckQuickHud.CargoText.text = FormatValueLine("Cargo", truckCargoAmount > 0 ? $"{truckCargoAmount}/5 ({truckCargoType})" : "Empty");
-        truckQuickHud.RouteText.text = FormatValueLine("Route", IsTruckOnActiveTradeRun(selectedTruck) ? GetTradeRunStatusLabel() : GetTripTitle(currentAssignedTrip));
-        truckQuickHud.CameraButtonText.text = isTruckCameraFocused ? "Exit Follow" : "Follow Camera";
+        truckQuickHud.CargoText.text = FormatValueLine("Cargo", FormatTruckCargoValue(truckCargoAmount, truckCargoType));
+        truckQuickHud.RouteText.text = FormatValueLine("Route", GetTruckQuickHudRouteLabel(selectedTruck));
+        truckQuickHud.FleetButtonText.text = L("Open Fleet");
+        truckQuickHud.CameraButtonText.text = L(isTruckCameraFocused ? "Exit Follow" : "Follow Camera");
         SaveTruckState(selectedTruck);
-        LocalizeCanvas(truckQuickHud.CanvasRoot);
+    }
+
+    private string GetTruckQuickHudRouteLabel(TruckAgent selectedTruck)
+    {
+        if (IsTruckOnActiveTradeRun(selectedTruck))
+        {
+            return GetCompactTradeRunStatusLabel();
+        }
+
+        return GetTripTitle(currentAssignedTrip);
+    }
+
+    private string GetCompactTradeRunStatusLabel()
+    {
+        if (!HasActiveTradeRun())
+        {
+            return "None";
+        }
+
+        string orderLabel = activeTradeRun.OrderType == TradeOrderType.Buy ? "Buy" : "Sell";
+        string resourceLabel = GetTradeResourceLabel(activeTradeRun.ResourceType);
+        string phaseLabel = activeTradeRun.Phase switch
+        {
+            TradeRunPhase.DriverToParking    => "driver to parking",
+            TradeRunPhase.DrivingToWarehouse => "to warehouse",
+            TradeRunPhase.LoadingAtWarehouse => "loading",
+            TradeRunPhase.DrivingToHighway   => "to highway",
+            TradeRunPhase.DrivingOffMap      => "leaving map",
+            TradeRunPhase.OutOfMap           => $"away {Mathf.CeilToInt(activeTradeRun.OutOfMapTimer)}s",
+            TradeRunPhase.ReturningFromOffMap => "entering map",
+            TradeRunPhase.ReturningToWarehouse => "to warehouse",
+            TradeRunPhase.UnloadingAtWarehouse => "unloading",
+            TradeRunPhase.ReturningToParking => "to parking",
+            _                                => "active"
+        };
+
+        return $"{orderLabel} {resourceLabel}: {phaseLabel}";
     }
 
     private void OpenFleetFromQuickHud()

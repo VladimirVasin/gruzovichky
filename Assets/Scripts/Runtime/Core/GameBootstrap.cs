@@ -53,10 +53,11 @@ public partial class GameBootstrap : MonoBehaviour
     private const float WaterEffectsUpdateInterval = 1f / 30f;
     private const float WaterLodMediumCameraHeight = 18f;
     private const float WaterLodFarCameraHeight = 28f;
-    private const float DriverEnergyMax = 100f;
-    private const float DriverEnergyCriticalThreshold = 30f;
-    private const float DriverEnergyDrainPerSecond = DriverEnergyMax / (DayNightCycleDuration / 24f * 16f);
-    private const float DriverSleepDuration = DayNightCycleDuration / 24f * 6f;
+    private const float DriverSleepDuration = DayNightCycleDuration / 24f * 8f;
+    private const float WorkerCanteenDuration = DayNightCycleDuration / 24f * 1f;
+    private const float WorkerLeisureDuration = DayNightCycleDuration / 24f * 2f;
+    private const float WorkerFreeIdleMinDuration = DayNightCycleDuration / 24f * 1f;
+    private const float WorkerFreeIdleMaxDuration = DayNightCycleDuration / 24f * 3f;
     private const float DriverWalkSpeed = 2.2f;
     private const float DriverIdleWanderSpeed = 1.35f;
     private const float DriverIdleWanderPauseMin = 2.2f;
@@ -284,6 +285,7 @@ public partial class GameBootstrap : MonoBehaviour
     private int nextDriverId = 1;
     private TripType currentAssignedTrip = TripType.None;
     private BuildTool activeBuildTool = BuildTool.None;
+    private HashSet<BuildTool> unlockedBuildTools;
     private Vector2Int? hoveredBuildCell;
     private Vector2Int? selectedDebugCell;
     private float edgeHighwayBusSpawnTimerCitySide;
@@ -583,6 +585,30 @@ public partial class GameBootstrap : MonoBehaviour
         Sleeping,
         DriverWalkToTruck,
         ReturnToParking
+    }
+
+    private enum WorkerLifeGoal
+    {
+        None,
+        Work,
+        Eat,
+        Leisure,
+        Sleep,
+        Idle
+    }
+
+    private enum WorkerNeedKind
+    {
+        Meal,
+        Sleep,
+        Leisure
+    }
+
+    private enum WorkerNeedStatus
+    {
+        Ok,
+        Warning,
+        Critical
     }
 
     private enum DriverDutyMode
@@ -964,6 +990,19 @@ public partial class GameBootstrap : MonoBehaviour
     {
         public int DriverId;
         public string DriverName;
+        public bool HasPortrait;
+        public int PortraitSkinTone;
+        public int PortraitHairStyle;
+        public int PortraitHairColor;
+        public int PortraitEyeStyle;
+        public int PortraitMouthStyle;
+        public int PortraitAccessory;
+        public int PortraitHeadShape;
+        public bool HasWorkerStats;
+        public int DrivingSkill;
+        public int StaminaSkill;
+        public int ProductionSkill;
+        public int LogisticsSkill;
         public DriverDutyMode DutyMode = DriverDutyMode.Local;
         // ShiftStartHour: -1 = idle/no shift assigned
         public int ShiftStartHour = -1;
@@ -982,9 +1021,6 @@ public partial class GameBootstrap : MonoBehaviour
         public Light DriverFlashlightLight;
         public Renderer DriverFlashlightRenderer;
         public Material DriverFlashlightMaterial;
-        public float Energy = DriverEnergyMax;
-        public float SleepStartEnergy = DriverEnergyMax;
-        public bool NeedsRestAfterTrip;
         public DriverRestPhase RestPhase = DriverRestPhase.None;
         public float SleepTimer;
         public Vector3 MotelIdlePosition;
@@ -1007,6 +1043,19 @@ public partial class GameBootstrap : MonoBehaviour
         public bool IsArrivingByBus;
         public int SittingBenchIndex = -1;
         public float IdleActivityTimer;
+        public WorkerLifeGoal LifeGoal = WorkerLifeGoal.None;
+        public int LifeCycleLastHour = -1;
+        public bool NeedsCycleResetPending;
+        public bool WorkedToday;
+        public bool AteToday;
+        public bool HadLeisureToday;
+        public bool SleptToday;
+        public float HoursSinceMeal = 0f;
+        public float HoursSinceSleep = 0f;
+        public float HoursSinceLeisure = 0f;
+        public WorkerNeedStatus LastMealNeedStatus = WorkerNeedStatus.Ok;
+        public WorkerNeedStatus LastSleepNeedStatus = WorkerNeedStatus.Ok;
+        public WorkerNeedStatus LastLeisureNeedStatus = WorkerNeedStatus.Ok;
         public LocationType? AssignedBuildingType;      // logistics only: building this worker is assigned to
         public bool IsInsideBuilding;                   // true while physically inside the assigned building
         public LocationType? WarehouseDeliveryTarget;   // warehouse worker: current delivery destination
@@ -1101,20 +1150,29 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         UpdateTutorialUi();
-        if (isTutorialOpen)
+        if (isTutorialOpen && ShouldPauseSimulationForTutorial())
         {
             return;
         }
 
         if (isRacingActive) { UpdateRacingMinigame(); return; }
         UpdateJoinRaceButton();
+        if (UpdateJoinRaceButtonInputFallback())
+        {
+            return;
+        }
 
-        HandleHotkeys();
-        HandleCameraInput();
+        bool blockPlayerInputForTutorial = isTutorialOpen;
+        if (!blockPlayerInputForTutorial)
+        {
+            HandleHotkeys();
+            HandleCameraInput();
+            HandleRoadRemovalInput();
+            HandleRoadPlacementInput();
+            UpdateBuildHoverHighlight();
+        }
+
         UpdateWaterVisualLod();
-        HandleRoadRemovalInput();
-        HandleRoadPlacementInput();
-        UpdateBuildHoverHighlight();
         ProduceForestWood();
         UpdateSawmillProcessing();
         UpdateFurnitureFactoryProcessing();
@@ -1140,6 +1198,11 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateForestWorkers();
         UpdateActiveTradeRun();
         UpdateTradeAutoDispatch();
+        foreach (DriverAgent driver in driverAgents)
+        {
+            UpdateWorkerNeedsClock(driver);
+        }
+
         for (int i = 0; i < truckAgents.Count; i++)
         {
             TruckAgent ta = truckAgents[i];
@@ -1152,7 +1215,6 @@ public partial class GameBootstrap : MonoBehaviour
             LoadTruckState(ta);
             UpdateTruckMovement();
             UpdateTruckInteraction();
-            UpdateDriverEnergy(da);
             UpdateAssignedTrip(da);   // award trip money BEFORE salary deduction
             UpdateRefuelOrder(da);
             UpdateDriverShiftEnd(ta, da);
@@ -1317,7 +1379,6 @@ public partial class GameBootstrap : MonoBehaviour
             GUI.color = new Color(0.05f, 0.07f, 0.1f, 0.82f);
             GUI.Box(rect, string.Empty);
 
-            GUI.contentColor = new Color(0.96f, 0.82f, 0.36f, 1f);
             GUI.Label(
                 new Rect(rect.x + 16f, rect.y + 12f, rect.width - 32f, rect.height - 24f),
                 L("R - rotate"),
@@ -1325,7 +1386,8 @@ public partial class GameBootstrap : MonoBehaviour
                 {
                     fontSize = 18,
                     fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter
+                    alignment = TextAnchor.MiddleCenter,
+                    normal    = { textColor = Color.white }
                 });
         }
         finally

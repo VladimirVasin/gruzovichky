@@ -559,6 +559,11 @@ public partial class GameBootstrap
         }
 
         Vector2 mousePosition = Mouse.current.position.ReadValue();
+        if (TryHandleJoinRaceButtonClick(mousePosition))
+        {
+            return;
+        }
+
         if (IsPointerOverHud(mousePosition))
         {
             return;
@@ -592,6 +597,17 @@ public partial class GameBootstrap
 
         if (activeBuildTool == BuildTool.None)
         {
+            if (TryShowBeeEasterEggForCell(cell))
+            {
+                ClearSelectedDebugCell();
+                selectedLocation = null;
+                isTruckDetailsOpen = false;
+                isDriverDetailsOpen = false;
+                DisableTruckCameraFocus();
+                RefreshSelectionVisuals();
+                return;
+            }
+
             SelectDebugCell(cell);
             selectedLocation = null;
             isTruckDetailsOpen = false;

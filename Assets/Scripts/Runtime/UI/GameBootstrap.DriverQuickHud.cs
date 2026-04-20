@@ -13,7 +13,6 @@ public partial class GameBootstrap
         public Text TruckText;
         public Text ModeText;
         public Text ShiftText;
-        public Text EnergyText;
         public Text BalanceText;
         public Button OpenDriversButton;
         public Text OpenDriversButtonText;
@@ -48,7 +47,7 @@ public partial class GameBootstrap
         root.anchorMax = new Vector2(1f, 0f);
         root.pivot = new Vector2(1f, 0f);
         root.anchoredPosition = new Vector2(-18f, 104f);
-        root.sizeDelta = new Vector2(300f, 264f);
+        root.sizeDelta = new Vector2(360f, 310f);
         VerticalLayoutGroup rootLayout = root.gameObject.AddComponent<VerticalLayoutGroup>();
         rootLayout.padding = new RectOffset(16, 16, 16, 16);
         rootLayout.spacing = 12;
@@ -71,7 +70,7 @@ public partial class GameBootstrap
         driverQuickHud.OccupationText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
         RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
-        summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 124f;
+        summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 152f;
 
         driverQuickHud.StatusText = CreateBodyText("Status", summaryBody, uiFont, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.StatusText.fontStyle = FontStyle.Bold;
@@ -79,15 +78,14 @@ public partial class GameBootstrap
 
         RectTransform statsGrid = CreateUiObject("StatsGrid", summaryBody).GetComponent<RectTransform>();
         GridLayoutGroup statsLayout = statsGrid.gameObject.AddComponent<GridLayoutGroup>();
-        statsLayout.cellSize = new Vector2(120f, 24f);
-        statsLayout.spacing = new Vector2(8f, 6f);
+        statsLayout.cellSize = new Vector2(288f, 24f);
+        statsLayout.spacing = new Vector2(0f, 5f);
         statsLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        statsLayout.constraintCount = 2;
-        statsGrid.gameObject.AddComponent<LayoutElement>().preferredHeight = 92f;
+        statsLayout.constraintCount = 1;
+        statsGrid.gameObject.AddComponent<LayoutElement>().preferredHeight = 111f;
         driverQuickHud.TruckText = CreateBodyText("TruckText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.ModeText = CreateBodyText("ModeText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.ShiftText = CreateBodyText("ShiftText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.EnergyText = CreateBodyText("EnergyText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.BalanceText = CreateBodyText("BalanceText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
 
         RectTransform actionRow = CreateLayoutRow("DriverQuickHudActions", root, 34f, 0f);
@@ -132,41 +130,42 @@ public partial class GameBootstrap
         TruckAgent truck = GetAssignedTruckForDriver(driver);
 
         driverQuickHud.HeaderText.text = driver.DriverName;
-        driverQuickHud.OccupationText.text = GetWorkerOccupationLabel(driver);
+        string occupationLabel = GetWorkerOccupationLabel(driver);
+        driverQuickHud.OccupationText.text = L(occupationLabel);
 
-        string statusLabel;
-        if (IsDriverOnActiveTradeRun(driver))
-            statusLabel = "On Trade Run";
-        else if (driver.IsArrivingByBus)
-            statusLabel = "Arriving by Bus";
-        else if (driver.RestPhase == DriverRestPhase.Sleeping)
-            statusLabel = "Sleeping";
-        else if (driver.RestPhase != DriverRestPhase.None)
-            statusLabel = "Walking";
-        else if (IsDriverIntercity(driver))
-            statusLabel = "Intercity";
-        else if (driver.IsOnActiveShift)
-            statusLabel = "On Shift";
-        else if (driver.WaitingForShiftAtParking)
-            statusLabel = "At Parking";
-        else if (driver.WalkPhase == DriverRescuePhase.ToMotelFromBusStop)
-            statusLabel = "Walking from Bus Stop";
-        else if (driver.WalkPhase == DriverRescuePhase.IdleWander)
-            statusLabel = "Wandering";
-        else if (driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen || driver.WalkPhase == DriverRescuePhase.IdleAtCanteen)
-            statusLabel = "At Canteen";
-        else if (driver.ShiftStartHour >= 0)
-            statusLabel = $"Shift at {driver.ShiftStartHour:00}:00";
-        else
-            statusLabel = "Idle";
-
-        driverQuickHud.StatusText.text = statusLabel;
+        driverQuickHud.StatusText.text = GetDriverQuickHudStatusLabel(driver);
         driverQuickHud.TruckText.text = FormatValueLine("Truck", truck != null ? truck.DisplayName : "None");
-        driverQuickHud.ModeText.text = string.Empty;
+        driverQuickHud.ModeText.text = FormatValueLine("Role", occupationLabel);
         driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—");
-        driverQuickHud.EnergyText.text = FormatValueLine("Energy", $"{Mathf.CeilToInt(driver.Energy)} / {Mathf.CeilToInt(DriverEnergyMax)}");
         driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
-        LocalizeCanvas(driverQuickHud.CanvasRoot);
+    }
+
+    private string GetDriverQuickHudStatusLabel(DriverAgent driver)
+    {
+        if (IsDriverOnActiveTradeRun(driver))
+            return L("On Trade Run");
+        if (driver.IsArrivingByBus)
+            return L("Arriving by Bus");
+        if (driver.RestPhase == DriverRestPhase.Sleeping)
+            return L("Sleeping");
+        if (driver.RestPhase != DriverRestPhase.None)
+            return L("Walking");
+        if (IsDriverIntercity(driver))
+            return L("Intercity");
+        if (driver.IsOnActiveShift)
+            return L("On Shift");
+        if (driver.WaitingForShiftAtParking)
+            return L("At Parking");
+        if (driver.WalkPhase == DriverRescuePhase.ToMotelFromBusStop)
+            return L("Walking from Bus Stop");
+        if (driver.WalkPhase == DriverRescuePhase.IdleWander)
+            return L("Wandering");
+        if (driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen || driver.WalkPhase == DriverRescuePhase.IdleAtCanteen)
+            return L("At Canteen");
+        if (driver.ShiftStartHour >= 0)
+            return string.Format(L("Shift at {0}:00"), driver.ShiftStartHour.ToString("00"));
+
+        return L("Idle");
     }
 
     private void FocusDriver(int driverId)

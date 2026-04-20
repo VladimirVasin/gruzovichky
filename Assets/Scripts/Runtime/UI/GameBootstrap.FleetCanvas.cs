@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -28,6 +28,7 @@ public partial class GameBootstrap
         public ScrollRect TruckListScrollRect;
         public RectTransform TruckListContent;
         public readonly List<FleetTruckRowUi> TruckRows = new();
+        public RectTransform BuyTruckContainer;
         public Button BuyTruckButton;
         public Text BuyTruckButtonText;
         public Text BuyTruckStatusText;
@@ -50,7 +51,6 @@ public partial class GameBootstrap
         public readonly List<Button> DriverPickerButtons = new();
         public readonly List<Text> DriverPickerButtonTexts = new();
         public Text ResourcesFuelText;
-        public Text ResourcesEnergyText;
         public Text ResourcesCargoText;
         public Text NavigationCellText;
         public Text NavigationRouteText;
@@ -139,6 +139,7 @@ public partial class GameBootstrap
         SetupFleetScrollView(listFrame);
 
         RectTransform buyContainer = CreateStyledPanel("BuyTruckButtonContainer", fleetScreenUi.LeftPanel, FleetInsetColor);
+        fleetScreenUi.BuyTruckContainer = buyContainer;
         LayoutElement buyLayoutElement = buyContainer.gameObject.AddComponent<LayoutElement>();
         buyLayoutElement.preferredHeight = 92f;
         VerticalLayoutGroup buyLayout = buyContainer.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -324,7 +325,6 @@ public partial class GameBootstrap
         RectTransform resourcesCard = CreateSectionCard(lowerRow, uiFont, "Resources", out RectTransform resourcesBody);
         resourcesCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         fleetScreenUi.ResourcesFuelText = CreateValueText("ResourcesFuel", resourcesBody, uiFont);
-        fleetScreenUi.ResourcesEnergyText = CreateValueText("ResourcesEnergy", resourcesBody, uiFont);
         fleetScreenUi.ResourcesCargoText = CreateValueText("ResourcesCargo", resourcesBody, uiFont);
 
         RectTransform navigationCard = CreateSectionCard(lowerRow, uiFont, "Navigation", out RectTransform navigationBody);
@@ -368,6 +368,7 @@ public partial class GameBootstrap
             return;
         }
 
+        ApplyFleetTutorialVisibility();
         if (!isFleetScreenDirty && shouldShow)
         {
             return;
@@ -378,6 +379,26 @@ public partial class GameBootstrap
         UpdateFleetDetailsPanel();
         LocalizeCanvas(fleetScreenUi.CanvasRoot);
         isFleetScreenDirty = false;
+    }
+
+    private void ApplyFleetTutorialVisibility()
+    {
+        if (fleetScreenUi?.BuyTruckContainer == null)
+        {
+            return;
+        }
+
+        bool hideBuyPanelForTutorial = isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetSelectTruck;
+        if (fleetScreenUi.BuyTruckContainer.gameObject.activeSelf == !hideBuyPanelForTutorial)
+        {
+            return;
+        }
+
+        fleetScreenUi.BuyTruckContainer.gameObject.SetActive(!hideBuyPanelForTutorial);
+        if (fleetScreenUi.LeftPanel != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(fleetScreenUi.LeftPanel);
+        }
     }
 
     private void EnsureFleetTruckRows()
@@ -407,7 +428,7 @@ public partial class GameBootstrap
             row.TruckNameText.text = truckAgent.DisplayName;
         row.DriverText.text = $"Assigned: {GetTruckAssignedDriverSummary(truckAgent)}";
             row.StateText.text = GetTruckListStatusForFleet(truckAgent);
-            row.ResourceText.text = $"Fuel {Mathf.CeilToInt(truckAgent.TruckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}    {GetTruckCargoSummary(truckAgent)}";
+            row.ResourceText.text = $"{L("Fuel")} {Mathf.CeilToInt(truckAgent.TruckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}    {GetTruckCargoSummary(truckAgent)}";
             row.Background.color = isSelected ? FleetSelectedRowColor : FleetRowColor;
             row.Accent.enabled = isSelected;
             row.Outline.effectColor = isSelected ? new Color(FleetAccentColor.r, FleetAccentColor.g, FleetAccentColor.b, 0.42f) : new Color(0f, 0f, 0f, 0.26f);
@@ -419,8 +440,16 @@ public partial class GameBootstrap
         }
 
         bool canHireTruck = GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
+        bool hideBuyPanelForTutorial = isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetSelectTruck;
+        ApplyFleetTutorialVisibility();
+
+        if (hideBuyPanelForTutorial)
+        {
+            return;
+        }
+
         fleetScreenUi.BuyTruckButton.interactable = canHireTruck;
-        fleetScreenUi.BuyTruckButtonText.text = $"Buy New Truck — ${HireTruckCost}";
+        fleetScreenUi.BuyTruckButtonText.text = $"{L("Buy New Truck")} — ${HireTruckCost}";
         fleetScreenUi.BuyTruckStatusText.text = GetFleetBuyStatusLabel();
         fleetScreenUi.BuyTruckStatusText.color = canHireTruck ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
     }
@@ -457,8 +486,7 @@ public partial class GameBootstrap
             fleetScreenUi.RemoveDriverButtons[slotIndex].interactable = CanUnassignDriverFromTruck(selectedTruck, rosterDriver);
         }
         fleetScreenUi.ResourcesFuelText.text = FormatValueLine("Fuel", $"{Mathf.CeilToInt(truckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}");
-        fleetScreenUi.ResourcesEnergyText.text = FormatValueLine("Energy", $"{(driver != null ? Mathf.CeilToInt(driver.Energy) : 0)} / {Mathf.CeilToInt(DriverEnergyMax)}");
-        fleetScreenUi.ResourcesCargoText.text = FormatValueLine("Cargo", truckCargoAmount > 0 ? $"{truckCargoAmount}/5 ({truckCargoType})" : "Empty");
+        fleetScreenUi.ResourcesCargoText.text = FormatValueLine("Cargo", FormatTruckCargoValue(truckCargoAmount, truckCargoType));
         fleetScreenUi.NavigationCellText.text = FormatValueLine("Grid Cell", $"{truckCell.x}, {truckCell.y}");
         fleetScreenUi.NavigationRouteText.text = FormatValueLine("Assigned Route", GetTripTitle(currentAssignedTrip));
         fleetScreenUi.NavigationPayoutText.text = FormatValueLine("Trip Payout", $"${currentAssignedTripReward}");
@@ -504,25 +532,25 @@ public partial class GameBootstrap
     {
         if (truckAgent.TruckCargoAmount <= 0 || truckAgent.TruckCargoType == CargoType.None)
         {
-            return "Cargo Empty";
+            return $"{L("Cargo")} {L("Empty")}";
         }
 
-        return $"Cargo {truckAgent.TruckCargoType} {truckAgent.TruckCargoAmount}/5";
+        return $"{L("Cargo")} {FormatTruckCargoValue(truckAgent.TruckCargoAmount, truckAgent.TruckCargoType)}";
     }
 
     private string GetFleetBuyStatusLabel()
     {
         if (GetOwnedTruckCount() >= MaxTruckCount)
         {
-            return "Fleet capacity reached.";
+            return L("Fleet capacity reached.");
         }
 
         if (money < HireTruckCost)
         {
-            return $"Need ${HireTruckCost} to hire a new truck.";
+            return $"{L("Need")} ${HireTruckCost} {L("to hire a new truck.")}";
         }
 
-        return "Adds a new truck directly to parking.";
+        return L("Adds a new truck directly to parking.");
     }
 
     private string GetTruckAssignedDriverName(TruckAgent truckAgent)
@@ -793,7 +821,6 @@ public partial class GameBootstrap
             driver.IsOnActiveShift = false;
             driver.WaitingForShiftAtParking = false;
             driver.NeedsShiftEndReturn = false;
-            driver.NeedsRestAfterTrip = false;
             driver.RestPhase = DriverRestPhase.None;
             driver.WalkPhase = DriverRescuePhase.None;
             driver.WalkPath.Clear();
@@ -1048,6 +1075,32 @@ public partial class GameBootstrap
         return $"<color=#{ColorUtility.ToHtmlStringRGB(FleetMutedTextColor)}>{L(label)}:</color>  <color=#FFFFFF>{L(value)}</color>";
     }
 
+    private static string FormatTruckCargoValue(int amount, CargoType cargoType, int capacity = 5)
+    {
+        if (amount <= 0 || cargoType == CargoType.None)
+        {
+            return L("Empty");
+        }
+
+        return $"{amount}/{capacity} ({GetCargoTypeLabel(cargoType)})";
+    }
+
+    private static string GetCargoTypeLabel(CargoType cargoType)
+    {
+        return cargoType switch
+        {
+            CargoType.Logs      => L("Logs"),
+            CargoType.Boards    => L("Boards"),
+            CargoType.Cotton    => L("Cotton"),
+            CargoType.Textile   => L("Textile"),
+            CargoType.Furniture => L("Furniture"),
+            CargoType.Fuel      => L("Fuel"),
+            CargoType.Alcohol   => L("Alcohol"),
+            CargoType.Food      => L("Food"),
+            _                   => L("None")
+        };
+    }
+
     private static void StretchRect(RectTransform rect, float left, float top, float right, float bottom)
     {
         rect.anchorMin = new Vector2(0f, 0f);
@@ -1098,7 +1151,7 @@ public partial class GameBootstrap
         RectTransform textRt = textGo.AddComponent<RectTransform>();
         StretchRect(textRt, 0f, 0f, 0f, 0f);
         Text txt = textGo.AddComponent<Text>();
-        txt.text = "✕";
+        txt.text = "X";
         txt.font = font;
         txt.fontSize = 18;
         txt.fontStyle = FontStyle.Bold;
@@ -1106,9 +1159,9 @@ public partial class GameBootstrap
         txt.color = Color.white;
         txt.raycastTarget = false;
 
-        // Render on top — move to last sibling
+        // Render on top вЂ” move to last sibling
         go.transform.SetAsLastSibling();
     }
 
-    // ── Drivers Canvas Screen ─────────────────────────────────────────────────
+    // в”Ђв”Ђ Drivers Canvas Screen в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 }

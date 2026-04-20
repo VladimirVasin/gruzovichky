@@ -21,9 +21,12 @@ public partial class GameBootstrap
         FleetSelectTruck,
         FleetAssignDriver,
         FleetPickDriver,
+        AssignSawmillProductionWorker,
+        SawmillWorkerAssigned,
         NeedSawmill,
         SawmillBuilt,
-        FirstTradeOpened
+        FirstTradeOpened,
+        BeeEasterEgg
     }
 
     private sealed class TutorialHudRefs
@@ -63,6 +66,8 @@ public partial class GameBootstrap
     private bool isTutorialCameraFocusActive;
     private Vector3 tutorialCameraFocusTarget;
     private float tutorialCameraWanderTime;
+    private string tutorialWindowFullText = string.Empty;
+    private float tutorialWindowTypeTime;
     private GameObject tutorialOrbitHudRoot;
     private RectTransform tutorialOrbitHudPanel;
     private Text tutorialOrbitHudText;
@@ -70,17 +75,51 @@ public partial class GameBootstrap
     private Button tutorialOrbitHudOkButton;
     private System.Action tutorialOrbitHudOnOk;
     private DriverAgent tutorialOrbitHudDriver;
-    private string tutorialOrbitHudFullText = string.Empty;
+    private string tutorialOrbitHudSpeakerPrefix = string.Empty;
+    private string tutorialOrbitHudBodyText = string.Empty;
     private float tutorialOrbitHudTypeTime;
+    private const float TutorialOrbitHudDefaultTypeSpeed = 40f;
+    private float tutorialOrbitHudTypeSpeed = TutorialOrbitHudDefaultTypeSpeed;
     private float tutorialOrbitHudOrbitTime;
+    private bool tutorialOrbitHudDetached;
+    private bool tutorialPendingForestWorkerStartedAfterOrbitOk;
+    private DriverRescuePhase tutorialOrbitHudAttachedWalkPhase = DriverRescuePhase.None;
+    private static readonly string[] TutorialOrbitHudDescriptorKeys =
+    {
+        "Hardworking",
+        "Patient",
+        "Persistent",
+        "Diligent",
+        "Reliable",
+        "Attentive",
+        "Careful",
+        "Brave",
+        "Practical",
+        "Humble",
+        "Energetic",
+        "Polite",
+        "Seasoned",
+        "Thoughtful",
+        "Honest",
+        "Steady",
+        "Observant",
+        "Decent",
+        "Quiet",
+        "Hopeful"
+    };
 
     private TutorialHudRefs tutorialHud;
     private TutorialTrigger activeTutorialTrigger;
-    private const int TutorialStepCount = 15;
+    private const int TutorialStepCount = 17;
 
     private bool IsTutorialEnabledForCurrentMode()
     {
         return selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+    }
+
+    private bool ShouldPauseSimulationForTutorial()
+    {
+        return activeTutorialTrigger != TutorialTrigger.ForestWorkerStarted;
     }
 
     private void ScheduleTutorial(TutorialTrigger trigger)
@@ -110,7 +149,7 @@ public partial class GameBootstrap
                     TutorialTrigger.GameStarted,
                     1,
                     "Welcome to Lo-Fi Delivery Co.",
-                    "Alright, buddy, you've been handed a problem the size of a small town. For some reason, it even comes with a steering wheel.\n\nThe map is empty - right where the road is supposed to be. You'll have to... convince it to appear.\nAnd buildings, unfortunately, won't build themselves.\n\nStart gently: take a look around, fill in what's missing, and try not to go bankrupt before noon.");
+                    "This is User mode. The town starts with missing buildings, roads, and workers.\n\nYour goal is simple: build the missing pieces, connect them with roads, hire workers, assign jobs, and move resources with trucks.\n\nStart by building a Motel.");
                 break;
             case TutorialTrigger.BuildMotelPrompt:
                 isBuildHighlightPersistent = true;
@@ -118,7 +157,7 @@ public partial class GameBootstrap
                     TutorialTrigger.BuildMotelPrompt,
                     2,
                     "Build a Motel",
-                    "A motel is a soft landing for people who do not yet understand what they have agreed to.\n\nIn Lo-Fi Delivery Co. it is where drivers are hired, wait between shifts, and pretend the road has not already taken something from them.\n\nOpen the Building menu at the top - or press B - choose Motel, and place it wherever your optimism still fits.");
+                    "The Motel unlocks worker hiring and gives workers a place to rest.\n\nOpen Building at the top, or press B. Choose Motel and place it near your road plan.\n\nIn Build mode, press R to rotate the building before placing it.");
                 break;
             case TutorialTrigger.FirstMotelBuilt:
                 if (hasShownFirstMotelTutorial) return;
@@ -129,7 +168,7 @@ public partial class GameBootstrap
                     TutorialTrigger.FirstMotelBuilt,
                     3,
                     "Open the Workers Panel",
-                    "The motel stands. Structurally sound, morally ambiguous - the usual.\n\nNow it needs a person inside it. Someone to drive the truck, carry the crates, and ask no questions about where the money went.\n\nOpen the Workers panel at the top of the screen.");
+                    "The Motel is ready, so you can hire workers.\n\nOpen the Workers panel at the top of the screen. This is where new workers are hired and tracked.");
                 break;
             case TutorialTrigger.WorkersPanelOpened:
                 if (hasShownWorkersPanelTutorial) return;
@@ -139,7 +178,7 @@ public partial class GameBootstrap
                     TutorialTrigger.WorkersPanelOpened,
                     4,
                     "Hire a Worker",
-                    "The Workers panel is open. Good. You are further along than most people get.\n\nThere is a button at the bottom. Hire New Worker. It costs money — some of which you still have.\n\nPress it.");
+                    "Use the Hire New Worker button at the bottom of the Workers panel.\n\nHiring costs money. New workers arrive by bus before they become available.");
                 break;
             case TutorialTrigger.FirstDriverHired:
                 if (hasShownFirstDriverHiredTutorial) return;
@@ -148,7 +187,7 @@ public partial class GameBootstrap
                     TutorialTrigger.FirstDriverHired,
                     5,
                     "The Worker is on Their Way!",
-                    "A human being will arrive by bus, already wearing the expression of someone who has made several poor decisions to get here.\n\nThat is your employee now. Treat them accordingly.");
+                    "Your new worker is arriving by bus.\n\nWait for the bus to stop and for the worker to walk to the Motel. After that, the worker can be assigned to jobs.");
                 break;
             case TutorialTrigger.ForestIntroduction:
                 if (hasShownForestIntroTutorial) return;
@@ -166,8 +205,8 @@ public partial class GameBootstrap
                 ShowTutorialWindow(
                     TutorialTrigger.ForestIntroduction,
                     6,
-                    "Timber, Unfortunately",
-                    "Our region is blessed with magnificent forests that have been patiently waiting to be logged.\n\nA Forest provides raw logs. A Sawmill turns them into boards. That is where the money starts.\n\nPut your new worker to work — assign them a shift at the Forest so the timber starts moving.");
+                    "Forest Production",
+                    "Forest produces Logs.\n\nTo start production, assign a worker to Forest in Shifts > Productions. Production workers operate from 08:00 to 18:00.");
                 break;
             case TutorialTrigger.SelectProductionWorker:
                 if (driverAgents.Count == 0) return;
@@ -176,8 +215,8 @@ public partial class GameBootstrap
                 ShowTutorialWindow(
                     TutorialTrigger.SelectProductionWorker,
                     7,
-                    "Choose the Person",
-                    "Before a building can pretend to be productive, it needs a person to blame.\n\nSelect your first worker in the list on the left. Or press OK and I will perform this tiny ceremony for you.");
+                    "Select a Worker",
+                    "Select a free worker from the list on the left.\n\nYou can also press OK and the first available worker will be selected automatically.");
                 break;
             case TutorialTrigger.AssignForestProductionWorker:
                 if (GetFirstAssignableProductionWorker() == null) return;
@@ -186,8 +225,8 @@ public partial class GameBootstrap
                 ShowTutorialWindow(
                     TutorialTrigger.AssignForestProductionWorker,
                     8,
-                    "Send Them to the Trees",
-                    "There. A worker, selected and vulnerable to management.\n\nPress Assign on the Forest row. Or press OK, and the bureaucracy will complete itself.");
+                    "Assign to Forest",
+                    "Press Assign on the Forest row to send the selected worker there.\n\nYou can also press OK and the tutorial will assign the worker for you.");
                 break;
             case TutorialTrigger.ForestWorkerStarted:
                 if (hasShownForestWorkerStartedTutorial) return;
@@ -195,16 +234,17 @@ public partial class GameBootstrap
                 if (locations.ContainsKey(LocationType.Forest))
                 {
                     StartTutorialCameraFocus(LocationType.Forest, placeLocationOnRight: true);
-                    selectedLocation = LocationType.Forest;
-                    RefreshSelectionVisuals();
                 }
+                selectedLocation = null;
+                ClearSelectedDebugCell();
+                RefreshSelectionVisuals();
                 isTutorialSideMode = true;
                 tutorialSideOnLeft = true;
                 ShowTutorialWindow(
                     TutorialTrigger.ForestWorkerStarted,
                     9,
-                    "Look at Them Go",
-                    "Observe our small hero at work. A person, a forest, and the ancient agreement between wage labor and questionable planning.\n\nIt is almost adorable. Do not say that out loud. Management has a reputation to maintain.");
+                    "Forest Is Working",
+                    "The worker is now producing Logs at Forest.\n\nLogs are raw material. They must be moved and processed before they become useful for the town.");
                 tutorialHud.BodyText.fontSize = 13;   // compact font so text fits neatly
                 break;
             case TutorialTrigger.FleetIntroduction:
@@ -214,8 +254,8 @@ public partial class GameBootstrap
                 ShowTutorialWindow(
                     TutorialTrigger.FleetIntroduction,
                     10,
-                    "Trucks Don't Drive Themselves",
-                    "The Forest worker is settled in. But logs in a forest are just expensive scenery.\n\nOpen Fleet, assign a driver to a truck, and set a route. That is how cargo starts moving.");
+                    "Use Trucks",
+                    "Resources do not move automatically.\n\nOpen Fleet, assign a driver to a truck, then choose a route to move cargo between buildings.");
                 break;
             case TutorialTrigger.FleetSelectTruck:
                 if (hasShownFleetSelectTruckTutorial) return;
@@ -226,7 +266,7 @@ public partial class GameBootstrap
                     TutorialTrigger.FleetSelectTruck,
                     13,
                     "Select the Truck",
-                    "The Fleet panel is open. Somewhere inside it sits Truck 1, a loyal rectangle with wheels and no opinions worth recording.\n\nSelect Truck 1 in the list. Or press OK, and I will gently point your attention at the machine that will soon inherit all our logistical sins.");
+                    "Select Truck #1 in the Fleet list.\n\nYou can also press OK and the tutorial will select the truck automatically.");
                 tutorialHud.BodyText.fontSize = 13;
                 break;
             case TutorialTrigger.FleetAssignDriver:
@@ -237,33 +277,56 @@ public partial class GameBootstrap
                 ShowTutorialWindow(
                     TutorialTrigger.FleetAssignDriver,
                     14,
-                    "Give It a Driver",
-                    "A truck without a driver is just furniture with fuel anxiety.\n\nNow assign a free worker to Truck 1. Press Assign in the first driver slot, or press OK and I will open the little personnel drawer for you.");
+                    "Assign a Driver",
+                    "Truck #1 needs a driver before it can run routes.\n\nPress Assign in Driver Slot 1. Only free workers can be assigned to trucks.");
                 tutorialHud.BodyText.fontSize = 13;
                 break;
             case TutorialTrigger.FleetPickDriver:
                 if (hasShownFleetPickDriverTutorial) return;
                 hasShownFleetPickDriverTutorial = true;
                 isTutorialSideMode = true;
-                tutorialSideOnLeft = false;
+                tutorialSideOnLeft = true;
                 ShowTutorialWindow(
                     TutorialTrigger.FleetPickDriver,
                     15,
                     "Choose a Driver",
-                    "There they are: the available souls. Not the one currently serving the trees. We do not rip people out of production just because a dropdown got lonely.\n\nSelect a free worker from the list. Or press OK, and the first available volunteer will become Truck 1's problem.");
+                    "Choose any free worker from the driver list.\n\nWorkers already assigned to production are not shown here. The tutorial will continue after you assign a driver.");
                 tutorialHud.BodyText.fontSize = 13;
+                break;
+            case TutorialTrigger.AssignSawmillProductionWorker:
+                if (hasShownAssignSawmillWorkerTutorial) return;
+                hasShownAssignSawmillWorkerTutorial = true;
+                isTutorialSideMode = false;
+                tutorialSideOnLeft = false;
+                ShowTutorialWindow(
+                    TutorialTrigger.AssignSawmillProductionWorker,
+                    16,
+                    "Staff the Sawmill",
+                    "You have assigned a worker to Forest. Now assign a worker to Sawmill.\n\nOpen Shifts, go to Productions, and assign a free worker to the Sawmill row.");
+                break;
+            case TutorialTrigger.SawmillWorkerAssigned:
+                if (hasShownSawmillWorkerAssignedTutorial) return;
+                hasShownSawmillWorkerAssignedTutorial = true;
+                isTutorialSideMode = false;
+                tutorialSideOnLeft = false;
+                ShowTutorialWindow(
+                    TutorialTrigger.SawmillWorkerAssigned,
+                    17,
+                    "Sawmill Ready",
+                    "The Sawmill now has a worker.\n\nNext, use Fleet routes to deliver Logs from Forest to Sawmill, then move Boards onward to Warehouse.");
                 break;
             case TutorialTrigger.NeedSawmill:
                 if (hasShownNeedSawmillTutorial) return;
                 hasShownNeedSawmillTutorial = true;
+                UnlockBuildTool(BuildTool.Sawmill);
                 isBuildHighlightPersistent = true;
                 isTutorialSideMode = false;
                 tutorialSideOnLeft = false;
                 ShowTutorialWindow(
                     TutorialTrigger.NeedSawmill,
                     10,
-                    "Logs Are Not Boards",
-                    "A log is only furniture in its larval form.\n\nTo turn Logs into Boards, you need a Sawmill. Open Building, choose Sawmill, and place it where the roads can eventually make peace with it.");
+                    "Build a Sawmill",
+                    "Logs must be processed into Boards.\n\nOpen Building, choose Sawmill, and place it with its entrance connected to a road.");
                 break;
             case TutorialTrigger.SawmillBuilt:
                 if (hasShownSawmillBuiltTutorial) return;
@@ -273,7 +336,7 @@ public partial class GameBootstrap
                     TutorialTrigger.SawmillBuilt,
                     11,
                     "Sawmill Placed",
-                    "The Sawmill stands. A box with teeth, waiting for logs to become boards and for everyone involved to call that progress.\n\nOne delicate problem remains: resources do not teleport. Tragically. Trucks will have to carry them between buildings, because civilization is mostly moving piles from one rectangle to another.");
+                    "Sawmill converts Logs into Boards.\n\nResources still need transport: use trucks to deliver Logs from Forest to Sawmill and move finished Boards onward.");
                 break;
         }
     }
@@ -289,17 +352,36 @@ public partial class GameBootstrap
         tutorialHud.BodyText.fontSize = 15;   // default; callers may override after this returns
         ApplyTutorialWindowLayout();
         tutorialHud.TitleText.text = L(title);
-        tutorialHud.StepText.text = $"{stepNumber}/{TutorialStepCount}";
-        tutorialHud.BodyText.text = L(body);
-        if (trigger == TutorialTrigger.ForestIntroduction)
-        {
-            tutorialHud.BodyText.text = L("See that Forest? It is not scenery. It is inventory with leaves.\n\nA Forest produces logs. Later, a Sawmill turns those logs into boards. That is the first honest-looking lie your economy will tell.\n\nNext, assign your worker to the Forest in the Productions tab.");
-        }
+        bool isEasterEgg = trigger == TutorialTrigger.BeeEasterEgg;
+        tutorialHud.StepText.text = isEasterEgg ? string.Empty : $"{stepNumber}/{TutorialStepCount}";
+        tutorialWindowFullText = L(body);
+        tutorialWindowTypeTime = 0f;
+        tutorialHud.BodyText.text = string.Empty;
         tutorialHud.SkipToggle.isOn = false;
+        tutorialHud.SkipToggle.gameObject.SetActive(!isEasterEgg);
         isTutorialOpen = true;
         tutorialHud.CanvasRoot.SetActive(true);
         PlayUiSound(uiPanelOpenClip, 0.82f);
         SessionDebugLogger.Log("TUTORIAL", $"Shown tutorial window: {title} (side={isTutorialSideMode}).");
+    }
+
+    private void ShowBeeEasterEggHud()
+    {
+        isTutorialSideMode = false;
+        tutorialSideOnLeft = false;
+        ShowTutorialWindow(
+            TutorialTrigger.BeeEasterEgg,
+            0,
+            "Bees",
+            "Дурачок, не мешай пчёлкам");
+        if (tutorialHud?.WindowRect != null)
+        {
+            tutorialHud.WindowRect.sizeDelta = new Vector2(500f, 260f);
+        }
+        if (tutorialHud?.BodyPanelLayout != null)
+        {
+            tutorialHud.BodyPanelLayout.preferredHeight = 100f;
+        }
     }
 
     private void OpenWorkersPanelFromTutorial()
@@ -348,7 +430,7 @@ public partial class GameBootstrap
                 TutorialTrigger.AssignForestProductionWorker => 640f,
                 TutorialTrigger.FleetSelectTruck => -640f,
                 TutorialTrigger.FleetAssignDriver => -640f,
-                TutorialTrigger.FleetPickDriver => 640f,
+                TutorialTrigger.FleetPickDriver => -500f,
                 _ => tutorialSideOnLeft ? TutorialSidePanelLeftX : TutorialSidePanelBaseX
             };
             // Left-offset mode needs full-size window to fit longer text; right side uses compact card
@@ -558,6 +640,12 @@ public partial class GameBootstrap
         isTutorialOpen     = false;
         isTutorialSideMode = false;
         tutorialSideOnLeft = false;
+        tutorialWindowFullText = string.Empty;
+        tutorialWindowTypeTime = 0f;
+        if (tutorialHud.SkipToggle != null)
+        {
+            tutorialHud.SkipToggle.gameObject.SetActive(true);
+        }
         PlayUiSound(uiPanelCloseClip, 0.82f);
 
         if (activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
@@ -637,7 +725,16 @@ public partial class GameBootstrap
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.FleetPickDriver)
         {
-            PickFirstFleetDriverForTutorial();
+            LogUiInput("Tutorial: Fleet driver picker hint closed; waiting for player driver choice.");
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.AssignSawmillProductionWorker)
+        {
+            isLogisticsTabActive = true;
+            isShiftsPanelOpen = true;
+            isShiftsScreenDirty = true;
+            LogUiInput("Tutorial: opened Shifts/Productions for Sawmill worker assignment.");
+            PlayUiSound(uiPanelOpenClip, 0.9f);
         }
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.SawmillBuilt)
@@ -915,16 +1012,21 @@ public partial class GameBootstrap
 
     private bool IsFleetDriverPickerTutorialHighlightActive()
     {
-        return isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetPickDriver;
+        return false;
     }
 
     private void UpdateTutorialUi()
     {
-        UpdateTutorialCameraFocus(Time.unscaledDeltaTime);
+        float dt = Time.unscaledDeltaTime;
+        UpdateTutorialCameraFocus(dt);
+        if (tutorialOrbitHudDetached && tutorialOrbitHudRoot != null && tutorialOrbitHudRoot.activeSelf)
+        {
+            UpdateTutorialOrbitHud(dt);
+        }
 
         if (pendingTutorialTrigger.HasValue)
         {
-            pendingTutorialDelay -= Time.unscaledDeltaTime;
+            pendingTutorialDelay -= dt;
             if (pendingTutorialDelay <= 0f && !isTutorialOpen)
             {
                 TutorialTrigger trigger = pendingTutorialTrigger.Value;
@@ -941,6 +1043,16 @@ public partial class GameBootstrap
         // Hide the window card when no tutorial is actively showing
         if (tutorialHud.WindowRect != null)
             tutorialHud.WindowRect.gameObject.SetActive(isTutorialOpen);
+
+        if (isTutorialOpen && tutorialHud.BodyText != null)
+        {
+            tutorialWindowTypeTime += dt;
+            int visibleChars = Mathf.Clamp(
+                Mathf.FloorToInt(tutorialWindowTypeTime * TutorialOrbitHudDefaultTypeSpeed),
+                0,
+                tutorialWindowFullText.Length);
+            tutorialHud.BodyText.text = tutorialWindowFullText.Substring(0, visibleChars);
+        }
 
         bool anyHighlight = IsBuildMenuTutorialHighlightActive()
                          || IsWorkersTutorialHighlightActive()
@@ -969,7 +1081,7 @@ public partial class GameBootstrap
                 TutorialTrigger.AssignForestProductionWorker => 640f,
                 TutorialTrigger.FleetSelectTruck => -640f,
                 TutorialTrigger.FleetAssignDriver => -640f,
-                TutorialTrigger.FleetPickDriver => 640f,
+                TutorialTrigger.FleetPickDriver => -500f,
                 _ => tutorialSideOnLeft ? TutorialSidePanelLeftX : TutorialSidePanelBaseX
             };
             float bobX  = Mathf.Sin(tutorialBobTime * 0.65f) * 3.5f;
@@ -993,6 +1105,20 @@ public partial class GameBootstrap
             tutorialHud.FleetMenuOutlineRoot.SetActive(IsFleetTutorialHighlightActive());
 
         UpdateTutorialElementOutlines();
+
+        // Shift fleet window right when the side tutorial card sits on the left
+        if (fleetScreenUi?.ScreenRoot != null)
+        {
+            RectTransform fleetRect = fleetScreenUi.ScreenRoot.GetComponent<RectTransform>();
+            bool shiftRight = isTutorialOpen && isFleetPanelOpen &&
+                (activeTutorialTrigger == TutorialTrigger.FleetSelectTruck ||
+                 activeTutorialTrigger == TutorialTrigger.FleetAssignDriver ||
+                 activeTutorialTrigger == TutorialTrigger.FleetPickDriver);
+            float targetX = shiftRight ? 180f : 0f;
+            Vector2 fp = fleetRect.anchoredPosition;
+            fp.x = Mathf.Lerp(fp.x, targetX, Time.unscaledDeltaTime * 8f);
+            fleetRect.anchoredPosition = fp;
+        }
     }
 
     private void UpdateTutorialElementOutlines()
@@ -1118,6 +1244,7 @@ public partial class GameBootstrap
             AssignWorkerToBuilding(selectedDriver, logisticsSlots[0]);
             LogUiInput($"Tutorial: assigned {selectedDriver.DriverName} to Forest production.");
             PlayUiSound(uiSelectClip, 0.85f);
+            StartForestWorkerTutorialCommute(selectedDriver);
         }
 
         isShiftsPanelOpen = false;
@@ -1140,12 +1267,80 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
         LogUiInput("Tutorial: Forest production assignment complete; closed Shifts panel.");
         PlayUiSound(uiPanelCloseClip, 0.82f);
+
+        DriverAgent assignedDriver = driverAgents.Find(d => d.DriverId == selectedShiftDriverId);
+        StartForestWorkerTutorialCommute(assignedDriver);
+    }
+
+    private void StartForestWorkerTutorialCommute(DriverAgent driver)
+    {
+        if (driver == null || driver.IsInsideBuilding) return;
+
+        bool shiftAlreadyActive = IsProductionWorkHour(GetCurrentHour());
+
+        if (shiftAlreadyActive)
+        {
+            // Shift is already active — force commute immediately and focus on Forest so player sees it
+            if (!IsDriverBusyWalkPhase(driver))
+                StartDriverBuildingCommute(driver);
+            if (locations.ContainsKey(LocationType.Forest))
+                StartTutorialCameraFocus(LocationType.Forest, placeLocationOnRight: true);
+            return;
+        }
+
+        // Shift hasn't started yet — force early commute and follow with camera + orbit HUD
+        SetTutorialClockToProductionStart();
+        driver.RestPhase = DriverRestPhase.None;
+        driver.SleepTimer = 0f;
+        driver.IsOnActiveShift = false;
+        driver.IsInsideBuilding = false;
+        driver.WalkPhase = DriverRescuePhase.None;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        if (IsDriverBusyWalkPhase(driver)) return;
+        StartDriverBuildingCommute(driver);
+        SetupTutorialUi();
+        tutorialCinematicDriver                = driver;
+        tutorialCinematicPhase                 = TutorialCinematicPhase.TrackingWorkerBackCloseup;
+        tutorialCinematicShouldShowForestIntro  = false;
+        isTutorialCameraFocusActive            = false;
+        isTruckCameraFocused                   = false;
+        isCameraReturningToDiorama              = false;
+        isCameraRotatingToTarget                = false;
+        tutorialOrbitHudTypeSpeed               = 40f;
+        string commuteMessage = IsRussianLanguage()
+            ? "Я иду к Лесу.\n\nКогда рабочий входит в здание в рабочее время 08:00-18:00, производство запускается автоматически."
+            : "I am walking to the Forest.\n\nWhen a worker enters a production building during 08:00-18:00, production starts automatically.";
+        ShowTutorialOrbitHud(driver, commuteMessage, $"8/{TutorialStepCount}", onOk: null);
+    }
+
+    private void SetTutorialClockToProductionStart()
+    {
+        if (IsProductionWorkHour(GetCurrentHour()))
+        {
+            return;
+        }
+
+        dayNightCycleTimer = (ProductionWorkStartHour / 24f) * DayNightCycleDuration + 0.01f;
+        SessionDebugLogger.Log("TUTORIAL", $"Tutorial forced clock to {ProductionWorkStartHour:00}:00 so the Forest worker can start production.");
     }
 
     private void NotifyTutorialProductionWorkerEntered(LocationType locationType)
     {
         if (locationType != LocationType.Forest || hasShownForestWorkerStartedTutorial)
         {
+            return;
+        }
+
+        // The force-commute orbit HUD becomes a centered normal HUD once the worker arrives.
+        DetachTutorialOrbitHudFromTarget("production worker reached assigned building");
+        if (tutorialCinematicPhase == TutorialCinematicPhase.TrackingWorkerBackCloseup)
+            tutorialCinematicPhase = TutorialCinematicPhase.Returning;
+
+        if (tutorialOrbitHudRoot != null && tutorialOrbitHudRoot.activeSelf)
+        {
+            tutorialPendingForestWorkerStartedAfterOrbitOk = true;
+            SessionDebugLogger.Log("TUTORIAL", "Forest worker-start tutorial deferred until orbit HUD OK.");
             return;
         }
 
@@ -1205,8 +1400,9 @@ public partial class GameBootstrap
             isCameraRotatingToTarget = false;
             ShowTutorialOrbitHud(
                 firstWorker,
-                "Two new workers have appeared.\n\nTime to put someone in a truck — open Fleet and assign a driver to a route.",
+                "Two new workers have arrived at the Bus Stop and will walk to the Motel.\n\nNext, open Fleet and assign a free worker to Truck #1.",
                 $"12/{TutorialStepCount}",
+                speakerProfessionOverrideKey: "(for now) unemployed",
                 onOk: () =>
                 {
                     isFleetHighlightPersistent = false;
@@ -1248,7 +1444,7 @@ public partial class GameBootstrap
         return position;
     }
 
-    private void ShowTutorialOrbitHud(DriverAgent worker, string message, string stepLabel = "", System.Action onOk = null)
+    private void ShowTutorialOrbitHud(DriverAgent worker, string message, string stepLabel = "", System.Action onOk = null, string speakerProfessionOverrideKey = null)
     {
         if (worker?.DriverObject == null)
         {
@@ -1311,16 +1507,26 @@ public partial class GameBootstrap
             tutorialOrbitHudOkButton.onClick.AddListener(() =>
             {
                 System.Action okAction = tutorialOrbitHudOnOk;
+                bool shouldShowPendingForestWorkerStarted = tutorialPendingForestWorkerStartedAfterOrbitOk;
                 tutorialOrbitHudOnOk = null;
                 HideTutorialOrbitHud();
                 okAction?.Invoke();
+                if (shouldShowPendingForestWorkerStarted &&
+                    IsTutorialEnabledForCurrentMode() &&
+                    !hasShownForestWorkerStartedTutorial)
+                {
+                    ScheduleTutorial(TutorialTrigger.ForestWorkerStarted);
+                }
                 tutorialCinematicPhase = TutorialCinematicPhase.Returning;
             });
         }
 
         tutorialOrbitHudOnOk = onOk;
         tutorialOrbitHudDriver = worker;
-        tutorialOrbitHudFullText = L(message);
+        tutorialOrbitHudAttachedWalkPhase = worker.WalkPhase;
+        tutorialOrbitHudDetached = false;
+        tutorialOrbitHudSpeakerPrefix = GetOrbitHudSpeakerPrefix(worker, speakerProfessionOverrideKey);
+        tutorialOrbitHudBodyText = L(message);
         tutorialOrbitHudTypeTime = 0f;
         tutorialOrbitHudOrbitTime = 0f;
         tutorialOrbitHudText.text = string.Empty;
@@ -1332,15 +1538,38 @@ public partial class GameBootstrap
 
     private void UpdateTutorialOrbitHud(float dt)
     {
-        if (tutorialOrbitHudRoot == null || tutorialOrbitHudText == null || tutorialOrbitHudDriver?.DriverObject == null || mainCamera == null)
+        if (tutorialOrbitHudRoot == null || tutorialOrbitHudText == null)
         {
             return;
         }
 
         tutorialOrbitHudTypeTime += dt;
         tutorialOrbitHudOrbitTime += dt;
-        int visibleChars = Mathf.Clamp(Mathf.FloorToInt(tutorialOrbitHudTypeTime * 8f), 0, tutorialOrbitHudFullText.Length);
-        tutorialOrbitHudText.text = tutorialOrbitHudFullText.Substring(0, visibleChars);
+        int visibleChars = Mathf.Clamp(Mathf.FloorToInt(tutorialOrbitHudTypeTime * tutorialOrbitHudTypeSpeed), 0, tutorialOrbitHudBodyText.Length);
+        tutorialOrbitHudText.text = $"{tutorialOrbitHudSpeakerPrefix}\n\n{tutorialOrbitHudBodyText.Substring(0, visibleChars)}";
+
+        if (!tutorialOrbitHudDetached && ShouldDetachTutorialOrbitHudFromTarget())
+        {
+            DetachTutorialOrbitHudFromTarget("attached character reached destination");
+        }
+
+        if (tutorialOrbitHudDetached)
+        {
+            if (tutorialOrbitHudPanel != null)
+            {
+                tutorialOrbitHudPanel.gameObject.SetActive(true);
+                tutorialOrbitHudPanel.anchoredPosition = Vector2.Lerp(
+                    tutorialOrbitHudPanel.anchoredPosition,
+                    Vector2.zero,
+                    1f - Mathf.Exp(-3.2f * dt));
+            }
+            return;
+        }
+
+        if (tutorialOrbitHudDriver?.DriverObject == null || mainCamera == null)
+        {
+            return;
+        }
 
         // Compute 3D orbit position then project onto the screen-space overlay canvas
         Vector3 workerPos = tutorialOrbitHudDriver.DriverObject.transform.position;
@@ -1364,6 +1593,120 @@ public partial class GameBootstrap
         }
     }
 
+    private string GetOrbitHudSpeakerPrefix(DriverAgent worker, string professionOverrideKey = null)
+    {
+        string speakerName = string.IsNullOrWhiteSpace(worker?.DriverName) ? L("Unknown") : worker.DriverName;
+        string descriptor = GetOrbitHudDescriptor(worker);
+        string profession = string.IsNullOrWhiteSpace(professionOverrideKey)
+            ? GetOrbitHudProfession(worker)
+            : L(professionOverrideKey);
+        string colorHex = ColorUtility.ToHtmlStringRGB(FleetAccentColor);
+        return $"<color=#{colorHex}><b>{descriptor} {profession} {speakerName} {L("thinks:")}</b></color>";
+    }
+
+    private string GetOrbitHudDescriptor(DriverAgent worker)
+    {
+        int seed = worker?.DriverId ?? 0;
+        if (worker?.AssignedBuildingType.HasValue == true)
+        {
+            seed = seed * 31 + (int)worker.AssignedBuildingType.Value;
+        }
+        else if (worker != null)
+        {
+            seed = seed * 31 + (int)worker.DutyMode;
+        }
+
+        int index = Mathf.Abs(seed) % TutorialOrbitHudDescriptorKeys.Length;
+        return L(TutorialOrbitHudDescriptorKeys[index]);
+    }
+
+    private string GetOrbitHudProfession(DriverAgent worker)
+    {
+        if (worker?.AssignedBuildingType.HasValue == true)
+        {
+            return worker.AssignedBuildingType.Value switch
+            {
+                LocationType.Forest           => L("lumberjack"),
+                LocationType.Sawmill          => L("sawyer"),
+                LocationType.FurnitureFactory => L("cabinetmaker"),
+                LocationType.Warehouse        => L("warehouse loader"),
+                LocationType.Motel            => L("motel attendant"),
+                LocationType.Bar              => L("bartender"),
+                LocationType.Canteen          => L("canteen worker"),
+                LocationType.Parking          => L("yard driver"),
+                LocationType.GasStation       => L("fuel attendant"),
+                LocationType.BusStop          => L("station hand"),
+                _                             => L("worker")
+            };
+        }
+
+        if (worker?.DutyMode == DriverDutyMode.Intercity)
+        {
+            return L("intercity driver");
+        }
+
+        if (worker?.AssignedTruckNumber > 0)
+        {
+            return L("driver");
+        }
+
+        return L("unemployed");
+    }
+
+    private bool ShouldDetachTutorialOrbitHudFromTarget()
+    {
+        if (tutorialOrbitHudDriver == null)
+        {
+            return false;
+        }
+
+        if (tutorialOrbitHudAttachedWalkPhase != DriverRescuePhase.None &&
+            tutorialOrbitHudDriver.WalkPhase != tutorialOrbitHudAttachedWalkPhase)
+        {
+            return true;
+        }
+
+        if (tutorialOrbitHudAttachedWalkPhase == DriverRescuePhase.None ||
+            tutorialOrbitHudDriver.DriverObject == null ||
+            !tutorialOrbitHudDriver.DriverObject.activeSelf)
+        {
+            return false;
+        }
+
+        Vector3 flatDelta = tutorialOrbitHudDriver.WalkTargetWorld - tutorialOrbitHudDriver.DriverObject.transform.position;
+        flatDelta.y = 0f;
+        bool atFinalWaypoint = tutorialOrbitHudDriver.WalkPath.Count == 0 ||
+                               tutorialOrbitHudDriver.WalkWaypointIndex >= tutorialOrbitHudDriver.WalkPath.Count - 1;
+        return atFinalWaypoint && flatDelta.sqrMagnitude < 0.025f;
+    }
+
+    private void DetachTutorialOrbitHudFromTarget(string reason)
+    {
+        if (tutorialOrbitHudRoot == null || !tutorialOrbitHudRoot.activeSelf || tutorialOrbitHudDetached)
+        {
+            return;
+        }
+
+        tutorialOrbitHudDetached = true;
+        tutorialOrbitHudAttachedWalkPhase = DriverRescuePhase.None;
+        if (tutorialOrbitHudPanel != null)
+        {
+            tutorialOrbitHudPanel.gameObject.SetActive(true);
+        }
+
+        if (tutorialCinematicPhase == TutorialCinematicPhase.TrackingWorkerBackCloseup)
+        {
+            tutorialCinematicPhase = TutorialCinematicPhase.Returning;
+        }
+        else
+        {
+            isCameraReturningToDiorama = true;
+            cameraTargetOffset = DioramaCameraOffset;
+        }
+
+        SessionDebugLogger.Log("TUTORIAL", $"Orbit HUD detached from target: {reason}.");
+    }
+
     private void HideTutorialOrbitHud()
     {
         if (tutorialOrbitHudRoot != null)
@@ -1372,9 +1715,14 @@ public partial class GameBootstrap
         }
 
         tutorialOrbitHudDriver = null;
-        tutorialOrbitHudFullText = string.Empty;
+        tutorialOrbitHudSpeakerPrefix = string.Empty;
+        tutorialOrbitHudBodyText = string.Empty;
         tutorialOrbitHudTypeTime = 0f;
+        tutorialOrbitHudTypeSpeed = TutorialOrbitHudDefaultTypeSpeed;
         tutorialOrbitHudOrbitTime = 0f;
+        tutorialOrbitHudDetached = false;
+        tutorialPendingForestWorkerStartedAfterOrbitOk = false;
+        tutorialOrbitHudAttachedWalkPhase = DriverRescuePhase.None;
     }
 
     private void SelectTruckForFleetTutorial()
@@ -1473,11 +1821,31 @@ public partial class GameBootstrap
         fleetAssignDriverTargetSlot = -1;
         isFleetScreenDirty = true;
         LogUiInput($"Tutorial: assigned {candidates[0].DriverName} to Truck 1.");
+        FinishFleetDriverAssignedTutorial();
     }
 
     private void CompleteFleetPickDriverTutorial()
     {
-        if (!isTutorialOpen || activeTutorialTrigger != TutorialTrigger.FleetPickDriver)
+        if (!hasShownFleetPickDriverTutorial || hasShownAssignSawmillWorkerTutorial)
+        {
+            return;
+        }
+
+        if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetPickDriver)
+        {
+            isTutorialOpen = false;
+            isTutorialSideMode = false;
+            tutorialSideOnLeft = false;
+        }
+
+        LogUiInput("Tutorial: Fleet driver pick complete.");
+        PlayUiSound(uiPanelCloseClip, 0.82f);
+        FinishFleetDriverAssignedTutorial();
+    }
+
+    private void FinishFleetDriverAssignedTutorial()
+    {
+        if (!IsTutorialEnabledForCurrentMode() || hasShownAssignSawmillWorkerTutorial)
         {
             return;
         }
@@ -1485,8 +1853,57 @@ public partial class GameBootstrap
         isTutorialOpen = false;
         isTutorialSideMode = false;
         tutorialSideOnLeft = false;
-        LogUiInput("Tutorial: Fleet driver pick complete.");
-        PlayUiSound(uiPanelCloseClip, 0.82f);
+        isFleetPanelOpen = false;
+        isTruckDetailsOpen = false;
+        isFleetScreenDirty = true;
+        ScheduleTutorial(TutorialTrigger.AssignSawmillProductionWorker);
+        LogUiInput("Tutorial: closed Fleet after truck driver assignment and queued Sawmill assignment prompt.");
+    }
+
+    private void CompleteSawmillWorkerAssignedTutorial()
+    {
+        if (!IsTutorialEnabledForCurrentMode() ||
+            !hasShownAssignSawmillWorkerTutorial ||
+            hasShownSawmillWorkerAssignedTutorial)
+        {
+            return;
+        }
+
+        isShiftsPanelOpen = false;
+        isShiftsScreenDirty = true;
+        ScheduleTutorial(TutorialTrigger.SawmillWorkerAssigned);
+        LogUiInput("Tutorial: Sawmill worker assigned; closed Shifts and queued step 17.");
+    }
+
+    private bool TryShowBeeEasterEggForCell(Vector2Int cell)
+    {
+        if (isTutorialOpen || !IsBeeEasterEggDaytime() || !IsFlowerBeeCell(cell))
+        {
+            return false;
+        }
+
+        ShowBeeEasterEggHud();
+        SessionDebugLogger.Log("TUTORIAL", $"Bee easter egg shown for flower cell {cell.x},{cell.y}.");
+        return true;
+    }
+
+    private bool IsBeeEasterEggDaytime()
+    {
+        int hour = GetCurrentHour();
+        return hour >= 12 && hour < 18 && AreAmbientBeesActive();
+    }
+
+    private bool IsFlowerBeeCell(Vector2Int cell)
+    {
+        for (int i = 0; i < flowerBeePoints.Count; i++)
+        {
+            if (WorldToCell(flowerBeePoints[i]) == cell)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static GameObject CreateTutorialDynamicOutline(string name, Transform parent)

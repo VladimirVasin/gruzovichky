@@ -292,7 +292,6 @@ public partial class GameBootstrap
                     driver.Money -= motelData.ServiceFee;
                     SpawnMoneySpendPopup(driver.MotelIdlePosition, motelData.ServiceFee);
                     driver.DriverObject.SetActive(false);
-                    driver.SleepStartEnergy = driver.Energy;
                     driver.SleepTimer = DriverSleepDuration;
                     driver.RestPhase = DriverRestPhase.Sleeping;
                     SessionDebugLogger.Log("REST", $"{driver.DriverName} checked into motel — paid ${motelData.ServiceFee} (balance: ${driver.Money}). Sleeping for {DriverSleepDuration}s.");
@@ -367,6 +366,7 @@ public partial class GameBootstrap
                     {
                         driver.Money -= barData.ServiceFee;
                         SpawnMoneySpendPopup(driver.DriverObject.transform.position, barData.ServiceFee);
+                        SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Bar for Leisure; paid=${barData.ServiceFee}, consumed=1 Alcohol, balance=${driver.Money}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
                         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar — paid ${barData.ServiceFee}, consumed 1 Alcohol (balance: ${driver.Money}).");
                     }
                     else
@@ -376,6 +376,15 @@ public partial class GameBootstrap
                 }
                 else
                 {
+                    if (driver.LifeGoal == WorkerLifeGoal.Leisure)
+                    {
+                        driver.HadLeisureToday = true;
+                        driver.LifeGoal = WorkerLifeGoal.None;
+                        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} could not complete Bar leisure after arrival; reason={GetWorkerServiceUnavailableReason(driver, LocationType.Bar)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
+                        ContinueWorkerLifeCycle(driver, currentPosition);
+                        return;
+                    }
+
                     driver.WalkPhase = DriverRescuePhase.IdleWander;
                     driver.IdleWanderPointIndex++;
                     BuildDriverWalkPath(driver, currentPosition, driver.MotelIdlePosition);
@@ -395,6 +404,7 @@ public partial class GameBootstrap
                     {
                         driver.Money -= canteenData.ServiceFee;
                         SpawnMoneySpendPopup(driver.DriverObject.transform.position, canteenData.ServiceFee);
+                        SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Canteen for Meal; paid=${canteenData.ServiceFee}, consumed=1 Food, balance=${driver.Money}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
                         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen — paid ${canteenData.ServiceFee}, consumed 1 Food (balance: ${driver.Money}).");
                     }
                     else
@@ -404,6 +414,15 @@ public partial class GameBootstrap
                 }
                 else
                 {
+                    if (driver.LifeGoal == WorkerLifeGoal.Eat)
+                    {
+                        driver.AteToday = true;
+                        driver.LifeGoal = WorkerLifeGoal.None;
+                        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} could not complete Canteen meal after arrival; reason={GetWorkerServiceUnavailableReason(driver, LocationType.Canteen)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
+                        ContinueWorkerLifeCycle(driver, currentPosition);
+                        return;
+                    }
+
                     driver.WalkPhase = DriverRescuePhase.IdleWander;
                     driver.IdleWanderPointIndex++;
                     BuildDriverWalkPath(driver, currentPosition, driver.MotelIdlePosition);
@@ -482,7 +501,6 @@ public partial class GameBootstrap
                     driver.Money -= motelFromBldg.ServiceFee;
                     SpawnMoneySpendPopup(driver.MotelIdlePosition, motelFromBldg.ServiceFee);
                     driver.DriverObject.SetActive(false);
-                    driver.SleepStartEnergy = driver.Energy;
                     driver.SleepTimer       = DriverSleepDuration;
                     driver.RestPhase        = DriverRestPhase.Sleeping;
                     SessionDebugLogger.Log("REST", $"{driver.DriverName} checked into motel after logistics shift — paid ${motelFromBldg.ServiceFee} (balance: ${driver.Money}).");
@@ -516,29 +534,6 @@ public partial class GameBootstrap
         }
 
         return false;
-    }
-
-    private void UpdateDriverEnergy(DriverAgent driver)
-    {
-        if (driver != null && driver.DutyMode == DriverDutyMode.Logistics)
-        {
-            if (!driver.IsOnActiveShift) return;
-            driver.Energy = Mathf.Max(0f, driver.Energy - DriverEnergyDrainPerSecond * Time.deltaTime * gameSpeedMultiplier);
-            return;
-        }
-
-        if (driver == null)
-        {
-            return;
-        }
-
-        if (driver.ShiftStartHour < 0) return; // idle — no energy drain
-        if (currentAssignedTrip == TripType.None && currentRefuelPhase == RefuelPhase.None)
-        {
-            return;
-        }
-
-        driver.Energy = Mathf.Max(0f, driver.Energy - DriverEnergyDrainPerSecond * Time.deltaTime * gameSpeedMultiplier);
     }
 
     private void UpdateDriverVisualAnimation(DriverAgent driver)

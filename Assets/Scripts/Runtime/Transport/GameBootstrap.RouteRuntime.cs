@@ -202,14 +202,11 @@ public partial class GameBootstrap
 
             case DriverRestPhase.Sleeping:
                 driver.SleepTimer -= Time.deltaTime * gameSpeedMultiplier;
-                float sleepProgress = 1f - Mathf.Clamp01(driver.SleepTimer / DriverSleepDuration);
-                driver.Energy = Mathf.Lerp(driver.SleepStartEnergy, DriverEnergyMax, sleepProgress);
                 if (driver.SleepTimer > 0f)
                 {
                     return;
                 }
 
-                driver.Energy = DriverEnergyMax;
                 driver.DriverObject.SetActive(true);
                 driver.DriverObject.transform.position = driver.MotelIdlePosition;
                 driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
@@ -218,9 +215,12 @@ public partial class GameBootstrap
                 driver.IdleWanderPointIndex = -1;
                 driver.IdleConversationTimer = 0f;
                 driver.IdleConversationPartnerId = -1;
+                ResetWorkerNeedTimer(driver, WorkerNeedKind.Sleep);
+                driver.SleptToday = true;
+                driver.LifeGoal = WorkerLifeGoal.Idle;
                 ApplyDriverPose(driver, 0f, 0f);
                 driver.RestPhase = DriverRestPhase.None;
-                SessionDebugLogger.Log("REST", $"{driver.DriverName} rested. Energy restored to {DriverEnergyMax}.");
+                SessionDebugLogger.Log("REST", $"{driver.DriverName} finished sleep; needs={FormatWorkerNeedsDebug(driver)}.");
                 return;
         }
     }

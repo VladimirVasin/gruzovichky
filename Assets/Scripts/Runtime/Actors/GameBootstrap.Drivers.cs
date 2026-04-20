@@ -191,18 +191,13 @@ public partial class GameBootstrap : MonoBehaviour
         truckAgent.Driver = null;
         driver.IsOnActiveShift = false;
         driver.WaitingForShiftAtParking = false;
-        driver.NeedsRestAfterTrip = false;
         driver.NeedsShiftEndReturn = false;
         driver.DriverObject.SetActive(true);
         driver.DriverObject.transform.position = GetDriverStandPointNearTruck();
         driver.DriverObject.transform.rotation = truckAgent.TruckObject != null ? truckAgent.TruckObject.transform.rotation : Quaternion.LookRotation(Vector3.forward, Vector3.up);
         driver.WalkAnimationTime = 0f;
         ApplyDriverPose(driver, 0f, 0f);
-        driver.WalkTargetWorld = GetDriverStandPointNearLocation(LocationType.Motel);
-        BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
-        driver.WalkPhase = DriverRescuePhase.ToMotelEntrance;
-        driver.RestPhase = DriverRestPhase.DriverWalkToMotel;
-        SessionDebugLogger.Log("REST", $"{driver.DriverName} left {truckAgent.DisplayName} in Parking and is walking to Motel.");
+        StartWorkerLifeCycleAfterWork(driver, driver.DriverObject.transform.position, $"{truckAgent.DisplayName} shift");
     }
 
     private bool ShouldLogisticsWorkerHeadToBuilding(DriverAgent driver)
@@ -331,12 +326,7 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkAnimationTime = 0f;
             ApplyDriverPose(driver, 0f, 0f);
 
-            Vector3 motelTarget = GetDriverStandPointNearLocation(LocationType.Motel);
-            driver.WalkTargetWorld = motelTarget;
-            BuildDriverWalkPath(driver, exitPos, motelTarget);
-            driver.WalkPhase = DriverRescuePhase.ToMotelFromBuilding;
-            driver.RestPhase = DriverRestPhase.DriverWalkToMotel;
-            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} left {building.Label} after shift and is walking to Motel.");
+            StartWorkerLifeCycleAfterWork(driver, exitPos, building.Label);
         }
         else if (onDeliveryWalk)
         {
@@ -350,12 +340,7 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WarehouseDeliveryTarget = null;
             PayDriverSalary(driver);
 
-            Vector3 motelTarget = GetDriverStandPointNearLocation(LocationType.Motel);
-            driver.WalkTargetWorld = motelTarget;
-            BuildDriverWalkPath(driver, driver.DriverObject.transform.position, motelTarget);
-            driver.WalkPhase = DriverRescuePhase.ToMotelFromBuilding;
-            driver.RestPhase = DriverRestPhase.DriverWalkToMotel;
-            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} shift ended mid-delivery — rerouted to Motel.");
+            StartWorkerLifeCycleAfterWork(driver, driver.DriverObject.transform.position, "interrupted delivery");
         }
         else
         {
@@ -440,12 +425,215 @@ public partial class GameBootstrap : MonoBehaviour
         SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} started delivery of {deliveryTarget.Value} resource to {locations[deliveryTarget.Value].Label}.");
     }
 
+    private void UpdateWorkerLifeCycleDailyState(DriverAgent driver)
+    {
+        if (driver == null) return;
+
+        int hour = GetCurrentHour();
+        if (driver.LifeCycleLastHour >= 0 && hour < driver.LifeCycleLastHour)
+        {
+            driver.NeedsCycleResetPending = true;
+            SessionDebugLogger.Log("LIFE", $"{driver.DriverName} queued a new daily life cycle; currentGoal={driver.LifeGoal}, rest={driver.RestPhase}, needs={FormatWorkerNeedsDebug(driver)}.");
+        }
+
+        driver.LifeCycleLastHour = hour;
+        if (!driver.NeedsCycleResetPending || driver.LifeGoal != WorkerLifeGoal.Idle && driver.LifeGoal != WorkerLifeGoal.None)
+        {
+            return;
+        }
+
+        if (driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || IsDriverInIdleActivity(driver))
+        {
+            return;
+        }
+
+        driver.WorkedToday = false;
+        driver.AteToday = false;
+        driver.HadLeisureToday = false;
+        driver.SleptToday = false;
+        driver.LifeGoal = WorkerLifeGoal.None;
+        driver.NeedsCycleResetPending = false;
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} started a new daily life cycle; helperFlags reset; needs remain timer-based: {FormatWorkerNeedsDebug(driver)}.");
+    }
+
+    private bool TryStartDueWorkerLifeCycle(DriverAgent driver)
+    {
+        if (driver == null ||
+            driver.DutyMode != DriverDutyMode.Local ||
+            driver.ShiftStartHour >= 0 ||
+            driver.AssignedTruckNumber > 0 ||
+            IsDriverIntercity(driver))
+        {
+            return false;
+        }
+
+        int hour = GetCurrentHour();
+        bool hasDueNeed = (!driver.AteToday && ShouldWorkerSeekMeal(driver)) ||
+                          (!driver.HadLeisureToday && ShouldWorkerSeekLeisure(driver)) ||
+                          (!driver.SleptToday && ShouldWorkerSeekSleep(driver));
+        if (hour < ProductionWorkEndHour || !hasDueNeed || (driver.AteToday && driver.HadLeisureToday && driver.SleptToday))
+        {
+            return false;
+        }
+
+        // Unemployed workers skip WORK, then run the same evening life chain.
+        driver.WorkedToday = true;
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} skipped WORK (unemployed/local); dueNeeds={FormatWorkerNeedsDebug(driver)}.");
+        return ContinueWorkerLifeCycle(driver, driver.DriverObject.transform.position);
+    }
+
+    private void StartWorkerLifeCycleAfterWork(DriverAgent driver, Vector3 startPosition, string sourceLabel)
+    {
+        if (driver == null) return;
+
+        UpdateWorkerLifeCycleDailyState(driver);
+        driver.WorkedToday = true;
+        driver.AteToday = false;
+        driver.HadLeisureToday = false;
+        driver.SleptToday = false;
+        driver.LifeGoal = WorkerLifeGoal.None;
+        driver.RestPhase = DriverRestPhase.None;
+        driver.IdleWanderPauseTimer = 0f;
+        driver.IdleWanderPointIndex = -1;
+        driver.IdleConversationTimer = 0f;
+        driver.IdleConversationPartnerId = -1;
+        ReleaseBench(driver);
+
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} completed WORK ({sourceLabel}); evaluating needs: {FormatWorkerNeedsDebug(driver)}.");
+        if (!ContinueWorkerLifeCycle(driver, startPosition))
+        {
+            driver.IdleWanderPauseTimer = Random.Range(WorkerFreeIdleMinDuration, WorkerFreeIdleMaxDuration);
+        }
+    }
+
+    private bool ContinueWorkerLifeCycle(DriverAgent driver, Vector3 startPosition)
+    {
+        if (driver == null || driver.DriverObject == null) return false;
+
+        if (!driver.AteToday && ShouldWorkerSeekMeal(driver) && TryStartWorkerLifeGoal(driver, WorkerLifeGoal.Eat, startPosition))
+        {
+            return true;
+        }
+
+        if (!driver.HadLeisureToday && ShouldWorkerSeekLeisure(driver) && TryStartWorkerLifeGoal(driver, WorkerLifeGoal.Leisure, startPosition))
+        {
+            return true;
+        }
+
+        if (!driver.SleptToday && ShouldWorkerSeekSleep(driver) && TryStartWorkerLifeGoal(driver, WorkerLifeGoal.Sleep, startPosition))
+        {
+            return true;
+        }
+
+        driver.LifeGoal = WorkerLifeGoal.Idle;
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} has no due life goals; entering Idle. helperFlags work={driver.WorkedToday}, eat={driver.AteToday}, leisure={driver.HadLeisureToday}, sleep={driver.SleptToday}; needs={FormatWorkerNeedsDebug(driver)}.");
+        return false;
+    }
+
+    private bool TryStartWorkerLifeGoal(DriverAgent driver, WorkerLifeGoal goal, Vector3 startPosition)
+    {
+        switch (goal)
+        {
+            case WorkerLifeGoal.Eat:
+                if (TryStartWorkerServiceVisit(driver, LocationType.Canteen, WorkerLifeGoal.Eat, DriverRescuePhase.IdleWalkToCanteen, WorkerCanteenDuration, startPosition))
+                {
+                    return true;
+                }
+                driver.AteToday = true;
+                SessionDebugLogger.Log("LIFE", $"{driver.DriverName} skipped Canteen today; reason={GetWorkerServiceUnavailableReason(driver, LocationType.Canteen)}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
+                return ContinueWorkerLifeCycle(driver, startPosition);
+
+            case WorkerLifeGoal.Leisure:
+                if (TryStartWorkerServiceVisit(driver, LocationType.Bar, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToBar, WorkerLeisureDuration, startPosition))
+                {
+                    return true;
+                }
+                StartWorkerFreeIdle(driver, startPosition, "leisure fallback");
+                return true;
+
+            case WorkerLifeGoal.Sleep:
+                if (TryStartWorkerSleep(driver, startPosition))
+                {
+                    return true;
+                }
+                driver.SleptToday = true;
+                SessionDebugLogger.Log("LIFE", $"{driver.DriverName} skipped Motel sleep today; reason={GetWorkerServiceUnavailableReason(driver, LocationType.Motel)}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Sleep)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
+                return false;
+        }
+
+        return false;
+    }
+
+    private bool TryStartWorkerServiceVisit(DriverAgent driver, LocationType type, WorkerLifeGoal goal, DriverRescuePhase walkPhase, float duration, Vector3 startPosition)
+    {
+        if (driver == null || !locations.TryGetValue(type, out LocationData service))
+        {
+            return false;
+        }
+
+        bool hasResource = type switch
+        {
+            LocationType.Canteen => service.FoodStored > 0,
+            LocationType.Bar     => service.AlcoholStored > 0,
+            _                    => true
+        };
+        if (!hasResource || driver.Money < service.ServiceFee)
+        {
+            return false;
+        }
+
+        float x = (service.Min.x + service.Max.x + 1) * 0.5f;
+        float z = (service.Min.y + service.Max.y + 1) * 0.5f;
+        Vector3 target = new(x + Random.Range(-0.2f, 0.2f), 0f, z + Random.Range(-0.2f, 0.2f));
+        driver.LifeGoal = goal;
+        driver.IdleActivityTimer = duration;
+        driver.WalkTargetWorld = target;
+        driver.WalkPhase = walkPhase;
+        driver.WalkAnimationTime = 0f;
+        BuildDriverWalkPath(driver, startPosition, target);
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} heading to {type} for {goal}; serviceFee=${service.ServiceFee}, need={FormatWorkerNeedDebug(driver, goal == WorkerLifeGoal.Eat ? WorkerNeedKind.Meal : WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
+        return true;
+    }
+
+    private bool TryStartWorkerSleep(DriverAgent driver, Vector3 startPosition)
+    {
+        if (driver == null || !locations.TryGetValue(LocationType.Motel, out LocationData motel) || driver.Money < motel.ServiceFee)
+        {
+            return false;
+        }
+
+        driver.LifeGoal = WorkerLifeGoal.Sleep;
+        driver.WalkTargetWorld = GetDriverStandPointNearLocation(LocationType.Motel);
+        driver.WalkPhase = DriverRescuePhase.ToMotelEntrance;
+        driver.RestPhase = DriverRestPhase.DriverWalkToMotel;
+        driver.WalkAnimationTime = 0f;
+        BuildDriverWalkPath(driver, startPosition, driver.WalkTargetWorld);
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} heading to Motel for SLEEP; serviceFee=${motel.ServiceFee}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Sleep)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
+        return true;
+    }
+
+    private void StartWorkerFreeIdle(DriverAgent driver, Vector3 startPosition, string reason)
+    {
+        if (driver == null) return;
+
+        driver.LifeGoal = WorkerLifeGoal.Leisure;
+        driver.HadLeisureToday = false;
+        driver.IdleActivityTimer = Random.Range(WorkerFreeIdleMinDuration, WorkerFreeIdleMaxDuration);
+        driver.WalkPhase = DriverRescuePhase.IdlePhoneCall;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        driver.WalkAnimationTime = 0f;
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} started free idle ({reason}) for {driver.IdleActivityTimer:0.0}s; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
+    }
+
     private void UpdateDriverIdleWander(DriverAgent driver)
     {
         if (driver == null || driver.DriverObject == null)
         {
             return;
         }
+
+        UpdateWorkerLifeCycleDailyState(driver);
 
         if (driver.IsArrivingByBus ||
             driver.RestPhase != DriverRestPhase.None ||
@@ -509,12 +697,31 @@ public partial class GameBootstrap : MonoBehaviour
             driver.IdleActivityTimer -= Time.deltaTime * gameSpeedMultiplier;
             if (driver.IdleActivityTimer <= 0f)
             {
+                WorkerLifeGoal completedGoal = driver.LifeGoal;
                 if (driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench)
                 {
                     ReleaseBench(driver);
                 }
 
                 driver.WalkPhase = DriverRescuePhase.None;
+                if (completedGoal == WorkerLifeGoal.Eat)
+                {
+                    ResetWorkerNeedTimer(driver, WorkerNeedKind.Meal);
+                    driver.AteToday = true;
+                    driver.LifeGoal = WorkerLifeGoal.None;
+                    ContinueWorkerLifeCycle(driver, driver.DriverObject.transform.position);
+                    return;
+                }
+
+                if (completedGoal == WorkerLifeGoal.Leisure)
+                {
+                    ResetWorkerNeedTimer(driver, WorkerNeedKind.Leisure);
+                    driver.HadLeisureToday = true;
+                    driver.LifeGoal = WorkerLifeGoal.None;
+                    ContinueWorkerLifeCycle(driver, driver.DriverObject.transform.position);
+                    return;
+                }
+
                 driver.IdleWanderPauseTimer = Random.Range(0.5f, 1.5f);
             }
 
@@ -529,6 +736,11 @@ public partial class GameBootstrap : MonoBehaviour
 
         if (driver.ShiftStartHour >= 0 &&
             (ShouldDriverHeadToShift(driver) || IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour)))
+        {
+            return;
+        }
+
+        if (TryStartDueWorkerLifeCycle(driver))
         {
             return;
         }
@@ -560,7 +772,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         float roll = Random.value;
 
-        if (roll < 0.35f)
+        if (roll < 0.45f)
         {
             driver.WalkPhase = DriverRescuePhase.IdleWander;
             driver.IdleWanderPointIndex++;
@@ -568,7 +780,7 @@ public partial class GameBootstrap : MonoBehaviour
             BuildDriverWalkPath(driver, startPosition, wanderTarget);
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started motel idle walk.");
         }
-        else if (roll < 0.55f && TryGetNearestFreeBench(startPosition, 14f, out int bIdx, out Vector3 bPos))
+        else if (roll < 0.75f && TryGetNearestFreeBench(startPosition, 14f, out int bIdx, out Vector3 bPos))
         {
             if (bIdx < benchOccupied.Length) benchOccupied[bIdx] = true;
             driver.SittingBenchIndex = bIdx;
@@ -578,29 +790,7 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPhase = DriverRescuePhase.IdleWalkToBench;
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading to bench {bIdx}.");
         }
-        else if (roll < 0.70f && locations.TryGetValue(LocationType.Bar, out LocationData bar) && driver.Money >= bar.ServiceFee && bar.AlcoholStored > 0)
-        {
-            driver.IdleActivityTimer = Random.Range(180f, 480f);
-            float bx = (bar.Min.x + bar.Max.x + 1) * 0.5f;
-            float bz = (bar.Min.y + bar.Max.y + 1) * 0.5f;
-            Vector3 barPos = new Vector3(bx + Random.Range(-0.2f, 0.2f), 0f, bz + Random.Range(-0.2f, 0.2f));
-            driver.WalkTargetWorld = barPos;
-            BuildDriverWalkPath(driver, startPosition, barPos);
-            driver.WalkPhase = DriverRescuePhase.IdleWalkToBar;
-            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading to Bar.");
-        }
-        else if (roll < 0.82f && locations.TryGetValue(LocationType.Canteen, out LocationData canteen) && driver.Money >= canteen.ServiceFee && canteen.FoodStored > 0)
-        {
-            driver.IdleActivityTimer = Random.Range(60f, 150f);
-            float cx = (canteen.Min.x + canteen.Max.x + 1) * 0.5f;
-            float cz = (canteen.Min.y + canteen.Max.y + 1) * 0.5f;
-            Vector3 canteenPos = new(cx + Random.Range(-0.2f, 0.2f), 0f, cz + Random.Range(-0.2f, 0.2f));
-            driver.WalkTargetWorld = canteenPos;
-            BuildDriverWalkPath(driver, startPosition, canteenPos);
-            driver.WalkPhase = DriverRescuePhase.IdleWalkToCanteen;
-            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading to Canteen.");
-        }
-        else if (roll < 0.90f)
+        else if (roll < 0.88f)
         {
             driver.IdleActivityTimer = Random.Range(20f, 45f);
             driver.WalkPhase = DriverRescuePhase.IdleSmoking;
@@ -1069,7 +1259,7 @@ public partial class GameBootstrap : MonoBehaviour
     private void EnsurePendingShiftSalaryPaid(DriverAgent driver)
     {
         if (driver == null) return;
-        // Driver may leave before shift end time (energy rest) — mark salary as pending so PayDriverSalary will execute
+        // Driver may leave before shift end time for the life-cycle flow; keep salary payout pending.
         if (driver.IsOnActiveShift && !driver.IsShiftSalaryPending)
         {
             driver.IsShiftSalaryPending = true;

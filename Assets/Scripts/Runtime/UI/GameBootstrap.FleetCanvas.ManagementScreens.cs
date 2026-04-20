@@ -12,6 +12,7 @@ public partial class GameBootstrap
 
     private DriversScreenUiRefs driversScreenUi;
     private bool isDriversScreenDirty = true;
+    private int  selectedWorkerPanelDriverId = 0;
     private bool isEconomyScreenDirty = true;
     private const int MaxDriverCardSlots = 8;
     private const int MaxShiftDriverSlots = 16;
@@ -44,14 +45,61 @@ public partial class GameBootstrap
 
     private sealed class DriversScreenUiRefs
     {
-        public GameObject CanvasRoot;
+        public GameObject    CanvasRoot;
         public RectTransform WindowRoot;
-        public RectTransform CardListContent;
-        public readonly List<DriverCardUi> Cards = new();
+        public RectTransform LeftPanel;
+        public RectTransform RightPanel;
+        public RectTransform WorkerListContent;
+        public readonly List<WorkerRowUi> WorkerRows = new();
         public Button HireButton;
         public Text   HireButtonText;
         public Text   HireStatusText;
         public Text   HeaderCountText;
+        // Right panel — detail view
+        public GameObject DetailPlaceholderCard;
+        public GameObject DetailContentRoot;
+        public Text  DetailNameText;
+        public RectTransform DetailPortraitRoot;
+        public Text  DetailSkillsTitleText;
+        public Text  DetailDrivingSkillText;
+        public Text  DetailStaminaSkillText;
+        public Text  DetailProductionSkillText;
+        public Text  DetailLogisticsSkillText;
+        public Text  DetailNeedsTitleText;
+        public Text  DetailMealNeedText;
+        public Text  DetailSleepNeedText;
+        public Text  DetailLeisureNeedText;
+        public GameObject DetailSkillTooltipRoot;
+        public Text DetailSkillTooltipTitleText;
+        public Text DetailSkillTooltipBodyText;
+        public Image DetailStatusBadge;
+        public Text  DetailStatusText;
+        public Text  DetailAssignmentLabel;
+        public Text  DetailAssignmentValue;
+        public Text  DetailShiftLabel;
+        public Text  DetailShiftText;
+        public Text  DetailDutyLabel;
+        public Text  DetailDutyStateText;
+        public Text  DetailSalaryLabel;
+        public Text  DetailSalaryText;
+        public Button DetailSalaryMinusBtn;
+        public Button DetailSalaryPlusBtn;
+        public Text  DetailBalanceLabel;
+        public Text  DetailBalanceText;
+        public Button DetailFocusButton;
+        public Text   DetailFocusButtonText;
+    }
+
+    private sealed class WorkerRowUi
+    {
+        public int           DriverId;
+        public RectTransform Root;
+        public Image         Background;
+        public Image         StatusBadgeBg;
+        public Text          NameText;
+        public Text          StatusText;
+        public Text          SubText;
+        public Button        SelectButton;
     }
 
     private sealed class ShiftsScreenUiRefs
@@ -73,6 +121,7 @@ public partial class GameBootstrap
         public RectTransform Root;
         public Image Background;
         public Text NameText;
+        public Text ProfessionText;
         public Text StatusText;
         public Button SelectButton;
     }
@@ -99,34 +148,25 @@ public partial class GameBootstrap
         public Button RemoveButton;
     }
 
+    private sealed class BuildItemUi
+    {
+        public BuildTool     Tool;
+        public Color         DefaultAccentColor;
+        public RectTransform Root;
+        public Button        Button;
+        public Image         CardBg;
+        public Image         AccentBg;
+        public Text          TitleText;
+        public Text          DescText;
+        public Text          StatusText;
+        public Image         StatusBg;
+    }
+
     private sealed class BuildScreenUiRefs
     {
-        public GameObject CanvasRoot;
+        public GameObject    CanvasRoot;
         public RectTransform WindowRoot;
-        public Button RoadButton;
-        public Text RoadButtonText;
-        public Text RoadTitleText;
-        public Text RoadDescriptionText;
-        public Button FurnitureFactoryButton;
-        public Text FurnitureFactoryButtonText;
-        public Text FurnitureFactoryTitleText;
-        public Text FurnitureFactoryDescriptionText;
-        public Button SawmillButton;
-        public Text SawmillButtonText;
-        public Text SawmillTitleText;
-        public Text SawmillDescriptionText;
-        public Button MotelButton;
-        public Text MotelButtonText;
-        public Text MotelTitleText;
-        public Text MotelDescriptionText;
-        public Button BarButton;
-        public Text BarButtonText;
-        public Text BarTitleText;
-        public Text BarDescriptionText;
-        public Button CanteenButton;
-        public Text CanteenButtonText;
-        public Text CanteenTitleText;
-        public Text CanteenDescriptionText;
+        public BuildItemUi[] Items;
     }
 
     private sealed class DriverCardUi
@@ -139,7 +179,6 @@ public partial class GameBootstrap
         public Text  StatusText;
         public Text  TruckLabelText;
         public Text  TruckText;
-        public Text  EnergyText;
         public Text  SalaryText;
         public Text  BalanceText;
         public Button SelectButton;
@@ -149,11 +188,20 @@ public partial class GameBootstrap
     {
         public GameObject CanvasRoot;
         public RectTransform WindowRoot;
-        public Text HeaderCountText;
         public Text TreasuryValueText;
-        public string LastHeaderCount;
         public string LastTreasuryValue;
-        public readonly List<ResourceSummaryRowUi> Rows = new();
+        // Tab buttons
+        public Button WarehouseTabBtn;
+        public Button ProductionTabBtn;
+        public Text   WarehouseTabText;
+        public Text   ProductionTabText;
+        // Tab panels
+        public GameObject WarehousePanel;
+        public GameObject ProductionPanel;
+        // Warehouse tab rows
+        public readonly List<ResourceSummaryRowUi> WarehouseRows = new();
+        // Production tab sections
+        public readonly List<ProductionBuildingSectionUi> ProductionSections = new();
     }
 
     private sealed class ResourceSummaryRowUi
@@ -163,6 +211,14 @@ public partial class GameBootstrap
         public string LastName;
         public string LastValue;
         public TradeResourceType ResourceType;
+    }
+
+    private sealed class ProductionBuildingSectionUi
+    {
+        public LocationType  BuildingType;
+        public Text          SectionHeaderText;
+        public GameObject    Root;
+        public readonly List<ResourceSummaryRowUi> Rows = new();
     }
 
     private sealed class EconomyScreenUiRefs
@@ -254,16 +310,18 @@ public partial class GameBootstrap
 
     private sealed class LogisticsSlotUi
     {
-        public LocationType BuildingType;
-        public Text         BuildingNameText;
-        public Text         AssignedWorkerText;
-        public Text         WorkHoursText;
-        public Button       AssignButton;
-        public Text         AssignButtonText;
-        public Button       RemoveButton;
+        public LocationType  BuildingType;
+        public RectTransform Root;
+        public Text          BuildingNameText;
+        public Text          AssignedWorkerText;
+        public Text          WorkHoursText;
+        public Button        AssignButton;
+        public Text          AssignButtonText;
+        public Button        RemoveButton;
     }
 
     private ResourcesScreenUiRefs resourcesScreenUi;
+    private bool isResourcesWarehouseTab = true;
     private EconomyScreenUiRefs economyScreenUi;
 
     private void SetupDriversScreenUi()
@@ -285,53 +343,61 @@ public partial class GameBootstrap
         scaler.matchWidthOrHeight = 0.5f;
         driversScreenUi.CanvasRoot = canvasObject;
 
-        // Window root
+        // Window root — two-panel layout (980×560)
         GameObject windowRoot = CreateUiObject("DriversWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 760f, 560f, -16f);
+        SetCenteredWindow(windowRect, 980f, 560f, -16f);
         driversScreenUi.WindowRoot = windowRect;
         Image windowBg = windowRoot.AddComponent<Image>();
         windowBg.color = DriversScreenTint;
         Outline windowOutline = windowRoot.AddComponent<Outline>();
         windowOutline.effectColor = new Color(0f, 0f, 0f, 0.28f);
         windowOutline.effectDistance = new Vector2(2f, -2f);
-
-        VerticalLayoutGroup rootLayout = windowRoot.AddComponent<VerticalLayoutGroup>();
+        HorizontalLayoutGroup rootLayout = windowRoot.AddComponent<HorizontalLayoutGroup>();
         rootLayout.padding = new RectOffset(18, 18, 18, 18);
-        rootLayout.spacing = 14;
+        rootLayout.spacing = 16;
         rootLayout.childControlWidth = true;
         rootLayout.childControlHeight = true;
-        rootLayout.childForceExpandWidth = true;
-        rootLayout.childForceExpandHeight = false;
+        rootLayout.childForceExpandWidth = false;
+        rootLayout.childForceExpandHeight = true;
+
+        // ── LEFT PANEL ────────────────────────────────────────────────────────
+        RectTransform leftPanel = CreateStyledPanel("WorkersLeftPanel", windowRoot.transform, FleetPanelColor);
+        driversScreenUi.LeftPanel = leftPanel;
+        LayoutElement leftPanelLE = leftPanel.gameObject.AddComponent<LayoutElement>();
+        leftPanelLE.preferredWidth = 324f;
+        leftPanelLE.minWidth      = 324f;
+        leftPanelLE.flexibleWidth  = 0f;
+        leftPanelLE.flexibleHeight = 1f;
+        VerticalLayoutGroup leftLayout = leftPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        leftLayout.padding = new RectOffset(16, 16, 16, 16);
+        leftLayout.spacing = 16;
+        leftLayout.childControlWidth = true;
+        leftLayout.childControlHeight = true;
+        leftLayout.childForceExpandWidth = true;
+        leftLayout.childForceExpandHeight = false;
 
         // Header
-        RectTransform headerRow = CreateLayoutRow("DriversHeaderRow", windowRoot.transform, 40f, 0f);
-        Text driversTitleText = CreateHeaderText("DriversTitle", headerRow, font, "Workers", 24, TextAnchor.MiddleLeft, Color.white);
-        driversTitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        RectTransform headerRow = CreateLayoutRow("DriversHeaderRow", leftPanel, 40f, 0f);
+        Text titleText = CreateHeaderText("DriversTitle", headerRow, font, "Workers", 24, TextAnchor.MiddleLeft, Color.white);
+        titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         driversScreenUi.HeaderCountText = CreateHeaderText("DriversCount", headerRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
 
-        // Scroll area
-        RectTransform listFrame = CreateStyledPanel("DriversListFrame", windowRoot.transform, FleetInsetColor);
-        LayoutElement listFrameLayout = listFrame.gameObject.AddComponent<LayoutElement>();
-        listFrameLayout.flexibleHeight = 1f;
-        listFrameLayout.minHeight = 280f;
-
-        // ScrollRect setup
-        GameObject scrollObj = CreateUiObject("DriversScrollView", listFrame);
+        // Scrollable compact worker rows
+        RectTransform listFrame = CreateStyledPanel("WorkersListFrame", leftPanel, FleetInsetColor);
+        listFrame.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        GameObject scrollObj = CreateUiObject("WorkersScrollView", listFrame);
         StretchRect(scrollObj.GetComponent<RectTransform>(), 8f, 8f, 8f, 8f);
-        Image scrollImg = scrollObj.AddComponent<Image>();
-        scrollImg.color = new Color(0f, 0f, 0f, 0f);
+        scrollObj.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
         ScrollRect scrollRect = scrollObj.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
         scrollRect.scrollSensitivity = 28f;
-
         GameObject viewportObj = CreateUiObject("Viewport", scrollObj.transform);
         StretchRect(viewportObj.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
-        Image viewportImage = viewportObj.AddComponent<Image>();
-        viewportImage.color = new Color(0f, 0f, 0f, 0.04f);
-        viewportImage.raycastTarget = true;
+        Image vpImg = viewportObj.AddComponent<Image>();
+        vpImg.color = new Color(0f, 0f, 0f, 0.04f);
+        vpImg.raycastTarget = true;
         viewportObj.AddComponent<Mask>().showMaskGraphic = false;
-
         GameObject contentObj = CreateUiObject("Content", viewportObj.transform);
         RectTransform contentRect = contentObj.GetComponent<RectTransform>();
         contentRect.anchorMin = new Vector2(0f, 1f);
@@ -348,18 +414,14 @@ public partial class GameBootstrap
         contentObj.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scrollRect.viewport = viewportObj.GetComponent<RectTransform>();
         scrollRect.content = contentRect;
-        driversScreenUi.CardListContent = contentRect;
+        driversScreenUi.WorkerListContent = contentRect;
 
-        // Pre-create card slots
         for (int i = 0; i < MaxDriverCardSlots; i++)
-        {
-            driversScreenUi.Cards.Add(CreateDriverCardV2(contentRect, font, i));
-        }
+            driversScreenUi.WorkerRows.Add(CreateWorkerRow(contentRect, font, i));
 
         // Hire section
-        RectTransform hireSection = CreateStyledPanel("HireSection", windowRoot.transform, FleetInsetColor);
-        LayoutElement hireSectionLayout = hireSection.gameObject.AddComponent<LayoutElement>();
-        hireSectionLayout.preferredHeight = 96f;
+        RectTransform hireSection = CreateStyledPanel("HireSection", leftPanel, FleetInsetColor);
+        hireSection.gameObject.AddComponent<LayoutElement>().preferredHeight = 96f;
         VerticalLayoutGroup hireLayout = hireSection.gameObject.AddComponent<VerticalLayoutGroup>();
         hireLayout.padding = new RectOffset(18, 18, 16, 14);
         hireLayout.spacing = 10;
@@ -368,11 +430,8 @@ public partial class GameBootstrap
         hireLayout.childControlHeight = true;
         hireLayout.childForceExpandWidth = true;
         hireLayout.childForceExpandHeight = false;
-
         driversScreenUi.HireButton = CreateButton("HireDriverButton", hireSection, font, out driversScreenUi.HireButtonText, "Hire New Worker", 16, FleetPrimaryButtonColor, Color.white);
-        LayoutElement hireButtonLayout = driversScreenUi.HireButton.gameObject.AddComponent<LayoutElement>();
-        hireButtonLayout.preferredHeight = 44f;
-        hireButtonLayout.minWidth = 320f;
+        driversScreenUi.HireButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
         driversScreenUi.HireButton.onClick.AddListener(() =>
         {
             LogUiInput("Drivers Canvas: clicked Hire New Driver");
@@ -387,9 +446,253 @@ public partial class GameBootstrap
         });
         driversScreenUi.HireStatusText = CreateBodyText("HireStatus", hireSection, font, string.Empty, 12, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
 
+        // ── RIGHT PANEL ───────────────────────────────────────────────────────
+        RectTransform rightPanel = CreateStyledPanel("WorkersDetailPanel", windowRoot.transform, FleetPanelColor);
+        driversScreenUi.RightPanel = rightPanel;
+        LayoutElement rightPanelLE = rightPanel.gameObject.AddComponent<LayoutElement>();
+        rightPanelLE.flexibleWidth  = 1f;
+        rightPanelLE.flexibleHeight = 1f;
+        VerticalLayoutGroup rightLayout = rightPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        rightLayout.padding = new RectOffset(18, 18, 18, 18);
+        rightLayout.spacing = 14;
+        rightLayout.childControlWidth = true;
+        rightLayout.childControlHeight = true;
+        rightLayout.childForceExpandWidth = true;
+        rightLayout.childForceExpandHeight = false;
+
+        // Placeholder card (shown when nothing selected)
+        RectTransform placeholderCard = CreateSectionCard(rightPanel, font, string.Empty, out RectTransform placeholderBody, false);
+        placeholderCard.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        VerticalLayoutGroup plBodyLayout = placeholderBody.GetComponent<VerticalLayoutGroup>();
+        plBodyLayout.childAlignment = TextAnchor.MiddleCenter;
+        plBodyLayout.childForceExpandHeight = true;
+        CreateBodyText("DetailPlaceholder", placeholderBody, font, "Select a worker from the list to view details.", 15, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
+        driversScreenUi.DetailPlaceholderCard = placeholderCard.gameObject;
+
+        // Detail content (hidden until a worker is selected)
+        GameObject detailRoot = CreateUiObject("WorkerDetailRoot", rightPanel);
+        driversScreenUi.DetailContentRoot = detailRoot;
+        detailRoot.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        VerticalLayoutGroup detailGroup = detailRoot.AddComponent<VerticalLayoutGroup>();
+        detailGroup.spacing = 14;
+        detailGroup.childControlWidth = true;
+        detailGroup.childControlHeight = true;
+        detailGroup.childForceExpandWidth = true;
+        detailGroup.childForceExpandHeight = false;
+
+        // Name + status badge header row
+        RectTransform detailHeaderRow = CreateLayoutRow("DetailHeaderRow", detailRoot.transform, 36f, 12f);
+        driversScreenUi.DetailNameText = CreateHeaderText("DetailName", detailHeaderRow, font, string.Empty, 22, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailNameText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        RectTransform statusBadge = CreateStyledPanel("DetailStatusBadge", detailHeaderRow, new Color(0.24f, 0.29f, 0.36f, 1f));
+        driversScreenUi.DetailStatusBadge = statusBadge.GetComponent<Image>();
+        statusBadge.gameObject.AddComponent<LayoutElement>().preferredWidth = 120f;
+        driversScreenUi.DetailStatusText = CreateBodyText("DetailStatus", statusBadge, font, string.Empty, 12, TextAnchor.MiddleCenter, Color.white);
+        driversScreenUi.DetailStatusText.fontStyle = FontStyle.Bold;
+
+        // Procedural worker portrait, kept directly under the selected worker name.
+        RectTransform portraitCard = CreateStyledPanel("WorkerPortraitCard", detailRoot.transform, FleetInsetColor);
+        portraitCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 118f;
+        HorizontalLayoutGroup portraitLayout = portraitCard.gameObject.AddComponent<HorizontalLayoutGroup>();
+        portraitLayout.padding = new RectOffset(16, 16, 10, 10);
+        portraitLayout.spacing = 12f;
+        portraitLayout.childAlignment = TextAnchor.MiddleLeft;
+        portraitLayout.childControlWidth = true;
+        portraitLayout.childControlHeight = true;
+        portraitLayout.childForceExpandWidth = false;
+        portraitLayout.childForceExpandHeight = false;
+
+        driversScreenUi.DetailPortraitRoot = CreateUiObject("WorkerPortraitRoot", portraitCard).GetComponent<RectTransform>();
+        LayoutElement portraitRootLayout = driversScreenUi.DetailPortraitRoot.gameObject.AddComponent<LayoutElement>();
+        portraitRootLayout.preferredWidth = 112f;
+        portraitRootLayout.preferredHeight = 98f;
+        portraitRootLayout.minWidth = 112f;
+        portraitRootLayout.minHeight = 98f;
+
+        RectTransform skillsColumn = CreateUiObject("WorkerStatsColumn", portraitCard).GetComponent<RectTransform>();
+        skillsColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup skillsLayout = skillsColumn.gameObject.AddComponent<VerticalLayoutGroup>();
+        skillsLayout.spacing = 4f;
+        skillsLayout.childControlWidth = true;
+        skillsLayout.childControlHeight = true;
+        skillsLayout.childForceExpandWidth = true;
+        skillsLayout.childForceExpandHeight = false;
+        driversScreenUi.DetailSkillsTitleText = CreateHeaderText("WorkerStatsTitle", skillsColumn, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailSkillsTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        driversScreenUi.DetailDrivingSkillText = CreateBodyText("WorkerDrivingSkill", skillsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailDrivingSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        ConfigureWorkerSkillTooltip(driversScreenUi.DetailDrivingSkillText, WorkerSkillKind.Driving);
+        driversScreenUi.DetailStaminaSkillText = CreateBodyText("WorkerStaminaSkill", skillsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailStaminaSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        ConfigureWorkerSkillTooltip(driversScreenUi.DetailStaminaSkillText, WorkerSkillKind.Stamina);
+        driversScreenUi.DetailProductionSkillText = CreateBodyText("WorkerProductionSkill", skillsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailProductionSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        ConfigureWorkerSkillTooltip(driversScreenUi.DetailProductionSkillText, WorkerSkillKind.Production);
+        driversScreenUi.DetailLogisticsSkillText = CreateBodyText("WorkerLogisticsSkill", skillsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailLogisticsSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        ConfigureWorkerSkillTooltip(driversScreenUi.DetailLogisticsSkillText, WorkerSkillKind.Logistics);
+
+        RectTransform needsCard = CreateStyledPanel("WorkerNeedsCard", detailRoot.transform, FleetInsetColor);
+        needsCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 92f;
+        VerticalLayoutGroup needsLayout = needsCard.gameObject.AddComponent<VerticalLayoutGroup>();
+        needsLayout.padding = new RectOffset(16, 16, 8, 8);
+        needsLayout.spacing = 4f;
+        needsLayout.childControlWidth = true;
+        needsLayout.childControlHeight = true;
+        needsLayout.childForceExpandWidth = true;
+        needsLayout.childForceExpandHeight = false;
+        driversScreenUi.DetailNeedsTitleText = CreateHeaderText("WorkerNeedsTitle", needsCard, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailNeedsTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        driversScreenUi.DetailMealNeedText = CreateBodyText("WorkerMealNeed", needsCard, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailMealNeedText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        driversScreenUi.DetailSleepNeedText = CreateBodyText("WorkerSleepNeed", needsCard, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailSleepNeedText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        driversScreenUi.DetailLeisureNeedText = CreateBodyText("WorkerLeisureNeed", needsCard, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailLeisureNeedText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+
+        // Assignment info card — compact rows, label refs stored for post-localization update
+        RectTransform assignCard = CreateSectionCard(detailRoot.transform, font, string.Empty, out RectTransform assignBody, false);
+        assignCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
+        assignCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
+        assignBody.GetComponent<VerticalLayoutGroup>().spacing = 4;
+
+        RectTransform assignRow = CreateLayoutRow("AssignRow", assignBody, 20f, 12f);
+        driversScreenUi.DetailAssignmentLabel = CreateBodyText("AL", assignRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailAssignmentLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+        driversScreenUi.DetailAssignmentValue = CreateHeaderText("AV", assignRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailAssignmentValue.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        RectTransform shiftRow = CreateLayoutRow("ShiftRow", assignBody, 20f, 12f);
+        driversScreenUi.DetailShiftLabel = CreateBodyText("SL", shiftRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailShiftLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+        driversScreenUi.DetailShiftText = CreateHeaderText("SV", shiftRow, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailShiftText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        RectTransform dutyRow = CreateLayoutRow("DutyRow", assignBody, 20f, 12f);
+        driversScreenUi.DetailDutyLabel = CreateBodyText("DL", dutyRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailDutyLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+        driversScreenUi.DetailDutyStateText = CreateBodyText("DV", dutyRow, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        driversScreenUi.DetailDutyStateText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        // Stats card (salary, balance) — compact
+        RectTransform statsCard = CreateSectionCard(detailRoot.transform, font, string.Empty, out RectTransform statsBody, false);
+        statsCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
+        statsCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
+        statsBody.GetComponent<VerticalLayoutGroup>().spacing = 6;
+
+        RectTransform salaryRow = CreateLayoutRow("SalaryEditRow", statsBody, 28f, 6f);
+        driversScreenUi.DetailSalaryLabel = CreateBodyText("SRL", salaryRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailSalaryLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+        driversScreenUi.DetailSalaryMinusBtn = CreateButton("SalaryMinus", salaryRow, font, out Text minusTxt, "-", 14, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
+        minusTxt.fontStyle = FontStyle.Bold;
+        LayoutElement minusLE = driversScreenUi.DetailSalaryMinusBtn.gameObject.AddComponent<LayoutElement>();
+        minusLE.preferredWidth = 28f; minusLE.preferredHeight = 24f;
+        RectTransform salaryValPanel = CreateStyledPanel("SalaryValPanel", salaryRow, new Color(0.09f, 0.13f, 0.19f, 1f));
+        LayoutElement salaryValLE = salaryValPanel.gameObject.AddComponent<LayoutElement>();
+        salaryValLE.preferredWidth = 80f; salaryValLE.preferredHeight = 24f;
+        driversScreenUi.DetailSalaryText = CreateHeaderText("SalaryVal", salaryValPanel, font, string.Empty, 13, TextAnchor.MiddleCenter, Color.white);
+        driversScreenUi.DetailSalaryPlusBtn = CreateButton("SalaryPlus", salaryRow, font, out Text plusTxt, "+", 14, new Color(0.24f, 0.38f, 0.24f, 1f), Color.white);
+        plusTxt.fontStyle = FontStyle.Bold;
+        LayoutElement plusLE = driversScreenUi.DetailSalaryPlusBtn.gameObject.AddComponent<LayoutElement>();
+        plusLE.preferredWidth = 28f; plusLE.preferredHeight = 24f;
+        CreateBodyText("PerShift", salaryRow, font, "/ shift", 12, TextAnchor.MiddleLeft, FleetMutedTextColor).gameObject.AddComponent<LayoutElement>().preferredWidth = 44f;
+        driversScreenUi.DetailSalaryMinusBtn.onClick.AddListener(() =>
+        {
+            DriverAgent d = driverAgents.Find(x => x.DriverId == selectedWorkerPanelDriverId);
+            if (d == null) return;
+            d.Salary = Mathf.Max(0, d.Salary - 25);
+            isDriversScreenDirty = true;
+        });
+        driversScreenUi.DetailSalaryPlusBtn.onClick.AddListener(() =>
+        {
+            DriverAgent d = driverAgents.Find(x => x.DriverId == selectedWorkerPanelDriverId);
+            if (d == null) return;
+            d.Salary += 25;
+            isDriversScreenDirty = true;
+        });
+
+        RectTransform balanceRow = CreateLayoutRow("BalanceRow", statsBody, 20f, 12f);
+        driversScreenUi.DetailBalanceLabel = CreateBodyText("BL", balanceRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailBalanceLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+        driversScreenUi.DetailBalanceText = CreateHeaderText("BV", balanceRow, font, string.Empty, 14, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailBalanceText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        // Focus button
+        driversScreenUi.DetailFocusButton = CreateButton("FocusWorkerBtn", detailRoot.transform, font, out driversScreenUi.DetailFocusButtonText, "Focus on Worker", 14, new Color(0.25f, 0.33f, 0.46f, 1f), Color.white);
+        driversScreenUi.DetailFocusButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
+        driversScreenUi.DetailFocusButton.onClick.AddListener(() =>
+        {
+            DriverAgent d = driverAgents.Find(x => x.DriverId == selectedWorkerPanelDriverId);
+            if (d == null) return;
+            isDriversPanelOpen = false;
+            isDriversScreenDirty = true;
+            FocusDriver(d.DriverId);
+            if (d.DriverObject != null && d.DriverObject.activeSelf)
+            {
+                Vector3 pos = d.DriverObject.transform.position;
+                cameraFocusPoint = new Vector3(pos.x, 0f, pos.z);
+            }
+        });
+
+        detailRoot.SetActive(false);
+        SetupWorkerSkillTooltip(windowRect, font);
+
         AddOverlayCloseButton(windowRect, font);
         driversScreenUi.CanvasRoot.SetActive(false);
         UpdateDriversScreenUi();
+    }
+
+    private WorkerRowUi CreateWorkerRow(RectTransform parent, Font font, int index)
+    {
+        WorkerRowUi row = new();
+        GameObject rowObj = CreateUiObject($"WorkerRow{index + 1}", parent);
+        row.Root = rowObj.GetComponent<RectTransform>();
+        rowObj.AddComponent<LayoutElement>().preferredHeight = 66f;
+        row.Background = rowObj.AddComponent<Image>();
+        row.Background.color = DriversCardColor;
+        Outline outline = rowObj.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.22f);
+        outline.effectDistance = new Vector2(1f, -1f);
+        VerticalLayoutGroup rowLayout = rowObj.AddComponent<VerticalLayoutGroup>();
+        rowLayout.padding = new RectOffset(14, 14, 10, 10);
+        rowLayout.spacing = 5;
+        rowLayout.childControlWidth = true;
+        rowLayout.childControlHeight = true;
+        rowLayout.childForceExpandWidth = true;
+        rowLayout.childForceExpandHeight = false;
+
+        RectTransform nameRow = CreateLayoutRow($"WorkerNameRow{index}", rowObj.transform, 22f, 8f);
+        row.NameText = CreateHeaderText("Name", nameRow, font, string.Empty, 14, TextAnchor.MiddleLeft, Color.white);
+        row.NameText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        RectTransform badge = CreateStyledPanel($"WorkerStatusBadge{index}", nameRow, new Color(0.24f, 0.29f, 0.36f, 1f));
+        row.StatusBadgeBg = badge.GetComponent<Image>();
+        badge.gameObject.AddComponent<LayoutElement>().preferredWidth = 86f;
+        row.StatusText = CreateBodyText("Status", badge, font, string.Empty, 10, TextAnchor.MiddleCenter, Color.white);
+        row.StatusText.fontStyle = FontStyle.Bold;
+
+        row.SubText = CreateBodyText("SubText", rowObj.transform, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        row.SubText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+
+        row.SelectButton = rowObj.AddComponent<Button>();
+        ColorBlock rowColors = row.SelectButton.colors;
+        rowColors.normalColor = Color.white;
+        rowColors.highlightedColor = new Color(1f, 1f, 1f, 0.92f);
+        rowColors.pressedColor = new Color(0.88f, 0.88f, 0.88f, 1f);
+        rowColors.selectedColor = Color.white;
+        rowColors.fadeDuration = 0.08f;
+        row.SelectButton.colors = rowColors;
+
+        int rowIndex = index;
+        row.SelectButton.onClick.AddListener(() =>
+        {
+            if (rowIndex >= driverAgents.Count) return;
+            DriverAgent d = driverAgents[rowIndex];
+            selectedWorkerPanelDriverId = selectedWorkerPanelDriverId == d.DriverId ? 0 : d.DriverId;
+            PlayUiSound(uiSelectClip, 0.8f);
+            isDriversScreenDirty = true;
+        });
+
+        return row;
     }
 
     private DriverCardUi CreateDriverCard(RectTransform parent, Font font, int cardIndex)
@@ -430,11 +733,7 @@ public partial class GameBootstrap
         card.TruckText = CreateBodyText("Truck", cardObj.transform, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
         card.TruckText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
-        // Row 3: Energy
-        card.EnergyText = CreateBodyText("Energy", cardObj.transform, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        card.EnergyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
-
-        // Row 4: Salary + Balance
+        // Row 3: Salary + Balance
         RectTransform salaryRow = CreateLayoutRow($"SalaryRow{cardIndex}", cardObj.transform, 28f, 6f);
 
         CreateBodyText("SalaryLabel", salaryRow, font, "Salary:", 13, TextAnchor.MiddleLeft, FleetMutedTextColor)
@@ -561,21 +860,6 @@ public partial class GameBootstrap
         card.TruckText.fontStyle = FontStyle.Bold;
         card.TruckText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
-        RectTransform energyPanel = CreateStyledPanel($"DriverEnergyPanel{cardIndex}", infoRow, FleetCardMutedColor);
-        energyPanel.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        VerticalLayoutGroup energyPanelLayout = energyPanel.gameObject.AddComponent<VerticalLayoutGroup>();
-        energyPanelLayout.padding = new RectOffset(12, 12, 8, 8);
-        energyPanelLayout.spacing = 4;
-        energyPanelLayout.childControlWidth = true;
-        energyPanelLayout.childControlHeight = true;
-        energyPanelLayout.childForceExpandWidth = true;
-        energyPanelLayout.childForceExpandHeight = false;
-        CreateBodyText("EnergyLabel", energyPanel, font, "Energy", 11, TextAnchor.MiddleLeft, FleetMutedTextColor)
-            .gameObject.AddComponent<LayoutElement>().preferredHeight = 14f;
-        card.EnergyText = CreateBodyText("EnergyValue", energyPanel, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
-        card.EnergyText.fontStyle = FontStyle.Bold;
-        card.EnergyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
-
         RectTransform footerRow = CreateLayoutRow($"DriverCardFooter{cardIndex}", cardObj.transform, 52f, 12f);
 
         RectTransform salaryPanel = CreateStyledPanel($"DriverSalaryPanel{cardIndex}", footerRow, FleetCardMutedColor);
@@ -658,81 +942,143 @@ public partial class GameBootstrap
         if (!shouldShow) return;
         if (!isDriversScreenDirty) return;
 
-        driversScreenUi.HeaderCountText.text = $"{driverAgents.Count} Driver{(driverAgents.Count == 1 ? "" : "s")}";
+        driversScreenUi.HeaderCountText.text = $"{driverAgents.Count} {(driverAgents.Count == 1 ? L("Worker") : L("Workers"))}";
 
-        for (int i = 0; i < driversScreenUi.Cards.Count; i++)
+        // Left panel — compact row list
+        for (int i = 0; i < driversScreenUi.WorkerRows.Count; i++)
         {
-            DriverCardUi card = driversScreenUi.Cards[i];
+            WorkerRowUi row = driversScreenUi.WorkerRows[i];
             bool active = i < driverAgents.Count;
-            card.Root.gameObject.SetActive(active);
+            row.Root.gameObject.SetActive(active);
             if (!active) continue;
 
             DriverAgent d = driverAgents[i];
             TruckAgent truck = GetAssignedTruckForDriver(d);
+            row.DriverId = d.DriverId;
+            bool isSelected  = selectedWorkerPanelDriverId == d.DriverId;
+            bool isLogistics = d.DutyMode == DriverDutyMode.Logistics;
+            row.Background.color = isSelected ? DriversCardSelected : DriversCardColor;
 
-            card.DriverId = d.DriverId;
-            bool isSelected = selectedShiftDriverId == d.DriverId || selectedDriverId == d.DriverId;
-            card.Background.color = isSelected ? DriversCardSelected : DriversCardColor;
-            if (card.StatusBadgeBackground != null)
+            row.NameText.text = d.DriverName;
+
+            string status = d.IsArrivingByBus
+                ? "Arriving"
+                : IsDriverOnActiveTradeRun(d) ? "Trade Run"
+                : IsDriverIntercity(d)        ? "Intercity"
+                : isLogistics                 ? "Production"
+                : truck != null               ? "Assigned"
+                : "Idle";
+            row.StatusText.text = status;
+            if (row.StatusBadgeBg != null)
             {
-                card.StatusBadgeBackground.color = d.IsArrivingByBus
+                row.StatusBadgeBg.color = d.IsArrivingByBus
                     ? new Color(0.22f, 0.36f, 0.54f, 1f)
-                    : d.DutyMode == DriverDutyMode.Logistics
-                    ? new Color(0.20f, 0.38f, 0.26f, 1f)
-                    : truck != null
-                    ? new Color(0.35f, 0.29f, 0.14f, 1f)
+                    : isLogistics  ? new Color(0.20f, 0.38f, 0.26f, 1f)
+                    : truck != null ? new Color(0.35f, 0.29f, 0.14f, 1f)
                     : new Color(0.24f, 0.29f, 0.36f, 1f);
             }
 
-            card.NameText.text = d.DriverName;
-
-            bool isLogistics = d.DutyMode == DriverDutyMode.Logistics;
-            card.StatusText.text = d.IsArrivingByBus
-                ? "Arriving by Bus"
-                : IsDriverOnActiveTradeRun(d)
-                    ? "Trade Run"
-                    : IsDriverIntercity(d)
-                        ? "Intercity"
-                        : isLogistics
-                            ? "Production"
-                            : truck != null
-                                ? "Assigned"
-                                : "Idle";
-
-            if (isLogistics && d.AssignedBuildingType.HasValue)
-            {
-                if (card.TruckLabelText != null) card.TruckLabelText.text = "Building";
-                card.TruckText.text = GetSelectedLocationDisplayName(d.AssignedBuildingType.Value);
-            }
-            else
-            {
-                if (card.TruckLabelText != null) card.TruckLabelText.text = "Truck";
-                card.TruckText.text = truck != null ? truck.DisplayName : "Unassigned";
-            }
-
-            string energyMark = d.Energy <= DriverEnergyCriticalThreshold ? "  ⚠" : "";
-            card.EnergyText.text = $"{Mathf.CeilToInt(d.Energy)} / {Mathf.CeilToInt(DriverEnergyMax)}{energyMark}";
-
-            card.SalaryText.text = $"${d.Salary} / shift";
-            card.BalanceText.text = $"${d.Money}";
+            row.SubText.text = d.IsArrivingByBus              ? "On the way..."
+                : isLogistics && d.AssignedBuildingType.HasValue ? GetSelectedLocationDisplayName(d.AssignedBuildingType.Value)
+                : truck != null                                   ? truck.DisplayName
+                : L(GetWorkerOccupationLabel(d));
         }
 
+        // Right panel — visibility toggle (done before LocalizeCanvas so layout is correct)
+        DriverAgent sel = driverAgents.Find(d => d.DriverId == selectedWorkerPanelDriverId);
+        bool hasSel = sel != null;
+        if (driversScreenUi.DetailPlaceholderCard != null)
+            driversScreenUi.DetailPlaceholderCard.SetActive(!hasSel);
+        if (driversScreenUi.DetailContentRoot != null)
+            driversScreenUi.DetailContentRoot.SetActive(hasSel);
+
         bool hasMotel = locations.ContainsKey(LocationType.Motel);
-        bool canHire = hasMotel && money >= HireDriverCost && hiringDriverArrival == null;
+        bool canHire  = hasMotel && money >= HireDriverCost && hiringDriverArrival == null;
         driversScreenUi.HireButton.interactable = canHire;
-        driversScreenUi.HireButtonText.text = $"Hire New Worker — ${HireDriverCost}";
+        driversScreenUi.HireButtonText.text = $"{L("Hire New Worker")} — ${HireDriverCost}";
         driversScreenUi.HireStatusText.text = hiringDriverArrival != null
-            ? "Another driver is currently arriving by bus."
+            ? L("Another worker is currently arriving by bus.")
             : !hasMotel
-                ? "Build a Motel first so new drivers have somewhere to check in."
+                ? L("Build a Motel first so new workers have somewhere to check in.")
             : canHire
-                ? "New hires arrive at the bus stop before checking in at the motel."
-                : $"Need ${HireDriverCost} to hire a new driver.";
+                ? L("New hires arrive at the bus stop before checking in at the motel.")
+                : $"{L("Need")} ${HireDriverCost} {L("to hire a new worker.")}";
         driversScreenUi.HireStatusText.color = canHire ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
 
-        LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.CardListContent);
+        LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WorkerListContent);
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WindowRoot);
+
+        // Localize static texts first — BEFORE setting detail panel strings so they aren't re-processed
         LocalizeCanvas(driversScreenUi.CanvasRoot);
+
+        // Set right-panel detail texts after localization to avoid substring corruption
+        if (hasSel)
+        {
+            bool ru = IsRussianLanguage();
+            TruckAgent truck = GetAssignedTruckForDriver(sel);
+            bool isLogistics = sel.DutyMode == DriverDutyMode.Logistics;
+
+            driversScreenUi.DetailNameText.text = sel.DriverName;
+            UpdateWorkerPortraitUi(sel);
+            UpdateWorkerStatsUi(sel, ru);
+            UpdateWorkerNeedsUi(sel, ru);
+
+            string statusLabel = sel.IsArrivingByBus      ? (ru ? "В пути"      : "Arriving")
+                : IsDriverOnActiveTradeRun(sel) ? (ru ? "Торговля"    : "Trade Run")
+                : IsDriverIntercity(sel)        ? (ru ? "Межгород"    : "Intercity")
+                : isLogistics                   ? (ru ? "Производство": "Production")
+                : truck != null                 ? (ru ? "Назначен"    : "Assigned")
+                : (ru ? "Свободен" : "Idle");
+            driversScreenUi.DetailStatusText.text = statusLabel;
+            if (driversScreenUi.DetailStatusBadge != null)
+            {
+                driversScreenUi.DetailStatusBadge.color = sel.IsArrivingByBus
+                    ? new Color(0.22f, 0.36f, 0.54f, 1f)
+                    : isLogistics   ? new Color(0.20f, 0.38f, 0.26f, 1f)
+                    : truck != null ? new Color(0.35f, 0.29f, 0.14f, 1f)
+                    : new Color(0.24f, 0.29f, 0.36f, 1f);
+            }
+
+            // Labels (set post-localization so LocalizeCanvas can't corrupt them)
+            if (driversScreenUi.DetailAssignmentLabel != null)
+                driversScreenUi.DetailAssignmentLabel.text = isLogistics ? (ru ? "Здание" : "Building") : (ru ? "Грузовик" : "Truck");
+            if (driversScreenUi.DetailShiftLabel != null)
+                driversScreenUi.DetailShiftLabel.text = ru ? "Смена" : "Shift";
+            if (driversScreenUi.DetailDutyLabel != null)
+                driversScreenUi.DetailDutyLabel.text = ru ? "Статус" : "Status";
+            if (driversScreenUi.DetailSalaryLabel != null)
+                driversScreenUi.DetailSalaryLabel.text = ru ? "Зарплата" : "Salary";
+            if (driversScreenUi.DetailBalanceLabel != null)
+                driversScreenUi.DetailBalanceLabel.text = ru ? "Баланс" : "Balance";
+
+            // Values
+            driversScreenUi.DetailAssignmentValue.text = isLogistics && sel.AssignedBuildingType.HasValue
+                ? GetSelectedLocationDisplayName(sel.AssignedBuildingType.Value)
+                : truck != null ? truck.DisplayName : "—";
+
+            bool hasShift = sel.ShiftStartHour >= 0;
+            driversScreenUi.DetailShiftText.text = isLogistics ? GetProductionWorkRangeLabel()
+                : hasShift                        ? GetShiftRangeLabel(sel.ShiftStartHour)
+                : (ru ? "Не назначена" : "Not assigned");
+            driversScreenUi.DetailShiftText.color = (hasShift || isLogistics) ? FleetAccentColor : FleetMutedTextColor;
+
+            string dutyState = sel.IsInsideBuilding         ? (ru ? "Работает в здании" : "Inside building")
+                : sel.IsOnActiveShift                       ? (ru ? "На смене"          : "On shift")
+                : sel.RestPhase != DriverRestPhase.None     ? (ru ? "Отдыхает"          : "Resting")
+                : IsDriverBusyWalkPhase(sel)                ? (ru ? "В пути"            : "Commuting")
+                : (ru ? "Свободен в мотеле" : "Idle at motel");
+            driversScreenUi.DetailDutyStateText.text = dutyState;
+
+            driversScreenUi.DetailSalaryText.text  = $"${sel.Salary}";
+            driversScreenUi.DetailBalanceText.text = $"${sel.Money}";
+
+            bool canFocus = sel.DriverObject != null && sel.DriverObject.activeSelf;
+            driversScreenUi.DetailFocusButton.interactable = canFocus;
+            driversScreenUi.DetailFocusButtonText.text = canFocus
+                ? (ru ? $"Следить за {sel.DriverName}" : $"Focus on {sel.DriverName}")
+                : (ru ? $"{sel.DriverName} внутри здания" : $"{sel.DriverName} is inside");
+        }
+
         isDriversScreenDirty = false;
     }
 
@@ -855,7 +1201,13 @@ public partial class GameBootstrap
             rowLayout.childForceExpandWidth = true;
             rowLayout.childForceExpandHeight = false;
 
-            row.NameText = CreateHeaderText($"ShiftDriverName{i + 1}", rowObj.transform, font, string.Empty, 14, TextAnchor.MiddleLeft, Color.white);
+            RectTransform workerHeaderRow = CreateLayoutRow($"ShiftDriverHeaderRow{i + 1}", row.Root, 24f, 8f);
+            row.NameText = CreateHeaderText($"ShiftDriverName{i + 1}", workerHeaderRow, font, string.Empty, 14, TextAnchor.MiddleLeft, Color.white);
+            row.NameText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            row.ProfessionText = CreateBodyText($"ShiftDriverProfession{i + 1}", workerHeaderRow, font, string.Empty, 12, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
+            LayoutElement professionLayout = row.ProfessionText.gameObject.AddComponent<LayoutElement>();
+            professionLayout.preferredWidth = 170f;
+            professionLayout.flexibleWidth = 0f;
             row.StatusText = CreateBodyText($"ShiftDriverStatus{i + 1}", rowObj.transform, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
 
             row.SelectButton = rowObj.AddComponent<Button>();
@@ -1128,6 +1480,7 @@ public partial class GameBootstrap
         logLayout.childControlHeight = true;
         logLayout.childForceExpandWidth = true;
         logLayout.childForceExpandHeight = false;
+        logLayout.childAlignment = TextAnchor.UpperCenter;
 
         LocationType[] productionTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory, LocationType.Warehouse };
         string[] productionNames = { "Forest", "Sawmill", "Furniture Factory", "Warehouse" };
@@ -1135,7 +1488,10 @@ public partial class GameBootstrap
         {
             LogisticsSlotUi slot = new() { BuildingType = productionTypes[si] };
             RectTransform slotCard = CreateSectionCard(shiftsLogisticsPanel, font, string.Empty, out RectTransform slotBody, false);
-            slotCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 120f;
+            slot.Root = slotCard;
+            LayoutElement slotCardLE = slotCard.gameObject.AddComponent<LayoutElement>();
+            slotCardLE.preferredHeight = 120f;
+            slotCardLE.flexibleHeight  = 0f;
             VerticalLayoutGroup slotBodyLayout = slotBody.GetComponent<VerticalLayoutGroup>();
             slotBodyLayout.spacing = 4;
 
@@ -1165,6 +1521,10 @@ public partial class GameBootstrap
                 if (capturedIndex == 0)
                 {
                     CompleteForestAssignmentTutorial();
+                }
+                else if (capturedIndex == 1)
+                {
+                    CompleteSawmillWorkerAssignedTutorial();
                 }
             });
             slot.RemoveButton.onClick.AddListener(() =>
@@ -1201,7 +1561,7 @@ public partial class GameBootstrap
         if (!shouldShow) return;
         if (!isShiftsScreenDirty) return;
 
-        shiftsScreenUi.HeaderCountText.text = $"{driverAgents.Count} Driver{(driverAgents.Count == 1 ? "" : "s")}";
+        shiftsScreenUi.HeaderCountText.text = $"{driverAgents.Count} {(driverAgents.Count == 1 ? L("Worker") : L("Workers"))}";
 
         EnforceShiftsWindowLayout();
         ApplyShiftsTabVisuals();
@@ -1220,17 +1580,28 @@ public partial class GameBootstrap
             bool isSelected = selectedShiftDriverId == driver.DriverId;
             row.Background.color = isSelected ? ShiftsCardSelected : ShiftsCardColor;
             row.NameText.text = driver.DriverName;
+            if (row.ProfessionText != null)
+            {
+                row.ProfessionText.text = L(GetWorkerOccupationLabel(driver));
+                row.ProfessionText.color = driver.AssignedTruckNumber > 0 || driver.DutyMode != DriverDutyMode.Local
+                    ? FleetAccentColor
+                    : FleetSecondaryTextColor;
+            }
+
             bool isAssigned = driver.ShiftStartHour >= 0;
             bool isIntercity = IsDriverIntercity(driver);
             bool isLogistics = driver.DutyMode == DriverDutyMode.Logistics;
+            bool isTruckAssigned = driver.AssignedTruckNumber > 0;
             row.StatusText.text = isIntercity
-                ? "Intercity"
-                : isLogistics
-                    ? "Productions"
-                    : isAssigned
-                        ? $"Assigned: {GetShiftRangeLabel(driver.ShiftStartHour)}"
-                        : "Idle";
-            row.StatusText.color = isIntercity || isLogistics
+                ? L("Intercity")
+                : isTruckAssigned
+                    ? L("Logistics")
+                    : isLogistics
+                        ? L("Productions")
+                        : isAssigned
+                            ? $"{L("Assigned")}: {GetShiftRangeLabel(driver.ShiftStartHour)}"
+                            : L("Idle");
+            row.StatusText.color = isIntercity || isLogistics || isTruckAssigned
                 ? FleetAccentColor
                 : isAssigned ? new Color(0.62f, 0.92f, 0.62f, 1f) : FleetMutedTextColor;
         }
@@ -1452,17 +1823,35 @@ public partial class GameBootstrap
 
     private void UpdateLogisticsTabUi(DriverAgent selectedDriver)
     {
+        bool forestTutorialActive = IsTutorialEnabledForCurrentMode() && !hasShownForestWorkerStartedTutorial;
         for (int i = 0; i < logisticsSlots.Length; i++)
         {
             LogisticsSlotUi slot = logisticsSlots[i];
             if (slot == null) continue;
 
+            if (slot.Root != null)
+            {
+                bool isBuilt = locations.ContainsKey(slot.BuildingType);
+                bool visible = isBuilt && (!forestTutorialActive || slot.BuildingType == LocationType.Forest);
+                slot.Root.gameObject.SetActive(visible);
+                if (!visible) continue;
+            }
+
             DriverAgent assigned = driverAgents.Find(d =>
                 d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == slot.BuildingType);
 
+            bool ru = IsRussianLanguage();
+            string professionLabel = slot.BuildingType switch
+            {
+                LocationType.Forest           => L("Lumberjack"),
+                LocationType.Sawmill          => L("Sawmill Worker"),
+                LocationType.FurnitureFactory => L("Carpenter"),
+                LocationType.Warehouse        => L("Warehouse Loader"),
+                _                             => L("Worker"),
+            };
             string workerLabel = assigned != null
                 ? $"{assigned.DriverName}  —  {GetProductionWorkRangeLabel()}"
-                : "No worker assigned";
+                : ru ? $"{professionLabel} не назначен" : $"{professionLabel} not assigned";
             slot.AssignedWorkerText.text = workerLabel;
             slot.AssignedWorkerText.color = assigned != null ? FleetAccentColor : FleetSecondaryTextColor;
             if (slot.WorkHoursText != null)
@@ -1490,6 +1879,19 @@ public partial class GameBootstrap
     {
         if (driver == null || slot == null) return;
         if (driver.IsArrivingByBus) return;
+
+        TruckAgent assignedTruck = GetAssignedTruckForDriver(driver);
+        if (assignedTruck != null)
+        {
+            if (!UnassignDriverFromTruck(assignedTruck, driver))
+            {
+                SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} production assignment to {slot.BuildingType} blocked: could not unassign from {assignedTruck.DisplayName}.");
+                LogDriverReaction(driver, $"cannot start production at {slot.BuildingType}: still assigned to {assignedTruck.DisplayName}");
+                return;
+            }
+
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} auto-unassigned from {assignedTruck.DisplayName} before production assignment to {slot.BuildingType}.");
+        }
 
         // Remove from any existing building assignment first
         if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)

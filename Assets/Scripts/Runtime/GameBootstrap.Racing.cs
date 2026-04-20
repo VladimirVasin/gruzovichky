@@ -145,6 +145,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private Canvas racingHudCanvas;
     private Text racingHudText;
+    private Text racingControlHintText;
     private RectTransform racingSpeedometerNeedle;
     private Text racingSpeedometerText;
     private Light racingHeadlightL;
@@ -303,6 +304,38 @@ public partial class GameBootstrap : MonoBehaviour
     }
 
     // ── Minigame entry / exit ─────────────────────────────────────────────────
+
+    private bool TryHandleJoinRaceButtonClick(Vector2 screenPosition)
+    {
+        if (joinRaceButtonRoot == null ||
+            joinRaceButton == null ||
+            !joinRaceButtonRoot.activeSelf ||
+            isRacingActive)
+        {
+            return false;
+        }
+
+        RectTransform buttonRect = joinRaceButton.transform as RectTransform;
+        if (buttonRect == null ||
+            !RectTransformUtility.RectangleContainsScreenPoint(buttonRect, screenPosition))
+        {
+            return false;
+        }
+
+        SessionDebugLogger.Log("RACING", "Join race clicked via direct input fallback.");
+        StartRacingMinigame();
+        return true;
+    }
+
+    private bool UpdateJoinRaceButtonInputFallback()
+    {
+        if (Mouse.current == null || !Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            return false;
+        }
+
+        return TryHandleJoinRaceButtonClick(Mouse.current.position.ReadValue());
+    }
 
     private void StartRacingMinigame()
     {
@@ -614,6 +647,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
         if (racingHudCanvas != null) { Object.Destroy(racingHudCanvas.gameObject); racingHudCanvas = null; }
         racingHudText = null;
+        racingControlHintText = null;
         racingSpeedometerNeedle = null;
         racingSpeedometerText = null;
         racingHeadlightL = null;
@@ -673,26 +707,8 @@ public partial class GameBootstrap : MonoBehaviour
             if (kb.wKey.isPressed || kb.upArrowKey.isPressed)   throttle += 1f;
             if (kb.sKey.isPressed || kb.downArrowKey.isPressed) sBrakeReverse = true;
 
-            // Steering — mouse drag on wheel takes priority; keyboard is fallback
+            // Steering is intentionally mouse-only: the wheel is the control surface.
             UpdateWheelMouseDrag(dt);
-
-            if (!racingWheelDragging)
-            {
-                bool steerLeft  = kb.aKey.isPressed || kb.leftArrowKey.isPressed;
-                bool steerRight = kb.dKey.isPressed || kb.rightArrowKey.isPressed;
-                bool steering   = steerLeft || steerRight;
-                if (steering)
-                {
-                    // Keyboard overrides: drive wheel angle directly and zero inertia
-                    float steerTarget = steerLeft ? -1f : steerRight ? 1f : 0f;
-                    float absInput  = Mathf.Abs(racingSteerInput);
-                    float steerSpeed = absInput < 0.3f ? 4.0f : 0.9f;
-                    racingSteerInput    = Mathf.MoveTowards(racingSteerInput, steerTarget, steerSpeed * dt);
-                    racingWheelAngle    = racingSteerInput * 180f;
-                    racingWheelAngularVel = 0f;
-                }
-                // else: wheel inertia + centering handled inside UpdateWheelMouseDrag
-            }
 
             if (kb.escapeKey.wasPressedThisFrame)
             {
@@ -2099,6 +2115,36 @@ public partial class GameBootstrap : MonoBehaviour
         racingHudText.color     = new Color(0.92f, 0.90f, 0.86f);
         racingHudText.alignment = TextAnchor.UpperLeft;
         racingHudText.text      = "";
+
+        RectTransform hintPanel = CreateUiObject("RacingControlHintPanel", canvasObj.transform).GetComponent<RectTransform>();
+        hintPanel.anchorMin        = new Vector2(1f, 1f);
+        hintPanel.anchorMax        = new Vector2(1f, 1f);
+        hintPanel.pivot            = new Vector2(1f, 1f);
+        hintPanel.anchoredPosition = new Vector2(-18f, -18f);
+        hintPanel.sizeDelta        = new Vector2(440f, 132f);
+
+        Image hintBg = hintPanel.gameObject.AddComponent<Image>();
+        hintBg.color = new Color(0.04f, 0.05f, 0.08f, 0.86f);
+        Outline hintOutline = hintPanel.gameObject.AddComponent<Outline>();
+        hintOutline.effectColor    = new Color(0.88f, 0.62f, 0.08f, 0.55f);
+        hintOutline.effectDistance = new Vector2(2f, -2f);
+
+        racingControlHintText = new GameObject("RacingControlHintText").AddComponent<Text>();
+        racingControlHintText.transform.SetParent(hintPanel, false);
+        racingControlHintText.rectTransform.anchorMin = Vector2.zero;
+        racingControlHintText.rectTransform.anchorMax = Vector2.one;
+        racingControlHintText.rectTransform.offsetMin = new Vector2(18f, 12f);
+        racingControlHintText.rectTransform.offsetMax = new Vector2(-18f, -12f);
+        racingControlHintText.font      = font;
+        racingControlHintText.fontSize  = 17;
+        racingControlHintText.color     = new Color(0.96f, 0.93f, 0.84f, 1f);
+        racingControlHintText.alignment = TextAnchor.MiddleLeft;
+        racingControlHintText.text      =
+            "Управление\n" +
+            "Мышь: руль\n" +
+            "W / ↑: газ\n" +
+            "S / ↓: тормоз / назад\n" +
+            "ESC: выйти";
 
         SetupSpeedometer(canvasObj.transform, font);
     }
