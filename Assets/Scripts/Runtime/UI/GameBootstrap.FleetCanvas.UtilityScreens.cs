@@ -22,6 +22,7 @@ public partial class GameBootstrap
             unlockedBuildTools.Add(BuildTool.FurnitureFactory);
             unlockedBuildTools.Add(BuildTool.Bar);
             unlockedBuildTools.Add(BuildTool.Canteen);
+            unlockedBuildTools.Add(BuildTool.GamblingHall);
         }
     }
 
@@ -61,7 +62,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("BuildWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 580f, 574f, -16f);
+        SetCenteredWindow(windowRect, 580f, 660f, -16f);
         buildScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();
@@ -82,22 +83,40 @@ public partial class GameBootstrap
         Text buildTitle = CreateHeaderText("BuildTitle", headerRow, font, "Build", 22, TextAnchor.MiddleLeft, Color.white);
         buildTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        RectTransform cardList = CreateUiObject("BuildCardList", windowRoot.transform).GetComponent<RectTransform>();
-        VerticalLayoutGroup cardListLayout = cardList.gameObject.AddComponent<VerticalLayoutGroup>();
+        GameObject buildScrollGo = CreateUiObject("BuildScrollView", windowRoot.transform);
+        buildScrollGo.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        ScrollRect buildScroll = buildScrollGo.AddComponent<ScrollRect>();
+        buildScrollGo.AddComponent<RectMask2D>();
+        buildScroll.horizontal = false; buildScroll.vertical = true;
+        buildScroll.movementType = ScrollRect.MovementType.Clamped;
+        buildScroll.scrollSensitivity = 30f; buildScroll.inertia = false;
+
+        GameObject buildContentGo = CreateUiObject("BuildCardList", buildScrollGo.transform);
+        RectTransform cardList = buildContentGo.GetComponent<RectTransform>();
+        cardList.anchorMin = new Vector2(0f, 1f); cardList.anchorMax = new Vector2(1f, 1f);
+        cardList.pivot = new Vector2(0.5f, 1f);
+        cardList.anchoredPosition = Vector2.zero; cardList.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup cardListLayout = buildContentGo.AddComponent<VerticalLayoutGroup>();
         cardListLayout.spacing = 10f;
         cardListLayout.childControlWidth = true;
         cardListLayout.childControlHeight = true;
         cardListLayout.childForceExpandWidth = true;
         cardListLayout.childForceExpandHeight = false;
+        buildContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        buildScroll.content = cardList;
 
-        buildScreenUi.Items = new BuildItemUi[]
+        buildScreenUi.Categories = new BuildCategoryUi[]
         {
-            CreateBuildItemCard(cardList, font, BuildTool.Road,             "RD", "Road",              new Color(0.27f, 0.42f, 0.60f)),
-            CreateBuildItemCard(cardList, font, BuildTool.Motel,            "MT", "Motel",             new Color(0.24f, 0.48f, 0.36f)),
-            CreateBuildItemCard(cardList, font, BuildTool.Sawmill,          "SW", "Sawmill",           new Color(0.58f, 0.36f, 0.16f)),
-            CreateBuildItemCard(cardList, font, BuildTool.FurnitureFactory, "FF", "Furniture Factory", new Color(0.46f, 0.26f, 0.52f)),
-            CreateBuildItemCard(cardList, font, BuildTool.Bar,              "BR", "Bar",               new Color(0.52f, 0.20f, 0.20f)),
-            CreateBuildItemCard(cardList, font, BuildTool.Canteen,          "CT", "Canteen",           new Color(0.20f, 0.42f, 0.50f)),
+            CreateBuildCategory(cardList, font, "Infrastructure", "Инфраструктура", false,
+                (BuildTool.Road,             "RD", "Road",              new Color(0.27f, 0.42f, 0.60f)),
+                (BuildTool.Motel,            "MT", "Motel",             new Color(0.24f, 0.48f, 0.36f))),
+            CreateBuildCategory(cardList, font, "Production", "Производство", false,
+                (BuildTool.Sawmill,          "SW", "Sawmill",           new Color(0.58f, 0.36f, 0.16f)),
+                (BuildTool.FurnitureFactory, "FF", "Furniture Factory", new Color(0.46f, 0.26f, 0.52f))),
+            CreateBuildCategory(cardList, font, "Services", "Сервисы", false,
+                (BuildTool.Bar,          "BR", "Bar",          new Color(0.52f, 0.20f, 0.20f)),
+                (BuildTool.Canteen,      "CT", "Canteen",      new Color(0.20f, 0.42f, 0.50f)),
+                (BuildTool.GamblingHall, "GH", "Gambling Hall",new Color(0.52f, 0.38f, 0.08f))),
         };
 
         AddOverlayCloseButton(windowRect, font);
@@ -200,9 +219,60 @@ public partial class GameBootstrap
             isBuildScreenDirty = true;
         });
         item.Button = btn;
-
-
         return item;
+    }
+
+    private BuildCategoryUi CreateBuildCategory(RectTransform parent, Font font, string labelEn, string labelRu, bool expanded,
+        params (BuildTool tool, string abbrev, string title, Color color)[] toolDefs)
+    {
+        BuildCategoryUi cat = new BuildCategoryUi { LabelEn = labelEn, LabelRu = labelRu, IsExpanded = expanded };
+
+        RectTransform headerRoot = CreateUiObject("CatHeader_" + labelEn, parent).GetComponent<RectTransform>();
+        LayoutElement hLE = headerRoot.gameObject.AddComponent<LayoutElement>();
+        hLE.preferredHeight = 30f;
+        hLE.flexibleHeight  = 0f;
+        Image headerBg = headerRoot.gameObject.AddComponent<Image>();
+        headerBg.color = new Color(0.13f, 0.17f, 0.23f, 1f);
+        cat.HeaderRoot = headerRoot;
+
+        HorizontalLayoutGroup hLG = headerRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+        hLG.padding = new RectOffset(10, 10, 0, 0);
+        hLG.spacing = 6f;
+        hLG.childControlWidth  = true;
+        hLG.childControlHeight = true;
+        hLG.childForceExpandWidth  = false;
+        hLG.childForceExpandHeight = true;
+
+        Text arrowText = CreateBodyText("Arrow", headerRoot, font, expanded ? "▼" : "▶", 13, TextAnchor.MiddleLeft, new Color(0.65f, 0.72f, 0.82f));
+        arrowText.gameObject.AddComponent<LayoutElement>().preferredWidth = 14f;
+        cat.ArrowText = arrowText;
+
+        Text headerText = CreateBodyText("CatLabel", headerRoot, font, labelEn, 13, TextAnchor.MiddleLeft, new Color(0.78f, 0.84f, 0.92f));
+        headerText.fontStyle = FontStyle.Bold;
+        headerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        cat.HeaderText = headerText;
+
+        Button btn = headerRoot.gameObject.AddComponent<Button>();
+        btn.targetGraphic = headerBg;
+        ColorBlock cb = btn.colors;
+        cb.normalColor      = Color.white;
+        cb.highlightedColor = new Color(1.1f, 1.1f, 1.1f, 1f);
+        cb.pressedColor     = new Color(0.85f, 0.85f, 0.85f, 1f);
+        btn.colors = cb;
+        BuildCategoryUi capturedCat = cat;
+        btn.onClick.AddListener(() =>
+        {
+            capturedCat.IsExpanded = !capturedCat.IsExpanded;
+            isBuildScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.70f);
+        });
+
+        // Create items after header so they appear below it in the layout
+        cat.Items = new BuildItemUi[toolDefs.Length];
+        for (int i = 0; i < toolDefs.Length; i++)
+            cat.Items[i] = CreateBuildItemCard(parent, font, toolDefs[i].tool, toolDefs[i].abbrev, toolDefs[i].title, toolDefs[i].color);
+
+        return cat;
     }
 
     private void UpdateBuildScreenUi()
@@ -219,41 +289,48 @@ public partial class GameBootstrap
         if (!shouldShow) return;
         if (!isBuildScreenDirty) return;
 
-        for (int i = 0; i < buildScreenUi.Items.Length; i++)
+        bool ru = IsRussianLanguage();
+        foreach (BuildCategoryUi cat in buildScreenUi.Categories)
         {
-            BuildItemUi item     = buildScreenUi.Items[i];
-            bool        unlocked = IsBuildToolUnlocked(item.Tool);
-            bool        isActive = activeBuildTool == item.Tool;
-            bool        isBuilt  = GetBuildToolAlreadyBuilt(item.Tool);
+            bool anyUnlocked = false;
+            foreach (BuildItemUi ci in cat.Items)
+                if (IsBuildToolUnlocked(ci.Tool)) { anyUnlocked = true; break; }
 
-            item.Root.gameObject.SetActive(unlocked);
-            if (!unlocked) continue;
+            cat.HeaderRoot.gameObject.SetActive(anyUnlocked);
+            if (!anyUnlocked) continue;
 
-            // Card background + accent strip
-            item.CardBg.color   = isActive ? new Color(0.20f, 0.27f, 0.37f, 1f) : new Color(0.16f, 0.21f, 0.28f, 1f);
-            item.AccentBg.color = isActive ? FleetAccentColor : item.DefaultAccentColor;
+            cat.HeaderText.text = ru ? cat.LabelRu : cat.LabelEn;
+            cat.ArrowText.text  = cat.IsExpanded ? "▼" : "▶";
 
-            // Description
-            item.DescText.text = GetBuildDescription(item.Tool, isActive);
-
-            // Status badge
-            if (isActive)
+            foreach (BuildItemUi item in cat.Items)
             {
-                item.StatusBg.gameObject.SetActive(true);
-                item.StatusBg.color  = new Color(0.60f, 0.36f, 0.10f, 0.85f);
-                item.StatusText.text = "Active";
-            }
-            else if (isBuilt)
-            {
-                item.StatusBg.gameObject.SetActive(true);
-                item.StatusBg.color  = new Color(0.18f, 0.40f, 0.24f, 0.85f);
-                item.StatusText.text = "Built";
-            }
-            else
-            {
-                item.StatusBg.gameObject.SetActive(true);
-                item.StatusBg.color  = new Color(0.22f, 0.28f, 0.38f, 0.80f);
-                item.StatusText.text = "Available";
+                bool unlocked = IsBuildToolUnlocked(item.Tool);
+                bool visible  = unlocked && cat.IsExpanded;
+                item.Root.gameObject.SetActive(visible);
+                if (!visible) continue;
+
+                bool isActive = activeBuildTool == item.Tool;
+                bool isBuilt  = GetBuildToolAlreadyBuilt(item.Tool);
+
+                item.CardBg.color   = isActive ? new Color(0.20f, 0.27f, 0.37f, 1f) : new Color(0.16f, 0.21f, 0.28f, 1f);
+                item.AccentBg.color = isActive ? FleetAccentColor : item.DefaultAccentColor;
+                item.DescText.text  = GetBuildDescription(item.Tool, isActive);
+
+                if (isActive)
+                {
+                    item.StatusBg.color  = new Color(0.60f, 0.36f, 0.10f, 0.85f);
+                    item.StatusText.text = "Active";
+                }
+                else if (isBuilt)
+                {
+                    item.StatusBg.color  = new Color(0.18f, 0.40f, 0.24f, 0.85f);
+                    item.StatusText.text = "Built";
+                }
+                else
+                {
+                    item.StatusBg.color  = new Color(0.22f, 0.28f, 0.38f, 0.80f);
+                    item.StatusText.text = "Available";
+                }
             }
         }
 
@@ -272,6 +349,7 @@ public partial class GameBootstrap
             BuildTool.FurnitureFactory => locations.ContainsKey(LocationType.FurnitureFactory),
             BuildTool.Bar              => locations.ContainsKey(LocationType.Bar),
             BuildTool.Canteen          => locations.ContainsKey(LocationType.Canteen),
+            BuildTool.GamblingHall     => locations.ContainsKey(LocationType.GamblingHall),
             _                          => false
         };
     }
@@ -291,6 +369,7 @@ public partial class GameBootstrap
                 BuildTool.FurnitureFactory => ru ? $"Режим активен: поставь фабрику 3x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 3x2 furniture factory from its driveway cell. R rotates ({rot}).",
                 BuildTool.Bar              => ru ? $"Режим активен: поставь бар с подъездом. R — поворот ({rot})." : $"Mode active: place bar from its driveway cell. R rotates ({rot}).",
                 BuildTool.Canteen          => ru ? $"Режим активен: поставь столовую 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x2 canteen from its driveway cell. R rotates ({rot}).",
+                BuildTool.GamblingHall     => ru ? $"Режим активен: поставь игровые автоматы 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place gambling hall from its driveway cell. R rotates ({rot}).",
                 _                          => string.Empty
             };
         }
@@ -304,6 +383,7 @@ public partial class GameBootstrap
             BuildTool.FurnitureFactory => locations.ContainsKey(LocationType.FurnitureFactory) ? alreadyBuilt : (ru ? "Фабрика 3x2: 1 Доска + 1 Ткань = 1 Мебель." : "Place a 3x2 factory that turns 1 Board + 1 Textile into 1 Furniture."),
             BuildTool.Bar              => locations.ContainsKey(LocationType.Bar)              ? alreadyBuilt : (ru ? "Соцточка — водители собираются здесь отдыхать." : "Social hub — idle drivers gather here to rest."),
             BuildTool.Canteen          => locations.ContainsKey(LocationType.Canteen)          ? alreadyBuilt : (ru ? "Столовая: водители и рабочие платят $10 за обед." : "Service building: visiting drivers/workers pay $10 for a quick meal."),
+            BuildTool.GamblingHall     => locations.ContainsKey(LocationType.GamblingHall)     ? alreadyBuilt : (ru ? "Досуг: бесплатный вход — рабочие расслабляются здесь." : "Leisure: free entry — workers unwind here."),
             _                          => string.Empty
         };
     }

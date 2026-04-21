@@ -43,6 +43,34 @@ public partial class GameBootstrap
         PlayUiSound(moneySpendClip, 0.85f);
     }
 
+    private void SpawnMoneyEarnPopup(Vector3 worldPos, int amount)
+    {
+        GameObject root = new("MoneyEarnPopup");
+        root.transform.position = worldPos + Vector3.up * 0.7f;
+
+        TextMesh tm = root.AddComponent<TextMesh>();
+        tm.text      = $"+${amount}";
+        tm.fontSize  = 28;
+        tm.fontStyle = FontStyle.Bold;
+        tm.color     = new Color(0.2f, 0.85f, 0.25f, 1f);
+        tm.anchor    = TextAnchor.MiddleCenter;
+        tm.alignment = TextAlignment.Center;
+        tm.characterSize = 0.06f;
+
+        if (mainCamera != null)
+            root.transform.rotation = mainCamera.transform.rotation;
+
+        moneyPopups.Add(new MoneySpendPopup
+        {
+            Root      = root,
+            TextMesh  = tm,
+            Timer     = 0f,
+            TotalTime = 1.6f
+        });
+
+        PlayUiSound(moneySpendClip, 0.85f);
+    }
+
     private void UpdateMoneyPopups()
     {
         for (int i = moneyPopups.Count - 1; i >= 0; i--)

@@ -10,10 +10,11 @@ public partial class GameBootstrap
         public Text HeaderText;
         public Text OccupationText;
         public Text StatusText;
+        public GameObject TruckRow;
         public Text TruckText;
-        public Text ModeText;
         public Text ShiftText;
         public Text BalanceText;
+        public Text EffectsText;
         public Button OpenDriversButton;
         public Text OpenDriversButtonText;
         public Button CloseButton;
@@ -47,7 +48,8 @@ public partial class GameBootstrap
         root.anchorMax = new Vector2(1f, 0f);
         root.pivot = new Vector2(1f, 0f);
         root.anchoredPosition = new Vector2(-18f, 104f);
-        root.sizeDelta = new Vector2(360f, 310f);
+        root.sizeDelta = new Vector2(360f, 280f);
+        root.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         VerticalLayoutGroup rootLayout = root.gameObject.AddComponent<VerticalLayoutGroup>();
         rootLayout.padding = new RectOffset(16, 16, 16, 16);
         rootLayout.spacing = 12;
@@ -70,23 +72,36 @@ public partial class GameBootstrap
         driverQuickHud.OccupationText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
         RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
-        summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 152f;
+        summaryCard.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
         driverQuickHud.StatusText = CreateBodyText("Status", summaryBody, uiFont, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.StatusText.fontStyle = FontStyle.Bold;
         driverQuickHud.StatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
 
         RectTransform statsGrid = CreateUiObject("StatsGrid", summaryBody).GetComponent<RectTransform>();
-        GridLayoutGroup statsLayout = statsGrid.gameObject.AddComponent<GridLayoutGroup>();
-        statsLayout.cellSize = new Vector2(288f, 24f);
-        statsLayout.spacing = new Vector2(0f, 5f);
-        statsLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        statsLayout.constraintCount = 1;
-        statsGrid.gameObject.AddComponent<LayoutElement>().preferredHeight = 111f;
-        driverQuickHud.TruckText = CreateBodyText("TruckText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.ModeText = CreateBodyText("ModeText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        VerticalLayoutGroup statsLayout = statsGrid.gameObject.AddComponent<VerticalLayoutGroup>();
+        statsLayout.spacing = 5f;
+        statsLayout.childControlWidth = true;
+        statsLayout.childControlHeight = true;
+        statsLayout.childForceExpandWidth = true;
+        statsLayout.childForceExpandHeight = false;
+        statsGrid.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        GameObject truckRow = CreateUiObject("TruckRow", statsGrid);
+        truckRow.AddComponent<LayoutElement>().preferredHeight = 24f;
+        driverQuickHud.TruckRow = truckRow;
+        driverQuickHud.TruckText = CreateBodyText("TruckText", truckRow.GetComponent<RectTransform>(), uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.TruckText.rectTransform.anchorMin = Vector2.zero;
+        driverQuickHud.TruckText.rectTransform.anchorMax = Vector2.one;
+        driverQuickHud.TruckText.rectTransform.offsetMin = Vector2.zero;
+        driverQuickHud.TruckText.rectTransform.offsetMax = Vector2.zero;
+
         driverQuickHud.ShiftText = CreateBodyText("ShiftText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.ShiftText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         driverQuickHud.BalanceText = CreateBodyText("BalanceText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
+        driverQuickHud.BalanceText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        driverQuickHud.EffectsText = CreateBodyText("EffectsText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, new Color(0.72f, 0.88f, 0.68f, 1f));
+        driverQuickHud.EffectsText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
 
         RectTransform actionRow = CreateLayoutRow("DriverQuickHudActions", root, 34f, 0f);
         driverQuickHud.OpenDriversButton = CreateButton("OpenDriversBtn", actionRow, uiFont, out driverQuickHud.OpenDriversButtonText, "Open Drivers", 13, FleetPrimaryButtonColor, Color.white);
@@ -134,10 +149,20 @@ public partial class GameBootstrap
         driverQuickHud.OccupationText.text = L(occupationLabel);
 
         driverQuickHud.StatusText.text = GetDriverQuickHudStatusLabel(driver);
-        driverQuickHud.TruckText.text = FormatValueLine("Truck", truck != null ? truck.DisplayName : "None");
-        driverQuickHud.ModeText.text = FormatValueLine("Role", occupationLabel);
+
+        bool hasTruck = truck != null;
+        driverQuickHud.TruckRow.SetActive(hasTruck);
+        if (hasTruck)
+            driverQuickHud.TruckText.text = FormatValueLine("Truck", truck.DisplayName);
+
         driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—");
         driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
+
+        bool ru = IsRussianLanguage();
+        string effectsValue = driver.ActiveEffects.Count > 0
+            ? string.Join(", ", driver.ActiveEffects.ConvertAll(e => ru ? e.RussianName : e.EnglishName))
+            : "—";
+        driverQuickHud.EffectsText.text = FormatValueLine(ru ? "Эффекты" : "Effects", effectsValue);
     }
 
     private string GetDriverQuickHudStatusLabel(DriverAgent driver)
@@ -162,10 +187,12 @@ public partial class GameBootstrap
             return L("Wandering");
         if (driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen || driver.WalkPhase == DriverRescuePhase.IdleAtCanteen)
             return L("At Canteen");
+        if (driver.WalkPhase == DriverRescuePhase.IdleWalkToGamblingHall || driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall)
+            return L("At Gambling Hall");
         if (driver.ShiftStartHour >= 0)
             return string.Format(L("Shift at {0}:00"), driver.ShiftStartHour.ToString("00"));
 
-        return L("Idle");
+        return IsRussianLanguage() ? "Бездельничает" : "Idling";
     }
 
     private void FocusDriver(int driverId)

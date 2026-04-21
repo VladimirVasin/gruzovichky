@@ -779,7 +779,7 @@ public partial class GameBootstrap
     private void DrawTimeHud()
     {
         Rect panelRect = GetTimeHudRect();
-        GUI.Box(panelRect, L("Time"));
+        GUI.Box(panelRect, $"{(IsRussianLanguage() ? "День" : "Day")} {currentDay}");
         GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
         {
             alignment = TextAnchor.MiddleCenter,
@@ -867,6 +867,7 @@ public partial class GameBootstrap
             LocationType.BusStop => L("Bus Stop"),
             LocationType.Bar => L("Bar"),
             LocationType.Canteen => L("Canteen"),
+            LocationType.GamblingHall => L("Gambling Hall"),
             _ => L("Location")
         };
     }

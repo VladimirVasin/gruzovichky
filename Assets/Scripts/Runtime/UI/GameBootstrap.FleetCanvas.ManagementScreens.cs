@@ -65,10 +65,17 @@ public partial class GameBootstrap
         public Text  DetailStaminaSkillText;
         public Text  DetailProductionSkillText;
         public Text  DetailLogisticsSkillText;
+        public Text  DetailEffectsTitleText;
+        public RectTransform DetailEffectsListRoot;
+        public Text  DetailEffectsEmptyText;
+        public readonly List<Text> DetailEffectTexts = new();
         public Text  DetailNeedsTitleText;
         public Text  DetailMealNeedText;
         public Text  DetailSleepNeedText;
         public Text  DetailLeisureNeedText;
+        public Text  DetailPerksTitleText;
+        public Text  DetailPerksEmptyText;
+        public readonly List<Text> DetailPerkTexts = new();
         public GameObject DetailSkillTooltipRoot;
         public Text DetailSkillTooltipTitleText;
         public Text DetailSkillTooltipBodyText;
@@ -162,16 +169,26 @@ public partial class GameBootstrap
         public Image         StatusBg;
     }
 
+    private sealed class BuildCategoryUi
+    {
+        public string        LabelEn;
+        public string        LabelRu;
+        public bool          IsExpanded;
+        public RectTransform HeaderRoot;
+        public Text          HeaderText;
+        public Text          ArrowText;
+        public BuildItemUi[] Items;
+    }
+
     private sealed class BuildScreenUiRefs
     {
-        public GameObject    CanvasRoot;
-        public RectTransform WindowRoot;
-        public BuildItemUi[] Items;
+        public GameObject        CanvasRoot;
+        public RectTransform     WindowRoot;
+        public BuildCategoryUi[] Categories;
     }
 
     private sealed class DriverCardUi
     {
-        public int   DriverId;
         public RectTransform Root;
         public Image Background;
         public Image StatusBadgeBackground;
@@ -510,7 +527,9 @@ public partial class GameBootstrap
         portraitRootLayout.minHeight = 98f;
 
         RectTransform skillsColumn = CreateUiObject("WorkerStatsColumn", portraitCard).GetComponent<RectTransform>();
-        skillsColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        LayoutElement skillsColumnLayoutElement = skillsColumn.gameObject.AddComponent<LayoutElement>();
+        skillsColumnLayoutElement.preferredWidth = 178f;
+        skillsColumnLayoutElement.minWidth = 168f;
         VerticalLayoutGroup skillsLayout = skillsColumn.gameObject.AddComponent<VerticalLayoutGroup>();
         skillsLayout.spacing = 4f;
         skillsLayout.childControlWidth = true;
@@ -532,23 +551,99 @@ public partial class GameBootstrap
         driversScreenUi.DetailLogisticsSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
         ConfigureWorkerSkillTooltip(driversScreenUi.DetailLogisticsSkillText, WorkerSkillKind.Logistics);
 
+        RectTransform effectsDivider = CreateUiObject("WorkerEffectsDivider", portraitCard).GetComponent<RectTransform>();
+        Image effectsDividerImage = effectsDivider.gameObject.AddComponent<Image>();
+        effectsDividerImage.color = new Color(0.30f, 0.36f, 0.45f, 0.85f);
+        LayoutElement effectsDividerLayout = effectsDivider.gameObject.AddComponent<LayoutElement>();
+        effectsDividerLayout.preferredWidth = 2f;
+        effectsDividerLayout.minWidth = 2f;
+        effectsDividerLayout.preferredHeight = 86f;
+
+        RectTransform effectsColumn = CreateUiObject("WorkerEffectsColumn", portraitCard).GetComponent<RectTransform>();
+        effectsColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup effectsLayout = effectsColumn.gameObject.AddComponent<VerticalLayoutGroup>();
+        effectsLayout.spacing = 4f;
+        effectsLayout.childControlWidth = true;
+        effectsLayout.childControlHeight = true;
+        effectsLayout.childForceExpandWidth = true;
+        effectsLayout.childForceExpandHeight = false;
+        driversScreenUi.DetailEffectsTitleText = CreateHeaderText("WorkerEffectsTitle", effectsColumn, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailEffectsTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        driversScreenUi.DetailEffectsListRoot = CreateUiObject("WorkerEffectsList", effectsColumn).GetComponent<RectTransform>();
+        LayoutElement effectsListLayout = driversScreenUi.DetailEffectsListRoot.gameObject.AddComponent<LayoutElement>();
+        effectsListLayout.preferredHeight = 64f;
+        effectsListLayout.flexibleHeight = 1f;
+        VerticalLayoutGroup effectsListGroup = driversScreenUi.DetailEffectsListRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        effectsListGroup.spacing = 1f;
+        effectsListGroup.childControlWidth = true;
+        effectsListGroup.childControlHeight = true;
+        effectsListGroup.childForceExpandWidth = true;
+        effectsListGroup.childForceExpandHeight = false;
+
+        driversScreenUi.DetailEffectsEmptyText = CreateBodyText("WorkerEffectsEmpty", driversScreenUi.DetailEffectsListRoot, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailEffectsEmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        for (int i = 0; i < WorkerEffectHudRowCount; i++)
+        {
+            Text effectText = CreateBodyText($"WorkerEffectRow{i + 1}", driversScreenUi.DetailEffectsListRoot, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+            effectText.gameObject.AddComponent<LayoutElement>().preferredHeight = 15f;
+            effectText.gameObject.SetActive(false);
+            driversScreenUi.DetailEffectTexts.Add(effectText);
+        }
+
         RectTransform needsCard = CreateStyledPanel("WorkerNeedsCard", detailRoot.transform, FleetInsetColor);
-        needsCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 92f;
-        VerticalLayoutGroup needsLayout = needsCard.gameObject.AddComponent<VerticalLayoutGroup>();
-        needsLayout.padding = new RectOffset(16, 16, 8, 8);
+        needsCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 104f;
+        HorizontalLayoutGroup needsCardLayout = needsCard.gameObject.AddComponent<HorizontalLayoutGroup>();
+        needsCardLayout.padding = new RectOffset(16, 16, 8, 8);
+        needsCardLayout.spacing = 12f;
+        needsCardLayout.childControlWidth = true;
+        needsCardLayout.childControlHeight = true;
+        needsCardLayout.childForceExpandWidth = false;
+        needsCardLayout.childForceExpandHeight = false;
+
+        RectTransform needsColumn = CreateUiObject("WorkerNeedsColumn", needsCard).GetComponent<RectTransform>();
+        needsColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup needsLayout = needsColumn.gameObject.AddComponent<VerticalLayoutGroup>();
         needsLayout.spacing = 4f;
         needsLayout.childControlWidth = true;
         needsLayout.childControlHeight = true;
         needsLayout.childForceExpandWidth = true;
         needsLayout.childForceExpandHeight = false;
-        driversScreenUi.DetailNeedsTitleText = CreateHeaderText("WorkerNeedsTitle", needsCard, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailNeedsTitleText = CreateHeaderText("WorkerNeedsTitle", needsColumn, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
         driversScreenUi.DetailNeedsTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
-        driversScreenUi.DetailMealNeedText = CreateBodyText("WorkerMealNeed", needsCard, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailMealNeedText = CreateBodyText("WorkerMealNeed", needsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailMealNeedText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
-        driversScreenUi.DetailSleepNeedText = CreateBodyText("WorkerSleepNeed", needsCard, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailSleepNeedText = CreateBodyText("WorkerSleepNeed", needsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailSleepNeedText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
-        driversScreenUi.DetailLeisureNeedText = CreateBodyText("WorkerLeisureNeed", needsCard, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailLeisureNeedText = CreateBodyText("WorkerLeisureNeed", needsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailLeisureNeedText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+
+        RectTransform perksDivider = CreateUiObject("WorkerPerksDivider", needsCard).GetComponent<RectTransform>();
+        Image perksDividerImage = perksDivider.gameObject.AddComponent<Image>();
+        perksDividerImage.color = new Color(0.30f, 0.36f, 0.45f, 0.85f);
+        LayoutElement perksDividerLayout = perksDivider.gameObject.AddComponent<LayoutElement>();
+        perksDividerLayout.preferredWidth = 2f;
+        perksDividerLayout.minWidth = 2f;
+        perksDividerLayout.preferredHeight = 78f;
+
+        RectTransform perksColumn = CreateUiObject("WorkerPerksColumn", needsCard).GetComponent<RectTransform>();
+        perksColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup perksLayout = perksColumn.gameObject.AddComponent<VerticalLayoutGroup>();
+        perksLayout.spacing = 4f;
+        perksLayout.childControlWidth = true;
+        perksLayout.childControlHeight = true;
+        perksLayout.childForceExpandWidth = true;
+        perksLayout.childForceExpandHeight = false;
+        driversScreenUi.DetailPerksTitleText = CreateHeaderText("WorkerPerksTitle", perksColumn, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailPerksTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        driversScreenUi.DetailPerksEmptyText = CreateBodyText("WorkerPerksEmpty", perksColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailPerksEmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        for (int i = 0; i < WorkerPerkHudRowCount; i++)
+        {
+            Text perkText = CreateBodyText($"WorkerPerkRow{i + 1}", perksColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+            perkText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+            perkText.gameObject.SetActive(false);
+            driversScreenUi.DetailPerkTexts.Add(perkText);
+        }
 
         // Assignment info card — compact rows, label refs stored for post-localization update
         RectTransform assignCard = CreateSectionCard(detailRoot.transform, font, string.Empty, out RectTransform assignBody, false);
@@ -1301,18 +1396,31 @@ public partial class GameBootstrap
         transportPanelLayout.preferredHeight = ShiftsTabContentHeight;
         transportPanelLayout.minHeight = ShiftsTabContentHeight;
         transportPanelLayout.flexibleHeight = 0f;
-        VerticalLayoutGroup transportLayout = transportPanelObj.AddComponent<VerticalLayoutGroup>();
+        ScrollRect transportScroll = transportPanelObj.AddComponent<ScrollRect>();
+        transportPanelObj.AddComponent<RectMask2D>();
+        transportScroll.horizontal = false; transportScroll.vertical = true;
+        transportScroll.movementType = ScrollRect.MovementType.Clamped;
+        transportScroll.scrollSensitivity = 30f; transportScroll.inertia = false;
+
+        GameObject transportContentGo = CreateUiObject("TransportContent", transportPanelObj.transform);
+        RectTransform transportContent = transportContentGo.GetComponent<RectTransform>();
+        transportContent.anchorMin = new Vector2(0f, 1f); transportContent.anchorMax = new Vector2(1f, 1f);
+        transportContent.pivot = new Vector2(0.5f, 1f);
+        transportContent.anchoredPosition = Vector2.zero; transportContent.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup transportLayout = transportContentGo.AddComponent<VerticalLayoutGroup>();
         transportLayout.spacing = 14;
         transportLayout.childControlWidth = true;
         transportLayout.childControlHeight = true;
         transportLayout.childForceExpandWidth = true;
         transportLayout.childForceExpandHeight = false;
+        transportContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        transportScroll.content = transportContent;
 
         for (int i = 0; i < ShiftPresetHours.Length; i++)
         {
             int shiftHour = ShiftPresetHours[i];
             ShiftCardUi card = new() { ShiftHour = shiftHour };
-            RectTransform cardRoot = CreateSectionCard(shiftsTransportPanel, font, string.Empty, out RectTransform cardBody, false);
+            RectTransform cardRoot = CreateSectionCard(transportContent, font, string.Empty, out RectTransform cardBody, false);
             cardRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 158f;
             VerticalLayoutGroup cardBodyLayout = cardBody.GetComponent<VerticalLayoutGroup>();
             cardBodyLayout.spacing = 8;
@@ -1433,7 +1541,7 @@ public partial class GameBootstrap
         }
 
         shiftsScreenUi.IntercitySlot = new IntercitySlotUi();
-        RectTransform intercityCard = CreateSectionCard(shiftsTransportPanel, font, string.Empty, out RectTransform intercityBody, false);
+        RectTransform intercityCard = CreateSectionCard(transportContent, font, string.Empty, out RectTransform intercityBody, false);
         intercityCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 142f;
         VerticalLayoutGroup intercityLayout = intercityBody.GetComponent<VerticalLayoutGroup>();
         intercityLayout.spacing = 8;
@@ -1474,20 +1582,33 @@ public partial class GameBootstrap
         logisticsPanelLayout.preferredHeight = ShiftsTabContentHeight;
         logisticsPanelLayout.minHeight = ShiftsTabContentHeight;
         logisticsPanelLayout.flexibleHeight = 0f;
-        VerticalLayoutGroup logLayout = logisticsPanelObj.AddComponent<VerticalLayoutGroup>();
+        ScrollRect logisticsScroll = logisticsPanelObj.AddComponent<ScrollRect>();
+        logisticsPanelObj.AddComponent<RectMask2D>();
+        logisticsScroll.horizontal = false; logisticsScroll.vertical = true;
+        logisticsScroll.movementType = ScrollRect.MovementType.Clamped;
+        logisticsScroll.scrollSensitivity = 30f; logisticsScroll.inertia = false;
+
+        GameObject logisticsContentGo = CreateUiObject("LogisticsContent", logisticsPanelObj.transform);
+        RectTransform logisticsContent = logisticsContentGo.GetComponent<RectTransform>();
+        logisticsContent.anchorMin = new Vector2(0f, 1f); logisticsContent.anchorMax = new Vector2(1f, 1f);
+        logisticsContent.pivot = new Vector2(0.5f, 1f);
+        logisticsContent.anchoredPosition = Vector2.zero; logisticsContent.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup logLayout = logisticsContentGo.AddComponent<VerticalLayoutGroup>();
         logLayout.spacing = 14;
         logLayout.childControlWidth = true;
         logLayout.childControlHeight = true;
         logLayout.childForceExpandWidth = true;
         logLayout.childForceExpandHeight = false;
-        logLayout.childAlignment = TextAnchor.UpperCenter;
+        logLayout.childAlignment = TextAnchor.UpperLeft;
+        logisticsContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        logisticsScroll.content = logisticsContent;
 
         LocationType[] productionTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory, LocationType.Warehouse };
         string[] productionNames = { "Forest", "Sawmill", "Furniture Factory", "Warehouse" };
         for (int si = 0; si < productionTypes.Length; si++)
         {
             LogisticsSlotUi slot = new() { BuildingType = productionTypes[si] };
-            RectTransform slotCard = CreateSectionCard(shiftsLogisticsPanel, font, string.Empty, out RectTransform slotBody, false);
+            RectTransform slotCard = CreateSectionCard(logisticsContent, font, string.Empty, out RectTransform slotBody, false);
             slot.Root = slotCard;
             LayoutElement slotCardLE = slotCard.gameObject.AddComponent<LayoutElement>();
             slotCardLE.preferredHeight = 120f;

@@ -42,6 +42,7 @@ public partial class GameBootstrap
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Meal, oldMeal, driver.LastMealNeedStatus, driver.HoursSinceMeal);
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Sleep, oldSleep, driver.LastSleepNeedStatus, driver.HoursSinceSleep);
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Leisure, oldLeisure, driver.LastLeisureNeedStatus, driver.HoursSinceLeisure);
+        SyncWorkerNeedEffects(driver);
 
         if (isDriversPanelOpen && selectedWorkerPanelDriverId == driver.DriverId)
         {
@@ -63,16 +64,22 @@ public partial class GameBootstrap
             case WorkerNeedKind.Meal:
                 driver.HoursSinceMeal = 0f;
                 driver.LastMealNeedStatus = WorkerNeedStatus.Ok;
+                RemoveWorkerEffect(driver, WorkerHungryEffectId);
+                RemoveWorkerEffect(driver, WorkerStarvingEffectId);
                 break;
 
             case WorkerNeedKind.Sleep:
                 driver.HoursSinceSleep = 0f;
                 driver.LastSleepNeedStatus = WorkerNeedStatus.Ok;
+                RemoveWorkerEffect(driver, WorkerSleepDeprivedEffectId);
+                RemoveWorkerEffect(driver, WorkerExhaustedEffectId);
                 break;
 
             case WorkerNeedKind.Leisure:
                 driver.HoursSinceLeisure = 0f;
                 driver.LastLeisureNeedStatus = WorkerNeedStatus.Ok;
+                RemoveWorkerEffect(driver, WorkerBoredEffectId);
+                RemoveWorkerEffect(driver, WorkerBurnedOutEffectId);
                 break;
         }
 
@@ -246,6 +253,8 @@ public partial class GameBootstrap
             driversScreenUi.DetailLeisureNeedText,
             FormatWorkerNeedLine(ru ? "\u0420\u0430\u0437\u0432\u043b\u0435\u0447\u0435\u043d\u0438\u0435" : "Leisure", driver.HoursSinceLeisure, driver.LastLeisureNeedStatus, ru),
             driver.LastLeisureNeedStatus);
+
+        UpdateWorkerPerksUi(driver, ru);
     }
 
     private void SetWorkerNeedText(Text text, string value, WorkerNeedStatus status)

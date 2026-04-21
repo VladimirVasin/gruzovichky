@@ -219,6 +219,7 @@ public partial class GameBootstrap
         { "Walking from Bus Stop", "Идёт от остановки" },
         { "Wandering", "Гуляет" },
         { "At Canteen", "В столовой" },
+        { "At Gambling Hall", "В автоматах" },
         { "Shift at {0}:00", "Смена в {0}:00" },
 
         { "Build Menu", "Строительство" },
@@ -227,6 +228,7 @@ public partial class GameBootstrap
         { "Motel", "Мотель" },
         { "Bar", "Бар" },
         { "Canteen", "Столовая" },
+        { "Gambling Hall", "Игровые автоматы" },
         { "Furniture Factory", "Мебельная фабрика" },
         { "Open Resources", "Открыть ресурсы" },
 
@@ -408,6 +410,7 @@ public partial class GameBootstrap
         isEconomyScreenDirty = true;
         isBuildScreenDirty = true;
         isWorldMapScreenDirty = true;
+        isStatesScreenDirty = true;
     }
 
     private void RefreshAllTextComponentsForLanguage()

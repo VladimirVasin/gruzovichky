@@ -105,6 +105,112 @@ public partial class GameBootstrap
         DrawWorkerPortraitAccessory(root, driver.PortraitAccessory, hair, ink);
     }
 
+    private void DrawWorkerPortraitScaled(DriverAgent driver, RectTransform root, float scale)
+    {
+        if (root == null || driver == null) return;
+        for (int i = root.childCount - 1; i >= 0; i--)
+            Destroy(root.GetChild(i).gameObject);
+
+        EnsureWorkerPortrait(driver);
+
+        Color bgA = new(0.09f, 0.12f, 0.17f, 1f);
+        Color bgB = new(0.13f, 0.17f, 0.23f, 1f);
+        CreatePortraitPart("PBP", root, Vector2.zero, new Vector2(108f * scale, 94f * scale), bgA);
+        CreatePortraitPart("PBD", root, new Vector2(0f, 5f * scale), new Vector2(88f * scale, 76f * scale), bgB);
+
+        Color skin      = WorkerPortraitSkinTones[Mathf.Clamp(driver.PortraitSkinTone, 0, WorkerPortraitSkinTones.Length - 1)];
+        Color hair      = WorkerPortraitHairColors[Mathf.Clamp(driver.PortraitHairColor, 0, WorkerPortraitHairColors.Length - 1)];
+        Color shirt     = WorkerPortraitShirtColors[Mathf.Abs(driver.DriverId) % WorkerPortraitShirtColors.Length];
+        Color shadowSkin = Color.Lerp(skin, Color.black, 0.18f);
+        Color ink       = new(0.07f, 0.08f, 0.10f, 1f);
+
+        float headWidth  = driver.PortraitHeadShape switch { 1 => 46f, 2 => 54f, _ => 50f } * scale;
+        float headHeight = (driver.PortraitHeadShape == 1 ? 46f : 50f) * scale;
+
+        CreatePortraitPart("PN",  root, new Vector2(0f, -23f * scale), new Vector2(15f * scale, 18f * scale), shadowSkin);
+        CreatePortraitPart("PSh", root, new Vector2(0f, -40f * scale), new Vector2(66f * scale, 26f * scale), shirt);
+        CreatePortraitPart("PC",  root, new Vector2(0f, -30f * scale), new Vector2(28f * scale, 9f  * scale), Color.Lerp(shirt, Color.white, 0.16f));
+        CreatePortraitPart("PLE", root, new Vector2(-headWidth * 0.5f - 4f * scale, 5f * scale), new Vector2(8f * scale, 16f * scale), shadowSkin);
+        CreatePortraitPart("PRE", root, new Vector2( headWidth * 0.5f + 4f * scale, 5f * scale), new Vector2(8f * scale, 16f * scale), shadowSkin);
+        CreatePortraitPart("PH",  root, new Vector2(0f, 6f * scale), new Vector2(headWidth, headHeight), skin);
+        CreatePortraitPart("PCh", root, new Vector2(headWidth * 0.18f, -4f * scale), new Vector2(10f * scale, 10f * scale), Color.Lerp(skin, Color.white, 0.12f));
+
+        DrawWorkerPortraitHairScaled(root, driver.PortraitHairStyle, hair, headWidth, headHeight, scale);
+        DrawWorkerPortraitEyesScaled(root, driver.PortraitEyeStyle, ink, scale);
+        CreatePortraitPart("PNo", root, new Vector2(0f, -1f * scale), new Vector2(5f * scale, 12f * scale), Color.Lerp(skin, Color.black, 0.12f));
+        DrawWorkerPortraitMouthScaled(root, driver.PortraitMouthStyle, ink, scale);
+        DrawWorkerPortraitAccessoryScaled(root, driver.PortraitAccessory, hair, ink, scale);
+    }
+
+    private static void DrawWorkerPortraitHairScaled(RectTransform root, int style, Color hair, float headWidth, float headHeight, float s)
+    {
+        CreatePortraitPart("PHT", root, new Vector2(0f, 5f * s + headHeight * 0.5f - 6f * s), new Vector2(headWidth + 8f * s, 14f * s), hair);
+        switch (style)
+        {
+            case 1:
+                CreatePortraitPart("PHL",  root, new Vector2(-headWidth * 0.38f, 15f * s), new Vector2(12f * s, 30f * s), hair);
+                CreatePortraitPart("PHRR", root, new Vector2( headWidth * 0.34f, 18f * s), new Vector2(10f * s, 22f * s), hair);
+                break;
+            case 2:
+                CreatePortraitPart("PHPK", root, new Vector2(10f * s, 34f * s), new Vector2(20f * s, 12f * s), Color.Lerp(hair, Color.white, 0.08f));
+                CreatePortraitPart("PHSB", root, new Vector2(-headWidth * 0.46f, 4f * s), new Vector2(7f * s, 22f * s), hair);
+                break;
+            case 3:
+                CreatePortraitPart("PHFC",  root, new Vector2(0f, 36f * s), new Vector2(headWidth + 18f * s, 8f * s), Color.Lerp(hair, Color.black, 0.22f));
+                CreatePortraitPart("PHFCB", root, new Vector2(18f * s, 30f * s), new Vector2(24f * s, 6f * s), Color.Lerp(hair, Color.black, 0.08f));
+                break;
+            default:
+                CreatePortraitPart("PHF",  root, new Vector2(-10f * s, 27f * s), new Vector2(22f * s, 11f * s), Color.Lerp(hair, Color.white, 0.06f));
+                CreatePortraitPart("PHRB", root, new Vector2(22f * s, 12f * s),  new Vector2(8f  * s, 26f * s), hair);
+                break;
+        }
+    }
+
+    private static void DrawWorkerPortraitEyesScaled(RectTransform root, int style, Color ink, float s)
+    {
+        float ew = (style == 2 ? 10f : 7f) * s;
+        float eh = (style == 1 ? 3f  : 5f) * s;
+        float y  = (style == 3 ? 9f  : 11f) * s;
+        CreatePortraitPart("PEL", root, new Vector2(-13f * s, y), new Vector2(ew, eh), ink);
+        CreatePortraitPart("PER", root, new Vector2( 13f * s, y), new Vector2(ew, eh), ink);
+        if (style == 2)
+        {
+            CreatePortraitPart("PBL", root, new Vector2(-13f * s, 18f * s), new Vector2(13f * s, 3f * s), ink);
+            CreatePortraitPart("PBR", root, new Vector2( 13f * s, 18f * s), new Vector2(13f * s, 3f * s), ink);
+        }
+    }
+
+    private static void DrawWorkerPortraitMouthScaled(RectTransform root, int style, Color ink, float s)
+    {
+        Color mouth = style == 2 ? new Color(0.42f, 0.12f, 0.10f, 1f) : ink;
+        Vector2 size = style switch { 1 => new Vector2(14f, 3f), 2 => new Vector2(10f, 5f), 3 => new Vector2(18f, 4f), _ => new Vector2(12f, 4f) } * s;
+        CreatePortraitPart("PMo", root, new Vector2(0f, -16f * s), size, mouth);
+        if (style == 3)
+            CreatePortraitPart("PMC", root, new Vector2(10f * s, -14f * s), new Vector2(4f * s, 3f * s), mouth);
+    }
+
+    private static void DrawWorkerPortraitAccessoryScaled(RectTransform root, int accessory, Color hair, Color ink, float s)
+    {
+        switch (accessory)
+        {
+            case 1:
+                CreatePortraitPart("PAG1", root, new Vector2(-13f * s, 10f * s), new Vector2(15f * s, 8f * s), new Color(0.02f, 0.03f, 0.04f, 0.72f));
+                CreatePortraitPart("PAG2", root, new Vector2( 13f * s, 10f * s), new Vector2(15f * s, 8f * s), new Color(0.02f, 0.03f, 0.04f, 0.72f));
+                CreatePortraitPart("PAG3", root, new Vector2(0f, 10f * s), new Vector2(8f * s, 3f * s), ink);
+                break;
+            case 2:
+                CreatePortraitPart("PAM1", root, new Vector2(-7f * s, -9f * s), new Vector2(13f * s, 4f * s), Color.Lerp(hair, Color.black, 0.1f));
+                CreatePortraitPart("PAM2", root, new Vector2( 7f * s, -9f * s), new Vector2(13f * s, 4f * s), Color.Lerp(hair, Color.black, 0.1f));
+                break;
+            case 3:
+                CreatePortraitPart("PAB", root, new Vector2(23f * s, -39f * s), new Vector2(9f * s, 9f * s), new Color(0.95f, 0.76f, 0.22f, 1f));
+                break;
+            case 4:
+                CreatePortraitPart("PAS", root, new Vector2(18f * s, 0f), new Vector2(3f * s, 18f * s), new Color(0.50f, 0.20f, 0.18f, 0.72f));
+                break;
+        }
+    }
+
     private static int StableWorkerPortraitHash(string value)
     {
         unchecked

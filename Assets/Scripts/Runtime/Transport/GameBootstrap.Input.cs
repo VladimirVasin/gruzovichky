@@ -18,7 +18,7 @@ public partial class GameBootstrap
             bool anyMenuOpen =
                 isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
                 isResourcesPanelOpen || isEconomyPanelOpen || isBuildPanelOpen || isWorldMapPanelOpen ||
-                isTruckDetailsOpen || isDriverDetailsOpen || activeBuildTool != BuildTool.None;
+                isStatesPanelOpen || isTruckDetailsOpen || isDriverDetailsOpen || activeBuildTool != BuildTool.None;
 
             if (anyMenuOpen)
             {
@@ -67,6 +67,11 @@ public partial class GameBootstrap
         else if (Keyboard.current.pKey.wasPressedThisFrame)
         {
             TogglePauseSpeed();
+        }
+
+        if (Keyboard.current.f9Key.wasPressedThisFrame)
+        {
+            ToggleDebugServicePanel();
         }
 
         if (Keyboard.current.bKey.wasPressedThisFrame)
@@ -187,7 +192,8 @@ public partial class GameBootstrap
                tool == BuildTool.Sawmill ||
                tool == BuildTool.Motel ||
                tool == BuildTool.Bar ||
-               tool == BuildTool.Canteen;
+               tool == BuildTool.Canteen ||
+               tool == BuildTool.GamblingHall;
     }
 
     private string GetBuildRotationLabel()
@@ -232,6 +238,7 @@ public partial class GameBootstrap
             isEconomyPanelOpen ||
             isWorldMapPanelOpen ||
             isBuildPanelOpen ||
+            isStatesPanelOpen ||
             isTruckDetailsOpen ||
             activeBuildTool != BuildTool.None;
 
@@ -242,6 +249,7 @@ public partial class GameBootstrap
         isEconomyPanelOpen = false;
         isWorldMapPanelOpen = false;
         isBuildPanelOpen = false;
+        isStatesPanelOpen = false;
         isTruckDetailsOpen = false;
         isDriverDetailsOpen = false;
         activeBuildTool = BuildTool.None;
@@ -336,7 +344,9 @@ public partial class GameBootstrap
 
         if (pan.sqrMagnitude > 0.0001f)
         {
-            cameraFocusPoint += pan.normalized * (CameraPanSpeed * cameraDeltaTime);
+            float zoomT = Mathf.InverseLerp(CameraMinHeight, CameraMaxHeight, cameraOffset.y);
+            float panSpeed = CameraPanSpeed * Mathf.Lerp(1f, 6f, zoomT);
+            cameraFocusPoint += pan.normalized * (panSpeed * cameraDeltaTime);
             isCameraRotatingToTarget = false;
         }
 
@@ -368,9 +378,28 @@ public partial class GameBootstrap
                 lastMousePosition = mousePosition;
             }
 
+            if (Mouse.current.middleButton.wasPressedThisFrame)
+            {
+                lastMiddleMousePosition = mousePosition;
+            }
+
+            if (Mouse.current.middleButton.isPressed)
+            {
+                Vector2 middleDelta = mousePosition - lastMiddleMousePosition;
+                if (middleDelta.sqrMagnitude > 0.01f)
+                {
+                    float zoomT = Mathf.InverseLerp(CameraMinHeight, CameraMaxHeight, cameraOffset.y);
+                    float dragMultiplier = CameraDragPanMultiplier * Mathf.Lerp(1f, 4f, zoomT);
+                    cameraFocusPoint -= right   * (middleDelta.x * dragMultiplier);
+                    cameraFocusPoint -= forward * (middleDelta.y * dragMultiplier);
+                    isCameraRotatingToTarget = false;
+                }
+                lastMiddleMousePosition = mousePosition;
+            }
+
             float scroll = Mouse.current.scroll.ReadValue().y;
             bool anyHudOpen = isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
-                isResourcesPanelOpen || isEconomyPanelOpen || isBuildPanelOpen || isWorldMapPanelOpen;
+                isResourcesPanelOpen || isEconomyPanelOpen || isBuildPanelOpen || isWorldMapPanelOpen || isStatesPanelOpen;
             if (Mathf.Abs(scroll) > 0.01f && !anyHudOpen)
             {
                 float currentDistance = cameraOffset.magnitude;
@@ -626,6 +655,7 @@ public partial class GameBootstrap
             BuildTool.Motel => TryPlaceMotelAtAnchor(cell),
             BuildTool.Bar => TryPlaceBarAtAnchor(cell),
             BuildTool.Canteen => TryPlaceCanteenAtAnchor(cell),
+            BuildTool.GamblingHall => TryPlaceGamblingHallAtAnchor(cell),
             _ => false
         };
 
@@ -926,6 +956,11 @@ public partial class GameBootstrap
         if (activeBuildTool == BuildTool.Canteen)
         {
             return GetCanteenPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
+        if (activeBuildTool == BuildTool.GamblingHall)
+        {
+            return GetGamblingHallPlacementPreview(cell, out previewPosition, out previewScale);
         }
 
         return false;

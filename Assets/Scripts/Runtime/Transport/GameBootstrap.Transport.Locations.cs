@@ -26,6 +26,7 @@ public partial class GameBootstrap
             FuelStored    = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
             AlcoholStored = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
             FoodStored    = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
+            BuildingBank  = type == LocationType.GamblingHall ? 50 : 0,
         };
 
         GameObject root = new(label);
@@ -115,6 +116,10 @@ public partial class GameBootstrap
         else if (type == LocationType.Canteen)
         {
             CreateCanteenDecoration(root.transform, center, min, max, anchor);
+        }
+        else if (type == LocationType.GamblingHall)
+        {
+            CreateGamblingHallDecoration(root.transform, center, min, max, anchor);
         }
         else
         {

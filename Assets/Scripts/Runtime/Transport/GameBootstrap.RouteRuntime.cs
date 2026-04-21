@@ -94,6 +94,7 @@ public partial class GameBootstrap
 
                 PlayTruckFx(parkingReturnCueClip, 0.64f);
                 AwardMoney(currentAssignedTripReward, "Client Delivery", $"Trip reward: {GetTripTitle(currentAssignedTrip)}");
+                ApplyWorkerRoadFocusEffect(driver);
                 SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} completed trip {GetTripTitle(currentAssignedTrip)} and earned ${currentAssignedTripReward}.");
                 currentAssignedTrip = TripType.None;
                 currentTripPhase = TripPhase.None;
@@ -216,6 +217,7 @@ public partial class GameBootstrap
                 driver.IdleConversationTimer = 0f;
                 driver.IdleConversationPartnerId = -1;
                 ResetWorkerNeedTimer(driver, WorkerNeedKind.Sleep);
+                ApplyWorkerRestedEffect(driver);
                 driver.SleptToday = true;
                 driver.LifeGoal = WorkerLifeGoal.Idle;
                 ApplyDriverPose(driver, 0f, 0f);

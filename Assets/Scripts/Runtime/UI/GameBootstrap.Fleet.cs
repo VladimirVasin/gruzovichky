@@ -60,6 +60,7 @@ public partial class GameBootstrap
         isEconomyPanelOpen = false;
         isBuildPanelOpen = false;
         isWorldMapPanelOpen = false;
+        isStatesPanelOpen = false;
         target = !wasOpen;
         // Clear persistent tutorial highlights when the highlighted button is clicked
         if (panelName == "Building")
@@ -103,6 +104,7 @@ public partial class GameBootstrap
         isEconomyScreenDirty = true;
         isBuildScreenDirty = true;
         isWorldMapScreenDirty = true;
+        isStatesScreenDirty = true;
         LogUiInput($"MenuBar: {(target ? "opened" : "closed")} {panelName}");
         PlayUiSound(target ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
     }
@@ -150,7 +152,8 @@ public partial class GameBootstrap
             MenuBtn("Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Trade",     ref isEconomyPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Building",  ref isBuildPanelOpen,     x, IsBuildMenuTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Map",       ref isWorldMapPanelOpen,  x);
+            MenuBtn("Map",       ref isWorldMapPanelOpen,  x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("States",    ref isStatesPanelOpen,    x);
         }
         finally
         {

@@ -72,6 +72,7 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase != DriverRescuePhase.IdleSittingOnBench &&
                driver.WalkPhase != DriverRescuePhase.IdleAtBar &&
                driver.WalkPhase != DriverRescuePhase.IdleAtCanteen &&
+               driver.WalkPhase != DriverRescuePhase.IdleAtGamblingHall &&
                driver.WalkPhase != DriverRescuePhase.IdleSmoking &&
                driver.WalkPhase != DriverRescuePhase.IdlePhoneCall;
     }
@@ -94,6 +95,8 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
+               driver.WalkPhase == DriverRescuePhase.IdleWalkToGamblingHall ||
+               driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
                driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
                driver.WalkPhase == DriverRescuePhase.IdlePhoneCall;
     }
@@ -499,6 +502,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IdleConversationPartnerId = -1;
         ReleaseBench(driver);
 
+        ApplyWorkerAfterWorkEffects(driver, driver.AssignedBuildingType);
         SessionDebugLogger.Log("LIFE", $"{driver.DriverName} completed WORK ({sourceLabel}); evaluating needs: {FormatWorkerNeedsDebug(driver)}.");
         if (!ContinueWorkerLifeCycle(driver, startPosition))
         {
@@ -544,10 +548,11 @@ public partial class GameBootstrap : MonoBehaviour
                 return ContinueWorkerLifeCycle(driver, startPosition);
 
             case WorkerLifeGoal.Leisure:
-                if (TryStartWorkerServiceVisit(driver, LocationType.Bar, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToBar, WorkerLeisureDuration, startPosition))
-                {
+                if (driver.Money >= WorkerGamblingMinBalance &&
+                    TryStartWorkerServiceVisit(driver, LocationType.GamblingHall, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToGamblingHall, WorkerGamblingHallDuration, startPosition))
                     return true;
-                }
+                if (TryStartWorkerServiceVisit(driver, LocationType.Bar, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToBar, WorkerLeisureDuration, startPosition))
+                    return true;
                 StartWorkerFreeIdle(driver, startPosition, "leisure fallback");
                 return true;
 
@@ -691,6 +696,7 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench ||
             driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
             driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
+            driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
             driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
             driver.WalkPhase == DriverRescuePhase.IdlePhoneCall)
         {
@@ -717,6 +723,17 @@ public partial class GameBootstrap : MonoBehaviour
                 {
                     ResetWorkerNeedTimer(driver, WorkerNeedKind.Leisure);
                     driver.HadLeisureToday = true;
+                    // Fallback: apply gambling money if animation never completed (HUD was closed)
+                    if (driver.GamblingMoneyPending)
+                    {
+                        driver.GamblingMoneyPending = false;
+                        int net = driver.GamblingPayout - driver.GamblingBet;
+                        driver.Money = Mathf.Max(0, driver.Money + net);
+                        SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} gambling fallback applied: net={net:+#;-#;0}, balance=${driver.Money}.");
+                    }
+                    driver.GamblingBet = 0;
+                    driver.GamblingPayout = 0;
+                    driver.GamblingMultiplier = 0;
                     driver.LifeGoal = WorkerLifeGoal.None;
                     ContinueWorkerLifeCycle(driver, driver.DriverObject.transform.position);
                     return;

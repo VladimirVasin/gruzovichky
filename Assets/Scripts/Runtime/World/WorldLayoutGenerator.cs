@@ -31,10 +31,10 @@ public static class WorldLayoutGenerator
             bool parkingOnLeft = parkingAnchor.x < gridWidth * 0.5f;
             bool parkingOnBottom = parkingAnchor.y < gridHeight * 0.5f;
 
-            int innerMinX = 4;
-            int innerMaxX = gridWidth - 5;
-            int innerMinY = 4;
-            int innerMaxY = gridHeight - 5;
+            int innerMinX = gridWidth / 8;
+            int innerMaxX = gridWidth - gridWidth / 8 - 1;
+            int innerMinY = gridHeight / 8;
+            int innerMaxY = gridHeight - gridHeight / 8 - 1;
             int horizontalMid = gridWidth / 2;
             int verticalMid = gridHeight / 2;
 
@@ -432,13 +432,13 @@ public static class WorldLayoutGenerator
     {
         return new GeneratedWorldLayout
         {
-            Parking = new WorldLocationPlacement { Min = new Vector2Int(2, 4), Max = new Vector2Int(4, 5), Anchor = new Vector2Int(3, 6) },
-            GasStation = new WorldLocationPlacement { Min = new Vector2Int(8, 8), Max = new Vector2Int(9, 9), Anchor = new Vector2Int(8, 10) },
-            Forest = new WorldLocationPlacement { Min = new Vector2Int(22, 19), Max = new Vector2Int(24, 21), Anchor = new Vector2Int(23, 18) },
-            Warehouse = new WorldLocationPlacement { Min = new Vector2Int(22, 10), Max = new Vector2Int(23, 11), Anchor = new Vector2Int(22, 9) },
-            Sawmill = new WorldLocationPlacement { Min = new Vector2Int(16, 22), Max = new Vector2Int(17, 23), Anchor = new Vector2Int(16, 21) },
-            Motel = new WorldLocationPlacement { Min = new Vector2Int(11, 11), Max = new Vector2Int(12, 12), Anchor = new Vector2Int(11, 10) },
-            BusStop = new WorldLocationPlacement { Min = new Vector2Int(14, 2), Max = new Vector2Int(15, 2), Anchor = new Vector2Int(15, 1) }
+            Parking = new WorldLocationPlacement { Min = new Vector2Int(4, 8), Max = new Vector2Int(8, 10), Anchor = new Vector2Int(6, 12) },
+            GasStation = new WorldLocationPlacement { Min = new Vector2Int(16, 16), Max = new Vector2Int(18, 18), Anchor = new Vector2Int(16, 20) },
+            Forest = new WorldLocationPlacement { Min = new Vector2Int(44, 38), Max = new Vector2Int(48, 42), Anchor = new Vector2Int(46, 36) },
+            Warehouse = new WorldLocationPlacement { Min = new Vector2Int(44, 20), Max = new Vector2Int(46, 22), Anchor = new Vector2Int(44, 18) },
+            Sawmill = new WorldLocationPlacement { Min = new Vector2Int(32, 44), Max = new Vector2Int(34, 46), Anchor = new Vector2Int(32, 42) },
+            Motel = new WorldLocationPlacement { Min = new Vector2Int(22, 22), Max = new Vector2Int(24, 24), Anchor = new Vector2Int(22, 20) },
+            BusStop = new WorldLocationPlacement { Min = new Vector2Int(28, 4), Max = new Vector2Int(30, 4), Anchor = new Vector2Int(30, 2) }
         };
     }
 }

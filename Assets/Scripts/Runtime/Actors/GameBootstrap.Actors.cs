@@ -529,6 +529,13 @@ public partial class GameBootstrap
         parkingReturnCueClip = CreatePentatonicMotifClip("Parking_Return", 0.36f, 0.068f, new[] { PentatonicC4, PentatonicE4 }, new[] { 0f, 0.1f });
         moneyRewardClip = CreateMoneyRewardClip("Money_Reward", 0.6f, 0.1f);
         moneySpendClip  = CreatePentatonicMotifClip("Money_Spend", 0.45f, 0.08f, new[] { PentatonicC5, PentatonicA4, PentatonicE4 }, new[] { 0f, 0.1f, 0.22f });
+        slotReelTickClip = CreateUiPulseClip("Slot_Tick", 820f, 0.038f, 0.048f);
+        slotWinClip  = CreatePentatonicMotifClip("Slot_Win",  1.1f, 0.10f,
+            new[] { PentatonicE4, PentatonicG4, PentatonicA4, PentatonicC5, PentatonicE5 },
+            new[] { 0f, 0.13f, 0.27f, 0.43f, 0.61f });
+        slotLoseClip = CreatePentatonicMotifClip("Slot_Lose", 0.85f, 0.09f,
+            new[] { PentatonicC5, 466.16f, PentatonicG4, 311.13f },
+            new[] { 0f, 0.16f, 0.34f, 0.54f });
         edgeHighwayBusPassbyClip = CreateBusPassbyClip("EdgeHighway_BusPassby", 1.15f, 0.055f);
         riverAmbientClip = CreateRiverAmbientClip("River_Ambient", 8f, 0.034f);
         riverSplashClip  = CreateWaterSplashClip("River_Splash", 0.28f, 0.075f);

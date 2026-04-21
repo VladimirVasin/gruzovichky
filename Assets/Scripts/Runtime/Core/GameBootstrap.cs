@@ -7,8 +7,8 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap : MonoBehaviour
 {
-    private const int GridWidth = 32;
-    private const int GridHeight = 32;
+    private const int GridWidth = 64;
+    private const int GridHeight = 64;
     private const int WaterRiverWidth = 4;
     private const float CellSize = 1f;
     private const float RoadHeight = 0.12f;
@@ -56,6 +56,10 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DriverSleepDuration = DayNightCycleDuration / 24f * 8f;
     private const float WorkerCanteenDuration = DayNightCycleDuration / 24f * 1f;
     private const float WorkerLeisureDuration = DayNightCycleDuration / 24f * 2f;
+    private const float WorkerGamblingHallDuration = DayNightCycleDuration / 24f * 2f;
+    private const int   WorkerGamblingMinBalance   = 5;
+    private const int   WorkerGamblingMinBet       = 5;
+    private const int   WorkerGamblingMaxBet       = 10;
     private const float WorkerFreeIdleMinDuration = DayNightCycleDuration / 24f * 1f;
     private const float WorkerFreeIdleMaxDuration = DayNightCycleDuration / 24f * 3f;
     private const float DriverWalkSpeed = 2.2f;
@@ -213,6 +217,7 @@ public partial class GameBootstrap : MonoBehaviour
     private Vector3 cameraOffset;
     private Vector3 cameraTargetOffset;
     private Vector2 lastMousePosition;
+    private Vector2 lastMiddleMousePosition;
     private Vector2 rightMousePressPosition;
     private float truckSegmentProgress;
     private float truckSegmentDuration;
@@ -222,6 +227,7 @@ public partial class GameBootstrap : MonoBehaviour
     private float moneyPopupTimer;
     private float truckFuel = TruckFuelCapacity;
     private float dayNightCycleTimer = DayNightCycleDuration * (5f / 24f);
+    private int   currentDay = 1;
     private float currentStylizedDaylight = 1f;
     private float forestProductionProgress;
     private float sawmillProcessingTimer;
@@ -277,6 +283,7 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isEconomyPanelOpen;
     private bool isBuildPanelOpen;
     private bool isWorldMapPanelOpen;
+    private bool isStatesPanelOpen;
     private int selectedWorldMapRegionIndex = 4;
     private int moneyPopupAmount;
     private int gameSpeedMultiplier = 1;
@@ -414,6 +421,16 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip parkingReturnCueClip;
     private AudioClip moneyRewardClip;
     private AudioClip moneySpendClip;
+    private AudioClip slotReelTickClip;
+    private AudioClip slotWinClip;
+    private AudioClip slotLoseClip;
+
+    // HUD flash/shake for gambling result
+    private float  hudFlashTimer;
+    private float  hudFlashDuration;
+    private Color  hudFlashColor;
+    private float  hudShakeTimer;
+    private float  hudShakeDuration;
     private AudioClip edgeHighwayBusPassbyClip;
     private AudioClip riverAmbientClip;
     private AudioClip riverSplashClip;
@@ -438,7 +455,8 @@ public partial class GameBootstrap : MonoBehaviour
         Motel,
         BusStop,
         Bar,
-        Canteen
+        Canteen,
+        GamblingHall
     }
 
     /// <summary>
@@ -525,7 +543,8 @@ public partial class GameBootstrap : MonoBehaviour
         Sawmill,
         Motel,
         Bar,
-        Canteen
+        Canteen,
+        GamblingHall
     }
 
     private enum GameStartMode
@@ -568,6 +587,8 @@ public partial class GameBootstrap : MonoBehaviour
         IdleAtBar,
         IdleWalkToCanteen,
         IdleAtCanteen,
+        IdleWalkToGamblingHall,
+        IdleAtGamblingHall,
         IdleSmoking,
         IdlePhoneCall,
         ToBuildingForShift,        // walking motel -> production building (logistics pre-shift)
@@ -664,8 +685,9 @@ public partial class GameBootstrap : MonoBehaviour
         public readonly List<GameObject> StoredLogVisuals = new();
         public readonly List<GameObject> StoredBoardVisuals = new();
 
-        public int Workers;     // production buildings only: >0 = operational, 0 = offline
-        public int ServiceFee;  // Service buildings deduct from driver.Money on entry.
+        public int Workers;      // production buildings only: >0 = operational, 0 = offline
+        public int ServiceFee;   // Service buildings deduct from driver.Money on entry.
+        public int BuildingBank; // Internal revenue: service fees in, gambling payouts out.
 
         public bool Contains(Vector2Int cell)
         {
@@ -986,6 +1008,31 @@ public partial class GameBootstrap : MonoBehaviour
         public int ParkingSlotIndex;
     }
 
+    private sealed class WorkerEffectState
+    {
+        public string EffectId;
+        public string EnglishName;
+        public string RussianName;
+        public string EnglishDescription;
+        public string RussianDescription;
+        public int DrivingDelta;
+        public int StaminaDelta;
+        public int ProductionDelta;
+        public int LogisticsDelta;
+        public float RemainingHours;
+    }
+
+    private enum WorkerPerkKind
+    {
+        Alcoholism
+    }
+
+    private enum WorkerPerkType
+    {
+        Positive,
+        Negative
+    }
+
     private sealed class DriverAgent
     {
         public int DriverId;
@@ -1003,6 +1050,8 @@ public partial class GameBootstrap : MonoBehaviour
         public int StaminaSkill;
         public int ProductionSkill;
         public int LogisticsSkill;
+        public readonly List<WorkerPerkKind> Perks = new();
+        public readonly List<WorkerEffectState> ActiveEffects = new();
         public DriverDutyMode DutyMode = DriverDutyMode.Local;
         // ShiftStartHour: -1 = idle/no shift assigned
         public int ShiftStartHour = -1;
@@ -1049,6 +1098,10 @@ public partial class GameBootstrap : MonoBehaviour
         public bool WorkedToday;
         public bool AteToday;
         public bool HadLeisureToday;
+        public int  GamblingBet;          // bet placed this visit; 0 = not gambling
+        public int  GamblingPayout;       // payout received ($0 on loss)
+        public int  GamblingMultiplier;   // 0=loss, 1=x1, 5=x5, 10=x10
+        public bool GamblingMoneyPending; // true until money is actually applied after animation
         public bool SleptToday;
         public float HoursSinceMeal = 0f;
         public float HoursSinceSleep = 0f;
@@ -1201,6 +1254,7 @@ public partial class GameBootstrap : MonoBehaviour
         foreach (DriverAgent driver in driverAgents)
         {
             UpdateWorkerNeedsClock(driver);
+            UpdateWorkerEffectsClock(driver);
         }
 
         for (int i = 0; i < truckAgents.Count; i++)
@@ -1269,6 +1323,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateEconomyScreenUi();
         UpdateBuildScreenUi();
         UpdateWorldMapScreenUi();
+        UpdateStatesScreenUi();
         CloseQuickHudsWhenBlockingHudIsOpen();
         UpdateTruckQuickHud();
         UpdateDriverQuickHud();
@@ -1351,6 +1406,8 @@ public partial class GameBootstrap : MonoBehaviour
             // Resources panel is now Canvas-based (ResourcesScreenCanvas)
             // Economy panel is now Canvas-based (EconomyScreenCanvas)
             // Build panel is now Canvas-based (BuildScreenCanvas)
+
+            DrawDebugServicePanel();
 
             GUI.color = prevColor;
             GUI.enabled = prevEnabled;
@@ -1458,6 +1515,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         float cycleDeltaTime = deltaTime >= 0f ? deltaTime : Time.deltaTime;
+        if (dayNightCycleTimer + cycleDeltaTime >= DayNightCycleDuration) currentDay++;
         dayNightCycleTimer = Mathf.Repeat(dayNightCycleTimer + cycleDeltaTime, DayNightCycleDuration);
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
         float dayHour = normalizedTime * 24f;

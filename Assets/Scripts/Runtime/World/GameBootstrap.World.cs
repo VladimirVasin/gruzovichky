@@ -240,6 +240,29 @@ public partial class GameBootstrap
         return true;
     }
 
+    private bool TryPlaceGamblingHallAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.GamblingHall))
+        {
+            SessionDebugLogger.Log("BUILD", "Gambling Hall placement rejected: already exists.");
+            return false;
+        }
+
+        if (!TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.GamblingHall, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Gambling Hall placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.GamblingHall, "Gambling Hall", min, max, anchorCell, new Color(0.52f, 0.38f, 0.08f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        SessionDebugLogger.Log("BUILD", $"Placed Gambling Hall at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
     private bool TryPlaceSawmillAtAnchor(Vector2Int anchorCell)
     {
         if (locations.ContainsKey(LocationType.Sawmill))
@@ -405,6 +428,11 @@ public partial class GameBootstrap
         return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.Canteen, out previewPosition, out previewScale);
     }
 
+    private bool GetGamblingHallPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.GamblingHall, out previewPosition, out previewScale);
+    }
+
     private bool GetTwoByTwoBuildingPlacementPreview(Vector2Int anchorCell, LocationType type, out Vector3 previewPosition, out Vector3 previewScale)
     {
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
@@ -551,6 +579,55 @@ public partial class GameBootstrap
         canteenLight.intensity = 0.32f;
         canteenLight.range = 2.8f;
         canteenLight.shadows = LightShadows.None;
+
+        CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
+    }
+
+    private void CreateGamblingHallDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        float scale = BuildingDecorScale;
+        Color wallColor = new Color(0.42f, 0.28f, 0.08f);
+        Color roofColor = new Color(0.58f, 0.42f, 0.10f);
+
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        body.transform.SetParent(parent, false);
+        body.transform.position = center + new Vector3(0f, 0.4f * scale, 0f);
+        body.transform.localScale = new Vector3(1.65f * scale, 0.8f * scale, 1.45f * scale);
+        ApplyColor(body, wallColor);
+        ConfigureStaticVisual(body);
+
+        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roof.transform.SetParent(parent, false);
+        roof.transform.position = center + new Vector3(0f, 0.86f * scale, 0f);
+        roof.transform.localScale = new Vector3(1.9f * scale, 0.1f * scale, 1.7f * scale);
+        ApplyColor(roof, roofColor);
+        ConfigureStaticVisual(roof);
+
+        // Neon sign strip on facade
+        GameObject neon = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        neon.transform.SetParent(parent, false);
+        neon.transform.position = center + new Vector3(0f, 0.69f * scale, -0.77f * scale);
+        neon.transform.localScale = new Vector3(0.82f * scale, 0.18f * scale, 0.04f * scale);
+        ApplyColor(neon, new Color(1f, 0.82f, 0.08f));
+        ConfigureStaticVisual(neon);
+
+        // Door on south face
+        GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        door.transform.SetParent(parent, false);
+        door.transform.position = center + new Vector3(0f, 0.2f * scale, -0.74f * scale);
+        door.transform.localScale = new Vector3(0.34f * scale, 0.48f * scale, 0.04f * scale);
+        ApplyColor(door, new Color(0.18f, 0.10f, 0.04f));
+        ConfigureStaticVisual(door);
+
+        GameObject lightObj = new("GamblingHallLight");
+        lightObj.transform.SetParent(parent, false);
+        lightObj.transform.position = center + new Vector3(0.35f * scale, 0.88f * scale, -0.9f * scale);
+        Light gamblingLight = lightObj.AddComponent<Light>();
+        gamblingLight.type = LightType.Point;
+        gamblingLight.color = new Color(1f, 0.82f, 0.3f);
+        gamblingLight.intensity = 0.40f;
+        gamblingLight.range = 3.2f;
+        gamblingLight.shadows = LightShadows.None;
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
     }

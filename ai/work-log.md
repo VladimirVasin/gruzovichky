@@ -1,10 +1,14 @@
 # Work Log
 
-Last updated: 2026-04-20
+Last updated: 2026-04-20 (session 2)
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20 to keep agent startup light. Use git history for exact old implementation details.
 
 ## Recent Detailed Work
+
+- 2026-04-20 (session 2): Added new HUD menu button "States" (Состояния). New file `GameBootstrap.FleetCanvas.StatesScreen.cs` creates a 700×580 scrollable reference panel listing all 4 Skills (Driving/Stamina/Production/Logistics with descriptions), all 17 Effects grouped as Activities (Rested, Well Fed, Forest Air, Sawdust, Warehouse Flow, Craft Focus, Worked Hard, Drunk, Road Focus, Road Fatigue, Race Rush) and Needs (Hungry, Starving, Sleep Deprived, Exhausted, Bored, Burned Out) with colored modifier tags (+N green / −N red) and source/cause hints, plus 1 Perk (Alcoholism). Panel localizes to Russian/English on language change. `isStatesPanelOpen` added to `GameBootstrap.cs`; button added to DrawMenuBar in `Fleet.cs`; close logic wired in ToggleMenuPanel, Input.cs (Escape/CloseAllMenus/scroll-block), BuildingQuickHud blocking check, and Localization.cs dirty flag. Build not verified in this session.
+
+- 2026-04-20 (session 2): Fixed Workers HUD detail panel — Перки section. `needsCardLayout.childForceExpandWidth` was `true`, causing Unity to expand the 2px divider to ~1/3 of the card width (gray-blue "square" artefact) and squish the perks column to near-zero width (hiding Алкоголизм text). Changed to `false` so the divider stays at `minWidth = 2f` and both columns share the remaining space equally. One-line fix in `ManagementScreens.cs:589`.
 
 - 2026-04-20: Fixed standalone Build And Run freeze when pressing `Join the race`. `Player.log` showed `ArgumentNullException: shader` in `CreateRacingHeadlight`; racing headlights/skydome now use packaged `ShaderRefs` fallbacks instead of `Shader.Find("Standard")`, and racing bootstrap is wrapped in exception logging plus cleanup so future startup errors restore the city instead of leaving `Time.timeScale = 0`. `Time.fixedDeltaTime` is also kept valid during racing pause. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors; one pre-existing legacy `DriverCardUi.DriverId` warning remains.
 
@@ -45,6 +49,20 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 - 2026-04-20: Rewrote all active tutorial HUD copy to be concise and gameplay-informative in both English and Russian. Updated the 17-step User tutorial flow, both OrbitHUD messages, removed the hidden Forest text override, and cleaned old literary tutorial strings out of localization so Russian mode uses the new instructional copy. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
 
 - 2026-04-20: Compressed this work log. Kept recent onboarding/Fleet/Trade/quick-HUD notes in useful detail and collapsed older multi-session history into thematic summaries. Stable memory files were not changed.
+
+- 2026-04-21: Simplified the Workers HUD Effects panel. The visible list now shows only each active effect name plus remaining time, while descriptions and skill modifiers moved into the shared hover tooltip; the tooltip expands for Effects and returns to the compact size for Skills. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
+
+- 2026-04-21: Expanded worker effects into the current gameplay loop. Motel sleep now applies `Rested`; need warning/critical states apply and clear live debuffs for hunger, sleep deprivation, and leisure burnout; completed work applies `Worked Hard` plus building-specific effects for Forest/Sawmill/Warehouse/Furniture Factory; normal route completion applies `Road Focus`; intercity trade completion applies `Road Fatigue`; race bonuses apply `Race Rush`. Effect refresh logging was adjusted to avoid per-frame spam. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
+
+- 2026-04-21: Added the second active worker effect, `Well Fed` / `Сытость`, after successful Canteen visits. Consuming Food now applies/refreshed a 6-game-hour effect with Stamina +2, Production +1, and Logistics +1; the existing Effects panel and effective skill display pick it up automatically. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
+
+- 2026-04-21: Added the first active worker effect, `Drunk` / `Опьянение`, after successful Bar visits. Consuming Alcohol now applies/refreshed a 4-game-hour effect with Driving -5, Production +1, and Logistics +1; the Workers HUD skill lines show effective values with base-plus-delta notation while the Effects panel lists the timed modifier. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
+
+- 2026-04-20: Added a worker Effects foundation beside Skills in the Workers HUD. Workers now have active temporary effect state with duration and skill modifier deltas, effect timers tick with game time, debug logs record effect activation/expiry, and the selected worker card shows a separated localized Effects panel with an empty state. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
+
+- 2026-04-21: Added the first worker perk system. Workers now roll random perks during stat generation; the first available perk is Alcoholism, internally typed as a negative perk. Workers HUD now shows a Perks column beside Needs with a divider, localized labels, and per-perk hover details, but does not print perk type labels in the HUD. Alcoholism strengthens and extends the Bar/Drunk effect instead of being only a label. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
+
+- 2026-04-21: Changed Workers HUD effects hover from a whole-table tooltip to per-effect rows. Each visible effect row now has its own hover target and shows only that effect's remaining time, modifiers, and description. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
 
 - 2026-04-19: Fixed Fleet tutorial step 13 Buy Truck panel hiding. The Buy Truck panel is now hidden every visible Fleet update during `FleetSelectTruck`, even if the list is not rebuilt that frame. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
 

@@ -1084,6 +1084,7 @@ public partial class GameBootstrap
         {
             money += racingBonusEarned;
             RecordMoneyMovement(racingBonusEarned, "Racing Bonus", "Treasury", "Intercity racing bonus", money);
+            ApplyWorkerRaceRushEffect(driver);
             racingBonusEarned = 0;
         }
 
@@ -1100,6 +1101,7 @@ public partial class GameBootstrap
 
         string completionVerb = activeTradeRun.OrderType == TradeOrderType.Buy ? "Bought" : "Sold";
         tradeDispatchStatusText = $"{completionVerb} {resourceLabel} x{activeTradeRun.Quantity}";
+        ApplyWorkerRoadFatigueEffect(driver);
         SessionDebugLogger.Log("TRADE", $"{driver.DriverName} completed trade run with {truckAgent.DisplayName}.");
         StartDriverMotelRest(truckAgent, driver);
         activeTradeRun = null;

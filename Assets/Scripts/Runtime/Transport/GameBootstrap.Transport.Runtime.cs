@@ -290,6 +290,7 @@ public partial class GameBootstrap
                 if (locations.TryGetValue(LocationType.Motel, out LocationData motelData) && driver.Money >= motelData.ServiceFee)
                 {
                     driver.Money -= motelData.ServiceFee;
+                    motelData.BuildingBank += motelData.ServiceFee;
                     SpawnMoneySpendPopup(driver.MotelIdlePosition, motelData.ServiceFee);
                     driver.DriverObject.SetActive(false);
                     driver.SleepTimer = DriverSleepDuration;
@@ -362,9 +363,11 @@ public partial class GameBootstrap
                 {
                     driver.WalkPhase = DriverRescuePhase.IdleAtBar;
                     barData.AlcoholStored = Mathf.Max(0, barData.AlcoholStored - 1);
+                    ApplyWorkerDrunkEffect(driver);
                     if (barData.ServiceFee > 0)
                     {
                         driver.Money -= barData.ServiceFee;
+                        barData.BuildingBank += barData.ServiceFee;
                         SpawnMoneySpendPopup(driver.DriverObject.transform.position, barData.ServiceFee);
                         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Bar for Leisure; paid=${barData.ServiceFee}, consumed=1 Alcohol, balance=${driver.Money}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
                         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar — paid ${barData.ServiceFee}, consumed 1 Alcohol (balance: ${driver.Money}).");
@@ -400,9 +403,11 @@ public partial class GameBootstrap
                 {
                     driver.WalkPhase = DriverRescuePhase.IdleAtCanteen;
                     canteenData.FoodStored = Mathf.Max(0, canteenData.FoodStored - 1);
+                    ApplyWorkerFedEffect(driver);
                     if (canteenData.ServiceFee > 0)
                     {
                         driver.Money -= canteenData.ServiceFee;
+                        canteenData.BuildingBank += canteenData.ServiceFee;
                         SpawnMoneySpendPopup(driver.DriverObject.transform.position, canteenData.ServiceFee);
                         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Canteen for Meal; paid=${canteenData.ServiceFee}, consumed=1 Food, balance=${driver.Money}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
                         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen — paid ${canteenData.ServiceFee}, consumed 1 Food (balance: ${driver.Money}).");
@@ -428,6 +433,14 @@ public partial class GameBootstrap
                     BuildDriverWalkPath(driver, currentPosition, driver.MotelIdlePosition);
                     SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at Canteen — no Food left, wandering back.");
                 }
+                return;
+
+            case DriverRescuePhase.IdleWalkToGamblingHall:
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.WalkPhase = DriverRescuePhase.IdleAtGamblingHall;
+                ResolveWorkerGamblingSpinResult(driver);
                 return;
 
             case DriverRescuePhase.WarehouseDeliveryToService:
@@ -499,6 +512,7 @@ public partial class GameBootstrap
                 if (locations.TryGetValue(LocationType.Motel, out LocationData motelFromBldg) && driver.Money >= motelFromBldg.ServiceFee)
                 {
                     driver.Money -= motelFromBldg.ServiceFee;
+                    motelFromBldg.BuildingBank += motelFromBldg.ServiceFee;
                     SpawnMoneySpendPopup(driver.MotelIdlePosition, motelFromBldg.ServiceFee);
                     driver.DriverObject.SetActive(false);
                     driver.SleepTimer       = DriverSleepDuration;
@@ -737,6 +751,28 @@ public partial class GameBootstrap
             driver.DriverFlashlightTransform.localPosition = new Vector3(0.24f, 0.57f - bob * 0.12f, 0.1f);
             driver.DriverFlashlightTransform.localRotation = Quaternion.Euler(16f + swing * 10f, swing * 5f, 0f);
         }
+    }
+
+    private void ResolveWorkerGamblingSpinResult(DriverAgent driver)
+    {
+        var rng = new System.Random();
+        int maxAffordable = Mathf.Clamp(driver.Money, WorkerGamblingMinBet, WorkerGamblingMaxBet);
+        int bet = rng.Next(WorkerGamblingMinBet, maxAffordable + 1);
+        float roll = (float)rng.NextDouble();
+        int multiplier = roll < 0.55f ? 0 : roll < 0.85f ? 1 : roll < 0.97f ? 5 : 10;
+        int payout = bet * multiplier;
+        int net    = payout - bet;
+
+        driver.GamblingBet          = bet;
+        driver.GamblingPayout       = payout;
+        driver.GamblingMultiplier   = multiplier;
+        driver.GamblingMoneyPending = true; // money applied after animation
+
+        if (multiplier > 0)
+            ApplyWorkerLuckyEffect(driver);
+
+        string outcomeStr = multiplier == 0 ? "LOSS" : $"WIN x{multiplier}";
+        SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Gambling Hall; bet=${bet}, roll={roll:0.00}, outcome={outcomeStr}, payout=${payout}, net={net:+#;-#;0}, balance pending=${driver.Money}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
     }
 
 }
