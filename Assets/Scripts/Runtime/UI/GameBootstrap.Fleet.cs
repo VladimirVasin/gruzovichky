@@ -126,12 +126,12 @@ public partial class GameBootstrap
 
         try
         {
-            void MenuBtn(string label, ref bool state, float x, bool highlight = false)
+            void MenuBtn(string panelName, string displayLabel, ref bool state, float x, bool highlight = false)
             {
                 GUI.color = state ? Color.yellow : Color.white;
                 Rect buttonRect = new Rect(x, btnY, MenuBtnW, MenuBtnH);
-                if (GUI.Button(buttonRect, L(label), btnStyle))
-                    ToggleMenuPanel(label, ref state);
+                if (GUI.Button(buttonRect, L(displayLabel), btnStyle))
+                    ToggleMenuPanel(panelName, ref state);
 
                 if (highlight)
                 {
@@ -146,14 +146,14 @@ public partial class GameBootstrap
             }
 
             float x = bar.x + MenuBtnGap;
-            MenuBtn("Fleet",     ref isFleetPanelOpen,     x, IsFleetTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Workers",   ref isDriversPanelOpen,   x, IsWorkersTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Shifts",    ref isShiftsPanelOpen,    x, IsShiftsTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Trade",     ref isEconomyPanelOpen,   x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Building",  ref isBuildPanelOpen,     x, IsBuildMenuTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Map",       ref isWorldMapPanelOpen,  x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("States",    ref isStatesPanelOpen,    x);
+            MenuBtn("Fleet", "Fleet", ref isFleetPanelOpen, x, IsFleetTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Workers", "Workers", ref isDriversPanelOpen, x, IsWorkersTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Shifts", "Assignments", ref isShiftsPanelOpen, x, IsShiftsTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Trade", "Trade", ref isEconomyPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Building", "Building", ref isBuildPanelOpen, x, IsBuildMenuTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Map", "Map", ref isWorldMapPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("States", "States", ref isStatesPanelOpen, x);
         }
         finally
         {

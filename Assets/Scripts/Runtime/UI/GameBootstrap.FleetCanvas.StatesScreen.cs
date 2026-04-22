@@ -49,7 +49,7 @@ public partial class GameBootstrap
         statesScreenUi.CanvasRoot = canvasObj;
 
         RectTransform windowRoot = CreateStyledPanel("StatesScreenRoot", canvasObj.transform, FleetPanelColor);
-        SetCenteredWindow(windowRoot, 700f, 580f, -16f);
+        SetCenteredWindow(windowRoot, 800f, 660f, -16f);
         VerticalLayoutGroup rootLayout = windowRoot.gameObject.AddComponent<VerticalLayoutGroup>();
         rootLayout.padding    = new RectOffset(18, 18, 16, 14);
         rootLayout.spacing    = 10;
@@ -313,7 +313,7 @@ public partial class GameBootstrap
             if (pi < statesScreenUi.PerkEntries.Count)
             {
                 StatesEntryUi entry = statesScreenUi.PerkEntries[pi++];
-                FillStatesSkill(entry, ru, GetWorkerPerkName(perk, ru), GetWorkerPerkDescription(perk, ru));
+                FillStatesSkill(entry, ru, GetWorkerPerkDisplayName(perk, ru), GetWorkerPerkDescription(perk, ru));
                 entry.NameText.color = GetWorkerPerkTypeColor(WorkerPerkType.Negative);
             }
         }
@@ -322,7 +322,7 @@ public partial class GameBootstrap
             if (pi < statesScreenUi.PerkEntries.Count)
             {
                 StatesEntryUi entry = statesScreenUi.PerkEntries[pi++];
-                FillStatesSkill(entry, ru, GetWorkerPerkName(perk, ru), GetWorkerPerkDescription(perk, ru));
+                FillStatesSkill(entry, ru, GetWorkerPerkDisplayName(perk, ru), GetWorkerPerkDescription(perk, ru));
                 entry.NameText.color = GetWorkerPerkTypeColor(WorkerPerkType.Positive);
             }
         }

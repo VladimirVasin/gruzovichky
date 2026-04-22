@@ -62,7 +62,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("BuildWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 580f, 660f, -16f);
+        SetCenteredWindow(windowRect, 660f, 740f, -16f);
         buildScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();
@@ -409,7 +409,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("ResourcesWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 480f, 600f, -16f);
+        SetCenteredWindow(windowRect, 560f, 680f, -16f);
         resourcesScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();
@@ -433,7 +433,7 @@ public partial class GameBootstrap
 
         // Tab row: two toggle buttons (mirrors Shifts tab pattern)
         const float ResTabRowHeight   = 36f;
-        const float ResPanelHeight    = 418f;
+        const float ResPanelHeight    = 500f;
         RectTransform tabRow = CreateLayoutRow("ResourcesTabRow", windowRoot.transform, ResTabRowHeight, 0f);
         LayoutElement tabRowLE = tabRow.GetComponent<LayoutElement>();
         tabRowLE.minHeight     = ResTabRowHeight;
@@ -819,7 +819,7 @@ public partial class GameBootstrap
 
                 string headerName = section.BuildingType switch
                 {
-                    LocationType.Forest          => ru ? "Лесозаготовка"    : "Forest",
+                    LocationType.Forest          => ru ? "Лесозаготовка"    : "Lumberyard",
                     LocationType.Sawmill         => ru ? "Лесопилка"        : "Sawmill",
                     LocationType.FurnitureFactory => ru ? "Мебельный завод"  : "Furniture Factory",
                     LocationType.GasStation      => ru ? "Заправка"         : "Gas Station",
@@ -1003,7 +1003,7 @@ public partial class GameBootstrap
 
         GameObject windowRoot = CreateUiObject("EconomyWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 840f, 620f, -16f);
+        SetCenteredWindow(windowRect, 940f, 700f, -16f);
         economyScreenUi.WindowRoot = windowRect;
 
         Image windowBg = windowRoot.AddComponent<Image>();

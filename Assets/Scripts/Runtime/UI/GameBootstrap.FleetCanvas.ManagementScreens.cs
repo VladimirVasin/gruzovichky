@@ -20,12 +20,13 @@ public partial class GameBootstrap
     private static readonly Color ShiftsScreenTint = new(0.06f, 0.08f, 0.11f, 0.76f);
     private static readonly Color ShiftsCardColor = new(0.13f, 0.16f, 0.21f, 0.98f);
     private static readonly Color ShiftsCardSelected = new(0.29f, 0.25f, 0.13f, 0.98f);
-    private const float ShiftsWindowWidth = 980f;
-    private const float ShiftsWindowHeight = 600f;
-    private const float ShiftsLeftPanelWidth = 467f;
-    private const float ShiftsRightPanelWidth = 461f;
-    private const float ShiftsInnerPanelHeight = 564f;
-    private const float ShiftsTabContentHeight = 486f;
+    private const float ShiftsWindowWidth = 1100f;
+    private const float ShiftsWindowHeight = 680f;
+    private const float ShiftsLeftPanelWidth = 500f;
+    private const float ShiftsRightPanelWidth = 548f;
+    private const float ShiftsInnerPanelHeight = 644f;
+    private const float ShiftsSelectionCardHeight = 156f;
+    private const float ShiftsTabRowHeight = 36f;
     private ShiftsScreenUiRefs shiftsScreenUi;
     private bool isShiftsScreenDirty = true;
     private bool isLogisticsTabActive = false;
@@ -59,6 +60,8 @@ public partial class GameBootstrap
         public GameObject DetailPlaceholderCard;
         public GameObject DetailContentRoot;
         public Text  DetailNameText;
+        public Text  DetailProfileTitleText;
+        public Text  DetailRoleText;
         public RectTransform DetailPortraitRoot;
         public Text  DetailSkillsTitleText;
         public Text  DetailDrivingSkillText;
@@ -87,12 +90,14 @@ public partial class GameBootstrap
         public Text  DetailShiftText;
         public Text  DetailDutyLabel;
         public Text  DetailDutyStateText;
+        public Text  DetailWorkTitleText;
         public Text  DetailSalaryLabel;
         public Text  DetailSalaryText;
         public Button DetailSalaryMinusBtn;
         public Button DetailSalaryPlusBtn;
         public Text  DetailBalanceLabel;
         public Text  DetailBalanceText;
+        public Text  DetailContractTitleText;
         public Button DetailFocusButton;
         public Text   DetailFocusButtonText;
     }
@@ -116,7 +121,19 @@ public partial class GameBootstrap
         public RectTransform LeftPanel;
         public RectTransform RightPanel;
         public RectTransform DriverListContent;
+        public ScrollRect TransportScrollRect;
+        public ScrollRect ProductionScrollRect;
+        public Text TitleText;
         public Text HeaderCountText;
+        public Text SelectionTitleText;
+        public Text SelectionNameText;
+        public Text SelectionProfessionText;
+        public Text SelectionStatusText;
+        public Text SelectionHintText;
+        public Text LogisticsSectionTitleText;
+        public Text LogisticsSectionSummaryText;
+        public Text ProductionSectionTitleText;
+        public Text ProductionSectionSummaryText;
         public readonly List<ShiftDriverRowUi> DriverRows = new();
         public readonly List<ShiftCardUi> ShiftCards = new();
         public IntercitySlotUi IntercitySlot;
@@ -137,6 +154,7 @@ public partial class GameBootstrap
     {
         public int ShiftHour;
         public Text HeaderText;
+        public Text SummaryText;
         public RectTransform AssignedListRoot;
         public Text EmptyText;
         public readonly List<GameObject> AssignedRows = new();
@@ -148,6 +166,8 @@ public partial class GameBootstrap
 
     private sealed class IntercitySlotUi
     {
+        public Text HeaderText;
+        public Text SummaryText;
         public Text AssignedDriverText;
         public Text StatusText;
         public Text AssignButtonText;
@@ -364,7 +384,7 @@ public partial class GameBootstrap
         // Window root — two-panel layout (980×560)
         GameObject windowRoot = CreateUiObject("DriversWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 980f, 560f, -16f);
+        SetCenteredWindow(windowRect, 1080f, 620f, -16f);
         driversScreenUi.WindowRoot = windowRect;
         Image windowBg = windowRoot.AddComponent<Image>();
         windowBg.color = DriversScreenTint;
@@ -383,8 +403,8 @@ public partial class GameBootstrap
         RectTransform leftPanel = CreateStyledPanel("WorkersLeftPanel", windowRoot.transform, FleetPanelColor);
         driversScreenUi.LeftPanel = leftPanel;
         LayoutElement leftPanelLE = leftPanel.gameObject.AddComponent<LayoutElement>();
-        leftPanelLE.preferredWidth = 324f;
-        leftPanelLE.minWidth      = 324f;
+        leftPanelLE.preferredWidth = 360f;
+        leftPanelLE.minWidth      = 360f;
         leftPanelLE.flexibleWidth  = 0f;
         leftPanelLE.flexibleHeight = 1f;
         VerticalLayoutGroup leftLayout = leftPanel.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -508,29 +528,56 @@ public partial class GameBootstrap
         driversScreenUi.DetailStatusText = CreateBodyText("DetailStatus", statusBadge, font, string.Empty, 12, TextAnchor.MiddleCenter, Color.white);
         driversScreenUi.DetailStatusText.fontStyle = FontStyle.Bold;
 
-        // Procedural worker portrait, kept directly under the selected worker name.
-        RectTransform portraitCard = CreateStyledPanel("WorkerPortraitCard", detailRoot.transform, FleetInsetColor);
-        portraitCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 118f;
-        HorizontalLayoutGroup portraitLayout = portraitCard.gameObject.AddComponent<HorizontalLayoutGroup>();
-        portraitLayout.padding = new RectOffset(16, 16, 10, 10);
-        portraitLayout.spacing = 12f;
-        portraitLayout.childAlignment = TextAnchor.MiddleLeft;
-        portraitLayout.childControlWidth = true;
-        portraitLayout.childControlHeight = true;
-        portraitLayout.childForceExpandWidth = false;
-        portraitLayout.childForceExpandHeight = false;
+        // Profile card
+        RectTransform profileCard = CreateStyledPanel("WorkerProfileCard", detailRoot.transform, FleetInsetColor);
+        profileCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 104f;
+        HorizontalLayoutGroup profileLayout = profileCard.gameObject.AddComponent<HorizontalLayoutGroup>();
+        profileLayout.padding = new RectOffset(16, 16, 10, 10);
+        profileLayout.spacing = 14f;
+        profileLayout.childAlignment = TextAnchor.MiddleLeft;
+        profileLayout.childControlWidth = true;
+        profileLayout.childControlHeight = true;
+        profileLayout.childForceExpandWidth = false;
+        profileLayout.childForceExpandHeight = false;
 
-        driversScreenUi.DetailPortraitRoot = CreateUiObject("WorkerPortraitRoot", portraitCard).GetComponent<RectTransform>();
+        driversScreenUi.DetailPortraitRoot = CreateUiObject("WorkerPortraitRoot", profileCard).GetComponent<RectTransform>();
         LayoutElement portraitRootLayout = driversScreenUi.DetailPortraitRoot.gameObject.AddComponent<LayoutElement>();
         portraitRootLayout.preferredWidth = 112f;
         portraitRootLayout.preferredHeight = 98f;
         portraitRootLayout.minWidth = 112f;
         portraitRootLayout.minHeight = 98f;
 
-        RectTransform skillsColumn = CreateUiObject("WorkerStatsColumn", portraitCard).GetComponent<RectTransform>();
+        RectTransform profileInfoColumn = CreateUiObject("WorkerProfileInfoColumn", profileCard).GetComponent<RectTransform>();
+        LayoutElement profileInfoLayoutElement = profileInfoColumn.gameObject.AddComponent<LayoutElement>();
+        profileInfoLayoutElement.flexibleWidth = 1f;
+        VerticalLayoutGroup profileInfoLayout = profileInfoColumn.gameObject.AddComponent<VerticalLayoutGroup>();
+        profileInfoLayout.spacing = 6f;
+        profileInfoLayout.childControlWidth = true;
+        profileInfoLayout.childControlHeight = true;
+        profileInfoLayout.childForceExpandWidth = true;
+        profileInfoLayout.childForceExpandHeight = false;
+
+        driversScreenUi.DetailProfileTitleText = CreateHeaderText("WorkerProfileTitle", profileInfoColumn, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailProfileTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        driversScreenUi.DetailRoleText = CreateHeaderText("WorkerRole", profileInfoColumn, font, string.Empty, 16, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailRoleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+
+        // Condition row 1: Skills | Effects
+        RectTransform conditionTopRow = CreateLayoutRow("WorkerConditionTopRow", detailRoot.transform, 118f, 14f);
+
+        RectTransform skillsCard = CreateStyledPanel("WorkerSkillsCard", conditionTopRow, FleetInsetColor);
+        skillsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup skillsCardLayout = skillsCard.gameObject.AddComponent<VerticalLayoutGroup>();
+        skillsCardLayout.padding = new RectOffset(16, 16, 10, 10);
+        skillsCardLayout.spacing = 4f;
+        skillsCardLayout.childControlWidth = true;
+        skillsCardLayout.childControlHeight = true;
+        skillsCardLayout.childForceExpandWidth = true;
+        skillsCardLayout.childForceExpandHeight = false;
+
+        RectTransform skillsColumn = CreateUiObject("WorkerStatsColumn", skillsCard).GetComponent<RectTransform>();
         LayoutElement skillsColumnLayoutElement = skillsColumn.gameObject.AddComponent<LayoutElement>();
-        skillsColumnLayoutElement.preferredWidth = 178f;
-        skillsColumnLayoutElement.minWidth = 168f;
+        skillsColumnLayoutElement.flexibleWidth = 1f;
         VerticalLayoutGroup skillsLayout = skillsColumn.gameObject.AddComponent<VerticalLayoutGroup>();
         skillsLayout.spacing = 4f;
         skillsLayout.childControlWidth = true;
@@ -552,15 +599,17 @@ public partial class GameBootstrap
         driversScreenUi.DetailLogisticsSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
         ConfigureWorkerSkillTooltip(driversScreenUi.DetailLogisticsSkillText, WorkerSkillKind.Logistics);
 
-        RectTransform effectsDivider = CreateUiObject("WorkerEffectsDivider", portraitCard).GetComponent<RectTransform>();
-        Image effectsDividerImage = effectsDivider.gameObject.AddComponent<Image>();
-        effectsDividerImage.color = new Color(0.30f, 0.36f, 0.45f, 0.85f);
-        LayoutElement effectsDividerLayout = effectsDivider.gameObject.AddComponent<LayoutElement>();
-        effectsDividerLayout.preferredWidth = 2f;
-        effectsDividerLayout.minWidth = 2f;
-        effectsDividerLayout.preferredHeight = 86f;
+        RectTransform effectsCard = CreateStyledPanel("WorkerEffectsCard", conditionTopRow, FleetInsetColor);
+        effectsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup effectsCardLayout = effectsCard.gameObject.AddComponent<VerticalLayoutGroup>();
+        effectsCardLayout.padding = new RectOffset(16, 16, 10, 10);
+        effectsCardLayout.spacing = 4f;
+        effectsCardLayout.childControlWidth = true;
+        effectsCardLayout.childControlHeight = true;
+        effectsCardLayout.childForceExpandWidth = true;
+        effectsCardLayout.childForceExpandHeight = false;
 
-        RectTransform effectsColumn = CreateUiObject("WorkerEffectsColumn", portraitCard).GetComponent<RectTransform>();
+        RectTransform effectsColumn = CreateUiObject("WorkerEffectsColumn", effectsCard).GetComponent<RectTransform>();
         effectsColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         VerticalLayoutGroup effectsLayout = effectsColumn.gameObject.AddComponent<VerticalLayoutGroup>();
         effectsLayout.spacing = 4f;
@@ -591,14 +640,17 @@ public partial class GameBootstrap
             driversScreenUi.DetailEffectTexts.Add(effectText);
         }
 
-        RectTransform needsCard = CreateStyledPanel("WorkerNeedsCard", detailRoot.transform, FleetInsetColor);
-        needsCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 104f;
-        HorizontalLayoutGroup needsCardLayout = needsCard.gameObject.AddComponent<HorizontalLayoutGroup>();
+        // Condition row 2: Needs | Perks
+        RectTransform conditionBottomRow = CreateLayoutRow("WorkerConditionBottomRow", detailRoot.transform, 104f, 14f);
+
+        RectTransform needsCard = CreateStyledPanel("WorkerNeedsCard", conditionBottomRow, FleetInsetColor);
+        needsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup needsCardLayout = needsCard.gameObject.AddComponent<VerticalLayoutGroup>();
         needsCardLayout.padding = new RectOffset(16, 16, 8, 8);
-        needsCardLayout.spacing = 12f;
+        needsCardLayout.spacing = 4f;
         needsCardLayout.childControlWidth = true;
         needsCardLayout.childControlHeight = true;
-        needsCardLayout.childForceExpandWidth = false;
+        needsCardLayout.childForceExpandWidth = true;
         needsCardLayout.childForceExpandHeight = false;
 
         RectTransform needsColumn = CreateUiObject("WorkerNeedsColumn", needsCard).GetComponent<RectTransform>();
@@ -618,15 +670,17 @@ public partial class GameBootstrap
         driversScreenUi.DetailLeisureNeedText = CreateBodyText("WorkerLeisureNeed", needsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailLeisureNeedText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
 
-        RectTransform perksDivider = CreateUiObject("WorkerPerksDivider", needsCard).GetComponent<RectTransform>();
-        Image perksDividerImage = perksDivider.gameObject.AddComponent<Image>();
-        perksDividerImage.color = new Color(0.30f, 0.36f, 0.45f, 0.85f);
-        LayoutElement perksDividerLayout = perksDivider.gameObject.AddComponent<LayoutElement>();
-        perksDividerLayout.preferredWidth = 2f;
-        perksDividerLayout.minWidth = 2f;
-        perksDividerLayout.preferredHeight = 78f;
+        RectTransform perksCard = CreateStyledPanel("WorkerPerksCard", conditionBottomRow, FleetInsetColor);
+        perksCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup perksCardLayout = perksCard.gameObject.AddComponent<VerticalLayoutGroup>();
+        perksCardLayout.padding = new RectOffset(16, 16, 8, 8);
+        perksCardLayout.spacing = 4f;
+        perksCardLayout.childControlWidth = true;
+        perksCardLayout.childControlHeight = true;
+        perksCardLayout.childForceExpandWidth = true;
+        perksCardLayout.childForceExpandHeight = false;
 
-        RectTransform perksColumn = CreateUiObject("WorkerPerksColumn", needsCard).GetComponent<RectTransform>();
+        RectTransform perksColumn = CreateUiObject("WorkerPerksColumn", perksCard).GetComponent<RectTransform>();
         perksColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         VerticalLayoutGroup perksLayout = perksColumn.gameObject.AddComponent<VerticalLayoutGroup>();
         perksLayout.spacing = 4f;
@@ -651,6 +705,8 @@ public partial class GameBootstrap
         assignCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
         assignCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
         assignBody.GetComponent<VerticalLayoutGroup>().spacing = 4;
+        driversScreenUi.DetailWorkTitleText = CreateHeaderText("WorkerWorkTitle", assignBody, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailWorkTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
         RectTransform assignRow = CreateLayoutRow("AssignRow", assignBody, 20f, 12f);
         driversScreenUi.DetailAssignmentLabel = CreateBodyText("AL", assignRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
@@ -675,6 +731,8 @@ public partial class GameBootstrap
         statsCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
         statsCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
         statsBody.GetComponent<VerticalLayoutGroup>().spacing = 6;
+        driversScreenUi.DetailContractTitleText = CreateHeaderText("WorkerContractTitle", statsBody, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailContractTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
         RectTransform salaryRow = CreateLayoutRow("SalaryEditRow", statsBody, 28f, 6f);
         driversScreenUi.DetailSalaryLabel = CreateBodyText("SRL", salaryRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
@@ -762,7 +820,7 @@ public partial class GameBootstrap
         row.NameText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         RectTransform badge = CreateStyledPanel($"WorkerStatusBadge{index}", nameRow, new Color(0.24f, 0.29f, 0.36f, 1f));
         row.StatusBadgeBg = badge.GetComponent<Image>();
-        badge.gameObject.AddComponent<LayoutElement>().preferredWidth = 86f;
+        badge.gameObject.AddComponent<LayoutElement>().preferredWidth = 112f;
         row.StatusText = CreateBodyText("Status", badge, font, string.Empty, 10, TextAnchor.MiddleCenter, Color.white);
         row.StatusText.fontStyle = FontStyle.Bold;
 
@@ -1024,6 +1082,39 @@ public partial class GameBootstrap
         return card;
     }
 
+    private string GetWorkerListStatusLabel(DriverAgent driver, bool ru)
+    {
+        if (driver == null)
+        {
+            return ru ? "Свободен" : "Idle";
+        }
+
+        TruckAgent truck = GetAssignedTruckForDriver(driver);
+        bool isProduction = driver.DutyMode == DriverDutyMode.Logistics;
+        return driver.IsArrivingByBus ? (ru ? "В пути" : "Arriving")
+            : IsDriverOnActiveTradeRun(driver) ? (ru ? "Торговый рейс" : "Trade Run")
+            : IsDriverIntercity(driver) ? (ru ? "Межгород" : "Intercity")
+            : isProduction ? (ru ? "На производстве" : "Production")
+            : truck != null ? (ru ? "На логистике" : "Logistics")
+            : driver.RestPhase != DriverRestPhase.None ? (ru ? "Отдыхает" : "Resting")
+            : (ru ? "Свободен" : "Idle");
+    }
+
+    private string GetWorkerDutySummaryLabel(DriverAgent driver, bool ru)
+    {
+        if (driver == null)
+        {
+            return "—";
+        }
+
+        return driver.IsInsideBuilding ? (ru ? "Работает в здании" : "Inside building")
+            : driver.IsOnActiveShift ? (ru ? "На смене" : "On shift")
+            : driver.RestPhase != DriverRestPhase.None ? (ru ? "Отдыхает" : "Resting")
+            : IsDriverBusyWalkPhase(driver) ? (ru ? "В пути" : "Commuting")
+            : IsDriverIntercity(driver) ? (ru ? "Ожидает межгород" : "Waiting for intercity")
+            : (ru ? "Свободен в мотеле" : "Idle at motel");
+    }
+
     private void UpdateDriversScreenUi()
     {
         if (driversScreenUi == null) return;
@@ -1057,13 +1148,8 @@ public partial class GameBootstrap
 
             row.NameText.text = d.DriverName;
 
-            string status = d.IsArrivingByBus
-                ? "Arriving"
-                : IsDriverOnActiveTradeRun(d) ? "Trade Run"
-                : IsDriverIntercity(d)        ? "Intercity"
-                : isLogistics                 ? "Production"
-                : truck != null               ? "Assigned"
-                : "Idle";
+            bool ru = IsRussianLanguage();
+            string status = GetWorkerListStatusLabel(d, ru);
             row.StatusText.text = status;
             if (row.StatusBadgeBg != null)
             {
@@ -1115,16 +1201,15 @@ public partial class GameBootstrap
             bool isLogistics = sel.DutyMode == DriverDutyMode.Logistics;
 
             driversScreenUi.DetailNameText.text = sel.DriverName;
+            if (driversScreenUi.DetailProfileTitleText != null)
+                driversScreenUi.DetailProfileTitleText.text = ru ? "Профиль" : "Profile";
+            if (driversScreenUi.DetailRoleText != null)
+                driversScreenUi.DetailRoleText.text = L(GetWorkerOccupationLabel(sel));
             UpdateWorkerPortraitUi(sel);
             UpdateWorkerStatsUi(sel, ru);
             UpdateWorkerNeedsUi(sel, ru);
 
-            string statusLabel = sel.IsArrivingByBus      ? (ru ? "В пути"      : "Arriving")
-                : IsDriverOnActiveTradeRun(sel) ? (ru ? "Торговля"    : "Trade Run")
-                : IsDriverIntercity(sel)        ? (ru ? "Межгород"    : "Intercity")
-                : isLogistics                   ? (ru ? "Производство": "Production")
-                : truck != null                 ? (ru ? "Назначен"    : "Assigned")
-                : (ru ? "Свободен" : "Idle");
+            string statusLabel = GetWorkerListStatusLabel(sel, ru);
             driversScreenUi.DetailStatusText.text = statusLabel;
             if (driversScreenUi.DetailStatusBadge != null)
             {
@@ -1142,10 +1227,14 @@ public partial class GameBootstrap
                 driversScreenUi.DetailShiftLabel.text = ru ? "Смена" : "Shift";
             if (driversScreenUi.DetailDutyLabel != null)
                 driversScreenUi.DetailDutyLabel.text = ru ? "Статус" : "Status";
+            if (driversScreenUi.DetailWorkTitleText != null)
+                driversScreenUi.DetailWorkTitleText.text = ru ? "Работа" : "Work";
             if (driversScreenUi.DetailSalaryLabel != null)
                 driversScreenUi.DetailSalaryLabel.text = ru ? "Зарплата" : "Salary";
             if (driversScreenUi.DetailBalanceLabel != null)
                 driversScreenUi.DetailBalanceLabel.text = ru ? "Баланс" : "Balance";
+            if (driversScreenUi.DetailContractTitleText != null)
+                driversScreenUi.DetailContractTitleText.text = ru ? "Контракт" : "Contract";
 
             // Values
             driversScreenUi.DetailAssignmentValue.text = isLogistics && sel.AssignedBuildingType.HasValue
@@ -1158,11 +1247,7 @@ public partial class GameBootstrap
                 : (ru ? "Не назначена" : "Not assigned");
             driversScreenUi.DetailShiftText.color = (hasShift || isLogistics) ? FleetAccentColor : FleetMutedTextColor;
 
-            string dutyState = sel.IsInsideBuilding         ? (ru ? "Работает в здании" : "Inside building")
-                : sel.IsOnActiveShift                       ? (ru ? "На смене"          : "On shift")
-                : sel.RestPhase != DriverRestPhase.None     ? (ru ? "Отдыхает"          : "Resting")
-                : IsDriverBusyWalkPhase(sel)                ? (ru ? "В пути"            : "Commuting")
-                : (ru ? "Свободен в мотеле" : "Idle at motel");
+            string dutyState = GetWorkerDutySummaryLabel(sel, ru);
             driversScreenUi.DetailDutyStateText.text = dutyState;
 
             driversScreenUi.DetailSalaryText.text  = $"${sel.Salary}";
@@ -1235,8 +1320,9 @@ public partial class GameBootstrap
         leftLayout.childForceExpandHeight = false;
 
         RectTransform leftHeader = CreateLayoutRow("ShiftsHeaderRow", leftPanel, 40f, 0f);
-        Text shiftsTitle = CreateHeaderText("ShiftsTitle", leftHeader, font, "Shifts", 24, TextAnchor.MiddleLeft, Color.white);
+        Text shiftsTitle = CreateHeaderText("ShiftsTitle", leftHeader, font, "Assignments", 24, TextAnchor.MiddleLeft, Color.white);
         shiftsTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        shiftsScreenUi.TitleText = shiftsTitle;
         shiftsScreenUi.HeaderCountText = CreateHeaderText("ShiftsCount", leftHeader, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
 
         RectTransform listFrame = CreateStyledPanel("ShiftsDriverListFrame", leftPanel, FleetInsetColor);
@@ -1357,10 +1443,36 @@ public partial class GameBootstrap
         rightLayout.childForceExpandWidth = true;
         rightLayout.childForceExpandHeight = false;
 
+        RectTransform selectionCard = CreateSectionCard(rightPanel, font, string.Empty, out RectTransform selectionBody, false);
+        selectionCard.gameObject.AddComponent<LayoutElement>().preferredHeight = ShiftsSelectionCardHeight;
+        shiftsScreenUi.SelectionTitleText = CreateHeaderText("AssignmentsSelectionTitle", selectionBody, font, "Selected Worker", 16, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.SelectionTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+
+        RectTransform selectionInfoPanel = CreateStyledPanel("AssignmentsSelectionInfoPanel", selectionBody, FleetCardMutedColor);
+        selectionInfoPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 78f;
+        VerticalLayoutGroup selectionInfoLayout = selectionInfoPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        selectionInfoLayout.padding = new RectOffset(12, 12, 10, 10);
+        selectionInfoLayout.spacing = 4;
+        selectionInfoLayout.childControlWidth = true;
+        selectionInfoLayout.childControlHeight = true;
+        selectionInfoLayout.childForceExpandWidth = true;
+        selectionInfoLayout.childForceExpandHeight = false;
+        shiftsScreenUi.SelectionNameText = CreateHeaderText("AssignmentsSelectionName", selectionInfoPanel, font, string.Empty, 15, TextAnchor.MiddleLeft, FleetAccentColor);
+        shiftsScreenUi.SelectionNameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        shiftsScreenUi.SelectionNameText.verticalOverflow = VerticalWrapMode.Overflow;
+        shiftsScreenUi.SelectionProfessionText = CreateBodyText("AssignmentsSelectionProfession", selectionInfoPanel, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        shiftsScreenUi.SelectionProfessionText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        shiftsScreenUi.SelectionProfessionText.verticalOverflow = VerticalWrapMode.Truncate;
+        shiftsScreenUi.SelectionStatusText = CreateBodyText("AssignmentsSelectionStatus", selectionInfoPanel, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.SelectionStatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        shiftsScreenUi.SelectionStatusText.verticalOverflow = VerticalWrapMode.Truncate;
+        shiftsScreenUi.SelectionHintText = CreateBodyText("AssignmentsSelectionHint", selectionBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        shiftsScreenUi.SelectionHintText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
         // ── Tab toggle row ───────────────────────────────────────────────────
-        RectTransform tabRow = CreateLayoutRow("ShiftsTabRow", rightPanel, 36f, 8f);
+        RectTransform tabRow = CreateLayoutRow("ShiftsTabRow", rightPanel, ShiftsTabRowHeight, 8f);
         LayoutElement tabRowLE = tabRow.GetComponent<LayoutElement>();
-        tabRowLE.minHeight = 36f;
+        tabRowLE.minHeight = ShiftsTabRowHeight;
         tabRowLE.flexibleHeight = 0f;
         HorizontalLayoutGroup tabRowLayout = tabRow.GetComponent<HorizontalLayoutGroup>();
         tabRowLayout.childForceExpandWidth = true;
@@ -1394,16 +1506,28 @@ public partial class GameBootstrap
         GameObject transportPanelObj = CreateUiObject("TransportPanel", rightPanel);
         shiftsTransportPanel = transportPanelObj.GetComponent<RectTransform>();
         LayoutElement transportPanelLayout = transportPanelObj.AddComponent<LayoutElement>();
-        transportPanelLayout.preferredHeight = ShiftsTabContentHeight;
-        transportPanelLayout.minHeight = ShiftsTabContentHeight;
+        transportPanelLayout.preferredHeight = GetShiftsTabContentHeight();
+        transportPanelLayout.minHeight = GetShiftsTabContentHeight();
         transportPanelLayout.flexibleHeight = 0f;
         ScrollRect transportScroll = transportPanelObj.AddComponent<ScrollRect>();
-        transportPanelObj.AddComponent<RectMask2D>();
+        shiftsScreenUi.TransportScrollRect = transportScroll;
         transportScroll.horizontal = false; transportScroll.vertical = true;
         transportScroll.movementType = ScrollRect.MovementType.Clamped;
         transportScroll.scrollSensitivity = 30f; transportScroll.inertia = false;
+        transportScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
 
-        GameObject transportContentGo = CreateUiObject("TransportContent", transportPanelObj.transform);
+        GameObject transportViewportObj = CreateUiObject("Viewport", transportPanelObj.transform);
+        RectTransform transportViewport = transportViewportObj.GetComponent<RectTransform>();
+        StretchRect(transportViewport, 0f, 18f, 0f, 0f);
+        Image transportViewportImage = transportViewportObj.AddComponent<Image>();
+        transportViewportImage.color = new Color(0f, 0f, 0f, 0.02f);
+        transportViewportObj.AddComponent<Mask>().showMaskGraphic = false;
+
+        Scrollbar transportScrollbar = CreatePanelScrollbar("TransportScrollbar", transportPanelObj.transform);
+        transportScroll.viewport = transportViewport;
+        transportScroll.verticalScrollbar = transportScrollbar;
+
+        GameObject transportContentGo = CreateUiObject("TransportContent", transportViewportObj.transform);
         RectTransform transportContent = transportContentGo.GetComponent<RectTransform>();
         transportContent.anchorMin = new Vector2(0f, 1f); transportContent.anchorMax = new Vector2(1f, 1f);
         transportContent.pivot = new Vector2(0.5f, 1f);
@@ -1417,6 +1541,13 @@ public partial class GameBootstrap
         transportContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         transportScroll.content = transportContent;
 
+        RectTransform transportIntroCard = CreateSectionCard(transportContent, font, string.Empty, out RectTransform transportIntroBody, false);
+        transportIntroCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 78f;
+        VerticalLayoutGroup transportIntroLayout = transportIntroBody.GetComponent<VerticalLayoutGroup>();
+        transportIntroLayout.spacing = 6f;
+        shiftsScreenUi.LogisticsSectionTitleText = CreateHeaderText("AssignmentsLogisticsSectionTitle", transportIntroBody, font, "Logistics", 16, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.LogisticsSectionSummaryText = CreateBodyText("AssignmentsLogisticsSectionSummary", transportIntroBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+
         for (int i = 0; i < ShiftPresetHours.Length; i++)
         {
             int shiftHour = ShiftPresetHours[i];
@@ -1427,6 +1558,8 @@ public partial class GameBootstrap
             cardBodyLayout.spacing = 8;
 
             card.HeaderText = CreateHeaderText($"ShiftHeader{i}", cardBody, font, $"{ShiftNames[i]}  {GetShiftRangeLabel(shiftHour)}", 16, TextAnchor.MiddleLeft, Color.white);
+            card.SummaryText = CreateBodyText($"ShiftSummary{i}", cardBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            card.SummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
 
             RectTransform assignedPanel = CreateStyledPanel($"ShiftAssignedPanel{i}", cardBody, FleetCardMutedColor);
             card.AssignedListRoot = assignedPanel;
@@ -1547,11 +1680,13 @@ public partial class GameBootstrap
         VerticalLayoutGroup intercityLayout = intercityBody.GetComponent<VerticalLayoutGroup>();
         intercityLayout.spacing = 8;
 
-        CreateHeaderText("IntercityHeader", intercityBody, font, "Intercity", 16, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.IntercitySlot.HeaderText = CreateHeaderText("IntercityHeader", intercityBody, font, "Intercity", 16, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.IntercitySlot.SummaryText = CreateBodyText("IntercitySummary", intercityBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        shiftsScreenUi.IntercitySlot.SummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
         shiftsScreenUi.IntercitySlot.AssignedDriverText = CreateHeaderText("IntercityAssigned", intercityBody, font, string.Empty, 15, TextAnchor.MiddleLeft, FleetAccentColor);
         shiftsScreenUi.IntercitySlot.AssignedDriverText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
         shiftsScreenUi.IntercitySlot.StatusText = CreateBodyText("IntercityStatus", intercityBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        shiftsScreenUi.IntercitySlot.StatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+        shiftsScreenUi.IntercitySlot.StatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
 
         RectTransform intercityButtonRow = CreateLayoutRow("IntercityButtonRow", intercityBody, 30f, 8f);
         shiftsScreenUi.IntercitySlot.AssignButton = CreateButton("IntercityAssignButton", intercityButtonRow, font, out Text intercityAssignText, string.Empty, 12, FleetPrimaryButtonColor, Color.white);
@@ -1580,16 +1715,28 @@ public partial class GameBootstrap
         GameObject logisticsPanelObj = CreateUiObject("LogisticsPanel", rightPanel);
         shiftsLogisticsPanel = logisticsPanelObj.GetComponent<RectTransform>();
         LayoutElement logisticsPanelLayout = logisticsPanelObj.AddComponent<LayoutElement>();
-        logisticsPanelLayout.preferredHeight = ShiftsTabContentHeight;
-        logisticsPanelLayout.minHeight = ShiftsTabContentHeight;
+        logisticsPanelLayout.preferredHeight = GetShiftsTabContentHeight();
+        logisticsPanelLayout.minHeight = GetShiftsTabContentHeight();
         logisticsPanelLayout.flexibleHeight = 0f;
         ScrollRect logisticsScroll = logisticsPanelObj.AddComponent<ScrollRect>();
-        logisticsPanelObj.AddComponent<RectMask2D>();
+        shiftsScreenUi.ProductionScrollRect = logisticsScroll;
         logisticsScroll.horizontal = false; logisticsScroll.vertical = true;
         logisticsScroll.movementType = ScrollRect.MovementType.Clamped;
         logisticsScroll.scrollSensitivity = 30f; logisticsScroll.inertia = false;
+        logisticsScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
 
-        GameObject logisticsContentGo = CreateUiObject("LogisticsContent", logisticsPanelObj.transform);
+        GameObject logisticsViewportObj = CreateUiObject("Viewport", logisticsPanelObj.transform);
+        RectTransform logisticsViewport = logisticsViewportObj.GetComponent<RectTransform>();
+        StretchRect(logisticsViewport, 0f, 18f, 0f, 0f);
+        Image logisticsViewportImage = logisticsViewportObj.AddComponent<Image>();
+        logisticsViewportImage.color = new Color(0f, 0f, 0f, 0.02f);
+        logisticsViewportObj.AddComponent<Mask>().showMaskGraphic = false;
+
+        Scrollbar logisticsScrollbar = CreatePanelScrollbar("ProductionScrollbar", logisticsPanelObj.transform);
+        logisticsScroll.viewport = logisticsViewport;
+        logisticsScroll.verticalScrollbar = logisticsScrollbar;
+
+        GameObject logisticsContentGo = CreateUiObject("LogisticsContent", logisticsViewportObj.transform);
         RectTransform logisticsContent = logisticsContentGo.GetComponent<RectTransform>();
         logisticsContent.anchorMin = new Vector2(0f, 1f); logisticsContent.anchorMax = new Vector2(1f, 1f);
         logisticsContent.pivot = new Vector2(0.5f, 1f);
@@ -1604,6 +1751,13 @@ public partial class GameBootstrap
         logisticsContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         logisticsScroll.content = logisticsContent;
 
+        RectTransform productionIntroCard = CreateSectionCard(logisticsContent, font, string.Empty, out RectTransform productionIntroBody, false);
+        productionIntroCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 78f;
+        VerticalLayoutGroup productionIntroLayout = productionIntroBody.GetComponent<VerticalLayoutGroup>();
+        productionIntroLayout.spacing = 6f;
+        shiftsScreenUi.ProductionSectionTitleText = CreateHeaderText("AssignmentsProductionSectionTitle", productionIntroBody, font, "Production", 16, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.ProductionSectionSummaryText = CreateBodyText("AssignmentsProductionSectionSummary", productionIntroBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+
         // Slots 0-2: Forest, Sawmill, FurnitureFactory (one card each, one worker each)
         LocationType[] singleTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory };
         string[] singleNames = { "Forest", "Sawmill", "Furniture Factory" };
@@ -1613,7 +1767,7 @@ public partial class GameBootstrap
             RectTransform slotCard = CreateSectionCard(logisticsContent, font, string.Empty, out RectTransform slotBody, false);
             slot.Root = slotCard;
             LayoutElement slotCardLE = slotCard.gameObject.AddComponent<LayoutElement>();
-            slotCardLE.preferredHeight = 120f;
+            slotCardLE.preferredHeight = 102f;
             slotCardLE.flexibleHeight  = 0f;
             VerticalLayoutGroup slotBodyLayout = slotBody.GetComponent<VerticalLayoutGroup>();
             slotBodyLayout.spacing = 4;
@@ -1656,7 +1810,7 @@ public partial class GameBootstrap
         {
             RectTransform warehouseCard = CreateSectionCard(logisticsContent, font, string.Empty, out RectTransform warehouseBody, false);
             LayoutElement warehouseCardLE = warehouseCard.gameObject.AddComponent<LayoutElement>();
-            warehouseCardLE.preferredHeight = 188f;
+            warehouseCardLE.preferredHeight = 170f;
             warehouseCardLE.flexibleHeight  = 0f;
             VerticalLayoutGroup warehouseBodyLayout = warehouseBody.GetComponent<VerticalLayoutGroup>();
             warehouseBodyLayout.spacing = 4;
@@ -1673,14 +1827,18 @@ public partial class GameBootstrap
                 int slotArrayIdx = 3 + wi;
                 LogisticsSlotUi wSlot = new() { BuildingType = LocationType.Warehouse, SlotIndex = wi, Root = warehouseCard };
                 // Store WorkHoursText only on first warehouse slot (used by UpdateLogisticsTabUi)
-                if (wi == 0) wSlot.WorkHoursText = warehouseWorkHours;
+                if (wi == 0)
+                {
+                    wSlot.WorkHoursText = warehouseWorkHours;
+                    wSlot.BuildingNameText = warehouseTitle;
+                }
 
                 RectTransform wActionRow = CreateLayoutRow($"LogActionRowWarehouse{wi}", warehouseBody, 26f, 4f);
                 wActionRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
                 wSlot.AssignedWorkerText = CreateHeaderText($"LogWorkerWarehouse{wi}", wActionRow, font, $"Loader {wi + 1}: —", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
                 wSlot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
                 wSlot.AssignButton = CreateButton($"LogAssignBtnWarehouse{wi}", wActionRow, font, out wSlot.AssignButtonText, "Assign", 11, FleetPrimaryButtonColor, Color.white);
-                wSlot.AssignButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
+                wSlot.AssignButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 104f;
                 wSlot.RemoveButton = CreateButton($"LogRemoveBtnWarehouse{wi}", wActionRow, font, out _, "×", 12, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
                 wSlot.RemoveButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
 
@@ -1726,6 +1884,31 @@ public partial class GameBootstrap
         if (!shouldShow) return;
         if (!isShiftsScreenDirty) return;
 
+        bool ru = IsRussianLanguage();
+        if (shiftsScreenUi.TitleText != null)
+        {
+            shiftsScreenUi.TitleText.text = ru ? "Назначения" : "Assignments";
+        }
+        if (shiftsScreenUi.LogisticsSectionTitleText != null)
+        {
+            shiftsScreenUi.LogisticsSectionTitleText.text = ru ? "Логистика" : "Logistics";
+        }
+        if (shiftsScreenUi.LogisticsSectionSummaryText != null)
+        {
+            shiftsScreenUi.LogisticsSectionSummaryText.text = ru
+                ? "Смены отвечают за локальные рейсы. Межгород резервирует отдельного рабочего под торговлю и выезды по магистрали."
+                : "Shifts handle local delivery work. Intercity reserves a dedicated worker for trade and highway trips.";
+        }
+        if (shiftsScreenUi.ProductionSectionTitleText != null)
+        {
+            shiftsScreenUi.ProductionSectionTitleText.text = ru ? "Производство" : "Production";
+        }
+        if (shiftsScreenUi.ProductionSectionSummaryText != null)
+        {
+            shiftsScreenUi.ProductionSectionSummaryText.text = ru
+                ? "Здесь рабочий закрепляется прямо за зданием и трудится по графику 08:00-18:00."
+                : "Here a worker is assigned directly to a building and works on an 08:00-18:00 schedule.";
+        }
         shiftsScreenUi.HeaderCountText.text = $"{driverAgents.Count} {(driverAgents.Count == 1 ? L("Worker") : L("Workers"))}";
 
         EnforceShiftsWindowLayout();
@@ -1755,23 +1938,101 @@ public partial class GameBootstrap
 
             bool isAssigned = driver.ShiftStartHour >= 0;
             bool isIntercity = IsDriverIntercity(driver);
-            bool isLogistics = driver.DutyMode == DriverDutyMode.Logistics;
+            bool isProduction = driver.DutyMode == DriverDutyMode.Logistics;
             bool isTruckAssigned = driver.AssignedTruckNumber > 0;
             row.StatusText.text = isIntercity
                 ? L("Intercity")
                 : isTruckAssigned
                     ? L("Logistics")
-                    : isLogistics
-                        ? L("Productions")
+                    : isProduction
+                        ? L("Production")
                         : isAssigned
                             ? $"{L("Assigned")}: {GetShiftRangeLabel(driver.ShiftStartHour)}"
                             : L("Idle");
-            row.StatusText.color = isIntercity || isLogistics || isTruckAssigned
+            row.StatusText.color = isIntercity || isProduction || isTruckAssigned
                 ? FleetAccentColor
                 : isAssigned ? new Color(0.62f, 0.92f, 0.62f, 1f) : FleetMutedTextColor;
         }
 
         DriverAgent selectedDriver = driverAgents.Find(driver => driver.DriverId == selectedShiftDriverId);
+        if (shiftsScreenUi.SelectionTitleText != null)
+        {
+            shiftsScreenUi.SelectionTitleText.text = ru ? "Выбранный рабочий" : "Selected Worker";
+        }
+        if (selectedDriver == null)
+        {
+            if (shiftsScreenUi.SelectionNameText != null)
+            {
+                shiftsScreenUi.SelectionNameText.text = ru ? "Никто не выбран" : "No worker selected";
+                shiftsScreenUi.SelectionNameText.color = Color.white;
+            }
+            if (shiftsScreenUi.SelectionProfessionText != null)
+            {
+                shiftsScreenUi.SelectionProfessionText.text = ru
+                    ? "Статус назначения"
+                    : "Assignment status";
+            }
+            if (shiftsScreenUi.SelectionStatusText != null)
+            {
+                shiftsScreenUi.SelectionStatusText.text = ru
+                    ? "Доступные назначения появятся после выбора"
+                    : "Available assignments appear after selection";
+                shiftsScreenUi.SelectionStatusText.color = FleetSecondaryTextColor;
+            }
+            if (shiftsScreenUi.SelectionHintText != null)
+            {
+                shiftsScreenUi.SelectionHintText.text = string.Empty;
+            }
+        }
+        else
+        {
+            if (shiftsScreenUi.SelectionNameText != null)
+            {
+                shiftsScreenUi.SelectionNameText.text = selectedDriver.DriverName;
+                shiftsScreenUi.SelectionNameText.color = FleetAccentColor;
+            }
+            if (shiftsScreenUi.SelectionProfessionText != null)
+            {
+                shiftsScreenUi.SelectionProfessionText.text = L(GetWorkerOccupationLabel(selectedDriver));
+            }
+
+            string workerStatusSummary = IsDriverIntercity(selectedDriver)
+                ? (ru ? "Закреплён за междугородними рейсами" : "Assigned to intercity duty")
+                : selectedDriver.AssignedTruckNumber > 0
+                    ? (ru ? $"Закреплён за грузовиком #{selectedDriver.AssignedTruckNumber}" : $"Assigned to Truck #{selectedDriver.AssignedTruckNumber}")
+                    : selectedDriver.DutyMode == DriverDutyMode.Logistics && selectedDriver.AssignedBuildingType.HasValue
+                        ? (ru ? $"Работает в {GetSelectedLocationDisplayName(selectedDriver.AssignedBuildingType.Value)}" : $"Working at {GetSelectedLocationDisplayName(selectedDriver.AssignedBuildingType.Value)}")
+                        : selectedDriver.ShiftStartHour >= 0
+                            ? (ru ? $"Логистическая смена: {GetShiftRangeLabel(selectedDriver.ShiftStartHour)}" : $"Logistics shift: {GetShiftRangeLabel(selectedDriver.ShiftStartHour)}")
+                            : (ru ? "Свободен для назначения" : "Available for assignment");
+            if (shiftsScreenUi.SelectionStatusText != null)
+            {
+                shiftsScreenUi.SelectionStatusText.text = workerStatusSummary;
+                shiftsScreenUi.SelectionStatusText.color =
+                    (selectedDriver.DutyMode != DriverDutyMode.Local || selectedDriver.AssignedTruckNumber > 0 || selectedDriver.ShiftStartHour >= 0)
+                    ? FleetAccentColor
+                    : Color.white;
+            }
+
+            if (shiftsScreenUi.SelectionHintText != null)
+            {
+                shiftsScreenUi.SelectionHintText.text = isLogisticsTabActive
+                    ? (ru ? "Производство: прямое назначение в здание."
+                        : "Production: direct building assignment.")
+                    : (ru ? "Логистика: смены и межгород."
+                        : "Logistics: shifts and intercity.");
+            }
+        }
+
+        if (shiftsScreenUi.TransportScrollRect != null)
+        {
+            shiftsScreenUi.TransportScrollRect.verticalNormalizedPosition = 1f;
+        }
+
+        if (shiftsScreenUi.ProductionScrollRect != null)
+        {
+            shiftsScreenUi.ProductionScrollRect.verticalNormalizedPosition = 1f;
+        }
 
         for (int i = 0; i < shiftsScreenUi.ShiftCards.Count; i++)
         {
@@ -1783,6 +2044,18 @@ public partial class GameBootstrap
                 {
                     assignedDrivers.Add(driver);
                 }
+            }
+
+            if (card.SummaryText != null)
+            {
+                string shiftPrefix = ru ? "Локальные рейсы" : "Local deliveries";
+                string summary = assignedDrivers.Count switch
+                {
+                    0 => ru ? "никто не назначен" : "no workers assigned",
+                    1 => ru ? "1 рабочий назначен" : "1 worker assigned",
+                    _ => ru ? $"{assignedDrivers.Count} рабочих назначено" : $"{assignedDrivers.Count} workers assigned"
+                };
+                card.SummaryText.text = $"{shiftPrefix} • {summary}";
             }
 
             card.EmptyText.gameObject.SetActive(assignedDrivers.Count == 0);
@@ -1797,15 +2070,15 @@ public partial class GameBootstrap
 
             bool alreadyAssigned = selectedDriver != null && selectedDriver.DutyMode == DriverDutyMode.Local && selectedDriver.ShiftStartHour == card.ShiftHour;
             bool intercitySelected = IsDriverIntercity(selectedDriver);
-            bool logisticsSelected = selectedDriver?.DutyMode == DriverDutyMode.Logistics;
-            card.AssignButton.interactable = selectedDriver != null && !alreadyAssigned && !intercitySelected && !logisticsSelected;
+            bool productionSelected = selectedDriver?.DutyMode == DriverDutyMode.Logistics;
+            card.AssignButton.interactable = selectedDriver != null && !alreadyAssigned && !intercitySelected && !productionSelected;
             card.AssignButtonText.text = selectedDriver == null
-                ? "Select a worker to assign"
-                : (intercitySelected || logisticsSelected)
-                    ? "Worker not available"
+                ? L("Select a worker to assign")
+                : (intercitySelected || productionSelected)
+                    ? L("Worker not available")
                     : alreadyAssigned
-                        ? $"{selectedDriver.DriverName} already assigned"
-                        : $"Assign {selectedDriver.DriverName} -> {ShiftNames[i]}";
+                        ? (ru ? $"{selectedDriver.DriverName} уже назначен" : $"{selectedDriver.DriverName} already assigned")
+                        : (ru ? $"Назначить {selectedDriver.DriverName} -> {ShiftNames[i]}" : $"Assign {selectedDriver.DriverName} -> {ShiftNames[i]}");
         }
 
         UpdateIntercitySlotUi(selectedDriver);
@@ -1834,8 +2107,17 @@ public partial class GameBootstrap
         SetCenteredWindow(shiftsScreenUi.WindowRoot, ShiftsWindowWidth, ShiftsWindowHeight, -16f);
         ApplyFixedLayoutSize(shiftsScreenUi.LeftPanel, ShiftsLeftPanelWidth, ShiftsInnerPanelHeight);
         ApplyFixedLayoutSize(shiftsScreenUi.RightPanel, ShiftsRightPanelWidth, ShiftsInnerPanelHeight);
-        ApplyFixedLayoutHeight(shiftsTransportPanel, ShiftsTabContentHeight);
-        ApplyFixedLayoutHeight(shiftsLogisticsPanel, ShiftsTabContentHeight);
+        float tabContentHeight = GetShiftsTabContentHeight();
+        ApplyFixedLayoutHeight(shiftsTransportPanel, tabContentHeight);
+        ApplyFixedLayoutHeight(shiftsLogisticsPanel, tabContentHeight);
+    }
+
+    private static float GetShiftsTabContentHeight()
+    {
+        const float rightPanelVerticalPadding = 30f;
+        const float rightPanelInterBlockSpacing = 24f;
+        float available = ShiftsInnerPanelHeight - rightPanelVerticalPadding - rightPanelInterBlockSpacing - ShiftsSelectionCardHeight - ShiftsTabRowHeight;
+        return Mathf.Max(280f, available);
     }
 
     private static void ApplyFixedLayoutSize(RectTransform rect, float width, float height)
@@ -1948,6 +2230,30 @@ public partial class GameBootstrap
         return text != null ? ColorUtility.ToHtmlStringRGBA(text.color) : "null";
     }
 
+    private static Scrollbar CreatePanelScrollbar(string name, Transform parent)
+    {
+        RectTransform scrollbarRoot = CreateStyledPanel(name, parent, new Color(0.09f, 0.12f, 0.17f, 0.96f));
+        scrollbarRoot.anchorMin = new Vector2(1f, 0f);
+        scrollbarRoot.anchorMax = new Vector2(1f, 1f);
+        scrollbarRoot.pivot = new Vector2(1f, 0.5f);
+        scrollbarRoot.sizeDelta = new Vector2(12f, 0f);
+        scrollbarRoot.anchoredPosition = Vector2.zero;
+
+        RectTransform slidingArea = CreateUiObject($"{name}_SlidingArea", scrollbarRoot).GetComponent<RectTransform>();
+        StretchRect(slidingArea, 2f, 2f, 2f, 2f);
+
+        RectTransform handleRect = CreateStyledPanel($"{name}_Handle", slidingArea, FleetPrimaryButtonColor);
+        StretchRect(handleRect, 0f, 0f, 0f, 0f);
+
+        Scrollbar scrollbar = scrollbarRoot.gameObject.AddComponent<Scrollbar>();
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scrollbar.handleRect = handleRect;
+        scrollbar.targetGraphic = handleRect.GetComponent<Image>();
+        scrollbar.value = 1f;
+        scrollbar.size = 0.25f;
+        return scrollbar;
+    }
+
     private void ApplyShiftsTabVisuals()
     {
         ApplyShiftsTabVisual(shiftsTransportTabBtn, shiftsTransportTabText, !isLogisticsTabActive);
@@ -1989,6 +2295,7 @@ public partial class GameBootstrap
     private void UpdateLogisticsTabUi(DriverAgent selectedDriver)
     {
         bool forestTutorialActive = IsTutorialEnabledForCurrentMode() && !hasShownForestWorkerStartedTutorial;
+        bool ru = IsRussianLanguage();
 
         // For Warehouse: only show the card once (slot index 3 controls Root visibility)
         bool warehouseCardShown = false;
@@ -2016,7 +2323,11 @@ public partial class GameBootstrap
 
             DriverAgent assigned = GetNthLogisticsWorker(slot.BuildingType, slot.SlotIndex);
 
-            bool ru = IsRussianLanguage();
+            if (slot.BuildingNameText != null)
+            {
+                slot.BuildingNameText.text = L(GetSelectedLocationDisplayName(slot.BuildingType));
+            }
+
             if (slot.WorkHoursText != null)
             {
                 slot.WorkHoursText.text = GetProductionWorkRangeLabel();
@@ -2026,7 +2337,7 @@ public partial class GameBootstrap
             if (isWarehouse)
             {
                 // Compact row: "Loader N: Name — hours" or "Loader N: —"
-                string loaderLabel = $"Loader {slot.SlotIndex + 1}: ";
+                string loaderLabel = ru ? $"Кладовщик {slot.SlotIndex + 1}: " : $"Loader {slot.SlotIndex + 1}: ";
                 slot.AssignedWorkerText.text = assigned != null
                     ? $"{loaderLabel}{assigned.DriverName}"
                     : $"{loaderLabel}—";
@@ -2042,7 +2353,7 @@ public partial class GameBootstrap
                     _                             => L("Worker"),
                 };
                 string workerLabel = assigned != null
-                    ? $"{assigned.DriverName}  —  {GetProductionWorkRangeLabel()}"
+                    ? (ru ? $"Назначен: {assigned.DriverName}" : $"Assigned: {assigned.DriverName}")
                     : ru ? $"{professionLabel} не назначен" : $"{professionLabel} not assigned";
                 slot.AssignedWorkerText.text = workerLabel;
                 slot.AssignedWorkerText.color = assigned != null ? FleetAccentColor : FleetSecondaryTextColor;
@@ -2055,14 +2366,14 @@ public partial class GameBootstrap
             bool canAssign = selectedIsIdle && assigned == null && !selectedAlreadyHere;
             slot.AssignButton.interactable = canAssign;
             slot.AssignButtonText.text = selectedDriver == null
-                ? (isWarehouse ? "Select" : "Select a worker")
+                ? (isWarehouse ? (ru ? "Выбери рабочего" : "Select worker") : L("Select a worker"))
                 : assigned != null
-                    ? (isWarehouse ? "Occupied" : "Slot occupied")
+                    ? (isWarehouse ? (ru ? "Занято" : "Occupied") : L("Slot occupied"))
                     : selectedAlreadyHere
-                        ? (isWarehouse ? "Assigned" : "Already assigned")
+                        ? (isWarehouse ? L("Assigned") : (ru ? "Уже назначен сюда" : "Already assigned here"))
                         : !selectedIsIdle
-                            ? (isWarehouse ? "Not idle" : $"{selectedDriver.DriverName} is not Idle")
-                            : isWarehouse ? selectedDriver.DriverName : $"Assign {selectedDriver.DriverName}";
+                            ? (isWarehouse ? (ru ? "Не свободен" : "Not idle") : (ru ? $"{selectedDriver.DriverName} не свободен" : $"{selectedDriver.DriverName} is not idle"))
+                            : isWarehouse ? (ru ? "Назначить" : "Assign") : (ru ? $"Назначить: {selectedDriver.DriverName}" : $"Assign: {selectedDriver.DriverName}");
 
             slot.RemoveButton.interactable = assigned != null;
         }
@@ -2137,16 +2448,27 @@ public partial class GameBootstrap
         DriverAgent intercityDriver = GetIntercityAssignedDriver();
         bool selectedIsIntercity = IsDriverIntercity(selectedDriver);
         bool selectedIsIdleForIntercity = selectedDriver != null && !selectedDriver.IsArrivingByBus && !selectedIsIntercity;
-        shiftsScreenUi.IntercitySlot.AssignedDriverText.text = intercityDriver != null ? intercityDriver.DriverName : "No worker assigned";
+        bool ru = IsRussianLanguage();
+        if (shiftsScreenUi.IntercitySlot.HeaderText != null)
+        {
+            shiftsScreenUi.IntercitySlot.HeaderText.text = ru ? "Межгород" : "Intercity";
+        }
+        if (shiftsScreenUi.IntercitySlot.SummaryText != null)
+        {
+            shiftsScreenUi.IntercitySlot.SummaryText.text = ru
+                ? "Отдельный рабочий для торговли и рейсов за пределы текущего региона."
+                : "Dedicated worker for trade and trips beyond the current region.";
+        }
+        shiftsScreenUi.IntercitySlot.AssignedDriverText.text = intercityDriver != null ? intercityDriver.DriverName : L("No worker assigned");
         shiftsScreenUi.IntercitySlot.StatusText.text = intercityDriver != null
-            ? "Reserved for future trade runs"
-            : "Assign one dedicated driver to intercity duty";
+            ? (ru ? "Закреплён под междугородние рейсы" : "Reserved for future trade runs")
+            : (ru ? "Назначьте отдельного рабочего на междугородние рейсы" : "Assign one dedicated worker to intercity duty");
         shiftsScreenUi.IntercitySlot.AssignButton.interactable = selectedIsIdleForIntercity && !selectedIsIntercity;
         shiftsScreenUi.IntercitySlot.AssignButtonText.text = selectedDriver == null
-            ? "Select a worker"
+            ? L("Select a worker")
             : (selectedIsIntercity || !selectedIsIdleForIntercity)
-                ? "Worker not available"
-                : $"Assign {selectedDriver.DriverName}";
+                ? L("Worker not available")
+                : (ru ? $"Назначить {selectedDriver.DriverName}" : $"Assign {selectedDriver.DriverName}");
         shiftsScreenUi.IntercitySlot.RemoveButton.interactable = intercityDriver != null;
     }
 

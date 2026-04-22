@@ -2,11 +2,29 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private enum DebugServiceResourceKind
+    {
+        Fuel,
+        Alcohol,
+        Food
+    }
+
+    private enum DebugProductionResourceKind
+    {
+        Logs,
+        Boards,
+        Textile,
+        Furniture
+    }
+
+    private const int DebugLooseStorageMax = 99;
+
     // ── state ───────────────────────────────────────────────────────────────
     private bool    isDebugServicePanelOpen;
     private int     debugSelectedDriverId = -1;
     private Vector2 debugWorkerScrollPos;
-    private Rect    debugPanelRect = new Rect(10f, 10f, 270f, 420f);
+    private Vector2 debugResourceScrollPos;
+    private Rect    debugPanelRect = new Rect(10f, 10f, 380f, 820f);
 
     private static readonly (LocationType type, string label)[] DebugServiceBuildings =
     {
@@ -35,7 +53,7 @@ public partial class GameBootstrap
         GUILayout.Space(4f);
         GUILayout.Label("Select worker:");
 
-        debugWorkerScrollPos = GUILayout.BeginScrollView(debugWorkerScrollPos, GUILayout.Height(200f));
+        debugWorkerScrollPos = GUILayout.BeginScrollView(debugWorkerScrollPos, GUILayout.Height(220f));
         foreach (DriverAgent d in driverAgents)
         {
             if (d?.DriverObject == null) continue;
@@ -64,11 +82,218 @@ public partial class GameBootstrap
         }
         GUI.enabled = true;
 
+        if (selectedGameStartMode == GameStartMode.Debug)
+        {
+            GUILayout.Space(10f);
+            GUILayout.Label("Debug resources:");
+
+            debugResourceScrollPos = GUILayout.BeginScrollView(debugResourceScrollPos, GUILayout.Height(360f));
+            GUILayout.Label("Service buildings:");
+            DrawDebugServiceResourceRow(LocationType.GasStation, "Gas Station", DebugServiceResourceKind.Fuel);
+            DrawDebugServiceResourceRow(LocationType.Bar, "Bar", DebugServiceResourceKind.Alcohol);
+            DrawDebugServiceResourceRow(LocationType.Canteen, "Canteen", DebugServiceResourceKind.Food);
+            GUILayout.Space(8f);
+            GUILayout.Label("Production / storage:");
+            DrawDebugProductionResourceRow(LocationType.Forest, "Forest", DebugProductionResourceKind.Logs);
+            DrawDebugProductionResourceRow(LocationType.Sawmill, "Sawmill Logs", DebugProductionResourceKind.Logs);
+            DrawDebugProductionResourceRow(LocationType.Sawmill, "Sawmill Boards", DebugProductionResourceKind.Boards);
+            DrawDebugProductionResourceRow(LocationType.Warehouse, "Warehouse Logs", DebugProductionResourceKind.Logs);
+            DrawDebugProductionResourceRow(LocationType.Warehouse, "Warehouse Boards", DebugProductionResourceKind.Boards);
+            DrawDebugProductionResourceRow(LocationType.Warehouse, "Warehouse Textile", DebugProductionResourceKind.Textile);
+            DrawDebugProductionResourceRow(LocationType.Warehouse, "Warehouse Furniture", DebugProductionResourceKind.Furniture);
+            DrawDebugProductionResourceRow(LocationType.FurnitureFactory, "Furniture Factory Boards", DebugProductionResourceKind.Boards);
+            DrawDebugProductionResourceRow(LocationType.FurnitureFactory, "Furniture Factory Textile", DebugProductionResourceKind.Textile);
+            DrawDebugProductionResourceRow(LocationType.FurnitureFactory, "Furniture Factory Furniture", DebugProductionResourceKind.Furniture);
+            GUILayout.EndScrollView();
+        }
+
         GUILayout.Space(8f);
         if (GUILayout.Button("Close  [F9]"))
             ToggleDebugServicePanel();
 
         GUI.DragWindow();
+    }
+
+    private void DrawDebugServiceResourceRow(LocationType type, string label, DebugServiceResourceKind resourceKind)
+    {
+        LocationData location = null;
+        bool built = locations != null && locations.TryGetValue(type, out location);
+        using (new GUILayout.VerticalScope(GUI.skin.box))
+        {
+            GUILayout.Label(built ? label : $"{label}  [not built]");
+            if (!built || location == null)
+            {
+                return;
+            }
+
+            int currentValue = GetDebugServiceResourceValue(location, resourceKind);
+            int maxValue = GetDebugServiceResourceMax(resourceKind);
+            GUILayout.Label($"{GetDebugServiceResourceLabel(resourceKind)}: {currentValue} / {maxValue}");
+
+            using (new GUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("-1", GUILayout.Width(52f)))
+                {
+                    AdjustDebugServiceResource(type, resourceKind, -1);
+                }
+
+                if (GUILayout.Button("+1", GUILayout.Width(52f)))
+                {
+                    AdjustDebugServiceResource(type, resourceKind, 1);
+                }
+            }
+        }
+    }
+
+    private static string GetDebugServiceResourceLabel(DebugServiceResourceKind resourceKind)
+    {
+        return resourceKind switch
+        {
+            DebugServiceResourceKind.Fuel => "Fuel",
+            DebugServiceResourceKind.Alcohol => "Alcohol",
+            DebugServiceResourceKind.Food => "Food",
+            _ => "Resource"
+        };
+    }
+
+    private void DrawDebugProductionResourceRow(LocationType type, string label, DebugProductionResourceKind resourceKind)
+    {
+        LocationData location = null;
+        bool built = locations != null && locations.TryGetValue(type, out location);
+        using (new GUILayout.VerticalScope(GUI.skin.box))
+        {
+            GUILayout.Label(built ? label : $"{label}  [not built]");
+            if (!built || location == null)
+            {
+                return;
+            }
+
+            int currentValue = GetDebugProductionResourceValue(location, resourceKind);
+            int maxValue = GetDebugProductionResourceMax(type, resourceKind);
+            GUILayout.Label($"{GetDebugProductionResourceLabel(resourceKind)}: {currentValue} / {maxValue}");
+
+            using (new GUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("-1", GUILayout.Width(52f)))
+                {
+                    AdjustDebugProductionResource(type, resourceKind, -1);
+                }
+
+                if (GUILayout.Button("+1", GUILayout.Width(52f)))
+                {
+                    AdjustDebugProductionResource(type, resourceKind, 1);
+                }
+            }
+        }
+    }
+
+    private static string GetDebugProductionResourceLabel(DebugProductionResourceKind resourceKind)
+    {
+        return resourceKind switch
+        {
+            DebugProductionResourceKind.Logs => "Logs",
+            DebugProductionResourceKind.Boards => "Boards",
+            DebugProductionResourceKind.Textile => "Textile",
+            DebugProductionResourceKind.Furniture => "Furniture",
+            _ => "Resource"
+        };
+    }
+
+    private static int GetDebugServiceResourceMax(DebugServiceResourceKind resourceKind)
+    {
+        return resourceKind switch
+        {
+            DebugServiceResourceKind.Fuel => GasStationMaxFuelStorage,
+            DebugServiceResourceKind.Alcohol => BarMaxAlcoholStorage,
+            DebugServiceResourceKind.Food => CanteenMaxFoodStorage,
+            _ => 0
+        };
+    }
+
+    private static int GetDebugProductionResourceMax(LocationType type, DebugProductionResourceKind resourceKind)
+    {
+        return (type, resourceKind) switch
+        {
+            (LocationType.Forest, DebugProductionResourceKind.Logs) => ForestMaxLogsStorage,
+            (LocationType.FurnitureFactory, DebugProductionResourceKind.Boards) => FurnitureFactoryMaxBoardsStorage,
+            (LocationType.FurnitureFactory, DebugProductionResourceKind.Textile) => FurnitureFactoryMaxTextileStorage,
+            (LocationType.FurnitureFactory, DebugProductionResourceKind.Furniture) => FurnitureFactoryMaxFurnitureStorage,
+            _ => DebugLooseStorageMax
+        };
+    }
+
+    private static int GetDebugServiceResourceValue(LocationData location, DebugServiceResourceKind resourceKind)
+    {
+        return resourceKind switch
+        {
+            DebugServiceResourceKind.Fuel => location.FuelStored,
+            DebugServiceResourceKind.Alcohol => location.AlcoholStored,
+            DebugServiceResourceKind.Food => location.FoodStored,
+            _ => 0
+        };
+    }
+
+    private static int GetDebugProductionResourceValue(LocationData location, DebugProductionResourceKind resourceKind)
+    {
+        return resourceKind switch
+        {
+            DebugProductionResourceKind.Logs => location.LogsStored,
+            DebugProductionResourceKind.Boards => location.BoardsStored,
+            DebugProductionResourceKind.Textile => location.TextileStored,
+            DebugProductionResourceKind.Furniture => location.FurnitureStored,
+            _ => 0
+        };
+    }
+
+    private void AdjustDebugServiceResource(LocationType type, DebugServiceResourceKind resourceKind, int delta)
+    {
+        if (!locations.TryGetValue(type, out LocationData location))
+        {
+            return;
+        }
+
+        int maxValue = GetDebugServiceResourceMax(resourceKind);
+        switch (resourceKind)
+        {
+            case DebugServiceResourceKind.Fuel:
+                location.FuelStored = Mathf.Clamp(location.FuelStored + delta, 0, maxValue);
+                break;
+            case DebugServiceResourceKind.Alcohol:
+                location.AlcoholStored = Mathf.Clamp(location.AlcoholStored + delta, 0, maxValue);
+                break;
+            case DebugServiceResourceKind.Food:
+                location.FoodStored = Mathf.Clamp(location.FoodStored + delta, 0, maxValue);
+                break;
+        }
+
+        SessionDebugLogger.Log("DEBUG", $"[DBG] {type} {GetDebugServiceResourceLabel(resourceKind)} adjusted by {delta}; now {GetDebugServiceResourceValue(location, resourceKind)}/{maxValue}.");
+    }
+
+    private void AdjustDebugProductionResource(LocationType type, DebugProductionResourceKind resourceKind, int delta)
+    {
+        if (!locations.TryGetValue(type, out LocationData location))
+        {
+            return;
+        }
+
+        int maxValue = GetDebugProductionResourceMax(type, resourceKind);
+        switch (resourceKind)
+        {
+            case DebugProductionResourceKind.Logs:
+                location.LogsStored = Mathf.Clamp(location.LogsStored + delta, 0, maxValue);
+                break;
+            case DebugProductionResourceKind.Boards:
+                location.BoardsStored = Mathf.Clamp(location.BoardsStored + delta, 0, maxValue);
+                break;
+            case DebugProductionResourceKind.Textile:
+                location.TextileStored = Mathf.Clamp(location.TextileStored + delta, 0, maxValue);
+                break;
+            case DebugProductionResourceKind.Furniture:
+                location.FurnitureStored = Mathf.Clamp(location.FurnitureStored + delta, 0, maxValue);
+                break;
+        }
+
+        SessionDebugLogger.Log("DEBUG", $"[DBG] {type} {GetDebugProductionResourceLabel(resourceKind)} adjusted by {delta}; now {GetDebugProductionResourceValue(location, resourceKind)}/{maxValue}.");
     }
 
     // ── force send ──────────────────────────────────────────────────────────

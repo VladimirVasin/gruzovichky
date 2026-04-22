@@ -667,7 +667,48 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         float grassPatchNoise = Mathf.PerlinNoise((x + 1) * 0.18f + 4.2f, (y + 1) * 0.2f + 7.4f);
+        if (IsDenseForestCell(x, y))
+        {
+            return true;
+        }
+
         return grassPatchNoise > 0.5f;
+    }
+
+    private bool IsDenseForestCell(int x, int y)
+    {
+        int shoreRow = GridHeight - WaterRiverWidth;
+        float centerX = GridWidth * 0.28f;
+        float centerY = shoreRow * 0.34f;
+
+        float dx = (x - centerX) / Mathf.Max(1f, GridWidth * 0.18f);
+        float dy = (y - centerY) / Mathf.Max(1f, GridHeight * 0.16f);
+        float radialFalloff = 1f - Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
+
+        if (radialFalloff <= 0f)
+        {
+            return false;
+        }
+
+        float edgeBreakupNoise = Mathf.PerlinNoise((x + 3) * 0.16f + 18.4f, (y + 5) * 0.17f + 29.1f);
+        return radialFalloff > 0.18f && edgeBreakupNoise > 0.24f;
+    }
+
+    private float GetDenseForestCellPriority(Vector2Int cell)
+    {
+        if (!IsDenseForestCell(cell.x, cell.y))
+        {
+            return 0f;
+        }
+
+        int shoreRow = GridHeight - WaterRiverWidth;
+        float centerX = GridWidth * 0.28f;
+        float centerY = shoreRow * 0.34f;
+        float dx = (cell.x - centerX) / Mathf.Max(1f, GridWidth * 0.18f);
+        float dy = (cell.y - centerY) / Mathf.Max(1f, GridHeight * 0.16f);
+        float radialFalloff = 1f - Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
+        float localNoise = Mathf.PerlinNoise((cell.x + 7) * 0.19f + 11.7f, (cell.y + 9) * 0.21f + 23.5f);
+        return radialFalloff * 10f + localNoise;
     }
 
     private bool IsWaterOrBeachCell(Vector2Int cell)

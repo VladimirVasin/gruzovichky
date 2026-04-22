@@ -3,13 +3,18 @@ using UnityEngine;
 
 public static class MiscTreePlanner
 {
+    private const float MiscTargetDensity = 0.22f;
+    private const int BaseMinMiscCount = 18;
+    private const float AreaPerMiscCapCell = 48f;
+
     public static List<Vector2Int> Plan(
         int gridWidth,
         int gridHeight,
         HashSet<Vector2Int> roadCells,
         HashSet<Vector2Int> blockedDecorationCells,
         System.Func<Vector2Int, bool> isLocationCell,
-        System.Func<Vector2Int, bool> isAllowedGroundCell)
+        System.Func<Vector2Int, bool> isAllowedGroundCell,
+        System.Func<Vector2Int, float> getCellPriority = null)
     {
         List<Vector2Int> candidates = new();
         for (int x = 0; x < gridWidth; x++)
@@ -25,9 +30,14 @@ public static class MiscTreePlanner
         }
 
         Shuffle(candidates);
+        if (getCellPriority != null)
+        {
+            candidates.Sort((a, b) => getCellPriority(b).CompareTo(getCellPriority(a)));
+        }
 
         List<Vector2Int> plannedCells = new();
-        int targetCount = Mathf.Clamp(Mathf.RoundToInt(candidates.Count * 0.18f), 12, 34);
+        int dynamicMaxCount = Mathf.Max(BaseMinMiscCount, Mathf.RoundToInt((gridWidth * gridHeight) / AreaPerMiscCapCell));
+        int targetCount = Mathf.Clamp(Mathf.RoundToInt(candidates.Count * MiscTargetDensity), BaseMinMiscCount, dynamicMaxCount);
         foreach (Vector2Int cell in candidates)
         {
             if (plannedCells.Count >= targetCount)

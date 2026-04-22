@@ -88,6 +88,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const int MaxTruckCount = 5;
     private const int HireTruckCost = 300;
     private const int HireDriverCost = 50;
+    private const int InitialWorkerCount = 3;
     private const int MaxMoneyLedgerEntries = 128;
     private const float DayNightCycleDuration = 360f; // 4 periods × 90s = 6-minute day
     private const float DriverShiftArrivalLeadHours = 1f;
@@ -598,7 +599,12 @@ public partial class GameBootstrap : MonoBehaviour
         ToBuildingForShift,        // walking motel -> production building (logistics pre-shift)
         ToMotelFromBuilding,       // walking building -> motel (logistics post-shift)
         WarehouseDeliveryToService, // walking Warehouse -> service building (carrying resource)
-        WarehouseDeliveryReturn    // walking service building -> Warehouse (empty-handed)
+        WarehouseDeliveryReturn,    // walking service building -> Warehouse (empty-handed)
+        LumberToTree,
+        LumberChopping,
+        LumberCarryLogToBuilding,
+        LumberReturnToTreeForPlanting,
+        LumberPlanting
     }
 
     private enum DriverRestPhase

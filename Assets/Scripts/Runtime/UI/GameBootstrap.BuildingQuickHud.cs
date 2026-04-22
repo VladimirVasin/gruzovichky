@@ -742,7 +742,7 @@ public partial class GameBootstrap
         {
             return locationType switch
             {
-                LocationType.Forest           => "Offline - no workers assigned",
+            LocationType.Forest           => "Offline - no workers assigned",
                 LocationType.Sawmill          => "Offline - no workers assigned",
                 LocationType.FurnitureFactory => "Offline - no workers assigned",
                 LocationType.Warehouse        => "Offline - no workers assigned",
@@ -754,7 +754,7 @@ public partial class GameBootstrap
         {
             LocationType.Parking          => "Logistics hub and truck handoff point",
             LocationType.GasStation       => "Fuel service online",
-            LocationType.Forest           => "Logging area in production",
+            LocationType.Forest           => "Lumberyard operations",
             LocationType.Sawmill          => "Processing logs into boards",
             LocationType.FurnitureFactory => "Crafting furniture from boards and textile",
             LocationType.Warehouse        => IsLocationOperational(LocationType.Warehouse)

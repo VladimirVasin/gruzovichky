@@ -30,6 +30,11 @@ public partial class GameBootstrap : MonoBehaviour
         // Leaving Logistics: release building slot
         if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
         {
+            if (driver.AssignedBuildingType == LocationType.Forest)
+            {
+                CancelForestFieldWork(driver);
+            }
+
             if (driver.IsInsideBuilding && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData bd))
             {
                 bd.Workers = Mathf.Max(0, bd.Workers - 1);
@@ -347,6 +352,18 @@ public partial class GameBootstrap : MonoBehaviour
         }
         else
         {
+            // Field-worker case: lumberyard worker may still be outside with a tree task.
+            if (driver.AssignedBuildingType == LocationType.Forest && driver.DriverObject != null && driver.DriverObject.activeSelf)
+            {
+                CancelForestFieldWork(driver);
+                driver.IsOnActiveShift = false;
+                driver.IsInsideBuilding = false;
+                driver.IsShiftSalaryPending = true;
+                PayDriverSalary(driver);
+                StartWorkerLifeCycleAfterWork(driver, driver.DriverObject.transform.position, "Lumberyard field work");
+                return;
+            }
+
             // Safety: shift ended but driver not inside (edge case)
             driver.IsOnActiveShift = false;
         }

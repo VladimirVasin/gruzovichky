@@ -7,6 +7,7 @@ using UnityEngine.Rendering.Universal;
 public partial class GameBootstrap
 {
     private const float TreeHeightScale = 1.1f;
+    private const float MiscTreeWorldScaleMultiplier = 2f;
     private const float BerryBushSpawnChance = 0.28f;
     private const float FlowerPatchSpawnChance = 0.18f;
 
@@ -17,7 +18,7 @@ public partial class GameBootstrap
         GeneratedWorldLayout layout = WorldLayoutGenerator.Generate(GridWidth, GridHeight, waterCells, HasRequiredLayoutRoads);
         CreateLocation(LocationType.Parking, "Parking", layout.Parking.Min, layout.Parking.Max, layout.Parking.Anchor, new Color(0.46f, 0.46f, 0.52f));
         CreateLocation(LocationType.GasStation, "Gas Station", layout.GasStation.Min, layout.GasStation.Max, layout.GasStation.Anchor, new Color(0.84f, 0.68f, 0.26f));
-        CreateLocation(LocationType.Forest, "Forest", layout.Forest.Min, layout.Forest.Max, layout.Forest.Anchor, new Color(0.22f, 0.55f, 0.24f));
+        CreateLocation(LocationType.Forest, "Lumberyard", layout.Forest.Min, layout.Forest.Max, layout.Forest.Anchor, new Color(0.58f, 0.42f, 0.24f));
         CreateLocation(LocationType.Warehouse, "Warehouse", layout.Warehouse.Min, layout.Warehouse.Max, layout.Warehouse.Anchor, new Color(0.7f, 0.52f, 0.3f));
         if (selectedGameStartMode == GameStartMode.Debug)
         {
@@ -111,6 +112,7 @@ public partial class GameBootstrap
             return;
         }
 
+        ResetLumberyardWorldState();
         miscOccupiedCells.Clear();
         miscTreeSways.Clear();
         miscTreePerchPoints.Clear();
@@ -121,7 +123,8 @@ public partial class GameBootstrap
             roadCells,
             edgeHighwayCells,
             IsLocationCell,
-            cell => IsGrassGroundCell(cell.x, cell.y) && !IsWaterOrBeachCell(cell));
+            cell => IsGrassGroundCell(cell.x, cell.y) && !IsWaterOrBeachCell(cell),
+            GetDenseForestCellPriority);
         int bushCount = 0;
         int flowerCount = 0;
         SessionDebugLogger.Log("WORLD", $"Planning {plannedCells.Count} misc cells");
@@ -648,10 +651,14 @@ public partial class GameBootstrap
         treeRoot.transform.SetParent(miscRoot, false);
         treeRoot.transform.position = GetCellCenter(cell);
         treeRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-        treeRoot.transform.localScale = Vector3.one * Random.Range(1.18f, 1.58f);
+        treeRoot.transform.localScale = Vector3.one * Random.Range(1.18f, 1.58f) * MiscTreeWorldScaleMultiplier;
         CreateTreeVariant(treeRoot.transform, variantIndex);
-        RegisterMiscTreeSway(treeRoot.transform, cell, variantIndex);
-        RegisterMiscTreePerchPoint(treeRoot.transform, cell, variantIndex);
+        bool isLumberTree = RegisterLumberTree(cell, treeRoot.transform, variantIndex);
+        if (!isLumberTree)
+        {
+            RegisterMiscTreeSway(treeRoot.transform, cell, variantIndex);
+            RegisterMiscTreePerchPoint(treeRoot.transform, cell, variantIndex);
+        }
         miscOccupiedCells.Add(cell);
     }
 

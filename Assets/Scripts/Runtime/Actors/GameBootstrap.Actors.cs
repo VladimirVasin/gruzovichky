@@ -72,12 +72,15 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("TRUCK", $"Spawned initial {firstTruck.DisplayName} in parking slot {firstTruck.ParkingSlotIndex}.");
         if (locations.ContainsKey(LocationType.Motel))
         {
-            DriverAgent firstDriver = CreateAndRegisterDriverAgent();
-            SessionDebugLogger.Log("DRIVER", $"{firstDriver.DriverName} hired (unassigned, idle).");
+            for (int i = 0; i < InitialWorkerCount; i++)
+            {
+                DriverAgent worker = CreateAndRegisterDriverAgent();
+                SessionDebugLogger.Log("DRIVER", $"{worker.DriverName} hired (unassigned, idle).");
+            }
         }
         else
         {
-            SessionDebugLogger.Log("DRIVER", "Initial driver skipped: Motel is not generated in this mode.");
+            SessionDebugLogger.Log("DRIVER", $"Initial workers skipped: Motel is not generated in this mode. Requested starter workers: {InitialWorkerCount}.");
         }
     }
 

@@ -315,7 +315,7 @@ public partial class GameBootstrap
         root.anchorMax = new Vector2(0.5f, 0.5f);
         root.pivot = new Vector2(0.5f, 0.5f);
         root.anchoredPosition = Vector2.zero;
-        root.sizeDelta = new Vector2(760f, 560f);
+        root.sizeDelta = new Vector2(860f, 640f);
         mainMenuHud.PatchNotesRoot = root.gameObject;
 
         VerticalLayoutGroup layout = root.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -337,7 +337,7 @@ public partial class GameBootstrap
         mainMenuHud.PatchNotesCloseButton.onClick.AddListener(CloseMainMenuPatchNotes);
 
         RectTransform scrollRoot = CreateStyledPanel("PatchNotesScrollRoot", root, new Color(0.10f, 0.15f, 0.22f, 0.96f));
-        scrollRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 450f;
+        scrollRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 530f;
         ScrollRect scrollRect = scrollRoot.gameObject.AddComponent<ScrollRect>();
         scrollRect.horizontal = false;
         scrollRect.vertical = true;

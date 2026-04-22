@@ -42,7 +42,7 @@ public partial class GameBootstrap
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.17f, 0f);
             baseBlock.transform.localScale = new Vector3(size.x * 0.98f, 0.12f, size.y * 0.98f);
-            ApplyStylizedGrassMaterial(baseBlock, min.x + max.x + 0.5f, min.y + max.y + 0.5f);
+            ApplyColor(baseBlock, new Color(0.42f, 0.3f, 0.18f));
         }
         else if (type == LocationType.Motel)
         {
@@ -257,113 +257,67 @@ public partial class GameBootstrap
         forestWorkPoints.Clear();
         forestWorkTargetTrees.Clear();
         forestTreeWobbles.Clear();
+        Vector3 center = new Vector3((min.x + max.x + 1) * 0.5f, 0.02f, (min.y + max.y + 1) * 0.5f);
 
-        GameObject groundPatch = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        groundPatch.transform.SetParent(parent, false);
-        groundPatch.transform.position = new Vector3(
-            (min.x + max.x + 1) * 0.5f,
-            0.02f,
-            (min.y + max.y + 1) * 0.5f);
-        groundPatch.transform.localScale = new Vector3(
-            Mathf.Max(1.35f, (max.x - min.x + 1) * 0.58f) * LargePropScale,
-            0.07f,
-            Mathf.Max(1.35f, (max.y - min.y + 1) * 0.58f) * LargePropScale);
-        ApplyStylizedGrassMaterial(groundPatch, min.x + max.x, min.y + max.y);
-        ConfigureStaticVisual(groundPatch);
+        GameObject yard = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        yard.transform.SetParent(parent, false);
+        yard.transform.position = center + new Vector3(0f, 0.03f, 0f);
+        yard.transform.localScale = new Vector3((max.x - min.x + 1) * 0.92f, 0.06f, (max.y - min.y + 1) * 0.92f);
+        ApplyColor(yard, new Color(0.46f, 0.34f, 0.22f));
+        ConfigureStaticVisual(yard);
 
-        List<Vector2Int> forestCells = new();
-        for (int x = min.x; x <= max.x; x++)
+        Vector3 buildingCenter = center + new Vector3(0f, 0.36f, 0.22f);
+        GameObject shed = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        shed.transform.SetParent(parent, false);
+        shed.transform.position = buildingCenter;
+        shed.transform.localScale = new Vector3(1.35f, 0.66f, 1.12f);
+        ApplyColor(shed, new Color(0.62f, 0.46f, 0.28f));
+        ConfigureStaticVisual(shed);
+
+        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roof.transform.SetParent(parent, false);
+        roof.transform.position = buildingCenter + new Vector3(0f, 0.44f, 0f);
+        roof.transform.localScale = new Vector3(1.55f, 0.12f, 1.34f);
+        ApplyColor(roof, new Color(0.72f, 0.18f, 0.12f));
+        ConfigureStaticVisual(roof);
+
+        GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        door.transform.SetParent(parent, false);
+        door.transform.position = buildingCenter + new Vector3(0f, -0.06f, -0.57f);
+        door.transform.localScale = new Vector3(0.42f, 0.54f, 0.08f);
+        ApplyColor(door, new Color(0.22f, 0.14f, 0.08f));
+        ConfigureStaticVisual(door);
+
+        Vector3[] fencePosts =
         {
-            for (int y = min.y; y <= max.y; y++)
-            {
-                forestCells.Add(new Vector2Int(x, y));
-            }
+            center + new Vector3(-0.95f, 0.2f, -0.8f),
+            center + new Vector3(0.95f, 0.2f, -0.8f),
+            center + new Vector3(-0.95f, 0.2f, 0.95f),
+            center + new Vector3(0.95f, 0.2f, 0.95f)
+        };
+
+        foreach (Vector3 fencePos in fencePosts)
+        {
+            GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            post.transform.SetParent(parent, false);
+            post.transform.position = fencePos;
+            post.transform.localScale = new Vector3(0.08f, 0.42f, 0.08f);
+            ApplyColor(post, new Color(0.35f, 0.23f, 0.14f));
+            ConfigureStaticVisual(post);
         }
 
-        forestCells.Sort((a, b) =>
-        {
-            int aDistance = Mathf.Abs(a.x - anchor.x) + Mathf.Abs(a.y - anchor.y);
-            int bDistance = Mathf.Abs(b.x - anchor.x) + Mathf.Abs(b.y - anchor.y);
-            return bDistance.CompareTo(aDistance);
-        });
+        Vector3 depotPos = GetCellCenter(GetForestDepotCell(min, max, anchor)) + new Vector3(0f, 0.12f, 0f);
+        GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        marker.transform.SetParent(parent, false);
+        marker.transform.position = depotPos;
+        marker.transform.localScale = new Vector3(0.52f, 0.16f, 0.82f);
+        ApplyColor(marker, new Color(0.47f, 0.31f, 0.18f));
+        ConfigureStaticVisual(marker);
 
-        int plantedTrees = 0;
-        foreach (Vector2Int cell in forestCells)
-        {
-            int distanceToAnchor = Mathf.Abs(cell.x - anchor.x) + Mathf.Abs(cell.y - anchor.y);
-            bool keepApproachClear = distanceToAnchor <= 2;
-            int treesInCell = keepApproachClear ? 1 : 2;
-
-            for (int i = 0; i < treesInCell; i++)
-            {
-                if (keepApproachClear && i > 0)
-                {
-                    continue;
-                }
-
-                float offsetX = keepApproachClear
-                    ? Mathf.Sign(cell.x + 0.5f - (anchor.x + 0.5f)) * 0.14f
-                    : (i == 0 ? -0.18f : 0.18f);
-                float offsetZ = keepApproachClear
-                    ? Mathf.Sign(cell.y + 0.5f - (anchor.y + 0.5f)) * 0.14f
-                    : (i == 0 ? 0.16f : -0.16f);
-
-                if (Mathf.Approximately(offsetX, 0f))
-                {
-                    offsetX = i == 0 ? -0.14f : 0.14f;
-                }
-
-                if (Mathf.Approximately(offsetZ, 0f))
-                {
-                    offsetZ = i == 0 ? 0.14f : -0.14f;
-                }
-
-                GameObject treeRoot = new($"ForestTree_{cell.x}_{cell.y}_{i}");
-                treeRoot.transform.SetParent(parent, false);
-                treeRoot.transform.position = GetCellCenter(cell) + new Vector3(offsetX, 0f, offsetZ);
-                treeRoot.transform.rotation = Quaternion.Euler(0f, (cell.x * 37 + cell.y * 29 + i * 71) % 360, 0f);
-                treeRoot.transform.localScale = Vector3.one * ((0.96f + ((cell.x + cell.y + i) % 3) * 0.12f) * LargePropScale);
-                CreateTreeVariant(treeRoot.transform, (cell.x + cell.y + i) % 3);
-                if (!keepApproachClear)
-                {
-                    forestWorkPoints.Add(treeRoot.transform.position + new Vector3(
-                        Mathf.Sign(anchor.x + 0.5f - treeRoot.transform.position.x) * 0.22f,
-                        0f,
-                        Mathf.Sign(anchor.y + 0.5f - treeRoot.transform.position.z) * 0.22f));
-                    forestWorkTargetTrees.Add(treeRoot.transform);
-                }
-
-                plantedTrees++;
-            }
-        }
-
-        GameObject lumberMarker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        lumberMarker.transform.SetParent(parent, false);
-        lumberMarker.transform.position = GetCellCenter(GetForestDepotCell(min, max, anchor)) + new Vector3(0f, 0.12f, 0f);
-        lumberMarker.transform.localScale = new Vector3(0.44f, 0.14f, 0.72f) * LargePropScale;
-        ApplyColor(lumberMarker, new Color(0.47f, 0.31f, 0.18f));
-        ConfigureStaticVisual(lumberMarker);
-
-        GameObject logTop = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        logTop.transform.SetParent(parent, false);
-        logTop.transform.position = lumberMarker.transform.position + new Vector3(-0.12f, 0.14f, 0f);
-        logTop.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
-        logTop.transform.localScale = new Vector3(0.12f, 0.18f, 0.12f) * LargePropScale;
-        ApplyColor(logTop, new Color(0.6f, 0.42f, 0.24f));
-        ConfigureStaticVisual(logTop);
-
-        GameObject logBottom = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        logBottom.transform.SetParent(parent, false);
-        logBottom.transform.position = lumberMarker.transform.position + new Vector3(0.1f, 0.08f, 0f);
-        logBottom.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
-        logBottom.transform.localScale = new Vector3(0.12f, 0.2f, 0.12f) * LargePropScale;
-        ApplyColor(logBottom, new Color(0.56f, 0.38f, 0.22f));
-        ConfigureStaticVisual(logBottom);
-
-        CreateForestStoredLogsVisuals(parent, lumberMarker.transform.position + new Vector3(0f, 0.08f, 0.54f));
+        CreateForestStoredLogsVisuals(parent, depotPos + new Vector3(0f, 0.08f, 0.58f));
         RefreshForestStoredLogsVisual();
 
-        SessionDebugLogger.Log("WORLD", $"Built enlarged forest cluster with {plantedTrees} trees.");
+        SessionDebugLogger.Log("WORLD", "Built Lumberyard decoration with depot yard and storage stack.");
     }
 
     private void CreateForestStoredLogsVisuals(Transform parent, Vector3 basePosition)

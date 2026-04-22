@@ -5,72 +5,12 @@ public partial class GameBootstrap
     private void SetupForestWorkers()
     {
         forestWorkers.Clear();
-        if (!locations.TryGetValue(LocationType.Forest, out LocationData forestLocation) || forestWorkPoints.Count == 0)
-        {
-            return;
-        }
-
-        for (int i = 0; i < 2; i++)
-        {
-            ForestWorkerAmbient worker = CreateForestWorkerAmbient(i + 1, forestLocation.RootObject.transform);
-            worker.WorkPointIndex = Mathf.Clamp((i * 3) % forestWorkPoints.Count, 0, forestWorkPoints.Count - 1);
-            worker.TargetWorldPosition = GetForestWorkerGroundPoint(forestWorkPoints[worker.WorkPointIndex]);
-            worker.RootObject.transform.position = worker.TargetWorldPosition + new Vector3(i == 0 ? -0.35f : 0.35f, 0f, i == 0 ? -0.2f : 0.2f);
-            worker.RootObject.transform.rotation = Quaternion.Euler(0f, i == 0 ? 145f : 215f, 0f);
-            worker.State = ForestWorkerState.Chopping;
-            worker.StateTimer = Random.Range(2.4f, 3.8f);
-            worker.AnimationTime = Random.Range(0f, 1.5f);
-            worker.ChopSoundCooldown = Random.Range(0.08f, 0.32f);
-            worker.RootObject.SetActive(false);   // hidden until a logistics worker enters
-            forestWorkers.Add(worker);
-        }
-
-        SessionDebugLogger.Log("WORLD", $"Spawned {forestWorkers.Count} ambient forest workers.");
+        StopForestWorkerAudio();
     }
 
     private void UpdateForestWorkers()
     {
-        if (forestWorkers.Count == 0 || forestWorkPoints.Count == 0)
-        {
-            return;
-        }
-
-        bool workActive = IsLocationOperational(LocationType.Forest);
-
-        foreach (ForestWorkerAmbient fw in forestWorkers)
-        {
-            if (fw?.RootObject != null && fw.RootObject.activeSelf != workActive)
-                fw.RootObject.SetActive(workActive);
-        }
-
-        if (!workActive)
-        {
-            StopForestWorkerAudio();
-            return;
-        }
-
-        foreach (ForestWorkerAmbient worker in forestWorkers)
-        {
-            if (worker?.RootObject == null)
-            {
-                continue;
-            }
-
-            UpdateForestWorkerFlashlight(worker);
-
-            switch (worker.State)
-            {
-                case ForestWorkerState.Walking:
-                    UpdateForestWorkerWalking(worker);
-                    break;
-                case ForestWorkerState.Pausing:
-                    UpdateForestWorkerPausing(worker);
-                    break;
-                default:
-                    UpdateForestWorkerChopping(worker);
-                    break;
-            }
-        }
+        StopForestWorkerAudio();
     }
 
     private void UpdateForestWorkerWalking(ForestWorkerAmbient worker)

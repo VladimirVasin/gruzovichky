@@ -12,8 +12,8 @@ public partial class GameBootstrap
     private const float WorkerSkillTooltipHeight = 86f;
     private const float WorkerEffectTooltipHeight = 220f;
     private const int WorkerEffectHudRowCount = 8;
-    private const int WorkerPerkHudRowCount = 4;
-
+    private const int WorkerPerkHudRowCount = 2;
+    private const float WorkerAlcoholismPerkChance = 0.35f;
     private static readonly WorkerPerkKind[] NegativePerks = { WorkerPerkKind.Alcoholism, WorkerPerkKind.Gambler };
     private static readonly WorkerPerkKind[] PositivePerks =
     {
@@ -49,7 +49,6 @@ public partial class GameBootstrap
     private const string WorkerRaceRushEffectId = "race_rush";
     private const string WorkerLuckyEffectId = "lucky";
     private const float WorkerLuckyEffectDurationHours = 4f;
-
     private enum WorkerSkillKind
     {
         Driving,
@@ -98,25 +97,26 @@ public partial class GameBootstrap
         if (driver == null || rng == null) return;
 
         driver.Perks.Clear();
-
-        // Always 1 random negative perk
-        driver.Perks.Add(NegativePerks[rng.Next(NegativePerks.Length)]);
-
-        // Always 3 random positive perks (no duplicates via Fisher-Yates on a copy)
-        WorkerPerkKind[] pool = (WorkerPerkKind[])PositivePerks.Clone();
-        for (int i = pool.Length - 1; i > 0; i--)
+        if (rng.NextDouble() < WorkerAlcoholismPerkChance)
         {
-            int j = rng.Next(i + 1);
-            (pool[i], pool[j]) = (pool[j], pool[i]);
+            driver.Perks.Add(WorkerPerkKind.Alcoholism);
         }
-        for (int i = 0; i < 3; i++)
-            driver.Perks.Add(pool[i]);
     }
 
     private void EnsureWorkerStats(DriverAgent driver)
     {
-        if (driver == null || driver.HasWorkerStats) return;
-        AssignWorkerStats(driver);
+        if (driver == null) return;
+        if (!driver.HasWorkerStats)
+        {
+            AssignWorkerStats(driver);
+            return;
+        }
+
+        if (driver.Perks.Count == 0)
+        {
+            int seed = StableWorkerStatsHash(driver.DriverName) ^ (driver.DriverId * 19349663);
+            AssignWorkerPerks(driver, new System.Random(seed));
+        }
     }
 
     private void UpdateWorkerStatsUi(DriverAgent driver, bool ru)
@@ -543,7 +543,7 @@ public partial class GameBootstrap
             WorkerPerkKind perk = driver.Perks[i];
             rowText.gameObject.SetActive(true);
             rowText.color = Color.white;
-            rowText.text = $"<color=#{ColorUtility.ToHtmlStringRGB(FleetAccentColor)}>{GetWorkerPerkName(perk, ru)}</color>";
+            rowText.text = $"<color=#{ColorUtility.ToHtmlStringRGB(FleetAccentColor)}>{GetWorkerPerkDisplayName(perk, ru)}</color>";
             ConfigureWorkerPerkTooltip(rowText, perk);
         }
     }
@@ -551,6 +551,24 @@ public partial class GameBootstrap
     private static bool HasWorkerPerk(DriverAgent driver, WorkerPerkKind perk)
     {
         return driver != null && driver.Perks.Contains(perk);
+    }
+
+    private static string GetWorkerPerkDisplayName(WorkerPerkKind perk, bool ru)
+    {
+        return perk switch
+        {
+            WorkerPerkKind.Alcoholism   => ru ? "\u0410\u043b\u043a\u043e\u0433\u043e\u043b\u0438\u0437\u043c" : "Alcoholism",
+            WorkerPerkKind.Gambler      => ru ? "\u041b\u0443\u0434\u043e\u043c\u0430\u043d" : "Gambler",
+            WorkerPerkKind.Nightowl     => ru ? "\u0421\u043e\u0432\u0430" : "Night Owl",
+            WorkerPerkKind.Ironman      => ru ? "\u0416\u0435\u043b\u0435\u0437\u043d\u044b\u0439" : "Iron Man",
+            WorkerPerkKind.Motorhead    => ru ? "\u0410\u0432\u0442\u043e\u043b\u044e\u0431\u0438\u0442\u0435\u043b\u044c" : "Motorhead",
+            WorkerPerkKind.Trader       => ru ? "\u0414\u0435\u043b\u0435\u0446" : "Trader",
+            WorkerPerkKind.Handyman     => ru ? "\u041c\u0430\u0441\u0442\u0435\u0440" : "Handyman",
+            WorkerPerkKind.Socialite    => ru ? "\u041e\u0431\u0449\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0439" : "Socialite",
+            WorkerPerkKind.Frugal       => ru ? "\u042d\u043a\u043e\u043d\u043e\u043c\u043d\u044b\u0439" : "Frugal",
+            WorkerPerkKind.Quicklearner => ru ? "\u0421\u043c\u044b\u0448\u043b\u0451\u043d\u044b\u0439" : "Quick Learner",
+            _ => ru ? "\u041f\u0435\u0440\u043a" : "Perk"
+        };
     }
 
     private static string GetWorkerPerkName(WorkerPerkKind perk, bool ru)
@@ -866,7 +884,7 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         if (driversScreenUi.DetailSkillTooltipTitleText != null)
         {
-            driversScreenUi.DetailSkillTooltipTitleText.text = GetWorkerPerkName(perk, ru);
+            driversScreenUi.DetailSkillTooltipTitleText.text = GetWorkerPerkDisplayName(perk, ru);
         }
 
         if (driversScreenUi.DetailSkillTooltipBodyText != null)

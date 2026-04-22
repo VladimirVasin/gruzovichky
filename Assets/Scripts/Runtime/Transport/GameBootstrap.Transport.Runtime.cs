@@ -50,7 +50,7 @@ public partial class GameBootstrap
 
     private void ProduceForestWood()
     {
-        // Forest production is now driven by worker chop hits.
+        UpdateLumberyardSystem();
     }
 
     private void UpdateSawmillProcessing()
@@ -505,6 +505,37 @@ public partial class GameBootstrap
                 }
                 return;
 
+            case DriverRescuePhase.LumberToTree:
+                driver.WalkPhase = DriverRescuePhase.LumberChopping;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} reached a forestry tree and started chopping.");
+                return;
+
+            case DriverRescuePhase.LumberCarryLogToBuilding:
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                if (lumberWorkerTasks.TryGetValue(driver.DriverId, out LumberWorkerTaskData carryTask))
+                {
+                    DeliverForestWorkerLog(driver, carryTask);
+                }
+                else
+                {
+                    ReturnForestWorkerInside(driver, "missing carry task on log delivery");
+                }
+                return;
+
+            case DriverRescuePhase.LumberReturnToTreeForPlanting:
+                driver.WalkPhase = DriverRescuePhase.LumberPlanting;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} reached the forestry plot and started planting.");
+                return;
+
             case DriverRescuePhase.ToMotelFromBuilding:
                 driver.WalkPhase = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
@@ -616,6 +647,9 @@ public partial class GameBootstrap
                 return;
             case DriverRescuePhase.IdlePhoneCall:
                 ApplyDriverPhoneCallPose(driver);
+                return;
+            case DriverRescuePhase.LumberChopping:
+            case DriverRescuePhase.LumberPlanting:
                 return;
         }
 

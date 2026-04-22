@@ -859,7 +859,7 @@ public partial class GameBootstrap
         {
             LocationType.Parking => L("Parking"),
             LocationType.GasStation => L("Fuel Stop"),
-            LocationType.Forest => L("Forest"),
+            LocationType.Forest => IsRussianLanguage() ? "Лесозаготовка" : "Lumberyard",
             LocationType.Warehouse => L("Warehouse"),
             LocationType.Sawmill => L("Sawmill"),
             LocationType.FurnitureFactory => L("Furniture Factory"),

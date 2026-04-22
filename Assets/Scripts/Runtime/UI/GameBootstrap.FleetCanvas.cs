@@ -37,7 +37,12 @@ public partial class GameBootstrap
         public Text DetailsPlaceholderText;
         public GameObject DetailsContentRoot;
         public LayoutElement InfoCardLayout;
+        public Text ProfileTitleText;
+        public Text ProfileStateTitleText;
         public Text InfoStateText;
+        public Text ProfileDriverSummaryText;
+        public Text ProfileRosterSummaryText;
+        public Text CrewTitleText;
         public readonly List<Button> DriverLinkButtons = new();
         public readonly List<Text> DriverLinkButtonTexts = new();
         public readonly List<Button> AssignDriverButtons = new();
@@ -50,8 +55,10 @@ public partial class GameBootstrap
         public Text AssignDriverPickerEmptyText;
         public readonly List<Button> DriverPickerButtons = new();
         public readonly List<Text> DriverPickerButtonTexts = new();
+        public Text ResourcesTitleText;
         public Text ResourcesFuelText;
         public Text ResourcesCargoText;
+        public Text NavigationTitleText;
         public Text NavigationCellText;
         public Text NavigationRouteText;
         public Text NavigationPayoutText;
@@ -99,7 +106,7 @@ public partial class GameBootstrap
 
         GameObject screenRoot = CreateUiObject("FleetScreenRoot", canvasObject.transform);
         RectTransform screenRect = screenRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(screenRect, 1180f, 560f, -16f);
+        SetCenteredWindow(screenRect, 1280f, 620f, -16f);
         Image screenBackground = screenRoot.AddComponent<Image>();
         screenBackground.color = FleetScreenTint;
         Outline screenOutline = screenRoot.AddComponent<Outline>();
@@ -116,7 +123,7 @@ public partial class GameBootstrap
 
         fleetScreenUi.LeftPanel = CreateStyledPanel("FleetListPanel", screenRoot.transform, FleetPanelColor);
         LayoutElement leftPanelLayout = fleetScreenUi.LeftPanel.gameObject.AddComponent<LayoutElement>();
-        leftPanelLayout.preferredWidth = 324f;
+        leftPanelLayout.preferredWidth = 360f;
         leftPanelLayout.flexibleWidth = 0f;
         leftPanelLayout.flexibleHeight = 1f;
         VerticalLayoutGroup leftLayout = fleetScreenUi.LeftPanel.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -192,11 +199,16 @@ public partial class GameBootstrap
         detailsContentGroup.childForceExpandWidth = true;
         detailsContentGroup.childForceExpandHeight = false;
 
-        RectTransform infoCard = CreateSectionCard(fleetScreenUi.DetailsContentRoot.transform, uiFont, "Truck Overview", out RectTransform infoBody);
-        fleetScreenUi.InfoCardLayout = infoCard.gameObject.AddComponent<LayoutElement>();
-        fleetScreenUi.InfoCardLayout.preferredHeight = 232f;
-        RectTransform stateBlock = CreateStyledPanel("StateBlock", infoBody, FleetCardMutedColor);
-        stateBlock.gameObject.AddComponent<LayoutElement>().preferredHeight = 66f;
+        RectTransform infoCard = CreateSectionCard(fleetScreenUi.DetailsContentRoot.transform, uiFont, string.Empty, out RectTransform infoBody, false);
+        LayoutElement infoCardLayout = infoCard.gameObject.AddComponent<LayoutElement>();
+        infoCardLayout.preferredHeight = 156f;
+        fleetScreenUi.InfoCardLayout = infoCardLayout;
+        fleetScreenUi.ProfileTitleText = CreateHeaderText("ProfileTitle", infoBody, uiFont, string.Empty, 18, TextAnchor.MiddleLeft, Color.white);
+        fleetScreenUi.ProfileTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+
+        RectTransform profileTopRow = CreateLayoutRow("ProfileTopRow", infoBody, 72f, 12f);
+        RectTransform stateBlock = CreateStyledPanel("StateBlock", profileTopRow, FleetCardMutedColor);
+        stateBlock.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         VerticalLayoutGroup stateBlockGroup = stateBlock.gameObject.AddComponent<VerticalLayoutGroup>();
         stateBlockGroup.padding = new RectOffset(12, 12, 10, 10);
         stateBlockGroup.spacing = 4;
@@ -204,14 +216,31 @@ public partial class GameBootstrap
         stateBlockGroup.childControlHeight = true;
         stateBlockGroup.childForceExpandWidth = true;
         stateBlockGroup.childForceExpandHeight = false;
-        CreateHeaderText("StateLabel", stateBlock, uiFont, "Current State", 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        fleetScreenUi.ProfileStateTitleText = CreateHeaderText("StateLabel", stateBlock, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
         fleetScreenUi.InfoStateText = CreateBodyText("InfoState", stateBlock, uiFont, string.Empty, 18, TextAnchor.MiddleLeft, Color.white);
         fleetScreenUi.InfoStateText.fontStyle = FontStyle.Bold;
         fleetScreenUi.InfoStateText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
 
-        RectTransform driverBlock = CreateStyledPanel("AssignedDriverBlock", infoBody, FleetCardMutedColor);
-        driverBlock.gameObject.AddComponent<LayoutElement>().preferredHeight = 120f;
-        VerticalLayoutGroup driverBlockGroup = driverBlock.gameObject.AddComponent<VerticalLayoutGroup>();
+        RectTransform summaryBlock = CreateStyledPanel("ProfileSummaryBlock", profileTopRow, FleetCardMutedColor);
+        summaryBlock.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup summaryBlockGroup = summaryBlock.gameObject.AddComponent<VerticalLayoutGroup>();
+        summaryBlockGroup.padding = new RectOffset(12, 12, 10, 10);
+        summaryBlockGroup.spacing = 4;
+        summaryBlockGroup.childControlWidth = true;
+        summaryBlockGroup.childControlHeight = true;
+        summaryBlockGroup.childForceExpandWidth = true;
+        summaryBlockGroup.childForceExpandHeight = false;
+        fleetScreenUi.ProfileDriverSummaryText = CreateValueText("ProfileDriverSummary", summaryBlock, uiFont);
+        fleetScreenUi.ProfileRosterSummaryText = CreateValueText("ProfileRosterSummary", summaryBlock, uiFont);
+
+        RectTransform driverBlock = CreateSectionCard(fleetScreenUi.DetailsContentRoot.transform, uiFont, string.Empty, out RectTransform driverBody, false);
+        LayoutElement driverCardLayout = driverBlock.gameObject.AddComponent<LayoutElement>();
+        driverCardLayout.preferredHeight = 214f;
+        fleetScreenUi.CrewTitleText = CreateHeaderText("CrewTitle", driverBody, uiFont, string.Empty, 18, TextAnchor.MiddleLeft, Color.white);
+        fleetScreenUi.CrewTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+        RectTransform driverBlockPanel = CreateStyledPanel("AssignedDriverBlock", driverBody, FleetCardMutedColor);
+        driverBlockPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 150f;
+        VerticalLayoutGroup driverBlockGroup = driverBlockPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         driverBlockGroup.padding = new RectOffset(12, 12, 10, 10);
         driverBlockGroup.spacing = 6;
         driverBlockGroup.childControlWidth = true;
@@ -220,8 +249,8 @@ public partial class GameBootstrap
         driverBlockGroup.childForceExpandHeight = false;
         for (int slotIndex = 0; slotIndex < 2; slotIndex++)
         {
-            CreateHeaderText($"AssignedDriverLabel{slotIndex + 1}", driverBlock, uiFont, $"Assigned Driver {slotIndex + 1}", 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
-            RectTransform driverRow = CreateLayoutRow($"AssignedDriverRow{slotIndex + 1}", driverBlock, 28f, 10f);
+            CreateHeaderText($"AssignedDriverLabel{slotIndex + 1}", driverBlockPanel, uiFont, $"Assigned Driver {slotIndex + 1}", 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+            RectTransform driverRow = CreateLayoutRow($"AssignedDriverRow{slotIndex + 1}", driverBlockPanel, 28f, 10f);
 
             Button driverButton = CreateButton($"DriverLinkButton{slotIndex + 1}", driverRow, uiFont, out Text driverButtonText, "Empty", 13, new Color(0.23f, 0.29f, 0.36f, 1f), Color.white);
             LayoutElement driverLinkLayout = driverButton.gameObject.AddComponent<LayoutElement>();
@@ -288,9 +317,10 @@ public partial class GameBootstrap
             fleetScreenUi.AssignDriverButtonTexts.Add(assignButtonText);
         }
 
-        fleetScreenUi.AssignDriverPickerPanel = CreateStyledPanel("AssignDriverPickerPanel", infoBody, FleetCardMutedColor);
-        fleetScreenUi.AssignDriverPickerLayout = fleetScreenUi.AssignDriverPickerPanel.gameObject.AddComponent<LayoutElement>();
-        fleetScreenUi.AssignDriverPickerLayout.preferredHeight = 0f;
+        fleetScreenUi.AssignDriverPickerPanel = CreateStyledPanel("AssignDriverPickerPanel", driverBody, FleetCardMutedColor);
+        LayoutElement assignDriverPickerLayout = fleetScreenUi.AssignDriverPickerPanel.gameObject.AddComponent<LayoutElement>();
+        assignDriverPickerLayout.preferredHeight = 0f;
+        fleetScreenUi.AssignDriverPickerLayout = assignDriverPickerLayout;
         VerticalLayoutGroup pickerGroup = fleetScreenUi.AssignDriverPickerPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         pickerGroup.padding = new RectOffset(12, 12, 12, 12);
         pickerGroup.spacing = 6;
@@ -322,13 +352,17 @@ public partial class GameBootstrap
         lowerRowLayout.childForceExpandHeight = true;
         lowerRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 164f;
 
-        RectTransform resourcesCard = CreateSectionCard(lowerRow, uiFont, "Resources", out RectTransform resourcesBody);
+        RectTransform resourcesCard = CreateSectionCard(lowerRow, uiFont, string.Empty, out RectTransform resourcesBody, false);
         resourcesCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        fleetScreenUi.ResourcesTitleText = CreateHeaderText("ResourcesTitle", resourcesBody, uiFont, string.Empty, 18, TextAnchor.MiddleLeft, Color.white);
+        fleetScreenUi.ResourcesTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
         fleetScreenUi.ResourcesFuelText = CreateValueText("ResourcesFuel", resourcesBody, uiFont);
         fleetScreenUi.ResourcesCargoText = CreateValueText("ResourcesCargo", resourcesBody, uiFont);
 
-        RectTransform navigationCard = CreateSectionCard(lowerRow, uiFont, "Navigation", out RectTransform navigationBody);
+        RectTransform navigationCard = CreateSectionCard(lowerRow, uiFont, string.Empty, out RectTransform navigationBody, false);
         navigationCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        fleetScreenUi.NavigationTitleText = CreateHeaderText("NavigationTitle", navigationBody, uiFont, string.Empty, 18, TextAnchor.MiddleLeft, Color.white);
+        fleetScreenUi.NavigationTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
         fleetScreenUi.NavigationCellText = CreateValueText("NavigationCell", navigationBody, uiFont);
         fleetScreenUi.NavigationRouteText = CreateValueText("NavigationRoute", navigationBody, uiFont);
         fleetScreenUi.NavigationPayoutText = CreateValueText("NavigationPayout", navigationBody, uiFont);
@@ -416,7 +450,8 @@ public partial class GameBootstrap
 
     private void UpdateFleetListPanel()
     {
-        fleetScreenUi.FleetCountText.text = $"{GetOwnedTruckCount()} / {MaxTruckCount} Trucks";
+        bool ru = IsRussianLanguage();
+        fleetScreenUi.FleetCountText.text = $"{GetOwnedTruckCount()} / {MaxTruckCount} {(ru ? "грузовиков" : "Trucks")}";
 
         for (int i = 0; i < truckAgents.Count; i++)
         {
@@ -426,7 +461,7 @@ public partial class GameBootstrap
             bool isSelected = isTruckDetailsOpen && selectedTruckNumber == truckAgent.TruckNumber;
             row.TruckNumber = truckAgent.TruckNumber;
             row.TruckNameText.text = truckAgent.DisplayName;
-        row.DriverText.text = $"Assigned: {GetTruckAssignedDriverSummary(truckAgent)}";
+            row.DriverText.text = $"{(ru ? "Экипаж" : "Crew")}: {GetTruckAssignedDriverSummary(truckAgent)}";
             row.StateText.text = GetTruckListStatusForFleet(truckAgent);
             row.ResourceText.text = $"{L("Fuel")} {Mathf.CeilToInt(truckAgent.TruckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}    {GetTruckCargoSummary(truckAgent)}";
             row.Background.color = isSelected ? FleetSelectedRowColor : FleetRowColor;
@@ -463,27 +498,62 @@ public partial class GameBootstrap
 
         if (!hasSelection)
         {
-            fleetScreenUi.DetailsHeaderText.text = "Truck Details";
+            fleetScreenUi.DetailsHeaderText.text = IsRussianLanguage() ? "Грузовик" : "Truck Details";
             return;
         }
 
         LoadTruckState(selectedTruck);
+        bool ru = IsRussianLanguage();
         DriverAgent driver = selectedTruck.Driver;
         fleetScreenUi.DetailsHeaderText.text = selectedTruck.DisplayName;
+        if (fleetScreenUi.ProfileTitleText != null)
+        {
+            fleetScreenUi.ProfileTitleText.text = ru ? "Профиль грузовика" : "Truck Profile";
+        }
+        if (fleetScreenUi.ProfileStateTitleText != null)
+        {
+            fleetScreenUi.ProfileStateTitleText.text = ru ? "Текущее состояние" : "Current State";
+        }
+        if (fleetScreenUi.CrewTitleText != null)
+        {
+            fleetScreenUi.CrewTitleText.text = ru ? "Экипаж" : "Crew";
+        }
+        if (fleetScreenUi.ResourcesTitleText != null)
+        {
+            fleetScreenUi.ResourcesTitleText.text = ru ? "Ресурсы" : "Resources";
+        }
+        if (fleetScreenUi.NavigationTitleText != null)
+        {
+            fleetScreenUi.NavigationTitleText.text = ru ? "Маршрут" : "Route";
+        }
         fleetScreenUi.InfoStateText.text = GetTruckFleetStatusLabel();
+        if (fleetScreenUi.ProfileDriverSummaryText != null)
+        {
+            string activeDriverLabel = driver != null ? driver.DriverName : (ru ? "Нет водителя" : "No active driver");
+            fleetScreenUi.ProfileDriverSummaryText.text = FormatValueLine(ru ? "Активный водитель" : "Active driver", activeDriverLabel);
+        }
+        if (fleetScreenUi.ProfileRosterSummaryText != null)
+        {
+            fleetScreenUi.ProfileRosterSummaryText.text = FormatValueLine(
+                ru ? "Слоты экипажа" : "Crew slots",
+                $"{selectedTruck.AssignedDrivers.Count}/2");
+        }
         for (int slotIndex = 0; slotIndex < fleetScreenUi.DriverLinkButtons.Count; slotIndex++)
         {
             bool hasRosterDriver = slotIndex < selectedTruck.AssignedDrivers.Count;
             DriverAgent rosterDriver = hasRosterDriver ? selectedTruck.AssignedDrivers[slotIndex] : null;
             bool isCurrentDriver = rosterDriver != null && rosterDriver == driver;
             fleetScreenUi.DriverLinkButtonTexts[slotIndex].text = rosterDriver == null
-                ? "Empty"
-                : (isCurrentDriver ? $"{rosterDriver.DriverName}  (Current)" : rosterDriver.DriverName);
+                ? (ru ? "Пусто" : "Empty")
+                : (isCurrentDriver ? $"{rosterDriver.DriverName}  {(ru ? "(Текущий)" : "(Current)")}" : rosterDriver.DriverName);
             fleetScreenUi.DriverLinkButtons[slotIndex].interactable = rosterDriver != null;
-            fleetScreenUi.AssignDriverButtonTexts[slotIndex].text = rosterDriver == null ? "Assign" : "Assigned";
+            fleetScreenUi.AssignDriverButtonTexts[slotIndex].text = rosterDriver == null
+                ? (ru ? "Назначить" : "Assign")
+                : (ru ? "Назначен" : "Assigned");
             fleetScreenUi.AssignDriverButtons[slotIndex].interactable = rosterDriver == null;
             fleetScreenUi.RemoveDriverButtons[slotIndex].gameObject.SetActive(rosterDriver != null);
             fleetScreenUi.RemoveDriverButtons[slotIndex].interactable = CanUnassignDriverFromTruck(selectedTruck, rosterDriver);
+            fleetScreenUi.RemoveDriverButtonTexts[slotIndex].text = "X";
         }
         fleetScreenUi.ResourcesFuelText.text = FormatValueLine("Fuel", $"{Mathf.CeilToInt(truckFuel)} / {Mathf.CeilToInt(TruckFuelCapacity)}");
         fleetScreenUi.ResourcesCargoText.text = FormatValueLine("Cargo", FormatTruckCargoValue(truckCargoAmount, truckCargoType));
@@ -572,15 +642,7 @@ public partial class GameBootstrap
         }
 
         fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(nextState);
-        if (fleetScreenUi.AssignDriverPickerLayout != null)
-        {
-            fleetScreenUi.AssignDriverPickerLayout.preferredHeight = nextState ? 128f : 0f;
-        }
-
-        if (fleetScreenUi.InfoCardLayout != null)
-        {
-            fleetScreenUi.InfoCardLayout.preferredHeight = nextState ? 360f : 232f;
-        }
+        UpdateFleetDriverPickerLayout(nextState, true);
 
         TruckAgent selectedTruck = GetFleetSelectedTruck();
         if (selectedTruck != null)
@@ -608,8 +670,7 @@ public partial class GameBootstrap
         if (selectedTruck == null)
         {
             fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(false);
-            if (fleetScreenUi.AssignDriverPickerLayout != null) fleetScreenUi.AssignDriverPickerLayout.preferredHeight = 0f;
-            if (fleetScreenUi.InfoCardLayout != null) fleetScreenUi.InfoCardLayout.preferredHeight = 232f;
+            UpdateFleetDriverPickerLayout(false, false);
             fleetAssignDriverTargetSlot = -1;
             return;
         }
@@ -617,16 +678,20 @@ public partial class GameBootstrap
         if (fleetAssignDriverTargetSlot < 0 || fleetAssignDriverTargetSlot > 1 || fleetAssignDriverTargetSlot < selectedTruck.AssignedDrivers.Count)
         {
             fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(false);
-            if (fleetScreenUi.AssignDriverPickerLayout != null) fleetScreenUi.AssignDriverPickerLayout.preferredHeight = 0f;
-            if (fleetScreenUi.InfoCardLayout != null) fleetScreenUi.InfoCardLayout.preferredHeight = 232f;
+            UpdateFleetDriverPickerLayout(false, false);
             fleetAssignDriverTargetSlot = -1;
             return;
         }
 
         List<DriverAgent> candidates = GetDriverAssignmentCandidates(selectedTruck);
         bool hasCandidates = candidates.Count > 0;
-        fleetScreenUi.AssignDriverPickerTitleText.text = $"Select Driver for Slot {fleetAssignDriverTargetSlot + 1}";
+        fleetScreenUi.AssignDriverPickerTitleText.text = IsRussianLanguage()
+            ? $"Выберите водителя для слота {fleetAssignDriverTargetSlot + 1}"
+            : $"Select Driver for Slot {fleetAssignDriverTargetSlot + 1}";
         fleetScreenUi.AssignDriverPickerEmptyText.gameObject.SetActive(!hasCandidates);
+        fleetScreenUi.AssignDriverPickerEmptyText.text = IsRussianLanguage()
+            ? "Нет доступных водителей."
+            : "No available drivers.";
         for (int i = 0; i < fleetScreenUi.DriverPickerButtons.Count; i++)
         {
             bool active = i < candidates.Count;
@@ -644,14 +709,20 @@ public partial class GameBootstrap
         }
 
         fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(fleetScreenUi.AssignDriverPickerPanel.gameObject.activeSelf);
-        if (fleetScreenUi.AssignDriverPickerLayout != null)
+        UpdateFleetDriverPickerLayout(fleetScreenUi.AssignDriverPickerPanel.gameObject.activeSelf, hasCandidates);
+    }
+
+    private void UpdateFleetDriverPickerLayout(bool isVisible, bool hasCandidates)
+    {
+        if (fleetScreenUi?.AssignDriverPickerPanel == null)
         {
-            fleetScreenUi.AssignDriverPickerLayout.preferredHeight = fleetScreenUi.AssignDriverPickerPanel.gameObject.activeSelf ? (hasCandidates ? 128f : 72f) : 0f;
+            return;
         }
 
-        if (fleetScreenUi.InfoCardLayout != null)
+        LayoutElement pickerLayout = fleetScreenUi.AssignDriverPickerPanel.GetComponent<LayoutElement>();
+        if (pickerLayout != null)
         {
-            fleetScreenUi.InfoCardLayout.preferredHeight = fleetScreenUi.AssignDriverPickerPanel.gameObject.activeSelf ? (hasCandidates ? 360f : 304f) : 232f;
+            pickerLayout.preferredHeight = isVisible ? (hasCandidates ? 128f : 72f) : 0f;
         }
     }
 
@@ -729,8 +800,7 @@ public partial class GameBootstrap
         {
             LogUiInput($"Fleet Canvas: picked {candidates[optionIndex].DriverName} for {selectedTruck.DisplayName}");
             fleetScreenUi.AssignDriverPickerPanel.gameObject.SetActive(false);
-            if (fleetScreenUi.AssignDriverPickerLayout != null) fleetScreenUi.AssignDriverPickerLayout.preferredHeight = 0f;
-            if (fleetScreenUi.InfoCardLayout != null) fleetScreenUi.InfoCardLayout.preferredHeight = 232f;
+            UpdateFleetDriverPickerLayout(false, false);
             fleetAssignDriverTargetSlot = -1;
             isFleetScreenDirty = true;
             CompleteFleetPickDriverTutorial();
