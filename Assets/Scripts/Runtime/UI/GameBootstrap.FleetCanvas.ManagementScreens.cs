@@ -37,7 +37,7 @@ public partial class GameBootstrap
     private RectTransform shiftsTransportPanel;
     private string lastShiftsHudDebugState = string.Empty;
     private bool hasLoggedLegacyShiftsHudDraw;
-    private readonly LogisticsSlotUi[] logisticsSlots = new LogisticsSlotUi[4];
+    private readonly LogisticsSlotUi[] logisticsSlots = new LogisticsSlotUi[6];
     private BuildScreenUiRefs buildScreenUi;
     private bool isBuildScreenDirty = true;
     private WorldMapScreenUiRefs worldMapScreenUi;
@@ -328,6 +328,7 @@ public partial class GameBootstrap
     private sealed class LogisticsSlotUi
     {
         public LocationType  BuildingType;
+        public int           SlotIndex;  // which worker slot within this building (0-based)
         public RectTransform Root;
         public Text          BuildingNameText;
         public Text          AssignedWorkerText;
@@ -1603,11 +1604,12 @@ public partial class GameBootstrap
         logisticsContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         logisticsScroll.content = logisticsContent;
 
-        LocationType[] productionTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory, LocationType.Warehouse };
-        string[] productionNames = { "Forest", "Sawmill", "Furniture Factory", "Warehouse" };
-        for (int si = 0; si < productionTypes.Length; si++)
+        // Slots 0-2: Forest, Sawmill, FurnitureFactory (one card each, one worker each)
+        LocationType[] singleTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory };
+        string[] singleNames = { "Forest", "Sawmill", "Furniture Factory" };
+        for (int si = 0; si < singleTypes.Length; si++)
         {
-            LogisticsSlotUi slot = new() { BuildingType = productionTypes[si] };
+            LogisticsSlotUi slot = new() { BuildingType = singleTypes[si], SlotIndex = 0 };
             RectTransform slotCard = CreateSectionCard(logisticsContent, font, string.Empty, out RectTransform slotBody, false);
             slot.Root = slotCard;
             LayoutElement slotCardLE = slotCard.gameObject.AddComponent<LayoutElement>();
@@ -1616,7 +1618,7 @@ public partial class GameBootstrap
             VerticalLayoutGroup slotBodyLayout = slotBody.GetComponent<VerticalLayoutGroup>();
             slotBodyLayout.spacing = 4;
 
-            slot.BuildingNameText = CreateHeaderText($"LogBldgName{si}", slotBody, font, productionNames[si], 16, TextAnchor.MiddleLeft, Color.white);
+            slot.BuildingNameText = CreateHeaderText($"LogBldgName{si}", slotBody, font, singleNames[si], 16, TextAnchor.MiddleLeft, Color.white);
             slot.AssignedWorkerText = CreateHeaderText($"LogWorker{si}", slotBody, font, "No worker assigned", 14, TextAnchor.MiddleLeft, FleetAccentColor);
             slot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
@@ -1639,22 +1641,64 @@ public partial class GameBootstrap
                 if (selectedDriver == null) return;
                 AssignWorkerToBuilding(selectedDriver, logisticsSlots[capturedIndex]);
                 PlayUiSound(uiSelectClip, 0.85f);
-                if (capturedIndex == 0)
-                {
-                    CompleteForestAssignmentTutorial();
-                }
-                else if (capturedIndex == 1)
-                {
-                    CompleteSawmillWorkerAssignedTutorial();
-                }
+                if (capturedIndex == 0) CompleteForestAssignmentTutorial();
+                else if (capturedIndex == 1) CompleteSawmillWorkerAssignedTutorial();
             });
             slot.RemoveButton.onClick.AddListener(() =>
             {
                 RemoveWorkerFromBuilding(logisticsSlots[capturedIndex]);
                 PlayUiSound(uiSelectClip, 0.85f);
             });
-
             logisticsSlots[si] = slot;
+        }
+
+        // Slots 3-5: Warehouse — one grouped card with 3 worker rows
+        {
+            RectTransform warehouseCard = CreateSectionCard(logisticsContent, font, string.Empty, out RectTransform warehouseBody, false);
+            LayoutElement warehouseCardLE = warehouseCard.gameObject.AddComponent<LayoutElement>();
+            warehouseCardLE.preferredHeight = 188f;
+            warehouseCardLE.flexibleHeight  = 0f;
+            VerticalLayoutGroup warehouseBodyLayout = warehouseBody.GetComponent<VerticalLayoutGroup>();
+            warehouseBodyLayout.spacing = 4;
+
+            Text warehouseTitle = CreateHeaderText("LogBldgNameWarehouse", warehouseBody, font, "Warehouse", 16, TextAnchor.MiddleLeft, Color.white);
+            RectTransform workRow = CreateLayoutRow("LogWorkRowWarehouse", warehouseBody, 22f, 8f);
+            workRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+            CreateBodyText("LogWorkLabelWarehouse", workRow, font, "Hours:", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            Text warehouseWorkHours = CreateHeaderText("LogWorkHoursWarehouse", workRow, font, GetProductionWorkRangeLabel(), 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            warehouseWorkHours.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            for (int wi = 0; wi < WarehouseMaxWorkers; wi++)
+            {
+                int slotArrayIdx = 3 + wi;
+                LogisticsSlotUi wSlot = new() { BuildingType = LocationType.Warehouse, SlotIndex = wi, Root = warehouseCard };
+                // Store WorkHoursText only on first warehouse slot (used by UpdateLogisticsTabUi)
+                if (wi == 0) wSlot.WorkHoursText = warehouseWorkHours;
+
+                RectTransform wActionRow = CreateLayoutRow($"LogActionRowWarehouse{wi}", warehouseBody, 26f, 4f);
+                wActionRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+                wSlot.AssignedWorkerText = CreateHeaderText($"LogWorkerWarehouse{wi}", wActionRow, font, $"Loader {wi + 1}: —", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+                wSlot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+                wSlot.AssignButton = CreateButton($"LogAssignBtnWarehouse{wi}", wActionRow, font, out wSlot.AssignButtonText, "Assign", 11, FleetPrimaryButtonColor, Color.white);
+                wSlot.AssignButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
+                wSlot.RemoveButton = CreateButton($"LogRemoveBtnWarehouse{wi}", wActionRow, font, out _, "×", 12, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
+                wSlot.RemoveButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
+
+                int capturedIdx = slotArrayIdx;
+                wSlot.AssignButton.onClick.AddListener(() =>
+                {
+                    DriverAgent sel = driverAgents.Find(d => d.DriverId == selectedShiftDriverId);
+                    if (sel == null) return;
+                    AssignWorkerToBuilding(sel, logisticsSlots[capturedIdx]);
+                    PlayUiSound(uiSelectClip, 0.85f);
+                });
+                wSlot.RemoveButton.onClick.AddListener(() =>
+                {
+                    RemoveWorkerFromBuilding(logisticsSlots[capturedIdx]);
+                    PlayUiSound(uiSelectClip, 0.85f);
+                });
+                logisticsSlots[slotArrayIdx] = wSlot;
+            }
         }
 
         // Start with Transport tab visible
@@ -1945,55 +1989,98 @@ public partial class GameBootstrap
     private void UpdateLogisticsTabUi(DriverAgent selectedDriver)
     {
         bool forestTutorialActive = IsTutorialEnabledForCurrentMode() && !hasShownForestWorkerStartedTutorial;
+
+        // For Warehouse: only show the card once (slot index 3 controls Root visibility)
+        bool warehouseCardShown = false;
+
         for (int i = 0; i < logisticsSlots.Length; i++)
         {
             LogisticsSlotUi slot = logisticsSlots[i];
             if (slot == null) continue;
 
-            if (slot.Root != null)
+            bool isWarehouse = slot.BuildingType == LocationType.Warehouse;
+
+            // Root visibility: only toggle for single-building slots and the first warehouse slot
+            if (slot.Root != null && (!isWarehouse || !warehouseCardShown))
             {
                 bool isBuilt = locations.ContainsKey(slot.BuildingType);
                 bool visible = isBuilt && (!forestTutorialActive || slot.BuildingType == LocationType.Forest);
                 slot.Root.gameObject.SetActive(visible);
+                if (isWarehouse) warehouseCardShown = true;
                 if (!visible) continue;
             }
+            else if (slot.Root != null && !slot.Root.gameObject.activeSelf)
+            {
+                continue;
+            }
 
-            DriverAgent assigned = driverAgents.Find(d =>
-                d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == slot.BuildingType);
+            DriverAgent assigned = GetNthLogisticsWorker(slot.BuildingType, slot.SlotIndex);
 
             bool ru = IsRussianLanguage();
-            string professionLabel = slot.BuildingType switch
-            {
-                LocationType.Forest           => L("Lumberjack"),
-                LocationType.Sawmill          => L("Sawmill Worker"),
-                LocationType.FurnitureFactory => L("Carpenter"),
-                LocationType.Warehouse        => L("Warehouse Loader"),
-                _                             => L("Worker"),
-            };
-            string workerLabel = assigned != null
-                ? $"{assigned.DriverName}  —  {GetProductionWorkRangeLabel()}"
-                : ru ? $"{professionLabel} не назначен" : $"{professionLabel} not assigned";
-            slot.AssignedWorkerText.text = workerLabel;
-            slot.AssignedWorkerText.color = assigned != null ? FleetAccentColor : FleetSecondaryTextColor;
             if (slot.WorkHoursText != null)
             {
                 slot.WorkHoursText.text = GetProductionWorkRangeLabel();
                 slot.WorkHoursText.color = IsProductionWorkHour(GetCurrentHour()) ? FleetAccentColor : FleetSecondaryTextColor;
             }
 
+            if (isWarehouse)
+            {
+                // Compact row: "Loader N: Name — hours" or "Loader N: —"
+                string loaderLabel = $"Loader {slot.SlotIndex + 1}: ";
+                slot.AssignedWorkerText.text = assigned != null
+                    ? $"{loaderLabel}{assigned.DriverName}"
+                    : $"{loaderLabel}—";
+                slot.AssignedWorkerText.color = assigned != null ? FleetAccentColor : FleetSecondaryTextColor;
+            }
+            else
+            {
+                string professionLabel = slot.BuildingType switch
+                {
+                    LocationType.Forest           => L("Lumberjack"),
+                    LocationType.Sawmill          => L("Sawmill Worker"),
+                    LocationType.FurnitureFactory => L("Carpenter"),
+                    _                             => L("Worker"),
+                };
+                string workerLabel = assigned != null
+                    ? $"{assigned.DriverName}  —  {GetProductionWorkRangeLabel()}"
+                    : ru ? $"{professionLabel} не назначен" : $"{professionLabel} not assigned";
+                slot.AssignedWorkerText.text = workerLabel;
+                slot.AssignedWorkerText.color = assigned != null ? FleetAccentColor : FleetSecondaryTextColor;
+            }
+
             bool selectedIsIdle = selectedDriver != null && !selectedDriver.IsArrivingByBus;
-            bool canAssign = selectedIsIdle && assigned == null;
+            bool selectedAlreadyHere = selectedDriver != null &&
+                selectedDriver.DutyMode == DriverDutyMode.Logistics &&
+                selectedDriver.AssignedBuildingType == slot.BuildingType;
+            bool canAssign = selectedIsIdle && assigned == null && !selectedAlreadyHere;
             slot.AssignButton.interactable = canAssign;
             slot.AssignButtonText.text = selectedDriver == null
-                ? "Select a worker"
+                ? (isWarehouse ? "Select" : "Select a worker")
                 : assigned != null
-                    ? "Slot occupied"
-                    : !selectedIsIdle
-                        ? $"{selectedDriver.DriverName} is not Idle"
-                        : $"Assign {selectedDriver.DriverName}";
+                    ? (isWarehouse ? "Occupied" : "Slot occupied")
+                    : selectedAlreadyHere
+                        ? (isWarehouse ? "Assigned" : "Already assigned")
+                        : !selectedIsIdle
+                            ? (isWarehouse ? "Not idle" : $"{selectedDriver.DriverName} is not Idle")
+                            : isWarehouse ? selectedDriver.DriverName : $"Assign {selectedDriver.DriverName}";
 
             slot.RemoveButton.interactable = assigned != null;
         }
+    }
+
+    private DriverAgent GetNthLogisticsWorker(LocationType buildingType, int slotIndex)
+    {
+        int count = 0;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent d = driverAgents[i];
+            if (d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == buildingType)
+            {
+                if (count == slotIndex) return d;
+                count++;
+            }
+        }
+        return null;
     }
 
     private void AssignWorkerToBuilding(DriverAgent driver, LogisticsSlotUi slot)
@@ -2032,11 +2119,10 @@ public partial class GameBootstrap
     private void RemoveWorkerFromBuilding(LogisticsSlotUi slot)
     {
         if (slot == null) return;
-        DriverAgent assigned = driverAgents.Find(d =>
-            d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == slot.BuildingType);
+        DriverAgent assigned = GetNthLogisticsWorker(slot.BuildingType, slot.SlotIndex);
         if (assigned == null) return;
         LogUiInput($"Shifts Canvas: removed {assigned.DriverName} from {slot.BuildingType}");
-        SetDriverDutyMode(assigned, DriverDutyMode.Local);  // clears building, fixes Workers counter
+        SetDriverDutyMode(assigned, DriverDutyMode.Local);
         isShiftsScreenDirty = true;
         isDriversScreenDirty = true;
     }

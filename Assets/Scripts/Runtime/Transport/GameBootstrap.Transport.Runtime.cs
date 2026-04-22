@@ -497,7 +497,9 @@ public partial class GameBootstrap
                 driver.DriverObject.SetActive(false);
                 if (driver.AssignedBuildingType.HasValue && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData enteredBuilding))
                 {
-                    enteredBuilding.Workers = 1;
+                    enteredBuilding.Workers = driver.AssignedBuildingType == LocationType.Warehouse
+                        ? Mathf.Min(enteredBuilding.Workers + 1, WarehouseMaxWorkers)
+                        : 1;
                     NotifyTutorialProductionWorkerEntered(driver.AssignedBuildingType.Value);
                     SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} entered {enteredBuilding.Label} — building operational.");
                 }
@@ -755,24 +757,72 @@ public partial class GameBootstrap
 
     private void ResolveWorkerGamblingSpinResult(DriverAgent driver)
     {
+        bool isGambler = HasWorkerPerk(driver, WorkerPerkKind.Gambler);
         var rng = new System.Random();
-        int maxAffordable = Mathf.Clamp(driver.Money, WorkerGamblingMinBet, WorkerGamblingMaxBet);
-        int bet = rng.Next(WorkerGamblingMinBet, maxAffordable + 1);
+
+        int casinoBank = locations.TryGetValue(LocationType.GamblingHall, out LocationData gh) ? gh.BuildingBank : 0;
+
+        int minBet = WorkerGamblingMinBet;
+        int maxBet;
+        if (isGambler)
+        {
+            // Gambler goes broke if can't cover minimum bet or casino has no funds
+            if (driver.Money < minBet || casinoBank < minBet)
+            {
+                driver.GamblerBroke = true;
+                driver.GamblingBet = 0;
+                driver.GamblingPayout = 0;
+                driver.GamblingMultiplier = 0;
+                driver.GamblingMoneyPending = false;
+                SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} [GAMBLER] is broke (money=${driver.Money}, casinoBank=${casinoBank}) — skipping bet.");
+                return;
+            }
+            driver.GamblerBroke = false;
+            // Bet full balance, capped by casino bank; 1.5× cap if lost last time (double-down)
+            maxBet = Mathf.Min(driver.Money, casinoBank);
+            if (driver.GamblerLostLastTime)
+                maxBet = Mathf.Min(driver.Money, Mathf.RoundToInt(maxBet * 1.5f));
+            maxBet = Mathf.Max(minBet, maxBet);
+        }
+        else
+        {
+            maxBet = Mathf.Clamp(driver.Money, WorkerGamblingMinBet, WorkerGamblingMaxBet);
+        }
+
+        int bet = rng.Next(minBet, maxBet + 1);
         float roll = (float)rng.NextDouble();
         int multiplier = roll < 0.55f ? 0 : roll < 0.85f ? 1 : roll < 0.97f ? 5 : 10;
-        int payout = bet * multiplier;
-        int net    = payout - bet;
 
+        int payout;
+        if (isGambler)
+        {
+            payout = multiplier switch
+            {
+                10 => bet * 12,
+                5  => bet * 6,
+                1  => bet,
+                _  => Mathf.RoundToInt(bet * 0.2f)  // lose only 80%
+            };
+            driver.GamblerLostLastTime = (multiplier == 0);
+        }
+        else
+        {
+            payout = bet * multiplier;
+        }
+
+        int net = payout - bet;
         driver.GamblingBet          = bet;
         driver.GamblingPayout       = payout;
         driver.GamblingMultiplier   = multiplier;
-        driver.GamblingMoneyPending = true; // money applied after animation
+        driver.GamblingMoneyPending = true;
+        driver.GamblingBetCount++;
 
         if (multiplier > 0)
             ApplyWorkerLuckyEffect(driver);
 
         string outcomeStr = multiplier == 0 ? "LOSS" : $"WIN x{multiplier}";
-        SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Gambling Hall; bet=${bet}, roll={roll:0.00}, outcome={outcomeStr}, payout=${payout}, net={net:+#;-#;0}, balance pending=${driver.Money}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
+        string gamblerTag = isGambler ? $" [GAMBLER bet#{driver.GamblingBetCount}]" : "";
+        SessionDebugLogger.Log("NEEDS", $"{driver.DriverName}{gamblerTag} gambling; bet=${bet}, roll={roll:0.00}, outcome={outcomeStr}, payout=${payout}, net={net:+#;-#;0}, balance pending=${driver.Money}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
     }
 
 }

@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap : MonoBehaviour
 {
-    private void SetupGround()
+    private System.Collections.IEnumerator SetupGroundAsync()
     {
         groundRoot = new GameObject("Ground").transform;
         groundRoot.SetParent(worldRoot, false);
@@ -183,6 +183,8 @@ public partial class GameBootstrap : MonoBehaviour
                     ConfigureStaticVisual(groundTile);
                 }
             }
+
+            if (x % 8 == 7) yield return null;
         }
 
         CreateDioramaBase();
@@ -739,7 +741,7 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyColor(boundary, new Color(0.9f, 0.85f, 0.75f));
     }
 
-    private void SetupGrid()
+    private System.Collections.IEnumerator SetupGridAsync()
     {
         GameObject gridRoot = new("GridLines");
         gridRoot.transform.SetParent(worldRoot, false);
@@ -756,6 +758,7 @@ public partial class GameBootstrap : MonoBehaviour
                 float edgeHeight = GetVerticalEdgeHeight(x, y) + 0.025f;
                 CreateGridLine(gridRoot.transform, lineMaterial, new Vector3(x, edgeHeight, y), new Vector3(x, edgeHeight, y + 1f));
             }
+            if (x % 8 == 7) yield return null;
         }
 
         for (int y = 0; y <= GridHeight; y++)
@@ -765,6 +768,7 @@ public partial class GameBootstrap : MonoBehaviour
                 float edgeHeight = GetHorizontalEdgeHeight(x, y) + 0.025f;
                 CreateGridLine(gridRoot.transform, lineMaterial, new Vector3(x, edgeHeight, y), new Vector3(x + 1f, edgeHeight, y));
             }
+            if (y % 8 == 7) yield return null;
         }
     }
 

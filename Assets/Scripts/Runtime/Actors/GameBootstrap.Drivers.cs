@@ -32,7 +32,7 @@ public partial class GameBootstrap : MonoBehaviour
         {
             if (driver.IsInsideBuilding && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData bd))
             {
-                bd.Workers = 0;
+                bd.Workers = Mathf.Max(0, bd.Workers - 1);
                 driver.IsInsideBuilding = false;
                 driver.DriverObject?.SetActive(true);
                 driver.DriverObject.transform.position = driver.MotelIdlePosition;
@@ -315,7 +315,7 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver.IsInsideBuilding && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData building))
         {
             // Normal exit: worker is invisible inside the building
-            locations[driver.AssignedBuildingType.Value].Workers = 0;
+            building.Workers = Mathf.Max(0, building.Workers - 1);
             driver.IsInsideBuilding = false;
             driver.IsOnActiveShift = false;
             driver.IsShiftSalaryPending = true;
@@ -335,7 +335,7 @@ public partial class GameBootstrap : MonoBehaviour
         {
             // Shift ended mid-delivery: cancel delivery, walk to motel from current position
             if (locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData deliveryBuilding))
-                locations[driver.AssignedBuildingType.Value].Workers = 0;
+                deliveryBuilding.Workers = Mathf.Max(0, deliveryBuilding.Workers - 1);
 
             driver.IsInsideBuilding = false;
             driver.IsOnActiveShift = false;
@@ -548,7 +548,12 @@ public partial class GameBootstrap : MonoBehaviour
                 return ContinueWorkerLifeCycle(driver, startPosition);
 
             case WorkerLifeGoal.Leisure:
-                if (driver.Money >= WorkerGamblingMinBalance &&
+                bool isGambler = HasWorkerPerk(driver, WorkerPerkKind.Gambler);
+                // Gambler always picks GamblingHall if it exists (even broke — enters but skips bet)
+                if (isGambler && locations.ContainsKey(LocationType.GamblingHall) &&
+                    TryStartWorkerServiceVisit(driver, LocationType.GamblingHall, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToGamblingHall, WorkerGamblingHallDuration, startPosition))
+                    return true;
+                if (!isGambler && driver.Money >= WorkerGamblingMinBalance &&
                     TryStartWorkerServiceVisit(driver, LocationType.GamblingHall, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToGamblingHall, WorkerGamblingHallDuration, startPosition))
                     return true;
                 if (TryStartWorkerServiceVisit(driver, LocationType.Bar, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToBar, WorkerLeisureDuration, startPosition))
@@ -734,6 +739,8 @@ public partial class GameBootstrap : MonoBehaviour
                     driver.GamblingBet = 0;
                     driver.GamblingPayout = 0;
                     driver.GamblingMultiplier = 0;
+                    driver.GamblingBetCount = 0;
+                    driver.GamblerBroke = false;
                     driver.LifeGoal = WorkerLifeGoal.None;
                     ContinueWorkerLifeCycle(driver, driver.DriverObject.transform.position);
                     return;

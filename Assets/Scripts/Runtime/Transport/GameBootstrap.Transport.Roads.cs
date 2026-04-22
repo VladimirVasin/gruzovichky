@@ -155,8 +155,8 @@ public partial class GameBootstrap
             }
         }
 
-        RebuildRoadLanterns();
-        RebuildRoadsideBenches();
+        RefreshRoadLanternsAround(cell);
+        RefreshRoadsideBenchesAround(cell);
         SessionDebugLogger.Log("ROAD", $"Added road at cell ({cell.x},{cell.y}).");
     }
 
@@ -181,8 +181,8 @@ public partial class GameBootstrap
             }
         }
 
-        RebuildRoadLanterns();
-        RebuildRoadsideBenches();
+        RefreshRoadLanternsAround(cell);
+        RefreshRoadsideBenchesAround(cell);
         SessionDebugLogger.Log("ROAD", $"Removed road at cell ({cell.x},{cell.y}).");
     }
 
@@ -276,6 +276,7 @@ public partial class GameBootstrap
         }
 
         roadLanterns.Clear();
+        roadCellLanternMap.Clear();
 
         foreach (Vector2Int roadCell in roadCells)
         {
@@ -284,11 +285,46 @@ public partial class GameBootstrap
                 continue;
             }
 
-            CreateRoadLantern(worldPosition, worldRotation);
+            CreateRoadLanternForCell(roadCell, worldPosition, worldRotation);
         }
 
         RebuildEdgeHighwayLanterns();
         RefreshAmbientLanternMoths();
+    }
+
+    private void RefreshRoadLanternsAround(Vector2Int cell)
+    {
+        if (lanternsRoot == null) return;
+
+        // Collect cell + road neighbors (their lantern eligibility may have changed)
+        System.Collections.Generic.List<Vector2Int> toRefresh = new() { cell };
+        foreach (Vector2Int n in GridPathService.GetCardinalNeighbors(cell))
+            if (roadCells.Contains(n)) toRefresh.Add(n);
+
+        // Remove affected road-cell lanterns
+        foreach (Vector2Int c in toRefresh)
+        {
+            if (!roadCellLanternMap.TryGetValue(c, out var info)) continue;
+            roadLanterns.Remove(info.Data);
+            Destroy(info.Root);
+            roadCellLanternMap.Remove(c);
+        }
+
+        // Re-evaluate and add where eligible
+        foreach (Vector2Int c in toRefresh)
+        {
+            if (!roadCells.Contains(c)) continue;
+            if (!TryGetRoadLanternPlacement(c, out Vector3 pos, out Quaternion rot)) continue;
+            CreateRoadLanternForCell(c, pos, rot);
+        }
+
+        RefreshAmbientLanternMoths();
+    }
+
+    private void CreateRoadLanternForCell(Vector2Int cell, Vector3 worldPosition, Quaternion worldRotation)
+    {
+        CreateRoadLantern(worldPosition, worldRotation);
+        roadCellLanternMap[cell] = (lanternsRoot.GetChild(lanternsRoot.childCount - 1).gameObject, roadLanterns[roadLanterns.Count - 1]);
     }
 
     private bool TryGetRoadLanternPlacement(Vector2Int cell, out Vector3 worldPosition, out Quaternion worldRotation)
@@ -408,16 +444,46 @@ public partial class GameBootstrap
         }
 
         roadsideBenchPositions.Clear();
-        HashSet<Vector2Int> reservedSideCells = new();
+        roadCellBenchMap.Clear();
+        benchSideCells.Clear();
+
         foreach (Vector2Int roadCell in roadCells)
         {
-            if (!TryGetRoadsideBenchPlacement(roadCell, reservedSideCells, out Vector3 worldPosition, out Quaternion worldRotation, out Vector2Int sideCell))
+            if (!TryGetRoadsideBenchPlacement(roadCell, benchSideCells, out Vector3 worldPosition, out Quaternion worldRotation, out Vector2Int sideCell))
             {
                 continue;
             }
 
-            CreateRoadsideBench(worldPosition, worldRotation, roadCell);
-            reservedSideCells.Add(sideCell);
+            CreateRoadsideBench(worldPosition, worldRotation, roadCell, sideCell);
+            benchSideCells.Add(sideCell);
+        }
+    }
+
+    private void RefreshRoadsideBenchesAround(Vector2Int cell)
+    {
+        if (roadsidePropsRoot == null) return;
+
+        System.Collections.Generic.List<Vector2Int> toRefresh = new() { cell };
+        foreach (Vector2Int n in GridPathService.GetCardinalNeighbors(cell))
+            if (roadCells.Contains(n)) toRefresh.Add(n);
+
+        // Remove existing benches for affected cells
+        foreach (Vector2Int c in toRefresh)
+        {
+            if (!roadCellBenchMap.TryGetValue(c, out var info)) continue;
+            benchSideCells.Remove(info.SideCell);
+            roadsideBenchPositions.Remove(info.Root.transform.position);
+            Destroy(info.Root);
+            roadCellBenchMap.Remove(c);
+        }
+
+        // Re-evaluate each affected road cell
+        foreach (Vector2Int c in toRefresh)
+        {
+            if (!roadCells.Contains(c)) continue;
+            if (!TryGetRoadsideBenchPlacement(c, benchSideCells, out Vector3 pos, out Quaternion rot, out Vector2Int sideCell)) continue;
+            CreateRoadsideBench(pos, rot, c, sideCell);
+            benchSideCells.Add(sideCell);
         }
     }
 
@@ -521,7 +587,7 @@ public partial class GameBootstrap
         return false;
     }
 
-    private void CreateRoadsideBench(Vector3 worldPosition, Quaternion worldRotation, Vector2Int roadCell)
+    private void CreateRoadsideBench(Vector3 worldPosition, Quaternion worldRotation, Vector2Int roadCell, Vector2Int sideCell)
     {
         if (roadsidePropsRoot == null)
         {
@@ -563,6 +629,7 @@ public partial class GameBootstrap
         }
 
         roadsideBenchPositions.Add(worldPosition);
+        roadCellBenchMap[roadCell] = (benchRoot, sideCell);
     }
 
     private bool TryGetNearestFreeBench(Vector3 fromPos, float maxDist, out int idx, out Vector3 pos)

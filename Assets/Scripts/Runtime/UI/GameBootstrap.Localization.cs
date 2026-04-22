@@ -95,6 +95,7 @@ public partial class GameBootstrap
         { "Resources", "Ресурсы" },
         { "Economy", "Экономика" },
         { "Trade", "Торговля" },
+        { "Building Bank", "Касса здания" },
         { "Build", "Стройка" },
         { "Building", "Стройка" },
         { "R - rotate", "R - повернуть" },

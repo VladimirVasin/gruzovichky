@@ -12,8 +12,14 @@ public partial class GameBootstrap
     private const float WorkerSkillTooltipHeight = 86f;
     private const float WorkerEffectTooltipHeight = 220f;
     private const int WorkerEffectHudRowCount = 8;
-    private const int WorkerPerkHudRowCount = 3;
-    private const float WorkerAlcoholismPerkChance = 0.32f;
+    private const int WorkerPerkHudRowCount = 4;
+
+    private static readonly WorkerPerkKind[] NegativePerks = { WorkerPerkKind.Alcoholism, WorkerPerkKind.Gambler };
+    private static readonly WorkerPerkKind[] PositivePerks =
+    {
+        WorkerPerkKind.Nightowl, WorkerPerkKind.Ironman, WorkerPerkKind.Motorhead, WorkerPerkKind.Trader,
+        WorkerPerkKind.Handyman, WorkerPerkKind.Socialite, WorkerPerkKind.Frugal, WorkerPerkKind.Quicklearner
+    };
     private const string WorkerDrunkEffectId = "drunk";
     private const float WorkerDrunkEffectDurationHours = 4f;
     private const float WorkerAlcoholicDrunkEffectDurationHours = 6f;
@@ -89,16 +95,22 @@ public partial class GameBootstrap
 
     private void AssignWorkerPerks(DriverAgent driver, System.Random rng)
     {
-        if (driver == null || rng == null)
-        {
-            return;
-        }
+        if (driver == null || rng == null) return;
 
         driver.Perks.Clear();
-        if (rng.NextDouble() < WorkerAlcoholismPerkChance)
+
+        // Always 1 random negative perk
+        driver.Perks.Add(NegativePerks[rng.Next(NegativePerks.Length)]);
+
+        // Always 3 random positive perks (no duplicates via Fisher-Yates on a copy)
+        WorkerPerkKind[] pool = (WorkerPerkKind[])PositivePerks.Clone();
+        for (int i = pool.Length - 1; i > 0; i--)
         {
-            driver.Perks.Add(WorkerPerkKind.Alcoholism);
+            int j = rng.Next(i + 1);
+            (pool[i], pool[j]) = (pool[j], pool[i]);
         }
+        for (int i = 0; i < 3; i++)
+            driver.Perks.Add(pool[i]);
     }
 
     private void EnsureWorkerStats(DriverAgent driver)
@@ -545,8 +557,17 @@ public partial class GameBootstrap
     {
         return perk switch
         {
-            WorkerPerkKind.Alcoholism => ru ? "\u0410\u043b\u043a\u043e\u0433\u043e\u043b\u0438\u0437\u043c" : "Alcoholism",
-            _ => ru ? "\u041f\u0435\u0440\u043a" : "Perk"
+            WorkerPerkKind.Alcoholism   => ru ? "Алкоголизм"     : "Alcoholism",
+            WorkerPerkKind.Gambler      => ru ? "Лудоман"        : "Gambler",
+            WorkerPerkKind.Nightowl     => ru ? "Сова"           : "Night Owl",
+            WorkerPerkKind.Ironman      => ru ? "Железный"       : "Iron Man",
+            WorkerPerkKind.Motorhead    => ru ? "Автолюбитель"   : "Motorhead",
+            WorkerPerkKind.Trader       => ru ? "Делец"          : "Trader",
+            WorkerPerkKind.Handyman     => ru ? "Мастер"         : "Handyman",
+            WorkerPerkKind.Socialite    => ru ? "Общительный"    : "Socialite",
+            WorkerPerkKind.Frugal       => ru ? "Экономный"      : "Frugal",
+            WorkerPerkKind.Quicklearner => ru ? "Смышлёный"      : "Quick Learner",
+            _ => ru ? "Перк" : "Perk"
         };
     }
 
@@ -555,9 +576,11 @@ public partial class GameBootstrap
         return perk switch
         {
             WorkerPerkKind.Alcoholism => WorkerPerkType.Negative,
+            WorkerPerkKind.Gambler    => WorkerPerkType.Negative,
             _ => WorkerPerkType.Positive
         };
     }
+    // All new perks are Positive by default via the wildcard above.
 
     private static string GetWorkerPerkTypeLabel(WorkerPerkType type, bool ru)
     {
@@ -586,7 +609,34 @@ public partial class GameBootstrap
             WorkerPerkKind.Alcoholism => ru
                 ? "\u0420\u0430\u043d\u0434\u043e\u043c\u043d\u044b\u0439 \u043f\u0435\u0440\u043a. \u041f\u043e\u0441\u043b\u0435 \u0411\u0430\u0440\u0430 \u041e\u043f\u044c\u044f\u043d\u0435\u043d\u0438\u0435 \u0434\u043b\u0438\u0442\u0441\u044f \u0434\u043e\u043b\u044c\u0448\u0435: \u0432\u043e\u0436\u0434\u0435\u043d\u0438\u0435 \u043f\u0430\u0434\u0430\u0435\u0442 \u0441\u0438\u043b\u044c\u043d\u0435\u0435, \u0437\u0430\u0442\u043e \u043e\u0431\u044b\u0447\u043d\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430 \u043d\u0430 \u0432\u0440\u0435\u043c\u044f \u0443\u0441\u0438\u043b\u0438\u0432\u0430\u0435\u0442\u0441\u044f."
                 : "Random perk. After visiting the Bar, Drunk lasts longer: driving drops harder, while ordinary work gets a stronger temporary boost.",
-            _ => ru ? "\u041f\u043e\u0441\u0442\u043e\u044f\u043d\u043d\u0430\u044f \u0447\u0435\u0440\u0442\u0430 \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e." : "A permanent worker trait."
+            WorkerPerkKind.Gambler => ru
+                ? "Всегда выбирает Игровые автоматы. Ставит весь баланс, делает 2 ставки за визит. Больший выигрыш (x12/x6), меньший проигрыш (20% возвращается). После проигрыша следующая ставка выше."
+                : "Always picks Gambling Hall. Bets full balance, makes 2 bets per visit. Higher jackpot (x12/x6), smaller losses (20% returned). Doubles down after a loss.",
+            WorkerPerkKind.Nightowl => ru
+                ? "[Заглушка] Ночная Сова. Работает эффективнее в ночные смены — бонус к вождению и производству в тёмное время суток."
+                : "[Stub] Night Owl. Works better during night shifts — driving and production bonus in the dark hours.",
+            WorkerPerkKind.Ironman => ru
+                ? "[Заглушка] Железный. Медленнее накапливает усталость и реже нуждается во сне. Нужды снижаются медленнее."
+                : "[Stub] Iron Man. Accumulates fatigue slower and needs less sleep. Need timers tick slower.",
+            WorkerPerkKind.Motorhead => ru
+                ? "[Заглушка] Автолюбитель. Бонус к навыку вождения. В будущем — снижение расхода топлива и ускоренное обслуживание грузовика."
+                : "[Stub] Motorhead. Driving skill bonus. Future: reduced fuel consumption and faster truck maintenance.",
+            WorkerPerkKind.Trader => ru
+                ? "[Заглушка] Делец. Торговые рейсы приносят больше прибыли. В будущем — бонус к Logistics и снижение закупочной цены."
+                : "[Stub] Trader. Trade runs yield more profit. Future: Logistics bonus and lower purchase prices.",
+            WorkerPerkKind.Handyman => ru
+                ? "[Заглушка] Мастер. Ускоряет производство на всех зданиях. Бонус к Production и сокращение времени простоя."
+                : "[Stub] Handyman. Speeds up production at all buildings. Production bonus and reduced downtime.",
+            WorkerPerkKind.Socialite => ru
+                ? "[Заглушка] Общительный. Восстанавливает потребность в досуге быстрее. Бар и другие заведения дают больший эффект."
+                : "[Stub] Socialite. Leisure need recovers faster. Bar and service buildings give stronger effects.",
+            WorkerPerkKind.Frugal => ru
+                ? "[Заглушка] Экономный. Меньше тратит на сервисные здания и бытовые нужды. Скидка на все услуги."
+                : "[Stub] Frugal. Spends less at service buildings. Discount on all service fees.",
+            WorkerPerkKind.Quicklearner => ru
+                ? "[Заглушка] Смышлёный. Быстрее прокачивает навыки через опыт. В будущем — ускоренный рост всех характеристик."
+                : "[Stub] Quick Learner. Gains skills faster through experience. Future: accelerated stat growth.",
+            _ => ru ? "Постоянная черта рабочего." : "A permanent worker trait."
         };
     }
 

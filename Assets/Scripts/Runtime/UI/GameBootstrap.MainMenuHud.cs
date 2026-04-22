@@ -475,13 +475,17 @@ public partial class GameBootstrap
         if (cityMusicSource != null)
         {
             if (!cityMusicSource.isPlaying) cityMusicSource.UnPause();
+            ResumeDayNightMusic();
             return;
         }
         AudioClip clip = Resources.Load<AudioClip>("City1");
-        if (clip == null) return;
-        cityMusicSource = CreateAudioSource("CityMusic", null, true, 0.20f, 0f, false);
-        cityMusicSource.clip = clip;
-        cityMusicSource.Play();
+        if (clip != null)
+        {
+            cityMusicSource = CreateAudioSource("CityMusic", null, true, 0f, 0f, false);
+            cityMusicSource.clip = clip;
+            cityMusicSource.Play();
+        }
+        SetupDayNightMusic();
     }
 
     private void StartMainMenuMusic()
@@ -700,10 +704,10 @@ public partial class GameBootstrap
         ApplyTerrainHeightsToWorld();
 
         SetLoadingProgress(++step / (float)totalSteps, "Setting up ground..."); yield return null;
-        SetupGround(); CreateWaterLayer();
+        yield return StartCoroutine(SetupGroundAsync()); CreateWaterLayer();
 
         SetLoadingProgress(++step / (float)totalSteps, "Building grid..."); yield return null;
-        SetupGrid();
+        yield return StartCoroutine(SetupGridAsync());
 
         SetLoadingProgress(++step / (float)totalSteps, "Edge highways..."); yield return null;
         SetupEdgeHighway(); SetupEdgeHighwayBuses(); SetupRiverBoats();
@@ -785,6 +789,7 @@ public partial class GameBootstrap
         Time.fixedDeltaTime = 0f;
         AudioListener.pause = true;
         cityMusicSource?.Pause();
+        PauseDayNightMusic();
         StartMainMenuMusic();
         isMainMenuOpen = true;
         UpdateMainMenuHud();

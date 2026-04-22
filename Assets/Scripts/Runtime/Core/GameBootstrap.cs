@@ -18,6 +18,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const int FurnitureFactoryMaxTextileStorage = 6;
     private const int FurnitureFactoryMaxFurnitureStorage = 6;
     private const float FurnitureFactoryProcessingDuration = 5.5f;
+    private const int WarehouseMaxWorkers        = 3;
     private const int WarehouseMaxFuelStorage    = 20;
     private const int WarehouseMaxAlcoholStorage = 20;
     private const int WarehouseMaxFoodStorage    = 20;
@@ -56,7 +57,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DriverSleepDuration = DayNightCycleDuration / 24f * 8f;
     private const float WorkerCanteenDuration = DayNightCycleDuration / 24f * 1f;
     private const float WorkerLeisureDuration = DayNightCycleDuration / 24f * 2f;
-    private const float WorkerGamblingHallDuration = DayNightCycleDuration / 24f * 2f;
+    private const float WorkerGamblingHallDuration = DayNightCycleDuration / 24f * 2.5f;
     private const int   WorkerGamblingMinBalance   = 5;
     private const int   WorkerGamblingMinBet       = 5;
     private const int   WorkerGamblingMaxBet       = 10;
@@ -88,7 +89,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const int HireTruckCost = 300;
     private const int HireDriverCost = 50;
     private const int MaxMoneyLedgerEntries = 128;
-    private const float DayNightCycleDuration = 300f;
+    private const float DayNightCycleDuration = 360f; // 4 periods × 90s = 6-minute day
     private const float DriverShiftArrivalLeadHours = 1f;
     private const int ProductionWorkStartHour = 8;
     private const int ProductionWorkEndHour = 18;
@@ -111,6 +112,9 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<Renderer> locationNightLightRenderers = new();
     private readonly List<Material> locationNightLightMaterials = new();
     private readonly List<RoadLanternData> roadLanterns = new();
+    private readonly Dictionary<Vector2Int, (GameObject Root, RoadLanternData Data)> roadCellLanternMap = new();
+    private readonly Dictionary<Vector2Int, (GameObject Root, Vector2Int SideCell)> roadCellBenchMap = new();
+    private readonly HashSet<Vector2Int> benchSideCells = new();
     private readonly List<TruckAgent> truckAgents = new();
     private readonly List<DriverAgent> driverAgents = new();
     private readonly List<ForestWorkerAmbient> forestWorkers = new();
@@ -226,7 +230,7 @@ public partial class GameBootstrap : MonoBehaviour
     private float truckInteractionTimer;
     private float moneyPopupTimer;
     private float truckFuel = TruckFuelCapacity;
-    private float dayNightCycleTimer = DayNightCycleDuration * (5f / 24f);
+    private float dayNightCycleTimer = DayNightCycleDuration * 0.25f; // start at 06:00 — morning
     private int   currentDay = 1;
     private float currentStylizedDaylight = 1f;
     private float forestProductionProgress;
@@ -1024,7 +1028,16 @@ public partial class GameBootstrap : MonoBehaviour
 
     private enum WorkerPerkKind
     {
-        Alcoholism
+        Alcoholism,
+        Gambler,
+        Nightowl,        // Работает лучше в ночную смену
+        Ironman,         // Медленнее устаёт, реже нужен отдых
+        Motorhead,       // Бонус к вождению и техобслуживанию
+        Trader,          // Торговые рейсы приносят больше прибыли
+        Handyman,        // Ускоряет производство на всех зданиях
+        Socialite,       // Восстанавливает досуг быстрее и дешевле
+        Frugal,          // Тратит меньше на сервисные нужды
+        Quicklearner     // Быстрее прокачивает навыки от опыта
     }
 
     private enum WorkerPerkType
@@ -1102,6 +1115,9 @@ public partial class GameBootstrap : MonoBehaviour
         public int  GamblingPayout;       // payout received ($0 on loss)
         public int  GamblingMultiplier;   // 0=loss, 1=x1, 5=x5, 10=x10
         public bool GamblingMoneyPending; // true until money is actually applied after animation
+        public int  GamblingBetCount;     // how many bets placed this visit (for 2-bet limit)
+        public bool GamblerLostLastTime;  // Gambler perk: true after a loss (doubles next bet)
+        public bool GamblerBroke;         // Gambler perk: Money < min bet, visits but skips bet
         public bool SleptToday;
         public float HoursSinceMeal = 0f;
         public float HoursSinceSleep = 0f;

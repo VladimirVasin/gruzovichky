@@ -119,7 +119,9 @@ public partial class GameBootstrap
 
         // ── Perks section ──────────────────────────────────────────────────────
         statesScreenUi.PerksSectionHeader = BuildStatesSectionHeader("PerksHdr", contentRt, font);
-        statesScreenUi.PerkEntries.Add(BuildStatesEntry(contentRt, font, false));
+        int totalPerkCount = NegativePerks.Length + PositivePerks.Length;
+        for (int i = 0; i < totalPerkCount; i++)
+            statesScreenUi.PerkEntries.Add(BuildStatesEntry(contentRt, font, false));
 
         statesScreenUi.CanvasRoot.SetActive(false);
         UpdateStatesScreenUi();
@@ -305,10 +307,25 @@ public partial class GameBootstrap
             ru ? "Причина: без отдыха ~24 часа." : "Cause: no leisure for ~24 hours.");
 
         // ── Perks ──────────────────────────────────────────────────────────────
-        FillStatesSkill(statesScreenUi.PerkEntries[0], ru,
-            ru ? "Алкоголизм" : "Alcoholism",
-            ru ? "Случайная черта. После посещения Бара эффект «Опьянение» длится дольше: вождение страдает сильнее, а обычная работа временно выигрывает больше."
-               : "Random trait. After visiting the Bar, Drunk lasts longer: driving drops harder, while ordinary work gets a stronger temporary boost.");
+        int pi = 0;
+        foreach (WorkerPerkKind perk in NegativePerks)
+        {
+            if (pi < statesScreenUi.PerkEntries.Count)
+            {
+                StatesEntryUi entry = statesScreenUi.PerkEntries[pi++];
+                FillStatesSkill(entry, ru, GetWorkerPerkName(perk, ru), GetWorkerPerkDescription(perk, ru));
+                entry.NameText.color = GetWorkerPerkTypeColor(WorkerPerkType.Negative);
+            }
+        }
+        foreach (WorkerPerkKind perk in PositivePerks)
+        {
+            if (pi < statesScreenUi.PerkEntries.Count)
+            {
+                StatesEntryUi entry = statesScreenUi.PerkEntries[pi++];
+                FillStatesSkill(entry, ru, GetWorkerPerkName(perk, ru), GetWorkerPerkDescription(perk, ru));
+                entry.NameText.color = GetWorkerPerkTypeColor(WorkerPerkType.Positive);
+            }
+        }
     }
 
     // ── Entry builders ─────────────────────────────────────────────────────────

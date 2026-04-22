@@ -14,7 +14,7 @@ public static class WorldLayoutGenerator
         GeneratedWorldLayout bestCandidate = null;
         int bestScore = int.MinValue;
 
-        for (int attempt = 0; attempt < 160; attempt++)
+        for (int attempt = 0; attempt < 30; attempt++)
         {
             Dictionary<string, WorldLocationPlacement> candidate = new();
             if (!TryPlaceParking(candidate, gridWidth, gridHeight, blockedCells))

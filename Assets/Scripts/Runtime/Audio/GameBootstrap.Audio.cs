@@ -129,6 +129,7 @@ public partial class GameBootstrap
         }
 
         UpdateDayNightAmbientOneShots(dayBlend, nightBlend);
+        UpdateDayNightMusic();
     }
 
     private AudioSource CreateAudioSource(string name, Transform parent, bool loop, float volume, float spatialBlend, bool playOnAwake)

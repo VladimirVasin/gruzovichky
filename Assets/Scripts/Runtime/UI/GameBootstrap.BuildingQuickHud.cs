@@ -6,7 +6,7 @@ public partial class GameBootstrap
 {
     private static readonly string[] SlotSymbols = { "7", "★", "♦", "♥", "♣", "♠" };
 
-    private enum GamblingSlotPhase { Idle, ShowBet, Spinning, Done }
+    private enum GamblingSlotPhase { Idle, ShowBet, Spinning, Done, ResultPause }
 
     private sealed class ServiceWorkerSlotUi
     {
@@ -23,12 +23,13 @@ public partial class GameBootstrap
 
         // Slot machine reels
         public RectTransform    ReelRow;
-        public Text[]           ReelTexts      = new Text[3];
-        public GamblingSlotPhase SlotPhase     = GamblingSlotPhase.Idle;
+        public Text[]           ReelTexts        = new Text[3];
+        public GamblingSlotPhase SlotPhase       = GamblingSlotPhase.Idle;
         public float            SpinTimer;
         public float            SpinCycleTimer;
-        public bool[]           ReelStopped    = new bool[3];
-        public string[]         FinalReelChars = new string[3];
+        public float            ResultDisplayTimer;
+        public bool[]           ReelStopped      = new bool[3];
+        public string[]         FinalReelChars   = new string[3];
         public int              LastSpinBet;
     }
 
@@ -412,7 +413,7 @@ public partial class GameBootstrap
             {
                 UpdateGamblingReels(slot, d);
 
-                bool spinDone = slot.SlotPhase == GamblingSlotPhase.Done;
+                bool spinDone = slot.SlotPhase == GamblingSlotPhase.Done || slot.SlotPhase == GamblingSlotPhase.ResultPause;
                 if (spinDone)
                 {
                     string outcomeLabel = d.GamblingMultiplier == 0 ? (ru ? "Проигрыш" : "Loss")
@@ -435,6 +436,12 @@ public partial class GameBootstrap
                 {
                     slot.ActivityText.text  = ru ? "Вращение..." : "Spinning...";
                     slot.ActivityText.color = Color.gray;
+                    slot.ActivityTextLayout.preferredHeight = 14f;
+                }
+                else if (d.GamblerBroke)
+                {
+                    slot.ActivityText.text  = ru ? "На мели" : "Broke";
+                    slot.ActivityText.color = new Color(0.6f, 0.4f, 0.4f);
                     slot.ActivityTextLayout.preferredHeight = 14f;
                 }
                 else
@@ -478,15 +485,16 @@ public partial class GameBootstrap
             return;
         }
 
-        // Detect new visit
+        // Detect new bet (first visit or second bet after result pause)
         if (d.GamblingBet != slot.LastSpinBet)
         {
-            slot.LastSpinBet    = d.GamblingBet;
-            slot.SlotPhase      = GamblingSlotPhase.ShowBet;
-            slot.SpinTimer      = 0f;
-            slot.SpinCycleTimer = 0f;
-            slot.ReelStopped    = new bool[3];
-            slot.FinalReelChars = GetReelFinalChars(d.GamblingMultiplier);
+            slot.LastSpinBet          = d.GamblingBet;
+            slot.SlotPhase            = GamblingSlotPhase.ShowBet;
+            slot.SpinTimer            = 0f;
+            slot.SpinCycleTimer       = 0f;
+            slot.ResultDisplayTimer   = 0f;
+            slot.ReelStopped          = new bool[3];
+            slot.FinalReelChars       = GetReelFinalChars(d.GamblingMultiplier);
             foreach (Text t in slot.ReelTexts) { t.text = "?"; t.color = Color.gray; }
             slot.ReelRow.gameObject.SetActive(false);
         }
@@ -496,7 +504,6 @@ public partial class GameBootstrap
         switch (slot.SlotPhase)
         {
             case GamblingSlotPhase.ShowBet:
-                // Wait 2.5 s showing the bet before reels appear
                 if (slot.SpinTimer >= 2.5f)
                 {
                     slot.SlotPhase = GamblingSlotPhase.Spinning;
@@ -522,14 +529,28 @@ public partial class GameBootstrap
                     if (anyStillSpinning) PlayUiSound(slotReelTickClip, 0.45f);
                 }
 
-                TryStopReel(slot, 0, 3.5f,  d.GamblingMultiplier); // reel 1 at 3.5 s
-                TryStopReel(slot, 1, 6.0f,  d.GamblingMultiplier); // reel 2 at 6.0 s
-                if (TryStopReel(slot, 2, 9.0f, d.GamblingMultiplier)) // reel 3 at 9.0 s
+                TryStopReel(slot, 0, 3.5f, d.GamblingMultiplier);
+                TryStopReel(slot, 1, 6.0f, d.GamblingMultiplier);
+                if (TryStopReel(slot, 2, 9.0f, d.GamblingMultiplier))
                 {
-                    slot.SlotPhase = GamblingSlotPhase.Done;
+                    slot.SlotPhase          = GamblingSlotPhase.Done;
+                    slot.ResultDisplayTimer = 3.5f;
                     TriggerHudGamblingResult(d);
                 }
                 break;
+
+            case GamblingSlotPhase.Done:
+                slot.ResultDisplayTimer -= Time.unscaledDeltaTime;
+                // Trigger second bet when result has been shown long enough
+                if (slot.ResultDisplayTimer <= 0f && d.GamblingBetCount < 2 && d.IdleActivityTimer > 12f && d.Money >= WorkerGamblingMinBet)
+                {
+                    slot.SlotPhase = GamblingSlotPhase.ResultPause;
+                    ResolveWorkerGamblingSpinResult(d);
+                    // d.GamblingBet is now a new value; next frame detects it and restarts ShowBet
+                }
+                break;
+
+            // ResultPause: waiting for next frame to detect the new bet value
         }
     }
 
@@ -563,7 +584,7 @@ public partial class GameBootstrap
             if (d.DriverObject != null)
             {
                 Vector3 pos = d.DriverObject.transform.position;
-                if (d.GamblingMultiplier == 0) SpawnMoneySpendPopup(pos, d.GamblingBet);
+                if (d.GamblingMultiplier == 0) SpawnMoneySpendPopup(pos, d.GamblingBet - d.GamblingPayout);
                 else if (net > 0)              SpawnMoneyEarnPopup(pos, net);
             }
             SessionDebugLogger.Log("NEEDS", $"{d.DriverName} gambling resolved: net={d.GamblingPayout - d.GamblingBet:+#;-#;0}, balance=${d.Money}.");
@@ -830,8 +851,8 @@ public partial class GameBootstrap
     private string GetWarehouseQuickResourceText()
     {
         locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse);
-        int workers   = warehouse != null ? warehouse.Workers         : 0;
-        return FormatValueLine("Workers", $"{workers} / 1");
+        int workers = warehouse != null ? warehouse.Workers : 0;
+        return FormatValueLine("Workers", $"{workers} / {WarehouseMaxWorkers}");
     }
 
     private static bool HasBuildingContextAction(LocationType locationType)
