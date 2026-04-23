@@ -845,6 +845,10 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("DRIVER", $"{driver.DriverName} added to {targetTruck.DisplayName} roster.");
         LogDriverReaction(driver, $"assigned to {targetTruck.DisplayName}");
         LogTruckReaction(targetTruck, $"added roster driver {driver.DriverName}");
+        PushFeedEvent(
+            $"{driver.DriverName} assigned to {targetTruck.DisplayName}.",
+            $"{driver.DriverName} назначен в {targetTruck.DisplayName}.",
+            FeedEventType.Info);
         PlayUiSound(uiSelectClip, 0.88f);
         return true;
     }
@@ -1109,6 +1113,7 @@ public partial class GameBootstrap
         text.supportRichText = true;
         text.horizontalOverflow = HorizontalWrapMode.Wrap;
         text.verticalOverflow = VerticalWrapMode.Overflow;
+        text.raycastTarget = false;
         return text;
     }
 

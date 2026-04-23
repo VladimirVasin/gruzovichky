@@ -273,7 +273,7 @@ public partial class GameBootstrap
                 if (driver.DriverFuelCanTransform != null)
                     driver.DriverFuelCanTransform.gameObject.SetActive(true);
                 if (locations.TryGetValue(LocationType.GasStation, out LocationData gsEmergency))
-                    gsEmergency.FuelStored = Mathf.Max(0, gsEmergency.FuelStored - 1);
+                    gsEmergency.FuelStored = GasStationMaxFuelStorage;
                 SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} driver reached Gas Station and is returning with fuel.");
                 driver.WalkTargetWorld = GetDriverStandPointNearTruck();
                 BuildDriverWalkPath(driver, currentPosition, driver.WalkTargetWorld);
@@ -401,6 +401,10 @@ public partial class GameBootstrap
                 {
                     driver.WalkPhase = DriverRescuePhase.IdleAtBar;
                     barData.AlcoholStored = Mathf.Max(0, barData.AlcoholStored - 1);
+                    if (HasWorkerEffect(driver, WorkerHangoverEffectId))
+                    {
+                        RemoveWorkerEffect(driver, WorkerHangoverEffectId);
+                    }
                     ApplyWorkerDrunkEffect(driver);
                     if (barData.ServiceFee > 0)
                     {
@@ -482,46 +486,66 @@ public partial class GameBootstrap
                 return;
 
             case DriverRescuePhase.WarehouseDeliveryToService:
-                // Arrived at service building вЂ” unload 1 unit
+                // Arrived at service building - unload the carried warehouse unit
                 if (driver.WarehouseDeliveryTarget.HasValue &&
                     locations.TryGetValue(driver.WarehouseDeliveryTarget.Value, out LocationData serviceBuilding))
                 {
-                    switch (driver.WarehouseDeliveryTarget.Value)
+                    switch (driver.WarehouseDeliveryResourceType)
                     {
-                        case LocationType.GasStation:
+                        case WarehouseResourceType.Fuel:
                             serviceBuilding.FuelStored = Mathf.Min(serviceBuilding.FuelStored + 1, GasStationMaxFuelStorage);
                             break;
-                        case LocationType.Bar:
+                        case WarehouseResourceType.Alcohol:
                             serviceBuilding.AlcoholStored = Mathf.Min(serviceBuilding.AlcoholStored + 1, BarMaxAlcoholStorage);
                             break;
-                        case LocationType.Canteen:
+                        case WarehouseResourceType.Food:
                             serviceBuilding.FoodStored = Mathf.Min(serviceBuilding.FoodStored + 1, CanteenMaxFoodStorage);
                             break;
                     }
-                    SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} delivered 1 unit to {serviceBuilding.Label}.");
+                    SessionDebugLogger.Log(
+                        "WAREHOUSE",
+                        $"{driver.DriverName} delivered {GetWarehouseResourceTypeLabel(driver.WarehouseDeliveryResourceType)} x{Mathf.Max(1, driver.WarehouseDeliveryAmount)} to {serviceBuilding.Label}.");
                 }
-                // Walk back to Warehouse
+                ClearWarehouseDeliveryCargo(driver);
+                // Return to Warehouse, using the local bus if it makes sense
                 if (driver.AssignedBuildingType.HasValue &&
                     locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData warehouseReturn))
                 {
                     Vector3 returnTarget = GetCellCenter(warehouseReturn.Anchor);
                     returnTarget.y += 0.05f;
+                    ResetWorkerLocalBusTripState(driver);
+                    if (TryStartWorkerLocalBusTrip(
+                            driver,
+                            currentPosition,
+                            returnTarget,
+                            DriverRescuePhase.WarehouseDeliveryReturn,
+                            "Warehouse return",
+                            true))
+                    {
+                        SessionDebugLogger.Log(
+                            "WAREHOUSE",
+                            $"{driver.DriverName} started bus-assisted return to Warehouse after delivery.");
+                        return;
+                    }
+
                     driver.WalkTargetWorld = returnTarget;
                     driver.WalkPhase = DriverRescuePhase.WarehouseDeliveryReturn;
                     BuildDriverWalkPath(driver, currentPosition, returnTarget);
+                    SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} started walking back to Warehouse after delivery.");
                 }
                 return;
 
             case DriverRescuePhase.WarehouseDeliveryReturn:
-                // Back at Warehouse вЂ” become invisible, ready for next delivery
+                // Back at Warehouse - become invisible, ready for next delivery
                 driver.WalkPhase         = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
                 driver.IsInsideBuilding  = true;
                 driver.WarehouseDeliveryTarget = null;
+                ClearWarehouseDeliveryCargo(driver);
                 driver.DriverObject.SetActive(false);
-                SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} returned to Warehouse вЂ” ready for next delivery.");
+                SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} returned to Warehouse - ready for next delivery.");
                 return;
 
             case DriverRescuePhase.ToBuildingForShift:

@@ -16,7 +16,7 @@ public static class TruckAutoPlanner
             return TruckAutoDecisionKind.None;
         }
 
-        if (truckFuel < 30f)
+        if (truckFuel < GameBootstrap.TruckAutoRefuelThreshold)
         {
             return TruckAutoDecisionKind.Refuel;
         }

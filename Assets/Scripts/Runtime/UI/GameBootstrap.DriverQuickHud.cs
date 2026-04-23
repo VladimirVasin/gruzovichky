@@ -10,6 +10,9 @@ public partial class GameBootstrap
         public Text HeaderText;
         public Text OccupationText;
         public Text StatusText;
+        public RectTransform NeedsMealBarFill;
+        public RectTransform NeedsSleepBarFill;
+        public RectTransform NeedsLeisureBarFill;
         public GameObject TruckRow;
         public Text TruckText;
         public Text ShiftText;
@@ -77,6 +80,19 @@ public partial class GameBootstrap
         driverQuickHud.StatusText = CreateBodyText("Status", summaryBody, uiFont, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.StatusText.fontStyle = FontStyle.Bold;
         driverQuickHud.StatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+
+        RectTransform needsBlock = CreateUiObject("NeedsBlock", summaryBody).GetComponent<RectTransform>();
+        HorizontalLayoutGroup needsBlockLayout = needsBlock.gameObject.AddComponent<HorizontalLayoutGroup>();
+        needsBlockLayout.spacing = 8f;
+        needsBlockLayout.childAlignment = TextAnchor.MiddleLeft;
+        needsBlockLayout.childControlWidth = false;
+        needsBlockLayout.childControlHeight = false;
+        needsBlockLayout.childForceExpandWidth = false;
+        needsBlockLayout.childForceExpandHeight = false;
+        needsBlock.gameObject.AddComponent<LayoutElement>().preferredHeight = 12f;
+        driverQuickHud.NeedsMealBarFill    = CreateNeedsMiniBar(needsBlock, GetNeedsMealIcon(),    "DQHMeal",    80f);
+        driverQuickHud.NeedsSleepBarFill   = CreateNeedsMiniBar(needsBlock, GetNeedsSleepIcon(),   "DQHSleep",   80f);
+        driverQuickHud.NeedsLeisureBarFill = CreateNeedsMiniBar(needsBlock, GetNeedsLeisureIcon(), "DQHLeisure", 80f);
 
         RectTransform statsGrid = CreateUiObject("StatsGrid", summaryBody).GetComponent<RectTransform>();
         VerticalLayoutGroup statsLayout = statsGrid.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -157,6 +173,19 @@ public partial class GameBootstrap
 
         driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—");
         driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
+
+        if (driverQuickHud.NeedsMealBarFill != null)
+        {
+            float mealPct    = Mathf.Clamp01(1f - driver.HoursSinceMeal    / WorkerMealCriticalHours);
+            float sleepPct   = Mathf.Clamp01(1f - driver.HoursSinceSleep   / WorkerSleepCriticalHours);
+            float leisurePct = Mathf.Clamp01(1f - driver.HoursSinceLeisure / WorkerLeisureCriticalHours);
+            driverQuickHud.NeedsMealBarFill.sizeDelta    = new Vector2(mealPct    * 80f, 0f);
+            driverQuickHud.NeedsSleepBarFill.sizeDelta   = new Vector2(sleepPct   * 80f, 0f);
+            driverQuickHud.NeedsLeisureBarFill.sizeDelta = new Vector2(leisurePct * 80f, 0f);
+            driverQuickHud.NeedsMealBarFill.GetComponent<Image>().color    = GetNeedBarColor(mealPct);
+            driverQuickHud.NeedsSleepBarFill.GetComponent<Image>().color   = GetNeedBarColor(sleepPct);
+            driverQuickHud.NeedsLeisureBarFill.GetComponent<Image>().color = GetNeedBarColor(leisurePct);
+        }
 
         bool ru = IsRussianLanguage();
         string effectsValue = driver.ActiveEffects.Count > 0

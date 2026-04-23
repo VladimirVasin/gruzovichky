@@ -99,7 +99,8 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("TRUCK", $"Spawned initial {firstTruck.DisplayName} in parking slot {firstTruck.ParkingSlotIndex}.");
         if (locations.ContainsKey(LocationType.Motel))
         {
-            for (int i = 0; i < InitialWorkerCount; i++)
+            int spawnCount = selectedGameStartMode == GameStartMode.Debug ? 9 : InitialWorkerCount;
+            for (int i = 0; i < spawnCount; i++)
             {
                 DriverAgent worker = CreateAndRegisterDriverAgent();
                 SessionDebugLogger.Log("DRIVER", $"{worker.DriverName} hired (unassigned, idle).");
@@ -302,30 +303,36 @@ public partial class GameBootstrap
     {
         float darkness = 1f - stylizedDaylight;
         bool lightsOn = darkness > 0.5f;
-        float lightIntensity = lightsOn ? Mathf.Lerp(0.18f, 1.15f, Mathf.InverseLerp(0.5f, 1f, darkness)) : 0f;
-        Color lampColor = Color.Lerp(
-            new Color(0.28f, 0.24f, 0.18f),
-            new Color(1f, 0.9f, 0.72f),
-            Mathf.Clamp01(lightIntensity / 1.15f));
+        float nightT = lightsOn ? Mathf.InverseLerp(0.5f, 1f, darkness) : 0f;
 
-        foreach (Light lightComponent in locationNightLights)
+        for (int i = 0; i < locationNightLights.Count; i++)
         {
+            Light lightComponent = locationNightLights[i];
             if (lightComponent == null)
             {
                 continue;
             }
 
+            float maxIntensity = i < locationNightLightMaxIntensities.Count ? locationNightLightMaxIntensities[i] : 1.15f;
+            float range = i < locationNightLightRanges.Count ? locationNightLightRanges[i] : 3.2f;
+            Color onColor = i < locationNightLightOnColors.Count ? locationNightLightOnColors[i] : new Color(1f, 0.9f, 0.72f);
             lightComponent.enabled = lightsOn;
-            lightComponent.intensity = lightIntensity;
+            lightComponent.intensity = lightsOn ? Mathf.Lerp(0.18f, maxIntensity, nightT) : 0f;
+            lightComponent.color = onColor;
+            lightComponent.range = range;
         }
 
-        foreach (Material material in locationNightLightMaterials)
+        for (int i = 0; i < locationNightLightMaterials.Count; i++)
         {
+            Material material = locationNightLightMaterials[i];
             if (material == null)
             {
                 continue;
             }
 
+            Color offColor = i < locationNightLightOffColors.Count ? locationNightLightOffColors[i] : new Color(0.28f, 0.24f, 0.18f);
+            Color onColor = i < locationNightLightOnColors.Count ? locationNightLightOnColors[i] : new Color(1f, 0.9f, 0.72f);
+            Color lampColor = Color.Lerp(offColor, onColor, nightT);
             material.color = lampColor;
         }
 

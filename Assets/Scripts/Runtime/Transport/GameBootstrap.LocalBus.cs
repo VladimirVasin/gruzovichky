@@ -17,6 +17,7 @@ public partial class GameBootstrap
             CurrentStopIndex = -1,
             PassengerCount = 0,
             PassengerCapacity = LocalBusMaxPassengers,
+            Bank = 0,
             LastBoardingBlockReason = string.Empty,
             Phase = LocalBusPhase.None
         };
@@ -229,6 +230,7 @@ public partial class GameBootstrap
         localBusRoute.TravelDirection = 1;
         localBusRoute.PassengerCount = 0;
         localBusRoute.PassengerCapacity = LocalBusMaxPassengers;
+        localBusRoute.Bank = 0;
         localBusRoute.Phase = LocalBusPhase.ParkedAwaitingShiftStart;
         ResetBusBoardingBlockReason();
 
@@ -308,6 +310,34 @@ public partial class GameBootstrap
                 continue;
             }
 
+            bool fareExempt = passenger.BusRideFareExempt;
+            if (!fareExempt && passenger.Money < LocalBusFare)
+            {
+                DriverRescuePhase finalWalkPhase = passenger.BusFinalWalkPhase;
+                Vector3 finalTarget = passenger.BusFinalTargetWorld;
+                string travelReason = passenger.BusTravelReason;
+                ResetWorkerLocalBusTripState(passenger);
+                passenger.WalkPhase = finalWalkPhase;
+                passenger.WalkTargetWorld = finalTarget;
+                passenger.DriverObject.SetActive(true);
+                passenger.DriverObject.transform.position = stopWaitPoint;
+                passenger.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+                passenger.WalkAnimationTime = 0f;
+                ApplyDriverPose(passenger, 0f, 0f);
+                BuildDriverWalkPath(passenger, stopWaitPoint, finalTarget);
+                SessionDebugLogger.Log(
+                    "BUS_PASSENGER",
+                    $"{passenger.DriverName} could not pay the ${LocalBusFare} fare at Stop #{stopNumber}; resumed {travelReason} on foot. Balance=${passenger.Money}.");
+                continue;
+            }
+
+            if (!fareExempt)
+            {
+                passenger.Money = Mathf.Max(0, passenger.Money - LocalBusFare);
+                localBusRoute.Bank += LocalBusFare;
+                SpawnMoneySpendPopup(stopWaitPoint, LocalBusFare);
+            }
+
             passenger.DriverObject.SetActive(false);
             passenger.WalkPhase = DriverRescuePhase.RidingLocalBus;
             passenger.WalkPath.Clear();
@@ -316,7 +346,7 @@ public partial class GameBootstrap
             localBusRoute.PassengerCount = Mathf.Min(localBusRoute.PassengerCapacity, localBusRoute.PassengerCount + 1);
             SessionDebugLogger.Log(
                 "BUS_PASSENGER",
-                $"{passenger.DriverName} boarded the local bus at Stop #{stopNumber} for Stop #{passenger.BusDestinationStopNumber}. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
+                $"{passenger.DriverName} boarded the local bus at Stop #{stopNumber} for Stop #{passenger.BusDestinationStopNumber}; fare={(fareExempt ? "service pass" : $"${LocalBusFare}")}, passengerBalance=${passenger.Money}, busBank=${localBusRoute.Bank}. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
         }
     }
 
@@ -656,6 +686,18 @@ public partial class GameBootstrap
             return;
         }
 
+        int transferredBank = 0;
+        if (localBusRoute != null &&
+            locations.TryGetValue(LocationType.Parking, out LocationData parking) &&
+            localBusRoute.Bank > 0)
+        {
+            transferredBank = localBusRoute.Bank;
+            parking.BuildingBank += transferredBank;
+            localBusRoute.Bank = 0;
+            SpawnMoneyEarnPopup(GetLocationCenter(LocationType.Parking), transferredBank);
+            SessionDebugLogger.Log("BUS_ECON", $"{driver.DriverName} delivered ${transferredBank} from the local bus bank to Parking treasury. Parking treasury=${parking.BuildingBank}.");
+        }
+
         if (localBusRoute?.RootTransform != null)
         {
             Destroy(localBusRoute.RootTransform.gameObject);
@@ -673,7 +715,7 @@ public partial class GameBootstrap
         driver.WalkAnimationTime = 0f;
         ApplyDriverPose(driver, 0f, 0f);
         PayDriverSalary(driver);
-        SessionDebugLogger.Log("BUS", $"{driver.DriverName} parked the local bus in Parking and finished the shift.");
+        SessionDebugLogger.Log("BUS", $"{driver.DriverName} parked the local bus in Parking and finished the shift. Bus bank transfer=${transferredBank}.");
         StartWorkerLifeCycleAfterWork(driver, driver.DriverObject.transform.position, "local bus shift");
     }
 }

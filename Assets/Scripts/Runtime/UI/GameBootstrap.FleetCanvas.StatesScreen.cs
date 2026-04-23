@@ -109,7 +109,7 @@ public partial class GameBootstrap
         // в”Ђв”Ђ Effects section вЂ” activities в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         statesScreenUi.EffectsSectionHeader = BuildStatesSectionHeader("EffectsHdr", contentRt, font);
         statesScreenUi.ActivitiesSubheader  = BuildStatesSubheader("ActSubhdr", contentRt, font);
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < 13; i++)
             statesScreenUi.EffectEntries.Add(BuildStatesEntry(contentRt, font, true));
 
         // в”Ђв”Ђ Effects section вЂ” needs в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
@@ -234,6 +234,13 @@ public partial class GameBootstrap
             ru ? "Вождение сильно снижено, а обычная работа чуть усилена. Алкоголизм делает этот эффект сильнее и дольше."
                : "Driving is heavily reduced, while ordinary work gets a small boost. Alcoholism makes the effect stronger and longer.",
             ru ? "Источник: посещение Бара." : "Source: visiting the Bar.");
+
+        FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
+            ru ? "Похмелье" : "Hangover",
+            BuildStatesMods(ru, driving: -6, stamina: -3, production: -2, logistics: -2),
+            ru ? "После спада опьянения алкоголика накрывает тяжёлым похмельем. Оно держится до следующего похода в Бар."
+               : "When Drunk wears off on an alcoholic worker, a heavy hangover kicks in and stays until the next Bar visit.",
+            ru ? "Источник: окончание Опьянения у работника с перком Алкоголизм." : "Source: Drunk expiring on a worker with Alcoholism.");
 
         FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
             ru ? "Дорожный фокус" : "Road Focus",

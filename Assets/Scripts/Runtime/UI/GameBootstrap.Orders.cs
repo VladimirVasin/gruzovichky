@@ -108,7 +108,7 @@ public partial class GameBootstrap
 
             if (canTakeOrdersNow)
             {
-                if (truckAgent.TruckFuel < 30f)
+                if (truckAgent.TruckFuel < TruckAutoRefuelThreshold)
                 {
                     truckAgent.CurrentRefuelPhase = RefuelPhase.ToGasStation;
                     LogTruckReaction(truckAgent, $"queued refuel because fuel is low ({Mathf.CeilToInt(truckAgent.TruckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)})");

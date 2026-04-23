@@ -112,6 +112,9 @@ public partial class GameBootstrap
         public Text          StatusText;
         public Text          SubText;
         public Button        SelectButton;
+        public RectTransform NeedsMealBarFill;
+        public RectTransform NeedsSleepBarFill;
+        public RectTransform NeedsLeisureBarFill;
     }
 
     private sealed class ShiftsScreenUiRefs
@@ -165,6 +168,7 @@ public partial class GameBootstrap
         public readonly List<Button> RemoveButtons = new();
         public Text AssignButtonText;
         public Button AssignButton;
+        public Image ActiveBorderImage;
     }
 
     private sealed class IntercitySlotUi
@@ -266,6 +270,17 @@ public partial class GameBootstrap
         public GameObject CanvasRoot;
         public RectTransform WindowRoot;
         public Text HeaderCountText;
+        public Button TaxesTabButton;
+        public Text TaxesTabText;
+        public Button TradeTabButton;
+        public Text TradeTabText;
+        public RectTransform TaxesPanel;
+        public RectTransform TradePanel;
+        public Button TaxesRateMinusButton;
+        public Button TaxesRatePlusButton;
+        public Text TaxesRateValueText;
+        public Text TaxesIncomeSummaryText;
+        public Text TaxesTimerSummaryText;
         public Text TradeResourceText;
         public Button TradeResourceDropdownButton;
         public RectTransform TradeResourceOptionsPanel;
@@ -804,7 +819,7 @@ public partial class GameBootstrap
         WorkerRowUi row = new();
         GameObject rowObj = CreateUiObject($"WorkerRow{index + 1}", parent);
         row.Root = rowObj.GetComponent<RectTransform>();
-        rowObj.AddComponent<LayoutElement>().preferredHeight = 66f;
+        rowObj.AddComponent<LayoutElement>().preferredHeight = 80f;
         row.Background = rowObj.AddComponent<Image>();
         row.Background.color = DriversCardColor;
         Outline outline = rowObj.AddComponent<Outline>();
@@ -829,6 +844,19 @@ public partial class GameBootstrap
 
         row.SubText = CreateBodyText("SubText", rowObj.transform, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
         row.SubText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+
+        RectTransform needsRow = CreateUiObject($"NeedsRow{index}", rowObj.transform).GetComponent<RectTransform>();
+        HorizontalLayoutGroup needsLayout = needsRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        needsLayout.spacing = 6f;
+        needsLayout.childAlignment = TextAnchor.MiddleLeft;
+        needsLayout.childControlWidth = false;
+        needsLayout.childControlHeight = false;
+        needsLayout.childForceExpandWidth = false;
+        needsLayout.childForceExpandHeight = false;
+        needsRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 10f;
+        row.NeedsMealBarFill    = CreateNeedsMiniBar(needsRow, GetNeedsMealIcon(),    $"Meal{index}",    60f);
+        row.NeedsSleepBarFill   = CreateNeedsMiniBar(needsRow, GetNeedsSleepIcon(),   $"Sleep{index}",   60f);
+        row.NeedsLeisureBarFill = CreateNeedsMiniBar(needsRow, GetNeedsLeisureIcon(), $"Leisure{index}", 60f);
 
         row.SelectButton = rowObj.AddComponent<Button>();
         ColorBlock rowColors = row.SelectButton.colors;
@@ -1179,6 +1207,19 @@ public partial class GameBootstrap
                 : isLogistics && d.AssignedBuildingType.HasValue ? GetSelectedLocationDisplayName(d.AssignedBuildingType.Value)
                 : truck != null                                   ? truck.DisplayName
                 : L(GetWorkerOccupationLabel(d));
+
+            if (row.NeedsMealBarFill != null)
+            {
+                float mealPct    = Mathf.Clamp01(1f - d.HoursSinceMeal    / WorkerMealCriticalHours);
+                float sleepPct   = Mathf.Clamp01(1f - d.HoursSinceSleep   / WorkerSleepCriticalHours);
+                float leisurePct = Mathf.Clamp01(1f - d.HoursSinceLeisure / WorkerLeisureCriticalHours);
+                row.NeedsMealBarFill.sizeDelta    = new Vector2(mealPct    * 60f, 0f);
+                row.NeedsSleepBarFill.sizeDelta   = new Vector2(sleepPct   * 60f, 0f);
+                row.NeedsLeisureBarFill.sizeDelta = new Vector2(leisurePct * 60f, 0f);
+                row.NeedsMealBarFill.GetComponent<Image>().color    = GetNeedBarColor(mealPct);
+                row.NeedsSleepBarFill.GetComponent<Image>().color   = GetNeedBarColor(sleepPct);
+                row.NeedsLeisureBarFill.GetComponent<Image>().color = GetNeedBarColor(leisurePct);
+            }
         }
 
         // Right panel — visibility toggle (done before LocalizeCanvas so layout is correct)
@@ -1335,7 +1376,7 @@ public partial class GameBootstrap
         leftLayout.childForceExpandHeight = false;
 
         RectTransform leftHeader = CreateLayoutRow("ShiftsHeaderRow", leftPanel, 40f, 0f);
-        Text shiftsTitle = CreateHeaderText("ShiftsTitle", leftHeader, font, "Assignments", 24, TextAnchor.MiddleLeft, Color.white);
+        Text shiftsTitle = CreateHeaderText("ShiftsTitle", leftHeader, font, "Roles", 24, TextAnchor.MiddleLeft, Color.white);
         shiftsTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         shiftsScreenUi.TitleText = shiftsTitle;
         shiftsScreenUi.HeaderCountText = CreateHeaderText("ShiftsCount", leftHeader, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
@@ -1569,6 +1610,20 @@ public partial class GameBootstrap
             ShiftCardUi card = new() { ShiftHour = shiftHour };
             RectTransform cardRoot = CreateSectionCard(transportContent, font, string.Empty, out RectTransform cardBody, false);
             cardRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 158f;
+
+            GameObject borderObj = CreateUiObject($"ShiftBorder{i}", cardRoot);
+            RectTransform borderRect = borderObj.GetComponent<RectTransform>();
+            borderRect.anchorMin = new Vector2(0f, 0f);
+            borderRect.anchorMax = new Vector2(0f, 1f);
+            borderRect.pivot = new Vector2(0f, 0.5f);
+            borderRect.anchoredPosition = Vector2.zero;
+            borderRect.sizeDelta = new Vector2(4f, 0f);
+            Image borderImg = borderObj.AddComponent<Image>();
+            borderImg.color = Color.clear;
+            borderImg.raycastTarget = false;
+            borderObj.AddComponent<LayoutElement>().ignoreLayout = true;
+            card.ActiveBorderImage = borderImg;
+
             VerticalLayoutGroup cardBodyLayout = cardBody.GetComponent<VerticalLayoutGroup>();
             cardBodyLayout.spacing = 8;
 
@@ -1689,6 +1744,10 @@ public partial class GameBootstrap
                 PlayUiSound(uiSelectClip, 0.85f);
                 SessionDebugLogger.Log("SHIFT", $"{selectedDriver.DriverName} assigned to {ShiftNames[currentShiftIndex]} ({GetShiftRangeLabel(ShiftPresetHours[currentShiftIndex])}).");
                 LogDriverReaction(selectedDriver, $"assigned to {ShiftNames[currentShiftIndex]} ({GetShiftRangeLabel(ShiftPresetHours[currentShiftIndex])})");
+                PushFeedEvent(
+                    $"{selectedDriver.DriverName} assigned to {ShiftNames[currentShiftIndex]} shift.",
+                    $"{selectedDriver.DriverName} назначен на смену {L(ShiftNames[currentShiftIndex])}.",
+                    FeedEventType.Info);
                 isShiftsScreenDirty = true;
                 isDriversScreenDirty = true;
             });
@@ -1954,7 +2013,7 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         if (shiftsScreenUi.TitleText != null)
         {
-            shiftsScreenUi.TitleText.text = ru ? "Назначения" : "Assignments";
+            shiftsScreenUi.TitleText.text = ru ? "Роли" : "Roles";
         }
         if (shiftsScreenUi.LogisticsSectionTitleText != null)
         {
@@ -2120,6 +2179,10 @@ public partial class GameBootstrap
                 }
             }
 
+            bool isActiveShift = IsHourInShiftWindow(GetCurrentHour(), card.ShiftHour);
+            if (card.ActiveBorderImage != null)
+                card.ActiveBorderImage.color = isActiveShift ? new Color(1f, 0.85f, 0.25f, 1f) : Color.clear;
+
             if (card.SummaryText != null)
             {
                 string shiftPrefix = ru ? "Локальные рейсы" : "Local deliveries";
@@ -2129,7 +2192,14 @@ public partial class GameBootstrap
                     1 => ru ? "1 рабочий назначен" : "1 worker assigned",
                     _ => ru ? $"{assignedDrivers.Count} рабочих назначено" : $"{assignedDrivers.Count} workers assigned"
                 };
-                card.SummaryText.text = $"{shiftPrefix} • {summary}";
+                string timerSuffix = string.Empty;
+                if (isActiveShift)
+                {
+                    int endMin = ((card.ShiftHour + 8) % 24) * 60;
+                    int minLeft = (endMin - GetCurrentTotalMinutes() + 24 * 60) % (24 * 60);
+                    timerSuffix = ru ? $" • осталось {minLeft / 60:00}:{minLeft % 60:00}" : $" • {minLeft / 60:00}:{minLeft % 60:00} left";
+                }
+                card.SummaryText.text = $"{shiftPrefix} • {summary}{timerSuffix}";
             }
 
             card.EmptyText.gameObject.SetActive(assignedDrivers.Count == 0);
@@ -2508,6 +2578,10 @@ public partial class GameBootstrap
         driver.ShiftStartHour = -1;
         LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {slot.BuildingType} ({GetProductionWorkRangeLabel()})");
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType} production work ({GetProductionWorkRangeLabel()}).");
+        PushFeedEvent(
+            $"{driver.DriverName} assigned to {GetSelectedLocationDisplayName(slot.BuildingType)}.",
+            $"{driver.DriverName} назначен в {GetSelectedLocationDisplayName(slot.BuildingType)}.",
+            FeedEventType.Info);
         isShiftsScreenDirty = true;
         isDriversScreenDirty = true;
     }
@@ -2649,6 +2723,10 @@ public partial class GameBootstrap
         PlayUiSound(uiSelectClip, 0.85f);
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to Intercity slot.");
         LogDriverReaction(driver, "assigned to Intercity duty");
+        PushFeedEvent(
+            $"{driver.DriverName} reserved for intercity duty.",
+            $"{driver.DriverName} закреплён за междугородними рейсами.",
+            FeedEventType.Info);
         isShiftsScreenDirty = true;
         isDriversScreenDirty = true;
     }
@@ -2694,6 +2772,10 @@ public partial class GameBootstrap
         PlayUiSound(uiSelectClip, 0.85f);
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to Bus Driver slot {ShiftNames[slotIndex]} ({GetShiftRangeLabel(ShiftPresetHours[slotIndex])}).");
         SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} reserved as Bus Driver for {ShiftNames[slotIndex]} ({GetShiftRangeLabel(ShiftPresetHours[slotIndex])}).");
+        PushFeedEvent(
+            $"{driver.DriverName} assigned as bus driver for {ShiftNames[slotIndex]}.",
+            $"{driver.DriverName} назначен водителем автобуса на смену {L(ShiftNames[slotIndex])}.",
+            FeedEventType.Info);
         bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[slotIndex]);
         if (inWindow && driver.RestPhase == DriverRestPhase.None)
         {
@@ -2747,5 +2829,161 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
     }
 
-}
+    private static Color GetNeedBarColor(float satisfactionPct)
+    {
+        if (satisfactionPct > 0.5f) return new Color(0.58f, 0.88f, 0.54f, 1f);
+        if (satisfactionPct > 0f)   return new Color(0.96f, 0.72f, 0.30f, 1f);
+        return new Color(0.95f, 0.32f, 0.25f, 1f);
+    }
 
+    // ── Need icon sprites (generated once, cached) ────────────────────────────
+    private static Sprite s_needsMealIcon;
+    private static Sprite s_needsSleepIcon;
+    private static Sprite s_needsLeisureIcon;
+
+    private static Sprite GetNeedsMealIcon()    => s_needsMealIcon    ??= BuildNeedIcon(PaintMealIcon);
+    private static Sprite GetNeedsSleepIcon()   => s_needsSleepIcon   ??= BuildNeedIcon(PaintSleepIcon);
+    private static Sprite GetNeedsLeisureIcon() => s_needsLeisureIcon ??= BuildNeedIcon(PaintLeisureIcon);
+
+    private static Sprite BuildNeedIcon(System.Action<Color[], int> paintFn)
+    {
+        const int sz = 16;
+        Texture2D tex = new(sz, sz, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Bilinear;
+        Color[] px = new Color[sz * sz];
+        for (int i = 0; i < px.Length; i++) px[i] = Color.clear;
+        paintFn(px, sz);
+        tex.SetPixels(px);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, sz, sz), new Vector2(0.5f, 0.5f), sz);
+    }
+
+    private static void NeedIconSet(Color[] px, int sz, int x, int y, Color c)
+    {
+        if (x >= 0 && x < sz && y >= 0 && y < sz) px[y * sz + x] = c;
+    }
+
+    private static void PaintMealIcon(Color[] px, int sz)
+    {
+        // Pixel-art fork (warm gold): 3 tines at top, handle at bottom
+        Color c = new(0.90f, 0.75f, 0.45f, 1f);
+        void S(int x, int y) => NeedIconSet(px, sz, x, y, c);
+
+        // Handle (2 px wide, lower half)
+        for (int y = 1; y <= 7; y++) { S(7, y); S(8, y); }
+
+        // Tine junction bar
+        for (int x = 3; x <= 12; x++) S(x, 8);
+
+        // Left tine (2 px wide)
+        for (int y = 9; y <= 13; y++) { S(3, y); S(4, y); }
+
+        // Centre tine (2 px wide)
+        for (int y = 9; y <= 13; y++) { S(7, y); S(8, y); }
+
+        // Right tine (2 px wide)
+        for (int y = 9; y <= 13; y++) { S(11, y); S(12, y); }
+    }
+
+    private static void PaintSleepIcon(Color[] px, int sz)
+    {
+        // Light-blue crescent — moon / sleep
+        Color c = new(0.45f, 0.70f, 0.95f, 1f);
+        float cx = (sz - 1) / 2f, cy = (sz - 1) / 2f;
+        float r1 = sz / 2f - 1.5f;
+        float r2 = r1 * 0.80f;
+        float ox = r1 * 0.55f;
+        for (int y = 0; y < sz; y++)
+            for (int x = 0; x < sz; x++)
+            {
+                float dx = x - cx, dy = y - cy;
+                float dx2 = x - (cx + ox), dy2 = y - cy;
+                if (dx * dx + dy * dy <= r1 * r1 &&
+                    dx2 * dx2 + dy2 * dy2 > r2 * r2)
+                    px[y * sz + x] = c;
+            }
+    }
+
+    private static void PaintLeisureIcon(Color[] px, int sz)
+    {
+        // Smiley face — leisure / fun
+        Color face   = new(0.96f, 0.88f, 0.12f, 1f);  // yellow
+        Color detail = new(0.10f, 0.07f, 0.04f, 1f);  // near-black
+        float cx = (sz - 1) / 2f, cy = (sz - 1) / 2f, r = sz / 2f - 1.5f;
+        void SF(int x, int y) => NeedIconSet(px, sz, x, y, face);
+        void SD(int x, int y) => NeedIconSet(px, sz, x, y, detail);
+
+        // Face fill
+        for (int y = 0; y < sz; y++)
+            for (int x = 0; x < sz; x++)
+                if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r)
+                    SF(x, y);
+
+        // Eyes — 2×2 dots, upper third
+        int eyeY = sz * 11 / 16;
+        SD(5, eyeY); SD(6, eyeY); SD(5, eyeY - 1); SD(6, eyeY - 1);
+        SD(9, eyeY); SD(10, eyeY); SD(9, eyeY - 1); SD(10, eyeY - 1);
+
+        // Smile — arc across lower third
+        for (float a = 200f; a <= 340f; a += 10f)
+        {
+            float rad = a * Mathf.Deg2Rad;
+            int sx = Mathf.RoundToInt(cx + Mathf.Cos(rad) * r * 0.52f);
+            int sy = Mathf.RoundToInt(cy - 1 + Mathf.Sin(rad) * r * 0.40f);
+            SD(sx, sy);
+            SD(sx, sy - 1);
+        }
+    }
+
+    private static RectTransform CreateNeedsMiniBar(RectTransform parent, Sprite iconSprite, string barName, float barWidth)
+    {
+        const float barH    = 6f;
+        const float iconSz  = 10f;
+
+        // Icon
+        GameObject iconObj = CreateUiObject($"NeedIcon{barName}", parent);
+        RectTransform iconRect = iconObj.GetComponent<RectTransform>();
+        iconRect.anchorMin = iconRect.anchorMax = new Vector2(0f, 0.5f);
+        iconRect.pivot = new Vector2(0f, 0.5f);
+        iconRect.sizeDelta = new Vector2(iconSz, iconSz);
+        Image iconImg = iconObj.AddComponent<Image>();
+        iconImg.sprite = iconSprite;
+        iconImg.color = Color.white;
+        iconImg.raycastTarget = false;
+        LayoutElement iconLE = iconObj.AddComponent<LayoutElement>();
+        iconLE.preferredWidth = iconSz;
+        iconLE.preferredHeight = iconSz;
+        iconLE.minWidth = iconSz;
+        iconLE.minHeight = iconSz;
+
+        // Bar background
+        GameObject bgObj = CreateUiObject($"NeedBg{barName}", parent);
+        RectTransform bgRect = bgObj.GetComponent<RectTransform>();
+        bgRect.anchorMin = bgRect.anchorMax = new Vector2(0f, 0.5f);
+        bgRect.pivot = new Vector2(0f, 0.5f);
+        bgRect.sizeDelta = new Vector2(barWidth, barH);
+        Image bgImg = bgObj.AddComponent<Image>();
+        bgImg.color = new Color(0.08f, 0.10f, 0.14f, 1f);
+        bgImg.raycastTarget = false;
+        LayoutElement bgLE = bgObj.AddComponent<LayoutElement>();
+        bgLE.preferredWidth = barWidth;
+        bgLE.preferredHeight = barH;
+        bgLE.minWidth = barWidth;
+        bgLE.minHeight = barH;
+
+        // Bar fill (left-anchored, width driven via sizeDelta.x at runtime)
+        GameObject fillObj = CreateUiObject($"NeedFill{barName}", bgRect);
+        Image fillImg = fillObj.AddComponent<Image>();
+        fillImg.color = new Color(0.58f, 0.88f, 0.54f, 1f);
+        fillImg.raycastTarget = false;
+        RectTransform fillRect = fillObj.GetComponent<RectTransform>();
+        fillRect.anchorMin = new Vector2(0f, 0f);
+        fillRect.anchorMax = new Vector2(0f, 1f);
+        fillRect.pivot = new Vector2(0f, 0.5f);
+        fillRect.anchoredPosition = Vector2.zero;
+        fillRect.sizeDelta = new Vector2(barWidth, 0f);
+
+        return fillRect;
+    }
+
+}

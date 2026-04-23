@@ -373,8 +373,8 @@ public partial class GameBootstrap
                 BuildTool.Motel            => ru ? $"Режим активен: поставь мотель 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x2 motel from its driveway cell. R rotates ({rot}).",
                 BuildTool.FurnitureFactory => ru ? $"Режим активен: поставь фабрику 3x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 3x2 furniture factory from its driveway cell. R rotates ({rot}).",
                 BuildTool.Bar              => ru ? $"Режим активен: поставь бар с подъездом. R — поворот ({rot})." : $"Mode active: place bar from its driveway cell. R rotates ({rot}).",
-                BuildTool.Canteen          => ru ? $"Режим активен: поставь столовую 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x2 canteen from its driveway cell. R rotates ({rot}).",
-                BuildTool.GamblingHall     => ru ? $"Режим активен: поставь игровые автоматы 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place gambling hall from its driveway cell. R rotates ({rot}).",
+                BuildTool.Canteen          => ru ? $"Режим активен: поставь столовую 3x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 3x2 canteen from its driveway cell. R rotates ({rot}).",
+                BuildTool.GamblingHall     => ru ? $"Режим активен: поставь игровой зал 3x3 с подъездом. R — поворот ({rot})." : $"Mode active: place one 3x3 gambling hall from its driveway cell. R rotates ({rot}).",
                 _                          => string.Empty
             };
         }
@@ -1027,12 +1027,136 @@ public partial class GameBootstrap
         rootLayout.childForceExpandHeight = false;
 
         RectTransform headerRow = CreateLayoutRow("EconomyHeaderRow", windowRoot.transform, 48f, 0f);
-        Text titleText = CreateHeaderText("EconomyTitle", headerRow, font, "Trade", 30, TextAnchor.MiddleLeft, Color.white);
+        Text titleText = CreateHeaderText("EconomyTitle", headerRow, font, "Economy", 30, TextAnchor.MiddleLeft, Color.white);
         titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         economyScreenUi.HeaderCountText = CreateHeaderText("EconomyCount", headerRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
 
-        RectTransform tradeCard = CreateSectionCard(windowRoot.transform, font, "Create Order", out RectTransform tradeBody);
-        tradeCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 236f;
+        RectTransform tabRow = CreateLayoutRow("EconomyTabRow", windowRoot.transform, 40f, 8f);
+        HorizontalLayoutGroup tabRowLayout = tabRow.GetComponent<HorizontalLayoutGroup>();
+        tabRowLayout.childForceExpandWidth = true;
+        tabRowLayout.childForceExpandHeight = false;
+        LayoutElement tabRowElement = tabRow.GetComponent<LayoutElement>();
+        tabRowElement.minHeight = 40f;
+        tabRowElement.flexibleHeight = 0f;
+        economyScreenUi.TaxesTabButton = CreateButton("EconomyTaxesTabBtn", tabRow, font, out Text taxesTabText, "Taxes", 13, FleetPrimaryButtonColor, Color.white);
+        economyScreenUi.TaxesTabText = taxesTabText;
+        taxesTabText.fontStyle = FontStyle.Bold;
+        economyScreenUi.TaxesTabButton.transition = Selectable.Transition.None;
+        LayoutElement taxesTabButtonLayout = economyScreenUi.TaxesTabButton.gameObject.AddComponent<LayoutElement>();
+        taxesTabButtonLayout.preferredHeight = 40f;
+        taxesTabButtonLayout.flexibleWidth = 1f;
+        economyScreenUi.TaxesTabButton.onClick.AddListener(() =>
+        {
+            isEconomyTaxesTabActive = true;
+            isEconomyScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.8f);
+        });
+        economyScreenUi.TradeTabButton = CreateButton("EconomyTradeTabBtn", tabRow, font, out Text tradeTabText, "Trade", 13, new Color(0.08f, 0.10f, 0.14f, 1f), Color.white);
+        economyScreenUi.TradeTabText = tradeTabText;
+        tradeTabText.fontStyle = FontStyle.Bold;
+        economyScreenUi.TradeTabButton.transition = Selectable.Transition.None;
+        LayoutElement tradeTabButtonLayout = economyScreenUi.TradeTabButton.gameObject.AddComponent<LayoutElement>();
+        tradeTabButtonLayout.preferredHeight = 40f;
+        tradeTabButtonLayout.flexibleWidth = 1f;
+        economyScreenUi.TradeTabButton.onClick.AddListener(() =>
+        {
+            isEconomyTaxesTabActive = false;
+            isEconomyScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.8f);
+        });
+
+        RectTransform taxesPanel = CreateUiObject("EconomyTaxesPanel", windowRoot.transform).GetComponent<RectTransform>();
+        LayoutElement taxesPanelElement = taxesPanel.gameObject.AddComponent<LayoutElement>();
+        taxesPanelElement.preferredHeight = 182f;
+        taxesPanelElement.flexibleHeight = 0f;
+        VerticalLayoutGroup taxesPanelLayout = taxesPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        taxesPanelLayout.spacing = 12f;
+        taxesPanelLayout.childControlWidth = true;
+        taxesPanelLayout.childControlHeight = true;
+        taxesPanelLayout.childForceExpandWidth = true;
+        taxesPanelLayout.childForceExpandHeight = false;
+        economyScreenUi.TaxesPanel = taxesPanel;
+
+        RectTransform taxesCardsRow = CreateLayoutRow("TaxesCardsRow", taxesPanel, 182f, 12f);
+        HorizontalLayoutGroup taxesCardsRowLayout = taxesCardsRow.GetComponent<HorizontalLayoutGroup>();
+        taxesCardsRowLayout.childForceExpandWidth = true;
+        taxesCardsRowLayout.childForceExpandHeight = true;
+
+        RectTransform rateCard = CreateSectionCard(taxesCardsRow, font, "Tax rate", out RectTransform rateBody);
+        LayoutElement rateCardLayout = rateCard.gameObject.AddComponent<LayoutElement>();
+        rateCardLayout.preferredWidth = 250f;
+        rateCardLayout.preferredHeight = 182f;
+        rateCardLayout.flexibleWidth = 1f;
+        VerticalLayoutGroup rateBodyLayout = rateBody.GetComponent<VerticalLayoutGroup>();
+        rateBodyLayout.spacing = 14f;
+        rateBodyLayout.childAlignment = TextAnchor.MiddleCenter;
+
+        RectTransform rateControlsRow = CreateLayoutRow("TaxesRateControlsRow", rateBody, 40f, 12f);
+        HorizontalLayoutGroup rateControlsLayout = rateControlsRow.GetComponent<HorizontalLayoutGroup>();
+        rateControlsLayout.childAlignment = TextAnchor.MiddleCenter;
+        rateControlsLayout.childForceExpandWidth = false;
+        rateControlsLayout.childForceExpandHeight = false;
+        CreateUiObject("TaxesRateLeftSpacer", rateControlsRow).AddComponent<LayoutElement>().flexibleWidth = 1f;
+        economyScreenUi.TaxesRateMinusButton = CreateButton("TaxesRateMinus", rateControlsRow, font, out Text taxMinusText, "-", 18, new Color(0.18f, 0.21f, 0.27f, 1f), Color.white);
+        taxMinusText.fontStyle = FontStyle.Bold;
+        LayoutElement taxMinusLayout = economyScreenUi.TaxesRateMinusButton.gameObject.AddComponent<LayoutElement>();
+        taxMinusLayout.preferredWidth = 40f;
+        taxMinusLayout.preferredHeight = 40f;
+        economyScreenUi.TaxesRateMinusButton.onClick.AddListener(() =>
+        {
+            dailyBuildingTaxPercent = Mathf.Max(MinDailyBuildingTaxPercent, dailyBuildingTaxPercent - 1);
+            isEconomyScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.75f);
+        });
+        economyScreenUi.TaxesRateValueText = CreateHeaderText("TaxesRateValue", rateControlsRow, font, string.Empty, 18, TextAnchor.MiddleCenter, FleetAccentColor);
+        LayoutElement taxRateValueLayout = economyScreenUi.TaxesRateValueText.gameObject.AddComponent<LayoutElement>();
+        taxRateValueLayout.preferredWidth = 68f;
+        taxRateValueLayout.preferredHeight = 24f;
+        economyScreenUi.TaxesRatePlusButton = CreateButton("TaxesRatePlus", rateControlsRow, font, out Text taxPlusText, "+", 18, new Color(0.18f, 0.21f, 0.27f, 1f), Color.white);
+        taxPlusText.fontStyle = FontStyle.Bold;
+        LayoutElement taxPlusLayout = economyScreenUi.TaxesRatePlusButton.gameObject.AddComponent<LayoutElement>();
+        taxPlusLayout.preferredWidth = 40f;
+        taxPlusLayout.preferredHeight = 40f;
+        economyScreenUi.TaxesRatePlusButton.onClick.AddListener(() =>
+        {
+            dailyBuildingTaxPercent = Mathf.Min(MaxDailyBuildingTaxPercent, dailyBuildingTaxPercent + 1);
+            isEconomyScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.75f);
+        });
+        CreateUiObject("TaxesRateRightSpacer", rateControlsRow).AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        RectTransform incomeCard = CreateSectionCard(taxesCardsRow, font, "Income", out RectTransform incomeBody);
+        LayoutElement incomeCardLayout = incomeCard.gameObject.AddComponent<LayoutElement>();
+        incomeCardLayout.preferredWidth = 320f;
+        incomeCardLayout.preferredHeight = 182f;
+        incomeCardLayout.flexibleWidth = 1f;
+        economyScreenUi.TaxesIncomeSummaryText = CreateBodyText("TaxesIncomeSummary", incomeBody, font, string.Empty, 14, TextAnchor.UpperLeft, Color.white);
+        economyScreenUi.TaxesIncomeSummaryText.lineSpacing = 1.08f;
+        LayoutElement incomeLayout = economyScreenUi.TaxesIncomeSummaryText.gameObject.AddComponent<LayoutElement>();
+        incomeLayout.flexibleHeight = 1f;
+
+        RectTransform timerCard = CreateSectionCard(taxesCardsRow, font, "Timer", out RectTransform timerBody);
+        LayoutElement timerCardLayout = timerCard.gameObject.AddComponent<LayoutElement>();
+        timerCardLayout.preferredWidth = 220f;
+        timerCardLayout.preferredHeight = 182f;
+        timerCardLayout.flexibleWidth = 1f;
+        economyScreenUi.TaxesTimerSummaryText = CreateBodyText("TaxesTimerSummary", timerBody, font, string.Empty, 14, TextAnchor.UpperLeft, Color.white);
+        economyScreenUi.TaxesTimerSummaryText.lineSpacing = 1.08f;
+        LayoutElement timerLayout = economyScreenUi.TaxesTimerSummaryText.gameObject.AddComponent<LayoutElement>();
+        timerLayout.flexibleHeight = 1f;
+
+        RectTransform tradePanel = CreateUiObject("EconomyTradePanel", windowRoot.transform).GetComponent<RectTransform>();
+        tradePanel.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        VerticalLayoutGroup tradePanelLayout = tradePanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        tradePanelLayout.spacing = 16f;
+        tradePanelLayout.childControlWidth = true;
+        tradePanelLayout.childControlHeight = true;
+        tradePanelLayout.childForceExpandWidth = true;
+        tradePanelLayout.childForceExpandHeight = false;
+        economyScreenUi.TradePanel = tradePanel;
+
+        RectTransform tradeCard = CreateSectionCard(tradePanel, font, "Create Order", out RectTransform tradeBody);
+        tradeCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 214f;
 
         RectTransform resourceRow = CreateLayoutRow("TradeResourceRow", tradeBody, 38f, 8f);
         resourceRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
@@ -1184,7 +1308,7 @@ public partial class GameBootstrap
         economyScreenUi.TradePlaceOrderButton.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         economyScreenUi.TradePlaceOrderButton.onClick.AddListener(CreateTradeHudOrder);
 
-        RectTransform ordersFrame = CreateSectionCard(windowRoot.transform, font, "Active Orders", out RectTransform ordersBody);
+        RectTransform ordersFrame = CreateSectionCard(tradePanel, font, "Active Orders", out RectTransform ordersBody);
         LayoutElement frameLayout = ordersFrame.gameObject.AddComponent<LayoutElement>();
         frameLayout.flexibleHeight = 1f;
         frameLayout.minHeight = 300f;
@@ -1322,7 +1446,11 @@ public partial class GameBootstrap
         bool forceLayoutRebuild = isEconomyScreenDirty;
 
         EnsureTradeHudSelectionValid();
-        economyScreenUi.HeaderCountText.text = string.Empty;
+        int taxableBankTotal = GetCurrentTaxableBuildingBankTotal();
+        if (economyScreenUi.TaxesPanel != null) economyScreenUi.TaxesPanel.gameObject.SetActive(isEconomyTaxesTabActive);
+        if (economyScreenUi.TradePanel != null) economyScreenUi.TradePanel.gameObject.SetActive(!isEconomyTaxesTabActive);
+        ApplyShiftsTabVisual(economyScreenUi.TaxesTabButton, economyScreenUi.TaxesTabText, isEconomyTaxesTabActive);
+        ApplyShiftsTabVisual(economyScreenUi.TradeTabButton, economyScreenUi.TradeTabText, !isEconomyTaxesTabActive);
         economyScreenUi.TradeResourceText.text = $"{L(GetTradeResourceShortLabel(selectedTradeResourceType))}  ▾";
         economyScreenUi.TradeActionText.text = L(GetTradeModeLabel(selectedTradeOrderType));
         bool isBuyMode = selectedTradeOrderType == TradeOrderType.Buy;
@@ -1360,11 +1488,27 @@ public partial class GameBootstrap
 
         if (forceLayoutRebuild)
         {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(economyScreenUi.ActiveOrdersContent);
+            if (economyScreenUi.ActiveOrdersContent != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(economyScreenUi.ActiveOrdersContent);
+            if (economyScreenUi.TaxesPanel != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(economyScreenUi.TaxesPanel);
+            if (economyScreenUi.TradePanel != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(economyScreenUi.TradePanel);
             LayoutRebuilder.ForceRebuildLayoutImmediate(economyScreenUi.WindowRoot);
         }
 
         LocalizeCanvas(economyScreenUi.CanvasRoot);
+        economyScreenUi.HeaderCountText.text = $"{L("Treasury")}: ${money}";
+        economyScreenUi.TaxesRateValueText.text = $"{dailyBuildingTaxPercent}%";
+        economyScreenUi.TaxesIncomeSummaryText.text =
+            $"{L("Current taxable bank")}: ${taxableBankTotal}\n" +
+            $"{L("Last collected")}: ${lastTaxCollectedAmount}\n" +
+            $"{L("Taxed buildings")}: {lastTaxedBuildingCount}";
+        economyScreenUi.TaxesTimerSummaryText.text =
+            $"{L("Next collection")}: 00:00\n" +
+            $"{L("Day")}: {currentDay}";
+        economyScreenUi.TaxesRateMinusButton.interactable = dailyBuildingTaxPercent > MinDailyBuildingTaxPercent;
+        economyScreenUi.TaxesRatePlusButton.interactable = dailyBuildingTaxPercent < MaxDailyBuildingTaxPercent;
         isEconomyScreenDirty = false;
     }
 
@@ -1434,6 +1578,14 @@ public partial class GameBootstrap
         isTradeResourceDropdownOpen = false;
         isTradeActionDropdownOpen = false;
         SessionDebugLogger.Log("TRADE_HUD", $"Created {selectedTradeOrderType} order: {selectedTradeOrderAmount} {GetTradeResourceShortLabel(selectedTradeResourceType)}.");
+        string tradeActionEn = selectedTradeOrderType == TradeOrderType.Buy ? "Buy" : "Sell";
+        string tradeActionRu = selectedTradeOrderType == TradeOrderType.Buy ? "Покупка" : "Продажа";
+        string resourceLabelEn = GetTradeResourceShortLabel(selectedTradeResourceType);
+        string resourceLabelRu = L(resourceLabelEn);
+        PushFeedEvent(
+            $"{tradeActionEn} order placed: {resourceLabelEn} x{selectedTradeOrderAmount}.",
+            $"Создан ордер: {tradeActionRu} {resourceLabelRu} x{selectedTradeOrderAmount}.",
+            FeedEventType.Money);
         PlayUiSound(uiSelectClip, 0.9f);
         TryAutoDispatchNextHudOrder();
     }

@@ -44,6 +44,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float LocalBusStopDwellGameMinutes = 5f;
     private const float LocalBusSpeedMultiplier = 0.92f;
     private const int LocalBusMaxPassengers = 5;
+    private const int LocalBusFare = 1;
     private const float HiringBusStopDuration = 2.8f;
     private const float TruckFollowDistance = 4.4f;
     private const float TruckFollowHeight = 2.05f;
@@ -53,7 +54,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const float TruckWheelRadius = 0.12f;
     private const float TruckCargoInteractionDuration = 3f;
     private const float TruckFuelCapacity = 100f;
-    private const float TruckFuelPerCell = 1f;
+    private const float TruckFuelPerCell = 0.5f;
+    internal const float TruckAutoRefuelThreshold = 50f;
     private const float WaterEffectsUpdateInterval = 1f / 30f;
     private const float WaterLodMediumCameraHeight = 18f;
     private const float WaterLodFarCameraHeight = 28f;
@@ -86,6 +88,9 @@ public partial class GameBootstrap : MonoBehaviour
     private const int AmbientLanternMothSwarmMaxCount = 8;
     private const int RiverFishMaxActiveCount = 6;
     private const int StartingTreasury = 350;
+    private const int DefaultDailyBuildingTaxPercent = 10;
+    private const int MinDailyBuildingTaxPercent = 0;
+    private const int MaxDailyBuildingTaxPercent = 50;
     private const float MoneyPopupDuration = 1.4f;
     private const int AudioSampleRate = 22050;
     private const int MaxTruckCount = 5;
@@ -93,7 +98,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const int HireDriverCost = 50;
     private const int InitialWorkerCount = 3;
     private const int MaxMoneyLedgerEntries = 128;
-    private const float DayNightCycleDuration = 360f; // 4 periods Г— 90s = 6-minute day
+    private const float DayNightCycleDuration = 440f; // 4 periods × 110s = 7m20s full day
     private const float DriverShiftArrivalLeadHours = 1f;
     private const int ProductionWorkStartHour = 8;
     private const int ProductionWorkEndHour = 18;
@@ -115,6 +120,10 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<Light> locationNightLights = new();
     private readonly List<Renderer> locationNightLightRenderers = new();
     private readonly List<Material> locationNightLightMaterials = new();
+    private readonly List<Color> locationNightLightOffColors = new();
+    private readonly List<Color> locationNightLightOnColors = new();
+    private readonly List<float> locationNightLightMaxIntensities = new();
+    private readonly List<float> locationNightLightRanges = new();
     private readonly List<RoadLanternData> roadLanterns = new();
     private readonly Dictionary<Vector2Int, (GameObject Root, RoadLanternData Data)> roadCellLanternMap = new();
     private readonly Dictionary<Vector2Int, (GameObject Root, Vector2Int SideCell)> roadCellBenchMap = new();
@@ -238,6 +247,10 @@ public partial class GameBootstrap : MonoBehaviour
     private float truckFuel = TruckFuelCapacity;
     private float dayNightCycleTimer = DayNightCycleDuration * 0.25f; // start at 06:00 вЂ” morning
     private int   currentDay = 1;
+    private int   dailyBuildingTaxPercent = DefaultDailyBuildingTaxPercent;
+    private int   lastTaxCollectionDay;
+    private int   lastTaxCollectedAmount;
+    private int   lastTaxedBuildingCount;
     private float currentStylizedDaylight = 1f;
     private float forestProductionProgress;
     private float sawmillProcessingTimer;
@@ -294,6 +307,7 @@ public partial class GameBootstrap : MonoBehaviour
     private string tradeDispatchStatusText = "Assign an Intercity driver to unlock trade dispatch.";
     private bool isResourcesPanelOpen;
     private bool isEconomyPanelOpen;
+    private bool isEconomyTaxesTabActive = true;
     private bool isBuildPanelOpen;
     private bool isWorldMapPanelOpen;
     private bool isStatesPanelOpen;
@@ -391,6 +405,7 @@ public partial class GameBootstrap : MonoBehaviour
         public float Speed;
         public int PassengerCount;
         public int PassengerCapacity = LocalBusMaxPassengers;
+        public int Bank;
         public string LastBoardingBlockReason;
         public LocalBusPhase Phase = LocalBusPhase.None;
     }
@@ -1187,9 +1202,13 @@ public partial class GameBootstrap : MonoBehaviour
         public DriverRescuePhase BusFinalWalkPhase = DriverRescuePhase.None;
         public Vector3 BusFinalTargetWorld;
         public string BusTravelReason = string.Empty;
+        public bool BusRideFareExempt;
         public LocationType? AssignedBuildingType;      // logistics only: building this worker is assigned to
         public bool IsInsideBuilding;                   // true while physically inside the assigned building
         public LocationType? WarehouseDeliveryTarget;   // warehouse worker: current delivery destination
+        public WarehouseResourceType WarehouseDeliveryResourceType;
+        public int WarehouseDeliveryAmount;
+        public bool IsCarryingWarehouseDelivery;
     }
 
     private int GetCurrentHour()
@@ -1277,6 +1296,8 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateMainMenuHud();
         if (isLoadingWorld || isMainMenuOpen)
         {
+            SetEventFeedVisible(false);
+            ClearEventFeedEntries();
             return;
         }
 
@@ -1286,7 +1307,12 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        if (isRacingActive) { UpdateRacingMinigame(); return; }
+        if (isRacingActive)
+        {
+            SetEventFeedVisible(false);
+            UpdateRacingMinigame();
+            return;
+        }
         UpdateJoinRaceButton();
         if (UpdateJoinRaceButtonInputFallback())
         {
@@ -1404,6 +1430,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateBuildScreenUi();
         UpdateWorldMapScreenUi();
         UpdateStatesScreenUi();
+        UpdateEventFeedUi();
         CloseQuickHudsWhenBlockingHudIsOpen();
         UpdateTruckQuickHud();
         UpdateLocalBusQuickHud();
@@ -1596,8 +1623,13 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         float cycleDeltaTime = deltaTime >= 0f ? deltaTime : Time.deltaTime;
-        if (dayNightCycleTimer + cycleDeltaTime >= DayNightCycleDuration) currentDay++;
+        bool didWrapDay = dayNightCycleTimer + cycleDeltaTime >= DayNightCycleDuration;
+        if (didWrapDay) currentDay++;
         dayNightCycleTimer = Mathf.Repeat(dayNightCycleTimer + cycleDeltaTime, DayNightCycleDuration);
+        if (didWrapDay)
+        {
+            CollectDailyBuildingTaxes();
+        }
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
         float dayHour = normalizedTime * 24f;
         float sunriseBlend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(4.8f, 7.2f, dayHour));
@@ -1650,6 +1682,89 @@ public partial class GameBootstrap : MonoBehaviour
             UpdateTruckHeadlights(stylizedDaylight, truckAgents[i].Driver);
             SaveTruckState(truckAgents[i]);
         }
+    }
+
+    private void CollectDailyBuildingTaxes()
+    {
+        if (lastTaxCollectionDay == currentDay)
+        {
+            return;
+        }
+
+        int treasuryBefore = money;
+        int totalCollected = 0;
+        int taxedBuildings = 0;
+        int taxableBankTotal = 0;
+        List<string> taxedBreakdown = new();
+
+        foreach (KeyValuePair<LocationType, LocationData> pair in locations)
+        {
+            LocationData location = pair.Value;
+            if (location == null || location.RootObject == null || location.BuildingBank <= 0)
+            {
+                continue;
+            }
+
+            taxableBankTotal += location.BuildingBank;
+            int taxAmount = Mathf.FloorToInt(location.BuildingBank * (dailyBuildingTaxPercent / 100f));
+            if (taxAmount <= 0)
+            {
+                continue;
+            }
+
+            location.BuildingBank -= taxAmount;
+            totalCollected += taxAmount;
+            taxedBuildings++;
+            taxedBreakdown.Add($"{location.Label} ${taxAmount}");
+        }
+
+        money += totalCollected;
+        lastTaxCollectionDay = currentDay;
+        lastTaxCollectedAmount = totalCollected;
+        lastTaxedBuildingCount = taxedBuildings;
+        if (totalCollected > 0)
+        {
+            RecordMoneyMovement(
+                totalCollected,
+                "Building Taxes",
+                "Treasury",
+                $"Daily tax collection from {taxedBuildings} building(s)",
+                money);
+        }
+        else
+        {
+            isEconomyScreenDirty = true;
+        }
+
+        string breakdown = taxedBreakdown.Count > 0 ? string.Join(", ", taxedBreakdown) : "none";
+        SessionDebugLogger.Log(
+            "TAX",
+            $"Collected ${totalCollected} on day {currentDay} from {taxedBuildings} building(s). Taxable bank total=${taxableBankTotal}. Breakdown: {breakdown}.");
+
+        int actualTreasuryDelta = money - treasuryBefore;
+        if (actualTreasuryDelta != totalCollected)
+        {
+            SessionDebugLogger.Log(
+                "TAX",
+                $"Treasury delta mismatch after tax collection. Expected ${totalCollected}, actual ${actualTreasuryDelta}.");
+        }
+    }
+
+    private int GetCurrentTaxableBuildingBankTotal()
+    {
+        int total = 0;
+        foreach (KeyValuePair<LocationType, LocationData> pair in locations)
+        {
+            LocationData location = pair.Value;
+            if (location == null || location.RootObject == null || location.BuildingBank <= 0)
+            {
+                continue;
+            }
+
+            total += location.BuildingBank;
+        }
+
+        return total;
     }
 
 }

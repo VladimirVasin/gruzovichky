@@ -93,9 +93,12 @@ public partial class GameBootstrap
                 }
 
                 PlayTruckFx(parkingReturnCueClip, 0.64f);
-                AwardMoney(currentAssignedTripReward, "Client Delivery", $"Trip reward: {GetTripTitle(currentAssignedTrip)}");
                 ApplyWorkerRoadFocusEffect(driver);
-                SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} completed trip {GetTripTitle(currentAssignedTrip)} and earned ${currentAssignedTripReward}.");
+                SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} completed trip {GetTripTitle(currentAssignedTrip)}.");
+                PushFeedEvent(
+                    $"{GetLoadedTruckDisplayName()} completed {GetTripTitle(currentAssignedTrip)}.",
+                    $"{GetLoadedTruckDisplayName()} завершил рейс {GetTripTitle(currentAssignedTrip)}.",
+                    FeedEventType.Info);
                 currentAssignedTrip = TripType.None;
                 currentTripPhase = TripPhase.None;
                 currentAssignedTripReward = 0;
@@ -126,12 +129,9 @@ public partial class GameBootstrap
         switch (currentRefuelPhase)
         {
             case RefuelPhase.ToGasStation:
-                // Abort refuel trip if gas station has run out of fuel
-                if (locations.TryGetValue(LocationType.GasStation, out LocationData gsRefuel) && gsRefuel.FuelStored <= 0)
+                if (locations.TryGetValue(LocationType.GasStation, out LocationData gsRefuel))
                 {
-                    SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} aborted refuel trip вЂ” Gas Station out of Fuel.");
-                    currentRefuelPhase = RefuelPhase.ReturnToParking;
-                    return;
+                    gsRefuel.FuelStored = GasStationMaxFuelStorage;
                 }
 
                 if (truckCell != locations[LocationType.GasStation].Anchor)

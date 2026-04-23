@@ -24,7 +24,11 @@ public partial class GameBootstrap
                 LocationType.Canteen => 10,
                 _                    => 0
             },
-            FuelStored    = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
+            FuelStored    = type == LocationType.Warehouse
+                ? WarehouseResourceStartAmount
+                : type == LocationType.GasStation
+                    ? GasStationMaxFuelStorage
+                    : 0,
             AlcoholStored = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
             FoodStored    = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
             BuildingBank  = type == LocationType.GamblingHall ? 50 : 0,
@@ -777,32 +781,101 @@ public partial class GameBootstrap
     {
         if (type == LocationType.Forest)
         {
-            CreateLocationNightLight(parent, center + new Vector3(0f, 1.15f, -0.95f));
+            CreateLocationNightLight(
+                parent,
+                center + new Vector3(0f, 1.15f, -0.95f),
+                new Color(0.28f, 0.24f, 0.18f),
+                new Color(1f, 0.9f, 0.72f),
+                1.15f,
+                3.2f);
             return;
         }
 
         float xOffset = Mathf.Max(0.45f, size.x * 0.28f);
         float zOffset = Mathf.Max(0.38f, size.y * 0.28f);
-        CreateLocationNightLight(parent, center + new Vector3(-xOffset, 0.92f, -zOffset));
-        CreateLocationNightLight(parent, center + new Vector3(xOffset, 0.92f, -zOffset));
+
+        Color offColor = new Color(0.28f, 0.24f, 0.18f);
+        Color onColor = new Color(1f, 0.9f, 0.72f);
+        float maxIntensity = 1.15f;
+        float lightRange = 3.2f;
+
+        if (type == LocationType.Bar)
+        {
+            offColor = new Color(0.30f, 0.20f, 0.10f);
+            onColor = new Color(1f, 0.74f, 0.30f);
+            maxIntensity = 1.28f;
+            lightRange = 3.5f;
+        }
+        else if (type == LocationType.Canteen)
+        {
+            offColor = new Color(0.22f, 0.26f, 0.24f);
+            onColor = new Color(1f, 0.94f, 0.82f);
+            maxIntensity = 1.05f;
+            lightRange = 3.8f;
+        }
+        else if (type == LocationType.GamblingHall)
+        {
+            offColor = new Color(0.24f, 0.14f, 0.30f);
+            onColor = new Color(1f, 0.34f, 0.82f);
+            maxIntensity = 1.42f;
+            lightRange = 4.3f;
+        }
+
+        CreateLocationNightLight(parent, center + new Vector3(-xOffset, 0.92f, -zOffset), offColor, onColor, maxIntensity, lightRange);
+        CreateLocationNightLight(parent, center + new Vector3(xOffset, 0.92f, -zOffset), offColor, onColor, maxIntensity, lightRange);
 
         if (type == LocationType.Sawmill || type == LocationType.FurnitureFactory)
         {
-            CreateLocationNightLight(parent, center + new Vector3(0f, 0.86f, zOffset));
+            CreateLocationNightLight(parent, center + new Vector3(0f, 0.86f, zOffset), offColor, onColor, maxIntensity, lightRange);
+        }
+
+        if (type == LocationType.Bar)
+        {
+            CreateLocationNightLight(
+                parent,
+                center + new Vector3(0f, 1.06f, -1.02f),
+                new Color(0.34f, 0.18f, 0.08f),
+                new Color(1f, 0.66f, 0.22f),
+                1.46f,
+                4.1f);
+        }
+        else if (type == LocationType.Canteen)
+        {
+            CreateLocationNightLight(
+                parent,
+                center + new Vector3(0f, 0.82f, -0.96f),
+                new Color(0.24f, 0.28f, 0.26f),
+                new Color(1f, 0.98f, 0.88f),
+                1.08f,
+                4.2f);
+        }
+        else if (type == LocationType.GamblingHall)
+        {
+            CreateLocationNightLight(
+                parent,
+                center + new Vector3(0f, 1.18f, -1.08f),
+                new Color(0.26f, 0.12f, 0.32f),
+                new Color(0.30f, 0.92f, 0.90f),
+                1.56f,
+                4.9f);
         }
     }
 
-    private void CreateLocationNightLight(Transform parent, Vector3 localPosition)
+    private void CreateLocationNightLight(Transform parent, Vector3 localPosition, Color offColor, Color onColor, float maxIntensity, float range)
     {
         GameObject lampVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         lampVisual.transform.SetParent(parent, false);
         lampVisual.transform.localPosition = localPosition;
         lampVisual.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
-        ApplyColor(lampVisual, new Color(0.28f, 0.24f, 0.18f));
+        ApplyColor(lampVisual, offColor);
         ConfigureStaticVisual(lampVisual);
         Renderer lampRenderer = lampVisual.GetComponent<Renderer>();
         locationNightLightRenderers.Add(lampRenderer);
         locationNightLightMaterials.Add(lampRenderer != null ? lampRenderer.material : null);
+        locationNightLightOffColors.Add(offColor);
+        locationNightLightOnColors.Add(onColor);
+        locationNightLightMaxIntensities.Add(maxIntensity);
+        locationNightLightRanges.Add(range);
 
         GameObject lightObject = new("NightLamp");
         lightObject.transform.SetParent(parent, false);
@@ -810,8 +883,8 @@ public partial class GameBootstrap
 
         Light lamp = lightObject.AddComponent<Light>();
         lamp.type = LightType.Point;
-        lamp.color = new Color(1f, 0.9f, 0.72f);
-        lamp.range = 3.2f;
+        lamp.color = onColor;
+        lamp.range = range;
         lamp.intensity = 0f;
         lamp.shadows = LightShadows.None;
         lamp.enabled = false;

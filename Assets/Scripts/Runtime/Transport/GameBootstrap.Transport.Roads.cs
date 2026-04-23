@@ -63,7 +63,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (cell == start || cell == goal || roadCells.Contains(cell))
+        if (cell == start || cell == goal || roadCells.Contains(cell) || IsAnchorCell(cell))
         {
             return true;
         }

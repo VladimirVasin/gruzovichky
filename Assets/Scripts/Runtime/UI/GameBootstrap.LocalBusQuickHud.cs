@@ -12,6 +12,7 @@ public partial class GameBootstrap
         public Text StatusText;
         public Text DriverText;
         public Text PassengersText;
+        public Text BankText;
         public Text StopText;
         public Text NextStopText;
         public Text RouteText;
@@ -49,7 +50,7 @@ public partial class GameBootstrap
         root.anchorMax = new Vector2(1f, 0f);
         root.pivot = new Vector2(1f, 0f);
         root.anchoredPosition = new Vector2(-18f, 104f);
-        root.sizeDelta = new Vector2(360f, 312f);
+        root.sizeDelta = new Vector2(360f, 336f);
         root.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         VerticalLayoutGroup rootLayout = root.gameObject.AddComponent<VerticalLayoutGroup>();
         rootLayout.padding = new RectOffset(16, 16, 16, 16);
@@ -90,6 +91,8 @@ public partial class GameBootstrap
         localBusQuickHud.DriverText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         localBusQuickHud.PassengersText = CreateBodyText("PassengersText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
         localBusQuickHud.PassengersText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        localBusQuickHud.BankText = CreateBodyText("BankText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
+        localBusQuickHud.BankText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         localBusQuickHud.StopText = CreateBodyText("StopText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         localBusQuickHud.StopText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         localBusQuickHud.NextStopText = CreateBodyText("NextStopText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
@@ -142,8 +145,9 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         localBusQuickHud.HeaderText.text = ru ? "Городской автобус" : "Local Bus";
         localBusQuickHud.StatusText.text = GetLocalBusQuickHudStatusLabel();
-        localBusQuickHud.DriverText.text = FormatValueLine(ru ? "Водитель" : "Driver", localBusRoute.Driver != null ? localBusRoute.Driver.DriverName : "—");
+        localBusQuickHud.DriverText.text = FormatValueLine(ru ? "Водитель" : "Driver", localBusRoute.Driver != null ? localBusRoute.Driver.DriverName : "-");
         localBusQuickHud.PassengersText.text = FormatValueLine(ru ? "Пассажиры" : "Passengers", $"{localBusRoute.PassengerCount} / {localBusRoute.PassengerCapacity}");
+        localBusQuickHud.BankText.text = FormatValueLine(ru ? "Касса автобуса" : "Bus Bank", $"${localBusRoute.Bank}");
         localBusQuickHud.StopText.text = FormatValueLine(ru ? "Остановка" : "Stop", GetLocalBusQuickHudStopLabel());
         localBusQuickHud.NextStopText.text = FormatValueLine(ru ? "Следующая" : "Next Stop", GetLocalBusQuickHudNextStopLabel());
         localBusQuickHud.RouteText.text = FormatValueLine(ru ? "Маршрут" : "Route", GetLocalBusQuickHudRouteLabel());
@@ -162,7 +166,7 @@ public partial class GameBootstrap
             LocalBusPhase.ParkedAwaitingShiftStart => IsRussianLanguage() ? "Ожидает старт смены" : "Awaiting shift start",
             LocalBusPhase.DrivingRoute => IsRussianLanguage() ? "На маршруте" : "On Route",
             LocalBusPhase.WaitingAtStop => IsRussianLanguage() ? "Стоит на остановке" : "Waiting at Stop",
-            LocalBusPhase.ReturningToParking => IsRussianLanguage() ? "Возвращается в Parking" : "Returning to Parking",
+            LocalBusPhase.ReturningToParking => IsRussianLanguage() ? "Возвращается на парковку" : "Returning to Parking",
             _ => IsRussianLanguage() ? "Неактивен" : "Inactive"
         };
     }
@@ -171,13 +175,13 @@ public partial class GameBootstrap
     {
         if (localBusRoute == null)
         {
-            return "—";
+            return "-";
         }
 
         List<LocationData> orderedStops = GetOrderedLocalStops();
         if (orderedStops.Count == 0)
         {
-            return "—";
+            return "-";
         }
 
         if (localBusRoute.CurrentStopIndex >= 0 && localBusRoute.CurrentStopIndex < orderedStops.Count)
@@ -187,30 +191,30 @@ public partial class GameBootstrap
 
         if (localBusRoute.Phase == LocalBusPhase.ParkedAwaitingShiftStart || localBusRoute.Phase == LocalBusPhase.ReturningToParking)
         {
-            return IsRussianLanguage() ? "Parking" : "Parking";
+            return IsRussianLanguage() ? "Парковка" : "Parking";
         }
 
-        return "—";
+        return "-";
     }
 
     private string GetLocalBusQuickHudNextStopLabel()
     {
         if (localBusRoute == null)
         {
-            return "—";
+            return "-";
         }
 
         List<LocationData> orderedStops = GetOrderedLocalStops();
         if (orderedStops.Count == 0)
         {
             return localBusRoute.Phase == LocalBusPhase.ReturningToParking || localBusRoute.Phase == LocalBusPhase.ParkedAwaitingShiftStart
-                ? "Parking"
-                : "—";
+                ? (IsRussianLanguage() ? "Парковка" : "Parking")
+                : "-";
         }
 
         if (localBusRoute.Phase == LocalBusPhase.ReturningToParking)
         {
-            return "Parking";
+            return IsRussianLanguage() ? "Парковка" : "Parking";
         }
 
         if (localBusRoute.Phase == LocalBusPhase.ParkedAwaitingShiftStart)
@@ -226,12 +230,12 @@ public partial class GameBootstrap
 
         if (localBusRoute.Phase != LocalBusPhase.WaitingAtStop)
         {
-            return "—";
+            return "-";
         }
 
         if (orderedStops.Count == 1)
         {
-            return "Parking";
+            return IsRussianLanguage() ? "Парковка" : "Parking";
         }
 
         int currentIndex = Mathf.Clamp(localBusRoute.CurrentStopIndex, 0, orderedStops.Count - 1);
@@ -251,7 +255,7 @@ public partial class GameBootstrap
 
         if (nextIndex < 0 || nextIndex >= orderedStops.Count)
         {
-            return "Parking";
+            return IsRussianLanguage() ? "Парковка" : "Parking";
         }
 
         return $"#{orderedStops[nextIndex].StopNumber}";
@@ -261,19 +265,19 @@ public partial class GameBootstrap
     {
         if (localBusRoute == null)
         {
-            return "—";
+            return "-";
         }
 
         List<LocationData> orderedStops = GetOrderedLocalStops();
         if (orderedStops.Count == 0)
         {
-            return "—";
+            return "-";
         }
 
         string leg = localBusRoute.TravelDirection > 0
             ? (IsRussianLanguage() ? "вверх по линии" : "ascending")
             : (IsRussianLanguage() ? "обратно по линии" : "descending");
-        return $"{orderedStops.Count} {(IsRussianLanguage() ? "ост." : "stops")} • {leg}";
+        return $"{orderedStops.Count} {(IsRussianLanguage() ? "ост." : "stops")} - {leg}";
     }
 
     private string GetLocalBusQuickHudManifestLabel()
@@ -294,8 +298,8 @@ public partial class GameBootstrap
 
             string destinationLabel = driver.BusDestinationStopNumber > 0
                 ? $"#{driver.BusDestinationStopNumber}"
-                : "—";
-            names.Add($"{driver.DriverName} → {destinationLabel}");
+                : "-";
+            names.Add($"{driver.DriverName} -> {destinationLabel}");
         }
 
         if (names.Count == 0)

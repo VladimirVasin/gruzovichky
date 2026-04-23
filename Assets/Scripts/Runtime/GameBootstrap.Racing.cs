@@ -353,8 +353,9 @@ public partial class GameBootstrap : MonoBehaviour
             // Close all city-mode panels before entering race
             CloseAllMenus();
 
-            // Mute city music during race
+            // Mute all city-mode music during race
             if (cityMusicSource != null) cityMusicSource.Pause();
+            PauseDayNightMusic();
 
             // Hide join button
             if (joinRaceButtonRoot != null) joinRaceButtonRoot.SetActive(false);
@@ -678,6 +679,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         // Resume city music
         if (cityMusicSource != null) cityMusicSource.UnPause();
+        ResumeDayNightMusic();
 
         // Restore main camera
         if (mainCamera != null) mainCamera.enabled = true;
@@ -2152,12 +2154,17 @@ public partial class GameBootstrap : MonoBehaviour
         racingControlHintText.fontSize  = 17;
         racingControlHintText.color     = new Color(0.96f, 0.93f, 0.84f, 1f);
         racingControlHintText.alignment = TextAnchor.MiddleLeft;
-        racingControlHintText.text      =
-            "РЈРїСЂР°РІР»РµРЅРёРµ\n" +
-            "РњС‹С€СЊ: СЂСѓР»СЊ\n" +
-            "W / в†‘: РіР°Р·\n" +
-            "S / в†“: С‚РѕСЂРјРѕР· / РЅР°Р·Р°Рґ\n" +
-            "ESC: РІС‹Р№С‚Рё";
+        racingControlHintText.text = IsRussianLanguage()
+            ? "Управление\n" +
+              "Мышь: руль\n" +
+              "W / ↑: газ\n" +
+              "S / ↓: тормоз / назад\n" +
+              "ESC: выйти"
+            : "Controls\n" +
+              "Mouse: steering\n" +
+              "W / ↑: throttle\n" +
+              "S / ↓: brake / reverse\n" +
+              "ESC: exit";
 
         SetupSpeedometer(canvasObj.transform, font);
     }

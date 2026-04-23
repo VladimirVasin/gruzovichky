@@ -250,7 +250,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        CreateLocation(LocationType.Bar, "Bar", min, max, anchorCell, new Color(0.38f, 0.18f, 0.12f));
+        CreateLocation(LocationType.Bar, "Bar", min, max, anchorCell, new Color(0.46f, 0.16f, 0.11f));
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
@@ -284,13 +284,13 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (!TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Canteen, out Vector2Int min, out Vector2Int max))
+        if (!TryGetCanteenPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Canteen placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
             return false;
         }
 
-        CreateLocation(LocationType.Canteen, "Canteen", min, max, anchorCell, new Color(0.58f, 0.42f, 0.24f));
+        CreateLocation(LocationType.Canteen, "Canteen", min, max, anchorCell, new Color(0.20f, 0.46f, 0.48f));
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
@@ -307,13 +307,13 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (!TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.GamblingHall, out Vector2Int min, out Vector2Int max))
+        if (!TryGetGamblingHallPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Gambling Hall placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
             return false;
         }
 
-        CreateLocation(LocationType.GamblingHall, "Gambling Hall", min, max, anchorCell, new Color(0.52f, 0.38f, 0.08f));
+        CreateLocation(LocationType.GamblingHall, "Gambling Hall", min, max, anchorCell, new Color(0.34f, 0.16f, 0.46f));
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
@@ -373,8 +373,17 @@ public partial class GameBootstrap
 
     private bool TryGetBarPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
-        // Anchor is on the road side; building footprint is 2Г—2 one row north of anchor
         return TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Bar, out min, out max);
+    }
+
+    private bool TryGetCanteenPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
+    {
+        return TryGetRotatedBuildingPlacement(anchorCell, LocationType.Canteen, 3, 2, out min, out max);
+    }
+
+    private bool TryGetGamblingHallPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
+    {
+        return TryGetRotatedBuildingPlacement(anchorCell, LocationType.GamblingHall, 3, 3, out min, out max);
     }
 
     private bool TryGetStopPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
@@ -489,21 +498,26 @@ public partial class GameBootstrap
 
     private bool GetCanteenPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
     {
-        return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.Canteen, out previewPosition, out previewScale);
+        return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.Canteen, 3, 2, out previewPosition, out previewScale);
     }
 
     private bool GetGamblingHallPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
     {
-        return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.GamblingHall, out previewPosition, out previewScale);
+        return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.GamblingHall, 3, 3, out previewPosition, out previewScale);
     }
 
     private bool GetTwoByTwoBuildingPlacementPreview(Vector2Int anchorCell, LocationType type, out Vector3 previewPosition, out Vector3 previewScale)
     {
+        return GetRotatedBuildingPlacementPreview(anchorCell, type, 2, 2, out previewPosition, out previewScale);
+    }
+
+    private bool GetRotatedBuildingPlacementPreview(Vector2Int anchorCell, LocationType type, int width, int depth, out Vector3 previewPosition, out Vector3 previewScale)
+    {
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
-        GetRotatedBuildingFootprint(anchorCell, 2, 2, out Vector2Int previewMin, out Vector2Int previewMax);
+        GetRotatedBuildingFootprint(anchorCell, width, depth, out Vector2Int previewMin, out Vector2Int previewMax);
         SetBuildFootprintPreviewCells(previewMin, previewMax, anchorCell);
-        if (!TryGetTwoByTwoBuildingPlacement(anchorCell, type, out Vector2Int min, out Vector2Int max))
+        if (!TryGetRotatedBuildingPlacement(anchorCell, type, width, depth, out Vector2Int min, out Vector2Int max))
         {
             return false;
         }
@@ -568,6 +582,30 @@ public partial class GameBootstrap
         ApplyColor(signBg, new Color(0.92f, 0.88f, 0.72f));
         ConfigureStaticVisual(signBg);
 
+        GameObject facade = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        facade.transform.SetParent(parent, false);
+        facade.transform.position = center + new Vector3(0f, 1.12f * scale, -0.73f * scale);
+        facade.transform.localScale = new Vector3(1.18f * scale, 0.52f * scale, 0.06f * scale);
+        ApplyColor(facade, new Color(0.58f, 0.24f, 0.16f));
+        ConfigureStaticVisual(facade);
+
+        GameObject porch = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        porch.transform.SetParent(parent, false);
+        porch.transform.position = center + new Vector3(0f, 0.08f * scale, -1.02f * scale);
+        porch.transform.localScale = new Vector3(1.2f * scale, 0.06f * scale, 0.42f * scale);
+        ApplyColor(porch, new Color(0.42f, 0.24f, 0.1f));
+        ConfigureStaticVisual(porch);
+
+        for (int i = 0; i < 2; i++)
+        {
+            GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            barrel.transform.SetParent(parent, false);
+            barrel.transform.position = center + new Vector3((-0.54f + i * 1.08f) * scale, 0.14f * scale, -0.88f * scale);
+            barrel.transform.localScale = new Vector3(0.12f * scale, 0.16f * scale, 0.12f * scale);
+            ApplyColor(barrel, new Color(0.34f, 0.2f, 0.08f));
+            ConfigureStaticVisual(barrel);
+        }
+
         // Warm point light above entrance
         GameObject lightObj = new("BarLight");
         lightObj.transform.SetParent(parent, false);
@@ -586,52 +624,71 @@ public partial class GameBootstrap
     private void CreateCanteenDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         float scale = BuildingDecorScale;
-        Color wallColor = new Color(0.66f, 0.48f, 0.27f);
-        Color roofColor = new Color(0.85f, 0.32f, 0.16f);
+        float width = max.x - min.x + 1;
+        float depth = max.y - min.y + 1;
+        Color wallColor = new Color(0.83f, 0.78f, 0.68f);
+        Color roofColor = new Color(0.18f, 0.54f, 0.56f);
 
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
         body.transform.SetParent(parent, false);
         body.transform.position = center + new Vector3(0f, 0.4f * scale, 0f);
-        body.transform.localScale = new Vector3(1.65f * scale, 0.8f * scale, 1.45f * scale);
+        body.transform.localScale = new Vector3((width - 0.22f) * scale, 0.78f * scale, (depth - 0.22f) * scale);
         ApplyColor(body, wallColor);
         ConfigureStaticVisual(body);
 
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(parent, false);
         roof.transform.position = center + new Vector3(0f, 0.86f * scale, 0f);
-        roof.transform.localScale = new Vector3(1.9f * scale, 0.1f * scale, 1.7f * scale);
+        roof.transform.localScale = new Vector3((width + 0.18f) * scale, 0.1f * scale, (depth + 0.12f) * scale);
         ApplyColor(roof, roofColor);
         ConfigureStaticVisual(roof);
 
+        GameObject awning = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        awning.transform.SetParent(parent, false);
+        awning.transform.position = center + new Vector3(0f, 0.58f * scale, -0.96f * scale);
+        awning.transform.localScale = new Vector3((width - 0.3f) * scale, 0.08f * scale, 0.5f * scale);
+        ApplyColor(awning, new Color(0.94f, 0.84f, 0.42f));
+        ConfigureStaticVisual(awning);
+
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.transform.SetParent(parent, false);
-        door.transform.position = center + new Vector3(-0.28f * scale, 0.2f * scale, -0.74f * scale);
+        door.transform.position = center + new Vector3(-(width * 0.24f) * scale, 0.2f * scale, -0.74f * scale);
         door.transform.localScale = new Vector3(0.34f * scale, 0.48f * scale, 0.04f * scale);
         ApplyColor(door, new Color(0.22f, 0.13f, 0.07f));
         ConfigureStaticVisual(door);
 
         GameObject servingWindow = GameObject.CreatePrimitive(PrimitiveType.Cube);
         servingWindow.transform.SetParent(parent, false);
-        servingWindow.transform.position = center + new Vector3(0.38f * scale, 0.48f * scale, -0.75f * scale);
-        servingWindow.transform.localScale = new Vector3(0.56f * scale, 0.3f * scale, 0.04f * scale);
-        ApplyColor(servingWindow, new Color(0.95f, 0.88f, 0.58f));
+        servingWindow.transform.position = center + new Vector3((width * 0.18f) * scale, 0.46f * scale, -0.75f * scale);
+        servingWindow.transform.localScale = new Vector3(0.92f * scale, 0.34f * scale, 0.04f * scale);
+        ApplyColor(servingWindow, new Color(0.34f, 0.64f, 0.72f));
         ConfigureStaticVisual(servingWindow);
 
         GameObject sign = GameObject.CreatePrimitive(PrimitiveType.Cube);
         sign.transform.SetParent(parent, false);
         sign.transform.position = center + new Vector3(0f, 0.69f * scale, -0.77f * scale);
-        sign.transform.localScale = new Vector3(0.82f * scale, 0.18f * scale, 0.04f * scale);
-        ApplyColor(sign, new Color(0.98f, 0.86f, 0.34f));
+        sign.transform.localScale = new Vector3(1.18f * scale, 0.2f * scale, 0.04f * scale);
+        ApplyColor(sign, new Color(0.96f, 0.78f, 0.22f));
         ConfigureStaticVisual(sign);
 
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 3; i++)
         {
             GameObject table = GameObject.CreatePrimitive(PrimitiveType.Cube);
             table.transform.SetParent(parent, false);
-            table.transform.position = center + new Vector3((-0.38f + i * 0.76f) * scale, 0.11f * scale, 0.62f * scale);
+            table.transform.position = center + new Vector3((-0.8f + i * 0.8f) * scale, 0.11f * scale, 0.58f * scale);
             table.transform.localScale = new Vector3(0.46f * scale, 0.1f * scale, 0.28f * scale);
             ApplyColor(table, new Color(0.55f, 0.34f, 0.16f));
             ConfigureStaticVisual(table);
+
+            for (int stoolSide = -1; stoolSide <= 1; stoolSide += 2)
+            {
+                GameObject stool = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                stool.transform.SetParent(parent, false);
+                stool.transform.position = table.transform.position + new Vector3(0f, -0.02f * scale, 0.18f * stoolSide * scale);
+                stool.transform.localScale = new Vector3(0.07f * scale, 0.08f * scale, 0.07f * scale);
+                ApplyColor(stool, new Color(0.42f, 0.28f, 0.14f));
+                ConfigureStaticVisual(stool);
+            }
         }
 
         GameObject lightObj = new("CanteenLight");
@@ -650,47 +707,71 @@ public partial class GameBootstrap
     private void CreateGamblingHallDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         float scale = BuildingDecorScale;
-        Color wallColor = new Color(0.42f, 0.28f, 0.08f);
-        Color roofColor = new Color(0.58f, 0.42f, 0.10f);
+        float width = max.x - min.x + 1;
+        float depth = max.y - min.y + 1;
+        Color wallColor = new Color(0.28f, 0.12f, 0.34f);
+        Color roofColor = new Color(0.62f, 0.18f, 0.72f);
 
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
         body.transform.SetParent(parent, false);
         body.transform.position = center + new Vector3(0f, 0.4f * scale, 0f);
-        body.transform.localScale = new Vector3(1.65f * scale, 0.8f * scale, 1.45f * scale);
+        body.transform.localScale = new Vector3((width - 0.16f) * scale, 0.82f * scale, (depth - 0.16f) * scale);
         ApplyColor(body, wallColor);
         ConfigureStaticVisual(body);
 
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(parent, false);
         roof.transform.position = center + new Vector3(0f, 0.86f * scale, 0f);
-        roof.transform.localScale = new Vector3(1.9f * scale, 0.1f * scale, 1.7f * scale);
+        roof.transform.localScale = new Vector3((width + 0.24f) * scale, 0.12f * scale, (depth + 0.24f) * scale);
         ApplyColor(roof, roofColor);
         ConfigureStaticVisual(roof);
 
-        // Neon sign strip on facade
+        GameObject tower = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        tower.transform.SetParent(parent, false);
+        tower.transform.position = center + new Vector3(0f, 1.18f * scale, -0.12f * scale);
+        tower.transform.localScale = new Vector3(1.18f * scale, 0.98f * scale, 1.08f * scale);
+        ApplyColor(tower, new Color(0.36f, 0.14f, 0.44f));
+        ConfigureStaticVisual(tower);
+
         GameObject neon = GameObject.CreatePrimitive(PrimitiveType.Cube);
         neon.transform.SetParent(parent, false);
-        neon.transform.position = center + new Vector3(0f, 0.69f * scale, -0.77f * scale);
-        neon.transform.localScale = new Vector3(0.82f * scale, 0.18f * scale, 0.04f * scale);
+        neon.transform.position = center + new Vector3(0f, 0.77f * scale, -1.08f * scale);
+        neon.transform.localScale = new Vector3(1.54f * scale, 0.24f * scale, 0.06f * scale);
         ApplyColor(neon, new Color(1f, 0.82f, 0.08f));
         ConfigureStaticVisual(neon);
 
-        // Door on south face
+        GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        canopy.transform.SetParent(parent, false);
+        canopy.transform.position = center + new Vector3(0f, 0.46f * scale, -1.04f * scale);
+        canopy.transform.localScale = new Vector3(1.72f * scale, 0.08f * scale, 0.42f * scale);
+        ApplyColor(canopy, new Color(0.96f, 0.74f, 0.16f));
+        ConfigureStaticVisual(canopy);
+
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.transform.SetParent(parent, false);
-        door.transform.position = center + new Vector3(0f, 0.2f * scale, -0.74f * scale);
-        door.transform.localScale = new Vector3(0.34f * scale, 0.48f * scale, 0.04f * scale);
+        door.transform.position = center + new Vector3(0f, 0.24f * scale, -0.84f * scale);
+        door.transform.localScale = new Vector3(0.58f * scale, 0.56f * scale, 0.04f * scale);
         ApplyColor(door, new Color(0.18f, 0.10f, 0.04f));
         ConfigureStaticVisual(door);
 
+        for (int side = -1; side <= 1; side += 2)
+        {
+            GameObject neonPillar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            neonPillar.transform.SetParent(parent, false);
+            neonPillar.transform.position = center + new Vector3(0.92f * side * scale, 0.6f * scale, -0.96f * scale);
+            neonPillar.transform.localScale = new Vector3(0.14f * scale, 0.92f * scale, 0.12f * scale);
+            ApplyColor(neonPillar, side < 0 ? new Color(0.24f, 0.92f, 0.86f) : new Color(1f, 0.36f, 0.72f));
+            ConfigureStaticVisual(neonPillar);
+        }
+
         GameObject lightObj = new("GamblingHallLight");
         lightObj.transform.SetParent(parent, false);
-        lightObj.transform.position = center + new Vector3(0.35f * scale, 0.88f * scale, -0.9f * scale);
+        lightObj.transform.position = center + new Vector3(0f, 1.08f * scale, -0.86f * scale);
         Light gamblingLight = lightObj.AddComponent<Light>();
         gamblingLight.type = LightType.Point;
-        gamblingLight.color = new Color(1f, 0.82f, 0.3f);
-        gamblingLight.intensity = 0.40f;
-        gamblingLight.range = 3.2f;
+        gamblingLight.color = new Color(1f, 0.48f, 0.82f);
+        gamblingLight.intensity = 0.48f;
+        gamblingLight.range = 4.2f;
         gamblingLight.shadows = LightShadows.None;
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);

@@ -66,13 +66,16 @@ public partial class GameBootstrap
         }
         if (driver == null || driver.DriverObject == null) return;
 
-        // If driver is already on a rest journey, or Gas Station has no fuel вЂ” silently refuel and continue
-        bool gasStationEmpty = locations.TryGetValue(LocationType.GasStation, out LocationData gsCheck) && gsCheck.FuelStored <= 0;
-        if (driver.RestPhase != DriverRestPhase.None || gasStationEmpty)
+        // If driver is already on a rest journey, silently refuel and continue.
+        if (locations.TryGetValue(LocationType.GasStation, out LocationData gsCheck))
+        {
+            gsCheck.FuelStored = GasStationMaxFuelStorage;
+        }
+
+        if (driver.RestPhase != DriverRestPhase.None)
         {
             truckFuel = TruckFuelCapacity;
-            string reason = gasStationEmpty ? "Gas Station out of Fuel" : "rest journey";
-            SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} refueled silently ({reason}) at ({truckCell.x},{truckCell.y}).");
+            SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} refueled silently (rest journey) at ({truckCell.x},{truckCell.y}).");
             if (activePath.Count > 0)
             {
                 isTruckMoving = true;
@@ -485,6 +488,10 @@ public partial class GameBootstrap
         };
         SessionDebugLogger.Log("DRIVER", $"Hired {hiredDriver.DriverName} for ${HireDriverCost}. Money now ${money}.");
         LogDriverReaction(hiredDriver, $"hired for ${HireDriverCost} and arriving by bus");
+        PushFeedEvent(
+            $"Hired {hiredDriver.DriverName}. Arrival bus is on the way.",
+            $"Нанят {hiredDriver.DriverName}. Автобус с новым рабочим уже в пути.",
+            FeedEventType.Success);
         isHireWorkerHighlightPersistent = false;
         isDriversPanelOpen = false;
         isDriversScreenDirty = true;

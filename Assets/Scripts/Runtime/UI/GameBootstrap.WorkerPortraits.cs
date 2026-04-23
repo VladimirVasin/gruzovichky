@@ -30,6 +30,9 @@ public partial class GameBootstrap
         new(0.20f, 0.28f, 0.38f, 1f)
     };
 
+    private static readonly int[] FemalePortraitHairStyles = { 0, 1, 2, 4, 5 };
+    private static readonly int[] FemalePortraitAccessories = { 0, 1, 3, 4, 5 };
+
     private void AssignWorkerPortrait(DriverAgent driver)
     {
         if (driver == null) return;
@@ -44,16 +47,13 @@ public partial class GameBootstrap
 
         if (driver.Gender == WorkerGender.Female)
         {
-            // Longer hair styles (0=short sides, 1=curtains вЂ” both work; avoid style 3 flat crop)
-            driver.PortraitHairStyle = rng.Next(3); // 0, 1, 2
-            // No moustache (case 2): remap [0,1,2,3] в†’ [0,1,3,4]
-            int acc = rng.Next(4);
-            driver.PortraitAccessory = acc >= 2 ? acc + 1 : acc;
+            driver.PortraitHairStyle = FemalePortraitHairStyles[rng.Next(FemalePortraitHairStyles.Length)];
+            driver.PortraitAccessory = FemalePortraitAccessories[rng.Next(FemalePortraitAccessories.Length)];
         }
         else
         {
             driver.PortraitHairStyle = rng.Next(4);
-            driver.PortraitAccessory = rng.Next(5);
+            driver.PortraitAccessory = rng.Next(6);
         }
 
         driver.HasPortrait = true;
@@ -102,23 +102,36 @@ public partial class GameBootstrap
             _ => 50f
         };
         float headHeight = driver.PortraitHeadShape == 1 ? 46f : 50f;
+        if (driver.Gender == WorkerGender.Female)
+        {
+            headWidth *= 0.94f;
+            headHeight *= 0.96f;
+        }
 
-        CreatePortraitPart("PortraitNeck", root, new Vector2(0f, -23f), new Vector2(15f, 18f), shadowSkin);
+        CreatePortraitPart("PortraitNeck", root, new Vector2(0f, -23f), new Vector2(driver.Gender == WorkerGender.Female ? 13f : 15f, 18f), shadowSkin);
         CreatePortraitPart("PortraitShirt", root, new Vector2(0f, -40f), new Vector2(66f, 26f), shirt);
-        CreatePortraitPart("PortraitCollar", root, new Vector2(0f, -30f), new Vector2(28f, 9f), Color.Lerp(shirt, Color.white, 0.16f));
-        CreatePortraitPart("PortraitLeftEar", root, new Vector2(-headWidth * 0.5f - 4f, 5f), new Vector2(8f, 16f), shadowSkin);
-        CreatePortraitPart("PortraitRightEar", root, new Vector2(headWidth * 0.5f + 4f, 5f), new Vector2(8f, 16f), shadowSkin);
+        CreatePortraitPart("PortraitCollar", root, new Vector2(0f, -30f), new Vector2(driver.Gender == WorkerGender.Female ? 24f : 28f, 9f), Color.Lerp(shirt, Color.white, 0.16f));
+        CreatePortraitPart("PortraitLeftEar", root, new Vector2(-headWidth * 0.5f - 4f, 5f), new Vector2(driver.Gender == WorkerGender.Female ? 7f : 8f, driver.Gender == WorkerGender.Female ? 14f : 16f), shadowSkin);
+        CreatePortraitPart("PortraitRightEar", root, new Vector2(headWidth * 0.5f + 4f, 5f), new Vector2(driver.Gender == WorkerGender.Female ? 7f : 8f, driver.Gender == WorkerGender.Female ? 14f : 16f), shadowSkin);
         CreatePortraitPart("PortraitHead", root, new Vector2(0f, 6f), new Vector2(headWidth, headHeight), skin);
         Color cheekTint = driver.Gender == WorkerGender.Female
             ? Color.Lerp(skin, new Color(1f, 0.75f, 0.75f, 1f), 0.22f)
             : Color.Lerp(skin, Color.white, 0.12f);
-        CreatePortraitPart("PortraitCheek", root, new Vector2(headWidth * 0.18f, -4f), new Vector2(10f, 10f), cheekTint);
+        if (driver.Gender == WorkerGender.Female)
+        {
+            CreatePortraitPart("PortraitCheekLeft", root, new Vector2(-headWidth * 0.18f, -4f), new Vector2(9f, 9f), cheekTint);
+            CreatePortraitPart("PortraitCheekRight", root, new Vector2(headWidth * 0.18f, -4f), new Vector2(9f, 9f), cheekTint);
+        }
+        else
+        {
+            CreatePortraitPart("PortraitCheek", root, new Vector2(headWidth * 0.18f, -4f), new Vector2(10f, 10f), cheekTint);
+        }
 
-        DrawWorkerPortraitHair(root, driver.PortraitHairStyle, hair, headWidth, headHeight);
-        DrawWorkerPortraitEyes(root, driver.PortraitEyeStyle, ink);
+        DrawWorkerPortraitHair(root, driver.PortraitHairStyle, hair, headWidth, headHeight, driver.Gender);
+        DrawWorkerPortraitEyes(root, driver.PortraitEyeStyle, ink, driver.Gender);
         CreatePortraitPart("PortraitNose", root, new Vector2(0f, -1f), new Vector2(5f, 12f), Color.Lerp(skin, Color.black, 0.12f));
-        DrawWorkerPortraitMouth(root, driver.PortraitMouthStyle, ink);
-        DrawWorkerPortraitAccessory(root, driver.PortraitAccessory, hair, ink);
+        DrawWorkerPortraitMouth(root, driver.PortraitMouthStyle, ink, driver.Gender);
+        DrawWorkerPortraitAccessory(root, driver.PortraitAccessory, hair, ink, driver.Gender);
     }
 
     private void DrawWorkerPortraitScaled(DriverAgent driver, RectTransform root, float scale)
@@ -142,26 +155,39 @@ public partial class GameBootstrap
 
         float headWidth  = driver.PortraitHeadShape switch { 1 => 46f, 2 => 54f, _ => 50f } * scale;
         float headHeight = (driver.PortraitHeadShape == 1 ? 46f : 50f) * scale;
+        if (driver.Gender == WorkerGender.Female)
+        {
+            headWidth *= 0.94f;
+            headHeight *= 0.96f;
+        }
 
-        CreatePortraitPart("PN",  root, new Vector2(0f, -23f * scale), new Vector2(15f * scale, 18f * scale), shadowSkin);
+        CreatePortraitPart("PN",  root, new Vector2(0f, -23f * scale), new Vector2((driver.Gender == WorkerGender.Female ? 13f : 15f) * scale, 18f * scale), shadowSkin);
         CreatePortraitPart("PSh", root, new Vector2(0f, -40f * scale), new Vector2(66f * scale, 26f * scale), shirt);
-        CreatePortraitPart("PC",  root, new Vector2(0f, -30f * scale), new Vector2(28f * scale, 9f  * scale), Color.Lerp(shirt, Color.white, 0.16f));
-        CreatePortraitPart("PLE", root, new Vector2(-headWidth * 0.5f - 4f * scale, 5f * scale), new Vector2(8f * scale, 16f * scale), shadowSkin);
-        CreatePortraitPart("PRE", root, new Vector2( headWidth * 0.5f + 4f * scale, 5f * scale), new Vector2(8f * scale, 16f * scale), shadowSkin);
+        CreatePortraitPart("PC",  root, new Vector2(0f, -30f * scale), new Vector2((driver.Gender == WorkerGender.Female ? 24f : 28f) * scale, 9f  * scale), Color.Lerp(shirt, Color.white, 0.16f));
+        CreatePortraitPart("PLE", root, new Vector2(-headWidth * 0.5f - 4f * scale, 5f * scale), new Vector2((driver.Gender == WorkerGender.Female ? 7f : 8f) * scale, (driver.Gender == WorkerGender.Female ? 14f : 16f) * scale), shadowSkin);
+        CreatePortraitPart("PRE", root, new Vector2( headWidth * 0.5f + 4f * scale, 5f * scale), new Vector2((driver.Gender == WorkerGender.Female ? 7f : 8f) * scale, (driver.Gender == WorkerGender.Female ? 14f : 16f) * scale), shadowSkin);
         CreatePortraitPart("PH",  root, new Vector2(0f, 6f * scale), new Vector2(headWidth, headHeight), skin);
         Color cheekTint = driver.Gender == WorkerGender.Female
             ? Color.Lerp(skin, new Color(1f, 0.75f, 0.75f, 1f), 0.22f)
             : Color.Lerp(skin, Color.white, 0.12f);
-        CreatePortraitPart("PCh", root, new Vector2(headWidth * 0.18f, -4f * scale), new Vector2(10f * scale, 10f * scale), cheekTint);
+        if (driver.Gender == WorkerGender.Female)
+        {
+            CreatePortraitPart("PChL", root, new Vector2(-headWidth * 0.18f, -4f * scale), new Vector2(9f * scale, 9f * scale), cheekTint);
+            CreatePortraitPart("PChR", root, new Vector2(headWidth * 0.18f, -4f * scale), new Vector2(9f * scale, 9f * scale), cheekTint);
+        }
+        else
+        {
+            CreatePortraitPart("PCh", root, new Vector2(headWidth * 0.18f, -4f * scale), new Vector2(10f * scale, 10f * scale), cheekTint);
+        }
 
-        DrawWorkerPortraitHairScaled(root, driver.PortraitHairStyle, hair, headWidth, headHeight, scale);
-        DrawWorkerPortraitEyesScaled(root, driver.PortraitEyeStyle, ink, scale);
+        DrawWorkerPortraitHairScaled(root, driver.PortraitHairStyle, hair, headWidth, headHeight, scale, driver.Gender);
+        DrawWorkerPortraitEyesScaled(root, driver.PortraitEyeStyle, ink, scale, driver.Gender);
         CreatePortraitPart("PNo", root, new Vector2(0f, -1f * scale), new Vector2(5f * scale, 12f * scale), Color.Lerp(skin, Color.black, 0.12f));
-        DrawWorkerPortraitMouthScaled(root, driver.PortraitMouthStyle, ink, scale);
-        DrawWorkerPortraitAccessoryScaled(root, driver.PortraitAccessory, hair, ink, scale);
+        DrawWorkerPortraitMouthScaled(root, driver.PortraitMouthStyle, ink, scale, driver.Gender);
+        DrawWorkerPortraitAccessoryScaled(root, driver.PortraitAccessory, hair, ink, scale, driver.Gender);
     }
 
-    private static void DrawWorkerPortraitHairScaled(RectTransform root, int style, Color hair, float headWidth, float headHeight, float s)
+    private static void DrawWorkerPortraitHairScaled(RectTransform root, int style, Color hair, float headWidth, float headHeight, float s, WorkerGender gender)
     {
         CreatePortraitPart("PHT", root, new Vector2(0f, 5f * s + headHeight * 0.5f - 6f * s), new Vector2(headWidth + 8f * s, 14f * s), hair);
         switch (style)
@@ -178,18 +204,44 @@ public partial class GameBootstrap
                 CreatePortraitPart("PHFC",  root, new Vector2(0f, 36f * s), new Vector2(headWidth + 18f * s, 8f * s), Color.Lerp(hair, Color.black, 0.22f));
                 CreatePortraitPart("PHFCB", root, new Vector2(18f * s, 30f * s), new Vector2(24f * s, 6f * s), Color.Lerp(hair, Color.black, 0.08f));
                 break;
+            case 4:
+                CreatePortraitPart("PHBobTop", root, new Vector2(0f, 28f * s), new Vector2(headWidth + 10f * s, 10f * s), Color.Lerp(hair, Color.white, 0.05f));
+                CreatePortraitPart("PHBobLeft", root, new Vector2(-headWidth * 0.42f, 8f * s), new Vector2(12f * s, 34f * s), hair);
+                CreatePortraitPart("PHBobRight", root, new Vector2(headWidth * 0.42f, 8f * s), new Vector2(12f * s, 34f * s), hair);
+                CreatePortraitPart("PHBobFringe", root, new Vector2(0f, 20f * s), new Vector2(26f * s, 8f * s), Color.Lerp(hair, Color.white, 0.08f));
+                break;
+            case 5:
+                CreatePortraitPart("PHPonyLeft", root, new Vector2(-headWidth * 0.40f, 10f * s), new Vector2(10f * s, 30f * s), hair);
+                CreatePortraitPart("PHPonyRight", root, new Vector2(headWidth * 0.40f, 10f * s), new Vector2(10f * s, 30f * s), hair);
+                CreatePortraitPart("PHPonyBand", root, new Vector2(0f, 18f * s), new Vector2(18f * s, 6f * s), Color.Lerp(hair, Color.white, 0.15f));
+                CreatePortraitPart("PHPonyTail", root, new Vector2(0f, -6f * s), new Vector2(12f * s, 28f * s), Color.Lerp(hair, Color.black, 0.08f));
+                break;
             default:
                 CreatePortraitPart("PHF",  root, new Vector2(-10f * s, 27f * s), new Vector2(22f * s, 11f * s), Color.Lerp(hair, Color.white, 0.06f));
-                CreatePortraitPart("PHRB", root, new Vector2(22f * s, 12f * s),  new Vector2(8f  * s, 26f * s), hair);
+                if (gender == WorkerGender.Female)
+                {
+                    CreatePortraitPart("PHFL", root, new Vector2(-headWidth * 0.42f, 8f * s), new Vector2(10f * s, 24f * s), hair);
+                    CreatePortraitPart("PHFR", root, new Vector2(headWidth * 0.42f, 8f * s), new Vector2(10f * s, 24f * s), hair);
+                }
+                else
+                {
+                    CreatePortraitPart("PHRB", root, new Vector2(22f * s, 12f * s),  new Vector2(8f  * s, 26f * s), hair);
+                }
                 break;
         }
     }
 
-    private static void DrawWorkerPortraitEyesScaled(RectTransform root, int style, Color ink, float s)
+    private static void DrawWorkerPortraitEyesScaled(RectTransform root, int style, Color ink, float s, WorkerGender gender)
     {
         float ew = (style == 2 ? 10f : 7f) * s;
         float eh = (style == 1 ? 3f  : 5f) * s;
         float y  = (style == 3 ? 9f  : 11f) * s;
+        if (gender == WorkerGender.Female)
+        {
+            ew *= 1.15f;
+            eh *= 1.10f;
+            y += 1.0f * s;
+        }
         CreatePortraitPart("PEL", root, new Vector2(-13f * s, y), new Vector2(ew, eh), ink);
         CreatePortraitPart("PER", root, new Vector2( 13f * s, y), new Vector2(ew, eh), ink);
         if (style == 2)
@@ -197,18 +249,29 @@ public partial class GameBootstrap
             CreatePortraitPart("PBL", root, new Vector2(-13f * s, 18f * s), new Vector2(13f * s, 3f * s), ink);
             CreatePortraitPart("PBR", root, new Vector2( 13f * s, 18f * s), new Vector2(13f * s, 3f * s), ink);
         }
+        if (gender == WorkerGender.Female)
+        {
+            Color lash = Color.Lerp(ink, Color.white, 0.08f);
+            CreatePortraitPart("PELL", root, new Vector2(-13f * s, (y + 6f * s)), new Vector2((ew + 3f * s), 2f * s), lash);
+            CreatePortraitPart("PERL", root, new Vector2(13f * s, (y + 6f * s)), new Vector2((ew + 3f * s), 2f * s), lash);
+        }
     }
 
-    private static void DrawWorkerPortraitMouthScaled(RectTransform root, int style, Color ink, float s)
+    private static void DrawWorkerPortraitMouthScaled(RectTransform root, int style, Color ink, float s, WorkerGender gender)
     {
         Color mouth = style == 2 ? new Color(0.42f, 0.12f, 0.10f, 1f) : ink;
+        if (gender == WorkerGender.Female)
+        {
+            mouth = Color.Lerp(mouth, new Color(0.72f, 0.28f, 0.34f, 1f), 0.55f);
+        }
         Vector2 size = style switch { 1 => new Vector2(14f, 3f), 2 => new Vector2(10f, 5f), 3 => new Vector2(18f, 4f), _ => new Vector2(12f, 4f) } * s;
-        CreatePortraitPart("PMo", root, new Vector2(0f, -16f * s), size, mouth);
+        float mouthY = gender == WorkerGender.Female ? -15f * s : -16f * s;
+        CreatePortraitPart("PMo", root, new Vector2(0f, mouthY), size, mouth);
         if (style == 3)
-            CreatePortraitPart("PMC", root, new Vector2(10f * s, -14f * s), new Vector2(4f * s, 3f * s), mouth);
+            CreatePortraitPart("PMC", root, new Vector2(10f * s, gender == WorkerGender.Female ? -13f * s : -14f * s), new Vector2(4f * s, 3f * s), mouth);
     }
 
-    private static void DrawWorkerPortraitAccessoryScaled(RectTransform root, int accessory, Color hair, Color ink, float s)
+    private static void DrawWorkerPortraitAccessoryScaled(RectTransform root, int accessory, Color hair, Color ink, float s, WorkerGender gender)
     {
         switch (accessory)
         {
@@ -226,6 +289,14 @@ public partial class GameBootstrap
                 break;
             case 4:
                 CreatePortraitPart("PAS", root, new Vector2(18f * s, 0f), new Vector2(3f * s, 18f * s), new Color(0.50f, 0.20f, 0.18f, 0.72f));
+                break;
+            case 5:
+                CreatePortraitPart("PAEL", root, new Vector2(-22f * s, -2f * s), new Vector2(4f * s, 7f * s), new Color(0.95f, 0.76f, 0.22f, 1f));
+                CreatePortraitPart("PAER", root, new Vector2(22f * s, -2f * s), new Vector2(4f * s, 7f * s), new Color(0.95f, 0.76f, 0.22f, 1f));
+                if (gender == WorkerGender.Female)
+                {
+                    CreatePortraitPart("PAClip", root, new Vector2(18f * s, 18f * s), new Vector2(8f * s, 4f * s), Color.Lerp(hair, Color.white, 0.35f));
+                }
                 break;
         }
     }
@@ -263,7 +334,7 @@ public partial class GameBootstrap
         return image;
     }
 
-    private static void DrawWorkerPortraitHair(RectTransform root, int style, Color hair, float headWidth, float headHeight)
+    private static void DrawWorkerPortraitHair(RectTransform root, int style, Color hair, float headWidth, float headHeight, WorkerGender gender)
     {
         CreatePortraitPart("PortraitHairTop", root, new Vector2(0f, 5f + headHeight * 0.5f - 6f), new Vector2(headWidth + 8f, 14f), hair);
 
@@ -281,18 +352,44 @@ public partial class GameBootstrap
                 CreatePortraitPart("PortraitFlatCap", root, new Vector2(0f, 36f), new Vector2(headWidth + 18f, 8f), Color.Lerp(hair, Color.black, 0.22f));
                 CreatePortraitPart("PortraitFlatCapBrim", root, new Vector2(18f, 30f), new Vector2(24f, 6f), Color.Lerp(hair, Color.black, 0.08f));
                 break;
+            case 4:
+                CreatePortraitPart("PortraitBobTop", root, new Vector2(0f, 28f), new Vector2(headWidth + 10f, 10f), Color.Lerp(hair, Color.white, 0.05f));
+                CreatePortraitPart("PortraitBobLeft", root, new Vector2(-headWidth * 0.42f, 8f), new Vector2(12f, 34f), hair);
+                CreatePortraitPart("PortraitBobRight", root, new Vector2(headWidth * 0.42f, 8f), new Vector2(12f, 34f), hair);
+                CreatePortraitPart("PortraitBobFringe", root, new Vector2(0f, 20f), new Vector2(26f, 8f), Color.Lerp(hair, Color.white, 0.08f));
+                break;
+            case 5:
+                CreatePortraitPart("PortraitPonyLeft", root, new Vector2(-headWidth * 0.40f, 10f), new Vector2(10f, 30f), hair);
+                CreatePortraitPart("PortraitPonyRight", root, new Vector2(headWidth * 0.40f, 10f), new Vector2(10f, 30f), hair);
+                CreatePortraitPart("PortraitPonyBand", root, new Vector2(0f, 18f), new Vector2(18f, 6f), Color.Lerp(hair, Color.white, 0.15f));
+                CreatePortraitPart("PortraitPonyTail", root, new Vector2(0f, -6f), new Vector2(12f, 28f), Color.Lerp(hair, Color.black, 0.08f));
+                break;
             default:
                 CreatePortraitPart("PortraitFringe", root, new Vector2(-10f, 27f), new Vector2(22f, 11f), Color.Lerp(hair, Color.white, 0.06f));
-                CreatePortraitPart("PortraitHairRightBlock", root, new Vector2(22f, 12f), new Vector2(8f, 26f), hair);
+                if (gender == WorkerGender.Female)
+                {
+                    CreatePortraitPart("PortraitHairLeftBlock", root, new Vector2(-headWidth * 0.42f, 8f), new Vector2(10f, 24f), hair);
+                    CreatePortraitPart("PortraitHairRightBlock", root, new Vector2(headWidth * 0.42f, 8f), new Vector2(10f, 24f), hair);
+                }
+                else
+                {
+                    CreatePortraitPart("PortraitHairRightBlock", root, new Vector2(22f, 12f), new Vector2(8f, 26f), hair);
+                }
                 break;
         }
     }
 
-    private static void DrawWorkerPortraitEyes(RectTransform root, int style, Color ink)
+    private static void DrawWorkerPortraitEyes(RectTransform root, int style, Color ink, WorkerGender gender)
     {
         float eyeWidth = style == 2 ? 10f : 7f;
         float eyeHeight = style == 1 ? 3f : 5f;
         float y = style == 3 ? 9f : 11f;
+        if (gender == WorkerGender.Female)
+        {
+            eyeWidth *= 1.15f;
+            eyeHeight *= 1.10f;
+            y += 1f;
+        }
         CreatePortraitPart("PortraitLeftEye", root, new Vector2(-13f, y), new Vector2(eyeWidth, eyeHeight), ink);
         CreatePortraitPart("PortraitRightEye", root, new Vector2(13f, y), new Vector2(eyeWidth, eyeHeight), ink);
 
@@ -301,11 +398,21 @@ public partial class GameBootstrap
             CreatePortraitPart("PortraitLeftBrow", root, new Vector2(-13f, 18f), new Vector2(13f, 3f), ink);
             CreatePortraitPart("PortraitRightBrow", root, new Vector2(13f, 18f), new Vector2(13f, 3f), ink);
         }
+        if (gender == WorkerGender.Female)
+        {
+            Color lash = Color.Lerp(ink, Color.white, 0.08f);
+            CreatePortraitPart("PortraitLeftLash", root, new Vector2(-13f, y + 6f), new Vector2(eyeWidth + 3f, 2f), lash);
+            CreatePortraitPart("PortraitRightLash", root, new Vector2(13f, y + 6f), new Vector2(eyeWidth + 3f, 2f), lash);
+        }
     }
 
-    private static void DrawWorkerPortraitMouth(RectTransform root, int style, Color ink)
+    private static void DrawWorkerPortraitMouth(RectTransform root, int style, Color ink, WorkerGender gender)
     {
         Color mouth = style == 2 ? new Color(0.42f, 0.12f, 0.10f, 1f) : ink;
+        if (gender == WorkerGender.Female)
+        {
+            mouth = Color.Lerp(mouth, new Color(0.72f, 0.28f, 0.34f, 1f), 0.55f);
+        }
         Vector2 size = style switch
         {
             1 => new Vector2(14f, 3f),
@@ -313,14 +420,15 @@ public partial class GameBootstrap
             3 => new Vector2(18f, 4f),
             _ => new Vector2(12f, 4f)
         };
-        CreatePortraitPart("PortraitMouth", root, new Vector2(0f, -16f), size, mouth);
+        float mouthY = gender == WorkerGender.Female ? -15f : -16f;
+        CreatePortraitPart("PortraitMouth", root, new Vector2(0f, mouthY), size, mouth);
         if (style == 3)
         {
-            CreatePortraitPart("PortraitMouthCorner", root, new Vector2(10f, -14f), new Vector2(4f, 3f), mouth);
+            CreatePortraitPart("PortraitMouthCorner", root, new Vector2(10f, gender == WorkerGender.Female ? -13f : -14f), new Vector2(4f, 3f), mouth);
         }
     }
 
-    private static void DrawWorkerPortraitAccessory(RectTransform root, int accessory, Color hair, Color ink)
+    private static void DrawWorkerPortraitAccessory(RectTransform root, int accessory, Color hair, Color ink, WorkerGender gender)
     {
         switch (accessory)
         {
@@ -338,6 +446,14 @@ public partial class GameBootstrap
                 break;
             case 4:
                 CreatePortraitPart("PortraitScar", root, new Vector2(18f, 0f), new Vector2(3f, 18f), new Color(0.50f, 0.20f, 0.18f, 0.72f));
+                break;
+            case 5:
+                CreatePortraitPart("PortraitEarringLeft", root, new Vector2(-22f, -2f), new Vector2(4f, 7f), new Color(0.95f, 0.76f, 0.22f, 1f));
+                CreatePortraitPart("PortraitEarringRight", root, new Vector2(22f, -2f), new Vector2(4f, 7f), new Color(0.95f, 0.76f, 0.22f, 1f));
+                if (gender == WorkerGender.Female)
+                {
+                    CreatePortraitPart("PortraitHairClip", root, new Vector2(18f, 18f), new Vector2(8f, 4f), Color.Lerp(hair, Color.white, 0.35f));
+                }
                 break;
         }
     }

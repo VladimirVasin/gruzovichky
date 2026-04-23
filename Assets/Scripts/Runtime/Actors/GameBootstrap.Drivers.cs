@@ -59,6 +59,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.BusFinalWalkPhase = DriverRescuePhase.None;
         driver.BusFinalTargetWorld = Vector3.zero;
         driver.BusTravelReason = string.Empty;
+        driver.BusRideFareExempt = false;
     }
 
     private static int EstimateGridDistance(Vector2Int a, Vector2Int b)
@@ -135,7 +136,8 @@ public partial class GameBootstrap : MonoBehaviour
         Vector3 startPosition,
         Vector3 finalTargetWorld,
         DriverRescuePhase finalWalkPhase,
-        string reason)
+        string reason,
+        bool fareExempt = false)
     {
         if (driver == null || driver.DriverObject == null)
         {
@@ -153,14 +155,78 @@ public partial class GameBootstrap : MonoBehaviour
         driver.BusFinalWalkPhase = finalWalkPhase;
         driver.BusFinalTargetWorld = finalTargetWorld;
         driver.BusTravelReason = reason ?? string.Empty;
+        driver.BusRideFareExempt = fareExempt;
         driver.WalkPhase = DriverRescuePhase.WalkToLocalBusStop;
         driver.WalkTargetWorld = waitPoint;
         driver.WalkAnimationTime = 0f;
         BuildDriverWalkPath(driver, startPosition, waitPoint);
         SessionDebugLogger.Log(
             "BUS_PASSENGER",
-            $"{driver.DriverName} chose local bus for {driver.BusTravelReason}: Stop #{originStop.StopNumber} -> Stop #{destinationStop.StopNumber}, finalPhase={finalWalkPhase}, finalCell=({WorldToCell(finalTargetWorld).x},{WorldToCell(finalTargetWorld).y}).");
+            $"{driver.DriverName} chose local bus for {driver.BusTravelReason}: Stop #{originStop.StopNumber} -> Stop #{destinationStop.StopNumber}, finalPhase={finalWalkPhase}, finalCell=({WorldToCell(finalTargetWorld).x},{WorldToCell(finalTargetWorld).y}), fareExempt={(fareExempt ? "yes" : "no")}.");
         return true;
+    }
+
+    private static WarehouseResourceType GetWarehouseResourceTypeForLocation(LocationType locationType)
+    {
+        return locationType switch
+        {
+            LocationType.GasStation => WarehouseResourceType.Fuel,
+            LocationType.Bar => WarehouseResourceType.Alcohol,
+            LocationType.Canteen => WarehouseResourceType.Food,
+            _ => WarehouseResourceType.Food
+        };
+    }
+
+    private static string GetWarehouseResourceTypeLabel(WarehouseResourceType resourceType)
+    {
+        return resourceType switch
+        {
+            WarehouseResourceType.Fuel => "Fuel",
+            WarehouseResourceType.Alcohol => "Alcohol",
+            WarehouseResourceType.Food => "Food",
+            _ => "Resource"
+        };
+    }
+
+    private void ClearWarehouseDeliveryCargo(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return;
+        }
+
+        driver.WarehouseDeliveryResourceType = default;
+        driver.WarehouseDeliveryAmount = 0;
+        driver.IsCarryingWarehouseDelivery = false;
+    }
+
+    private void RefundWarehouseDeliveryCargoToWarehouse(DriverAgent driver)
+    {
+        if (driver == null ||
+            !driver.IsCarryingWarehouseDelivery ||
+            driver.WarehouseDeliveryAmount <= 0 ||
+            !locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse))
+        {
+            return;
+        }
+
+        switch (driver.WarehouseDeliveryResourceType)
+        {
+            case WarehouseResourceType.Fuel:
+                warehouse.FuelStored = Mathf.Min(warehouse.FuelStored + driver.WarehouseDeliveryAmount, WarehouseMaxFuelStorage);
+                break;
+            case WarehouseResourceType.Alcohol:
+                warehouse.AlcoholStored = Mathf.Min(warehouse.AlcoholStored + driver.WarehouseDeliveryAmount, WarehouseMaxAlcoholStorage);
+                break;
+            case WarehouseResourceType.Food:
+                warehouse.FoodStored = Mathf.Min(warehouse.FoodStored + driver.WarehouseDeliveryAmount, WarehouseMaxFoodStorage);
+                break;
+        }
+
+        SessionDebugLogger.Log(
+            "WAREHOUSE",
+            $"{driver.DriverName} returned {GetWarehouseResourceTypeLabel(driver.WarehouseDeliveryResourceType)} x{driver.WarehouseDeliveryAmount} to Warehouse after delivery interruption.");
+        ClearWarehouseDeliveryCargo(driver);
     }
 
     private void SetDriverDutyMode(DriverAgent driver, DriverDutyMode dutyMode)
@@ -505,6 +571,11 @@ public partial class GameBootstrap : MonoBehaviour
 
         bool onDeliveryWalk = driver.WalkPhase == DriverRescuePhase.WarehouseDeliveryToService ||
                               driver.WalkPhase == DriverRescuePhase.WarehouseDeliveryReturn;
+        bool onWarehouseDeliveryBusTrip =
+            driver.WarehouseDeliveryTarget.HasValue &&
+            (driver.WalkPhase == DriverRescuePhase.WalkToLocalBusStop ||
+             driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop ||
+             driver.WalkPhase == DriverRescuePhase.RidingLocalBus);
 
         if (driver.IsInsideBuilding && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData building))
         {
@@ -525,15 +596,37 @@ public partial class GameBootstrap : MonoBehaviour
 
             StartWorkerLifeCycleAfterWork(driver, exitPos, building.Label);
         }
-        else if (onDeliveryWalk)
+        else if (onDeliveryWalk || onWarehouseDeliveryBusTrip)
         {
-            // Shift ended mid-delivery: cancel delivery, walk to motel from current position
+            // Shift ended mid-delivery: cancel delivery, restore cargo to Warehouse if still carried, then go to after-work flow
             if (locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData deliveryBuilding))
                 deliveryBuilding.Workers = Mathf.Max(0, deliveryBuilding.Workers - 1);
 
+            bool wasRidingLocalBus = driver.WalkPhase == DriverRescuePhase.RidingLocalBus;
+            if (wasRidingLocalBus && localBusRoute != null)
+            {
+                localBusRoute.PassengerCount = Mathf.Max(0, localBusRoute.PassengerCount - 1);
+            }
+
+            if (!driver.DriverObject.activeSelf)
+            {
+                driver.DriverObject.SetActive(true);
+                if (wasRidingLocalBus && localBusRoute?.RootTransform != null)
+                {
+                    driver.DriverObject.transform.position = localBusRoute.RootTransform.position;
+                }
+            }
+
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.WalkPath.Clear();
+            driver.WalkWaypointIndex = 0;
+            driver.WalkAnimationTime = 0f;
+            ApplyDriverPose(driver, 0f, 0f);
             driver.IsInsideBuilding = false;
             driver.IsOnActiveShift = false;
             driver.IsShiftSalaryPending = true;
+            RefundWarehouseDeliveryCargoToWarehouse(driver);
+            ResetWorkerLocalBusTripState(driver);
             driver.WarehouseDeliveryTarget = null;
             PayDriverSalary(driver);
 
@@ -606,7 +699,8 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        // Deduct resource from Warehouse
+        // Deduct resource from Warehouse and remember the carried unit on the worker
+        WarehouseResourceType resourceType = GetWarehouseResourceTypeForLocation(deliveryTarget.Value);
         switch (deliveryTarget.Value)
         {
             case LocationType.GasStation: warehouse.FuelStored--;    break;
@@ -615,6 +709,9 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         driver.WarehouseDeliveryTarget = deliveryTarget;
+        driver.WarehouseDeliveryResourceType = resourceType;
+        driver.WarehouseDeliveryAmount = 1;
+        driver.IsCarryingWarehouseDelivery = true;
         driver.IsInsideBuilding = false;
 
         // Spawn visible at Warehouse anchor
@@ -628,10 +725,25 @@ public partial class GameBootstrap : MonoBehaviour
 
         Vector3 targetPos = GetCellCenter(locations[deliveryTarget.Value].Anchor);
         targetPos.y += 0.05f;
+        ResetWorkerLocalBusTripState(driver);
+        if (TryStartWorkerLocalBusTrip(
+                driver,
+                spawnPos,
+                targetPos,
+                DriverRescuePhase.WarehouseDeliveryToService,
+                $"{locations[deliveryTarget.Value].Label} delivery",
+                true))
+        {
+            SessionDebugLogger.Log(
+                "WAREHOUSE",
+                $"{driver.DriverName} started bus-assisted delivery of {GetWarehouseResourceTypeLabel(resourceType)} x1 to {locations[deliveryTarget.Value].Label}.");
+            return;
+        }
+
         driver.WalkTargetWorld = targetPos;
         driver.WalkPhase = DriverRescuePhase.WarehouseDeliveryToService;
         BuildDriverWalkPath(driver, spawnPos, targetPos);
-        SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} started delivery of {deliveryTarget.Value} resource to {locations[deliveryTarget.Value].Label}.");
+        SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} started walking delivery of {GetWarehouseResourceTypeLabel(resourceType)} x1 to {locations[deliveryTarget.Value].Label}.");
     }
 
     private void UpdateWorkerLifeCycleDailyState(DriverAgent driver)
@@ -754,7 +866,11 @@ public partial class GameBootstrap : MonoBehaviour
                 return ContinueWorkerLifeCycle(driver, startPosition);
 
             case WorkerLifeGoal.Leisure:
+                bool isAlcoholic = HasWorkerPerk(driver, WorkerPerkKind.Alcoholism);
                 bool isGambler = HasWorkerPerk(driver, WorkerPerkKind.Gambler);
+                if (isAlcoholic &&
+                    TryStartWorkerServiceVisit(driver, LocationType.Bar, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToBar, WorkerLeisureDuration, startPosition))
+                    return true;
                 // Gambler always picks GamblingHall if it exists (even broke вЂ” enters but skips bet)
                 if (isGambler && locations.ContainsKey(LocationType.GamblingHall) &&
                     TryStartWorkerServiceVisit(driver, LocationType.GamblingHall, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToGamblingHall, WorkerGamblingHallDuration, startPosition))

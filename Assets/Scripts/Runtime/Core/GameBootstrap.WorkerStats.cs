@@ -12,8 +12,9 @@ public partial class GameBootstrap
     private const float WorkerSkillTooltipHeight = 86f;
     private const float WorkerEffectTooltipHeight = 220f;
     private const int WorkerEffectHudRowCount = 8;
-    private const int WorkerPerkHudRowCount = 2;
-    private const float WorkerAlcoholismPerkChance = 0.35f;
+    private const int WorkerPerkHudRowCount = 5;
+    private const int WorkerNegativePerkCount = 1;
+    private const int WorkerPositivePerkCount = 4;
     private static readonly WorkerPerkKind[] NegativePerks = { WorkerPerkKind.Alcoholism, WorkerPerkKind.Gambler };
     private static readonly WorkerPerkKind[] PositivePerks =
     {
@@ -21,11 +22,16 @@ public partial class GameBootstrap
         WorkerPerkKind.Handyman, WorkerPerkKind.Socialite, WorkerPerkKind.Frugal, WorkerPerkKind.Quicklearner
     };
     private const string WorkerDrunkEffectId = "drunk";
+    private const string WorkerHangoverEffectId = "hangover";
     private const float WorkerDrunkEffectDurationHours = 4f;
     private const float WorkerAlcoholicDrunkEffectDurationHours = 6f;
     private const int WorkerDrunkDrivingDelta = -5;
     private const int WorkerDrunkProductionDelta = 1;
     private const int WorkerDrunkLogisticsDelta = 1;
+    private const int WorkerHangoverDrivingDelta = -6;
+    private const int WorkerHangoverStaminaDelta = -3;
+    private const int WorkerHangoverProductionDelta = -2;
+    private const int WorkerHangoverLogisticsDelta = -2;
     private const string WorkerFedEffectId = "fed";
     private const float WorkerFedEffectDurationHours = 6f;
     private const int WorkerFedStaminaDelta = 2;
@@ -97,9 +103,24 @@ public partial class GameBootstrap
         if (driver == null || rng == null) return;
 
         driver.Perks.Clear();
-        if (rng.NextDouble() < WorkerAlcoholismPerkChance)
+
+        int negativeCount = Mathf.Min(WorkerNegativePerkCount, NegativePerks.Length);
+        int positiveCount = Mathf.Min(WorkerPositivePerkCount, PositivePerks.Length);
+
+        WorkerPerkKind[] negativePool = (WorkerPerkKind[])NegativePerks.Clone();
+        WorkerPerkKind[] positivePool = (WorkerPerkKind[])PositivePerks.Clone();
+
+        ShuffleWorkerPerkPool(negativePool, rng);
+        ShuffleWorkerPerkPool(positivePool, rng);
+
+        for (int i = 0; i < negativeCount; i++)
         {
-            driver.Perks.Add(WorkerPerkKind.Alcoholism);
+            driver.Perks.Add(negativePool[i]);
+        }
+
+        for (int i = 0; i < positiveCount; i++)
+        {
+            driver.Perks.Add(positivePool[i]);
         }
     }
 
@@ -112,10 +133,23 @@ public partial class GameBootstrap
             return;
         }
 
-        if (driver.Perks.Count == 0)
+        int expectedPerkCount = Mathf.Min(WorkerNegativePerkCount, NegativePerks.Length) +
+                                Mathf.Min(WorkerPositivePerkCount, PositivePerks.Length);
+        if (driver.Perks.Count != expectedPerkCount)
         {
             int seed = StableWorkerStatsHash(driver.DriverName) ^ (driver.DriverId * 19349663);
             AssignWorkerPerks(driver, new System.Random(seed));
+        }
+    }
+
+    private static void ShuffleWorkerPerkPool(WorkerPerkKind[] perks, System.Random rng)
+    {
+        if (perks == null || rng == null) return;
+
+        for (int i = perks.Length - 1; i > 0; i--)
+        {
+            int swapIndex = rng.Next(i + 1);
+            (perks[i], perks[swapIndex]) = (perks[swapIndex], perks[i]);
         }
     }
 
@@ -139,6 +173,7 @@ public partial class GameBootstrap
     private void ApplyWorkerDrunkEffect(DriverAgent driver)
     {
         bool hasAlcoholism = HasWorkerPerk(driver, WorkerPerkKind.Alcoholism);
+        RemoveWorkerEffect(driver, WorkerHangoverEffectId);
         AddOrRefreshWorkerEffect(
             driver,
             WorkerDrunkEffectId,
@@ -154,6 +189,22 @@ public partial class GameBootstrap
             drivingDelta: hasAlcoholism ? WorkerDrunkDrivingDelta - 1 : WorkerDrunkDrivingDelta,
             productionDelta: hasAlcoholism ? WorkerDrunkProductionDelta + 1 : WorkerDrunkProductionDelta,
             logisticsDelta: hasAlcoholism ? WorkerDrunkLogisticsDelta + 1 : WorkerDrunkLogisticsDelta);
+    }
+
+    private void ApplyWorkerHangoverEffect(DriverAgent driver)
+    {
+        AddOrRefreshWorkerEffect(
+            driver,
+            WorkerHangoverEffectId,
+            "Hangover",
+            "\u041f\u043e\u0445\u043c\u0435\u043b\u044c\u0435",
+            "After Drunk wears off, the worker crashes hard. The debuff stays until they visit the Bar again.",
+            "\u041f\u043e\u0441\u043b\u0435 \u043e\u043f\u044c\u044f\u043d\u0435\u043d\u0438\u044f \u0440\u0430\u0431\u043e\u0442\u043d\u0438\u043a\u0430 \u043d\u0430\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u0436\u0451\u0441\u0442\u043a\u0438\u043c \u043f\u043e\u0445\u043c\u0435\u043b\u044c\u0435\u043c. \u042d\u0444\u0444\u0435\u043a\u0442 \u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044f \u0434\u043e \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0433\u043e \u043f\u043e\u0445\u043e\u0434\u0430 \u0432 \u0411\u0430\u0440.",
+            float.PositiveInfinity,
+            drivingDelta: WorkerHangoverDrivingDelta,
+            staminaDelta: WorkerHangoverStaminaDelta,
+            productionDelta: WorkerHangoverProductionDelta,
+            logisticsDelta: WorkerHangoverLogisticsDelta);
     }
 
     private void ApplyWorkerFedEffect(DriverAgent driver)
@@ -336,6 +387,10 @@ public partial class GameBootstrap
             {
                 SessionDebugLogger.Log("WORKER_EFFECT", $"{driver.DriverName} effect expired: {effect.EffectId}.");
                 driver.ActiveEffects.RemoveAt(i);
+                if (effect.EffectId == WorkerDrunkEffectId && HasWorkerPerk(driver, WorkerPerkKind.Alcoholism))
+                {
+                    ApplyWorkerHangoverEffect(driver);
+                }
             }
         }
 
@@ -553,6 +608,24 @@ public partial class GameBootstrap
         return driver != null && driver.Perks.Contains(perk);
     }
 
+    private static bool HasWorkerEffect(DriverAgent driver, string effectId)
+    {
+        if (driver == null || string.IsNullOrWhiteSpace(effectId) || driver.ActiveEffects.Count == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < driver.ActiveEffects.Count; i++)
+        {
+            if (driver.ActiveEffects[i]?.EffectId == effectId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string GetWorkerPerkDisplayName(WorkerPerkKind perk, bool ru)
     {
         return perk switch
@@ -575,17 +648,17 @@ public partial class GameBootstrap
     {
         return perk switch
         {
-            WorkerPerkKind.Alcoholism   => ru ? "РђР»РєРѕРіРѕР»РёР·Рј"     : "Alcoholism",
-            WorkerPerkKind.Gambler      => ru ? "Р›СѓРґРѕРјР°РЅ"        : "Gambler",
-            WorkerPerkKind.Nightowl     => ru ? "РЎРѕРІР°"           : "Night Owl",
-            WorkerPerkKind.Ironman      => ru ? "Р–РµР»РµР·РЅС‹Р№"       : "Iron Man",
-            WorkerPerkKind.Motorhead    => ru ? "РђРІС‚РѕР»СЋР±РёС‚РµР»СЊ"   : "Motorhead",
-            WorkerPerkKind.Trader       => ru ? "Р”РµР»РµС†"          : "Trader",
-            WorkerPerkKind.Handyman     => ru ? "РњР°СЃС‚РµСЂ"         : "Handyman",
-            WorkerPerkKind.Socialite    => ru ? "РћР±С‰РёС‚РµР»СЊРЅС‹Р№"    : "Socialite",
-            WorkerPerkKind.Frugal       => ru ? "Р­РєРѕРЅРѕРјРЅС‹Р№"      : "Frugal",
-            WorkerPerkKind.Quicklearner => ru ? "РЎРјС‹С€Р»С‘РЅС‹Р№"      : "Quick Learner",
-            _ => ru ? "РџРµСЂРє" : "Perk"
+            WorkerPerkKind.Alcoholism   => ru ? "Алкоголизм" : "Alcoholism",
+            WorkerPerkKind.Gambler      => ru ? "Лудоман" : "Gambler",
+            WorkerPerkKind.Nightowl     => ru ? "Сова" : "Night Owl",
+            WorkerPerkKind.Ironman      => ru ? "Железный" : "Iron Man",
+            WorkerPerkKind.Motorhead    => ru ? "Автолюбитель" : "Motorhead",
+            WorkerPerkKind.Trader       => ru ? "Делец" : "Trader",
+            WorkerPerkKind.Handyman     => ru ? "Мастер" : "Handyman",
+            WorkerPerkKind.Socialite    => ru ? "Общительный" : "Socialite",
+            WorkerPerkKind.Frugal       => ru ? "Экономный" : "Frugal",
+            WorkerPerkKind.Quicklearner => ru ? "Смышлёный" : "Quick Learner",
+            _ => ru ? "Перк" : "Perk"
         };
     }
 
@@ -625,36 +698,36 @@ public partial class GameBootstrap
         return perk switch
         {
             WorkerPerkKind.Alcoholism => ru
-                ? "\u0420\u0430\u043d\u0434\u043e\u043c\u043d\u044b\u0439 \u043f\u0435\u0440\u043a. \u041f\u043e\u0441\u043b\u0435 \u0411\u0430\u0440\u0430 \u041e\u043f\u044c\u044f\u043d\u0435\u043d\u0438\u0435 \u0434\u043b\u0438\u0442\u0441\u044f \u0434\u043e\u043b\u044c\u0448\u0435: \u0432\u043e\u0436\u0434\u0435\u043d\u0438\u0435 \u043f\u0430\u0434\u0430\u0435\u0442 \u0441\u0438\u043b\u044c\u043d\u0435\u0435, \u0437\u0430\u0442\u043e \u043e\u0431\u044b\u0447\u043d\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430 \u043d\u0430 \u0432\u0440\u0435\u043c\u044f \u0443\u0441\u0438\u043b\u0438\u0432\u0430\u0435\u0442\u0441\u044f."
-                : "Random perk. After visiting the Bar, Drunk lasts longer: driving drops harder, while ordinary work gets a stronger temporary boost.",
+                ? "\u041f\u043e\u0441\u043b\u0435 \u0411\u0430\u0440\u0430 \u043e\u043f\u044c\u044f\u043d\u0435\u043d\u0438\u0435 \u0434\u043b\u0438\u0442\u0441\u044f \u0434\u043e\u043b\u044c\u0448\u0435 \u0438 \u0434\u0430\u0451\u0442 \u0431\u043e\u043b\u044c\u0448\u0435 \u0431\u0430\u0444\u043e\u0432 \u043a \u043e\u0431\u044b\u0447\u043d\u043e\u0439 \u0440\u0430\u0431\u043e\u0442\u0435. \u041f\u043e\u0441\u043b\u0435 \u0441\u043f\u0430\u0434\u0430 \u043d\u0430\u0441\u0442\u0443\u043f\u0430\u0435\u0442 \u0436\u0451\u0441\u0442\u043a\u043e\u0435 \u043f\u043e\u0445\u043c\u0435\u043b\u044c\u0435 \u0434\u043e \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0433\u043e \u043f\u043e\u0445\u043e\u0434\u0430 \u0432 \u0411\u0430\u0440. \u0414\u043b\u044f \u0434\u043e\u0441\u0443\u0433\u0430 \u0442\u0430\u043a\u043e\u0439 \u0440\u0430\u0431\u043e\u0442\u043d\u0438\u043a \u0432\u0441\u0435\u0433\u0434\u0430 \u0442\u044f\u043d\u0435\u0442\u0441\u044f \u0438\u043c\u0435\u043d\u043d\u043e \u0432 \u0411\u0430\u0440."
+                : "After visiting the Bar, Drunk lasts longer and gives stronger boosts to ordinary work. When it wears off, a harsh Hangover remains until the next Bar visit. For leisure, this worker always prefers the Bar.",
             WorkerPerkKind.Gambler => ru
-                ? "Р’СЃРµРіРґР° РІС‹Р±РёСЂР°РµС‚ РРіСЂРѕРІС‹Рµ Р°РІС‚РѕРјР°С‚С‹. РЎС‚Р°РІРёС‚ РІРµСЃСЊ Р±Р°Р»Р°РЅСЃ, РґРµР»Р°РµС‚ 2 СЃС‚Р°РІРєРё Р·Р° РІРёР·РёС‚. Р‘РѕР»СЊС€РёР№ РІС‹РёРіСЂС‹С€ (x12/x6), РјРµРЅСЊС€РёР№ РїСЂРѕРёРіСЂС‹С€ (20% РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ). РџРѕСЃР»Рµ РїСЂРѕРёРіСЂС‹С€Р° СЃР»РµРґСѓСЋС‰Р°СЏ СЃС‚Р°РІРєР° РІС‹С€Рµ."
+                ? "Всегда выбирает Игровые автоматы. Ставит весь баланс, делает 2 ставки за визит. Больший выигрыш (x12/x6), меньший проигрыш (20% возвращается). После проигрыша следующая ставка выше."
                 : "Always picks Gambling Hall. Bets full balance, makes 2 bets per visit. Higher jackpot (x12/x6), smaller losses (20% returned). Doubles down after a loss.",
             WorkerPerkKind.Nightowl => ru
-                ? "[Р—Р°РіР»СѓС€РєР°] РќРѕС‡РЅР°СЏ РЎРѕРІР°. Р Р°Р±РѕС‚Р°РµС‚ СЌС„С„РµРєС‚РёРІРЅРµРµ РІ РЅРѕС‡РЅС‹Рµ СЃРјРµРЅС‹ вЂ” Р±РѕРЅСѓСЃ Рє РІРѕР¶РґРµРЅРёСЋ Рё РїСЂРѕРёР·РІРѕРґСЃС‚РІСѓ РІ С‚С‘РјРЅРѕРµ РІСЂРµРјСЏ СЃСѓС‚РѕРє."
-                : "[Stub] Night Owl. Works better during night shifts вЂ” driving and production bonus in the dark hours.",
+                ? "[Заглушка] Ночная Сова. Работает эффективнее в ночные смены — бонус к вождению и производству в тёмное время суток."
+                : "[Stub] Night Owl. Works better during night shifts — driving and production bonus in the dark hours.",
             WorkerPerkKind.Ironman => ru
-                ? "[Р—Р°РіР»СѓС€РєР°] Р–РµР»РµР·РЅС‹Р№. РњРµРґР»РµРЅРЅРµРµ РЅР°РєР°РїР»РёРІР°РµС‚ СѓСЃС‚Р°Р»РѕСЃС‚СЊ Рё СЂРµР¶Рµ РЅСѓР¶РґР°РµС‚СЃСЏ РІРѕ СЃРЅРµ. РќСѓР¶РґС‹ СЃРЅРёР¶Р°СЋС‚СЃСЏ РјРµРґР»РµРЅРЅРµРµ."
+                ? "[Заглушка] Железный. Медленнее накапливает усталость и реже нуждается во сне. Нужды снижаются медленнее."
                 : "[Stub] Iron Man. Accumulates fatigue slower and needs less sleep. Need timers tick slower.",
             WorkerPerkKind.Motorhead => ru
-                ? "[Р—Р°РіР»СѓС€РєР°] РђРІС‚РѕР»СЋР±РёС‚РµР»СЊ. Р‘РѕРЅСѓСЃ Рє РЅР°РІС‹РєСѓ РІРѕР¶РґРµРЅРёСЏ. Р’ Р±СѓРґСѓС‰РµРј вЂ” СЃРЅРёР¶РµРЅРёРµ СЂР°СЃС…РѕРґР° С‚РѕРїР»РёРІР° Рё СѓСЃРєРѕСЂРµРЅРЅРѕРµ РѕР±СЃР»СѓР¶РёРІР°РЅРёРµ РіСЂСѓР·РѕРІРёРєР°."
+                ? "[Заглушка] Автолюбитель. Бонус к навыку вождения. В будущем — снижение расхода топлива и ускоренное обслуживание грузовика."
                 : "[Stub] Motorhead. Driving skill bonus. Future: reduced fuel consumption and faster truck maintenance.",
             WorkerPerkKind.Trader => ru
-                ? "[Р—Р°РіР»СѓС€РєР°] Р”РµР»РµС†. РўРѕСЂРіРѕРІС‹Рµ СЂРµР№СЃС‹ РїСЂРёРЅРѕСЃСЏС‚ Р±РѕР»СЊС€Рµ РїСЂРёР±С‹Р»Рё. Р’ Р±СѓРґСѓС‰РµРј вЂ” Р±РѕРЅСѓСЃ Рє Logistics Рё СЃРЅРёР¶РµРЅРёРµ Р·Р°РєСѓРїРѕС‡РЅРѕР№ С†РµРЅС‹."
+                ? "[Заглушка] Делец. Торговые рейсы приносят больше прибыли. В будущем — бонус к логистике и снижение закупочной цены."
                 : "[Stub] Trader. Trade runs yield more profit. Future: Logistics bonus and lower purchase prices.",
             WorkerPerkKind.Handyman => ru
-                ? "[Р—Р°РіР»СѓС€РєР°] РњР°СЃС‚РµСЂ. РЈСЃРєРѕСЂСЏРµС‚ РїСЂРѕРёР·РІРѕРґСЃС‚РІРѕ РЅР° РІСЃРµС… Р·РґР°РЅРёСЏС…. Р‘РѕРЅСѓСЃ Рє Production Рё СЃРѕРєСЂР°С‰РµРЅРёРµ РІСЂРµРјРµРЅРё РїСЂРѕСЃС‚РѕСЏ."
+                ? "[Заглушка] Мастер. Ускоряет производство на всех зданиях. Бонус к производству и сокращение времени простоя."
                 : "[Stub] Handyman. Speeds up production at all buildings. Production bonus and reduced downtime.",
             WorkerPerkKind.Socialite => ru
-                ? "[Р—Р°РіР»СѓС€РєР°] РћР±С‰РёС‚РµР»СЊРЅС‹Р№. Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РїРѕС‚СЂРµР±РЅРѕСЃС‚СЊ РІ РґРѕСЃСѓРіРµ Р±С‹СЃС‚СЂРµРµ. Р‘Р°СЂ Рё РґСЂСѓРіРёРµ Р·Р°РІРµРґРµРЅРёСЏ РґР°СЋС‚ Р±РѕР»СЊС€РёР№ СЌС„С„РµРєС‚."
+                ? "[Заглушка] Общительный. Восстанавливает потребность в досуге быстрее. Бар и другие заведения дают больший эффект."
                 : "[Stub] Socialite. Leisure need recovers faster. Bar and service buildings give stronger effects.",
             WorkerPerkKind.Frugal => ru
-                ? "[Р—Р°РіР»СѓС€РєР°] Р­РєРѕРЅРѕРјРЅС‹Р№. РњРµРЅСЊС€Рµ С‚СЂР°С‚РёС‚ РЅР° СЃРµСЂРІРёСЃРЅС‹Рµ Р·РґР°РЅРёСЏ Рё Р±С‹С‚РѕРІС‹Рµ РЅСѓР¶РґС‹. РЎРєРёРґРєР° РЅР° РІСЃРµ СѓСЃР»СѓРіРё."
+                ? "[Заглушка] Экономный. Меньше тратит на сервисные здания и бытовые нужды. Скидка на все услуги."
                 : "[Stub] Frugal. Spends less at service buildings. Discount on all service fees.",
             WorkerPerkKind.Quicklearner => ru
-                ? "[Р—Р°РіР»СѓС€РєР°] РЎРјС‹С€Р»С‘РЅС‹Р№. Р‘С‹СЃС‚СЂРµРµ РїСЂРѕРєР°С‡РёРІР°РµС‚ РЅР°РІС‹РєРё С‡РµСЂРµР· РѕРїС‹С‚. Р’ Р±СѓРґСѓС‰РµРј вЂ” СѓСЃРєРѕСЂРµРЅРЅС‹Р№ СЂРѕСЃС‚ РІСЃРµС… С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРє."
+                ? "[Заглушка] Смышлёный. Быстрее прокачивает навыки через опыт. В будущем — ускоренный рост всех характеристик."
                 : "[Stub] Quick Learner. Gains skills faster through experience. Future: accelerated stat growth.",
-            _ => ru ? "РџРѕСЃС‚РѕСЏРЅРЅР°СЏ С‡РµСЂС‚Р° СЂР°Р±РѕС‡РµРіРѕ." : "A permanent worker trait."
+            _ => ru ? "Постоянная черта рабочего." : "A permanent worker trait."
         };
     }
 
@@ -678,6 +751,11 @@ public partial class GameBootstrap
 
     private static string FormatWorkerEffectTime(float remainingHours, bool ru)
     {
+        if (float.IsInfinity(remainingHours))
+        {
+            return "\u221e";
+        }
+
         int minutes = Mathf.Max(1, Mathf.CeilToInt(remainingHours * 60f));
         if (minutes >= 60)
         {

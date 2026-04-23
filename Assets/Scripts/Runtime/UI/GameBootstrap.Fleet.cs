@@ -149,9 +149,9 @@ public partial class GameBootstrap
             float x = bar.x + MenuBtnGap;
             MenuBtn("Fleet", "Fleet", ref isFleetPanelOpen, x, IsFleetTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Workers", "Workers", ref isDriversPanelOpen, x, IsWorkersTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Shifts", "Assignments", ref isShiftsPanelOpen, x, IsShiftsTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Shifts", "Roles", ref isShiftsPanelOpen, x, IsShiftsTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Trade", "Trade", ref isEconomyPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Trade", "Economy", ref isEconomyPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Building", "Building", ref isBuildPanelOpen, x, IsBuildMenuTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Map", "Map", ref isWorldMapPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("States", "States", ref isStatesPanelOpen, x);

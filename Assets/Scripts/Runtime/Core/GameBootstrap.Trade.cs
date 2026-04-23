@@ -1103,6 +1103,14 @@ public partial class GameBootstrap
         tradeDispatchStatusText = $"{completionVerb} {resourceLabel} x{activeTradeRun.Quantity}";
         ApplyWorkerRoadFatigueEffect(driver);
         SessionDebugLogger.Log("TRADE", $"{driver.DriverName} completed trade run with {truckAgent.DisplayName}.");
+        PushFeedEvent(
+            activeTradeRun.OrderType == TradeOrderType.Buy
+                ? $"Trade run complete: bought {resourceLabel} x{activeTradeRun.Quantity}."
+                : $"Trade run complete: sold {resourceLabel} x{activeTradeRun.Quantity} for ${activeTradeRun.Price}.",
+            activeTradeRun.OrderType == TradeOrderType.Buy
+                ? $"Торговый рейс завершён: куплено {L(resourceLabel)} x{activeTradeRun.Quantity}."
+                : $"Торговый рейс завершён: продано {L(resourceLabel)} x{activeTradeRun.Quantity} за ${activeTradeRun.Price}.",
+            FeedEventType.Money);
         StartDriverMotelRest(truckAgent, driver);
         activeTradeRun = null;
         RemoveCompletedTradeDispatchLedgerEntry(completedOrderType, completedResourceType, completedQuantity);

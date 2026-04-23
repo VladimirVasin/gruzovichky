@@ -4,7 +4,15 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
-    private static readonly string[] SlotSymbols = { "7", "в…", "в™¦", "в™Ґ", "в™Ј", "в™ " };
+    private static readonly string[] SlotSymbols =
+    {
+        "7",
+        "\u2605",
+        "\u2666",
+        "\u2665",
+        "\u2663",
+        "\u2660"
+    };
 
     private enum GamblingSlotPhase { Idle, ShowBet, Spinning, Done, ResultPause }
 
@@ -513,6 +521,7 @@ public partial class GameBootstrap
     private void UpdateGamblingReels(ServiceWorkerSlotUi slot, DriverAgent d)
     {
         bool hasBet = d.GamblingBet > 0;
+        float uiDelta = Time.unscaledDeltaTime * Mathf.Max(0f, gameSpeedMultiplier);
         slot.SlotLayout.preferredHeight = hasBet ? 90f : 54f;
 
         if (!hasBet)
@@ -537,7 +546,7 @@ public partial class GameBootstrap
             slot.ReelRow.gameObject.SetActive(false);
         }
 
-        slot.SpinTimer += Time.unscaledDeltaTime;
+        slot.SpinTimer += uiDelta;
 
         switch (slot.SlotPhase)
         {
@@ -551,7 +560,7 @@ public partial class GameBootstrap
                 break;
 
             case GamblingSlotPhase.Spinning:
-                slot.SpinCycleTimer -= Time.unscaledDeltaTime;
+                slot.SpinCycleTimer -= uiDelta;
                 if (slot.SpinCycleTimer <= 0f)
                 {
                     slot.SpinCycleTimer = 0.26f;
@@ -578,7 +587,7 @@ public partial class GameBootstrap
                 break;
 
             case GamblingSlotPhase.Done:
-                slot.ResultDisplayTimer -= Time.unscaledDeltaTime;
+                slot.ResultDisplayTimer -= uiDelta;
                 // Trigger second bet when result has been shown long enough
                 if (slot.ResultDisplayTimer <= 0f && d.GamblingBetCount < 2 && d.IdleActivityTimer > 12f && d.Money >= WorkerGamblingMinBet)
                 {
@@ -600,7 +609,10 @@ public partial class GameBootstrap
             slot.ReelStopped[r]     = true;
             slot.ReelTexts[r].text  = slot.FinalReelChars[r];
             slot.ReelTexts[r].color = GetReelResultColor(multiplier);
-            PlayUiSound(uiPanelCloseClip, 0.55f); // reel stop thump
+            if (IsGamblingHallQuickHudVisible())
+            {
+                PlayUiSound(uiPanelCloseClip, 0.55f); // reel stop thump
+            }
             return true;
         }
         return false;
@@ -628,21 +640,37 @@ public partial class GameBootstrap
             SessionDebugLogger.Log("NEEDS", $"{d.DriverName} gambling resolved: net={d.GamblingPayout - d.GamblingBet:+#;-#;0}, balance=${d.Money}.");
         }
 
+        bool hudVisible = IsGamblingHallQuickHudVisible();
+
         if (d.GamblingMultiplier == 0)
         {
-            PlayUiSound(slotLoseClip, 0.88f);
-            hudFlashColor    = new Color(0.85f, 0.12f, 0.08f);
-            hudFlashDuration = hudFlashTimer = 2.2f;
-            hudShakeDuration = hudShakeTimer = 0.65f;
+            if (hudVisible)
+            {
+                PlayUiSound(slotLoseClip, 0.88f);
+                hudFlashColor    = new Color(0.85f, 0.12f, 0.08f);
+                hudFlashDuration = hudFlashTimer = 2.2f;
+                hudShakeDuration = hudShakeTimer = 0.65f;
+            }
         }
         else
         {
-            PlayUiSound(slotWinClip, 0.88f);
-            hudFlashColor    = d.GamblingMultiplier >= 5 ? new Color(0.05f, 0.82f, 0.18f) : new Color(0.4f, 0.75f, 1f);
-            hudFlashDuration = hudFlashTimer = 2.2f;
-            hudShakeDuration = 0f;
-            hudShakeTimer    = 0f;
+            if (hudVisible)
+            {
+                PlayUiSound(slotWinClip, 0.88f);
+                hudFlashColor    = d.GamblingMultiplier >= 5 ? new Color(0.05f, 0.82f, 0.18f) : new Color(0.4f, 0.75f, 1f);
+                hudFlashDuration = hudFlashTimer = 2.2f;
+                hudShakeDuration = 0f;
+                hudShakeTimer    = 0f;
+            }
         }
+    }
+
+    private bool IsGamblingHallQuickHudVisible()
+    {
+        return buildingQuickHud?.CanvasRoot != null &&
+               buildingQuickHud.CanvasRoot.activeSelf &&
+               selectedLocation.HasValue &&
+               selectedLocation.Value == LocationType.GamblingHall;
     }
 
     private void UpdateHudGamblingEffects()
@@ -816,7 +844,7 @@ public partial class GameBootstrap
     {
         return locationType switch
         {
-            LocationType.Parking => FormatValueLine("Parked Trucks", $"{GetParkingTruckCount()} / {MaxTruckCount}"),
+            LocationType.Parking => $"{FormatValueLine("Parked Trucks", $"{GetParkingTruckCount()} / {MaxTruckCount}")}\n{FormatValueLine(IsRussianLanguage() ? "Казна парковки" : "Parking Treasury", $"${locations[LocationType.Parking].BuildingBank}")}",
             LocationType.Forest => $"{FormatValueLine("Workers", $"{locations[LocationType.Forest].Workers} / 1")}\n{FormatValueLine("Logs", $"{locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}")}",
             LocationType.Sawmill => $"{FormatValueLine("Workers", $"{locations[LocationType.Sawmill].Workers} / 1")}\n{FormatValueLine("Logs", locations[LocationType.Sawmill].LogsStored.ToString())}\n{FormatValueLine("Boards", locations[LocationType.Sawmill].BoardsStored.ToString())}",
             LocationType.FurnitureFactory => $"{FormatValueLine("Workers", $"{locations[LocationType.FurnitureFactory].Workers} / 1")}\n{FormatValueLine("Boards", $"{locations[LocationType.FurnitureFactory].BoardsStored} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{locations[LocationType.FurnitureFactory].TextileStored} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{locations[LocationType.FurnitureFactory].FurnitureStored} / {FurnitureFactoryMaxFurnitureStorage}")}",
@@ -854,8 +882,12 @@ public partial class GameBootstrap
     private string GetGasStationQuickResourceText()
     {
         locations.TryGetValue(LocationType.GasStation, out LocationData gs);
-        int fuel = gs != null ? gs.FuelStored : 0;
-        return $"{FormatValueLine("Fuel", $"{fuel} / {GasStationMaxFuelStorage}")}\n" +
+        if (gs != null)
+        {
+            gs.FuelStored = GasStationMaxFuelStorage;
+        }
+
+        return $"{FormatValueLine("Fuel", $"{GasStationMaxFuelStorage} / {GasStationMaxFuelStorage}")}\n" +
                $"{FormatValueLine("Truck Fuel Service", "Ready")}";
     }
 
