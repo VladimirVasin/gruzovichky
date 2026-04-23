@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
@@ -58,7 +58,7 @@ public partial class GameBootstrap
         rootLayout.childForceExpandWidth  = true;
         rootLayout.childForceExpandHeight = false;
 
-        // ── Title row ──────────────────────────────────────────────────────────
+        // в”Ђв”Ђ Title row в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         RectTransform titleRow = CreateLayoutRow("TitleRow", windowRoot, 30f, 8f);
         statesScreenUi.TitleText = CreateHeaderText("Title", titleRow, font, string.Empty, 20, TextAnchor.MiddleLeft, Color.white);
         statesScreenUi.TitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -73,7 +73,7 @@ public partial class GameBootstrap
             PlayUiSound(uiPanelCloseClip, 0.82f);
         });
 
-        // ── Scroll area ────────────────────────────────────────────────────────
+        // в”Ђв”Ђ Scroll area в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         GameObject scrollObj = CreateUiObject("StatesScroll", windowRoot);
         scrollObj.AddComponent<LayoutElement>().flexibleHeight = 1f;
         scrollObj.AddComponent<RectMask2D>();
@@ -101,23 +101,23 @@ public partial class GameBootstrap
         scrollRect.movementType     = ScrollRect.MovementType.Clamped;
         scrollRect.scrollSensitivity = 30f;
 
-        // ── Skills section ─────────────────────────────────────────────────────
+        // в”Ђв”Ђ Skills section в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         statesScreenUi.SkillsSectionHeader = BuildStatesSectionHeader("SkillsHdr", contentRt, font);
         for (int i = 0; i < 4; i++)
             statesScreenUi.SkillEntries.Add(BuildStatesEntry(contentRt, font, false));
 
-        // ── Effects section — activities ───────────────────────────────────────
+        // в”Ђв”Ђ Effects section вЂ” activities в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         statesScreenUi.EffectsSectionHeader = BuildStatesSectionHeader("EffectsHdr", contentRt, font);
         statesScreenUi.ActivitiesSubheader  = BuildStatesSubheader("ActSubhdr", contentRt, font);
         for (int i = 0; i < 12; i++)
             statesScreenUi.EffectEntries.Add(BuildStatesEntry(contentRt, font, true));
 
-        // ── Effects section — needs ────────────────────────────────────────────
+        // в”Ђв”Ђ Effects section вЂ” needs в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         statesScreenUi.NeedsSubheader = BuildStatesSubheader("NeedsSubhdr", contentRt, font);
         for (int i = 0; i < 6; i++)
             statesScreenUi.EffectEntries.Add(BuildStatesEntry(contentRt, font, true));
 
-        // ── Perks section ──────────────────────────────────────────────────────
+        // в”Ђв”Ђ Perks section в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         statesScreenUi.PerksSectionHeader = BuildStatesSectionHeader("PerksHdr", contentRt, font);
         int totalPerkCount = NegativePerks.Length + PositivePerks.Length;
         for (int i = 0; i < totalPerkCount; i++)
@@ -148,14 +148,14 @@ public partial class GameBootstrap
 
         statesScreenUi.TitleText.text = ru ? "Состояния" : "States";
 
-        // ── Section headers ────────────────────────────────────────────────────
+        // в”Ђв”Ђ Section headers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         statesScreenUi.SkillsSectionHeader.text  = ru ? "Навыки" : "Skills";
         statesScreenUi.EffectsSectionHeader.text = ru ? "Эффекты" : "Effects";
-        statesScreenUi.ActivitiesSubheader.text  = ru ? "— Активности —" : "— Activities —";
-        statesScreenUi.NeedsSubheader.text       = ru ? "— Потребности —" : "— Needs —";
+        statesScreenUi.ActivitiesSubheader.text  = ru ? "- Активности -" : "- Activities -";
+        statesScreenUi.NeedsSubheader.text       = ru ? "- Потребности -" : "- Needs -";
         statesScreenUi.PerksSectionHeader.text   = ru ? "Перки" : "Perks";
 
-        // ── Skills ─────────────────────────────────────────────────────────────
+        // в”Ђв”Ђ Skills в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         FillStatesSkill(statesScreenUi.SkillEntries[0], ru,
             ru ? "Вождение" : "Driving",
             ru ? "Влияет на рейсы грузовика, вождение на маршрутах и будущее управление в гонках."
@@ -176,7 +176,7 @@ public partial class GameBootstrap
             ru ? "Влияет на склад, переноску, погрузку, разгрузку и будущие торговые рейсы."
                : "Affects Warehouse work, carrying, loading, unloading, and future trade runs.");
 
-        // ── Activity effects (indices 0–10) ────────────────────────────────────
+        // в”Ђв”Ђ Activity effects (indices 0вЂ“10) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         int ei = 0;
 
         FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
@@ -203,7 +203,7 @@ public partial class GameBootstrap
         FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
             ru ? "Пыль лесопилки" : "Sawdust",
             BuildStatesMods(ru, stamina: -1, production: +1),
-            ru ? "Ритм производства хорош. Пыль — нет."
+            ru ? "Ритм производства хорош. Пыль - нет."
                : "The production rhythm is good. The dust is not.",
             ru ? "Источник: смена на Лесопилке." : "Source: completing a Sawmill shift.");
 
@@ -231,8 +231,8 @@ public partial class GameBootstrap
         FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
             ru ? "Опьянение" : "Drunk",
             BuildStatesMods(ru, driving: -5, production: +1, logistics: +1),
-            ru ? "Вождение сильно снижено, а обычная работа чуть усилена. Алкоголик: Вождение −6, Производство +2, Логистика +2, длится дольше."
-               : "Driving is heavily reduced, while ordinary work gets a small boost. Alcoholism: Driving −6, Production +2, Logistics +2, lasts longer.",
+            ru ? "Вождение сильно снижено, а обычная работа чуть усилена. Алкоголизм делает этот эффект сильнее и дольше."
+               : "Driving is heavily reduced, while ordinary work gets a small boost. Alcoholism makes the effect stronger and longer.",
             ru ? "Источник: посещение Бара." : "Source: visiting the Bar.");
 
         FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
@@ -247,7 +247,7 @@ public partial class GameBootstrap
             BuildStatesMods(ru, driving: -1, stamina: -2),
             ru ? "Дальний межгород оставляет водителя уставшим и менее точным."
                : "A long intercity run leaves the driver tired and less steady.",
-            ru ? "Источник: завершение межгородского рейса." : "Source: completing an intercity run.");
+            ru ? "Источник: завершение междугороднего рейса." : "Source: completing an intercity run.");
 
         FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
             ru ? "Гоночный азарт" : "Race Rush",
@@ -263,7 +263,7 @@ public partial class GameBootstrap
                : "A winning streak puts a spring in the worker's step.",
             ru ? "Источник: посещение Игровых автоматов." : "Source: visiting the Gambling Hall.");
 
-        // ── Need effects (indices 12–17) ───────────────────────────────────────
+        // в”Ђв”Ђ Need effects (indices 12вЂ“17) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
             ru ? "Голод" : "Hungry",
             BuildStatesMods(ru, stamina: -2, production: -1, logistics: -1),
@@ -274,7 +274,7 @@ public partial class GameBootstrap
         FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
             ru ? "Сильный голод" : "Starving",
             BuildStatesMods(ru, driving: -1, stamina: -4, production: -2, logistics: -2),
-            ru ? "Еду игнорировали слишком долго. Работа сыплется, вождение тоже просядает."
+            ru ? "Еду игнорировали слишком долго. Работа сыплется, вождение тоже проседает."
                : "Food has been ignored too long. Work collapses; driving starts to suffer.",
             ru ? "Причина: без еды ~24 часа." : "Cause: no food for ~24 hours.");
 
@@ -302,11 +302,11 @@ public partial class GameBootstrap
         FillStatesEffect(statesScreenUi.EffectEntries[ei++], ru,
             ru ? "Выгорание" : "Burned Out",
             BuildStatesMods(ru, driving: -1, stamina: -1, production: -2, logistics: -2),
-            ru ? "Нет досуга — нет искры. Почти любое дело становится тяжелее."
+            ru ? "Нет досуга - нет искры. Почти любое дело становится тяжелее."
                : "No leisure, no spark. Almost every task becomes heavier.",
             ru ? "Причина: без отдыха ~24 часа." : "Cause: no leisure for ~24 hours.");
 
-        // ── Perks ──────────────────────────────────────────────────────────────
+        // в”Ђв”Ђ Perks в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         int pi = 0;
         foreach (WorkerPerkKind perk in NegativePerks)
         {
@@ -328,7 +328,7 @@ public partial class GameBootstrap
         }
     }
 
-    // ── Entry builders ─────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Entry builders в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private static Text BuildStatesSectionHeader(string name, Transform parent, Font font)
     {
@@ -389,7 +389,7 @@ public partial class GameBootstrap
         return entry;
     }
 
-    // ── Fill helpers ───────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Fill helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private static void FillStatesSkill(StatesEntryUi entry, bool ru, string name, string desc)
     {
@@ -435,3 +435,4 @@ public partial class GameBootstrap
         sb.Append($"{label}: <color=#{hex}>{sign}{delta}</color>");
     }
 }
+

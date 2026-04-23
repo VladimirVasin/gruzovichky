@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap : MonoBehaviour
 {
-    // ── Fields ────────────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Fields в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private struct RaceSegment
     {
@@ -22,7 +22,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         public float      T;               // distance from start along track centre (m)
         public float      Speed;           // m/s (always positive)
-        public int        Direction;       // +1 = same as player, −1 = oncoming
+        public int        Direction;       // +1 = same as player, в€’1 = oncoming
         public float      LaneOffset;      // world units along road-right from centre
         public GameObject Root;
         public float      CollisionRadius;
@@ -114,13 +114,13 @@ public partial class GameBootstrap : MonoBehaviour
     private float racingAngularVel;   // degrees/s
     private float racingSteerInput;   // -1..1, ramps up/down like a steering wheel
 
-    private float racingCameraAngle;  // lagging camera yaw — trails truck angle for inertial feel
+    private float racingCameraAngle;  // lagging camera yaw вЂ” trails truck angle for inertial feel
     private float racingCameraSwayX;  // smoothed lateral offset (camera sways out of corner)
 
-    private float racingBodyAngle;    // visual body/rear lag — trails physics angle for FWD articulation
+    private float racingBodyAngle;    // visual body/rear lag вЂ” trails physics angle for FWD articulation
     private Transform racingFrontAssembly; // front wheels + cabin assembly, rotated ahead of body
-    private Transform racingBodyGroup;     // cargo cube — receives Z body roll
-    private Transform racingCabinGroup;    // cabin cube inside FrontAssembly — receives same Z roll
+    private Transform racingBodyGroup;     // cargo cube вЂ” receives Z body roll
+    private Transform racingCabinGroup;    // cabin cube inside FrontAssembly вЂ” receives same Z roll
     private float     racingBodyRoll;      // smoothed lean angle, degrees
     private float     racingBodyPitch;     // smoothed terrain pitch (X-axis), degrees
     private float     racingBodyTiltZ;     // smoothed terrain lateral tilt (Z-axis), degrees
@@ -137,11 +137,11 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<RaceObstacleData> racingTreeObstacles   = new();
     private readonly List<RacingBusData>    racingBuses           = new();
     private readonly List<TerrainBump>      terrainBumps          = new();
-    private float racingGroundY;  // base ground Y — set in PopulateRacingWorld
+    private float racingGroundY;  // base ground Y вЂ” set in PopulateRacingWorld
     private float[]  racingSegCumLen;   // cumulative segment lengths for GetTrackPoint
     private float    racingTrackLen;    // total track length (m)
     private Vector3 raceFinishPos;
-    private Vector3 raceFinishFwd;  // road forward direction at finish — used for strip detection
+    private Vector3 raceFinishFwd;  // road forward direction at finish вЂ” used for strip detection
 
     private Canvas racingHudCanvas;
     private Text racingHudText;
@@ -155,7 +155,7 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioSource racingMusicSource;
     private float       racingMusicFadeStart; // time when fadeout began (-1 = not fading)
 
-    // ── Cinematic finish fields ──────────────────────────────────────────────
+    // в”Ђв”Ђ Cinematic finish fields в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     private bool    racingFinishSequenceActive;
     private float   racingFinishSequenceTimer;
     private Vector3 racingFinishCameraPos;
@@ -166,26 +166,26 @@ public partial class GameBootstrap : MonoBehaviour
     private Text    racingFinishOverlayText;
     private const float RacingFinishDuration = 3.2f;
 
-    // ── Skybox ───────────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Skybox в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     private GameObject racingSkydome;
     private Renderer   racingSkydomeRenderer;
     private Light      racingDirectionalLight;
     private float      racingSavedShadowDistance;
 
-    // ── Steering wheel + pedals (children of racing camera) ─────────────────────
-    private GameObject racingSteeringWheelRoot;   // the spinner — rotates around local Y
+    // в”Ђв”Ђ Steering wheel + pedals (children of racing camera) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    private GameObject racingSteeringWheelRoot;   // the spinner вЂ” rotates around local Y
     private float      racingWheelAngle;          // current wheel angle, unbounded degrees
-    private float      racingWheelAngularVel;     // degrees/sec — inertia after drag release
+    private float      racingWheelAngularVel;     // degrees/sec вЂ” inertia after drag release
     private bool       racingWheelDragging;       // mouse held in wheel zone
     private Transform  racingPedalGas;            // gas pedal root (tilts on W press)
     private Transform  racingPedalBrake;          // brake pedal root (tilts on S press)
     private Transform  racingGearShift;           // gear stick root (forward/reverse tilt)
     private bool       racingIsReversing;         // true when truck moving backward
-    private int        racingCurrentGear;         // 0=R, 1–4=forward gears (auto)
+    private int        racingCurrentGear;         // 0=R, 1вЂ“4=forward gears (auto)
     private float      racingGearChangeTimer;     // cooldown between gear changes (s)
     private Text       racingGearText;            // HUD gear indicator
 
-    // ── Racing atmosphere ────────────────────────────────────────────────────
+    // в”Ђв”Ђ Racing atmosphere в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     private readonly List<RacingBirdData>  racingBirds       = new();
     private readonly List<RacingBeeData>   racingBees        = new();
     private readonly List<RacingMothData>  racingMoths       = new();
@@ -196,26 +196,26 @@ public partial class GameBootstrap : MonoBehaviour
     private Button joinRaceButton;
     private Text joinRaceButtonText;
 
-    // ── Constants ────────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Constants в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
-    // ── Lantern collision ────────────────────────────────────────────────────
-    private const float LanternPoleRadius      = 0.12f; // world units (pole local 0.08 × scale 3 × 0.5)
-    private const float TruckCollisionRadius   = 0.60f; // world units — truck XZ footprint
+    // в”Ђв”Ђ Lantern collision в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    private const float LanternPoleRadius      = 0.12f; // world units (pole local 0.08 Г— scale 3 Г— 0.5)
+    private const float TruckCollisionRadius   = 0.60f; // world units вЂ” truck XZ footprint
     private const float LanternCombinedRadius  = LanternPoleRadius + TruckCollisionRadius; // 0.72
     private const float LanternTiltTargetDeg   = 44f;   // how far lantern tips when hit
-    private const float LanternTiltSpeed       = 140f;  // deg/s (reaches 44° in ~0.3 s)
+    private const float LanternTiltSpeed       = 140f;  // deg/s (reaches 44В° in ~0.3 s)
     private const float CollisionEnergyLoss    = 0.42f; // fraction of normal velocity lost on hit
     private const float CollisionAngularKick   = 55f;   // deg/s spin impulse on first contact
 
-    // ── Physics ──────────────────────────────────────────────────────────────
-    private const float RacingAcceleration  = 6f;     // raw power — halved for heavy truck feel
-    private const float RacingMaxSpeed      = 14.5f;  // ~52 km/h — higher ceiling, slow to reach
+    // в”Ђв”Ђ Physics в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    private const float RacingAcceleration  = 6f;     // raw power вЂ” halved for heavy truck feel
+    private const float RacingMaxSpeed      = 14.5f;  // ~52 km/h вЂ” higher ceiling, slow to reach
     private const float RacingDrag          = 0.997f; // very gentle coasting drag
     private const float RacingAngularDrag   = 0.88f;  // high = angular velocity persists (inertial steering)
     private const float RacingSteerForce    = 300f;   // max turn force (balanced with new angular drag)
     private const float RacingLateralFriction = 28f;  // lower = more drift/slide
 
-    // ── Gear shift ──────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Gear shift в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     // Lever X-rotation per gear: 0=R, 1=1st, 2=2nd, 3=3rd, 4=4th
     private static readonly float[] GearShiftAngles  = { -28f, -14f, 0f, 14f, 28f };
     // Upshift when speed (km/h) exceeds this (index = current gear)
@@ -227,7 +227,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float RaceTrackOffsetX    = 2000f;   // remote position, away from main world
     private const float RaceFinishRadius    = 2.8f;
 
-    // ── Join-Race button setup/update ─────────────────────────────────────────
+    // в”Ђв”Ђ Join-Race button setup/update в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void SetupJoinRaceButton()
     {
@@ -303,7 +303,7 @@ public partial class GameBootstrap : MonoBehaviour
             joinRaceButtonRoot.SetActive(shouldShow);
     }
 
-    // ── Minigame entry / exit ─────────────────────────────────────────────────
+    // в”Ђв”Ђ Minigame entry / exit в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private bool TryHandleJoinRaceButtonClick(Vector2 screenPosition)
     {
@@ -427,7 +427,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         if (success && !racingFinishSequenceActive)
         {
-            // Begin cinematic — don't clean up yet
+            // Begin cinematic вЂ” don't clean up yet
             racingBonusEarned = 50;
             SessionDebugLogger.Log("RACING", "Race completed! Bonus earned: $50.");
             StartFinishSequence();
@@ -471,7 +471,7 @@ public partial class GameBootstrap : MonoBehaviour
         // Hide normal HUD
         if (racingHudCanvas != null) racingHudCanvas.gameObject.SetActive(false);
 
-        // Victory sound — short upbeat chime built from two sine tones
+        // Victory sound вЂ” short upbeat chime built from two sine tones
         PlayRacingVictorySound();
 
         // Start music fadeout over 3 seconds
@@ -501,7 +501,7 @@ public partial class GameBootstrap : MonoBehaviour
         Image barImg = barObj.AddComponent<Image>();
         barImg.color = new Color(0f, 0f, 0f, 0.55f);
 
-        // "Вы финишировали!" text
+        // "Р’С‹ С„РёРЅРёС€РёСЂРѕРІР°Р»Рё!" text
         GameObject textObj = new("FinishText");
         textObj.transform.SetParent(overlayObj.transform, false);
         Text txt = textObj.AddComponent<Text>();
@@ -545,7 +545,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         float t = Mathf.Clamp01(racingFinishSequenceTimer / RacingFinishDuration);
 
-        // Truck floors it past the finish — accelerates into the horizon
+        // Truck floors it past the finish вЂ” accelerates into the horizon
         float coastSpeed = Mathf.Lerp(racingFinishEntrySpeed, RacingMaxSpeed * 1.1f, t * t);
         racingVelocity = racingFinishDriveDir * coastSpeed;
 
@@ -604,10 +604,10 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateSteeringWheel(dt);
         UpdatePedals(dt, 1f, false);
         racingIsReversing = false;
-        racingCurrentGear = 4; // cinematic — full speed, show top gear
+        racingCurrentGear = 4; // cinematic вЂ” full speed, show top gear
         UpdateGearShift(dt);
 
-        // Done — clean up
+        // Done вЂ” clean up
         if (racingFinishSequenceTimer >= RacingFinishDuration)
         {
             isRacingActive             = false;
@@ -633,7 +633,7 @@ public partial class GameBootstrap : MonoBehaviour
         if (racingDirectionalLight != null) { Object.Destroy(racingDirectionalLight.gameObject); racingDirectionalLight = null; }
         if (racingSkydome != null) { Object.Destroy(racingSkydome); racingSkydome = null; racingSkydomeRenderer = null; }
 
-        // Steering wheel + pedals are children of camera — destroyed with it
+        // Steering wheel + pedals are children of camera вЂ” destroyed with it
         racingSteeringWheelRoot  = null;
         racingWheelAngle  = 0f;
         racingBodyPitch   = 0f;
@@ -695,13 +695,13 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateJoinRaceButton();
     }
 
-    // ── Per-frame update ──────────────────────────────────────────────────────
+    // в”Ђв”Ђ Per-frame update в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void UpdateRacingMinigame()
     {
         if (!isRacingActive && !racingFinishSequenceActive) return;
 
-        // Cinematic finish sequence — runs after crossing finish line
+        // Cinematic finish sequence вЂ” runs after crossing finish line
         if (racingFinishSequenceActive)
         {
             UpdateFinishSequence();
@@ -710,7 +710,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         float dt = Time.unscaledDeltaTime;
 
-        // ── Input ────────────────────────────────────────
+        // в”Ђв”Ђ Input в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         float throttle = 0f;
         bool  sBrakeReverse = false;
         var kb = Keyboard.current;
@@ -729,10 +729,10 @@ public partial class GameBootstrap : MonoBehaviour
             }
         }
 
-        // ── Physics ──────────────────────────────────────
+        // в”Ђв”Ђ Physics в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         float speed = racingVelocity.magnitude;
 
-        // Forward direction (from previous frame angle — used for reverse steer check)
+        // Forward direction (from previous frame angle вЂ” used for reverse steer check)
         float rad = racingTruckAngle * Mathf.Deg2Rad;
         Vector2 forward = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
         Vector2 right   = new Vector2(Mathf.Cos(rad), -Mathf.Sin(rad));
@@ -742,7 +742,7 @@ public partial class GameBootstrap : MonoBehaviour
         float steerSign = fwdDot >= 0f ? 1f : -1f;
         racingIsReversing = fwdDot < -0.2f;
 
-        // Steering — uses ramped input, stronger max force
+        // Steering вЂ” uses ramped input, stronger max force
         float steerAmount = racingSteerInput * steerSign * RacingSteerForce * Mathf.Clamp01(speed / 3.5f) * dt;
         racingAngularVel += steerAmount;
         racingAngularVel *= Mathf.Pow(RacingAngularDrag, dt * 60f);
@@ -754,7 +754,7 @@ public partial class GameBootstrap : MonoBehaviour
         forward = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
         right   = new Vector2(Mathf.Cos(rad), -Mathf.Sin(rad));
 
-        // Acceleration with torque curve — full power at low speed, tapers to 0 at max
+        // Acceleration with torque curve вЂ” full power at low speed, tapers to 0 at max
         float torque = Mathf.Pow(1f - Mathf.Clamp01(speed / RacingMaxSpeed), 0.6f);
         racingVelocity += forward * throttle * RacingAcceleration * torque * dt;
 
@@ -762,7 +762,7 @@ public partial class GameBootstrap : MonoBehaviour
         float lateralSpeed = Vector2.Dot(racingVelocity, right);
         racingVelocity -= right * (lateralSpeed * RacingLateralFriction * dt);
 
-        // S key — brake while moving forward, then reverse at half speed
+        // S key вЂ” brake while moving forward, then reverse at half speed
         if (sBrakeReverse)
         {
             float fwdSpeed = Vector2.Dot(racingVelocity, forward); // + = moving forward
@@ -774,7 +774,7 @@ public partial class GameBootstrap : MonoBehaviour
             }
             else
             {
-                // Reverse — half max speed, same torque curve
+                // Reverse вЂ” half max speed, same torque curve
                 float revMax    = RacingMaxSpeed * 0.5f;
                 float revSpeed  = Mathf.Max(0f, -fwdSpeed);
                 float revTorque = Mathf.Pow(1f - Mathf.Clamp01(revSpeed / revMax), 0.6f);
@@ -798,9 +798,9 @@ public partial class GameBootstrap : MonoBehaviour
         racingTruckPos.x += racingVelocity.x * dt;
         racingTruckPos.z += racingVelocity.y * dt;
         {
-            const float Gravity           = 18f;   // m/s² — arcade-strong
+            const float Gravity           = 18f;   // m/sВІ вЂ” arcade-strong
             const float TerminalVelY      = -25f;  // m/s downward cap
-            const float GroundedThreshold = 0.05f; // m above floor → airborne
+            const float GroundedThreshold = 0.05f; // m above floor в†’ airborne
 
             Vector3 flatPos = new Vector3(racingTruckPos.x, 0f, racingTruckPos.z);
             bool  onRoad = IsPositionOnRaceRoad(flatPos, 4.8f);
@@ -810,13 +810,13 @@ public partial class GameBootstrap : MonoBehaviour
 
             if (onRoad && floorY > racingTruckPos.y)
             {
-                // Uphill — lerp up to meet the rising surface
+                // Uphill вЂ” lerp up to meet the rising surface
                 racingTruckPos.y = Mathf.Lerp(racingTruckPos.y, floorY, 18f * dt);
                 racingTruckVelY  = 0f;
             }
             else
             {
-                // Downhill or off-road — apply gravity, land on floor
+                // Downhill or off-road вЂ” apply gravity, land on floor
                 racingTruckVelY   = Mathf.Max(racingTruckVelY - Gravity * dt, TerminalVelY);
                 racingTruckPos.y += racingTruckVelY * dt;
                 if (racingTruckPos.y <= floorY + GroundedThreshold)
@@ -832,13 +832,13 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateLanternCollisions(dt);
         UpdateRacingAtmosphere(dt);
 
-        // ── Apply truck transform — FWD articulation ─────────────────────
+        // в”Ђв”Ђ Apply truck transform вЂ” FWD articulation в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         if (racingTruckVisual != null)
         {
-            // Body/rear lags behind physics angle — gives the "rear follows front" look
+            // Body/rear lags behind physics angle вЂ” gives the "rear follows front" look
             racingBodyAngle = Mathf.LerpAngle(racingBodyAngle, racingTruckAngle, 4.5f * dt);
 
-            // ── Terrain pitch + lateral tilt (4-point finite difference) ─────
+            // в”Ђв”Ђ Terrain pitch + lateral tilt (4-point finite difference) в”Ђв”Ђв”Ђв”Ђв”Ђ
             const float ProbeD = 0.8f;
             float sinY = Mathf.Sin(racingBodyAngle * Mathf.Deg2Rad);
             float cosY = Mathf.Cos(racingBodyAngle * Mathf.Deg2Rad);
@@ -856,21 +856,21 @@ public partial class GameBootstrap : MonoBehaviour
             racingTruckVisual.transform.position = racingTruckPos;
             racingTruckVisual.transform.rotation = Quaternion.Euler(racingBodyPitch, racingBodyAngle, racingBodyTiltZ);
 
-            // FWD delta — front axle (wheels) + cabin pivot both steer ahead of body
+            // FWD delta вЂ” front axle (wheels) + cabin pivot both steer ahead of body
             float frontDelta = Mathf.DeltaAngle(racingBodyAngle, racingTruckAngle);
             if (racingFrontAssembly != null)
                 racingFrontAssembly.localRotation = Quaternion.Euler(0f, frontDelta, 0f);
             if (racingCabinGroup != null)
                 racingCabinGroup.localRotation = Quaternion.Euler(0f, frontDelta, 0f);
 
-            // Body roll — both red body and yellow cabin lean together (suspension)
-            // Terminal angularVel ≈ 36 deg/s, normalise → ±RacingRollMax degrees
+            // Body roll вЂ” both red body and yellow cabin lean together (suspension)
+            // Terminal angularVel в‰€ 36 deg/s, normalise в†’ В±RacingRollMax degrees
             float rollTarget = Mathf.Clamp(racingAngularVel / 36f, -1f, 1f) * RacingRollMax;
             racingBodyRoll = Mathf.Lerp(racingBodyRoll, rollTarget, RacingRollSmooth * dt);
             if (racingBodyGroup != null)
                 racingBodyGroup.localRotation = Quaternion.Euler(0f, 0f, racingBodyRoll);
 
-            // Rotate around the cylinder's local Y (= world X after Euler(0,0,-90)) — rolls forward
+            // Rotate around the cylinder's local Y (= world X after Euler(0,0,-90)) вЂ” rolls forward
             float wheelSpin = speed * dt * 180f;
             if (racingTruckWheelFL != null) racingTruckWheelFL.Rotate(Vector3.up, wheelSpin, Space.Self);
             if (racingTruckWheelFR != null) racingTruckWheelFR.Rotate(Vector3.up, wheelSpin, Space.Self);
@@ -878,10 +878,10 @@ public partial class GameBootstrap : MonoBehaviour
             if (racingTruckWheelRR != null) racingTruckWheelRR.Rotate(Vector3.up, wheelSpin, Space.Self);
         }
 
-        // ── Camera follow — lagging yaw + lateral sway ───────────────────────
+        // в”Ђв”Ђ Camera follow вЂ” lagging yaw + lateral sway в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         if (racingCamera != null)
         {
-            // Camera yaw trails truck yaw — lower value = more lag / heavier feel
+            // Camera yaw trails truck yaw вЂ” lower value = more lag / heavier feel
             racingCameraAngle = Mathf.LerpAngle(racingCameraAngle, racingTruckAngle, 2.8f * dt);
 
             // Lateral sway: camera drifts opposite to steering (centrifugal throw)
@@ -902,8 +902,8 @@ public partial class GameBootstrap : MonoBehaviour
                 racingCamera.transform.rotation, camRot, 5.5f * dt);
         }
 
-        // ── Finish check — strip detection ────────────────
-        // Narrow along road direction (±2.5 m), very wide across it (±14 m)
+        // в”Ђв”Ђ Finish check вЂ” strip detection в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+        // Narrow along road direction (В±2.5 m), very wide across it (В±14 m)
         // so missing the line by driving off-road still counts.
         Vector3 toFinish = new Vector3(racingTruckPos.x - raceFinishPos.x, 0f, racingTruckPos.z - raceFinishPos.z);
         float alongRoad   = Vector3.Dot(toFinish, raceFinishFwd);          // depth through the line
@@ -913,7 +913,7 @@ public partial class GameBootstrap : MonoBehaviour
         // Keep distToFinish for HUD display (visual distance to centre of line)
         float distToFinish = toFinish.magnitude;
 
-        // ── HUD update ────────────────────────────────────
+        // в”Ђв”Ђ HUD update в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         float kmh = speed * 3.6f;
 
         UpdateAutoGear(fwdDot, kmh, dt);
@@ -922,15 +922,15 @@ public partial class GameBootstrap : MonoBehaviour
         {
             racingHudText.text =
                 "INTERCITY DELIVERY\n" +
-                "────────────────\n" +
+                "в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ\n" +
                 $"Finish:  {distToFinish:F0} m\n" +
-                "────────────────\n" +
+                "в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ\n" +
                 "[ESC]  Skip";
         }
 
         if (racingSpeedometerNeedle != null)
         {
-            // Sweep: 0 km/h = 150° CCW from up (7 o'clock), 100 km/h = -150° (5 o'clock)
+            // Sweep: 0 km/h = 150В° CCW from up (7 o'clock), 100 km/h = -150В° (5 o'clock)
             float needleZ = 150f - Mathf.Clamp01(kmh / 100f) * 300f;
             racingSpeedometerNeedle.localEulerAngles = new Vector3(0f, 0f, needleZ);
         }
@@ -946,7 +946,7 @@ public partial class GameBootstrap : MonoBehaviour
                 : new Color(0.95f, 0.90f, 0.84f);
         }
 
-        // Headlights — always on, brighter at night
+        // Headlights вЂ” always on, brighter at night
         if (racingHeadlightL != null && racingHeadlightR != null)
         {
             float darkness = 1f - currentStylizedDaylight;
@@ -1022,7 +1022,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         Vector2 mousePos = mouse.position.ReadValue();
 
-        // On click inside wheel zone — start drag
+        // On click inside wheel zone вЂ” start drag
         if (mouse.leftButton.wasPressedThisFrame)
         {
             racingWheelDragging = false;
@@ -1038,7 +1038,7 @@ public partial class GameBootstrap : MonoBehaviour
         if (mouse.leftButton.wasReleasedThisFrame)
             racingWheelDragging = false;
 
-        // ── Wheel drag ────────────────────────────────────────────────────────
+        // в”Ђв”Ђ Wheel drag в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         if (racingWheelDragging && mouse.leftButton.isPressed)
         {
             float mouseDX      = mouse.delta.ReadValue().x;
@@ -1048,14 +1048,14 @@ public partial class GameBootstrap : MonoBehaviour
         }
         else if (!racingWheelDragging)
         {
-            // Inertia — decays over ~3 s
+            // Inertia вЂ” decays over ~3 s
             racingWheelAngle     += racingWheelAngularVel * dt;
             racingWheelAngularVel *= Mathf.Pow(0.975f, dt * 60f);
-            // Spring return — proportional to angle (stronger the further from centre)
+            // Spring return вЂ” proportional to angle (stronger the further from centre)
             racingWheelAngle -= racingWheelAngle * 2.8f * dt;
         }
 
-        racingWheelAngle = Mathf.Clamp(racingWheelAngle, -360f, 360f);   // max ±1 full turn
+        racingWheelAngle = Mathf.Clamp(racingWheelAngle, -360f, 360f);   // max В±1 full turn
         racingSteerInput = Mathf.Clamp(racingWheelAngle / 180f, -1f, 1f);
     }
 
@@ -1072,11 +1072,11 @@ public partial class GameBootstrap : MonoBehaviour
     private void UpdateSteeringWheel(float dt)
     {
         if (racingSteeringWheelRoot == null) return;
-        // Apply current wheel angle directly — driven by mouse drag or keyboard
+        // Apply current wheel angle directly вЂ” driven by mouse drag or keyboard
         racingSteeringWheelRoot.transform.localRotation = Quaternion.Euler(0f, racingWheelAngle, 0f);
     }
 
-    // ── Road buses ───────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Road buses в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void BuildTrackSampler()
     {
@@ -1102,7 +1102,7 @@ public partial class GameBootstrap : MonoBehaviour
         if (t < 0f)
         {
             segIdx = 0;
-            localT = t; // negative → extrapolate behind start
+            localT = t; // negative в†’ extrapolate behind start
         }
         else if (t >= racingTrackLen)
         {
@@ -1172,7 +1172,7 @@ public partial class GameBootstrap : MonoBehaviour
             }
         }
 
-        // mask: 0 = within 6 m of road centre → use road Y; 1 = far away → use terrain
+        // mask: 0 = within 6 m of road centre в†’ use road Y; 1 = far away в†’ use terrain
         float mask      = Mathf.Clamp01((minDist - 6f) / 12f);
         float farY      = groundY + SampleTerrainY(x, z);
         return Mathf.Lerp(nearRoadY, farY, mask);
@@ -1224,7 +1224,7 @@ public partial class GameBootstrap : MonoBehaviour
             LaneOffset = laneOffset, CollisionRadius = 0.90f
         };
 
-        // Root GO — positioned every frame
+        // Root GO вЂ” positioned every frame
         bus.Root = new GameObject("RacingBus");
 
         Color roofColor = Color.Lerp(bodyColor, Color.black, 0.25f);
@@ -1333,7 +1333,7 @@ public partial class GameBootstrap : MonoBehaviour
         racingTrackLen  = 0f;
     }
 
-    // ── Lantern collision ─────────────────────────────────────────────────────
+    // в”Ђв”Ђ Lantern collision в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void UpdateLanternCollisions(float dt)
     {
@@ -1406,7 +1406,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
     }
 
-    // ── Track generation ──────────────────────────────────────────────────────
+    // в”Ђв”Ђ Track generation в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void GenerateRaceTrack()
     {
@@ -1468,7 +1468,7 @@ public partial class GameBootstrap : MonoBehaviour
         RaceSegment last = raceSegments[raceSegments.Count - 1];
         raceFinishPos = last.Center + last.Rotation * Vector3.forward * last.Length * 0.45f;
         raceFinishPos.y = last.EndY + 0.35f;
-        raceFinishFwd = last.Rotation * Vector3.forward;   // road direction — for strip detection
+        raceFinishFwd = last.Rotation * Vector3.forward;   // road direction вЂ” for strip detection
         CreateRaceMarker(raceFinishPos, last.Rotation, new Color(0.95f, 0.82f, 0.12f));
 
         // Finish light
@@ -1482,7 +1482,7 @@ public partial class GameBootstrap : MonoBehaviour
         fl.range = 7f;
         fl.shadows = LightShadows.None;
 
-        // ── Road extension beyond finish (decorative — truck drives into horizon) ──
+        // в”Ђв”Ђ Road extension beyond finish (decorative вЂ” truck drives into horizon) в”Ђв”Ђ
         raceExtensionSegments.Clear();
         float extStartY = last.EndY;
         Vector3 extCursor = raceFinishPos;
@@ -1569,7 +1569,7 @@ public partial class GameBootstrap : MonoBehaviour
         ConfigureShadowVisual(marker);
     }
 
-    // ── Racing truck ─────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Racing truck в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void CreateRacingTruck()
     {
@@ -1580,14 +1580,14 @@ public partial class GameBootstrap : MonoBehaviour
         Color cabinColor  = new Color(0.95f, 0.82f, 0.28f);
         Color wheelColor  = new Color(0.14f, 0.14f, 0.14f);
 
-        // ── BodyGroup — both body cubes roll together (suspension) ────────
+        // в”Ђв”Ђ BodyGroup вЂ” both body cubes roll together (suspension) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         // Wheels are outside this group so they stay flat.
         GameObject bodyGroupObj = new("BodyGroup");
         bodyGroupObj.transform.SetParent(racingTruckVisual.transform, false);
         bodyGroupObj.transform.localPosition = Vector3.zero;
         racingBodyGroup = bodyGroupObj.transform;
 
-        // Red cargo body — child of BodyGroup
+        // Red cargo body вЂ” child of BodyGroup
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
         body.transform.SetParent(racingBodyGroup, false);
         body.transform.localPosition = new Vector3(0f, 0.22f, 0f);
@@ -1595,13 +1595,13 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyColor(body, bodyColor);
         ConfigureShadowVisual(body);
 
-        // CabinPivot inside BodyGroup — receives FWD delta Y so cabin steers ahead
+        // CabinPivot inside BodyGroup вЂ” receives FWD delta Y so cabin steers ahead
         GameObject cabinPivotObj = new("CabinPivot");
         cabinPivotObj.transform.SetParent(racingBodyGroup, false);
         cabinPivotObj.transform.localPosition = Vector3.zero;
         racingCabinGroup = cabinPivotObj.transform;
 
-        // Yellow cabin — child of CabinPivot (rolls with body, steers ahead)
+        // Yellow cabin вЂ” child of CabinPivot (rolls with body, steers ahead)
         GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cabin.transform.SetParent(racingCabinGroup, false);
         cabin.transform.localPosition = new Vector3(0f, 0.40f, 0.20f);
@@ -1609,7 +1609,7 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyColor(cabin, cabinColor);
         ConfigureShadowVisual(cabin);
 
-        // ── FrontAxle — front wheels + headlights, steers for FWD visual ─
+        // в”Ђв”Ђ FrontAxle вЂ” front wheels + headlights, steers for FWD visual в”Ђ
         // NOT a parent of body parts, so steering here doesn't tilt the body
         GameObject frontObj = new("FrontAxle");
         frontObj.transform.SetParent(racingTruckVisual.transform, false);
@@ -1619,11 +1619,11 @@ public partial class GameBootstrap : MonoBehaviour
         racingTruckWheelFL = CreateRacingWheel(racingFrontAssembly, new Vector3(-0.40f, 0.12f,  0.32f), wheelColor);
         racingTruckWheelFR = CreateRacingWheel(racingFrontAssembly, new Vector3( 0.40f, 0.12f,  0.32f), wheelColor);
 
-        // Headlights on FrontAxle — point forward regardless of body roll
+        // Headlights on FrontAxle вЂ” point forward regardless of body roll
         racingHeadlightL = CreateRacingHeadlight(racingFrontAssembly, new Vector3(-0.28f, 0.28f, 0.52f));
         racingHeadlightR = CreateRacingHeadlight(racingFrontAssembly, new Vector3( 0.28f, 0.28f, 0.52f));
 
-        // ── Rear wheels — on root, flat ───────────────────────────────────
+        // в”Ђв”Ђ Rear wheels вЂ” on root, flat в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         racingTruckWheelRL = CreateRacingWheel(racingTruckVisual.transform, new Vector3(-0.40f, 0.12f, -0.32f), wheelColor);
         racingTruckWheelRR = CreateRacingWheel(racingTruckVisual.transform, new Vector3( 0.40f, 0.12f, -0.32f), wheelColor);
     }
@@ -1635,7 +1635,7 @@ public partial class GameBootstrap : MonoBehaviour
         go.transform.localPosition = localPos;
         go.transform.localRotation = Quaternion.Euler(5f, 0f, 0f);
 
-        // Visible lens — unlit bright white disc so it's always visible as a glowing element
+        // Visible lens вЂ” unlit bright white disc so it's always visible as a glowing element
         GameObject lens = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         Object.Destroy(lens.GetComponent<Collider>());
         lens.name = "HeadlightLens";
@@ -1672,14 +1672,14 @@ public partial class GameBootstrap : MonoBehaviour
         // Euler(0, 0, -90): cylinder axis (local Y) points along world X (left-right)
         // flat circles face sideways, curved surface rolls forward/back correctly
         wheel.transform.localRotation = Quaternion.Euler(0f, 0f, -90f);
-        // x = z = radius scale (0.28 → diameter 0.28), y = half-thickness (0.065 → 0.13 wide)
+        // x = z = radius scale (0.28 в†’ diameter 0.28), y = half-thickness (0.065 в†’ 0.13 wide)
         wheel.transform.localScale    = new Vector3(0.28f, 0.065f, 0.28f);
         ApplyColor(wheel, color);
         ConfigureShadowVisual(wheel);
         return wheel.transform;
     }
 
-    // ── Racing camera ─────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Racing camera в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void SetupRacingCamera()
     {
@@ -1698,7 +1698,7 @@ public partial class GameBootstrap : MonoBehaviour
         racingCamera.transform.position = racingTruckPos + Vector3.up * 1.4f + initRot * Vector3.back * 2.8f;
         racingCamera.transform.rotation = initRot;
 
-        // Directional light — provides ambient shadows for the whole race scene
+        // Directional light вЂ” provides ambient shadows for the whole race scene
         GameObject dirObj = new("RacingDirectionalLight");
         dirObj.transform.rotation = Quaternion.Euler(48f, -35f, 0f);
         racingDirectionalLight = dirObj.AddComponent<Light>();
@@ -1723,7 +1723,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
     }
 
-    // ── 3D Steering wheel — child of racing camera ───────────────────────────
+    // в”Ђв”Ђ 3D Steering wheel вЂ” child of racing camera в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     //
     // The wheel is parented directly to racingCamera so it stays fixed
     // in screen space (bottom-centre) like a dashboard prop.
@@ -1733,8 +1733,8 @@ public partial class GameBootstrap : MonoBehaviour
     {
         if (racingCamera == null) return;
 
-        // Anchor: child of camera — lower and more tilted forward so it's below the truck visual
-        // X-tilt of -55° means the wheel face tilts toward the player (dashboard angle)
+        // Anchor: child of camera вЂ” lower and more tilted forward so it's below the truck visual
+        // X-tilt of -55В° means the wheel face tilts toward the player (dashboard angle)
         GameObject anchor = new("SteeringWheelAnchor");
         anchor.transform.SetParent(racingCamera.transform, false);
         anchor.transform.localPosition = new Vector3(0f, -0.80f, 1.1f); // lower, slightly closer
@@ -1750,7 +1750,7 @@ public partial class GameBootstrap : MonoBehaviour
         wl.range     = 1.4f;
         wl.color     = new Color(1f, 0.92f, 0.78f); // warm dashboard glow
 
-        // Spinner: child of anchor — this is what rotates each frame
+        // Spinner: child of anchor вЂ” this is what rotates each frame
         racingSteeringWheelRoot = new("SteeringWheelRoot");
         racingSteeringWheelRoot.transform.SetParent(anchor.transform, false);
         racingSteeringWheelRoot.transform.localPosition = Vector3.zero;
@@ -1762,7 +1762,7 @@ public partial class GameBootstrap : MonoBehaviour
         Transform root   = racingSteeringWheelRoot.transform;
         float rimRadius  = 0.30f;
 
-        // Yellow dot at top of rim — moves WITH the wheel, shows rotation amount
+        // Yellow dot at top of rim вЂ” moves WITH the wheel, shows rotation amount
         GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
         Object.Destroy(marker.GetComponent<Collider>());
         marker.name = "WheelCenterMarker";
@@ -1773,7 +1773,7 @@ public partial class GameBootstrap : MonoBehaviour
         NoShadow(marker);
         ApplyColor(marker, new Color(1f, 0.88f, 0.08f));
 
-        // Hub — flat cylinder, lies in XZ plane (Y is the face normal)
+        // Hub вЂ” flat cylinder, lies in XZ plane (Y is the face normal)
         GameObject hub = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         Object.Destroy(hub.GetComponent<Collider>());
         hub.name = "WheelHub";
@@ -1783,7 +1783,7 @@ public partial class GameBootstrap : MonoBehaviour
         NoShadow(hub);
         ApplyColor(hub, hubColor);
 
-        // 3 spokes — radiate from hub edge outward to rim, 120° apart
+        // 3 spokes вЂ” radiate from hub edge outward to rim, 120В° apart
         // Each spoke's LOCAL position must be computed along its own direction,
         // otherwise all three shift to the same offset in parent space.
         float spokeLen    = rimRadius - 0.06f;        // 0.24 units long
@@ -1806,11 +1806,11 @@ public partial class GameBootstrap : MonoBehaviour
             ApplyColor(spoke, spokeColor);
         }
 
-        // Outer rim — 8 flat bars forming a connected octagon
-        // Each bar is placed at the midpoint of its chord and rotated +90° so its
+        // Outer rim вЂ” 8 flat bars forming a connected octagon
+        // Each bar is placed at the midpoint of its chord and rotated +90В° so its
         // long axis (local Z) is tangential to the circle, not radial.
         int   rimCount  = 8;
-        // chord length between adjacent vertices: 2r·sin(π/n), +6% overlap for clean joins
+        // chord length between adjacent vertices: 2rВ·sin(ПЂ/n), +6% overlap for clean joins
         float chordLen  = 2f * rimRadius * Mathf.Sin(Mathf.PI / rimCount) * 1.06f;
         for (int i = 0; i < rimCount; i++)
         {
@@ -1823,7 +1823,7 @@ public partial class GameBootstrap : MonoBehaviour
             seg.name = $"Rim{i}";
             seg.transform.SetParent(root, false);
             seg.transform.localPosition = new Vector3(mx, 0f, mz);
-            // +90° makes local Z tangential (along the rim edge) instead of radial
+            // +90В° makes local Z tangential (along the rim edge) instead of radial
             seg.transform.localRotation = Quaternion.Euler(0f, midA * Mathf.Rad2Deg + 90f, 0f);
             seg.transform.localScale    = new Vector3(0.055f, 0.018f, chordLen);
             NoShadow(seg);
@@ -1833,14 +1833,14 @@ public partial class GameBootstrap : MonoBehaviour
         racingWheelAngle = 0f;
     }
 
-    // ── Pedals ────────────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Pedals в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void CreateRacingPedals()
     {
         if (racingCamera == null) return;
 
         // Anchor: left of the steering wheel, raised so it stays inside camera frustum
-        // Rule: |y/z| < tan(FOV/2=32.5°)=0.637  →  y must be > -0.637*z
+        // Rule: |y/z| < tan(FOV/2=32.5В°)=0.637  в†’  y must be > -0.637*z
         // With z=1.0: y must be > -0.637, so -0.55 is safe
         GameObject anchor = new("PedalAnchor");
         anchor.transform.SetParent(racingCamera.transform, false);
@@ -1857,11 +1857,11 @@ public partial class GameBootstrap : MonoBehaviour
         pl.range     = 1.2f;
         pl.color     = new Color(1f, 0.92f, 0.78f);
 
-        // Brake (left) — red tint
+        // Brake (left) вЂ” red tint
         racingPedalBrake = CreateSinglePedal("BrakePedal", anchor.transform,
             new Vector3(-0.13f, 0f, 0f), new Color(0.55f, 0.12f, 0.12f));
 
-        // Gas (right) — green tint
+        // Gas (right) вЂ” green tint
         racingPedalGas = CreateSinglePedal("GasPedal", anchor.transform,
             new Vector3(0.13f, 0f, 0f), new Color(0.14f, 0.44f, 0.14f));
     }
@@ -1875,7 +1875,7 @@ public partial class GameBootstrap : MonoBehaviour
         root.transform.localPosition = offset;
         root.transform.localRotation = Quaternion.identity;
 
-        // Stem — thin vertical post
+        // Stem вЂ” thin vertical post
         GameObject stem = GameObject.CreatePrimitive(PrimitiveType.Cube);
         Object.Destroy(stem.GetComponent<Collider>());
         stem.name = "Stem";
@@ -1885,7 +1885,7 @@ public partial class GameBootstrap : MonoBehaviour
         NoShadow(stem);
         ApplyColor(stem, stemColor);
 
-        // Surface — flat pedal plate
+        // Surface вЂ” flat pedal plate
         GameObject surface = GameObject.CreatePrimitive(PrimitiveType.Cube);
         Object.Destroy(surface.GetComponent<Collider>());
         surface.name = "Surface";
@@ -1913,13 +1913,13 @@ public partial class GameBootstrap : MonoBehaviour
         pedal.localRotation = Quaternion.Euler(Mathf.Lerp(cur, target, 14f * dt), 0f, 0f);
     }
 
-    // ── Gear shift ────────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Gear shift в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void CreateGearShift()
     {
         if (racingCamera == null) return;
 
-        // Mirror of pedal anchor — right side of steering wheel
+        // Mirror of pedal anchor вЂ” right side of steering wheel
         GameObject anchor = new("GearShiftAnchor");
         anchor.transform.SetParent(racingCamera.transform, false);
         anchor.transform.localPosition = new Vector3(0.54f, -0.55f, 1.0f);
@@ -1935,7 +1935,7 @@ public partial class GameBootstrap : MonoBehaviour
         gl.range     = 1.0f;
         gl.color     = new Color(1f, 0.92f, 0.78f);
 
-        // Gear shift root — this tilts forward/backward
+        // Gear shift root вЂ” this tilts forward/backward
         racingGearShift = new GameObject("GearShiftRoot").transform;
         racingGearShift.SetParent(anchor.transform, false);
         racingGearShift.localPosition = Vector3.zero;
@@ -1944,7 +1944,7 @@ public partial class GameBootstrap : MonoBehaviour
         Color stickColor = new Color(0.20f, 0.20f, 0.22f);
         Color knobColor  = new Color(0.28f, 0.26f, 0.30f);
 
-        // Stick — thin vertical rod
+        // Stick вЂ” thin vertical rod
         GameObject stick = GameObject.CreatePrimitive(PrimitiveType.Cube);
         Object.Destroy(stick.GetComponent<Collider>());
         stick.name = "Stick";
@@ -1954,7 +1954,7 @@ public partial class GameBootstrap : MonoBehaviour
         NoShadow(stick);
         ApplyColor(stick, stickColor);
 
-        // Knob — sphere-ish cube on top
+        // Knob вЂ” sphere-ish cube on top
         GameObject knob = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         Object.Destroy(knob.GetComponent<Collider>());
         knob.name = "Knob";
@@ -1964,7 +1964,7 @@ public partial class GameBootstrap : MonoBehaviour
         NoShadow(knob);
         ApplyColor(knob, knobColor);
 
-        // Gear label on knob — tiny flat cubes for "D" and "R" indicator
+        // Gear label on knob вЂ” tiny flat cubes for "D" and "R" indicator
         // Forward indicator: small yellow stripe on front of knob
         GameObject fwdDot = GameObject.CreatePrimitive(PrimitiveType.Cube);
         Object.Destroy(fwdDot.GetComponent<Collider>());
@@ -1989,7 +1989,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         racingGearChangeTimer -= dt;
 
-        // Reversing — triggered by actual velocity direction
+        // Reversing вЂ” triggered by actual velocity direction
         if (fwdDot < -0.2f)
         {
             if (racingCurrentGear != 0)
@@ -2000,7 +2000,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        // Coming out of R — jump to 1st
+        // Coming out of R вЂ” jump to 1st
         if (racingCurrentGear == 0)
         {
             racingCurrentGear = 1;
@@ -2032,7 +2032,7 @@ public partial class GameBootstrap : MonoBehaviour
         racingSkydome.name = "RacingSkydome";
         Object.Destroy(racingSkydome.GetComponent<Collider>());
 
-        // Negative X scale flips winding order — renders from the inside
+        // Negative X scale flips winding order вЂ” renders from the inside
         racingSkydome.transform.localScale = new Vector3(-480f, 480f, 480f);
 
         racingSkydomeRenderer = racingSkydome.GetComponent<Renderer>();
@@ -2084,7 +2084,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
     }
 
-    // ── Racing HUD ───────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Racing HUD в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void SetupRacingHud()
     {
@@ -2153,11 +2153,11 @@ public partial class GameBootstrap : MonoBehaviour
         racingControlHintText.color     = new Color(0.96f, 0.93f, 0.84f, 1f);
         racingControlHintText.alignment = TextAnchor.MiddleLeft;
         racingControlHintText.text      =
-            "Управление\n" +
-            "Мышь: руль\n" +
-            "W / ↑: газ\n" +
-            "S / ↓: тормоз / назад\n" +
-            "ESC: выйти";
+            "РЈРїСЂР°РІР»РµРЅРёРµ\n" +
+            "РњС‹С€СЊ: СЂСѓР»СЊ\n" +
+            "W / в†‘: РіР°Р·\n" +
+            "S / в†“: С‚РѕСЂРјРѕР· / РЅР°Р·Р°Рґ\n" +
+            "ESC: РІС‹Р№С‚Рё";
 
         SetupSpeedometer(canvasObj.transform, font);
     }
@@ -2167,7 +2167,7 @@ public partial class GameBootstrap : MonoBehaviour
         const float size   = 160f;
         const float radius = 62f; // tick ring radius from center
 
-        // Root — bottom-right corner
+        // Root вЂ” bottom-right corner
         RectTransform root = CreateUiObject("Speedometer", canvasParent).GetComponent<RectTransform>();
         root.anchorMin        = new Vector2(1f, 0f);
         root.anchorMax        = new Vector2(1f, 0f);
@@ -2181,10 +2181,10 @@ public partial class GameBootstrap : MonoBehaviour
         bgOutline.effectColor    = new Color(0.88f, 0.62f, 0.08f, 0.5f);
         bgOutline.effectDistance = new Vector2(2f, -2f);
 
-        // Arc tick marks: 0–100 km/h → -135° to +135° from vertical (CW positive)
+        // Arc tick marks: 0вЂ“100 km/h в†’ -135В° to +135В° from vertical (CW positive)
         Color tickDim    = new Color(0.55f, 0.55f, 0.55f);
         Color tickBright = new Color(0.95f, 0.82f, 0.20f);
-        int tickCount = 11; // 0, 10, 20 … 100
+        int tickCount = 11; // 0, 10, 20 вЂ¦ 100
         for (int i = 0; i < tickCount; i++)
         {
             float t        = i / (float)(tickCount - 1);
@@ -2249,7 +2249,7 @@ public partial class GameBootstrap : MonoBehaviour
         cap.sizeDelta        = new Vector2(12f, 12f);
         cap.gameObject.AddComponent<Image>().color = new Color(0.86f, 0.22f, 0.16f);
 
-        // Speed readout — center-bottom of gauge
+        // Speed readout вЂ” center-bottom of gauge
         racingSpeedometerText = new GameObject("SpeedReadout").AddComponent<Text>();
         racingSpeedometerText.transform.SetParent(root, false);
         racingSpeedometerText.rectTransform.anchorMin        = new Vector2(0f, 0f);
@@ -2278,7 +2278,7 @@ public partial class GameBootstrap : MonoBehaviour
         unit.alignment = TextAnchor.MiddleCenter;
         unit.text      = "km/h";
 
-        // Gear indicator — sits above the speed readout in the center of the dial
+        // Gear indicator вЂ” sits above the speed readout in the center of the dial
         racingGearText = new GameObject("GearReadout").AddComponent<Text>();
         racingGearText.transform.SetParent(root, false);
         racingGearText.rectTransform.anchorMin        = new Vector2(0f, 1f);
@@ -2294,7 +2294,7 @@ public partial class GameBootstrap : MonoBehaviour
         racingGearText.text      = "1";
     }
 
-    // ── Racing world population ───────────────────────────────────────────────
+    // в”Ђв”Ђ Racing world population в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void PopulateRacingWorld()
     {
@@ -2308,7 +2308,7 @@ public partial class GameBootstrap : MonoBehaviour
         center /= raceSegments.Count;
         center.y = 0f;
 
-        // ── Ground base level ────────────────────────────────────────────────
+        // в”Ђв”Ђ Ground base level в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         float minSegY = float.MaxValue;
         foreach (var s in raceSegments)
         {
@@ -2318,10 +2318,10 @@ public partial class GameBootstrap : MonoBehaviour
         float groundY = (minSegY < float.MaxValue ? minSegY : 0f) - 1.5f;
         racingGroundY = groundY;
 
-        // ── Terrain bumps (hills + mountains) ───────────────────────────────
+        // в”Ђв”Ђ Terrain bumps (hills + mountains) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         terrainBumps.Clear();
 
-        // Track bounding radius — used to place mountains well outside the track
+        // Track bounding radius вЂ” used to place mountains well outside the track
         float trackBoundsRadius = 0f;
         foreach (var s in raceSegments)
         {
@@ -2329,7 +2329,7 @@ public partial class GameBootstrap : MonoBehaviour
             if (d + s.Length * 0.5f > trackBoundsRadius) trackBoundsRadius = d + s.Length * 0.5f;
         }
 
-        // Hills — moderate bumps anywhere in the world area
+        // Hills вЂ” moderate bumps anywhere in the world area
         for (int i = 0; i < 18; i++)
         {
             terrainBumps.Add(new TerrainBump
@@ -2341,7 +2341,7 @@ public partial class GameBootstrap : MonoBehaviour
             });
         }
 
-        // Mountains — large, tall, placed far from track
+        // Mountains вЂ” large, tall, placed far from track
         int mountainsPlaced = 0;
         for (int attempt = 0; attempt < 300 && mountainsPlaced < 7; attempt++)
         {
@@ -2369,8 +2369,8 @@ public partial class GameBootstrap : MonoBehaviour
             mountainsPlaced++;
         }
 
-        // ── Procedural ground mesh ───────────────────────────────────────────
-        const int   GridN     = 88;      // 88×88 quads = 89² = 7921 verts (safely under 65535)
+        // в”Ђв”Ђ Procedural ground mesh в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+        const int   GridN     = 88;      // 88Г—88 quads = 89ВІ = 7921 verts (safely under 65535)
         const float WorldSize = 900f;
         float step    = WorldSize / GridN;
         float originX = center.x - WorldSize * 0.5f;
@@ -2432,7 +2432,7 @@ public partial class GameBootstrap : MonoBehaviour
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
         mr.receiveShadows = true;
 
-        // ── Trees, bushes, flowers ──────────────────────────────────────────
+        // в”Ђв”Ђ Trees, bushes, flowers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         int placed = 0;
         for (int attempt = 0; attempt < 1200 && placed < 380; attempt++)
         {
@@ -2452,7 +2452,7 @@ public partial class GameBootstrap : MonoBehaviour
 
             if (roll < 0.62f)
             {
-                // Tree — much bigger
+                // Tree вЂ” much bigger
                 float treeScale = Random.Range(2.8f, 4.2f);
                 obj.transform.localScale = Vector3.one * treeScale;
                 CreateTreeVariant(obj.transform, attempt % 3);
@@ -2491,7 +2491,7 @@ public partial class GameBootstrap : MonoBehaviour
             placed++;
         }
 
-        // ── Lanterns — one pair every segment, both sides ────────────────
+        // в”Ђв”Ђ Lanterns вЂ” one pair every segment, both sides в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         for (int i = 0; i < raceSegments.Count; i++)
         {
             RaceSegment seg = raceSegments[i];
@@ -2620,7 +2620,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
     }
 
-    // Returns raw surface Y (no +0.35 truck-centre offset) — on-road or off-road.
+    // Returns raw surface Y (no +0.35 truck-centre offset) вЂ” on-road or off-road.
     private float SampleSurfaceY(float x, float z)
     {
         if (IsPositionOnRaceRoad(new Vector3(x, 0f, z), 4.8f))
@@ -2642,7 +2642,7 @@ public partial class GameBootstrap : MonoBehaviour
         return SampleGroundMeshY(x, z, racingGroundY);
     }
 
-    // ── Racing atmosphere ─────────────────────────────────────────────────────
+    // в”Ђв”Ђ Racing atmosphere в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void PopulateRacingAtmosphere()
     {
@@ -2654,10 +2654,10 @@ public partial class GameBootstrap : MonoBehaviour
         center /= raceSegments.Count;
         center.y = 0f;
 
-        // ── Post-processing on racing camera ─────────────────────────────────
+        // в”Ђв”Ђ Post-processing on racing camera в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         SetupRacingPostProcessing();
 
-        // ── Birds on tree tops ───────────────────────────────────────────────
+        // в”Ђв”Ђ Birds on tree tops в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         int birdCount = Mathf.Min(racingTreeObstacles.Count, 6);
         if (birdCount > 0)
         {
@@ -2673,7 +2673,7 @@ public partial class GameBootstrap : MonoBehaviour
             }
         }
 
-        // ── Bees near flower patches ──────────────────────────────────────────
+        // в”Ђв”Ђ Bees near flower patches в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         int beeCount = Mathf.Min(racingFlowerPoints.Count, 10);
         if (beeCount > 0)
         {
@@ -2682,7 +2682,7 @@ public partial class GameBootstrap : MonoBehaviour
                 CreateRacingBee(racingFlowerPoints[Mathf.Min(i * step, racingFlowerPoints.Count - 1)]);
         }
 
-        // ── Moths near lanterns ──────────────────────────────────────────────
+        // в”Ђв”Ђ Moths near lanterns в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         int mothCount = Mathf.Min(racingLanterns.Count, 10);
         if (mothCount > 0)
         {
@@ -2690,7 +2690,7 @@ public partial class GameBootstrap : MonoBehaviour
             for (int i = 0; i < mothCount; i++)
             {
                 RaceObstacleData lan = racingLanterns[Mathf.Min(i * step, racingLanterns.Count - 1)];
-                // Lamp head is at local Y ≈ 1.05, world scale 3 → ~3.2 m above root
+                // Lamp head is at local Y в‰€ 1.05, world scale 3 в†’ ~3.2 m above root
                 Vector3 lampPos = lan.Root != null
                     ? lan.Root.position + Vector3.up * 3.2f
                     : new Vector3(lan.PoleXZ.x, 3.5f, lan.PoleXZ.y);
@@ -2698,11 +2698,11 @@ public partial class GameBootstrap : MonoBehaviour
             }
         }
 
-        // ── Ambient dust motes ───────────────────────────────────────────────
+        // в”Ђв”Ђ Ambient dust motes в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         for (int i = 0; i < 14; i++)
             CreateRacingDustMote(center, i);
 
-        // ── Boulders near mountains ──────────────────────────────────────────
+        // в”Ђв”Ђ Boulders near mountains в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         foreach (var bump in terrainBumps)
         {
             if (bump.Height < 9f) continue;
@@ -2712,7 +2712,7 @@ public partial class GameBootstrap : MonoBehaviour
             CreateRacingBoulderCluster(clusterBase, bump.Radius * 0.28f);
         }
 
-        // ── Small ponds ──────────────────────────────────────────────────────
+        // в”Ђв”Ђ Small ponds в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         int pondsPlaced = 0;
         for (int attempt = 0; attempt < 300 && pondsPlaced < 4; attempt++)
         {
@@ -2960,7 +2960,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         float t = Time.unscaledTime;
 
-        // ── Birds (idle perch bob + wing twitch) ──────────────────────────────
+        // в”Ђв”Ђ Birds (idle perch bob + wing twitch) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         for (int i = 0; i < racingBirds.Count; i++)
         {
             RacingBirdData b = racingBirds[i];
@@ -2972,7 +2972,7 @@ public partial class GameBootstrap : MonoBehaviour
             if (b.RightWing != null) b.RightWing.localRotation = Quaternion.Euler(0f, 0f, -wingAng);
         }
 
-        // ── Bees (orbit flower + wing flutter) ───────────────────────────────
+        // в”Ђв”Ђ Bees (orbit flower + wing flutter) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         for (int i = racingBees.Count - 1; i >= 0; i--)
         {
             RacingBeeData b = racingBees[i];
@@ -2989,7 +2989,7 @@ public partial class GameBootstrap : MonoBehaviour
             racingBees[i] = b;
         }
 
-        // ── Moths (orbit lantern) ──────────────────────────────────────────────
+        // в”Ђв”Ђ Moths (orbit lantern) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         for (int i = racingMoths.Count - 1; i >= 0; i--)
         {
             RacingMothData m = racingMoths[i];
@@ -3003,7 +3003,7 @@ public partial class GameBootstrap : MonoBehaviour
             racingMoths[i] = m;
         }
 
-        // ── Dust (slow lazy drift) ────────────────────────────────────────────
+        // в”Ђв”Ђ Dust (slow lazy drift) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         for (int i = 0; i < racingDustMotes.Count; i++)
         {
             RacingDustData d = racingDustMotes[i];
@@ -3051,3 +3051,4 @@ public partial class GameBootstrap : MonoBehaviour
         return (p - (a + ab * t)).magnitude;
     }
 }
+

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public partial class GameBootstrap
@@ -508,7 +508,7 @@ public partial class GameBootstrap
         ApplyLumberTreeStageVisual(tree);
         task.PendingPlanting = false;
         SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} planted a new tree at ({tree.Cell.x},{tree.Cell.y}).");
-        ReturnForestWorkerInside(driver, "tree planted");
+        StartForestWorkerReturnToBuildingWalk(driver, "tree planted");
     }
 
     private void FinalizeFelledTree(LumberTreeRuntimeData tree)
@@ -816,4 +816,22 @@ public partial class GameBootstrap
             task.PendingPlanting = false;
         }
     }
+
+    private void StartForestWorkerReturnToBuildingWalk(DriverAgent driver, string reason)
+    {
+        if (driver?.DriverObject == null || !locations.TryGetValue(LocationType.Forest, out LocationData forestLocation))
+        {
+            ReturnForestWorkerInside(driver, reason);
+            return;
+        }
+
+        Vector3 target = GetCellCenter(forestLocation.Anchor);
+        target.y += 0.05f;
+        driver.WalkTargetWorld = target;
+        driver.WalkPhase = DriverRescuePhase.LumberReturnToBuilding;
+        driver.WalkAnimationTime = 0f;
+        BuildDriverWalkPath(driver, driver.DriverObject.transform.position, target);
+        SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} started walking back to Lumberyard after {reason}.");
+    }
 }
+

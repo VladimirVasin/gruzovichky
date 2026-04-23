@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -27,18 +27,24 @@ public partial class GameBootstrap
             return;
         }
 
-        if (!selectedLocation.HasValue || !locations.TryGetValue(selectedLocation.Value, out LocationData location) || mainCamera == null)
+        if (mainCamera == null)
         {
             selectedLocationLabelRoot.SetActive(false);
             return;
         }
 
-        Vector3 labelPosition = GetLocationCenter(selectedLocation.Value) + new Vector3(0f, 1.45f, 0f);
+        if (!TryGetSelectedBuilding(out LocationData location, out LocationType locationType, out Vector3 center))
+        {
+            selectedLocationLabelRoot.SetActive(false);
+            return;
+        }
+
+        Vector3 labelPosition = center + new Vector3(0f, 1.45f, 0f);
         SelectionVisualService.UpdateLabelVisual(
             selectedLocationLabelRoot,
             selectedLocationLabelText,
             selectedLocationLabelOutlines,
-            GetSelectedLocationDisplayName(selectedLocation.Value),
+            GetSelectedLocationDisplayName(locationType),
             labelPosition,
             mainCamera.transform.position,
             34f,
@@ -55,7 +61,27 @@ public partial class GameBootstrap
             }
 
             selectedLocation = pair.Key;
+            selectedLocalStopIndex = -1;
             isTruckDetailsOpen = false;
+            isLocalBusDetailsOpen = false;
+            RefreshSelectionVisuals();
+            PlayUiSound(uiSelectClip, 0.9f);
+            return true;
+        }
+
+        for (int i = 0; i < localStops.Count; i++)
+        {
+            LocationData stop = localStops[i];
+            if (!stop.Contains(cell) && stop.Anchor != cell)
+            {
+                continue;
+            }
+
+            selectedLocation = null;
+            selectedLocalStopIndex = -1;
+            selectedLocalStopIndex = i;
+            isTruckDetailsOpen = false;
+            isLocalBusDetailsOpen = false;
             RefreshSelectionVisuals();
             PlayUiSound(uiSelectClip, 0.9f);
             return true;
@@ -74,7 +100,15 @@ public partial class GameBootstrap
             }
         }
 
-        if (!selectedLocation.HasValue || !locations.TryGetValue(selectedLocation.Value, out LocationData location))
+        for (int i = 0; i < localStopSelectionHighlights.Count; i++)
+        {
+            if (localStopSelectionHighlights[i] != null)
+            {
+                localStopSelectionHighlights[i].SetActive(false);
+            }
+        }
+
+        if (!TryGetSelectedBuilding(out LocationData location, out LocationType locationType, out Vector3 center))
         {
             if (selectedLocationLabelRoot != null)
             {
@@ -84,10 +118,22 @@ public partial class GameBootstrap
             return;
         }
 
-        LocationType locationType = selectedLocation.Value;
-        if (locationSelectionHighlights.TryGetValue(locationType, out GameObject selectionHighlight) && selectionHighlight != null)
+        if (selectedLocalStopIndex >= 0)
         {
-            Vector3 center = GetLocationCenter(locationType) + new Vector3(0f, 0.03f, 0f);
+            if (selectedLocalStopIndex < localStopSelectionHighlights.Count)
+            {
+                GameObject selectionHighlight = localStopSelectionHighlights[selectedLocalStopIndex];
+                if (selectionHighlight != null)
+                {
+                    Vector3 size = new Vector3(location.Max.x - location.Min.x + 1.05f, 0.06f, location.Max.y - location.Min.y + 1.05f);
+                    selectionHighlight.transform.position = center + new Vector3(0f, 0.03f, 0f);
+                    selectionHighlight.transform.localScale = size;
+                    selectionHighlight.SetActive(true);
+                }
+            }
+        }
+        else if (locationSelectionHighlights.TryGetValue(locationType, out GameObject selectionHighlight) && selectionHighlight != null)
+        {
             Vector3 size = new Vector3(location.Max.x - location.Min.x + 1.05f, 0.06f, location.Max.y - location.Min.y + 1.05f);
             selectionHighlight.transform.position = center;
             selectionHighlight.transform.localScale = size;
@@ -96,8 +142,33 @@ public partial class GameBootstrap
 
         if (selectedLocationLabelRoot != null)
         {
-            selectedLocationLabelRoot.transform.position = GetLocationCenter(locationType) + new Vector3(0f, 1.45f, 0f);
+            selectedLocationLabelRoot.transform.position = center + new Vector3(0f, 1.45f, 0f);
             selectedLocationLabelRoot.SetActive(true);
         }
     }
+
+    private bool TryGetSelectedBuilding(out LocationData location, out LocationType locationType, out Vector3 center)
+    {
+        if (selectedLocalStopIndex >= 0 && selectedLocalStopIndex < localStops.Count)
+        {
+            location = localStops[selectedLocalStopIndex];
+            locationType = LocationType.Stop;
+            center = GetLocationCenter(location);
+            return true;
+        }
+
+        if (selectedLocation.HasValue && locations.TryGetValue(selectedLocation.Value, out location))
+        {
+            locationType = selectedLocation.Value;
+            center = GetLocationCenter(locationType);
+            return true;
+        }
+
+        location = null;
+        locationType = default;
+        center = Vector3.zero;
+        return false;
+    }
 }
+
+

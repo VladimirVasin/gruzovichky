@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
-    private static readonly string[] WorkerFirstNames =
+    private static readonly string[] WorkerMaleFirstNames =
     {
         // Disco Elysium style
         "Raul",
@@ -32,6 +32,32 @@ public partial class GameBootstrap
         "Sargis"
     };
 
+    private static readonly string[] WorkerFemaleFirstNames =
+    {
+        // Disco Elysium style
+        "Vera",
+        "Marta",
+        "Neli",
+        "Rina",
+        "Lara",
+        "Tina",
+        "Dara",
+        "Nina",
+        "Lena",
+        "Mira",
+        "Vika",
+        "Elvi",
+        "Zara",
+        // Armenian
+        "Ani",
+        "Sona",
+        "Aida",
+        "Nare",
+        "Lilit",
+        "Astghik",
+        "Gohar"
+    };
+
     private static readonly string[] WorkerLastNames =
     {
         // Disco Elysium style
@@ -48,7 +74,7 @@ public partial class GameBootstrap
         "Faroul",
         "Clauber",
         "Trant",
-        "Brúk",
+        "BrГєk",
         "Odors",
         // Armenian
         "Petrosyan",
@@ -58,9 +84,10 @@ public partial class GameBootstrap
         "Sargsyan"
     };
 
-    private string GenerateWorkerName()
+    private string GenerateWorkerName(WorkerGender gender)
     {
-        string first = WorkerFirstNames[Random.Range(0, WorkerFirstNames.Length)];
+        string[] pool = gender == WorkerGender.Female ? WorkerFemaleFirstNames : WorkerMaleFirstNames;
+        string first = pool[Random.Range(0, pool.Length)];
         string last  = WorkerLastNames[Random.Range(0, WorkerLastNames.Length)];
         return $"{first} {last}";
     }
@@ -390,10 +417,12 @@ public partial class GameBootstrap
 
     private DriverAgent SetupDriver(bool spawnInMotel = true)
     {
+        WorkerGender gender = Random.value < 0.5f ? WorkerGender.Female : WorkerGender.Male;
         DriverAgent driver = new()
         {
             DriverId = nextDriverId,
-            DriverName = GenerateWorkerName(),
+            Gender   = gender,
+            DriverName = GenerateWorkerName(gender),
             ShiftStartHour = -1,
             IsOnActiveShift = false
         };
@@ -406,11 +435,18 @@ public partial class GameBootstrap
         driver.DriverVisualRoot = new GameObject("DriverVisualRoot").transform;
         driver.DriverVisualRoot.SetParent(driver.DriverObject.transform, false);
 
+        bool isFemale = driver.Gender == WorkerGender.Female;
+
+        // Shirt/clothing color: blue for men, teal for women
+        Color shirtColor = isFemale ? new Color(0.20f, 0.56f, 0.52f) : new Color(0.22f, 0.44f, 0.88f);
+        // Trouser color: dark navy for men, dark teal for women
+        Color trouserColor = isFemale ? new Color(0.14f, 0.26f, 0.28f) : new Color(0.18f, 0.22f, 0.36f);
+
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         body.transform.SetParent(driver.DriverVisualRoot, false);
         body.transform.localPosition = new Vector3(0f, 0.38f, 0f);
-        body.transform.localScale = new Vector3(0.22f, 0.34f, 0.22f);
-        ApplyColor(body, new Color(0.22f, 0.44f, 0.88f));
+        body.transform.localScale = isFemale ? new Vector3(0.20f, 0.34f, 0.20f) : new Vector3(0.22f, 0.34f, 0.22f);
+        ApplyColor(body, shirtColor);
         ConfigureShadowVisual(body);
         driver.DriverBodyTransform = body.transform;
 
@@ -422,18 +458,33 @@ public partial class GameBootstrap
         ConfigureShadowVisual(head);
         driver.DriverHeadTransform = head.transform;
 
-        GameObject cap = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        cap.transform.SetParent(driver.DriverVisualRoot, false);
-        cap.transform.localPosition = new Vector3(0f, 1.02f, 0f);
-        cap.transform.localScale = new Vector3(0.26f, 0.08f, 0.26f);
-        ApplyColor(cap, new Color(0.84f, 0.22f, 0.18f));
-        ConfigureShadowVisual(cap);
-        driver.DriverCapTransform = cap.transform;
+        if (isFemale)
+        {
+            // Hair bun instead of flat cap
+            GameObject bun = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            bun.transform.SetParent(driver.DriverVisualRoot, false);
+            bun.transform.localPosition = new Vector3(0f, 1.02f, -0.04f);
+            bun.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
+            ApplyColor(bun, new Color(0.31f, 0.18f, 0.09f));
+            ConfigureShadowVisual(bun);
+            driver.DriverCapTransform = bun.transform;
+        }
+        else
+        {
+            // Flat cap for men
+            GameObject cap = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cap.transform.SetParent(driver.DriverVisualRoot, false);
+            cap.transform.localPosition = new Vector3(0f, 1.02f, 0f);
+            cap.transform.localScale = new Vector3(0.26f, 0.08f, 0.26f);
+            ApplyColor(cap, new Color(0.84f, 0.22f, 0.18f));
+            ConfigureShadowVisual(cap);
+            driver.DriverCapTransform = cap.transform;
+        }
 
-        driver.DriverLeftArmTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverLeftArm", new Vector3(-0.2f, 0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), new Color(0.22f, 0.44f, 0.88f));
-        driver.DriverRightArmTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverRightArm", new Vector3(0.2f, 0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), new Color(0.22f, 0.44f, 0.88f));
-        driver.DriverLeftLegTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverLeftLeg", new Vector3(-0.09f, 0.15f, 0f), new Vector3(0.1f, 0.42f, 0.1f), new Color(0.18f, 0.22f, 0.36f));
-        driver.DriverRightLegTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverRightLeg", new Vector3(0.09f, 0.15f, 0f), new Vector3(0.1f, 0.42f, 0.1f), new Color(0.18f, 0.22f, 0.36f));
+        driver.DriverLeftArmTransform  = CreateDriverLimb(driver.DriverVisualRoot, "DriverLeftArm",  new Vector3(-0.2f,  0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), shirtColor);
+        driver.DriverRightArmTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverRightArm", new Vector3( 0.2f,  0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), shirtColor);
+        driver.DriverLeftLegTransform  = CreateDriverLimb(driver.DriverVisualRoot, "DriverLeftLeg",  new Vector3(-0.09f, 0.15f, 0f), new Vector3(0.1f,  0.42f, 0.1f),  trouserColor);
+        driver.DriverRightLegTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverRightLeg", new Vector3( 0.09f, 0.15f, 0f), new Vector3(0.1f,  0.42f, 0.1f),  trouserColor);
 
         GameObject fuelCan = GameObject.CreatePrimitive(PrimitiveType.Cube);
         fuelCan.transform.SetParent(driver.DriverVisualRoot, false);
@@ -611,4 +662,5 @@ public partial class GameBootstrap
     }
 
 }
+
 

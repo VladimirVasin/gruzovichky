@@ -134,9 +134,12 @@ public partial class GameBootstrap
         public Text LogisticsSectionSummaryText;
         public Text ProductionSectionTitleText;
         public Text ProductionSectionSummaryText;
+        public Text BusDriverGroupTitleText;
+        public Text BusDriverGroupSummaryText;
         public readonly List<ShiftDriverRowUi> DriverRows = new();
         public readonly List<ShiftCardUi> ShiftCards = new();
         public IntercitySlotUi IntercitySlot;
+        public readonly List<IntercitySlotUi> BusDriverSlots = new();
     }
 
     private sealed class ShiftDriverRowUi
@@ -1082,37 +1085,49 @@ public partial class GameBootstrap
         return card;
     }
 
-    private string GetWorkerListStatusLabel(DriverAgent driver, bool ru)
-    {
-        if (driver == null)
-        {
-            return ru ? "Свободен" : "Idle";
-        }
+    private static string Gend(DriverAgent d, string male, string female) =>
+        d?.Gender == WorkerGender.Female ? female : male;
 
-        TruckAgent truck = GetAssignedTruckForDriver(driver);
-        bool isProduction = driver.DutyMode == DriverDutyMode.Logistics;
-        return driver.IsArrivingByBus ? (ru ? "В пути" : "Arriving")
-            : IsDriverOnActiveTradeRun(driver) ? (ru ? "Торговый рейс" : "Trade Run")
-            : IsDriverIntercity(driver) ? (ru ? "Межгород" : "Intercity")
-            : isProduction ? (ru ? "На производстве" : "Production")
-            : truck != null ? (ru ? "На логистике" : "Logistics")
-            : driver.RestPhase != DriverRestPhase.None ? (ru ? "Отдыхает" : "Resting")
-            : (ru ? "Свободен" : "Idle");
-    }
-
-    private string GetWorkerDutySummaryLabel(DriverAgent driver, bool ru)
+    private static string GetWorkerGenderLabel(DriverAgent driver, bool ru)
     {
         if (driver == null)
         {
             return "—";
         }
 
+        return driver.Gender == WorkerGender.Female
+            ? (ru ? "Женщина" : "Female")
+            : (ru ? "Мужчина" : "Male");
+    }
+
+    private string GetWorkerListStatusLabel(DriverAgent driver, bool ru)
+    {
+        if (driver == null) return ru ? "Свободен" : "Idle";
+
+        TruckAgent truck = GetAssignedTruckForDriver(driver);
+        bool isProduction = driver.DutyMode == DriverDutyMode.Logistics;
+        return driver.IsArrivingByBus ? (ru ? "В пути" : "Arriving")
+            : IsDriverOnActiveTradeRun(driver) ? (ru ? "Торговый рейс" : "Trade Run")
+            : IsDriverIntercity(driver) ? (ru ? "Межгород" : "Intercity")
+            : IsDriverBusDriver(driver) ? (ru ? "Логистика" : "Logistics")
+            : isProduction ? (ru ? "На производстве" : "Production")
+            : truck != null ? (ru ? "На логистике" : "Logistics")
+            : driver.RestPhase != DriverRestPhase.None ? (ru ? "Отдыхает" : "Resting")
+            : (ru ? Gend(driver, "Свободен", "Свободна") : "Idle");
+    }
+
+    private string GetWorkerDutySummaryLabel(DriverAgent driver, bool ru)
+    {
+        if (driver == null) return "—";
+
         return driver.IsInsideBuilding ? (ru ? "Работает в здании" : "Inside building")
+            : IsBusDriverOnActiveRoute(driver) ? (ru ? "На автобусном маршруте" : "On bus route")
             : driver.IsOnActiveShift ? (ru ? "На смене" : "On shift")
             : driver.RestPhase != DriverRestPhase.None ? (ru ? "Отдыхает" : "Resting")
             : IsDriverBusyWalkPhase(driver) ? (ru ? "В пути" : "Commuting")
             : IsDriverIntercity(driver) ? (ru ? "Ожидает межгород" : "Waiting for intercity")
-            : (ru ? "Свободен в мотеле" : "Idle at motel");
+            : IsDriverBusDriver(driver) ? (ru ? "Ожидает автобусный маршрут" : "Waiting for bus route")
+            : (ru ? Gend(driver, "Свободен в мотеле", "Свободна в мотеле") : "Idle at motel");
     }
 
     private void UpdateDriversScreenUi()
@@ -1204,7 +1219,7 @@ public partial class GameBootstrap
             if (driversScreenUi.DetailProfileTitleText != null)
                 driversScreenUi.DetailProfileTitleText.text = ru ? "Профиль" : "Profile";
             if (driversScreenUi.DetailRoleText != null)
-                driversScreenUi.DetailRoleText.text = L(GetWorkerOccupationLabel(sel));
+                driversScreenUi.DetailRoleText.text = $"{L(GetWorkerOccupationLabel(sel))} • {GetWorkerGenderLabel(sel, ru)}";
             UpdateWorkerPortraitUi(sel);
             UpdateWorkerStatsUi(sel, ru);
             UpdateWorkerNeedsUi(sel, ru);
@@ -1659,9 +1674,16 @@ public partial class GameBootstrap
                 selectedDriver.IsOnActiveShift = false;
                 selectedDriver.WaitingForShiftAtParking = false;
                 bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[currentShiftIndex]);
-                if (inWindow && selectedDriver.RestPhase == DriverRestPhase.None && !IsDriverBusyWalkPhase(selectedDriver))
+                if (inWindow && selectedDriver.RestPhase == DriverRestPhase.None)
                 {
-                    StartDriverShiftCommute(selectedDriver);
+                    if (IsDriverBusDriver(selectedDriver))
+                    {
+                        StartBusDriverShiftCommute(selectedDriver);
+                    }
+                    else if (!IsDriverBusyWalkPhase(selectedDriver))
+                    {
+                        StartDriverShiftCommute(selectedDriver);
+                    }
                 }
 
                 PlayUiSound(uiSelectClip, 0.85f);
@@ -1710,6 +1732,51 @@ public partial class GameBootstrap
         intercityRemoveLayout.preferredWidth = 92f;
         intercityRemoveLayout.preferredHeight = 30f;
         shiftsScreenUi.IntercitySlot.RemoveButton.onClick.AddListener(RemoveIntercityDriverAssignment);
+
+        RectTransform busDriverCard = CreateSectionCard(transportContent, font, string.Empty, out RectTransform busDriverBody, false);
+        LayoutElement busDriverCardLayout = busDriverCard.gameObject.AddComponent<LayoutElement>();
+        busDriverCardLayout.preferredHeight = 176f;
+        busDriverCardLayout.flexibleHeight = 0f;
+        VerticalLayoutGroup busDriverLayout = busDriverBody.GetComponent<VerticalLayoutGroup>();
+        busDriverLayout.spacing = 4f;
+
+        shiftsScreenUi.BusDriverGroupTitleText = CreateHeaderText("BusDriverGroupTitle", busDriverBody, font, "Bus Driver", 16, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.BusDriverGroupSummaryText = CreateBodyText("BusDriverGroupSummary", busDriverBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        shiftsScreenUi.BusDriverGroupSummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+
+        for (int busShiftIndex = 0; busShiftIndex < ShiftPresetHours.Length; busShiftIndex++)
+        {
+            IntercitySlotUi busSlot = new();
+            shiftsScreenUi.BusDriverSlots.Add(busSlot);
+
+            RectTransform busShiftRow = CreateLayoutRow($"BusDriverShiftRow{busShiftIndex}", busDriverBody, 28f, 4f);
+            busShiftRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+
+            busSlot.AssignedDriverText = CreateHeaderText($"BusDriverAssigned{busShiftIndex}", busShiftRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            busSlot.AssignedDriverText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            busSlot.AssignButton = CreateButton($"BusDriverAssignButton{busShiftIndex}", busShiftRow, font, out Text busDriverAssignText, string.Empty, 11, FleetPrimaryButtonColor, Color.white);
+            busSlot.AssignButtonText = busDriverAssignText;
+            LayoutElement busDriverAssignLayout = busSlot.AssignButton.gameObject.AddComponent<LayoutElement>();
+            busDriverAssignLayout.preferredWidth = 104f;
+            busDriverAssignLayout.preferredHeight = 28f;
+            int capturedBusShiftIndex = busShiftIndex;
+            busSlot.AssignButton.onClick.AddListener(() =>
+            {
+                DriverAgent selectedDriver = driverAgents.Find(driver => driver.DriverId == selectedShiftDriverId);
+                if (selectedDriver == null)
+                {
+                    return;
+                }
+
+                AssignDriverToBusSlot(selectedDriver, capturedBusShiftIndex);
+            });
+
+            busSlot.RemoveButton = CreateButton($"BusDriverRemoveButton{busShiftIndex}", busShiftRow, font, out _, "×", 12, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
+            LayoutElement busDriverRemoveLayout = busSlot.RemoveButton.gameObject.AddComponent<LayoutElement>();
+            busDriverRemoveLayout.preferredWidth = 28f;
+            busDriverRemoveLayout.preferredHeight = 28f;
+            busSlot.RemoveButton.onClick.AddListener(() => RemoveBusDriverAssignment(capturedBusShiftIndex));
+        }
 
         // ── Logistics panel ──────────────────────────────────────────────────
         GameObject logisticsPanelObj = CreateUiObject("LogisticsPanel", rightPanel);
@@ -1938,10 +2005,13 @@ public partial class GameBootstrap
 
             bool isAssigned = driver.ShiftStartHour >= 0;
             bool isIntercity = IsDriverIntercity(driver);
+            bool isBusDriver = IsDriverBusDriver(driver);
             bool isProduction = driver.DutyMode == DriverDutyMode.Logistics;
             bool isTruckAssigned = driver.AssignedTruckNumber > 0;
             row.StatusText.text = isIntercity
                 ? L("Intercity")
+                : isBusDriver
+                    ? (ru ? $"Автобус: {GetShiftRangeLabel(driver.ShiftStartHour)}" : $"Bus: {GetShiftRangeLabel(driver.ShiftStartHour)}")
                 : isTruckAssigned
                     ? L("Logistics")
                     : isProduction
@@ -1949,7 +2019,7 @@ public partial class GameBootstrap
                         : isAssigned
                             ? $"{L("Assigned")}: {GetShiftRangeLabel(driver.ShiftStartHour)}"
                             : L("Idle");
-            row.StatusText.color = isIntercity || isProduction || isTruckAssigned
+            row.StatusText.color = isIntercity || isBusDriver || isProduction || isTruckAssigned
                 ? FleetAccentColor
                 : isAssigned ? new Color(0.62f, 0.92f, 0.62f, 1f) : FleetMutedTextColor;
         }
@@ -1998,18 +2068,20 @@ public partial class GameBootstrap
 
             string workerStatusSummary = IsDriverIntercity(selectedDriver)
                 ? (ru ? "Закреплён за междугородними рейсами" : "Assigned to intercity duty")
+                : IsDriverBusDriver(selectedDriver)
+                    ? (ru ? $"Закреплён за автобусной сменой {GetShiftRangeLabel(selectedDriver.ShiftStartHour)}" : $"Assigned to bus duty {GetShiftRangeLabel(selectedDriver.ShiftStartHour)}")
                 : selectedDriver.AssignedTruckNumber > 0
                     ? (ru ? $"Закреплён за грузовиком #{selectedDriver.AssignedTruckNumber}" : $"Assigned to Truck #{selectedDriver.AssignedTruckNumber}")
                     : selectedDriver.DutyMode == DriverDutyMode.Logistics && selectedDriver.AssignedBuildingType.HasValue
                         ? (ru ? $"Работает в {GetSelectedLocationDisplayName(selectedDriver.AssignedBuildingType.Value)}" : $"Working at {GetSelectedLocationDisplayName(selectedDriver.AssignedBuildingType.Value)}")
                         : selectedDriver.ShiftStartHour >= 0
                             ? (ru ? $"Логистическая смена: {GetShiftRangeLabel(selectedDriver.ShiftStartHour)}" : $"Logistics shift: {GetShiftRangeLabel(selectedDriver.ShiftStartHour)}")
-                            : (ru ? "Свободен для назначения" : "Available for assignment");
+                            : (ru ? Gend(selectedDriver, "Свободен для назначения", "Свободна для назначения") : "Available for assignment");
             if (shiftsScreenUi.SelectionStatusText != null)
             {
                 shiftsScreenUi.SelectionStatusText.text = workerStatusSummary;
                 shiftsScreenUi.SelectionStatusText.color =
-                    (selectedDriver.DutyMode != DriverDutyMode.Local || selectedDriver.AssignedTruckNumber > 0 || selectedDriver.ShiftStartHour >= 0)
+                    (selectedDriver.DutyMode != DriverDutyMode.Local || selectedDriver.AssignedTruckNumber > 0 || selectedDriver.ShiftStartHour >= 0 || IsDriverBusDriver(selectedDriver))
                     ? FleetAccentColor
                     : Color.white;
             }
@@ -2040,7 +2112,9 @@ public partial class GameBootstrap
             List<DriverAgent> assignedDrivers = new();
             foreach (DriverAgent driver in driverAgents)
             {
-                if (driver.DutyMode == DriverDutyMode.Local && driver.ShiftStartHour == card.ShiftHour)
+                if (driver.DutyMode == DriverDutyMode.Local &&
+                    driver.ShiftStartHour == card.ShiftHour &&
+                    !IsDriverBusDriver(driver))
                 {
                     assignedDrivers.Add(driver);
                 }
@@ -2070,11 +2144,12 @@ public partial class GameBootstrap
 
             bool alreadyAssigned = selectedDriver != null && selectedDriver.DutyMode == DriverDutyMode.Local && selectedDriver.ShiftStartHour == card.ShiftHour;
             bool intercitySelected = IsDriverIntercity(selectedDriver);
+            bool busDriverSelected = IsDriverBusDriver(selectedDriver);
             bool productionSelected = selectedDriver?.DutyMode == DriverDutyMode.Logistics;
-            card.AssignButton.interactable = selectedDriver != null && !alreadyAssigned && !intercitySelected && !productionSelected;
+            card.AssignButton.interactable = selectedDriver != null && !alreadyAssigned && !intercitySelected && !productionSelected && !busDriverSelected;
             card.AssignButtonText.text = selectedDriver == null
                 ? L("Select a worker to assign")
-                : (intercitySelected || productionSelected)
+                : (intercitySelected || productionSelected || busDriverSelected)
                     ? L("Worker not available")
                     : alreadyAssigned
                         ? (ru ? $"{selectedDriver.DriverName} уже назначен" : $"{selectedDriver.DriverName} already assigned")
@@ -2082,6 +2157,7 @@ public partial class GameBootstrap
         }
 
         UpdateIntercitySlotUi(selectedDriver);
+        UpdateBusDriverSlotsUi(selectedDriver);
 
         if (isLogisticsTabActive)
         {
@@ -2399,6 +2475,15 @@ public partial class GameBootstrap
         if (driver == null || slot == null) return;
         if (driver.IsArrivingByBus) return;
 
+        if (IsDriverBusDriver(driver))
+        {
+            int busSlotIndex = GetBusDriverShiftSlotIndex(driver);
+            if (busSlotIndex >= 0)
+            {
+                busDriverShiftIds[busSlotIndex] = 0;
+            }
+        }
+
         TruckAgent assignedTruck = GetAssignedTruckForDriver(driver);
         if (assignedTruck != null)
         {
@@ -2472,9 +2557,73 @@ public partial class GameBootstrap
         shiftsScreenUi.IntercitySlot.RemoveButton.interactable = intercityDriver != null;
     }
 
+    private void UpdateBusDriverSlotsUi(DriverAgent selectedDriver)
+    {
+        if (shiftsScreenUi == null || shiftsScreenUi.BusDriverSlots.Count == 0)
+        {
+            return;
+        }
+
+        bool ru = IsRussianLanguage();
+        if (shiftsScreenUi.BusDriverGroupTitleText != null)
+        {
+            shiftsScreenUi.BusDriverGroupTitleText.text = ru ? "Водитель автобуса" : "Bus Driver";
+        }
+
+        if (shiftsScreenUi.BusDriverGroupSummaryText != null)
+        {
+            shiftsScreenUi.BusDriverGroupSummaryText.text = ru
+                ? "Одна должность, три смены. Водители сменяют друг друга."
+                : "One role, three shift slots. Drivers hand the route over to each other.";
+        }
+
+        bool selectedIsAvailable = selectedDriver != null &&
+                                   !selectedDriver.IsArrivingByBus &&
+                                   !IsDriverIntercity(selectedDriver) &&
+                                   selectedDriver.DutyMode == DriverDutyMode.Local &&
+                                   selectedDriver.AssignedTruckNumber <= 0 &&
+                                   !IsDriverOnActiveTradeRun(selectedDriver) &&
+                                   !IsBusDriverOnActiveRoute(selectedDriver);
+        int selectedBusSlotIndex = GetBusDriverShiftSlotIndex(selectedDriver);
+        bool selectedAlreadyBusDriver = selectedBusSlotIndex >= 0;
+
+        for (int i = 0; i < shiftsScreenUi.BusDriverSlots.Count && i < ShiftPresetHours.Length; i++)
+        {
+            IntercitySlotUi slot = shiftsScreenUi.BusDriverSlots[i];
+            DriverAgent busDriver = GetBusAssignedDriver(i);
+            bool selectedAlreadyInThisSlot = selectedBusSlotIndex == i;
+            string shiftLabel = $"{L(ShiftNames[i])} {GetShiftRangeLabel(ShiftPresetHours[i])}";
+            string assignedLabel = busDriver != null ? busDriver.DriverName : "—";
+
+            slot.AssignedDriverText.text = $"{shiftLabel}: {assignedLabel}";
+            slot.AssignButton.interactable = selectedIsAvailable && !selectedAlreadyBusDriver && !selectedAlreadyInThisSlot && busDriver == null;
+            slot.AssignButtonText.text = selectedDriver == null
+                ? (ru ? "Выбери рабочего" : "Select worker")
+                : busDriver != null
+                    ? (ru ? "Занято" : "Occupied")
+                    : selectedAlreadyBusDriver
+                        ? (ru ? "Уже назначен" : "Already assigned")
+                        : !selectedIsAvailable
+                            ? (ru ? "Недоступен" : "Unavailable")
+                            : (ru ? "Назначить" : "Assign");
+            slot.RemoveButton.interactable = busDriver != null && !IsBusDriverOnActiveRoute(busDriver);
+        }
+    }
+
     private DriverAgent GetIntercityAssignedDriver()
     {
         return driverAgents.Find(driver => driver.DriverId == intercityDriverId && IsDriverIntercity(driver));
+    }
+
+    private DriverAgent GetBusAssignedDriver(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= busDriverShiftIds.Length)
+        {
+            return null;
+        }
+
+        int driverId = busDriverShiftIds[slotIndex];
+        return driverId <= 0 ? null : driverAgents.Find(driver => driver.DriverId == driverId);
     }
 
     private void AssignDriverToIntercitySlot(DriverAgent driver)
@@ -2504,6 +2653,57 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
     }
 
+    private void AssignDriverToBusSlot(DriverAgent driver, int slotIndex)
+    {
+        if (driver == null || driver.IsArrivingByBus)
+        {
+            return;
+        }
+
+        if (slotIndex < 0 || slotIndex >= ShiftPresetHours.Length)
+        {
+            return;
+        }
+
+        if (driver.AssignedTruckNumber > 0 || driver.DutyMode == DriverDutyMode.Logistics || IsDriverIntercity(driver))
+        {
+            return;
+        }
+
+        DriverAgent currentBusDriver = GetBusAssignedDriver(slotIndex);
+        if (currentBusDriver != null && currentBusDriver != driver)
+        {
+            currentBusDriver.ShiftStartHour = -1;
+            currentBusDriver.IsOnActiveShift = false;
+            currentBusDriver.WaitingForShiftAtParking = false;
+            currentBusDriver.NeedsShiftEndReturn = false;
+            busDriverShiftIds[slotIndex] = 0;
+        }
+
+        int previousSlotIndex = GetBusDriverShiftSlotIndex(driver);
+        if (previousSlotIndex >= 0 && previousSlotIndex != slotIndex)
+        {
+            busDriverShiftIds[previousSlotIndex] = 0;
+        }
+
+        busDriverShiftIds[slotIndex] = driver.DriverId;
+        driver.ShiftStartHour = ShiftPresetHours[slotIndex];
+        driver.IsOnActiveShift = false;
+        driver.WaitingForShiftAtParking = false;
+        driver.NeedsShiftEndReturn = false;
+        PlayUiSound(uiSelectClip, 0.85f);
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to Bus Driver slot {ShiftNames[slotIndex]} ({GetShiftRangeLabel(ShiftPresetHours[slotIndex])}).");
+        SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} reserved as Bus Driver for {ShiftNames[slotIndex]} ({GetShiftRangeLabel(ShiftPresetHours[slotIndex])}).");
+        bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[slotIndex]);
+        if (inWindow && driver.RestPhase == DriverRestPhase.None)
+        {
+            StartBusDriverShiftCommute(driver);
+        }
+        LogDriverReaction(driver, $"assigned to bus duty {ShiftNames[slotIndex]} ({GetShiftRangeLabel(ShiftPresetHours[slotIndex])})");
+        isShiftsScreenDirty = true;
+        isDriversScreenDirty = true;
+    }
+
     private void RemoveIntercityDriverAssignment()
     {
         DriverAgent intercityDriver = GetIntercityAssignedDriver();
@@ -2528,4 +2728,24 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
     }
 
+    private void RemoveBusDriverAssignment(int slotIndex)
+    {
+        DriverAgent busDriver = GetBusAssignedDriver(slotIndex);
+        if (busDriver == null)
+        {
+            return;
+        }
+
+        busDriverShiftIds[slotIndex] = 0;
+        busDriver.ShiftStartHour = -1;
+        busDriver.IsOnActiveShift = false;
+        busDriver.WaitingForShiftAtParking = false;
+        busDriver.NeedsShiftEndReturn = false;
+        SessionDebugLogger.Log("SHIFT", $"{busDriver.DriverName} removed from Bus Driver slot {ShiftNames[slotIndex]}.");
+        LogDriverReaction(busDriver, $"removed from bus duty {ShiftNames[slotIndex]}");
+        isShiftsScreenDirty = true;
+        isDriversScreenDirty = true;
+    }
+
 }
+

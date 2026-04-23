@@ -77,3 +77,11 @@ the agent must:
 - Do not paste code into memory files.
 - `ai/work-log.md` is the frequently updated file.
 - Stable memory files should only be updated when project reality actually changes.
+
+## Encoding Safety Rules
+
+- Treat all `.cs`, `.md`, `.json`, `.txt`, and other project text files as `UTF-8`.
+- Prefer `apply_patch` for manual edits, especially in files containing Russian UI/localization text.
+- Do not rewrite project files through shell commands unless encoding is explicitly forced to UTF-8.
+- After editing localized UI/HUD/tutorial/state text, run a quick scan for mojibake markers such as `вЂ`, `Р`, `С`, or `�`.
+- If a diff shows broken Cyrillic or mojibake, stop and fix it before moving on.

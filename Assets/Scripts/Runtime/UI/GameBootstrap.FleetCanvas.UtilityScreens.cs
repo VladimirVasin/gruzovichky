@@ -13,11 +13,13 @@ public partial class GameBootstrap
         {
             unlockedBuildTools.Add(BuildTool.Road);
             unlockedBuildTools.Add(BuildTool.Motel);
+            unlockedBuildTools.Add(BuildTool.Stop);
         }
         else
         {
             unlockedBuildTools.Add(BuildTool.Road);
             unlockedBuildTools.Add(BuildTool.Motel);
+            unlockedBuildTools.Add(BuildTool.Stop);
             unlockedBuildTools.Add(BuildTool.Sawmill);
             unlockedBuildTools.Add(BuildTool.FurnitureFactory);
             unlockedBuildTools.Add(BuildTool.Bar);
@@ -109,6 +111,7 @@ public partial class GameBootstrap
         {
             CreateBuildCategory(cardList, font, "Infrastructure", "Инфраструктура", false,
                 (BuildTool.Road,             "RD", "Road",              new Color(0.27f, 0.42f, 0.60f)),
+                (BuildTool.Stop,             "ST", "Bus Stop",          new Color(0.72f, 0.28f, 0.24f)),
                 (BuildTool.Motel,            "MT", "Motel",             new Color(0.24f, 0.48f, 0.36f))),
             CreateBuildCategory(cardList, font, "Production", "Производство", false,
                 (BuildTool.Sawmill,          "SW", "Sawmill",           new Color(0.58f, 0.36f, 0.16f)),
@@ -344,6 +347,7 @@ public partial class GameBootstrap
         return tool switch
         {
             BuildTool.Road             => false,
+            BuildTool.Stop             => false,
             BuildTool.Sawmill          => locations.ContainsKey(LocationType.Sawmill),
             BuildTool.Motel            => locations.ContainsKey(LocationType.Motel),
             BuildTool.FurnitureFactory => locations.ContainsKey(LocationType.FurnitureFactory),
@@ -364,6 +368,7 @@ public partial class GameBootstrap
             return tool switch
             {
                 BuildTool.Road             => ru ? "Режим активен: левый клик строит, правый удаляет." : "Mode active: left click builds, right click removes.",
+                BuildTool.Stop             => ru ? $"Режим активен: поставь автобусную остановку 2x1 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x1 bus stop from its driveway cell. R rotates ({rot}).",
                 BuildTool.Sawmill          => ru ? $"Режим активен: поставь лесопилку 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x2 sawmill from its driveway cell. R rotates ({rot}).",
                 BuildTool.Motel            => ru ? $"Режим активен: поставь мотель 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x2 motel from its driveway cell. R rotates ({rot}).",
                 BuildTool.FurnitureFactory => ru ? $"Режим активен: поставь фабрику 3x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 3x2 furniture factory from its driveway cell. R rotates ({rot}).",
@@ -378,6 +383,7 @@ public partial class GameBootstrap
         return tool switch
         {
             BuildTool.Road             => ru ? "Нажми для входа в режим постройки дорог." : "Click to enter road building mode.",
+            BuildTool.Stop             => ru ? "Автобусная остановка 2x1: локальная городская остановка для будущего транспорта рабочих." : "Place a 2x1 local bus stop for future worker public transport routes.",
             BuildTool.Sawmill          => locations.ContainsKey(LocationType.Sawmill)          ? alreadyBuilt : (ru ? "Здание 2x2: превращает брёвна в доски." : "Place a 2x2 production building that turns logs into boards."),
             BuildTool.Motel            => locations.ContainsKey(LocationType.Motel)            ? alreadyBuilt : (ru ? "Мотель 2x2: водители нанимаются и ждут здесь." : "Place a 2x2 driver hub. Drivers can idle and be hired after it exists."),
             BuildTool.FurnitureFactory => locations.ContainsKey(LocationType.FurnitureFactory) ? alreadyBuilt : (ru ? "Фабрика 3x2: 1 Доска + 1 Ткань = 1 Мебель." : "Place a 3x2 factory that turns 1 Board + 1 Textile into 1 Furniture."),
@@ -1963,3 +1969,4 @@ public partial class GameBootstrap
         isWorldMapScreenDirty = false;
     }
 }
+

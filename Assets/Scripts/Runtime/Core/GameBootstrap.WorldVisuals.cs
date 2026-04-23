@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -19,9 +19,9 @@ public partial class GameBootstrap : MonoBehaviour
         const float waterSurfaceTop = 0.22f;
         const float waterSurfaceThickness = 0.035f;
         // Opaque water body sits low; transparent surface stack floats above it.
-        float waterSurfaceCenterY    = waterCellHeight - 0.006f;  // 0.214 — top layer
-        float waterMidSurfaceCenterY = waterCellHeight - 0.012f;  // 0.208 — mid layer
-        float waterLowSurfaceCenterY = waterCellHeight - 0.018f;  // 0.202 — low layer
+        float waterSurfaceCenterY    = waterCellHeight - 0.006f;  // 0.214 вЂ” top layer
+        float waterMidSurfaceCenterY = waterCellHeight - 0.012f;  // 0.208 вЂ” mid layer
+        float waterLowSurfaceCenterY = waterCellHeight - 0.018f;  // 0.202 вЂ” low layer
         waterSurfaceTiles.Clear();
         waterBodyTiles.Clear();
 
@@ -45,7 +45,7 @@ public partial class GameBootstrap : MonoBehaviour
 
                 if (isWater)
                 {
-                    // t=0 → shore (shallow), t=1 → deepest row
+                    // t=0 в†’ shore (shallow), t=1 в†’ deepest row
                     float t = (float)(y - shoreRow) / Mathf.Max(WaterRiverWidth - 1, 1);
 
                     // Solid tile: per-tile depth colour (instance material)
@@ -68,7 +68,7 @@ public partial class GameBootstrap : MonoBehaviour
                         PhaseOffset = wavePhase
                     });
 
-                    // Top shimmer layer — wide, light, animated bob
+                    // Top shimmer layer вЂ” wide, light, animated bob
                     Color topColor = Color.Lerp(
                         new Color(0.75f, 0.94f, 1.00f, 0.18f),
                         new Color(0.18f, 0.50f, 0.85f, 0.11f), t);
@@ -96,7 +96,7 @@ public partial class GameBootstrap : MonoBehaviour
                         LayerIndex = 0
                     });
 
-                    // Mid layer — slightly smaller, more saturated
+                    // Mid layer вЂ” slightly smaller, more saturated
                     Color midColor = Color.Lerp(
                         new Color(0.42f, 0.78f, 0.92f, 0.16f),
                         new Color(0.10f, 0.36f, 0.72f, 0.11f), t);
@@ -123,7 +123,7 @@ public partial class GameBootstrap : MonoBehaviour
                         LayerIndex = 1
                     });
 
-                    // Low layer — noticeably smaller, darkest, acts as "depth shadow"
+                    // Low layer вЂ” noticeably smaller, darkest, acts as "depth shadow"
                     Color lowColor = Color.Lerp(
                         new Color(0.22f, 0.58f, 0.78f, 0.30f),
                         new Color(0.04f, 0.18f, 0.52f, 0.22f), t);
@@ -223,7 +223,7 @@ public partial class GameBootstrap : MonoBehaviour
             for (int x = 0; x < GridWidth; x++)
                 terrainHeights[x, beachFarRow] = Mathf.Min(terrainHeights[x, beachFarRow], 0.08f);
 
-        // One gradient row before the sand shelf — gentle slope down into the beach.
+        // One gradient row before the sand shelf вЂ” gentle slope down into the beach.
         if (gradRow >= 0)
             for (int x = 0; x < GridWidth; x++)
                 terrainHeights[x, gradRow] = Mathf.Min(terrainHeights[x, gradRow], 0.22f);
@@ -814,3 +814,4 @@ public partial class GameBootstrap : MonoBehaviour
     }
 
 }
+

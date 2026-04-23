@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -16,7 +16,7 @@ public partial class GameBootstrap : MonoBehaviour
         Vector3 center = new(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
         Vector3 spawnBase = center + new Vector3(-30f, 0f, -4f);
 
-        // Near (bottom screen) — lower Y so they sit closer to ground-level perspective
+        // Near (bottom screen) вЂ” lower Y so they sit closer to ground-level perspective
         CreateDistantCloud(spawnBase + new Vector3(0f, 10f, -18f), 1.0f, 0.7f,  0.44f, 0.30f, 1.8f,   4f);
         CreateDistantCloud(spawnBase + new Vector3(0f, 11f, -12f), 0.8f, 0.85f, 0.38f, 1.50f, 2.0f,  22f);
         CreateDistantCloud(spawnBase + new Vector3(0f, 12f,  -7f), 1.2f, 0.75f, 0.41f, 0.80f, 2.15f,  0f);
@@ -608,10 +608,10 @@ public partial class GameBootstrap : MonoBehaviour
                 });
         }
 
-        if (locations.TryGetValue(LocationType.BusStop, out _))
+        if (locations.TryGetValue(LocationType.IntercityStop, out _))
         {
             RegisterAmbientCatPointsNearLocation(
-                LocationType.BusStop,
+                LocationType.IntercityStop,
                 new[]
                 {
                     new Vector2(-2.2f, 1.1f),
@@ -1403,3 +1403,5 @@ public partial class GameBootstrap : MonoBehaviour
     }
 
 }
+
+

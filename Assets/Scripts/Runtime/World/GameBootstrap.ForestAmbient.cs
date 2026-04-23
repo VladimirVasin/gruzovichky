@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public partial class GameBootstrap
 {
@@ -530,3 +530,4 @@ public partial class GameBootstrap
         }
     }
 }
+

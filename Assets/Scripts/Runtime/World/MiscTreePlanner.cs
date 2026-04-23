@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public static class MiscTreePlanner
@@ -120,3 +120,4 @@ public static class MiscTreePlanner
         return cell.x >= 0 && cell.x < gridWidth && cell.y >= 0 && cell.y < gridHeight;
     }
 }
+

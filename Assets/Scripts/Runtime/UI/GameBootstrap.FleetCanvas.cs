@@ -764,6 +764,11 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (IsDriverBusDriver(driver))
+        {
+            return false;
+        }
+
         if (driver.AssignedTruckNumber > 0)
         {
             return false;
@@ -1235,3 +1240,4 @@ public partial class GameBootstrap
 
     // в”Ђв”Ђ Drivers Canvas Screen в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 }
+

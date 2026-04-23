@@ -1,0 +1,679 @@
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+
+public partial class GameBootstrap
+{
+    private void SetupLocalBusRuntime()
+    {
+        CleanupLocalBusRuntime();
+        localBusRoute = new LocalBusRouteData
+        {
+            Speed = EdgeHighwayBusSpeed * LocalBusSpeedMultiplier,
+            BobPhase = Random.Range(0f, 10f),
+            TravelDirection = 1,
+            CurrentStopIndex = -1,
+            PassengerCount = 0,
+            PassengerCapacity = LocalBusMaxPassengers,
+            LastBoardingBlockReason = string.Empty,
+            Phase = LocalBusPhase.None
+        };
+    }
+
+    private int GetLocalBusPassengerCount(DriverAgent driver)
+    {
+        if (driver == null ||
+            localBusRoute == null ||
+            localBusRoute.Driver != driver)
+        {
+            return 0;
+        }
+
+        return Mathf.Clamp(localBusRoute.PassengerCount, 0, localBusRoute.PassengerCapacity);
+    }
+
+    private int GetLocalBusPassengerCapacity()
+    {
+        return LocalBusMaxPassengers;
+    }
+
+    private void LogBusBoardingBlockOnce(string reason)
+    {
+        if (localBusRoute == null)
+        {
+            return;
+        }
+
+        if (localBusRoute.LastBoardingBlockReason == reason)
+        {
+            return;
+        }
+
+        localBusRoute.LastBoardingBlockReason = reason;
+        SessionDebugLogger.Log("BUS_SHIFT", reason);
+    }
+
+    private void ResetBusBoardingBlockReason()
+    {
+        if (localBusRoute != null)
+        {
+            localBusRoute.LastBoardingBlockReason = string.Empty;
+        }
+    }
+
+    private void CleanupLocalBusRuntime()
+    {
+        if (localBusRoute?.Driver?.DriverObject != null && !localBusRoute.Driver.DriverObject.activeSelf && locations.ContainsKey(LocationType.Parking))
+        {
+            localBusRoute.Driver.DriverObject.SetActive(true);
+            localBusRoute.Driver.DriverObject.transform.position = GetDriverStandPointNearLocation(LocationType.Parking);
+            localBusRoute.Driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            localBusRoute.Driver.WalkPhase = DriverRescuePhase.None;
+            localBusRoute.Driver.WaitingForShiftAtParking = false;
+        }
+
+        if (localBusRoute?.RootTransform != null)
+        {
+            Destroy(localBusRoute.RootTransform.gameObject);
+        }
+
+        localBusRoute = null;
+    }
+
+    private bool IsBusDriverOnActiveRoute(DriverAgent driver)
+    {
+        return driver != null &&
+               localBusRoute != null &&
+               localBusRoute.Driver == driver &&
+               localBusRoute.RootTransform != null &&
+               localBusRoute.Phase != LocalBusPhase.None;
+    }
+
+    private float GetRealSecondsForGameMinutes(float minutes)
+    {
+        return DayNightCycleDuration * (minutes / (24f * 60f));
+    }
+
+    private Vector3 GetLocalBusParkingWorldPosition()
+    {
+        return GetBusRoadWorldPosition(locations[LocationType.Parking].Anchor);
+    }
+
+    private Vector3 GetBusRoadWorldPosition(Vector2Int cell)
+    {
+        Vector3 world = GetCellCenter(cell);
+        world.y = SampleTerrainHeight(world.x, world.z) + RoadHeight + EdgeHighwayBusLift;
+        return world;
+    }
+
+    private static Quaternion GetLocalBusFacingRotation(Vector3 flatDirection)
+    {
+        if (flatDirection.sqrMagnitude <= 0.0001f)
+        {
+            return Quaternion.identity;
+        }
+
+        // Bus mesh in BuildSharedBusVisual is modeled with nose along +X.
+        return Quaternion.FromToRotation(Vector3.right, flatDirection.normalized);
+    }
+
+    private bool ShouldBusDriverHeadToShift(DriverAgent driver)
+    {
+        if (driver == null || !IsDriverBusDriver(driver) || driver.IsArrivingByBus || driver.ShiftStartHour < 0)
+        {
+            return false;
+        }
+
+        int minutesUntilShiftStart = GetMinutesUntilShiftStart(driver);
+        return minutesUntilShiftStart > 0 && minutesUntilShiftStart <= Mathf.RoundToInt(DriverShiftArrivalLeadHours * 60f);
+    }
+
+    private void StartBusDriverShiftCommute(DriverAgent driver)
+    {
+        if (driver == null || driver.DriverObject == null || !locations.ContainsKey(LocationType.Parking))
+        {
+            return;
+        }
+
+        if (IsBusDriverOnActiveRoute(driver))
+        {
+            SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} commute to Parking skipped because the worker already controls the active local bus route.");
+            return;
+        }
+
+        if (!driver.DriverObject.activeSelf)
+        {
+            driver.DriverObject.SetActive(true);
+            driver.DriverObject.transform.position = driver.MotelIdlePosition;
+            driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        }
+
+        driver.WaitingForShiftAtParking = false;
+        driver.IdleWanderPauseTimer = 0f;
+        driver.IdleWanderPointIndex = -1;
+        driver.IdleConversationTimer = 0f;
+        driver.IdleConversationPartnerId = -1;
+        driver.WalkAnimationTime = 0f;
+        ReleaseBench(driver);
+        ApplyDriverPose(driver, 0f, 0f);
+        driver.WalkPhase = DriverRescuePhase.ToParkingForShift;
+        driver.WalkTargetWorld = GetDriverStandPointNearLocation(LocationType.Parking);
+        BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
+        SessionDebugLogger.Log("BUS", $"{driver.DriverName} started commute to Parking for bus shift.");
+    }
+
+    private bool TryBoardBusDriver(DriverAgent driver)
+    {
+        if (driver == null || !IsDriverBusDriver(driver) || !driver.WaitingForShiftAtParking || driver.DriverObject == null)
+        {
+            if (driver != null && IsDriverBusDriver(driver) && driver.WaitingForShiftAtParking)
+            {
+                LogBusBoardingBlockOnce($"{driver.DriverName} cannot board local bus: driver object missing or state invalid.");
+            }
+            return false;
+        }
+
+        NormalizeLocalStopNumbers();
+        if (localStops.Count == 0 || !locations.ContainsKey(LocationType.Parking))
+        {
+            LogBusBoardingBlockOnce($"{driver.DriverName} cannot board local bus: no connected local stops or Parking is missing.");
+            return false;
+        }
+
+        if (localBusRoute == null)
+        {
+            SetupLocalBusRuntime();
+        }
+
+        if (localBusRoute.Driver != null && localBusRoute.Driver != driver)
+        {
+            LogBusBoardingBlockOnce($"{driver.DriverName} cannot board local bus: route is currently controlled by {localBusRoute.Driver.DriverName}.");
+            return false;
+        }
+
+        if (localBusRoute.RootTransform == null)
+        {
+            GameObject busRoot = new("LocalRouteBus");
+            busRoot.transform.SetParent(worldRoot, false);
+
+            BuildSharedBusVisual(
+                busRoot.transform,
+                new Color(0.28f, 0.58f, 0.9f),
+                "LocalBusHeadlightLeft",
+                "LocalBusHeadlightRight",
+                out Renderer headlightLeftRenderer,
+                out Renderer headlightRightRenderer,
+                out Material headlightLeftMaterial,
+                out Material headlightRightMaterial,
+                out Light headlightLeft,
+                out Light headlightRight);
+
+            localBusRoute.RootTransform = busRoot.transform;
+            localBusRoute.HeadlightLeftRenderer = headlightLeftRenderer;
+            localBusRoute.HeadlightRightRenderer = headlightRightRenderer;
+            localBusRoute.HeadlightLeftMaterial = headlightLeftMaterial;
+            localBusRoute.HeadlightRightMaterial = headlightRightMaterial;
+            localBusRoute.HeadlightLeft = headlightLeft;
+            localBusRoute.HeadlightRight = headlightRight;
+        }
+
+        localBusRoute.Driver = driver;
+        localBusRoute.Speed = EdgeHighwayBusSpeed * LocalBusSpeedMultiplier;
+        localBusRoute.BobPhase = Random.Range(0f, 10f);
+        localBusRoute.DwellTimer = 0f;
+        localBusRoute.Waypoints.Clear();
+        localBusRoute.WaypointIndex = 0;
+        localBusRoute.CurrentStopIndex = -1;
+        localBusRoute.TravelDirection = 1;
+        localBusRoute.PassengerCount = 0;
+        localBusRoute.PassengerCapacity = LocalBusMaxPassengers;
+        localBusRoute.Phase = LocalBusPhase.ParkedAwaitingShiftStart;
+        ResetBusBoardingBlockReason();
+
+        driver.WaitingForShiftAtParking = false;
+        driver.DriverObject.SetActive(false);
+        driver.WalkPhase = DriverRescuePhase.None;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        driver.WalkAnimationTime = 0f;
+
+        Vector3 parkingWorld = GetLocalBusParkingWorldPosition();
+        localBusRoute.RootTransform.position = parkingWorld;
+        localBusRoute.RootTransform.rotation = Quaternion.identity;
+        UpdateLocalBusVisual();
+
+        SessionDebugLogger.Log("BUS", $"{driver.DriverName} boarded the local route bus in Parking. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
+        SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} local bus boarded and awaiting shift start window.");
+        return true;
+    }
+
+    private void HandleLocalBusPassengersAtStop(LocationData stop)
+    {
+        if (localBusRoute == null || stop == null)
+        {
+            return;
+        }
+
+        int stopNumber = stop.StopNumber;
+        Vector3 stopWaitPoint = GetLocalStopPassengerWaitPoint(stop);
+
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent passenger = driverAgents[i];
+            if (passenger == null ||
+                passenger.WalkPhase != DriverRescuePhase.RidingLocalBus ||
+                passenger.BusDestinationStopNumber != stopNumber)
+            {
+                continue;
+            }
+
+            passenger.DriverObject.SetActive(true);
+            passenger.DriverObject.transform.position = stopWaitPoint;
+            passenger.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            passenger.WalkAnimationTime = 0f;
+            ApplyDriverPose(passenger, 0f, 0f);
+
+            DriverRescuePhase finalWalkPhase = passenger.BusFinalWalkPhase;
+            Vector3 finalTarget = passenger.BusFinalTargetWorld;
+            string travelReason = passenger.BusTravelReason;
+            ResetWorkerLocalBusTripState(passenger);
+
+            passenger.WalkPhase = finalWalkPhase;
+            passenger.WalkTargetWorld = finalTarget;
+            BuildDriverWalkPath(passenger, stopWaitPoint, finalTarget);
+            localBusRoute.PassengerCount = Mathf.Max(0, localBusRoute.PassengerCount - 1);
+            SessionDebugLogger.Log(
+                "BUS_PASSENGER",
+                $"{passenger.DriverName} left the local bus at Stop #{stopNumber} and resumed {travelReason}. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
+        }
+
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent passenger = driverAgents[i];
+            if (passenger == null ||
+                passenger.WalkPhase != DriverRescuePhase.WaitingAtLocalBusStop ||
+                passenger.BusOriginStopNumber != stopNumber ||
+                passenger.BusDestinationStopNumber <= 0)
+            {
+                continue;
+            }
+
+            if (localBusRoute.PassengerCount >= localBusRoute.PassengerCapacity)
+            {
+                SessionDebugLogger.Log(
+                    "BUS_PASSENGER",
+                    $"{passenger.DriverName} could not board at Stop #{stopNumber}: local bus is full ({localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}).");
+                continue;
+            }
+
+            passenger.DriverObject.SetActive(false);
+            passenger.WalkPhase = DriverRescuePhase.RidingLocalBus;
+            passenger.WalkPath.Clear();
+            passenger.WalkWaypointIndex = 0;
+            passenger.WalkAnimationTime = 0f;
+            localBusRoute.PassengerCount = Mathf.Min(localBusRoute.PassengerCapacity, localBusRoute.PassengerCount + 1);
+            SessionDebugLogger.Log(
+                "BUS_PASSENGER",
+                $"{passenger.DriverName} boarded the local bus at Stop #{stopNumber} for Stop #{passenger.BusDestinationStopNumber}. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
+        }
+    }
+
+    private void UpdateLocalBusRoute()
+    {
+        if (localBusRoute?.RootTransform == null)
+        {
+            return;
+        }
+
+        DriverAgent driver = localBusRoute.Driver;
+        if (driver == null || !IsDriverBusDriver(driver))
+        {
+            CleanupLocalBusRuntime();
+            return;
+        }
+
+        float dt = Time.deltaTime * gameSpeedMultiplier;
+        switch (localBusRoute.Phase)
+        {
+            case LocalBusPhase.DrivingRoute:
+            case LocalBusPhase.ReturningToParking:
+                UpdateLocalBusMovement(dt);
+                break;
+
+            case LocalBusPhase.WaitingAtStop:
+                localBusRoute.DwellTimer -= dt;
+                if (localBusRoute.DwellTimer <= 0f)
+                {
+                    if (driver.NeedsShiftEndReturn)
+                    {
+                        bool shouldReturnToParking = ShouldLocalBusReturnToParkingAfterCurrentStop();
+                        List<LocationData> orderedStops = GetOrderedLocalStops();
+                        int currentIndex = Mathf.Clamp(localBusRoute.CurrentStopIndex, 0, Mathf.Max(orderedStops.Count - 1, 0));
+                        int stopNumber = orderedStops.Count > 0 ? orderedStops[currentIndex].StopNumber : -1;
+                        SessionDebugLogger.Log(
+                            "BUS_SHIFT",
+                            $"{driver.DriverName} finish-cycle check at Stop #{stopNumber}: currentIndex={currentIndex}, direction={(localBusRoute.TravelDirection > 0 ? "ascending" : "descending")}, stopCount={orderedStops.Count}, returnToParking={(shouldReturnToParking ? "yes" : "no")}.");
+
+                        if (shouldReturnToParking)
+                        {
+                            SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} completed the route cycle and is now returning the local bus to Parking.");
+                            BeginLocalBusReturnToParking();
+                            break;
+                        }
+                    }
+
+                    if (!TryBeginNextLocalBusStopSegment())
+                    {
+                        SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} could not continue the local route cycle, forcing return to Parking.");
+                        BeginLocalBusReturnToParking();
+                    }
+                }
+                break;
+
+            case LocalBusPhase.ParkedAwaitingShiftStart:
+                localBusRoute.RootTransform.position = GetLocalBusParkingWorldPosition();
+                break;
+        }
+
+        UpdateLocalBusVisual();
+    }
+
+    private void UpdateLocalBusMovement(float dt)
+    {
+        if (localBusRoute.WaypointIndex >= localBusRoute.Waypoints.Count)
+        {
+            CompleteLocalBusCurrentSegment();
+            return;
+        }
+
+        Vector3 position = localBusRoute.RootTransform.position;
+        Vector3 target = localBusRoute.Waypoints[localBusRoute.WaypointIndex];
+        target.y = SampleTerrainHeight(target.x, target.z) + RoadHeight + EdgeHighwayBusLift;
+
+        Vector3 flatDelta = new Vector3(target.x - position.x, 0f, target.z - position.z);
+        float remaining = flatDelta.magnitude;
+        if (remaining <= 0.001f)
+        {
+            localBusRoute.RootTransform.position = target;
+            localBusRoute.WaypointIndex++;
+            CompleteLocalBusCurrentSegment();
+            return;
+        }
+
+        float step = localBusRoute.Speed * dt;
+        if (step >= remaining)
+        {
+            localBusRoute.RootTransform.position = target;
+            localBusRoute.WaypointIndex++;
+            if (flatDelta.sqrMagnitude > 0.0001f)
+            {
+                localBusRoute.RootTransform.rotation = GetLocalBusFacingRotation(flatDelta);
+            }
+            CompleteLocalBusCurrentSegment();
+            return;
+        }
+
+        Vector3 nextPosition = position + flatDelta.normalized * step;
+        nextPosition.y = SampleTerrainHeight(nextPosition.x, nextPosition.z) + RoadHeight + EdgeHighwayBusLift;
+        localBusRoute.RootTransform.position = nextPosition;
+        localBusRoute.RootTransform.rotation = GetLocalBusFacingRotation(flatDelta);
+    }
+
+    private void CompleteLocalBusCurrentSegment()
+    {
+        if (localBusRoute == null)
+        {
+            return;
+        }
+
+        if (localBusRoute.WaypointIndex < localBusRoute.Waypoints.Count)
+        {
+            return;
+        }
+
+        localBusRoute.Waypoints.Clear();
+        localBusRoute.WaypointIndex = 0;
+
+        if (localBusRoute.Phase == LocalBusPhase.ReturningToParking)
+        {
+            DriverAgent driver = localBusRoute.Driver;
+            localBusRoute.RootTransform.position = GetLocalBusParkingWorldPosition();
+            if (driver != null && (driver.NeedsShiftEndReturn || !driver.IsOnActiveShift))
+            {
+                CompleteBusDriverShiftReturn(driver);
+            }
+            else
+            {
+                localBusRoute.Phase = LocalBusPhase.ParkedAwaitingShiftStart;
+                if (GetOrderedLocalStops().Count == 1)
+                {
+                    BeginLocalBusRouteFromParking();
+                }
+            }
+
+            return;
+        }
+
+        List<LocationData> orderedStops = GetOrderedLocalStops();
+        if (localBusRoute.CurrentStopIndex < 0 || localBusRoute.CurrentStopIndex >= orderedStops.Count)
+        {
+            BeginLocalBusReturnToParking();
+            return;
+        }
+
+        LocationData stop = orderedStops[localBusRoute.CurrentStopIndex];
+        localBusRoute.RootTransform.position = GetBusRoadWorldPosition(stop.Anchor);
+        localBusRoute.DwellTimer = GetRealSecondsForGameMinutes(LocalBusStopDwellGameMinutes);
+        localBusRoute.Phase = LocalBusPhase.WaitingAtStop;
+        HandleLocalBusPassengersAtStop(stop);
+        SessionDebugLogger.Log("BUS", $"{localBusRoute.Driver?.DriverName ?? "Bus driver"} reached Stop #{stop.StopNumber} and is waiting.");
+    }
+
+    private bool ShouldLocalBusReturnToParkingAfterCurrentStop()
+    {
+        if (localBusRoute == null)
+        {
+            return true;
+        }
+
+        List<LocationData> orderedStops = GetOrderedLocalStops();
+        if (orderedStops.Count <= 1)
+        {
+            return true;
+        }
+
+        int currentIndex = Mathf.Clamp(localBusRoute.CurrentStopIndex, 0, orderedStops.Count - 1);
+
+        // Finish the current out-and-back route cycle before parking:
+        // ascending leg: keep going until the far terminal and come back;
+        // descending leg: once we reach Stop #1, the cycle is complete.
+        return currentIndex == 0 && localBusRoute.TravelDirection < 0;
+    }
+
+    private bool BeginLocalBusRouteFromParking()
+    {
+        NormalizeLocalStopNumbers();
+        List<LocationData> orderedStops = GetOrderedLocalStops();
+        if (orderedStops.Count == 0 || !locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} cannot start route from Parking: no local stops or Parking missing.");
+            return false;
+        }
+
+        localBusRoute.TravelDirection = 1;
+        localBusRoute.CurrentStopIndex = 0;
+        SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute.Driver?.DriverName ?? "Bus driver"} started local bus route cycle. Stops={orderedStops.Count}, firstStop=#{orderedStops[0].StopNumber}.");
+        return TryBeginLocalBusDriveSegment(parking.Anchor, orderedStops[0].Anchor, LocalBusPhase.DrivingRoute);
+    }
+
+    private bool TryBeginNextLocalBusStopSegment()
+    {
+        List<LocationData> orderedStops = GetOrderedLocalStops();
+        if (orderedStops.Count == 0)
+        {
+            SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} cannot continue route: no local stops.");
+            return false;
+        }
+
+        if (orderedStops.Count == 1)
+        {
+            BeginLocalBusReturnToParking();
+            return true;
+        }
+
+        int currentIndex = Mathf.Clamp(localBusRoute.CurrentStopIndex, 0, orderedStops.Count - 1);
+        int nextIndex;
+        if (localBusRoute.TravelDirection > 0)
+        {
+            if (currentIndex >= orderedStops.Count - 1)
+            {
+                localBusRoute.TravelDirection = -1;
+                nextIndex = orderedStops.Count - 2;
+            }
+            else
+            {
+                nextIndex = currentIndex + 1;
+            }
+        }
+        else
+        {
+            if (currentIndex <= 0)
+            {
+                localBusRoute.TravelDirection = 1;
+                nextIndex = 1;
+            }
+            else
+            {
+                nextIndex = currentIndex - 1;
+            }
+        }
+
+        Vector2Int startAnchor = orderedStops[currentIndex].Anchor;
+        Vector2Int nextAnchor = orderedStops[nextIndex].Anchor;
+        localBusRoute.CurrentStopIndex = nextIndex;
+        SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute.Driver?.DriverName ?? "Bus driver"} heading to next stop #{orderedStops[nextIndex].StopNumber} ({(localBusRoute.TravelDirection > 0 ? "ascending" : "descending")} leg).");
+        return TryBeginLocalBusDriveSegment(startAnchor, nextAnchor, LocalBusPhase.DrivingRoute);
+    }
+
+    private void BeginLocalBusReturnToParking()
+    {
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            return;
+        }
+
+        Vector2Int startCell = localBusRoute?.RootTransform != null
+            ? WorldToCell(localBusRoute.RootTransform.position)
+            : parking.Anchor;
+
+        SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} starting return-to-parking segment from ({startCell.x},{startCell.y}) to Parking ({parking.Anchor.x},{parking.Anchor.y}).");
+
+        if (!TryBeginLocalBusDriveSegment(startCell, parking.Anchor, LocalBusPhase.ReturningToParking))
+        {
+            DriverAgent driver = localBusRoute?.Driver;
+            if (driver != null)
+            {
+                CompleteBusDriverShiftReturn(driver);
+            }
+        }
+    }
+
+    private bool TryBeginLocalBusDriveSegment(Vector2Int startCell, Vector2Int endCell, LocalBusPhase phase)
+    {
+        List<Vector2Int> path = FindPath(startCell, endCell);
+        if (path == null || path.Count == 0)
+        {
+            SessionDebugLogger.Log("BUS", $"Local bus failed to find path from ({startCell.x},{startCell.y}) to ({endCell.x},{endCell.y}).");
+            return false;
+        }
+
+        localBusRoute.Waypoints.Clear();
+        for (int i = 1; i < path.Count; i++)
+        {
+            localBusRoute.Waypoints.Add(GetBusRoadWorldPosition(path[i]));
+        }
+
+        if (localBusRoute.Waypoints.Count == 0)
+        {
+            localBusRoute.Waypoints.Add(GetBusRoadWorldPosition(endCell));
+        }
+
+        localBusRoute.WaypointIndex = 0;
+        localBusRoute.Phase = phase;
+        SessionDebugLogger.Log("BUS", $"Local bus started segment {phase} from ({startCell.x},{startCell.y}) to ({endCell.x},{endCell.y}) over {localBusRoute.Waypoints.Count} waypoints.");
+        return true;
+    }
+
+    private void UpdateLocalBusVisual()
+    {
+        if (localBusRoute?.RootTransform == null)
+        {
+            return;
+        }
+
+        Vector3 position = localBusRoute.RootTransform.position;
+        float bob = Mathf.Sin(Time.time * 3.2f + localBusRoute.BobPhase) * 0.015f;
+        position.y = SampleTerrainHeight(position.x, position.z) + RoadHeight + EdgeHighwayBusLift + bob;
+        localBusRoute.RootTransform.position = position;
+
+        float darkness = 1f - currentStylizedDaylight;
+        bool headlightsOn = darkness > 0.55f;
+        float headlightIntensity = headlightsOn ? Mathf.Lerp(0.4f, 1.75f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+        Color lampColor = Color.Lerp(
+            new Color(0.34f, 0.3f, 0.22f),
+            new Color(1f, 0.94f, 0.78f),
+            Mathf.Clamp01(headlightIntensity / 1.75f));
+
+        if (localBusRoute.HeadlightLeft != null)
+        {
+            localBusRoute.HeadlightLeft.enabled = headlightsOn;
+            localBusRoute.HeadlightLeft.intensity = headlightIntensity;
+        }
+
+        if (localBusRoute.HeadlightRight != null)
+        {
+            localBusRoute.HeadlightRight.enabled = headlightsOn;
+            localBusRoute.HeadlightRight.intensity = headlightIntensity;
+        }
+
+        if (localBusRoute.HeadlightLeftMaterial != null)
+        {
+            localBusRoute.HeadlightLeftMaterial.color = lampColor;
+        }
+
+        if (localBusRoute.HeadlightRightMaterial != null)
+        {
+            localBusRoute.HeadlightRightMaterial.color = lampColor;
+        }
+    }
+
+    private void CompleteBusDriverShiftReturn(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return;
+        }
+
+        if (localBusRoute?.RootTransform != null)
+        {
+            Destroy(localBusRoute.RootTransform.gameObject);
+        }
+
+        localBusRoute = null;
+        SetupLocalBusRuntime();
+
+        driver.IsOnActiveShift = false;
+        driver.WaitingForShiftAtParking = false;
+        driver.NeedsShiftEndReturn = false;
+        driver.DriverObject.SetActive(true);
+        driver.DriverObject.transform.position = GetDriverStandPointNearLocation(LocationType.Parking);
+        driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        driver.WalkAnimationTime = 0f;
+        ApplyDriverPose(driver, 0f, 0f);
+        PayDriverSalary(driver);
+        SessionDebugLogger.Log("BUS", $"{driver.DriverName} parked the local bus in Parking and finished the shift.");
+        StartWorkerLifeCycleAfterWork(driver, driver.DriverObject.transform.position, "local bus shift");
+    }
+}

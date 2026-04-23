@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public partial class GameBootstrap
 {
@@ -106,7 +106,7 @@ public partial class GameBootstrap
         if (band != 0 && musicNightSource.volume   == 0f && musicNightSource.isPlaying)   musicNightSource.Pause();
     }
 
-    // 0=night  1=morning  2=day  3=evening — mirrors GetTimeOfDayLabel() thresholds
+    // 0=night  1=morning  2=day  3=evening вЂ” mirrors GetTimeOfDayLabel() thresholds
     private int GetDayNightBand()
     {
         float norm = dayNightCycleTimer / DayNightCycleDuration;
@@ -125,3 +125,4 @@ public partial class GameBootstrap
         _ => null
     };
 }
+

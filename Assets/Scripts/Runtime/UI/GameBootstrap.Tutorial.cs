@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -34,7 +34,7 @@ public partial class GameBootstrap
         public GameObject     CanvasRoot;
         public GameObject     OverlayRoot;          // dark fullscreen bg parent
         public Image          OverlayImage;         // tinted in center mode, transparent in side mode
-        public RectTransform  WindowRect;           // the floating card — repositioned per mode
+        public RectTransform  WindowRect;           // the floating card вЂ” repositioned per mode
         public LayoutElement  BodyPanelLayout;      // body height changed per mode
         public Text TitleText;
         public Text StepText;
@@ -236,6 +236,7 @@ public partial class GameBootstrap
                     StartTutorialCameraFocus(LocationType.Forest, placeLocationOnRight: true);
                 }
                 selectedLocation = null;
+                selectedLocalStopIndex = -1;
                 ClearSelectedDebugCell();
                 RefreshSelectionVisuals();
                 isTutorialSideMode = true;
@@ -373,7 +374,7 @@ public partial class GameBootstrap
             TutorialTrigger.BeeEasterEgg,
             0,
             "Bees",
-            "Дурачок, не мешай пчёлкам");
+            "Р”СѓСЂР°С‡РѕРє, РЅРµ РјРµС€Р°Р№ РїС‡С‘Р»РєР°Рј");
         if (tutorialHud?.WindowRect != null)
         {
             tutorialHud.WindowRect.sizeDelta = new Vector2(500f, 260f);
@@ -402,7 +403,7 @@ public partial class GameBootstrap
 
     private void OpenBuildPanelFromTutorial()
     {
-        // Close all panels then open Build — same effect as clicking the Building button
+        // Close all panels then open Build вЂ” same effect as clicking the Building button
         isFleetPanelOpen      = false;
         isShiftsPanelOpen     = false;
         isDriversPanelOpen    = false;
@@ -633,6 +634,7 @@ public partial class GameBootstrap
             isShiftsHighlightPersistent = false;
             HideTutorialOrbitHud();
             selectedLocation = null;
+            selectedLocalStopIndex = -1;
             RefreshSelectionVisuals();
             SessionDebugLogger.Log("TUTORIAL", "Tutorial skipped by player.");
         }
@@ -681,6 +683,7 @@ public partial class GameBootstrap
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
         {
             selectedLocation            = null;       // close microhud
+            selectedLocalStopIndex      = -1;
             isShiftsHighlightPersistent = false;
             isLogisticsTabActive        = true;
             isShiftsPanelOpen           = true;
@@ -703,6 +706,7 @@ public partial class GameBootstrap
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.ForestWorkerStarted)
         {
             selectedLocation = null;
+            selectedLocalStopIndex = -1;
             isTutorialCameraFocusActive = false;
             tutorialCinematicPhase = TutorialCinematicPhase.Returning;   // smooth camera back to default
             ScheduleTutorial(TutorialTrigger.NeedSawmill);
@@ -745,7 +749,7 @@ public partial class GameBootstrap
 
     private void StartHireArrivalCinematic()
     {
-        if (hiringDriverArrival == null) return;   // bus already gone — nothing to track
+        if (hiringDriverArrival == null) return;   // bus already gone вЂ” nothing to track
         tutorialCinematicDriver = hiringDriverArrival.Driver;
         tutorialCinematicPhase  = TutorialCinematicPhase.TrackingBus;
         tutorialCinematicShouldShowForestIntro = true;
@@ -868,7 +872,7 @@ public partial class GameBootstrap
                     cameraTargetOffset      = DioramaCameraOffset;
                     tutorialCinematicDriver = null;
                     tutorialCinematicPhase  = TutorialCinematicPhase.None;
-                    // Show tutorial 6 immediately — camera pan to Forest happens inside TryShowTutorial
+                    // Show tutorial 6 immediately вЂ” camera pan to Forest happens inside TryShowTutorial
                     if (tutorialCinematicShouldShowForestIntro)
                     {
                         ScheduleTutorial(TutorialTrigger.ForestIntroduction);
@@ -918,7 +922,7 @@ public partial class GameBootstrap
             return;
         }
 
-        // Wander mode: Tutorial 9 (ForestWorkerStarted) — camera drifts gently around Forest while open
+        // Wander mode: Tutorial 9 (ForestWorkerStarted) вЂ” camera drifts gently around Forest while open
         bool isWanderMode = isTutorialOpen && activeTutorialTrigger == TutorialTrigger.ForestWorkerStarted;
         if (isWanderMode)
             tutorialCameraWanderTime += dt;
@@ -940,7 +944,7 @@ public partial class GameBootstrap
         mainCamera.transform.position = cameraFocusPoint + cameraOffset;
         mainCamera.transform.rotation = GetDioramaCameraRotation();
 
-        // In wander mode the focus never "completes" — it stays active until OK is pressed
+        // In wander mode the focus never "completes" вЂ” it stays active until OK is pressed
         if (!isWanderMode)
         {
             bool focusDone = (cameraFocusPoint - focusTarget).sqrMagnitude < 0.05f;
@@ -1280,7 +1284,7 @@ public partial class GameBootstrap
 
         if (shiftAlreadyActive)
         {
-            // Shift is already active — force commute immediately and focus on Forest so player sees it
+            // Shift is already active вЂ” force commute immediately and focus on Forest so player sees it
             if (!IsDriverBusyWalkPhase(driver))
                 StartDriverBuildingCommute(driver);
             if (locations.ContainsKey(LocationType.Forest))
@@ -1288,7 +1292,7 @@ public partial class GameBootstrap
             return;
         }
 
-        // Shift hasn't started yet — force early commute and follow with camera + orbit HUD
+        // Shift hasn't started yet вЂ” force early commute and follow with camera + orbit HUD
         SetTutorialClockToProductionStart();
         driver.RestPhase = DriverRestPhase.None;
         driver.SleepTimer = 0f;
@@ -1309,7 +1313,7 @@ public partial class GameBootstrap
         isCameraRotatingToTarget                = false;
         tutorialOrbitHudTypeSpeed               = 40f;
         string commuteMessage = IsRussianLanguage()
-            ? "Я иду к Лесу.\n\nКогда рабочий входит в здание в рабочее время 08:00-18:00, производство запускается автоматически."
+            ? "РЇ РёРґСѓ Рє Р›РµСЃСѓ.\n\nРљРѕРіРґР° СЂР°Р±РѕС‡РёР№ РІС…РѕРґРёС‚ РІ Р·РґР°РЅРёРµ РІ СЂР°Р±РѕС‡РµРµ РІСЂРµРјСЏ 08:00-18:00, РїСЂРѕРёР·РІРѕРґСЃС‚РІРѕ Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё."
             : "I am walking to the Forest.\n\nWhen a worker enters a production building during 08:00-18:00, production starts automatically.";
         ShowTutorialOrbitHud(driver, commuteMessage, $"8/{TutorialStepCount}", onOk: null);
     }
@@ -1359,7 +1363,7 @@ public partial class GameBootstrap
 
     private void StartTutorialBusStopWorkerArrival()
     {
-        if (!locations.ContainsKey(LocationType.BusStop) || !locations.ContainsKey(LocationType.Motel))
+        if (!locations.ContainsKey(LocationType.IntercityStop) || !locations.ContainsKey(LocationType.Motel))
         {
             return;
         }
@@ -1418,7 +1422,7 @@ public partial class GameBootstrap
                     isFleetPanelOpen = true;
                     isFleetScreenDirty = true;
                     ScheduleTutorial(TutorialTrigger.FleetSelectTruck);
-                    LogUiInput("Tutorial: orbit HUD OK — opened Fleet panel (step 12).");
+                    LogUiInput("Tutorial: orbit HUD OK вЂ” opened Fleet panel (step 12).");
                     PlayUiSound(uiPanelOpenClip, 0.9f);
                 });
             SessionDebugLogger.Log("TUTORIAL", "Spawned two tutorial workers at Bus Stop and started worker-follow camera.");
@@ -1430,7 +1434,7 @@ public partial class GameBootstrap
 
     private Vector3 GetTutorialBusStopWorkerSpawnPosition(int index)
     {
-        LocationData busStop = locations[LocationType.BusStop];
+        LocationData busStop = locations[LocationType.IntercityStop];
         Vector2Int cell = index == 0 ? busStop.Min : busStop.Max;
         if (cell == busStop.Min && index > 0)
         {
@@ -1475,7 +1479,7 @@ public partial class GameBootstrap
             panel.sizeDelta = new Vector2(380f, 230f);   // wider + taller so all text fits
             tutorialOrbitHudPanel = panel;
 
-            // Step counter — top-right corner (e.g. "12/12")
+            // Step counter вЂ” top-right corner (e.g. "12/12")
             tutorialOrbitHudStepText = CreateBodyText("OrbitStepText", panel, font, string.Empty, 13, TextAnchor.UpperRight, FleetAccentColor);
             RectTransform stepRect = tutorialOrbitHudStepText.GetComponent<RectTransform>();
             stepRect.anchorMin = new Vector2(1f, 1f);
@@ -1485,7 +1489,7 @@ public partial class GameBootstrap
             stepRect.sizeDelta = new Vector2(72f, 22f);
             tutorialOrbitHudStepText.raycastTarget = false;
 
-            // Main body text — font 13, wrapping enabled, leaves room for step counter top + OK button bottom
+            // Main body text вЂ” font 13, wrapping enabled, leaves room for step counter top + OK button bottom
             tutorialOrbitHudText = CreateBodyText("OrbitTypewriterText", panel, font, string.Empty, 13, TextAnchor.UpperLeft, Color.white);
             tutorialOrbitHudText.horizontalOverflow = HorizontalWrapMode.Wrap;
             tutorialOrbitHudText.verticalOverflow   = VerticalWrapMode.Overflow;
@@ -1584,7 +1588,7 @@ public partial class GameBootstrap
             tutorialOrbitHudPanel.gameObject.SetActive(inFront);
             if (inFront)
             {
-                // Convert screen point → canvas-local position (no UI camera needed for SSO)
+                // Convert screen point в†’ canvas-local position (no UI camera needed for SSO)
                 RectTransform canvasRect = tutorialOrbitHudRoot.GetComponent<RectTransform>();
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     canvasRect, new Vector2(screenPos.x, screenPos.y), null, out Vector2 localPoint);
@@ -1635,7 +1639,7 @@ public partial class GameBootstrap
                 LocationType.Canteen          => L("canteen worker"),
                 LocationType.Parking          => L("yard driver"),
                 LocationType.GasStation       => L("fuel attendant"),
-                LocationType.BusStop          => L("station hand"),
+                LocationType.IntercityStop          => L("station hand"),
                 _                             => L("worker")
             };
         }
@@ -1977,8 +1981,8 @@ public partial class GameBootstrap
 
     private static GameObject CreateTutorialHireButtonOutline(string name, Transform parent)
     {
-        // Positioned over the "Hire New Worker" button inside the Drivers panel (760×560, yOffset=-16)
-        // Button sits at the bottom of the panel — approximate canvas-space center: (0, -228)
+        // Positioned over the "Hire New Worker" button inside the Drivers panel (760Г—560, yOffset=-16)
+        // Button sits at the bottom of the panel вЂ” approximate canvas-space center: (0, -228)
         GameObject root = CreateUiObject(name, parent);
         RectTransform rootRect = root.GetComponent<RectTransform>();
         rootRect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -2009,3 +2013,6 @@ public partial class GameBootstrap
         image.raycastTarget = false;
     }
 }
+
+
+

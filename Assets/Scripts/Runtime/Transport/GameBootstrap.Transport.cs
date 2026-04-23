@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -38,6 +38,16 @@ public partial class GameBootstrap
     private float GetLocationBaseHeight(LocationType locationType)
     {
         if (!locations.TryGetValue(locationType, out LocationData location))
+        {
+            return 0f;
+        }
+
+        return GetLocationBaseHeight(location);
+    }
+
+    private float GetLocationBaseHeight(LocationData location)
+    {
+        if (location == null)
         {
             return 0f;
         }
@@ -193,4 +203,5 @@ public partial class GameBootstrap
         return cell.x >= 0 && cell.x < GridWidth && cell.y >= 0 && cell.y < GridHeight;
     }
 }
+
 

@@ -70,6 +70,16 @@ Rule:
 - Do not paste code into memory files.
 - Do not document speculative designs as implemented facts.
 
+### Encoding Safety
+
+- Treat all source and project text files as `UTF-8`.
+- Prefer `apply_patch` for code/text edits, especially in files with Russian localization.
+- Avoid whole-file rewrite scripts unless the write path is explicitly `UTF-8`.
+- In PowerShell, never write project files without an explicit UTF-8 encoding.
+- After localized UI/tutorial/HUD text edits, run a quick scan for mojibake markers such as `вЂ`, `Р`, `С`, or `�`.
+- If encoding corruption appears in diff output, treat it as a bug to fix immediately.
+- Avoid combining large refactors with mass localization edits unless necessary.
+
 ### After implementation
 
 - Update `work-log.md` first.

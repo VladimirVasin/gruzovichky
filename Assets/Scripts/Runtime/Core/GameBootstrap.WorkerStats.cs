@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -575,17 +575,17 @@ public partial class GameBootstrap
     {
         return perk switch
         {
-            WorkerPerkKind.Alcoholism   => ru ? "Алкоголизм"     : "Alcoholism",
-            WorkerPerkKind.Gambler      => ru ? "Лудоман"        : "Gambler",
-            WorkerPerkKind.Nightowl     => ru ? "Сова"           : "Night Owl",
-            WorkerPerkKind.Ironman      => ru ? "Железный"       : "Iron Man",
-            WorkerPerkKind.Motorhead    => ru ? "Автолюбитель"   : "Motorhead",
-            WorkerPerkKind.Trader       => ru ? "Делец"          : "Trader",
-            WorkerPerkKind.Handyman     => ru ? "Мастер"         : "Handyman",
-            WorkerPerkKind.Socialite    => ru ? "Общительный"    : "Socialite",
-            WorkerPerkKind.Frugal       => ru ? "Экономный"      : "Frugal",
-            WorkerPerkKind.Quicklearner => ru ? "Смышлёный"      : "Quick Learner",
-            _ => ru ? "Перк" : "Perk"
+            WorkerPerkKind.Alcoholism   => ru ? "РђР»РєРѕРіРѕР»РёР·Рј"     : "Alcoholism",
+            WorkerPerkKind.Gambler      => ru ? "Р›СѓРґРѕРјР°РЅ"        : "Gambler",
+            WorkerPerkKind.Nightowl     => ru ? "РЎРѕРІР°"           : "Night Owl",
+            WorkerPerkKind.Ironman      => ru ? "Р–РµР»РµР·РЅС‹Р№"       : "Iron Man",
+            WorkerPerkKind.Motorhead    => ru ? "РђРІС‚РѕР»СЋР±РёС‚РµР»СЊ"   : "Motorhead",
+            WorkerPerkKind.Trader       => ru ? "Р”РµР»РµС†"          : "Trader",
+            WorkerPerkKind.Handyman     => ru ? "РњР°СЃС‚РµСЂ"         : "Handyman",
+            WorkerPerkKind.Socialite    => ru ? "РћР±С‰РёС‚РµР»СЊРЅС‹Р№"    : "Socialite",
+            WorkerPerkKind.Frugal       => ru ? "Р­РєРѕРЅРѕРјРЅС‹Р№"      : "Frugal",
+            WorkerPerkKind.Quicklearner => ru ? "РЎРјС‹С€Р»С‘РЅС‹Р№"      : "Quick Learner",
+            _ => ru ? "РџРµСЂРє" : "Perk"
         };
     }
 
@@ -628,33 +628,33 @@ public partial class GameBootstrap
                 ? "\u0420\u0430\u043d\u0434\u043e\u043c\u043d\u044b\u0439 \u043f\u0435\u0440\u043a. \u041f\u043e\u0441\u043b\u0435 \u0411\u0430\u0440\u0430 \u041e\u043f\u044c\u044f\u043d\u0435\u043d\u0438\u0435 \u0434\u043b\u0438\u0442\u0441\u044f \u0434\u043e\u043b\u044c\u0448\u0435: \u0432\u043e\u0436\u0434\u0435\u043d\u0438\u0435 \u043f\u0430\u0434\u0430\u0435\u0442 \u0441\u0438\u043b\u044c\u043d\u0435\u0435, \u0437\u0430\u0442\u043e \u043e\u0431\u044b\u0447\u043d\u0430\u044f \u0440\u0430\u0431\u043e\u0442\u0430 \u043d\u0430 \u0432\u0440\u0435\u043c\u044f \u0443\u0441\u0438\u043b\u0438\u0432\u0430\u0435\u0442\u0441\u044f."
                 : "Random perk. After visiting the Bar, Drunk lasts longer: driving drops harder, while ordinary work gets a stronger temporary boost.",
             WorkerPerkKind.Gambler => ru
-                ? "Всегда выбирает Игровые автоматы. Ставит весь баланс, делает 2 ставки за визит. Больший выигрыш (x12/x6), меньший проигрыш (20% возвращается). После проигрыша следующая ставка выше."
+                ? "Р’СЃРµРіРґР° РІС‹Р±РёСЂР°РµС‚ РРіСЂРѕРІС‹Рµ Р°РІС‚РѕРјР°С‚С‹. РЎС‚Р°РІРёС‚ РІРµСЃСЊ Р±Р°Р»Р°РЅСЃ, РґРµР»Р°РµС‚ 2 СЃС‚Р°РІРєРё Р·Р° РІРёР·РёС‚. Р‘РѕР»СЊС€РёР№ РІС‹РёРіСЂС‹С€ (x12/x6), РјРµРЅСЊС€РёР№ РїСЂРѕРёРіСЂС‹С€ (20% РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ). РџРѕСЃР»Рµ РїСЂРѕРёРіСЂС‹С€Р° СЃР»РµРґСѓСЋС‰Р°СЏ СЃС‚Р°РІРєР° РІС‹С€Рµ."
                 : "Always picks Gambling Hall. Bets full balance, makes 2 bets per visit. Higher jackpot (x12/x6), smaller losses (20% returned). Doubles down after a loss.",
             WorkerPerkKind.Nightowl => ru
-                ? "[Заглушка] Ночная Сова. Работает эффективнее в ночные смены — бонус к вождению и производству в тёмное время суток."
-                : "[Stub] Night Owl. Works better during night shifts — driving and production bonus in the dark hours.",
+                ? "[Р—Р°РіР»СѓС€РєР°] РќРѕС‡РЅР°СЏ РЎРѕРІР°. Р Р°Р±РѕС‚Р°РµС‚ СЌС„С„РµРєС‚РёРІРЅРµРµ РІ РЅРѕС‡РЅС‹Рµ СЃРјРµРЅС‹ вЂ” Р±РѕРЅСѓСЃ Рє РІРѕР¶РґРµРЅРёСЋ Рё РїСЂРѕРёР·РІРѕРґСЃС‚РІСѓ РІ С‚С‘РјРЅРѕРµ РІСЂРµРјСЏ СЃСѓС‚РѕРє."
+                : "[Stub] Night Owl. Works better during night shifts вЂ” driving and production bonus in the dark hours.",
             WorkerPerkKind.Ironman => ru
-                ? "[Заглушка] Железный. Медленнее накапливает усталость и реже нуждается во сне. Нужды снижаются медленнее."
+                ? "[Р—Р°РіР»СѓС€РєР°] Р–РµР»РµР·РЅС‹Р№. РњРµРґР»РµРЅРЅРµРµ РЅР°РєР°РїР»РёРІР°РµС‚ СѓСЃС‚Р°Р»РѕСЃС‚СЊ Рё СЂРµР¶Рµ РЅСѓР¶РґР°РµС‚СЃСЏ РІРѕ СЃРЅРµ. РќСѓР¶РґС‹ СЃРЅРёР¶Р°СЋС‚СЃСЏ РјРµРґР»РµРЅРЅРµРµ."
                 : "[Stub] Iron Man. Accumulates fatigue slower and needs less sleep. Need timers tick slower.",
             WorkerPerkKind.Motorhead => ru
-                ? "[Заглушка] Автолюбитель. Бонус к навыку вождения. В будущем — снижение расхода топлива и ускоренное обслуживание грузовика."
+                ? "[Р—Р°РіР»СѓС€РєР°] РђРІС‚РѕР»СЋР±РёС‚РµР»СЊ. Р‘РѕРЅСѓСЃ Рє РЅР°РІС‹РєСѓ РІРѕР¶РґРµРЅРёСЏ. Р’ Р±СѓРґСѓС‰РµРј вЂ” СЃРЅРёР¶РµРЅРёРµ СЂР°СЃС…РѕРґР° С‚РѕРїР»РёРІР° Рё СѓСЃРєРѕСЂРµРЅРЅРѕРµ РѕР±СЃР»СѓР¶РёРІР°РЅРёРµ РіСЂСѓР·РѕРІРёРєР°."
                 : "[Stub] Motorhead. Driving skill bonus. Future: reduced fuel consumption and faster truck maintenance.",
             WorkerPerkKind.Trader => ru
-                ? "[Заглушка] Делец. Торговые рейсы приносят больше прибыли. В будущем — бонус к Logistics и снижение закупочной цены."
+                ? "[Р—Р°РіР»СѓС€РєР°] Р”РµР»РµС†. РўРѕСЂРіРѕРІС‹Рµ СЂРµР№СЃС‹ РїСЂРёРЅРѕСЃСЏС‚ Р±РѕР»СЊС€Рµ РїСЂРёР±С‹Р»Рё. Р’ Р±СѓРґСѓС‰РµРј вЂ” Р±РѕРЅСѓСЃ Рє Logistics Рё СЃРЅРёР¶РµРЅРёРµ Р·Р°РєСѓРїРѕС‡РЅРѕР№ С†РµРЅС‹."
                 : "[Stub] Trader. Trade runs yield more profit. Future: Logistics bonus and lower purchase prices.",
             WorkerPerkKind.Handyman => ru
-                ? "[Заглушка] Мастер. Ускоряет производство на всех зданиях. Бонус к Production и сокращение времени простоя."
+                ? "[Р—Р°РіР»СѓС€РєР°] РњР°СЃС‚РµСЂ. РЈСЃРєРѕСЂСЏРµС‚ РїСЂРѕРёР·РІРѕРґСЃС‚РІРѕ РЅР° РІСЃРµС… Р·РґР°РЅРёСЏС…. Р‘РѕРЅСѓСЃ Рє Production Рё СЃРѕРєСЂР°С‰РµРЅРёРµ РІСЂРµРјРµРЅРё РїСЂРѕСЃС‚РѕСЏ."
                 : "[Stub] Handyman. Speeds up production at all buildings. Production bonus and reduced downtime.",
             WorkerPerkKind.Socialite => ru
-                ? "[Заглушка] Общительный. Восстанавливает потребность в досуге быстрее. Бар и другие заведения дают больший эффект."
+                ? "[Р—Р°РіР»СѓС€РєР°] РћР±С‰РёС‚РµР»СЊРЅС‹Р№. Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РїРѕС‚СЂРµР±РЅРѕСЃС‚СЊ РІ РґРѕСЃСѓРіРµ Р±С‹СЃС‚СЂРµРµ. Р‘Р°СЂ Рё РґСЂСѓРіРёРµ Р·Р°РІРµРґРµРЅРёСЏ РґР°СЋС‚ Р±РѕР»СЊС€РёР№ СЌС„С„РµРєС‚."
                 : "[Stub] Socialite. Leisure need recovers faster. Bar and service buildings give stronger effects.",
             WorkerPerkKind.Frugal => ru
-                ? "[Заглушка] Экономный. Меньше тратит на сервисные здания и бытовые нужды. Скидка на все услуги."
+                ? "[Р—Р°РіР»СѓС€РєР°] Р­РєРѕРЅРѕРјРЅС‹Р№. РњРµРЅСЊС€Рµ С‚СЂР°С‚РёС‚ РЅР° СЃРµСЂРІРёСЃРЅС‹Рµ Р·РґР°РЅРёСЏ Рё Р±С‹С‚РѕРІС‹Рµ РЅСѓР¶РґС‹. РЎРєРёРґРєР° РЅР° РІСЃРµ СѓСЃР»СѓРіРё."
                 : "[Stub] Frugal. Spends less at service buildings. Discount on all service fees.",
             WorkerPerkKind.Quicklearner => ru
-                ? "[Заглушка] Смышлёный. Быстрее прокачивает навыки через опыт. В будущем — ускоренный рост всех характеристик."
+                ? "[Р—Р°РіР»СѓС€РєР°] РЎРјС‹С€Р»С‘РЅС‹Р№. Р‘С‹СЃС‚СЂРµРµ РїСЂРѕРєР°С‡РёРІР°РµС‚ РЅР°РІС‹РєРё С‡РµСЂРµР· РѕРїС‹С‚. Р’ Р±СѓРґСѓС‰РµРј вЂ” СѓСЃРєРѕСЂРµРЅРЅС‹Р№ СЂРѕСЃС‚ РІСЃРµС… С…Р°СЂР°РєС‚РµСЂРёСЃС‚РёРє."
                 : "[Stub] Quick Learner. Gains skills faster through experience. Future: accelerated stat growth.",
-            _ => ru ? "Постоянная черта рабочего." : "A permanent worker trait."
+            _ => ru ? "РџРѕСЃС‚РѕСЏРЅРЅР°СЏ С‡РµСЂС‚Р° СЂР°Р±РѕС‡РµРіРѕ." : "A permanent worker trait."
         };
     }
 
@@ -1236,3 +1236,4 @@ public partial class GameBootstrap
         }
     }
 }
+

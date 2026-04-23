@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -86,6 +86,14 @@ public partial class GameBootstrap
             }
         }
 
+        for (int i = 0; i < localStops.Count; i++)
+        {
+            if (localStops[i].Anchor == cell)
+            {
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -99,6 +107,14 @@ public partial class GameBootstrap
             }
         }
 
+        for (int i = 0; i < localStops.Count; i++)
+        {
+            if (localStops[i].Contains(cell) || localStops[i].Anchor == cell)
+            {
+                return LocationType.Stop;
+            }
+        }
+
         return null;
     }
 
@@ -107,6 +123,14 @@ public partial class GameBootstrap
         foreach (LocationData location in locations.Values)
         {
             if (location.Contains(cell) || location.Anchor == cell)
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < localStops.Count; i++)
+        {
+            if (localStops[i].Contains(cell) || localStops[i].Anchor == cell)
             {
                 return true;
             }
@@ -194,10 +218,10 @@ public partial class GameBootstrap
         CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Forest, LocationType.Sawmill);
         CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Sawmill, LocationType.Warehouse);
         CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Warehouse, LocationType.Motel);
-        CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Motel, LocationType.BusStop);
+        CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Motel, LocationType.IntercityStop);
         if (!locations.ContainsKey(LocationType.Motel))
         {
-            CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Warehouse, LocationType.BusStop);
+            CreateGuaranteedRoadConnectionIfLocationsExist(LocationType.Warehouse, LocationType.IntercityStop);
         }
 
         SessionDebugLogger.Log("ROAD", $"Generated starter road network with {roadCells.Count} road cells.");
@@ -708,3 +732,5 @@ public partial class GameBootstrap
     }
 
 }
+
+

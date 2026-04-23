@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -15,6 +15,7 @@ public partial class GameBootstrap
             Max = max,
             Anchor = anchor,
             BaseColor = baseColor,
+            StopNumber = type == LocationType.Stop ? GetNextStopNumber() : 0,
             Workers = 0,
             ServiceFee = type switch
             {
@@ -61,7 +62,13 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(scaleX, 0.7f, scaleZ);
             ApplyColor(baseBlock, baseColor);
         }
-        else if (type == LocationType.BusStop)
+        else if (type == LocationType.IntercityStop)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.22f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.92f, 0.14f, size.y * 0.64f);
+            ApplyColor(baseBlock, new Color(0.78f, 0.74f, 0.68f));
+        }
+        else if (type == LocationType.Stop)
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.22f, 0f);
             baseBlock.transform.localScale = new Vector3(size.x * 0.92f, 0.14f, size.y * 0.64f);
@@ -105,7 +112,11 @@ public partial class GameBootstrap
         {
             CreateFurnitureFactoryDecoration(root.transform, center, min, max, anchor);
         }
-        else if (type == LocationType.BusStop)
+        else if (type == LocationType.IntercityStop)
+        {
+            CreateBusStopDecoration(root.transform, center, min, max, anchor);
+        }
+        else if (type == LocationType.Stop)
         {
             CreateBusStopDecoration(root.transform, center, min, max, anchor);
         }
@@ -128,16 +139,16 @@ public partial class GameBootstrap
 
         CreateLocationNightLights(type, root.transform, center, size);
 
-        // ── Category indicator stripe ────────────────────────────────────────
+        // в”Ђв”Ђ Category indicator stripe в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         // Production (Forest / Sawmill / FurnitureFactory) = amber
         // Service (everything else) = slate blue
-        // Forest and BusStop have no upright base block — skip.
-        if (type != LocationType.Forest && type != LocationType.BusStop)
+        // Forest and BusStop have no upright base block вЂ” skip.
+        if (type != LocationType.Forest && type != LocationType.IntercityStop && type != LocationType.Stop)
         {
             bool isProduction = IsProductionLocation(type);
             Color stripeColor = isProduction
-                ? new Color(0.95f, 0.58f, 0.10f)   // amber  — production
-                : new Color(0.28f, 0.55f, 0.84f);   // blue   — service
+                ? new Color(0.95f, 0.58f, 0.10f)   // amber  вЂ” production
+                : new Color(0.28f, 0.55f, 0.84f);   // blue   вЂ” service
 
             GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
             stripe.name = "CategoryStripe";
@@ -155,15 +166,31 @@ public partial class GameBootstrap
         anchorMarker.transform.localScale = new Vector3(0.22f, 0.02f, 0.22f);
         ApplyColor(anchorMarker, new Color(1f, 0.9f, 0.35f));
 
-        locations[type] = data;
-        root.transform.position = new Vector3(0f, GetLocationBaseHeight(type), 0f);
-        if (worldRoot != null && !locationSelectionHighlights.ContainsKey(type))
+        if (type == LocationType.Stop)
         {
-            locationSelectionHighlights[type] = SelectionVisualService.CreateHighlight(
-                worldRoot,
-                data.Label,
-                ApplyColor,
-                ConfigureStaticVisual);
+            localStops.Add(data);
+            root.transform.position = new Vector3(0f, GetLocationBaseHeight(data), 0f);
+            if (worldRoot != null)
+            {
+                localStopSelectionHighlights.Add(SelectionVisualService.CreateHighlight(
+                    worldRoot,
+                    data.Label,
+                    ApplyColor,
+                    ConfigureStaticVisual));
+            }
+        }
+        else
+        {
+            locations[type] = data;
+            root.transform.position = new Vector3(0f, GetLocationBaseHeight(type), 0f);
+            if (worldRoot != null && !locationSelectionHighlights.ContainsKey(type))
+            {
+                locationSelectionHighlights[type] = SelectionVisualService.CreateHighlight(
+                    worldRoot,
+                    data.Label,
+                    ApplyColor,
+                    ConfigureStaticVisual);
+            }
         }
     }
 
@@ -318,6 +345,50 @@ public partial class GameBootstrap
         RefreshForestStoredLogsVisual();
 
         SessionDebugLogger.Log("WORLD", "Built Lumberyard decoration with depot yard and storage stack.");
+    }
+
+    private int GetNextStopNumber()
+    {
+        NormalizeLocalStopNumbers();
+        return localStops.Count + 1;
+    }
+
+    private void NormalizeLocalStopNumbers()
+    {
+        if (localStops.Count == 0)
+        {
+            return;
+        }
+
+        List<LocationData> orderedStops = GetOrderedLocalStops();
+
+        for (int i = 0; i < orderedStops.Count; i++)
+        {
+            orderedStops[i].StopNumber = i + 1;
+        }
+    }
+
+    private List<LocationData> GetOrderedLocalStops()
+    {
+        List<LocationData> orderedStops = new(localStops);
+        orderedStops.Sort((a, b) =>
+        {
+            int numberCompare = a.StopNumber.CompareTo(b.StopNumber);
+            if (numberCompare != 0)
+            {
+                return numberCompare;
+            }
+
+            int xCompare = a.Anchor.x.CompareTo(b.Anchor.x);
+            if (xCompare != 0)
+            {
+                return xCompare;
+            }
+
+            return a.Anchor.y.CompareTo(b.Anchor.y);
+        });
+
+        return orderedStops;
     }
 
     private void CreateForestStoredLogsVisuals(Transform parent, Vector3 basePosition)
@@ -643,7 +714,7 @@ public partial class GameBootstrap
         orientedRoot.transform.localScale = Vector3.one * BuildingDecorScale;
         Transform or = orientedRoot.transform;
 
-        // === BUILDING — back half of footprint (local Z < 0 = away from anchor) ===
+        // === BUILDING вЂ” back half of footprint (local Z < 0 = away from anchor) ===
 
         // Main body
         GameObject mainBlock = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -659,7 +730,7 @@ public partial class GameBootstrap
         roofBlock.transform.localScale = new Vector3(1.92f, 0.09f, 0.82f);
         ApplyColor(roofBlock, new Color(0.76f, 0.22f, 0.18f));
 
-        // Facade canopy — on the front face of the building body (toward anchor side)
+        // Facade canopy вЂ” on the front face of the building body (toward anchor side)
         GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Cube);
         canopy.transform.SetParent(or, false);
         canopy.transform.localPosition = new Vector3(0f, 0.58f, -0.06f);
@@ -684,7 +755,7 @@ public partial class GameBootstrap
         sign.transform.localScale = new Vector3(0.72f, 0.18f, 0.06f);
         ApplyColor(sign, new Color(0.98f, 0.84f, 0.12f));
 
-        // === PARKING AREA — front half of footprint (local Z > 0 = toward anchor) ===
+        // === PARKING AREA вЂ” front half of footprint (local Z > 0 = toward anchor) ===
 
         // Two flat parking panels on the ground in front of the building.
         // localY = 0.37 puts them just above the top of the location base block (top = 0.35 local).
@@ -762,3 +833,5 @@ public partial class GameBootstrap
         lineRenderer.receiveShadows = false;
     }
 }
+
+

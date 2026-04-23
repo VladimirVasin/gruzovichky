@@ -175,12 +175,24 @@ public partial class GameBootstrap
             return L("Sleeping");
         if (driver.RestPhase != DriverRestPhase.None)
             return L("Walking");
+        if (IsBusDriverOnActiveRoute(driver))
+            return IsRussianLanguage()
+                ? $"{L("On Bus Route")} • Пассажиры {GetLocalBusPassengerCount(driver)}/{GetLocalBusPassengerCapacity()}"
+                : $"{L("On Bus Route")} • Passengers {GetLocalBusPassengerCount(driver)}/{GetLocalBusPassengerCapacity()}";
+        if (IsDriverBusDriver(driver) && driver.ShiftStartHour < 0)
+            return L("Bus Driver: no shift");
         if (IsDriverIntercity(driver))
             return L("Intercity");
         if (driver.IsOnActiveShift)
             return L("On Shift");
         if (driver.WaitingForShiftAtParking)
             return L("At Parking");
+        if (driver.WalkPhase == DriverRescuePhase.WalkToLocalBusStop)
+            return IsRussianLanguage() ? $"Идёт к остановке #{driver.BusOriginStopNumber}" : $"Walking to Stop #{driver.BusOriginStopNumber}";
+        if (driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop)
+            return IsRussianLanguage() ? $"Ждёт автобус на остановке #{driver.BusOriginStopNumber}" : $"Waiting at Stop #{driver.BusOriginStopNumber}";
+        if (driver.WalkPhase == DriverRescuePhase.RidingLocalBus)
+            return IsRussianLanguage() ? $"Едет до остановки #{driver.BusDestinationStopNumber}" : $"Riding to Stop #{driver.BusDestinationStopNumber}";
         if (driver.WalkPhase == DriverRescuePhase.ToMotelFromBusStop)
             return L("Walking from Bus Stop");
         if (driver.WalkPhase == DriverRescuePhase.IdleWander)
@@ -200,7 +212,9 @@ public partial class GameBootstrap
         selectedDriverId = driverId;
         isDriverDetailsOpen = true;
         isTruckDetailsOpen = false;
+        isLocalBusDetailsOpen = false;
         selectedLocation = null;
+        selectedLocalStopIndex = -1;
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         DriverAgent driver = driverAgents.Find(d => d.DriverId == driverId);
@@ -212,6 +226,9 @@ public partial class GameBootstrap
 
     private string GetWorkerOccupationLabel(DriverAgent driver)
     {
+        if (IsDriverBusDriver(driver))
+            return "Bus Driver";
+
         if (driver.DutyMode == DriverDutyMode.Intercity)
             return "Intercity Driver";
 
@@ -248,3 +265,5 @@ public partial class GameBootstrap
         PlayUiSound(uiPanelCloseClip, 0.82f);
     }
 }
+
+

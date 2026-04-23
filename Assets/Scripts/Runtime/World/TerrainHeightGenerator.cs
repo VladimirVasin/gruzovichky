@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public static class TerrainHeightGenerator
@@ -115,3 +115,4 @@ public static class TerrainHeightGenerator
         return cell.x >= 0 && cell.x < width && cell.y >= 0 && cell.y < height;
     }
 }
+

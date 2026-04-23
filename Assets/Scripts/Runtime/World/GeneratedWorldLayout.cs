@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 public sealed class WorldLocationPlacement
@@ -42,3 +42,4 @@ public enum WorldPlacementFacing
     East,
     West
 }
+

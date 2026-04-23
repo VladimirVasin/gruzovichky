@@ -1,10 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
-    private static readonly string[] SlotSymbols = { "7", "★", "♦", "♥", "♣", "♠" };
+    private static readonly string[] SlotSymbols = { "7", "в…", "в™¦", "в™Ґ", "в™Ј", "в™ " };
 
     private enum GamblingSlotPhase { Idle, ShowBet, Spinning, Done, ResultPause }
 
@@ -43,6 +43,12 @@ public partial class GameBootstrap
         public Text ResourceText;
         public Button ContextButton;
         public Text ContextButtonText;
+        public RectTransform StopNumberRow;
+        public Button StopNumberDecreaseButton;
+        public Text StopNumberDecreaseText;
+        public Text StopNumberLabelText;
+        public Button StopNumberIncreaseButton;
+        public Text StopNumberIncreaseText;
         public Button CloseButton;
         public Text CloseButtonText;
         public RectTransform WorkerSlotsSection;
@@ -76,8 +82,10 @@ public partial class GameBootstrap
 
         bool hadAnyQuickHud =
             isTruckDetailsOpen ||
+            isLocalBusDetailsOpen ||
             isDriverDetailsOpen ||
             selectedLocation.HasValue ||
+            selectedLocalStopIndex >= 0 ||
             selectedDebugCell.HasValue;
 
         if (!hadAnyQuickHud)
@@ -91,12 +99,15 @@ public partial class GameBootstrap
             isTruckDetailsOpen = false;
         }
 
+        isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
         selectedDriverId = 0;
         selectedLocation = null;
+        selectedLocalStopIndex = -1;
         selectedDebugCell = null;
 
         if (truckQuickHud?.CanvasRoot != null) truckQuickHud.CanvasRoot.SetActive(false);
+        if (localBusQuickHud?.CanvasRoot != null) localBusQuickHud.CanvasRoot.SetActive(false);
         if (driverQuickHud?.CanvasRoot != null) driverQuickHud.CanvasRoot.SetActive(false);
         if (buildingQuickHud?.CanvasRoot != null) buildingQuickHud.CanvasRoot.SetActive(false);
         if (cellQuickHud?.CanvasRoot != null) cellQuickHud.CanvasRoot.SetActive(false);
@@ -120,6 +131,7 @@ public partial class GameBootstrap
             return;
         }
 
+        EnsureFleetEventSystem();
         Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         buildingQuickHud = new BuildingQuickHudRefs();
 
@@ -160,12 +172,13 @@ public partial class GameBootstrap
         closeLayout.preferredHeight = 28f;
         buildingQuickHud.CloseButton.onClick.AddListener(() =>
         {
-            if (selectedLocation.HasValue)
+            if (TryGetSelectedBuilding(out LocationData selectedBuilding, out _, out _))
             {
-                LogUiInput($"Quick HUD: closed {locations[selectedLocation.Value].Label}");
+                LogUiInput($"Quick HUD: closed {selectedBuilding.Label}");
             }
 
             selectedLocation = null;
+            selectedLocalStopIndex = -1;
             RefreshSelectionVisuals();
             PlayUiSound(uiPanelCloseClip, 0.82f);
         });
@@ -180,7 +193,7 @@ public partial class GameBootstrap
         buildingQuickHud.ResourceText = CreateBodyText("ResourceText", summaryBody, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         buildingQuickHud.ResourceText.gameObject.AddComponent<LayoutElement>().preferredHeight = 78f;
 
-        // ── Worker slots section ──────────────────────────────────────────
+        // в”Ђв”Ђ Worker slots section в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         RectTransform workerSection = CreateUiObject("WorkerSlotsSection", root).GetComponent<RectTransform>();
         VerticalLayoutGroup wSectionLayout = workerSection.gameObject.AddComponent<VerticalLayoutGroup>();
         wSectionLayout.spacing = 6f;
@@ -290,7 +303,24 @@ public partial class GameBootstrap
         contextLayout.preferredHeight = 34f;
         buildingQuickHud.ContextButton.onClick.AddListener(OpenContextPanelFromBuildingQuickHud);
 
-        // Flash overlay — full-panel transparent image rendered on top
+        RectTransform stopNumberRow = CreateLayoutRow("StopNumberRow", root, 34f, 8f);
+        buildingQuickHud.StopNumberRow = stopNumberRow;
+        buildingQuickHud.StopNumberDecreaseButton = CreateButton("StopNumberMinus", stopNumberRow, uiFont, out buildingQuickHud.StopNumberDecreaseText, "-", 16, new Color(0.26f, 0.30f, 0.36f, 1f), Color.white);
+        LayoutElement stopMinusLayout = buildingQuickHud.StopNumberDecreaseButton.gameObject.AddComponent<LayoutElement>();
+        stopMinusLayout.preferredWidth = 40f;
+        stopMinusLayout.preferredHeight = 30f;
+        buildingQuickHud.StopNumberLabelText = CreateBodyText("StopNumberLabel", stopNumberRow, uiFont, string.Empty, 13, TextAnchor.MiddleCenter, Color.white);
+        LayoutElement stopLabelLayout = buildingQuickHud.StopNumberLabelText.gameObject.AddComponent<LayoutElement>();
+        stopLabelLayout.flexibleWidth = 1f;
+        stopLabelLayout.preferredHeight = 30f;
+        buildingQuickHud.StopNumberIncreaseButton = CreateButton("StopNumberPlus", stopNumberRow, uiFont, out buildingQuickHud.StopNumberIncreaseText, "+", 16, FleetPrimaryButtonColor, Color.white);
+        LayoutElement stopPlusLayout = buildingQuickHud.StopNumberIncreaseButton.gameObject.AddComponent<LayoutElement>();
+        stopPlusLayout.preferredWidth = 40f;
+        stopPlusLayout.preferredHeight = 30f;
+        buildingQuickHud.StopNumberDecreaseButton.onClick.AddListener(() => ShiftSelectedStopNumber(-1));
+        buildingQuickHud.StopNumberIncreaseButton.onClick.AddListener(() => ShiftSelectedStopNumber(1));
+
+        // Flash overlay вЂ” full-panel transparent image rendered on top
         RectTransform flashRt = CreateUiObject("FlashOverlay", root).GetComponent<RectTransform>();
         flashRt.anchorMin = Vector2.zero;
         flashRt.anchorMax = Vector2.one;
@@ -314,7 +344,7 @@ public partial class GameBootstrap
         }
 
         bool shouldShow =
-            selectedLocation.HasValue &&
+            (selectedLocation.HasValue || selectedLocalStopIndex >= 0) &&
             !isTruckDetailsOpen &&
             !isFleetPanelOpen &&
             !isDriversPanelOpen &&
@@ -332,7 +362,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (!locations.TryGetValue(selectedLocation.Value, out LocationData location))
+        if (!TryGetSelectedBuilding(out LocationData location, out LocationType selectedBuildingType, out _))
         {
             buildingQuickHud.CanvasRoot.SetActive(false);
             return;
@@ -340,16 +370,24 @@ public partial class GameBootstrap
 
         bool ru = IsRussianLanguage();
         buildingQuickHud.HeaderText.text = location.Label;
-        string categoryTag = IsProductionLocation(selectedLocation.Value) ? "  [Production]" : "  [Service]";
-        buildingQuickHud.TypeText.text = GetSelectedLocationDisplayName(selectedLocation.Value) + categoryTag;
-        buildingQuickHud.StatusText.text = GetBuildingQuickStatusText(selectedLocation.Value);
-        buildingQuickHud.ResourceText.text = GetBuildingQuickResourceText(selectedLocation.Value);
-        bool showContextBtn = HasBuildingContextAction(selectedLocation.Value);
+        string categoryTag = IsProductionLocation(selectedBuildingType) ? "  [Production]" : "  [Service]";
+        buildingQuickHud.TypeText.text = GetSelectedLocationDisplayName(selectedBuildingType) + categoryTag;
+        buildingQuickHud.StatusText.text = GetBuildingQuickStatusText(selectedBuildingType);
+        buildingQuickHud.ResourceText.text = GetBuildingQuickResourceText(selectedBuildingType);
+        bool showContextBtn = HasBuildingContextAction(selectedBuildingType);
         buildingQuickHud.ContextButton.gameObject.SetActive(showContextBtn);
         if (showContextBtn)
-            buildingQuickHud.ContextButtonText.text = GetBuildingQuickContextButtonText(selectedLocation.Value);
+            buildingQuickHud.ContextButtonText.text = GetBuildingQuickContextButtonText(selectedBuildingType);
+        bool showStopNumberRow = selectedBuildingType == LocationType.Stop;
+        buildingQuickHud.StopNumberRow.gameObject.SetActive(showStopNumberRow);
+        if (showStopNumberRow)
+        {
+            NormalizeLocalStopNumbers();
+            int stopNumber = Mathf.Max(1, location.StopNumber);
+            buildingQuickHud.StopNumberLabelText.text = ru ? $"Номер остановки: {stopNumber}" : $"Stop Number: {stopNumber}";
+        }
 
-        UpdateBuildingServiceWorkerSlots(selectedLocation.Value, ru);
+        UpdateBuildingServiceWorkerSlots(selectedBuildingType, ru);
         UpdateHudGamblingEffects();
 
         LocalizeCanvas(buildingQuickHud.CanvasRoot);
@@ -417,12 +455,12 @@ public partial class GameBootstrap
                 if (spinDone)
                 {
                     string outcomeLabel = d.GamblingMultiplier == 0 ? (ru ? "Проигрыш" : "Loss")
-                                        : d.GamblingMultiplier == 1 ? (ru ? "Ставка ×1" : "Break even")
-                                        : d.GamblingMultiplier == 5 ? (ru ? "Выигрыш ×5" : "Win ×5")
-                                        :                             (ru ? "Джекпот ×10" : "Jackpot ×10");
+                                        : d.GamblingMultiplier == 1 ? (ru ? "Ставка x1" : "Break even")
+                                        : d.GamblingMultiplier == 5 ? (ru ? "Выигрыш x5" : "Win x5")
+                                        :                             (ru ? "Джекпот x10" : "Jackpot x10");
                     int net = d.GamblingPayout - d.GamblingBet;
                     string netStr = net >= 0 ? $"+${net}" : $"-${-net}";
-                    slot.ActivityText.text  = $"{(ru ? "Ставка" : "Bet")}: ${d.GamblingBet}  {outcomeLabel}\n{(ru ? "Итог" : "Net")}: {netStr}  →  ${d.GamblingPayout}";
+                    slot.ActivityText.text  = $"{(ru ? "Ставка" : "Bet")}: ${d.GamblingBet}  {outcomeLabel}\n{(ru ? "Итог" : "Net")}: {netStr}  ->  ${d.GamblingPayout}";
                     slot.ActivityText.color = GetReelResultColor(d.GamblingMultiplier);
                     slot.ActivityTextLayout.preferredHeight = 28f;
                 }
@@ -640,9 +678,9 @@ public partial class GameBootstrap
     private static string[] GetReelFinalChars(int multiplier) => multiplier switch
     {
         10 => new[] { "7", "7", "7" },
-        5  => new[] { "★", "★", "★" },
-        1  => new[] { "♦", "♦", "♦" },
-        _  => new[] { "♥", "♠", "●" }
+        5  => new[] { "в…", "в…", "в…" },
+        1  => new[] { "в™¦", "в™¦", "в™¦" },
+        _  => new[] { "в™Ґ", "в™ ", "в—Џ" }
     };
 
     private static Color GetReelResultColor(int multiplier) => multiplier switch
@@ -762,13 +800,14 @@ public partial class GameBootstrap
                   activeTradeRun.OrderType == TradeOrderType.Buy &&
                   (activeTradeRun.Phase == TradeRunPhase.ReturningToWarehouse || activeTradeRun.Phase == TradeRunPhase.UnloadingAtWarehouse)
                     ? "Receiving imported trade delivery"
-                    : "Warehouse operational — resources available"
+                    : "Warehouse operational - resources available"
                 : "Finished goods storage",
             LocationType.Motel   => "Drivers rest and idle here",
-            LocationType.BusStop => "Roadside bus stop by the edge highway",
+            LocationType.IntercityStop => "Intercity worker arrival stop by the highway",
+            LocationType.Stop    => IsRussianLanguage() ? "Местная автобусная остановка" : "Local worker bus stop",
             LocationType.Canteen      => "Service canteen - visitors pay $10 for meals",
-            LocationType.Bar          => "Social hub — idle drivers gather here",
-            LocationType.GamblingHall => "Gambling Hall — free leisure for workers.",
+            LocationType.Bar          => "Social hub - idle drivers gather here",
+            LocationType.GamblingHall => "Gambling Hall - free leisure for workers.",
             _                         => string.Empty
         };
     }
@@ -783,7 +822,12 @@ public partial class GameBootstrap
             LocationType.FurnitureFactory => $"{FormatValueLine("Workers", $"{locations[LocationType.FurnitureFactory].Workers} / 1")}\n{FormatValueLine("Boards", $"{locations[LocationType.FurnitureFactory].BoardsStored} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{locations[LocationType.FurnitureFactory].TextileStored} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{locations[LocationType.FurnitureFactory].FurnitureStored} / {FurnitureFactoryMaxFurnitureStorage}")}",
             LocationType.Warehouse => GetWarehouseQuickResourceText(),
             LocationType.GasStation => GetGasStationQuickResourceText(),
-            LocationType.BusStop    => FormatValueLine("Status", "Waiting bay ready"),
+            LocationType.IntercityStop    => IsRussianLanguage()
+                ? FormatValueLine("Статус", "Готова к приёму")
+                : FormatValueLine("Status", "Intercity arrivals ready"),
+            LocationType.Stop       => IsRussianLanguage()
+                ? FormatValueLine("Статус", "Остановка готова")
+                : FormatValueLine("Status", "Local route stop ready"),
             LocationType.Motel      => GetServiceBuildingQuickResourceText(locationType),
             LocationType.Bar          => GetBarQuickResourceText(),
             LocationType.Canteen      => GetCanteenQuickResourceText(),
@@ -858,7 +902,8 @@ public partial class GameBootstrap
     private static bool HasBuildingContextAction(LocationType locationType)
     {
         return locationType != LocationType.GamblingHall &&
-               locationType != LocationType.BusStop;
+               locationType != LocationType.IntercityStop &&
+               locationType != LocationType.Stop;
     }
 
     private string GetBuildingQuickContextButtonText(LocationType locationType)
@@ -871,4 +916,47 @@ public partial class GameBootstrap
         };
     }
 
+    private void ShiftSelectedStopNumber(int delta)
+    {
+        if (selectedLocalStopIndex < 0 || selectedLocalStopIndex >= localStops.Count)
+        {
+            return;
+        }
+
+        NormalizeLocalStopNumbers();
+        LocationData location = localStops[selectedLocalStopIndex];
+        int stopCount = localStops.Count;
+        int currentNumber = Mathf.Clamp(location.StopNumber, 1, Mathf.Max(1, stopCount));
+        int targetNumber = Mathf.Clamp(currentNumber + delta, 1, Mathf.Max(1, stopCount));
+        if (targetNumber == currentNumber)
+        {
+            UpdateBuildingQuickHud();
+            return;
+        }
+
+        for (int i = 0; i < localStops.Count; i++)
+        {
+            if (i == selectedLocalStopIndex)
+            {
+                continue;
+            }
+
+            if (localStops[i].StopNumber == targetNumber)
+            {
+                localStops[i].StopNumber = currentNumber;
+                break;
+            }
+        }
+
+        location.StopNumber = targetNumber;
+        NormalizeLocalStopNumbers();
+        isFleetScreenDirty = true;
+        LogUiInput($"Quick HUD: changed stop number for {location.Label} to {location.StopNumber}");
+        SessionDebugLogger.Log("BUILD", $"{location.Label} stop number changed to {location.StopNumber}.");
+        PlayUiSound(uiSelectClip, 0.72f);
+        UpdateBuildingQuickHud();
+    }
+
 }
+
+

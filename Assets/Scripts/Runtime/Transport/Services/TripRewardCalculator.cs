@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public static class TripRewardCalculator
 {
@@ -7,3 +7,4 @@ public static class TripRewardCalculator
         return Mathf.Max(minimumReward, totalSteps * 3 + handlingBonus + locationBonus);
     }
 }
+

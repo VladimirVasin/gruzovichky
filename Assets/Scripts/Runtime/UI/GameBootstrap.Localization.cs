@@ -211,14 +211,17 @@ public partial class GameBootstrap
         { "Carpenter", "Столяр" },
         { "Warehouse Loader", "Грузчик склада" },
         { "Production Worker", "Рабочий производства" },
+        { "Bus Driver", "Водитель автобуса" },
         { "Truck Driver", "Водитель грузовика" },
         { "Unemployed", "Безработный" },
         { "On Trade Run", "В торговом рейсе" },
+        { "On Bus Route", "На автобусном маршруте" },
         { "Arriving by Bus", "Едет на автобусе" },
         { "Sleeping", "Спит" },
         { "Walking", "Идёт" },
         { "On Shift", "На смене" },
         { "At Parking", "На парковке" },
+        { "Bus Driver: no shift", "Водитель автобуса: смена не назначена" },
         { "Walking from Bus Stop", "Идёт от остановки" },
         { "Wandering", "Гуляет" },
         { "At Canteen", "В столовой" },
@@ -442,3 +445,4 @@ public partial class GameBootstrap
         // UI update function, so the periodic full-scene scan is no longer needed.
     }
 }
+

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public partial class GameBootstrap
@@ -268,3 +268,4 @@ public partial class GameBootstrap
         text.color = GetWorkerNeedStatusColor(status);
     }
 }
+

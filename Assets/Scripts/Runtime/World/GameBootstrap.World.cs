@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -14,6 +14,7 @@ public partial class GameBootstrap
     private void SetupLocations()
     {
         locations.Clear();
+        localStops.Clear();
 
         GeneratedWorldLayout layout = WorldLayoutGenerator.Generate(GridWidth, GridHeight, waterCells, HasRequiredLayoutRoads);
         CreateLocation(LocationType.Parking, "Parking", layout.Parking.Min, layout.Parking.Max, layout.Parking.Anchor, new Color(0.46f, 0.46f, 0.52f));
@@ -26,7 +27,7 @@ public partial class GameBootstrap
             CreateLocation(LocationType.Motel, "Motel", layout.Motel.Min, layout.Motel.Max, layout.Motel.Anchor, new Color(0.91f, 0.87f, 0.74f));
         }
 
-        CreateLocation(LocationType.BusStop, "Bus Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f));
+        CreateLocation(LocationType.IntercityStop, "Intercity Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f));
 
         SessionDebugLogger.Log(
             "WORLD",
@@ -84,6 +85,16 @@ public partial class GameBootstrap
                 Anchor = location.Anchor
             };
         }
+
+        foreach (LocationData stop in localStops)
+        {
+            yield return new WorldLocationPlacement
+            {
+                Min = stop.Min,
+                Max = stop.Max,
+                Anchor = stop.Anchor
+            };
+        }
     }
 
     private void ApplyTerrainHeightsToWorld()
@@ -101,6 +112,15 @@ public partial class GameBootstrap
             if (pair.Value != null)
             {
                 pair.Value.transform.position = GetCellCenter(pair.Key) + new Vector3(0f, RoadHeight, 0f);
+            }
+        }
+
+        for (int i = 0; i < localStops.Count; i++)
+        {
+            LocationData stop = localStops[i];
+            if (stop.RootObject != null)
+            {
+                stop.RootObject.transform.position = new Vector3(0f, GetLocationBaseHeight(stop), 0f);
             }
         }
     }
@@ -174,6 +194,25 @@ public partial class GameBootstrap
         return true;
     }
 
+    private bool GetStopPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
+        previewScale = new Vector3(0.98f, 0.04f, 0.98f);
+        GetRotatedBuildingFootprint(anchorCell, 2, 1, out Vector2Int previewMin, out Vector2Int previewMax);
+        SetBuildFootprintPreviewCells(previewMin, previewMax, anchorCell);
+        bool canPlace = TryGetStopPlacement(anchorCell, out Vector2Int min, out Vector2Int max);
+        if (!canPlace)
+        {
+            return false;
+        }
+
+        float centerX = (min.x + max.x + 1) * 0.5f;
+        float centerZ = (min.y + max.y + 1) * 0.5f;
+        previewPosition = new Vector3(centerX, SampleTerrainHeight(centerX, centerZ) + RoadHeight + 0.03f, centerZ);
+        previewScale = new Vector3((max.x - min.x + 1) * 0.94f, 0.04f, (max.y - min.y + 1) * 0.94f);
+        return true;
+    }
+
     private bool TryPlaceFurnitureFactoryAtAnchor(Vector2Int anchorCell)
     {
         if (locations.ContainsKey(LocationType.FurnitureFactory))
@@ -217,6 +256,23 @@ public partial class GameBootstrap
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         SessionDebugLogger.Log("BUILD", $"Placed Bar at anchor ({anchorCell.x},{anchorCell.y}).");
+        return true;
+    }
+
+    private bool TryPlaceStopAtAnchor(Vector2Int anchorCell)
+    {
+        if (!TryGetStopPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Stop placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.Stop, "Bus Stop", min, max, anchorCell, new Color(0.82f, 0.24f, 0.22f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        SessionDebugLogger.Log("BUILD", $"Placed Stop at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         return true;
     }
 
@@ -317,8 +373,13 @@ public partial class GameBootstrap
 
     private bool TryGetBarPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
-        // Anchor is on the road side; building footprint is 2×2 one row north of anchor
+        // Anchor is on the road side; building footprint is 2Г—2 one row north of anchor
         return TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Bar, out min, out max);
+    }
+
+    private bool TryGetStopPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
+    {
+        return TryGetRotatedBuildingPlacement(anchorCell, LocationType.Stop, 2, 1, out min, out max);
     }
 
     private bool TryGetTwoByTwoBuildingPlacement(Vector2Int anchorCell, LocationType type, out Vector2Int min, out Vector2Int max)
@@ -483,7 +544,7 @@ public partial class GameBootstrap
         ApplyColor(chimney, new Color(0.28f, 0.22f, 0.18f));
         ConfigureStaticVisual(chimney);
 
-        // Door (faces south toward anchor) — on south face of body
+        // Door (faces south toward anchor) вЂ” on south face of body
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.transform.SetParent(parent, false);
         door.transform.position = center + new Vector3(0f, 0.22f * scale, -0.81f * scale);
@@ -940,3 +1001,5 @@ public partial class GameBootstrap
         return source;
     }
 }
+
+

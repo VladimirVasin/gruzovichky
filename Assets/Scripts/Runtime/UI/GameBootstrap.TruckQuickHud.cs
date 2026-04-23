@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public partial class GameBootstrap
@@ -223,3 +223,4 @@ public partial class GameBootstrap
         PlayUiSound(uiPanelOpenClip, 0.86f);
     }
 }
+

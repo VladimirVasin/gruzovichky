@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public static class RoadLanternPlanner
 {
@@ -62,3 +62,4 @@ public static class RoadLanternPlanner
         return true;
     }
 }
+

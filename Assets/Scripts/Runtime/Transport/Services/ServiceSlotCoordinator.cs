@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 public static class ServiceSlotCoordinator
 {
@@ -18,3 +18,4 @@ public static class ServiceSlotCoordinator
         occupiedServiceLocations.Remove(locationType);
     }
 }
+

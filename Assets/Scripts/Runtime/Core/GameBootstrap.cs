@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -41,6 +41,9 @@ public partial class GameBootstrap : MonoBehaviour
     private const float EdgeHighwayBusLaneOffset = 0.32f;
     private const float EdgeHighwayBusLift = 0.24f;
     private const float EdgeHighwayBusPassbyDistance = 5.5f;
+    private const float LocalBusStopDwellGameMinutes = 5f;
+    private const float LocalBusSpeedMultiplier = 0.92f;
+    private const int LocalBusMaxPassengers = 5;
     private const float HiringBusStopDuration = 2.8f;
     private const float TruckFollowDistance = 4.4f;
     private const float TruckFollowHeight = 2.05f;
@@ -90,14 +93,14 @@ public partial class GameBootstrap : MonoBehaviour
     private const int HireDriverCost = 50;
     private const int InitialWorkerCount = 3;
     private const int MaxMoneyLedgerEntries = 128;
-    private const float DayNightCycleDuration = 360f; // 4 periods × 90s = 6-minute day
+    private const float DayNightCycleDuration = 360f; // 4 periods Г— 90s = 6-minute day
     private const float DriverShiftArrivalLeadHours = 1f;
     private const int ProductionWorkStartHour = 8;
     private const int ProductionWorkEndHour = 18;
     private const float DioramaCameraPitch = 42f;
     private static readonly Vector3 DioramaCameraOffset = new(-16f, 20f, -16f);
     private static readonly Vector3 CloudTravelDir = new Vector3(1f, 0f, 0.4f).normalized;
-    private const float CloudTravelLength = 80f;  // full path spawn→exit (wider spawn X=-30 needs longer path)
+    private const float CloudTravelLength = 80f;  // full path spawnв†’exit (wider spawn X=-30 needs longer path)
 
     private readonly HashSet<Vector2Int> waterCells = new();
     private readonly HashSet<Vector2Int> roadCells = new();
@@ -140,8 +143,10 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<MoneyLedgerEntry> moneyLedgerEntries = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
     private readonly Dictionary<LocationType, GameObject> locationSelectionHighlights = new();
+    private readonly List<GameObject> localStopSelectionHighlights = new();
     private readonly List<EdgeHighwayBusData> edgeHighwayBuses = new();
     private readonly List<RiverBoatData> riverBoats = new();
+    private LocalBusRouteData localBusRoute;
     private float[,] terrainHeights = new float[GridWidth, GridHeight];
 
     private Camera mainCamera;
@@ -231,7 +236,7 @@ public partial class GameBootstrap : MonoBehaviour
     private float truckInteractionTimer;
     private float moneyPopupTimer;
     private float truckFuel = TruckFuelCapacity;
-    private float dayNightCycleTimer = DayNightCycleDuration * 0.25f; // start at 06:00 — morning
+    private float dayNightCycleTimer = DayNightCycleDuration * 0.25f; // start at 06:00 вЂ” morning
     private int   currentDay = 1;
     private float currentStylizedDaylight = 1f;
     private float forestProductionProgress;
@@ -245,7 +250,9 @@ public partial class GameBootstrap : MonoBehaviour
     private float terrainNoiseOffsetX;
     private float terrainNoiseOffsetY;
     private LocationType? selectedLocation;
+    private int selectedLocalStopIndex = -1;
     private bool isTruckDetailsOpen;
+    private bool isLocalBusDetailsOpen;
     private bool isRightMouseDragging;
     private bool isCameraReturningToDiorama;
     private bool isCameraRotatingToTarget;
@@ -266,6 +273,7 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isDriversPanelOpen;
     private int selectedShiftDriverId; // DriverId, 0 = none
     private int intercityDriverId;
+    private readonly int[] busDriverShiftIds = new int[3];
     private TradeResourceType selectedTradeResourceType = TradeResourceType.Logs;
     private TradeOrderType selectedTradeOrderType = TradeOrderType.Buy;
     private int selectedTradeOrderAmount = 5;
@@ -298,6 +306,7 @@ public partial class GameBootstrap : MonoBehaviour
     private TripType currentAssignedTrip = TripType.None;
     private BuildTool activeBuildTool = BuildTool.None;
     private HashSet<BuildTool> unlockedBuildTools;
+    private readonly List<LocationData> localStops = new();
     private Vector2Int? hoveredBuildCell;
     private Vector2Int? selectedDebugCell;
     private float edgeHighwayBusSpawnTimerCitySide;
@@ -361,6 +370,38 @@ public partial class GameBootstrap : MonoBehaviour
         public Material HeadlightRightMaterial;
         public Light HeadlightLeft;
         public Light HeadlightRight;
+    }
+
+    private sealed class LocalBusRouteData
+    {
+        public Transform RootTransform;
+        public Renderer HeadlightLeftRenderer;
+        public Renderer HeadlightRightRenderer;
+        public Material HeadlightLeftMaterial;
+        public Material HeadlightRightMaterial;
+        public Light HeadlightLeft;
+        public Light HeadlightRight;
+        public DriverAgent Driver;
+        public readonly List<Vector3> Waypoints = new();
+        public int WaypointIndex;
+        public int CurrentStopIndex = -1;
+        public int TravelDirection = 1;
+        public float DwellTimer;
+        public float BobPhase;
+        public float Speed;
+        public int PassengerCount;
+        public int PassengerCapacity = LocalBusMaxPassengers;
+        public string LastBoardingBlockReason;
+        public LocalBusPhase Phase = LocalBusPhase.None;
+    }
+
+    private enum LocalBusPhase
+    {
+        None,
+        ParkedAwaitingShiftStart,
+        DrivingRoute,
+        WaitingAtStop,
+        ReturningToParking
     }
 
     private sealed class HiringDriverArrivalData
@@ -458,7 +499,8 @@ public partial class GameBootstrap : MonoBehaviour
         Sawmill,
         FurnitureFactory,
         Motel,
-        BusStop,
+        IntercityStop,
+        Stop,
         Bar,
         Canteen,
         GamblingHall
@@ -544,6 +586,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         None,
         Road,
+        Stop,
         FurnitureFactory,
         Sawmill,
         Motel,
@@ -596,6 +639,9 @@ public partial class GameBootstrap : MonoBehaviour
         IdleAtGamblingHall,
         IdleSmoking,
         IdlePhoneCall,
+        WalkToLocalBusStop,
+        WaitingAtLocalBusStop,
+        RidingLocalBus,
         ToBuildingForShift,        // walking motel -> production building (logistics pre-shift)
         ToMotelFromBuilding,       // walking building -> motel (logistics post-shift)
         WarehouseDeliveryToService, // walking Warehouse -> service building (carrying resource)
@@ -604,7 +650,8 @@ public partial class GameBootstrap : MonoBehaviour
         LumberChopping,
         LumberCarryLogToBuilding,
         LumberReturnToTreeForPlanting,
-        LumberPlanting
+        LumberPlanting,
+        LumberReturnToBuilding
     }
 
     private enum DriverRestPhase
@@ -682,6 +729,7 @@ public partial class GameBootstrap : MonoBehaviour
         public Vector2Int Max;
         public Vector2Int Anchor;
         public Color BaseColor;
+        public int StopNumber;
         public int LogsStored;
         public int BoardsStored;
         public int TextileStored;
@@ -1036,14 +1084,14 @@ public partial class GameBootstrap : MonoBehaviour
     {
         Alcoholism,
         Gambler,
-        Nightowl,        // Работает лучше в ночную смену
-        Ironman,         // Медленнее устаёт, реже нужен отдых
-        Motorhead,       // Бонус к вождению и техобслуживанию
-        Trader,          // Торговые рейсы приносят больше прибыли
-        Handyman,        // Ускоряет производство на всех зданиях
-        Socialite,       // Восстанавливает досуг быстрее и дешевле
-        Frugal,          // Тратит меньше на сервисные нужды
-        Quicklearner     // Быстрее прокачивает навыки от опыта
+        Nightowl,        // Р Р°Р±РѕС‚Р°РµС‚ Р»СѓС‡С€Рµ РІ РЅРѕС‡РЅСѓСЋ СЃРјРµРЅСѓ
+        Ironman,         // РњРµРґР»РµРЅРЅРµРµ СѓСЃС‚Р°С‘С‚, СЂРµР¶Рµ РЅСѓР¶РµРЅ РѕС‚РґС‹С…
+        Motorhead,       // Р‘РѕРЅСѓСЃ Рє РІРѕР¶РґРµРЅРёСЋ Рё С‚РµС…РѕР±СЃР»СѓР¶РёРІР°РЅРёСЋ
+        Trader,          // РўРѕСЂРіРѕРІС‹Рµ СЂРµР№СЃС‹ РїСЂРёРЅРѕСЃСЏС‚ Р±РѕР»СЊС€Рµ РїСЂРёР±С‹Р»Рё
+        Handyman,        // РЈСЃРєРѕСЂСЏРµС‚ РїСЂРѕРёР·РІРѕРґСЃС‚РІРѕ РЅР° РІСЃРµС… Р·РґР°РЅРёСЏС…
+        Socialite,       // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РґРѕСЃСѓРі Р±С‹СЃС‚СЂРµРµ Рё РґРµС€РµРІР»Рµ
+        Frugal,          // РўСЂР°С‚РёС‚ РјРµРЅСЊС€Рµ РЅР° СЃРµСЂРІРёСЃРЅС‹Рµ РЅСѓР¶РґС‹
+        Quicklearner     // Р‘С‹СЃС‚СЂРµРµ РїСЂРѕРєР°С‡РёРІР°РµС‚ РЅР°РІС‹РєРё РѕС‚ РѕРїС‹С‚Р°
     }
 
     private enum WorkerPerkType
@@ -1052,10 +1100,13 @@ public partial class GameBootstrap : MonoBehaviour
         Negative
     }
 
+    private enum WorkerGender { Male, Female }
+
     private sealed class DriverAgent
     {
         public int DriverId;
         public string DriverName;
+        public WorkerGender Gender;
         public bool HasPortrait;
         public int PortraitSkinTone;
         public int PortraitHairStyle;
@@ -1131,6 +1182,11 @@ public partial class GameBootstrap : MonoBehaviour
         public WorkerNeedStatus LastMealNeedStatus = WorkerNeedStatus.Ok;
         public WorkerNeedStatus LastSleepNeedStatus = WorkerNeedStatus.Ok;
         public WorkerNeedStatus LastLeisureNeedStatus = WorkerNeedStatus.Ok;
+        public int BusOriginStopNumber = -1;
+        public int BusDestinationStopNumber = -1;
+        public DriverRescuePhase BusFinalWalkPhase = DriverRescuePhase.None;
+        public Vector3 BusFinalTargetWorld;
+        public string BusTravelReason = string.Empty;
         public LocationType? AssignedBuildingType;      // logistics only: building this worker is assigned to
         public bool IsInsideBuilding;                   // true while physically inside the assigned building
         public LocationType? WarehouseDeliveryTarget;   // warehouse worker: current delivery destination
@@ -1182,11 +1238,11 @@ public partial class GameBootstrap : MonoBehaviour
         return $"{ProductionWorkStartHour:00}:00 - {ProductionWorkEndHour:00}:00";
     }
 
-    // Shift display string: "06:00 – 14:00"
+    // Shift display string: "06:00 \u2013 14:00"
     private static string GetShiftRangeLabel(int shiftStart)
     {
         int end = (shiftStart + 8) % 24;
-        return $"{shiftStart:00}:00 – {end:00}:00";
+        return $"{shiftStart:00}:00 \u2013 {end:00}:00";
     }
 
     private void Awake()
@@ -1265,6 +1321,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
         UpdateRiverFish();
         UpdateHiringDriverArrival();
+        UpdateLocalBusRoute();
         UpdateEdgeHighwayBuses();
         UpdateRiverBoats();
         UpdateDistantClouds();
@@ -1328,6 +1385,7 @@ public partial class GameBootstrap : MonoBehaviour
 
             UpdateDriverShiftPreparation(driver);
             UpdateDriverShiftActivation(driver);
+            UpdateBusDriverShiftEnd(driver);
             UpdateLogisticsShiftEnd(driver);
             UpdateWarehouseDelivery(driver);
             UpdateDriverRest(driver);
@@ -1348,6 +1406,7 @@ public partial class GameBootstrap : MonoBehaviour
         UpdateStatesScreenUi();
         CloseQuickHudsWhenBlockingHudIsOpen();
         UpdateTruckQuickHud();
+        UpdateLocalBusQuickHud();
         UpdateDriverQuickHud();
         UpdateBuildingQuickHud();
         UpdateCellQuickHud();
@@ -1517,7 +1576,7 @@ public partial class GameBootstrap : MonoBehaviour
         keyLight.shadowBias = 0.04f;
         keyLight.shadowNormalBias = 0.32f;
         keyLight.shadowNearPlane = 0.2f;
-        // shadowResolution is Built-In RP only — shadow quality in URP is set via the renderer asset
+        // shadowResolution is Built-In RP only вЂ” shadow quality in URP is set via the renderer asset
 
         Light[] allLights = FindObjectsByType<Light>();
         foreach (Light lightComponent in allLights)
@@ -1594,3 +1653,4 @@ public partial class GameBootstrap : MonoBehaviour
     }
 
 }
+

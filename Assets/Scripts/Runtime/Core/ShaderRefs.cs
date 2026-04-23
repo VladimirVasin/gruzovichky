@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 [CreateAssetMenu(fileName = "ShaderRefs", menuName = "Game/Shader Refs")]
 public class ShaderRefs : ScriptableObject
@@ -14,3 +14,4 @@ public class ShaderRefs : ScriptableObject
     public static Shader Unlit    => Instance != null ? Instance.UrpUnlit     : Shader.Find("Universal Render Pipeline/Unlit");
     public static Shader Sprites  => Instance != null ? Instance.SpritesDefault : Shader.Find("Sprites/Default");
 }
+

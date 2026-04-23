@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public partial class GameBootstrap
@@ -160,7 +160,7 @@ public partial class GameBootstrap
 
     private Vector2Int GetTradeHighwayEntryCell()
     {
-        return locations[LocationType.BusStop].Anchor;
+        return locations[LocationType.IntercityStop].Anchor;
     }
 
     private Vector2Int GetTradeHighwayDepartureCell()
@@ -641,7 +641,7 @@ public partial class GameBootstrap
         }
 
         if (!locations.TryGetValue(LocationType.Parking, out LocationData parking) ||
-            !locations.TryGetValue(LocationType.BusStop, out LocationData busStop) ||
+            !locations.TryGetValue(LocationType.IntercityStop, out LocationData busStop) ||
             !HasPath(parking.Anchor, busStop.Anchor))
         {
             blockReason = "Highway access is not connected";
@@ -894,7 +894,7 @@ public partial class GameBootstrap
         int boardsAfter = GetTotalBoardsResourceAmount();
         Debug.Log($"[TRADE] {truckAgent.DisplayName} finished loading {resourceLabel} x{activeTradeRun.Quantity}. " +
                   $"Truck cargo: {truckAgent.TruckCargoAmount} {truckAgent.TruckCargoType}. " +
-                  $"Resource totals after load — Logs:{logsAfter} Boards:{boardsAfter}");
+                  $"Resource totals after load вЂ” Logs:{logsAfter} Boards:{boardsAfter}");
         SessionDebugLogger.Log("TRADE", $"{truckAgent.DisplayName} loaded {resourceLabel} x{activeTradeRun.Quantity} from Warehouse.");
         SetTradeRunPhase(TradeRunPhase.DrivingToHighway, $"{truckAgent.DisplayName} finished Warehouse loading.");
         tradeDispatchStatusText = GetTradeRunStatusLabel();
@@ -1121,7 +1121,7 @@ public partial class GameBootstrap
         int quantity = GetTradeRunQuantity(resourceType);
         int price = GetTradeRunPrice(resourceType, orderType);
         string action = orderType == TradeOrderType.Buy ? "Import" : "Export";
-        return $"{action} x{quantity}  •  ${price}";
+        return $"{action} x{quantity}  вЂў  ${price}";
     }
 
     private string GetTradeEtaLabel()
@@ -1139,10 +1139,12 @@ public partial class GameBootstrap
                 TradeRunPhase.ReturningToWarehouse => "ETA: warehouse unload",
                 TradeRunPhase.UnloadingAtWarehouse => "ETA: unloading",
                 TradeRunPhase.ReturningToParking => "ETA: parking return",
-                _ => "ETA —"
+                _ => "ETA вЂ”"
             };
         }
 
         return $"ETA {Mathf.CeilToInt(GetTradeRunDuration(selectedTradeResourceType))}s";
     }
 }
+
+

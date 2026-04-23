@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -66,7 +66,7 @@ public partial class GameBootstrap
         }
         if (driver == null || driver.DriverObject == null) return;
 
-        // If driver is already on a rest journey, or Gas Station has no fuel — silently refuel and continue
+        // If driver is already on a rest journey, or Gas Station has no fuel вЂ” silently refuel and continue
         bool gasStationEmpty = locations.TryGetValue(LocationType.GasStation, out LocationData gsCheck) && gsCheck.FuelStored <= 0;
         if (driver.RestPhase != DriverRestPhase.None || gasStationEmpty)
         {
@@ -278,6 +278,11 @@ public partial class GameBootstrap
     {
         LocationData location = locations[locationType];
         return new Vector3((location.Min.x + location.Max.x + 1) * 0.5f, GetLocationBaseHeight(locationType), (location.Min.y + location.Max.y + 1) * 0.5f);
+    }
+
+    private Vector3 GetLocationCenter(LocationData location)
+    {
+        return new Vector3((location.Min.x + location.Max.x + 1) * 0.5f, GetLocationBaseHeight(location), (location.Min.y + location.Max.y + 1) * 0.5f);
     }
 
     private string GetTruckStatusLabel()
@@ -846,7 +851,8 @@ public partial class GameBootstrap
             LocationType.Sawmill => $"Logs: {locations[LocationType.Sawmill].LogsStored} | Boards: {locations[LocationType.Sawmill].BoardsStored}",
             LocationType.FurnitureFactory => $"Boards: {locations[LocationType.FurnitureFactory].BoardsStored} | Textile: {locations[LocationType.FurnitureFactory].TextileStored} | Furniture: {locations[LocationType.FurnitureFactory].FurnitureStored}",
             LocationType.Motel => "Roadside stop",
-            LocationType.BusStop => "Bus stop by the highway",
+            LocationType.IntercityStop => "Intercity stop by the highway",
+            LocationType.Stop => "Local bus stop",
             LocationType.Bar => "Service fee: $10",
             LocationType.Canteen => "Service fee: $10",
             _ => string.Empty
@@ -864,7 +870,8 @@ public partial class GameBootstrap
             LocationType.Sawmill => L("Sawmill"),
             LocationType.FurnitureFactory => L("Furniture Factory"),
             LocationType.Motel => L("Motel"),
-            LocationType.BusStop => L("Bus Stop"),
+            LocationType.IntercityStop => IsRussianLanguage() ? "Междугородняя остановка" : "Intercity Stop",
+            LocationType.Stop => IsRussianLanguage() ? "Автобусная остановка" : "Bus Stop",
             LocationType.Bar => L("Bar"),
             LocationType.Canteen => L("Canteen"),
             LocationType.GamblingHall => L("Gambling Hall"),
@@ -895,3 +902,5 @@ public partial class GameBootstrap
     }
 
 }
+
+

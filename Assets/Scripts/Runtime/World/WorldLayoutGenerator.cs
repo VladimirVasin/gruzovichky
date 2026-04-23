@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public static class WorldLayoutGenerator
@@ -442,3 +442,4 @@ public static class WorldLayoutGenerator
         };
     }
 }
+

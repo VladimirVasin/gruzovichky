@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -110,10 +110,10 @@ public partial class GameBootstrap : MonoBehaviour
                 }
             }
 
-            // Two overlapping sines → organic bob
+            // Two overlapping sines в†’ organic bob
             float bob  = Mathf.Sin(Time.time * 1.1f  + boat.BobPhase) * 0.022f
                        + Mathf.Sin(Time.time * 0.43f + boat.BobPhase * 0.7f) * 0.010f;
-            // Two overlapping sines → smooth roll
+            // Two overlapping sines в†’ smooth roll
             float roll = Mathf.Sin(Time.time * 0.7f  + boat.RockPhase) * 1.2f
                        + Mathf.Sin(Time.time * 1.3f  + boat.RockPhase * 1.4f) * 0.5f;
 
@@ -122,7 +122,7 @@ public partial class GameBootstrap : MonoBehaviour
             boat.RootTransform.position = new Vector3(boat.WorldX, waterY + 0.13f + bob, laneZ);
             boat.RootTransform.rotation = Quaternion.Euler(0f, boat.TravelDirection > 0f ? 90f : -90f, roll);
 
-            // Lantern — on at night, same threshold as bus headlights
+            // Lantern вЂ” on at night, same threshold as bus headlights
             float darkness = 1f - currentStylizedDaylight;
             bool lanternOn = darkness > 0.55f;
             float lanternIntensity = lanternOn
@@ -143,7 +143,7 @@ public partial class GameBootstrap : MonoBehaviour
                 boat.LanternRenderer.material.color = lampColor;
             }
 
-            // Boat motor audio — fade in when inside river, fade out approaching edge
+            // Boat motor audio вЂ” fade in when inside river, fade out approaching edge
             if (boat.BoatAudioSource != null)
             {
                 float margin = 2f;
@@ -157,7 +157,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private float GetRiverBoatLaneZ(float direction)
     {
-        // Two lanes inside the river strip (y=28..31 → Z≈28.5 and 30.5)
+        // Two lanes inside the river strip (y=28..31 в†’ Zв‰€28.5 and 30.5)
         int shoreRow = GridHeight - WaterRiverWidth;
         return direction > 0f
             ? shoreRow + 0.5f   // near-shore lane, left-to-right
@@ -199,9 +199,9 @@ public partial class GameBootstrap : MonoBehaviour
         boatRoot.transform.SetParent(riverBoatRoot, false);
 
         // Geometry is built along local Z = forward (travel direction).
-        // No extra 90° Y rotation needed — boat spawns facing +Z or -Z via Y=0/180.
+        // No extra 90В° Y rotation needed вЂ” boat spawns facing +Z or -Z via Y=0/180.
 
-        // Hull — main flat body, long along Z (travel axis)
+        // Hull вЂ” main flat body, long along Z (travel axis)
         GameObject hull = GameObject.CreatePrimitive(PrimitiveType.Cube);
         hull.transform.SetParent(boatRoot.transform, false);
         hull.transform.localPosition = new Vector3(0f, -0.06f, 0f);
@@ -209,7 +209,7 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyColor(hull, hullColor);
         ConfigureShadowVisual(hull);
 
-        // Hull sides — raised gunwale strips along the length
+        // Hull sides вЂ” raised gunwale strips along the length
         foreach (float sx in new[] { -0.24f, 0.24f })
         {
             GameObject gunwale = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -220,7 +220,7 @@ public partial class GameBootstrap : MonoBehaviour
             ConfigureShadowVisual(gunwale);
         }
 
-        // Bow — tapered front end (positive Z = front)
+        // Bow вЂ” tapered front end (positive Z = front)
         GameObject bow = GameObject.CreatePrimitive(PrimitiveType.Cube);
         bow.transform.SetParent(boatRoot.transform, false);
         bow.transform.localPosition = new Vector3(0f, -0.05f, 0.62f);
@@ -229,7 +229,7 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyColor(bow, hullColor);
         ConfigureShadowVisual(bow);
 
-        // Cabin — sits toward the rear
+        // Cabin вЂ” sits toward the rear
         GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cabin.transform.SetParent(boatRoot.transform, false);
         cabin.transform.localPosition = new Vector3(0f, 0.18f, -0.14f);
@@ -269,7 +269,7 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyColor(mast, new Color(0.72f, 0.64f, 0.52f));
         ConfigureShadowVisual(mast);
 
-        // Lantern head — glowing cube on top of mast
+        // Lantern head вЂ” glowing cube on top of mast
         GameObject lanternHead = GameObject.CreatePrimitive(PrimitiveType.Cube);
         lanternHead.transform.SetParent(boatRoot.transform, false);
         lanternHead.transform.localPosition = new Vector3(0f, 0.94f, 0.28f);
@@ -294,7 +294,7 @@ public partial class GameBootstrap : MonoBehaviour
         boatRoot.transform.position = new Vector3(spawnX, waterSurfaceY, laneZ);
         boatRoot.transform.rotation = Quaternion.Euler(0f, travelDirection > 0f ? 90f : -90f, 0f);
 
-        // Boat motor audio source — spatial, loops quietly while in scene
+        // Boat motor audio source вЂ” spatial, loops quietly while in scene
         AudioSource boatAudio = null;
         if (boatMotorClip != null)
         {
@@ -578,6 +578,141 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         return edgeHighwayCells.Contains(nextStep) || edgeHighwayCells.Contains(truckAgent.TruckCell);
+    }
+
+    private void BuildSharedBusVisual(
+        Transform parent,
+        Color bodyColor,
+        string leftLightName,
+        string rightLightName,
+        out Renderer headlightLeftRenderer,
+        out Renderer headlightRightRenderer,
+        out Material headlightLeftMaterial,
+        out Material headlightRightMaterial,
+        out Light leftLight,
+        out Light rightLight)
+    {
+        Color roofColor = new(0.94f, 0.92f, 0.84f);
+        Color windowColor = new(0.72f, 0.88f, 0.95f);
+
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        body.transform.SetParent(parent, false);
+        body.transform.localPosition = new Vector3(0f, 0.26f, 0f);
+        body.transform.localScale = new Vector3(1.24f, 0.42f, 0.44f);
+        ApplyColor(body, bodyColor);
+        ConfigureShadowVisual(body);
+
+        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roof.transform.SetParent(parent, false);
+        roof.transform.localPosition = new Vector3(-0.02f, 0.56f, 0f);
+        roof.transform.localScale = new Vector3(1.02f, 0.12f, 0.4f);
+        ApplyColor(roof, roofColor);
+        ConfigureShadowVisual(roof);
+
+        GameObject windowBand = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        windowBand.transform.SetParent(parent, false);
+        windowBand.transform.localPosition = new Vector3(-0.02f, 0.38f, 0f);
+        windowBand.transform.localScale = new Vector3(0.94f, 0.18f, 0.46f);
+        ApplyColor(windowBand, windowColor);
+        ConfigureShadowVisual(windowBand);
+
+        GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        windshield.transform.SetParent(parent, false);
+        windshield.transform.localPosition = new Vector3(0.56f, 0.41f, 0f);
+        windshield.transform.localScale = new Vector3(0.12f, 0.2f, 0.38f);
+        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f));
+        ConfigureShadowVisual(windshield);
+
+        GameObject rearWindow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rearWindow.transform.SetParent(parent, false);
+        rearWindow.transform.localPosition = new Vector3(-0.56f, 0.39f, 0f);
+        rearWindow.transform.localScale = new Vector3(0.08f, 0.17f, 0.34f);
+        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f));
+        ConfigureShadowVisual(rearWindow);
+
+        GameObject headlightLeftVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        headlightLeftVisual.transform.SetParent(parent, false);
+        headlightLeftVisual.transform.localPosition = new Vector3(0.61f, 0.26f, -0.14f);
+        headlightLeftVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
+        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f));
+        ConfigureShadowVisual(headlightLeftVisual);
+
+        GameObject headlightRightVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        headlightRightVisual.transform.SetParent(parent, false);
+        headlightRightVisual.transform.localPosition = new Vector3(0.61f, 0.26f, 0.14f);
+        headlightRightVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
+        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f));
+        ConfigureShadowVisual(headlightRightVisual);
+
+        GameObject sideStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        sideStripe.transform.SetParent(parent, false);
+        sideStripe.transform.localPosition = new Vector3(0f, 0.23f, 0f);
+        sideStripe.transform.localScale = new Vector3(1.08f, 0.06f, 0.47f);
+        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f));
+        ConfigureShadowVisual(sideStripe);
+
+        GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        door.transform.SetParent(parent, false);
+        door.transform.localPosition = new Vector3(0.18f, 0.23f, -0.22f);
+        door.transform.localScale = new Vector3(0.24f, 0.32f, 0.05f);
+        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f));
+        ConfigureShadowVisual(door);
+
+        float[] wheelX = { -0.38f, 0.38f };
+        float[] wheelZ = { -0.18f, 0.18f };
+        foreach (float wx in wheelX)
+        {
+            foreach (float wz in wheelZ)
+            {
+                GameObject wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                wheel.transform.SetParent(parent, false);
+                wheel.transform.localPosition = new Vector3(wx, 0.1f, wz);
+                wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                wheel.transform.localScale = new Vector3(0.1f, 0.05f, 0.1f);
+                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f));
+                ConfigureShadowVisual(wheel);
+            }
+        }
+
+        GameObject routePlate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        routePlate.transform.SetParent(parent, false);
+        routePlate.transform.localPosition = new Vector3(0.48f, 0.53f, 0f);
+        routePlate.transform.localScale = new Vector3(0.18f, 0.08f, 0.3f);
+        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f));
+        ConfigureShadowVisual(routePlate);
+
+        GameObject leftLightObject = new(leftLightName);
+        leftLightObject.transform.SetParent(parent, false);
+        leftLightObject.transform.localPosition = new Vector3(0.64f, 0.28f, -0.14f);
+        leftLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
+        leftLight = leftLightObject.AddComponent<Light>();
+        leftLight.type = LightType.Spot;
+        leftLight.color = new Color(1f, 0.9f, 0.72f);
+        leftLight.range = 3.6f;
+        leftLight.spotAngle = 42f;
+        leftLight.innerSpotAngle = 22f;
+        leftLight.intensity = 0f;
+        leftLight.shadows = LightShadows.None;
+        leftLight.enabled = false;
+
+        GameObject rightLightObject = new(rightLightName);
+        rightLightObject.transform.SetParent(parent, false);
+        rightLightObject.transform.localPosition = new Vector3(0.64f, 0.28f, 0.14f);
+        rightLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
+        rightLight = rightLightObject.AddComponent<Light>();
+        rightLight.type = LightType.Spot;
+        rightLight.color = new Color(1f, 0.9f, 0.72f);
+        rightLight.range = 3.6f;
+        rightLight.spotAngle = 42f;
+        rightLight.innerSpotAngle = 22f;
+        rightLight.intensity = 0f;
+        rightLight.shadows = LightShadows.None;
+        rightLight.enabled = false;
+
+        headlightLeftRenderer = headlightLeftVisual.GetComponent<Renderer>();
+        headlightRightRenderer = headlightRightVisual.GetComponent<Renderer>();
+        headlightLeftMaterial = headlightLeftRenderer != null ? headlightLeftRenderer.material : null;
+        headlightRightMaterial = headlightRightRenderer != null ? headlightRightRenderer.material : null;
     }
 
     private void CreateEdgeHighwayBus(float travelDirection, bool isCitySideLane)
@@ -932,3 +1067,4 @@ public partial class GameBootstrap : MonoBehaviour
     }
 
 }
+

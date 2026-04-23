@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public enum TruckAutoDecisionKind
 {
@@ -29,3 +29,4 @@ public static class TruckAutoPlanner
         return tripCount <= 0 ? -1 : Random.Range(0, tripCount);
     }
 }
+

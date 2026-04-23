@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public partial class GameBootstrap
 {
@@ -19,7 +19,7 @@ public partial class GameBootstrap
 
     private const int DebugLooseStorageMax = 99;
 
-    // ── state ───────────────────────────────────────────────────────────────
+    // в”Ђв”Ђ state в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     private bool    isDebugServicePanelOpen;
     private int     debugSelectedDriverId = -1;
     private Vector2 debugWorkerScrollPos;
@@ -34,14 +34,14 @@ public partial class GameBootstrap
         (LocationType.Motel,        "Motel (Sleep)"),
     };
 
-    // ── toggle ──────────────────────────────────────────────────────────────
+    // в”Ђв”Ђ toggle в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     private void ToggleDebugServicePanel()
     {
         isDebugServicePanelOpen = !isDebugServicePanelOpen;
         if (!isDebugServicePanelOpen) debugSelectedDriverId = -1;
     }
 
-    // ── called from the main OnGUI ──────────────────────────────────────────
+    // в”Ђв”Ђ called from the main OnGUI в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     private void DrawDebugServicePanel()
     {
         if (!isDebugServicePanelOpen) return;
@@ -296,7 +296,7 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("DEBUG", $"[DBG] {type} {GetDebugProductionResourceLabel(resourceKind)} adjusted by {delta}; now {GetDebugProductionResourceValue(location, resourceKind)}/{maxValue}.");
     }
 
-    // ── force send ──────────────────────────────────────────────────────────
+    // в”Ђв”Ђ force send в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
     private void ForceWorkerToServiceBuilding(DriverAgent driver, LocationType type)
     {
         if (driver?.DriverObject == null) return;
@@ -354,6 +354,7 @@ public partial class GameBootstrap
             BuildDriverWalkPath(driver, pos, target);
         }
 
-        SessionDebugLogger.Log("DEBUG", $"[DBG] Forced {driver.DriverName} → {type}.");
+        SessionDebugLogger.Log("DEBUG", $"[DBG] Forced {driver.DriverName} в†’ {type}.");
     }
 }
+

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -28,6 +28,27 @@ public partial class GameBootstrap
         }
 
         return false;
+    }
+
+    private bool TryHandleLocalBusSelection(Ray ray)
+    {
+        if (!Physics.Raycast(ray, out RaycastHit hit, 200f))
+        {
+            return false;
+        }
+
+        if (hit.transform == null || localBusRoute?.RootTransform == null)
+        {
+            return false;
+        }
+
+        if (!hit.transform.IsChildOf(localBusRoute.RootTransform))
+        {
+            return false;
+        }
+
+        FocusLocalBus();
+        return true;
     }
 
     private bool TryHandleDriverSelection(Ray ray)
@@ -179,6 +200,12 @@ public partial class GameBootstrap
             return;
         }
 
+        if (driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop ||
+            driver.WalkPhase == DriverRescuePhase.RidingLocalBus)
+        {
+            return;
+        }
+
         Vector3 currentPosition = driver.DriverObject.transform.position;
         Vector3 targetPosition = driver.WalkTargetWorld;
         if (driver.WalkPath.Count > 0)
@@ -295,12 +322,12 @@ public partial class GameBootstrap
                     driver.DriverObject.SetActive(false);
                     driver.SleepTimer = DriverSleepDuration;
                     driver.RestPhase = DriverRestPhase.Sleeping;
-                    SessionDebugLogger.Log("REST", $"{driver.DriverName} checked into motel — paid ${motelData.ServiceFee} (balance: ${driver.Money}). Sleeping for {DriverSleepDuration}s.");
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} checked into motel вЂ” paid ${motelData.ServiceFee} (balance: ${driver.Money}). Sleeping for {DriverSleepDuration}s.");
                 }
                 else
                 {
                     driver.RestPhase = DriverRestPhase.None;
-                    SessionDebugLogger.Log("REST", $"{driver.DriverName} couldn't afford motel (${driver.Money} < ${motelData?.ServiceFee ?? 0}) — staying outside.");
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} couldn't afford motel (${driver.Money} < ${motelData?.ServiceFee ?? 0}) вЂ” staying outside.");
                 }
                 return;
 
@@ -323,6 +350,17 @@ public partial class GameBootstrap
                 driver.WaitingForShiftAtParking = true;
                 SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} arrived at Parking for upcoming shift.");
                 TryBoardDriverToAssignedTruck(driver);
+                TryBoardBusDriver(driver);
+                return;
+
+            case DriverRescuePhase.WalkToLocalBusStop:
+                driver.WalkPhase = DriverRescuePhase.WaitingAtLocalBusStop;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                SessionDebugLogger.Log(
+                    "BUS_PASSENGER",
+                    $"{driver.DriverName} reached Stop #{driver.BusOriginStopNumber} and is waiting for a local bus to Stop #{driver.BusDestinationStopNumber}.");
                 return;
 
             case DriverRescuePhase.ToMotelFromBusStop:
@@ -370,11 +408,11 @@ public partial class GameBootstrap
                         barData.BuildingBank += barData.ServiceFee;
                         SpawnMoneySpendPopup(driver.DriverObject.transform.position, barData.ServiceFee);
                         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Bar for Leisure; paid=${barData.ServiceFee}, consumed=1 Alcohol, balance=${driver.Money}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
-                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar — paid ${barData.ServiceFee}, consumed 1 Alcohol (balance: ${driver.Money}).");
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar вЂ” paid ${barData.ServiceFee}, consumed 1 Alcohol (balance: ${driver.Money}).");
                     }
                     else
                     {
-                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar — consumed 1 Alcohol.");
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar вЂ” consumed 1 Alcohol.");
                     }
                 }
                 else
@@ -391,7 +429,7 @@ public partial class GameBootstrap
                     driver.WalkPhase = DriverRescuePhase.IdleWander;
                     driver.IdleWanderPointIndex++;
                     BuildDriverWalkPath(driver, currentPosition, driver.MotelIdlePosition);
-                    SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at Bar — no Alcohol left, wandering back.");
+                    SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at Bar вЂ” no Alcohol left, wandering back.");
                 }
                 return;
 
@@ -410,11 +448,11 @@ public partial class GameBootstrap
                         canteenData.BuildingBank += canteenData.ServiceFee;
                         SpawnMoneySpendPopup(driver.DriverObject.transform.position, canteenData.ServiceFee);
                         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Canteen for Meal; paid=${canteenData.ServiceFee}, consumed=1 Food, balance=${driver.Money}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
-                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen — paid ${canteenData.ServiceFee}, consumed 1 Food (balance: ${driver.Money}).");
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen вЂ” paid ${canteenData.ServiceFee}, consumed 1 Food (balance: ${driver.Money}).");
                     }
                     else
                     {
-                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen — consumed 1 Food.");
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen вЂ” consumed 1 Food.");
                     }
                 }
                 else
@@ -431,7 +469,7 @@ public partial class GameBootstrap
                     driver.WalkPhase = DriverRescuePhase.IdleWander;
                     driver.IdleWanderPointIndex++;
                     BuildDriverWalkPath(driver, currentPosition, driver.MotelIdlePosition);
-                    SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at Canteen — no Food left, wandering back.");
+                    SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at Canteen вЂ” no Food left, wandering back.");
                 }
                 return;
 
@@ -444,7 +482,7 @@ public partial class GameBootstrap
                 return;
 
             case DriverRescuePhase.WarehouseDeliveryToService:
-                // Arrived at service building — unload 1 unit
+                // Arrived at service building вЂ” unload 1 unit
                 if (driver.WarehouseDeliveryTarget.HasValue &&
                     locations.TryGetValue(driver.WarehouseDeliveryTarget.Value, out LocationData serviceBuilding))
                 {
@@ -475,7 +513,7 @@ public partial class GameBootstrap
                 return;
 
             case DriverRescuePhase.WarehouseDeliveryReturn:
-                // Back at Warehouse — become invisible, ready for next delivery
+                // Back at Warehouse вЂ” become invisible, ready for next delivery
                 driver.WalkPhase         = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
@@ -483,7 +521,7 @@ public partial class GameBootstrap
                 driver.IsInsideBuilding  = true;
                 driver.WarehouseDeliveryTarget = null;
                 driver.DriverObject.SetActive(false);
-                SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} returned to Warehouse — ready for next delivery.");
+                SessionDebugLogger.Log("WAREHOUSE", $"{driver.DriverName} returned to Warehouse вЂ” ready for next delivery.");
                 return;
 
             case DriverRescuePhase.ToBuildingForShift:
@@ -501,7 +539,7 @@ public partial class GameBootstrap
                         ? Mathf.Min(enteredBuilding.Workers + 1, WarehouseMaxWorkers)
                         : 1;
                     NotifyTutorialProductionWorkerEntered(driver.AssignedBuildingType.Value);
-                    SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} entered {enteredBuilding.Label} — building operational.");
+                    SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} entered {enteredBuilding.Label} вЂ” building operational.");
                 }
                 return;
 
@@ -536,6 +574,10 @@ public partial class GameBootstrap
                 SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} reached the forestry plot and started planting.");
                 return;
 
+            case DriverRescuePhase.LumberReturnToBuilding:
+                ReturnForestWorkerInside(driver, "walked back into Lumberyard");
+                return;
+
             case DriverRescuePhase.ToMotelFromBuilding:
                 driver.WalkPhase = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
@@ -550,12 +592,12 @@ public partial class GameBootstrap
                     driver.DriverObject.SetActive(false);
                     driver.SleepTimer       = DriverSleepDuration;
                     driver.RestPhase        = DriverRestPhase.Sleeping;
-                    SessionDebugLogger.Log("REST", $"{driver.DriverName} checked into motel after logistics shift — paid ${motelFromBldg.ServiceFee} (balance: ${driver.Money}).");
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} checked into motel after logistics shift вЂ” paid ${motelFromBldg.ServiceFee} (balance: ${driver.Money}).");
                 }
                 else
                 {
                     driver.RestPhase = DriverRestPhase.None;
-                    SessionDebugLogger.Log("REST", $"{driver.DriverName} couldn't afford motel after logistics shift (${driver.Money} < ${motelFromBldg?.ServiceFee ?? 0}) — staying outside.");
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} couldn't afford motel after logistics shift (${driver.Money} < ${motelFromBldg?.ServiceFee ?? 0}) вЂ” staying outside.");
                 }
                 return;
         }
@@ -651,6 +693,8 @@ public partial class GameBootstrap
             case DriverRescuePhase.LumberChopping:
             case DriverRescuePhase.LumberPlanting:
                 return;
+            case DriverRescuePhase.LumberReturnToBuilding:
+                break;
         }
 
         ApplyDriverPose(driver, swing, bob);
@@ -808,11 +852,11 @@ public partial class GameBootstrap
                 driver.GamblingPayout = 0;
                 driver.GamblingMultiplier = 0;
                 driver.GamblingMoneyPending = false;
-                SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} [GAMBLER] is broke (money=${driver.Money}, casinoBank=${casinoBank}) — skipping bet.");
+                SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} [GAMBLER] is broke (money=${driver.Money}, casinoBank=${casinoBank}) вЂ” skipping bet.");
                 return;
             }
             driver.GamblerBroke = false;
-            // Bet full balance, capped by casino bank; 1.5× cap if lost last time (double-down)
+            // Bet full balance, capped by casino bank; 1.5Г— cap if lost last time (double-down)
             maxBet = Mathf.Min(driver.Money, casinoBank);
             if (driver.GamblerLostLastTime)
                 maxBet = Mathf.Min(driver.Money, Mathf.RoundToInt(maxBet * 1.5f));
@@ -860,3 +904,4 @@ public partial class GameBootstrap
     }
 
 }
+

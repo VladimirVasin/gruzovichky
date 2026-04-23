@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -188,7 +188,8 @@ public partial class GameBootstrap
 
     private static bool IsBuildingBuildTool(BuildTool tool)
     {
-        return tool == BuildTool.FurnitureFactory ||
+        return tool == BuildTool.Stop ||
+               tool == BuildTool.FurnitureFactory ||
                tool == BuildTool.Sawmill ||
                tool == BuildTool.Motel ||
                tool == BuildTool.Bar ||
@@ -218,7 +219,10 @@ public partial class GameBootstrap
 
         selectedTruckNumber = truckNumber;
         selectedLocation = null;
+        selectedLocalStopIndex = -1;
         isTruckDetailsOpen = true;
+        isLocalBusDetailsOpen = false;
+        isDriverDetailsOpen = false;
         isTruckCameraFocused = false;
         isCameraReturningToDiorama = wasTruckCameraFocused;
         isFleetScreenDirty = true;
@@ -240,6 +244,7 @@ public partial class GameBootstrap
             isBuildPanelOpen ||
             isStatesPanelOpen ||
             isTruckDetailsOpen ||
+            isLocalBusDetailsOpen ||
             activeBuildTool != BuildTool.None;
 
         isFleetPanelOpen = false;
@@ -251,10 +256,12 @@ public partial class GameBootstrap
         isBuildPanelOpen = false;
         isStatesPanelOpen = false;
         isTruckDetailsOpen = false;
+        isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
         activeBuildTool = BuildTool.None;
         hoveredBuildCell = null;
         selectedLocation = null;
+        selectedLocalStopIndex = -1;
         isFleetScreenDirty = true;
         isEconomyScreenDirty = true;
         isBuildScreenDirty = true;
@@ -403,7 +410,7 @@ public partial class GameBootstrap
             if (Mathf.Abs(scroll) > 0.01f && !anyHudOpen)
             {
                 float currentDistance = cameraOffset.magnitude;
-                // Normalize scroll to ±1 per tick regardless of platform scroll magnitude, then apply a fixed step
+                // Normalize scroll to В±1 per tick regardless of platform scroll magnitude, then apply a fixed step
                 float zoomStep = Mathf.Sign(scroll) * CameraZoomSpeed * 0.6f;
                 float targetDistance = Mathf.Clamp(currentDistance - zoomStep, CameraMinDistance, CameraMaxDistance);
                 Vector3 nextOffset = cameraOffset.normalized * targetDistance;
@@ -523,6 +530,7 @@ public partial class GameBootstrap
         }
         isTruckDetailsOpen = false;
         selectedLocation = null;
+        selectedLocalStopIndex = -1;
         DisableTruckCameraFocus();
         cameraFocusPoint = new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
         if (cameraOffset.sqrMagnitude < 0.0001f)
@@ -571,6 +579,7 @@ public partial class GameBootstrap
         }
 
         selectedLocation = null;
+        selectedLocalStopIndex = -1;
         isTruckDetailsOpen = false;
         DisableTruckCameraFocus();
         RefreshSelectionVisuals();
@@ -611,6 +620,12 @@ public partial class GameBootstrap
             return;
         }
 
+        if (TryHandleLocalBusSelection(ray))
+        {
+            ClearSelectedDebugCell();
+            return;
+        }
+
         if (TryHandleDriverSelection(ray))
         {
             ClearSelectedDebugCell();
@@ -630,7 +645,9 @@ public partial class GameBootstrap
             {
                 ClearSelectedDebugCell();
                 selectedLocation = null;
+                selectedLocalStopIndex = -1;
                 isTruckDetailsOpen = false;
+                isLocalBusDetailsOpen = false;
                 isDriverDetailsOpen = false;
                 DisableTruckCameraFocus();
                 RefreshSelectionVisuals();
@@ -639,7 +656,9 @@ public partial class GameBootstrap
 
             SelectDebugCell(cell);
             selectedLocation = null;
+            selectedLocalStopIndex = -1;
             isTruckDetailsOpen = false;
+            isLocalBusDetailsOpen = false;
             isDriverDetailsOpen = false;
             DisableTruckCameraFocus();
             RefreshSelectionVisuals();
@@ -650,6 +669,7 @@ public partial class GameBootstrap
         bool buildActionSucceeded = placementTool switch
         {
             BuildTool.Road => TryPlaceRoadAtCell(cell),
+            BuildTool.Stop => TryPlaceStopAtAnchor(cell),
             BuildTool.FurnitureFactory => TryPlaceFurnitureFactoryAtAnchor(cell),
             BuildTool.Sawmill => TryPlaceSawmillAtAnchor(cell),
             BuildTool.Motel => TryPlaceMotelAtAnchor(cell),
@@ -663,6 +683,7 @@ public partial class GameBootstrap
         {
             ClearSelectedDebugCell();
             selectedLocation = null;
+            selectedLocalStopIndex = -1;
             isTruckDetailsOpen = false;
             isDriverDetailsOpen = false;
             DisableTruckCameraFocus();
@@ -672,7 +693,9 @@ public partial class GameBootstrap
 
         ClearSelectedDebugCell();
         selectedLocation = null;
+        selectedLocalStopIndex = -1;
         isTruckDetailsOpen = false;
+        isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
         DisableTruckCameraFocus();
         if (IsBuildingBuildTool(placementTool))
@@ -684,6 +707,7 @@ public partial class GameBootstrap
         if (placementTool == BuildTool.Road)
         {
             selectedLocation = null;
+            selectedLocalStopIndex = -1;
             RefreshSelectionVisuals();
         }
     }
@@ -938,6 +962,11 @@ public partial class GameBootstrap
             return GetFurnitureFactoryPlacementPreview(cell, out previewPosition, out previewScale);
         }
 
+        if (activeBuildTool == BuildTool.Stop)
+        {
+            return GetStopPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
         if (activeBuildTool == BuildTool.Sawmill)
         {
             return GetSawmillPlacementPreview(cell, out previewPosition, out previewScale);
@@ -967,4 +996,6 @@ public partial class GameBootstrap
     }
 
 }
+
+
 

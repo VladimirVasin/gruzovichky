@@ -1,10 +1,10 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
 public partial class GameBootstrap
 {
-    // ── Menu bar ─────────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Menu bar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private const float MenuBtnW = 90f;
     private const float MenuBtnH = 40f;
@@ -66,7 +66,7 @@ public partial class GameBootstrap
         if (panelName == "Building")
         {
             isBuildHighlightPersistent = false;
-            // If tutorial 2 is open, dismiss it — user found the button themselves
+            // If tutorial 2 is open, dismiss it вЂ” user found the button themselves
             if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.BuildMotelPrompt)
             {
                 isTutorialOpen     = false;
@@ -86,7 +86,8 @@ public partial class GameBootstrap
         if (panelName == "Shifts")
         {
             isShiftsHighlightPersistent = false;
-            selectedLocation = null;   // close building microhud (Forest was selected by tutorial 6)
+            selectedLocation = null;
+            selectedLocalStopIndex = -1;   // close building microhud (Forest was selected by tutorial 6)
             if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
             {
                 isTutorialOpen     = false;
@@ -162,13 +163,13 @@ public partial class GameBootstrap
         }
     }
 
-    // ── Fleet panel ──────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Fleet panel в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void DrawFleetPanel()
     {
     }
 
-    // ── Shifts panel ─────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Shifts panel в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private static readonly int[]    ShiftPresetHours = { 6, 14, 22 };
     private static readonly string[] ShiftNames       = { "Morning", "Evening", "Night" };
@@ -198,7 +199,7 @@ public partial class GameBootstrap
 
         GUI.Box(panelRect, L("Shift Management"), titleStyle);
 
-        // ── Left column: driver list ──────────────────────────────────────────
+        // в”Ђв”Ђ Left column: driver list в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         Rect leftRect = new Rect(panelRect.x + pad, panelRect.y + 38f, leftW, panelRect.height - 46f);
         GUI.Box(leftRect, L("Drivers"), secStyle);
 
@@ -232,7 +233,7 @@ public partial class GameBootstrap
             dy += 52f;
         }
 
-        // ── Right column: shift cards stacked ────────────────────────────────
+        // в”Ђв”Ђ Right column: shift cards stacked в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         float rx = panelRect.x + pad + leftW + gap;
         float cy = panelRect.y + 38f;
 
@@ -281,7 +282,7 @@ public partial class GameBootstrap
                     }
                     if (selectedShiftDriverId == d.DriverId) selectedShiftDriverId = 0;
                     PlayUiSound(uiSelectClip, 0.85f);
-                    SessionDebugLogger.Log("SHIFT", $"{d.DriverName} removed from shift — now Idle.");
+                    SessionDebugLogger.Log("SHIFT", $"{d.DriverName} removed from shift вЂ” now Idle.");
                     LogDriverReaction(d, "shift removed; now idle");
                 }
                 ry += 30f;
@@ -297,7 +298,7 @@ public partial class GameBootstrap
             bool canAssign   = selDriver != null && !alreadyHere;
             string assignLabel = selDriver == null      ? "Select a worker to assign"
                                : alreadyHere            ? $"{selDriver.DriverName} already assigned"
-                               :                          $"Assign  {selDriver.DriverName}  →  {ShiftNames[c]}";
+                               :                          $"Assign  {selDriver.DriverName}  в†’  {ShiftNames[c]}";
 
             GUI.enabled = canAssign;
             if (GUI.Button(new Rect(card.x + 6f, card.y + cardH - 38f, card.width - 12f, 30f), assignLabel, btnStyle))
@@ -308,9 +309,16 @@ public partial class GameBootstrap
                 selDriver.IsOnActiveShift = false;
                 selDriver.WaitingForShiftAtParking = false;
                 bool inWindow = IsHourInShiftWindow(GetCurrentHour(), ShiftPresetHours[c]);
-                if (inWindow && selDriver.RestPhase == DriverRestPhase.None && !IsDriverBusyWalkPhase(selDriver))
+                if (inWindow && selDriver.RestPhase == DriverRestPhase.None)
                 {
-                    StartDriverShiftCommute(selDriver);
+                    if (IsDriverBusDriver(selDriver))
+                    {
+                        StartBusDriverShiftCommute(selDriver);
+                    }
+                    else if (!IsDriverBusyWalkPhase(selDriver))
+                    {
+                        StartDriverShiftCommute(selDriver);
+                    }
                 }
                 PlayUiSound(uiSelectClip, 0.85f);
                 SessionDebugLogger.Log("SHIFT", $"{selDriver.DriverName} assigned to {ShiftNames[c]} ({GetShiftRangeLabel(ShiftPresetHours[c])}).");
@@ -322,7 +330,7 @@ public partial class GameBootstrap
         }
     }
 
-    // ── Drivers panel ────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Drivers panel в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void DrawDriversPanel()
     {
@@ -354,7 +362,7 @@ public partial class GameBootstrap
 
             // Salary row
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 82f, 90f, 18f), $"Salary: ${d.Salary}", labelMid);
-            if (GUI.Button(new Rect(cardRect.x + 100f, cardRect.y + 80f, 22f, 20f), "–", btnSmall))
+            if (GUI.Button(new Rect(cardRect.x + 100f, cardRect.y + 80f, 22f, 20f), "вЂ“", btnSmall))
             {
                 d.Salary = Mathf.Max(0, d.Salary - 25);
                 LogUiInput($"Drivers: {d.DriverName} salary decreased to ${d.Salary}");
@@ -451,7 +459,7 @@ public partial class GameBootstrap
         return driver.AssignedTruckNumber > 0 ? "Assigned" : "Idle";
     }
 
-    // ── Resources panel ──────────────────────────────────────────────────────
+    // в”Ђв”Ђ Resources panel в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void DrawResourcesPanel()
     {
@@ -484,7 +492,7 @@ public partial class GameBootstrap
         y += 58f;
     }
 
-    // ── Build panel ──────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Build panel в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private void DrawBuildPanel()
     {
@@ -515,7 +523,7 @@ public partial class GameBootstrap
             smallStyle);
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
+    // в”Ђв”Ђ Helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     private string GetTruckFleetStatusLabel()
     {
@@ -672,7 +680,7 @@ public partial class GameBootstrap
         }
 
         if (isFleetPanelOpen && GetFleetPanelRect().Contains(guiPosition)) return true;
-        // Shifts / Drivers / Resources / Economy / Build panels are Canvas-based — handled by EventSystem.IsPointerOverGameObject above
+        // Shifts / Drivers / Resources / Economy / Build panels are Canvas-based вЂ” handled by EventSystem.IsPointerOverGameObject above
         if (isTruckDetailsOpen && GetTruckDetailsHudRect().Contains(guiPosition)) return true;
 
         return false;
@@ -766,3 +774,5 @@ public partial class GameBootstrap
         PlayUiSound(clip, volumeScale);
     }
 }
+
+

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -129,7 +129,7 @@ public partial class GameBootstrap
                 // Abort refuel trip if gas station has run out of fuel
                 if (locations.TryGetValue(LocationType.GasStation, out LocationData gsRefuel) && gsRefuel.FuelStored <= 0)
                 {
-                    SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} aborted refuel trip — Gas Station out of Fuel.");
+                    SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} aborted refuel trip вЂ” Gas Station out of Fuel.");
                     currentRefuelPhase = RefuelPhase.ReturnToParking;
                     return;
                 }
@@ -227,3 +227,4 @@ public partial class GameBootstrap
         }
     }
 }
+

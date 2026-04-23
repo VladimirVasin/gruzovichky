@@ -9,9 +9,28 @@ Rules:
 - When preparing a new version, compare this baseline against current code and recent `ai/work-log.md`.
 - Update the in-game Patch Notes text in `Assets/Scripts/Runtime/UI/GameBootstrap.MainMenuHud.cs`.
 
-## Lo-fi Delivery Co. v.0.0.1
+## Lo-fi Delivery Co. v.0.0.2
 
 Status: current documented prototype version.
+
+### New Since v.0.0.1
+
+- ДОБАВЛЕНЫ ЖЕНЩИНЫ!!!
+- Forest was reworked into an early Lumberyard gameplay loop. Forest workers can now leave the building, go to real misc trees in the dense forest zone, chop them down, spawn world logs, carry those logs back to storage, and replant saplings.
+- Dense-forest trees now support day-based regrowth from sapling to mature tree, creating the start of a renewable forestry loop instead of one static decorative forest patch.
+- Worker simulation expanded significantly: portraits, base skills, timed needs, timed effects, perks, and the separate `States` reference HUD are now all part of the current playable build.
+- Main management HUDs were redesigned and enlarged, especially Workers, Fleet, and Assignments, to better support the denser worker information model.
+- `F9` debug tooling was expanded so both service resources and production/storage resources can be manipulated directly during testing.
+- World bootstrap was rebalanced for the larger map: the game now starts with three workers, uses a dedicated dense forest hotspot, and scales misc props/trees more aggressively for the bigger town.
+
+### Main Menu And Patch Notes
+
+- Main Menu version label now shows `Lo-fi Delivery Co. v.0.0.2`.
+- In-game Patch Notes now include a dedicated `v.0.0.2` section focused on changes since `v.0.0.1`.
+
+## Lo-fi Delivery Co. v.0.0.1
+
+Status: previous documented prototype baseline.
 
 ### Core Loop
 

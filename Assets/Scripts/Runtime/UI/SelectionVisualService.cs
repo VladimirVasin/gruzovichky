@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public static class SelectionVisualService
@@ -97,3 +97,4 @@ public static class SelectionVisualService
         labelRoot.SetActive(true);
     }
 }
+

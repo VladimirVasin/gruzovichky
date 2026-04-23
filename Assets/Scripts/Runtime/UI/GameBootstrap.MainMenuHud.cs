@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.IO;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -62,7 +62,7 @@ public partial class GameBootstrap
     private Text loadingStatusText;
     private static readonly bool IsUserModeTemporarilyDisabled = true;
     private const string UserModeWorkInProgressLabel = "Work in progress";
-    private const string MainMenuVersionLabel = "Lo-fi Delivery Co. v.0.0.1";
+    private const string MainMenuVersionLabel = "Lo-fi Delivery Co. v.0.0.2";
     private const string PatchNotesButtonLabel = "Patch Notes";
     private bool isGameStarted;
     private GameStartMode selectedGameStartMode = GameStartMode.Debug;
@@ -105,14 +105,14 @@ public partial class GameBootstrap
             return;
         }
 
-        EnsureFleetEventSystem(); // buttons require an EventSystem — create it eagerly
+        EnsureFleetEventSystem(); // buttons require an EventSystem вЂ” create it eagerly
         Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         mainMenuHud = new MainMenuHudRefs();
 
         GameObject canvasObject = new("MainMenuCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 90;   // above tutorial canvas (80) so ESC → main menu covers it
+        canvas.sortingOrder = 90;   // above tutorial canvas (80) so ESC в†’ main menu covers it
 
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -425,7 +425,13 @@ public partial class GameBootstrap
             FleetSecondaryTextColor,
             FontStyle.Normal);
 
-        AddPatchNotesSection(uiFont, ru ? "v.0.0.1 - \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u0438\u0433\u0440\u0430\u0435\u043c\u044b\u0439 \u043f\u0440\u043e\u0442\u043e\u0442\u0438\u043f" : "v.0.0.1 - Current playable prototype");
+        AddPatchNotesSection(uiFont, ru ? "v.0.0.2 - \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u0441\u0438\u0441\u0442\u0435\u043c \u0440\u0430\u0431\u043e\u0447\u0438\u0445 \u0438 \u043b\u0435\u0441\u043e\u0437\u0430\u0433\u043e\u0442\u043e\u0432\u043a\u0438" : "v.0.0.2 - Worker systems and lumberyard update");
+        AddPatchNotesSection(uiFont, ru ? "\u0427\u0442\u043e \u043d\u043e\u0432\u043e\u0433\u043e \u043f\u043e\u0441\u043b\u0435 v.0.0.1" : "What is new since v.0.0.1");
+        AddPatchNotesParagraph(uiFont, ru
+            ? "- \u0414\u041e\u0411\u0410\u0412\u041b\u0415\u041d\u042b \u0416\u0415\u041d\u0429\u0418\u041d\u042b!!!\n- Forest \u043f\u0435\u0440\u0435\u0441\u043e\u0431\u0440\u0430\u043d \u0432 MVP-\u0432\u0435\u0440\u0441\u0438\u044e \u041b\u0435\u0441\u043e\u0437\u0430\u0433\u043e\u0442\u043e\u0432\u043a\u0438: \u0440\u0430\u0431\u043e\u0447\u0438\u0439 \u0432\u044b\u0445\u043e\u0434\u0438\u0442 \u0438\u0437 \u0437\u0434\u0430\u043d\u0438\u044f, \u0438\u0434\u0451\u0442 \u043a real misc-\u0434\u0435\u0440\u0435\u0432\u044c\u044f\u043c, \u0440\u0443\u0431\u0438\u0442 \u0438\u0445, \u0442\u0430\u0449\u0438\u0442 \u0431\u0440\u0451\u0432\u043d\u0430 \u043d\u0430\u0437\u0430\u0434 \u043f\u043e \u043e\u0434\u043d\u043e\u043c\u0443 \u0438 \u0432\u044b\u0441\u0430\u0436\u0438\u0432\u0430\u0435\u0442 \u043d\u043e\u0432\u044b\u0435 \u0441\u0430\u0436\u0435\u043d\u0446\u044b.\n- \u0414\u0435\u0440\u0435\u0432\u044c\u044f \u0432 \u043f\u043b\u043e\u0442\u043d\u043e\u0439 \u043b\u0435\u0441\u043d\u043e\u0439 \u0437\u043e\u043d\u0435 \u0442\u0435\u043f\u0435\u0440\u044c \u0440\u0430\u0441\u0442\u0443\u0442 \u043f\u043e \u0434\u043d\u044f\u043c \u043e\u0442 \u0441\u0430\u0436\u0435\u043d\u0446\u0430 \u0434\u043e \u0432\u0437\u0440\u043e\u0441\u043b\u043e\u0433\u043e \u0434\u0435\u0440\u0435\u0432\u0430.\n- \u0421\u0438\u0441\u0442\u0435\u043c\u0430 \u0440\u0430\u0431\u043e\u0447\u0438\u0445 \u0437\u0430\u043c\u0435\u0442\u043d\u043e \u0443\u0433\u043b\u0443\u0431\u0438\u043b\u0430\u0441\u044c: \u0435\u0441\u0442\u044c \u043f\u043e\u0440\u0442\u0440\u0435\u0442\u044b, \u043d\u0430\u0432\u044b\u043a\u0438, \u043f\u043e\u0442\u0440\u0435\u0431\u043d\u043e\u0441\u0442\u0438, \u044d\u0444\u0444\u0435\u043a\u0442\u044b, \u043f\u0435\u0440\u043a\u0438 \u0438 \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u044b\u0439 \u0441\u043f\u0440\u0430\u0432\u043e\u0447\u043d\u0438\u043a States.\n- HUD-\u043c\u0435\u043d\u044e Workers, Fleet \u0438 Assignments \u043f\u043e\u043b\u0443\u0447\u0438\u043b\u0438 \u043a\u0440\u0443\u043f\u043d\u044b\u0439 \u0440\u0435\u0434\u0438\u0437\u0430\u0439\u043d \u0438 \u0441\u0442\u0430\u043b\u0438 \u0447\u0438\u0442\u0430\u0435\u043c\u0435\u0435 \u043d\u0430 \u0431\u043e\u043b\u044c\u0448\u0438\u0445 \u043e\u0431\u044a\u0451\u043c\u0430\u0445 \u0442\u0435\u043a\u0441\u0442\u0430.\n- \u0414\u0435\u0431\u0430\u0433-\u0438\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442\u044b F9 \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043d\u044b: \u0442\u0435\u043f\u0435\u0440\u044c \u043c\u043e\u0436\u043d\u043e \u043a\u0440\u0443\u0442\u0438\u0442\u044c \u0440\u0435\u0441\u0443\u0440\u0441\u044b \u043a\u0430\u043a \u0432 service-\u0437\u0434\u0430\u043d\u0438\u044f\u0445, \u0442\u0430\u043a \u0438 \u0432 production/storage-\u0437\u0434\u0430\u043d\u0438\u044f\u0445.\n- \u041c\u0438\u0440 \u0441\u0442\u0430\u0440\u0442\u0443\u0435\u0442 \u0441 \u0442\u0440\u0435\u043c\u044f \u0440\u0430\u0431\u043e\u0447\u0438\u043c\u0438, \u043a\u0430\u0440\u0442\u0430 \u043f\u043e\u043b\u0443\u0447\u0438\u043b\u0430 \u0433\u0443\u0441\u0442\u0443\u044e \u043b\u0435\u0441\u043d\u0443\u044e \u0437\u043e\u043d\u0443, \u0430 misc-\u043e\u0431\u044a\u0435\u043a\u0442\u044b \u0438 \u0434\u0435\u0440\u0435\u0432\u044c\u044f \u0431\u044b\u043b\u0438 \u0443\u0441\u0438\u043b\u0435\u043d\u044b \u043f\u043e \u043f\u043b\u043e\u0442\u043d\u043e\u0441\u0442\u0438 \u0438 \u0440\u0430\u0437\u043c\u0435\u0440\u0443."
+            : "- WOMEN ADDED!!!\n- Forest was rebuilt into an MVP Lumberyard loop: a worker now leaves the building, walks to real misc trees, chops them down, carries world logs back one by one, and replants saplings.\n- Trees in the dense forest zone now regrow over multiple days from sapling to mature tree.\n- Worker simulation became much deeper: portraits, skills, needs, timed effects, perks, and a dedicated States reference panel are now part of the HUD loop.\n- Workers, Fleet, and Assignments HUDs received a major readability redesign and scale-up.\n- F9 debug tools were expanded so service and production/storage resources can both be adjusted during testing.\n- The world now starts with three workers, includes a denser forest hotspot, and uses heavier misc prop density with larger decorative trees.");
+
+        AddPatchNotesSection(uiFont, ru ? "v.0.0.1 - \u0431\u0430\u0437\u043e\u0432\u044b\u0439 \u0438\u0433\u0440\u0430\u0435\u043c\u044b\u0439 \u043f\u0440\u043e\u0442\u043e\u0442\u0438\u043f" : "v.0.0.1 - Base playable prototype");
         AddPatchNotesSection(uiFont, ru ? "\u041e\u0441\u043d\u043e\u0432\u043d\u043e\u0439 \u0446\u0438\u043a\u043b" : "Core loop");
         AddPatchNotesParagraph(uiFont, ru
             ? "- \u0421\u0442\u0440\u043e\u0439 \u0438 \u0441\u043e\u0435\u0434\u0438\u043d\u044f\u0439 \u043d\u0435\u0431\u043e\u043b\u044c\u0448\u043e\u0439 \u043b\u043e\u0433\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0433\u043e\u0440\u043e\u0434 \u043d\u0430 \u0441\u0435\u0442\u043a\u0435.\n- \u0421\u0435\u0439\u0447\u0430\u0441 \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d New Game Debug. New Game User \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043f\u043e\u043c\u0435\u0447\u0435\u043d \u043a\u0430\u043a Work in progress.\n- \u0412\u0435\u0440\u0445\u043d\u0438\u0435 HUD-\u0432\u043a\u043b\u0430\u0434\u043a\u0438 \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u044e\u0442 \u0430\u0432\u0442\u043e\u043f\u0430\u0440\u043a, \u0440\u0430\u0431\u043e\u0447\u0438\u0445, \u0441\u043c\u0435\u043d\u044b, \u0440\u0435\u0441\u0443\u0440\u0441\u044b, \u044d\u043a\u043e\u043d\u043e\u043c\u0438\u043a\u0443, \u0441\u0442\u0440\u043e\u0439\u043a\u0443, \u0442\u043e\u0440\u0433\u043e\u0432\u043b\u044e \u0438 \u043a\u0430\u0440\u0442\u0443."
@@ -618,7 +624,7 @@ public partial class GameBootstrap
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
-        // No full-screen overlay — main menu stays visible underneath
+        // No full-screen overlay вЂ” main menu stays visible underneath
         Transform canvasRoot = loadingOverlayCanvas.transform;
 
         // Bottom bar background (full width, 14px tall)
@@ -658,7 +664,7 @@ public partial class GameBootstrap
     private void SetLoadingProgress(float t, string status)
     {
         if (loadingBarFill == null) return;
-        // barBg is full width (anchored 0→1 horizontally, sizeDelta.x=0)
+        // barBg is full width (anchored 0в†’1 horizontally, sizeDelta.x=0)
         // We drive fill via anchorMax.x on the fill rect
         RectTransform rt = loadingBarFill.rectTransform;
         rt.anchorMax = new Vector2(Mathf.Clamp01(t), 1f);
@@ -710,7 +716,7 @@ public partial class GameBootstrap
         yield return StartCoroutine(SetupGridAsync());
 
         SetLoadingProgress(++step / (float)totalSteps, "Edge highways..."); yield return null;
-        SetupEdgeHighway(); SetupEdgeHighwayBuses(); SetupRiverBoats();
+        SetupEdgeHighway(); SetupEdgeHighwayBuses(); SetupLocalBusRuntime(); SetupRiverBoats();
 
         SetLoadingProgress(++step / (float)totalSteps, "Atmosphere..."); yield return null;
         SetupDistantClouds(); SetupAmbientAirParticles();
@@ -751,7 +757,7 @@ public partial class GameBootstrap
         SetupBuildScreenUi(); SetupWorldMapScreenUi();
 
         SetLoadingProgress(++step / (float)totalSteps, "HUD..."); yield return null;
-        SetupTruckQuickHud(); SetupDriverQuickHud(); SetupBuildingQuickHud(); SetupCellQuickHud();
+        SetupTruckQuickHud(); SetupLocalBusQuickHud(); SetupDriverQuickHud(); SetupBuildingQuickHud(); SetupCellQuickHud();
 
         SetLoadingProgress(++step / (float)totalSteps, "Finishing up..."); yield return null;
         SetupMainMenuHud(); SetupJoinRaceButton();
@@ -893,3 +899,4 @@ public partial class GameBootstrap
         fx.RectTransform.localScale = Vector3.Lerp(currentScale, desiredScale, 14f * deltaTime);
     }
 }
+

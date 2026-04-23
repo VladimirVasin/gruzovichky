@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public partial class GameBootstrap
@@ -104,3 +104,4 @@ public partial class GameBootstrap
         }
     }
 }
+
