@@ -220,7 +220,7 @@ public partial class GameBootstrap
             position.y = SampleTerrainHeight(position.x, position.z);
 
             Vector2Int cell = WorldToCell(position);
-            if (!IsInsideGrid(cell) || roadCells.Contains(cell) || IsLocationCell(cell))
+            if (!IsInsideGrid(cell) || roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) || IsLocationCell(cell))
             {
                 continue;
             }

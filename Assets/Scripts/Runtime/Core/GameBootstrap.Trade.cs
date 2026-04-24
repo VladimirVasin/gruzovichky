@@ -686,6 +686,7 @@ public partial class GameBootstrap
 
     private void UpdateTradeAutoDispatch()
     {
+        if (IsWeekend()) { tradeAutoDispatchRetryTimer = 0f; return; }
         if (HasActiveTradeRun() || activeTradeHudOrders.Count == 0)
         {
             tradeAutoDispatchRetryTimer = 0f;

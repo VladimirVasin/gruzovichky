@@ -300,7 +300,12 @@ public partial class GameBootstrap : MonoBehaviour
         public TradeResourceType ResourceType;
         public TradeOrderType OrderType;
         public int Amount;
+        public int TargetRegionIndex = -1; // -1 = generic (Trade panel), 0-8 = specific region
     }
+
+    private TradeResourceType worldMapRouteResource  = TradeResourceType.Alcohol;
+    private int               worldMapRouteAmount    = 1;
+    private TradeOrderType    worldMapRouteOrderType = TradeOrderType.Buy;
 
     private readonly List<TradeHudOrder> activeTradeHudOrders = new();
 
@@ -1241,14 +1246,18 @@ public partial class GameBootstrap : MonoBehaviour
         return (shiftStartMinutes - currentMinutes + 24 * 60) % (24 * 60);
     }
 
+    private bool IsWeekend() => (currentDay - 1) % 7 >= 5;
+
     // Returns true if 'hour' falls within the 8-hour window starting at 'shiftStart'
-    private static bool IsHourInShiftWindow(int hour, int shiftStart)
+    private bool IsHourInShiftWindow(int hour, int shiftStart)
     {
+        if (IsWeekend()) return false;
         return (hour - shiftStart + 24) % 24 < 8;
     }
 
-    private static bool IsProductionWorkHour(int hour)
+    private bool IsProductionWorkHour(int hour)
     {
+        if (IsWeekend()) return false;
         return hour >= ProductionWorkStartHour && hour < ProductionWorkEndHour;
     }
 
@@ -1495,19 +1504,15 @@ public partial class GameBootstrap : MonoBehaviour
             Color prevColor = GUI.color;
             bool prevEnabled = GUI.enabled;
 
-            if (!isRacingActive)
+            if (!isRacingActive && !isWorldMapPanelOpen)
             {
                 DrawMoneyHud();
                 DrawTimeHud();
                 DrawSpeedHud();
                 DrawPauseOverlay();
-
-                if (!isWorldMapPanelOpen)
-                {
-                    DrawMenuBar();
-                    DrawBuildModeLegend();
-                    if (isFleetPanelOpen) DrawFleetPanel();
-                }
+                DrawMenuBar();
+                DrawBuildModeLegend();
+                if (isFleetPanelOpen) DrawFleetPanel();
             }
             // Shifts panel is now Canvas-based (ShiftsScreenCanvas)
             // Drivers panel is now Canvas-based (DriversScreenCanvas)

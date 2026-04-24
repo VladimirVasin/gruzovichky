@@ -180,7 +180,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (walkPhase == DriverRescuePhase.IdleWander && roadCells.Contains(cell))
+        if (edgeHighwayCells.Contains(cell))
         {
             return false;
         }
@@ -762,6 +762,22 @@ public partial class GameBootstrap
         return $"{hours:00}:{minutes:00}";
     }
 
+    private string GetWeekDayLabel()
+    {
+        int dow = (currentDay - 1) % 7;
+        bool ru = IsRussianLanguage();
+        return dow switch
+        {
+            0 => ru ? "Пн" : "Mon",
+            1 => ru ? "Вт" : "Tue",
+            2 => ru ? "Ср" : "Wed",
+            3 => ru ? "Чт" : "Thu",
+            4 => ru ? "Пт" : "Fri",
+            5 => ru ? "Сб" : "Sat",
+            _ => ru ? "Вс" : "Sun",
+        };
+    }
+
     private void DrawMoneyHud()
     {
         Rect panelRect = GetMoneyHudRect();
@@ -791,7 +807,7 @@ public partial class GameBootstrap
     private void DrawTimeHud()
     {
         Rect panelRect = GetTimeHudRect();
-        GUI.Box(panelRect, $"{(IsRussianLanguage() ? "День" : "Day")} {currentDay}");
+        GUI.Box(panelRect, $"{(IsRussianLanguage() ? "День" : "Day")} {currentDay} ({GetWeekDayLabel()})");
         GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
         {
             alignment = TextAnchor.MiddleCenter,

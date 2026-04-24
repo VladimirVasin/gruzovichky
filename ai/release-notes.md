@@ -15,11 +15,17 @@ Status: current documented prototype version.
 
 ### New Since v.0.0.1
 
-- ДОБАВЛЕНЫ ЖЕНЩИНЫ!!!
+- WOMEN ADDED!!!
 - Forest was reworked into an early Lumberyard gameplay loop. Forest workers can now leave the building, go to real misc trees in the dense forest zone, chop them down, spawn world logs, carry those logs back to storage, and replant saplings.
 - Dense-forest trees now support day-based regrowth from sapling to mature tree, creating the start of a renewable forestry loop instead of one static decorative forest patch.
 - Worker simulation expanded significantly: portraits, base skills, timed needs, timed effects, perks, and the separate `States` reference HUD are now all part of the current playable build.
-- Main management HUDs were redesigned and enlarged, especially Workers, Fleet, and Assignments, to better support the denser worker information model.
+- Workers now also have randomized perk loadouts, more distinct female portraits, and a deeper `Alcoholism` perk tied to `Drunk` / `Hangover` behavior.
+- Main management HUDs were redesigned and enlarged, especially Workers, Fleet, and Assignments / Roles, to better support the denser worker information model.
+- The town now has a real local bus loop: buildable local stops, a dedicated bus-driver role, worker passenger trips, and bus-assisted Warehouse deliveries.
+- Local buses charge a `$1` fare, keep their own onboard bank, and transfer that revenue into `Parking` at shift end.
+- A right-side Event Feed HUD was added for important gameplay notifications.
+- Economy was expanded with a separate `Taxes / Trade` tabbed window and a daily `10%` tax transfer from all building banks into global Treasury.
+- `Bar`, `Canteen`, and `Gambling Hall` were visually separated with stronger silhouettes, larger distinct footprints, and different night-light identities.
 - `F9` debug tooling was expanded so both service resources and production/storage resources can be manipulated directly during testing.
 - World bootstrap was rebalanced for the larger map: the game now starts with three workers, uses a dedicated dense forest hotspot, and scales misc props/trees more aggressively for the bigger town.
 

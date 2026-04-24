@@ -7,8 +7,8 @@ public partial class GameBootstrap
     private const int EventFeedMaxVisibleEntries = 5;
     private const float EventFeedEntryLifetime = 6.5f;
     private const float EventFeedFadeDuration = 0.45f;
-    private const float EventFeedCardWidth = 356f;
-    private const float EventFeedCardMinHeight = 92f;
+    private const float EventFeedCardWidth = 240f;
+    private const float EventFeedCardMinHeight = 48f;
     private const float EventFeedTopOffset = 138f;
 
     private enum FeedEventType
@@ -75,6 +75,8 @@ public partial class GameBootstrap
         }
     }
 
+    private float _feedDebugTimer;
+
     private void UpdateEventFeedUi()
     {
         if (isMainMenuOpen || isLoadingWorld || isRacingActive)
@@ -86,6 +88,17 @@ public partial class GameBootstrap
 
         SetupEventFeedUi();
         SetEventFeedVisible(true);
+
+        _feedDebugTimer -= Time.unscaledDeltaTime;
+        if (_feedDebugTimer <= 0f && eventFeedRoot != null)
+        {
+            _feedDebugTimer = 2f;
+            Vector2 pos  = eventFeedRoot.anchoredPosition;
+            Vector2 size = eventFeedRoot.rect.size;
+            Vector2 anch = eventFeedRoot.anchorMin;
+            Vector3 world = eventFeedRoot.position;
+            Debug.Log($"[EventFeed] anchor=({anch.x:F2},{anch.y:F2})  anchoredPos=({pos.x:F0},{pos.y:F0})  rectSize=({size.x:F0}×{size.y:F0})  worldPos=({world.x:F0},{world.y:F0})  entries={eventFeedEntries.Count}");
+        }
 
         float dt = Time.unscaledDeltaTime;
         for (int i = eventFeedEntries.Count - 1; i >= 0; i--)
@@ -135,12 +148,12 @@ public partial class GameBootstrap
         scaler.matchWidthOrHeight = 0.5f;
 
         eventFeedRoot = CreateUiObject("EventFeedRoot", canvasObject.transform).GetComponent<RectTransform>();
-        eventFeedRoot.anchorMin = new Vector2(1f, 1f);
-        eventFeedRoot.anchorMax = new Vector2(1f, 1f);
+        eventFeedRoot.anchorMin = new Vector2(1f, 0.5f);
+        eventFeedRoot.anchorMax = new Vector2(1f, 0.5f);
         eventFeedRoot.pivot = new Vector2(1f, 1f);
         eventFeedRoot.sizeDelta = new Vector2(EventFeedCardWidth, 540f);
-        // Keep the feed clearly below the top-right speed/day/treasury strip.
-        eventFeedRoot.anchoredPosition = new Vector2(-18f, -EventFeedTopOffset);
+        // Right edge; pivot top-right so entries grow downward from 240 px above center.
+        eventFeedRoot.anchoredPosition = new Vector2(0f, 340f);
 
         eventFeedLayout = eventFeedRoot.gameObject.AddComponent<VerticalLayoutGroup>();
         eventFeedLayout.childAlignment = TextAnchor.UpperRight;
@@ -202,8 +215,8 @@ public partial class GameBootstrap
         contentLayout.preferredWidth = EventFeedCardWidth - 6f;
         contentLayout.flexibleWidth = 1f;
         VerticalLayoutGroup contentGroup = content.gameObject.AddComponent<VerticalLayoutGroup>();
-        contentGroup.padding = new RectOffset(12, 14, 10, 10);
-        contentGroup.spacing = 4f;
+        contentGroup.padding = new RectOffset(8, 8, 5, 5);
+        contentGroup.spacing = 3f;
         contentGroup.childControlWidth = true;
         contentGroup.childControlHeight = false;
         contentGroup.childForceExpandWidth = true;
@@ -218,13 +231,13 @@ public partial class GameBootstrap
         metaLayout.childControlHeight = true;
         metaLayout.childForceExpandWidth = false;
         metaLayout.childForceExpandHeight = false;
-        metaRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+        metaRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
 
         RectTransform badgeRoot = CreateUiObject("HeaderBadge", metaRow).GetComponent<RectTransform>();
         LayoutElement badgeLayout = badgeRoot.gameObject.AddComponent<LayoutElement>();
-        badgeLayout.minWidth = 86f;
-        badgeLayout.preferredWidth = 86f;
-        badgeLayout.preferredHeight = 20f;
+        badgeLayout.minWidth = 72f;
+        badgeLayout.preferredWidth = 72f;
+        badgeLayout.preferredHeight = 16f;
         Image badgeImage = badgeRoot.gameObject.AddComponent<Image>();
         badgeImage.color = GetFeedEventAccentColor(type);
         Outline badgeOutline = badgeRoot.gameObject.AddComponent<Outline>();
@@ -238,13 +251,13 @@ public partial class GameBootstrap
         timeLayout.flexibleWidth = 1f;
         timeText.horizontalOverflow = HorizontalWrapMode.Overflow;
         timeText.verticalOverflow = VerticalWrapMode.Truncate;
-        Text messageText = CreateBodyText("Message", content, uiFont, string.Empty, 13, TextAnchor.UpperLeft, Color.white);
+        Text messageText = CreateBodyText("Message", content, uiFont, string.Empty, 12, TextAnchor.UpperLeft, Color.white);
         messageText.supportRichText = true;
         messageText.horizontalOverflow = HorizontalWrapMode.Wrap;
         messageText.verticalOverflow = VerticalWrapMode.Truncate;
-        messageText.lineSpacing = 1.08f;
+        messageText.lineSpacing = 1.05f;
         LayoutElement messageLayout = messageText.gameObject.AddComponent<LayoutElement>();
-        messageLayout.preferredHeight = 44f;
+        messageLayout.preferredHeight = 20f;
         Shadow messageShadow = messageText.gameObject.AddComponent<Shadow>();
         messageShadow.effectColor = new Color(0f, 0f, 0f, 0.35f);
         messageShadow.effectDistance = new Vector2(1f, -1f);
@@ -291,20 +304,11 @@ public partial class GameBootstrap
         }
         entry.MessageText.text = body;
         entry.AccentImage.color = GetFeedEventAccentColor(entry.Type);
-        LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)entry.RootObject.transform);
 
-        float alpha = Mathf.Clamp01(entry.RemainingTime / EventFeedFadeDuration);
-        if (entry.RemainingTime > EventFeedFadeDuration)
-        {
-            alpha = 1f;
-        }
-
+        float alpha = entry.RemainingTime > EventFeedFadeDuration
+            ? 1f
+            : Mathf.Clamp01(entry.RemainingTime / EventFeedFadeDuration);
         entry.CanvasGroup.alpha = alpha;
-        float lift = (1f - alpha) * 10f;
-        if (entry.RootObject.transform is RectTransform rect)
-        {
-            rect.anchoredPosition = new Vector2(0f, -lift);
-        }
     }
 
     private void RemoveEventFeedEntry(EventFeedEntryUi entry)

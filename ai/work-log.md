@@ -202,6 +202,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Active Notes / Watchouts
 
+- 2026-04-24: Expanded the documented `v.0.0.2` Patch Notes to catch up with the actual shipped prototype state. The in-game changelog and `ai/release-notes.md` now mention the local bus loop, bus fares/Parking revenue, Event Feed, Economy taxes/tabs, stronger service-building visual separation, deeper Alcoholism behavior, randomized perk loadouts, and improved female portraits so the release notes better match the current build.
+
 - 2026-04-23: Upgraded female worker portrait generation so women read more distinctly from men in the low-poly HUD portraits. Female portraits now draw from their own hair-style pool (including bob/ponytail variants), can receive a dedicated earring/hair-clip accessory, and use slightly different face proportions plus softer cheek/eye/mouth treatment in both full-size and scaled portrait renderers. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.
 
 - 2026-04-23: Restored full random worker-perk generation. Workers now receive exactly `1` random negative perk and `4` random positive perks on stat assignment, chosen deterministically from the existing perk pools without duplicates. `EnsureWorkerStats()` now repairs older workers that still had an incomplete perk set, and the Workers HUD perk list was expanded to 5 rows so the full loadout is visible. Verified `dotnet build Assembly-CSharp.csproj -nologo` with 0 errors and 0 warnings.

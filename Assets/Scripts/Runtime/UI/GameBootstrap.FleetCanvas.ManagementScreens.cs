@@ -312,6 +312,15 @@ public partial class GameBootstrap
         public int OrderId;
     }
 
+    private sealed class WorldMapRouteRowUi
+    {
+        public GameObject Root;
+        public Text TagText;
+        public Text OrderText;
+        public Button RemoveButton;
+        public int OrderId;
+    }
+
     private sealed class WorldMapScreenUiRefs
     {
         public GameObject CanvasRoot;
@@ -324,7 +333,19 @@ public partial class GameBootstrap
         public Text DetailsNameText;
         public Text DetailsStatusText;
         public Text DetailsResourcesText;
+        public Text DetailsImportsText;
         public Text DetailsDescriptionText;
+        // trade route bottom panel
+        public GameObject RoutePanelRoot;
+        public Text RoutePanelTitleText;
+        public RectTransform RouteOrdersRow;
+        public readonly List<WorldMapRouteRowUi> RouteRows = new();
+        // add-order form
+        public Text RouteResourceLabel;
+        public Text RouteAmountLabel;
+        public Button RouteTypeButton;
+        public Text RouteTypeButtonText;
+        public Button RoutePlaceButton;
     }
 
     private sealed class WorldMapCellUi
@@ -345,6 +366,7 @@ public partial class GameBootstrap
         public Image HighwayDashC;
         public Text NameText;
         public Text TypeText;
+        public Image RouteStatusDot;
         public int RegionIndex;
     }
 
