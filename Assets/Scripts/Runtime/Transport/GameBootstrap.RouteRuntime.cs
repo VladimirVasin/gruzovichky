@@ -13,85 +13,65 @@ public partial class GameBootstrap
             return;
         }
 
-        if (currentAssignedTrip == TripType.None || currentRefuelPhase != RefuelPhase.None ||
-            driver.RestPhase != DriverRestPhase.None || isDriverRescueActive || isTruckMoving || isTruckInteracting)
+        if (!TruckRuntimeGuardService.CanUpdateAssignedTrip(
+                currentAssignedTrip != TripType.None,
+                currentRefuelPhase != RefuelPhase.None,
+                driver.RestPhase != DriverRestPhase.None,
+                isDriverRescueActive,
+                isTruckMoving,
+                isTruckInteracting))
         {
             return;
         }
 
-        switch (currentTripPhase)
+        LocationType pickupLocation = GetPickupLocation(currentAssignedTrip);
+        LocationType dropoffLocation = GetDropoffLocation(currentAssignedTrip);
+        bool queuedInteractionResumed = false;
+        if ((currentTripPhase == TripPhase.Loading || currentTripPhase == TripPhase.Unloading) &&
+            !isTruckInteracting)
         {
-            case TripPhase.ToPickup:
-            {
-                LocationType pickupLocation = GetPickupLocation(currentAssignedTrip);
-                if (truckCell != locations[pickupLocation].Anchor)
-                {
-                    StartMoveTo(locations[pickupLocation].Anchor);
-                    return;
-                }
+            queuedInteractionResumed = TryResumeQueuedTruckInteraction();
+        }
 
+        TruckTripRuntimeAction action = TruckTripRuntimeService.Evaluate(
+            currentTripPhase,
+            truckCell,
+            locations[pickupLocation].Anchor,
+            locations[dropoffLocation].Anchor,
+            locations[LocationType.Parking].Anchor,
+            isTruckInteracting,
+            queuedInteractionResumed);
+
+        switch (action.Kind)
+        {
+            case TruckTripRuntimeActionKind.MoveToPickup:
+            case TruckTripRuntimeActionKind.MoveToDropoff:
+            case TruckTripRuntimeActionKind.MoveToParking:
+                StartMoveTo(action.TargetCell);
+                return;
+
+            case TruckTripRuntimeActionKind.StartLoading:
                 if (TryStartTruckInteraction(GetLoadInteraction(currentAssignedTrip), pickupLocation))
                 {
                     SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} started loading at {pickupLocation} for trip {GetTripTitle(currentAssignedTrip)}.");
                     currentTripPhase = TripPhase.Loading;
                 }
-
-                return;
-            }
-
-            case TripPhase.Loading:
-                if (isTruckInteracting)
-                {
-                    return;
-                }
-
-                if (TryResumeQueuedTruckInteraction())
-                {
-                    return;
-                }
-
-                currentTripPhase = TripPhase.ToDropoff;
                 return;
 
-            case TripPhase.ToDropoff:
-            {
-                LocationType dropoffLocation = GetDropoffLocation(currentAssignedTrip);
-                if (truckCell != locations[dropoffLocation].Anchor)
-                {
-                    StartMoveTo(locations[dropoffLocation].Anchor);
-                    return;
-                }
+            case TruckTripRuntimeActionKind.AdvanceToDropoff:
+            case TruckTripRuntimeActionKind.AdvanceToParking:
+                currentTripPhase = action.NextPhase;
+                return;
 
+            case TruckTripRuntimeActionKind.StartUnloading:
                 if (TryStartTruckInteraction(GetUnloadInteraction(currentAssignedTrip), dropoffLocation))
                 {
                     SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} started unloading at {dropoffLocation} for trip {GetTripTitle(currentAssignedTrip)}.");
                     currentTripPhase = TripPhase.Unloading;
                 }
-
-                return;
-            }
-
-            case TripPhase.Unloading:
-                if (isTruckInteracting)
-                {
-                    return;
-                }
-
-                if (TryResumeQueuedTruckInteraction())
-                {
-                    return;
-                }
-
-                currentTripPhase = TripPhase.ReturnToParking;
                 return;
 
-            case TripPhase.ReturnToParking:
-                if (truckCell != locations[LocationType.Parking].Anchor)
-                {
-                    StartMoveTo(locations[LocationType.Parking].Anchor);
-                    return;
-                }
-
+            case TruckTripRuntimeActionKind.Complete:
                 PlayTruckFx(parkingReturnCueClip, 0.64f);
                 ApplyWorkerRoadFocusEffect(driver);
                 SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} completed trip {GetTripTitle(currentAssignedTrip)}.");
@@ -110,6 +90,10 @@ public partial class GameBootstrap
                 }
 
                 return;
+
+            case TruckTripRuntimeActionKind.Wait:
+            default:
+                return;
         }
     }
 
@@ -120,55 +104,57 @@ public partial class GameBootstrap
             return;
         }
 
-        if (currentRefuelPhase == RefuelPhase.None || currentAssignedTrip != TripType.None ||
-            driver.RestPhase != DriverRestPhase.None || isDriverRescueActive || isTruckMoving || isTruckInteracting)
+        if (!TruckRuntimeGuardService.CanUpdateRefuelOrder(
+                currentRefuelPhase != RefuelPhase.None,
+                currentAssignedTrip != TripType.None,
+                driver.RestPhase != DriverRestPhase.None,
+                isDriverRescueActive,
+                isTruckMoving,
+                isTruckInteracting))
         {
             return;
         }
 
-        switch (currentRefuelPhase)
+        if (currentRefuelPhase == RefuelPhase.ToGasStation &&
+            locations.TryGetValue(LocationType.GasStation, out LocationData gsRefuel))
         {
-            case RefuelPhase.ToGasStation:
-                if (locations.TryGetValue(LocationType.GasStation, out LocationData gsRefuel))
-                {
-                    gsRefuel.FuelStored = GasStationMaxFuelStorage;
-                }
+            gsRefuel.FuelStored = GasStationMaxFuelStorage;
+        }
 
-                if (truckCell != locations[LocationType.GasStation].Anchor)
-                {
-                    StartMoveTo(locations[LocationType.GasStation].Anchor);
-                    return;
-                }
+        bool queuedInteractionResumed = false;
+        if (currentRefuelPhase == RefuelPhase.Refueling && !isTruckInteracting)
+        {
+            queuedInteractionResumed = TryResumeQueuedTruckInteraction();
+        }
 
+        TruckRefuelRuntimeAction action = TruckRefuelRuntimeService.Evaluate(
+            currentRefuelPhase,
+            truckCell,
+            locations[LocationType.GasStation].Anchor,
+            locations[LocationType.Parking].Anchor,
+            isTruckInteracting,
+            queuedInteractionResumed);
+
+        switch (action.Kind)
+        {
+            case TruckRefuelRuntimeActionKind.MoveToGasStation:
+            case TruckRefuelRuntimeActionKind.MoveToParking:
+                StartMoveTo(action.TargetCell);
+                return;
+
+            case TruckRefuelRuntimeActionKind.StartRefueling:
                 if (TryStartTruckInteraction(TruckInteractionType.RefuelAtGasStation, LocationType.GasStation))
                 {
                     SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} started refueling at Gas Station.");
                     currentRefuelPhase = RefuelPhase.Refueling;
                 }
-
                 return;
 
-            case RefuelPhase.Refueling:
-                if (isTruckInteracting)
-                {
-                    return;
-                }
-
-                if (TryResumeQueuedTruckInteraction())
-                {
-                    return;
-                }
-
-                currentRefuelPhase = RefuelPhase.ReturnToParking;
+            case TruckRefuelRuntimeActionKind.AdvanceToParking:
+                currentRefuelPhase = action.NextPhase;
                 return;
 
-            case RefuelPhase.ReturnToParking:
-                if (truckCell != locations[LocationType.Parking].Anchor)
-                {
-                    StartMoveTo(locations[LocationType.Parking].Anchor);
-                    return;
-                }
-
+            case TruckRefuelRuntimeActionKind.Complete:
                 PlayTruckFx(parkingReturnCueClip, 0.58f);
                 SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} finished refuel order and returned to parking.");
                 currentRefuelPhase = RefuelPhase.None;
@@ -177,6 +163,10 @@ public partial class GameBootstrap
                     EnsurePendingShiftSalaryPaid(driver);
                     StartDriverMotelRest(truckAgent, driver);
                 }
+                return;
+
+            case TruckRefuelRuntimeActionKind.Wait:
+            default:
                 return;
         }
     }
@@ -223,6 +213,32 @@ public partial class GameBootstrap
                 ApplyDriverPose(driver, 0f, 0f);
                 driver.RestPhase = DriverRestPhase.None;
                 SessionDebugLogger.Log("REST", $"{driver.DriverName} finished sleep; needs={FormatWorkerNeedsDebug(driver)}.");
+                return;
+
+            case DriverRestPhase.SleepingAtHome:
+                driver.SleepTimer -= Time.deltaTime * gameSpeedMultiplier;
+                if (driver.SleepTimer > 0f) return;
+                {
+                    int hi = driver.AssignedPersonalHouseIndex;
+                    Vector3 wakePos = (hi >= 0 && hi < personalHouses.Count)
+                        ? GetDriverStandPointNearPersonalHouse(hi)
+                        : driver.MotelIdlePosition;
+                    driver.DriverObject.SetActive(true);
+                    driver.DriverObject.transform.position = wakePos;
+                    driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+                }
+                driver.WalkAnimationTime = 0f;
+                driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+                driver.IdleWanderPointIndex = -1;
+                driver.IdleConversationTimer = 0f;
+                driver.IdleConversationPartnerId = -1;
+                ResetWorkerNeedTimer(driver, WorkerNeedKind.Sleep);
+                ApplyWorkerRestedEffect(driver);
+                driver.SleptToday = true;
+                driver.LifeGoal = WorkerLifeGoal.Idle;
+                ApplyDriverPose(driver, 0f, 0f);
+                driver.RestPhase = DriverRestPhase.None;
+                SessionDebugLogger.Log("REST", $"{driver.DriverName} woke up at home; needs={FormatWorkerNeedsDebug(driver)}.");
                 return;
         }
     }

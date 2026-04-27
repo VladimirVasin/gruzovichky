@@ -16,10 +16,34 @@ public partial class GameBootstrap
     private void BeginNextTruckSegment(Vector2Int nextCell)
     {
         truckSegmentStartWorld = truckObject.transform.position;
-        truckTargetWorld = GetTruckWorldPosition(nextCell);
+        truckTargetWorld = GetTruckWorldPosition(nextCell) + GetRoadLaneOffset(truckCell, nextCell);
         truckSegmentProgress = 0f;
         float distance = Vector3.Distance(truckSegmentStartWorld, truckTargetWorld);
         truckSegmentDuration = Mathf.Max(0.38f, distance / TruckCruiseSpeed);
+    }
+
+    private Vector3 GetRoadLaneOffset(Vector2Int fromCell, Vector2Int toCell)
+    {
+        if (IsAnchorCell(fromCell) || IsAnchorCell(toCell)) return Vector3.zero;
+        if (!roadCells.Contains(toCell)) return Vector3.zero;
+        if (IsRoadDeadEnd(toCell)) return Vector3.zero;
+        Vector2Int dir = toCell - fromCell;
+        return GetRightHandLaneOffset(dir);
+    }
+
+    private Vector3 GetRightHandLaneOffset(Vector2Int direction)
+    {
+        Vector2Int dir = NormalizeRoadDirection(direction);
+        // Unity grid Z grows "up" on the map; this gives the visual right lane for travel.
+        return new Vector3(-dir.y, 0f, dir.x) * RoadLaneOffset;
+    }
+
+    private bool IsRoadDeadEnd(Vector2Int cell)
+    {
+        int n = 0;
+        foreach (Vector2Int neighbor in GridPathService.GetCardinalNeighbors(cell))
+            if (roadCells.Contains(neighbor) || IsAnchorCell(neighbor)) n++;
+        return n <= 1;
     }
 
     private void CompleteTruckSegment()
@@ -218,6 +242,21 @@ public partial class GameBootstrap
         return standPoint;
     }
 
+    private Vector3 GetDriverStandPointNearPersonalHouse(int houseIndex)
+    {
+        if (houseIndex < 0 || houseIndex >= personalHouses.Count) return Vector3.zero;
+        LocationData house = personalHouses[houseIndex];
+        Vector3 anchorPoint = GetCellCenter(house.Anchor);
+        Vector3 center = GetLocationCenter(house);
+        Vector3 outward = anchorPoint - center;
+        outward.y = 0f;
+        if (outward.sqrMagnitude < 0.0001f) outward = Vector3.forward;
+        outward.Normalize();
+        Vector3 standPoint = anchorPoint - outward * 0.12f;
+        standPoint.y = SampleTerrainHeight(standPoint.x, standPoint.z);
+        return standPoint;
+    }
+
     private void UpdateTruckVisuals(float speed, bool moving)
     {
         if (truckVisualRoot == null)
@@ -411,7 +450,7 @@ public partial class GameBootstrap
         }
 
         y += 8f;
-        bool canHireTruck = GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
+        bool canHireTruck = locations.ContainsKey(LocationType.Parking) && GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
         GUI.enabled = canHireTruck;
         if (GUI.Button(new Rect(panelRect.x + 12, y, panelRect.width - 24, 28), $"Hire New Truck  ${HireTruckCost}"))
         {
@@ -419,7 +458,11 @@ public partial class GameBootstrap
         }
 
         GUI.enabled = true;
-        if (GetOwnedTruckCount() >= MaxTruckCount)
+        if (!locations.ContainsKey(LocationType.Parking))
+        {
+            GUI.Label(new Rect(panelRect.x + 12, y + 32f, 240, 20), "Build Parking first.");
+        }
+        else if (GetOwnedTruckCount() >= MaxTruckCount)
         {
             GUI.Label(new Rect(panelRect.x + 12, y + 32f, 240, 20), "Parking is full.");
         }
@@ -433,7 +476,7 @@ public partial class GameBootstrap
     {
         LogUiInput("Fleet/Parking: clicked Buy New Truck");
         LogCommand($"HireNewTruck(cost=${HireTruckCost})");
-        if (GetOwnedTruckCount() >= MaxTruckCount || money < HireTruckCost)
+        if (!locations.ContainsKey(LocationType.Parking) || GetOwnedTruckCount() >= MaxTruckCount || money < HireTruckCost)
         {
             SessionDebugLogger.Log("TRUCK_REACTION", $"Hire new truck rejected: {GetFleetBuyStatusLabel()}");
             return;
@@ -708,6 +751,7 @@ public partial class GameBootstrap
                 DriverRestPhase.ParkAtMotel => "Parking at Motel",
                 DriverRestPhase.DriverWalkToMotel => "Driver walking to Motel",
                 DriverRestPhase.Sleeping => $"Driver sleeping ({Mathf.CeilToInt(driver.SleepTimer)}s)",
+                DriverRestPhase.SleepingAtHome => $"Sleeping at home ({Mathf.CeilToInt(driver.SleepTimer)}s)",
                 DriverRestPhase.DriverWalkToTruck => "Driver returning to truck",
                 DriverRestPhase.ReturnToParking => "Returning from Motel",
                 _ => "Resting"
@@ -897,7 +941,10 @@ public partial class GameBootstrap
             LocationType.Stop => IsRussianLanguage() ? "Автобусная остановка" : "Bus Stop",
             LocationType.Bar => L("Bar"),
             LocationType.Canteen => L("Canteen"),
-            LocationType.GamblingHall => L("Gambling Hall"),
+            LocationType.GamblingHall  => L("Gambling Hall"),
+            LocationType.CityPark      => IsRussianLanguage() ? "Городской парк" : "City Park",
+            LocationType.PersonalHouse => IsRussianLanguage() ? "Жилой дом" : "Personal House",
+            LocationType.CarMarket     => IsRussianLanguage() ? "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a" : "Car Market",
             _ => L("Location")
         };
     }
@@ -925,5 +972,3 @@ public partial class GameBootstrap
     }
 
 }
-
-

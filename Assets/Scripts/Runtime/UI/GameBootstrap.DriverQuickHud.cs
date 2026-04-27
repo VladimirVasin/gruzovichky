@@ -16,6 +16,7 @@ public partial class GameBootstrap
         public GameObject TruckRow;
         public Text TruckText;
         public Text ShiftText;
+        public Text CarText;
         public Text BalanceText;
         public Text EffectsText;
         public Button OpenDriversButton;
@@ -114,6 +115,8 @@ public partial class GameBootstrap
 
         driverQuickHud.ShiftText = CreateBodyText("ShiftText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.ShiftText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        driverQuickHud.CarText = CreateBodyText("CarText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.CarText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         driverQuickHud.BalanceText = CreateBodyText("BalanceText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
         driverQuickHud.BalanceText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         driverQuickHud.EffectsText = CreateBodyText("EffectsText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, new Color(0.72f, 0.88f, 0.68f, 1f));
@@ -172,6 +175,8 @@ public partial class GameBootstrap
             driverQuickHud.TruckText.text = FormatValueLine("Truck", truck.DisplayName);
 
         driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—");
+        bool hasCar = driver.OwnedCarModelIndex >= 0 && driver.OwnedCarModelIndex < CarModelNames.Length;
+        driverQuickHud.CarText.text = FormatValueLine(IsRussianLanguage() ? "\u0410\u0432\u0442\u043e" : "Car", hasCar ? CarModelNames[driver.OwnedCarModelIndex] : "—");
         driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
 
         if (driverQuickHud.NeedsMealBarFill != null)
@@ -200,7 +205,7 @@ public partial class GameBootstrap
             return L("On Trade Run");
         if (driver.IsArrivingByBus)
             return L("Arriving by Bus");
-        if (driver.RestPhase == DriverRestPhase.Sleeping)
+        if (driver.RestPhase == DriverRestPhase.Sleeping || driver.RestPhase == DriverRestPhase.SleepingAtHome)
             return L("Sleeping");
         if (driver.RestPhase != DriverRestPhase.None)
             return L("Walking");
@@ -244,6 +249,7 @@ public partial class GameBootstrap
         isLocalBusDetailsOpen = false;
         selectedLocation = null;
         selectedLocalStopIndex = -1;
+        selectedPersonalHouseIndex = -1;
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         DriverAgent driver = driverAgents.Find(d => d.DriverId == driverId);

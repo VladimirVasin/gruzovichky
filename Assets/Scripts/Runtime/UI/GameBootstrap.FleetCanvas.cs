@@ -474,7 +474,7 @@ public partial class GameBootstrap
             SaveTruckState(truckAgent);
         }
 
-        bool canHireTruck = GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
+        bool canHireTruck = locations.ContainsKey(LocationType.Parking) && GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
         bool hideBuyPanelForTutorial = isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetSelectTruck;
         ApplyFleetTutorialVisibility();
 
@@ -610,6 +610,11 @@ public partial class GameBootstrap
 
     private string GetFleetBuyStatusLabel()
     {
+        if (!locations.ContainsKey(LocationType.Parking))
+        {
+            return IsRussianLanguage() ? "Сначала построй Парковку." : "Build Parking first.";
+        }
+
         if (GetOwnedTruckCount() >= MaxTruckCount)
         {
             return L("Fleet capacity reached.");
@@ -1039,59 +1044,49 @@ public partial class GameBootstrap
 
     private static GameObject CreateUiObject(string name, Transform parent)
     {
-        GameObject go = new(name, typeof(RectTransform));
-        go.transform.SetParent(parent, false);
-        return go;
+        return FleetCanvasUiFactory.CreateUiObject(name, parent);
     }
 
     private static RectTransform CreateStyledPanel(string name, Transform parent, Color color)
     {
-        GameObject go = CreateUiObject(name, parent);
-        Image image = go.AddComponent<Image>();
-        image.color = color;
-        Outline outline = go.AddComponent<Outline>();
-        outline.effectColor = new Color(0f, 0f, 0f, 0.18f);
-        outline.effectDistance = new Vector2(1f, -1f);
-        return go.GetComponent<RectTransform>();
+        return FleetCanvasUiFactory.CreateStyledPanel(name, parent, color);
     }
 
     private static RectTransform CreateLayoutRow(string name, Transform parent, float preferredHeight, float spacing)
     {
-        RectTransform row = CreateUiObject(name, parent).GetComponent<RectTransform>();
-        HorizontalLayoutGroup layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = spacing;
-        layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = false;
-        row.gameObject.AddComponent<LayoutElement>().preferredHeight = preferredHeight;
-        return row;
+        return FleetCanvasUiFactory.CreateLayoutRow(name, parent, preferredHeight, spacing);
+    }
+
+    private static RectTransform CreateSpacer(
+        string name,
+        Transform parent,
+        float preferredWidth = 0f,
+        float preferredHeight = 0f,
+        float flexibleWidth = 0f,
+        float flexibleHeight = 0f)
+    {
+        return FleetCanvasUiFactory.CreateSpacer(name, parent, preferredWidth, preferredHeight, flexibleWidth, flexibleHeight);
+    }
+
+    private static RectTransform CreateTabRow(string name, Transform parent, float preferredHeight, float spacing)
+    {
+        return FleetCanvasUiFactory.CreateTabRow(name, parent, preferredHeight, spacing);
+    }
+
+    private static FleetCanvasUiFactory.ScrollPanelRefs CreateVerticalScrollPanel(
+        string name,
+        Transform parent,
+        Color viewportTint,
+        float inset,
+        float spacing,
+        float scrollSensitivity = 28f)
+    {
+        return FleetCanvasUiFactory.CreateVerticalScrollPanel(name, parent, viewportTint, inset, spacing, scrollSensitivity);
     }
 
     private static RectTransform CreateSectionCard(Transform parent, Font font, string title, out RectTransform body, bool addTitle = true)
     {
-        RectTransform card = CreateStyledPanel($"{title}Card", parent, FleetInsetColor);
-        VerticalLayoutGroup cardLayout = card.gameObject.AddComponent<VerticalLayoutGroup>();
-        cardLayout.padding = new RectOffset(16, 16, 14, 16);
-        cardLayout.spacing = 12;
-        cardLayout.childControlWidth = true;
-        cardLayout.childControlHeight = true;
-        cardLayout.childForceExpandWidth = true;
-        cardLayout.childForceExpandHeight = false;
-        if (addTitle && !string.IsNullOrEmpty(title))
-        {
-            CreateHeaderText("Header", card, font, title, 18, TextAnchor.MiddleLeft, Color.white);
-        }
-
-        body = CreateUiObject("Body", card).GetComponent<RectTransform>();
-        VerticalLayoutGroup bodyLayout = body.gameObject.AddComponent<VerticalLayoutGroup>();
-        bodyLayout.spacing = 8;
-        bodyLayout.childControlWidth = true;
-        bodyLayout.childControlHeight = true;
-        bodyLayout.childForceExpandWidth = true;
-        bodyLayout.childForceExpandHeight = false;
-        return card;
+        return FleetCanvasUiFactory.CreateSectionCard($"{title}Card", parent, font, title, FleetInsetColor, Color.white, L, out body, addTitle);
     }
 
     private static Text CreateHeaderText(string name, Transform parent, Font font, string value, int fontSize, TextAnchor alignment, Color color)
@@ -1103,18 +1098,7 @@ public partial class GameBootstrap
 
     private static Text CreateBodyText(string name, Transform parent, Font font, string value, int fontSize, TextAnchor alignment, Color color)
     {
-        GameObject go = CreateUiObject(name, parent);
-        Text text = go.AddComponent<Text>();
-        text.font = font;
-        text.text = L(value);
-        text.fontSize = fontSize;
-        text.alignment = alignment;
-        text.color = color;
-        text.supportRichText = true;
-        text.horizontalOverflow = HorizontalWrapMode.Wrap;
-        text.verticalOverflow = VerticalWrapMode.Overflow;
-        text.raycastTarget = false;
-        return text;
+        return FleetCanvasUiFactory.CreateBodyText(name, parent, font, value, fontSize, alignment, color, L);
     }
 
     private static Text CreateValueText(string name, Transform parent, Font font)
@@ -1126,28 +1110,7 @@ public partial class GameBootstrap
 
     private static Button CreateButton(string name, Transform parent, Font font, out Text label, string buttonText, int fontSize, Color normalColor, Color textColor)
     {
-        GameObject go = CreateUiObject(name, parent);
-        Image image = go.AddComponent<Image>();
-        image.color = normalColor;
-        Button button = go.AddComponent<Button>();
-        button.targetGraphic = image;
-        ColorBlock colors = button.colors;
-        colors.normalColor = normalColor;
-        colors.highlightedColor = Color.Lerp(normalColor, Color.white, 0.12f);
-        colors.pressedColor = Color.Lerp(normalColor, Color.black, 0.15f);
-        colors.selectedColor = normalColor;
-        colors.disabledColor = new Color(normalColor.r * 0.42f, normalColor.g * 0.42f, normalColor.b * 0.42f, 0.75f);
-        button.colors = colors;
-        Outline outline = go.AddComponent<Outline>();
-        outline.effectColor = new Color(0f, 0f, 0f, 0.20f);
-        outline.effectDistance = new Vector2(1f, -1f);
-        label = CreateBodyText("Label", go.transform, font, buttonText, fontSize, TextAnchor.MiddleCenter, textColor);
-        RectTransform labelRect = label.rectTransform;
-        labelRect.anchorMin = Vector2.zero;
-        labelRect.anchorMax = Vector2.one;
-        labelRect.offsetMin = new Vector2(12f, 0f);
-        labelRect.offsetMax = new Vector2(-12f, 0f);
-        return button;
+        return FleetCanvasUiFactory.CreateButton(name, parent, font, out label, buttonText, fontSize, normalColor, textColor, L);
     }
 
     private static string FormatValueLine(string label, string value)
@@ -1183,10 +1146,7 @@ public partial class GameBootstrap
 
     private static void StretchRect(RectTransform rect, float left, float top, float right, float bottom)
     {
-        rect.anchorMin = new Vector2(0f, 0f);
-        rect.anchorMax = new Vector2(1f, 1f);
-        rect.offsetMin = new Vector2(left, bottom);
-        rect.offsetMax = new Vector2(-right, -top);
+        FleetCanvasUiFactory.StretchRect(rect, left, top, right, bottom);
     }
 
     private static void SetCenteredWindow(RectTransform rect, float width, float height, float yOffset)

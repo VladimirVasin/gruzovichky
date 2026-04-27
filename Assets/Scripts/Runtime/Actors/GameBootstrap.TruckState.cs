@@ -158,6 +158,16 @@ public partial class GameBootstrap
     private Vector3 GetDriverIdleMotelPosition(int driverIndex)
     {
         Vector3 position = GetDriverIdleMotelWanderPosition(driverIndex, driverIndex);
+        for (int attempt = 0; attempt < 28; attempt++)
+        {
+            Vector3 candidate = GetDriverIdleMotelWanderPosition(driverIndex, driverIndex + attempt * 3);
+            if (!WouldIdleDriverOverlapAtPosition(null, candidate))
+            {
+                position = candidate;
+                break;
+            }
+        }
+
         position.y = SampleTerrainHeight(position.x, position.z);
         return position;
     }
@@ -166,8 +176,10 @@ public partial class GameBootstrap
     {
         if (!locations.TryGetValue(LocationType.Motel, out LocationData motel))
         {
-            Vector3 fallback = locations.ContainsKey(LocationType.Parking)
-                ? GetLocationCenter(LocationType.Parking) + new Vector3(1.25f, 0f, 1.25f)
+            Vector3 fallback = locations.ContainsKey(LocationType.IntercityStop)
+                ? GetIntercityStopIdlePosition(driverIndex, pointIndex)
+                : locations.ContainsKey(LocationType.Parking)
+                    ? GetLocationCenter(LocationType.Parking) + new Vector3(1.25f, 0f, 1.25f)
                 : new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
             fallback.y = SampleTerrainHeight(fallback.x, fallback.z);
             return fallback;
@@ -209,7 +221,21 @@ public partial class GameBootstrap
             new Vector2(-0.58f, 0.88f),
             new Vector2(-0.26f, 0.18f),
             new Vector2(0.36f, -0.26f),
-            new Vector2(1.22f, 0.34f)
+            new Vector2(1.22f, 0.34f),
+            new Vector2(2.78f, -1.42f),
+            new Vector2(3.34f, -0.76f),
+            new Vector2(3.58f, 0.12f),
+            new Vector2(3.32f, 0.98f),
+            new Vector2(2.74f, 1.72f),
+            new Vector2(1.92f, 2.38f),
+            new Vector2(0.92f, 2.78f),
+            new Vector2(-0.18f, 2.66f),
+            new Vector2(-0.94f, 2.08f),
+            new Vector2(-1.12f, 1.18f),
+            new Vector2(-0.92f, -0.18f),
+            new Vector2(-0.32f, -1.48f),
+            new Vector2(0.82f, -2.16f),
+            new Vector2(2.02f, -2.08f)
         };
 
         int baseIndex = Mathf.Abs(pointIndex + Mathf.Max(0, driverIndex)) % localPoints.Length;
@@ -230,6 +256,69 @@ public partial class GameBootstrap
 
         frontageBase.y = SampleTerrainHeight(frontageBase.x, frontageBase.z);
         return frontageBase;
+    }
+
+    private Vector3 GetIntercityStopIdlePosition(int driverIndex, int pointIndex)
+    {
+        Vector3 center = GetLocationCenter(LocationType.IntercityStop);
+        Vector2[] localPoints =
+        {
+            new Vector2(-2.4f, 1.2f),
+            new Vector2(-1.5f, 1.9f),
+            new Vector2(-0.2f, 2.2f),
+            new Vector2(1.1f, 1.85f),
+            new Vector2(2.25f, 1.15f),
+            new Vector2(2.55f, 0.15f),
+            new Vector2(1.6f, -0.85f),
+            new Vector2(0.25f, -1.25f),
+            new Vector2(-1.2f, -0.95f),
+            new Vector2(-2.35f, -0.1f)
+        };
+
+        int baseIndex = Mathf.Abs(pointIndex + Mathf.Max(0, driverIndex)) % localPoints.Length;
+        for (int attempt = 0; attempt < localPoints.Length; attempt++)
+        {
+            Vector2 localPoint = localPoints[(baseIndex + attempt) % localPoints.Length];
+            Vector3 position = center + new Vector3(localPoint.x, 0f, localPoint.y);
+            Vector2Int cell = WorldToCell(position);
+            if (!IsInsideGrid(cell) || roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) || IsLocationCell(cell))
+            {
+                continue;
+            }
+
+            position.y = SampleTerrainHeight(position.x, position.z);
+            return position;
+        }
+
+        center.y = SampleTerrainHeight(center.x, center.z);
+        return center;
+    }
+
+    private void MoveStarterIdleWorkersToMotel()
+    {
+        if (!locations.ContainsKey(LocationType.Motel))
+        {
+            return;
+        }
+
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (driver?.DriverObject == null || driver.IsArrivingByBus || driver.IsOnActiveShift || IsDriverBusyWalkPhase(driver))
+            {
+                continue;
+            }
+
+            Vector3 current = driver.DriverObject.transform.position;
+            driver.MotelIdlePosition = GetDriverIdleMotelPosition(i);
+            driver.WalkTargetWorld = driver.MotelIdlePosition;
+            driver.WalkPhase = DriverRescuePhase.IdleWander;
+            driver.IdleWanderPauseTimer = 0f;
+            driver.IdleWanderPointIndex = -1;
+            BuildDriverWalkPath(driver, current, driver.MotelIdlePosition);
+        }
+
+        SessionDebugLogger.Log("DRIVER", "Starter idle workers moved from Intercity Stop fallback to newly built Motel idle area.");
     }
 
     private Vector3 GetDriverParkingWaitPosition(TruckAgent truckAgent)

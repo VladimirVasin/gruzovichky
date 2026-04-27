@@ -62,6 +62,7 @@ public partial class GameBootstrap
 
             selectedLocation = pair.Key;
             selectedLocalStopIndex = -1;
+            selectedPersonalHouseIndex = -1;
             isTruckDetailsOpen = false;
             isLocalBusDetailsOpen = false;
             RefreshSelectionVisuals();
@@ -78,8 +79,26 @@ public partial class GameBootstrap
             }
 
             selectedLocation = null;
-            selectedLocalStopIndex = -1;
             selectedLocalStopIndex = i;
+            selectedPersonalHouseIndex = -1;
+            isTruckDetailsOpen = false;
+            isLocalBusDetailsOpen = false;
+            RefreshSelectionVisuals();
+            PlayUiSound(uiSelectClip, 0.9f);
+            return true;
+        }
+
+        for (int i = 0; i < personalHouses.Count; i++)
+        {
+            LocationData house = personalHouses[i];
+            if (!house.Contains(cell) && house.Anchor != cell)
+            {
+                continue;
+            }
+
+            selectedLocation = null;
+            selectedLocalStopIndex = -1;
+            selectedPersonalHouseIndex = i;
             isTruckDetailsOpen = false;
             isLocalBusDetailsOpen = false;
             RefreshSelectionVisuals();
@@ -108,6 +127,14 @@ public partial class GameBootstrap
             }
         }
 
+        for (int i = 0; i < personalHouseSelectionHighlights.Count; i++)
+        {
+            if (personalHouseSelectionHighlights[i] != null)
+            {
+                personalHouseSelectionHighlights[i].SetActive(false);
+            }
+        }
+
         if (!TryGetSelectedBuilding(out LocationData location, out LocationType locationType, out Vector3 center))
         {
             if (selectedLocationLabelRoot != null)
@@ -123,6 +150,20 @@ public partial class GameBootstrap
             if (selectedLocalStopIndex < localStopSelectionHighlights.Count)
             {
                 GameObject selectionHighlight = localStopSelectionHighlights[selectedLocalStopIndex];
+                if (selectionHighlight != null)
+                {
+                    Vector3 size = new Vector3(location.Max.x - location.Min.x + 1.05f, 0.06f, location.Max.y - location.Min.y + 1.05f);
+                    selectionHighlight.transform.position = center + new Vector3(0f, 0.03f, 0f);
+                    selectionHighlight.transform.localScale = size;
+                    selectionHighlight.SetActive(true);
+                }
+            }
+        }
+        else if (selectedPersonalHouseIndex >= 0)
+        {
+            if (selectedPersonalHouseIndex < personalHouseSelectionHighlights.Count)
+            {
+                GameObject selectionHighlight = personalHouseSelectionHighlights[selectedPersonalHouseIndex];
                 if (selectionHighlight != null)
                 {
                     Vector3 size = new Vector3(location.Max.x - location.Min.x + 1.05f, 0.06f, location.Max.y - location.Min.y + 1.05f);
@@ -153,6 +194,14 @@ public partial class GameBootstrap
         {
             location = localStops[selectedLocalStopIndex];
             locationType = LocationType.Stop;
+            center = GetLocationCenter(location);
+            return true;
+        }
+
+        if (selectedPersonalHouseIndex >= 0 && selectedPersonalHouseIndex < personalHouses.Count)
+        {
+            location = personalHouses[selectedPersonalHouseIndex];
+            locationType = LocationType.PersonalHouse;
             center = GetLocationCenter(location);
             return true;
         }

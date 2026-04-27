@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -8,52 +8,68 @@ public partial class GameBootstrap
 {
     private const float TreeHeightScale = 1.1f;
     private const float MiscTreeWorldScaleMultiplier = 2f;
-    private const float BerryBushSpawnChance = 0.28f;
-    private const float FlowerPatchSpawnChance = 0.18f;
+    private const float BerryBushSpawnChance = 0.36f;
+    private const float FlowerPatchSpawnChance = 0.14f;
 
     private void SetupLocations()
     {
         locations.Clear();
         localStops.Clear();
+        personalHouses.Clear();
+        personalHouseSelectionHighlights.Clear();
+        selectedPersonalHouseIndex = -1;
 
         GeneratedWorldLayout layout = WorldLayoutGenerator.Generate(GridWidth, GridHeight, waterCells, HasRequiredLayoutRoads);
-        CreateLocation(LocationType.Parking, "Parking", layout.Parking.Min, layout.Parking.Max, layout.Parking.Anchor, new Color(0.46f, 0.46f, 0.52f));
-        CreateLocation(LocationType.GasStation, "Gas Station", layout.GasStation.Min, layout.GasStation.Max, layout.GasStation.Anchor, new Color(0.84f, 0.68f, 0.26f));
-        CreateLocation(LocationType.Forest, "Lumberyard", layout.Forest.Min, layout.Forest.Max, layout.Forest.Anchor, new Color(0.58f, 0.42f, 0.24f));
-        CreateLocation(LocationType.Warehouse, "Warehouse", layout.Warehouse.Min, layout.Warehouse.Max, layout.Warehouse.Anchor, new Color(0.7f, 0.52f, 0.3f));
-        if (selectedGameStartMode == GameStartMode.Debug)
+
+        if (selectedGameStartMode == GameStartMode.Clear)
         {
-            CreateLocation(LocationType.Sawmill, "Sawmill", layout.Sawmill.Min, layout.Sawmill.Max, layout.Sawmill.Anchor, new Color(0.3f, 0.52f, 0.8f));
-            CreateLocation(LocationType.Motel, "Motel", layout.Motel.Min, layout.Motel.Max, layout.Motel.Anchor, new Color(0.91f, 0.87f, 0.74f));
+            CreateLocation(LocationType.IntercityStop, "Intercity Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f), layout.BusStop.RoadAccess);
+            SessionDebugLogger.Log("WORLD", $"Generated clear layout: BusStop {FormatPlacement(layout.BusStop)} (all other locations skipped).");
+            return;
         }
 
-        CreateLocation(LocationType.IntercityStop, "Intercity Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f));
+        if (selectedGameStartMode == GameStartMode.Debug)
+        {
+            CreateLocation(LocationType.Parking, "Parking", layout.Parking.Min, layout.Parking.Max, layout.Parking.Anchor, new Color(0.46f, 0.46f, 0.52f), layout.Parking.RoadAccess);
+            CreateLocation(LocationType.Warehouse, "Warehouse", layout.Warehouse.Min, layout.Warehouse.Max, layout.Warehouse.Anchor, new Color(0.7f, 0.52f, 0.3f), layout.Warehouse.RoadAccess);
+            CreateLocation(LocationType.GasStation, "Gas Station", layout.GasStation.Min, layout.GasStation.Max, layout.GasStation.Anchor, new Color(0.84f, 0.68f, 0.26f), layout.GasStation.RoadAccess);
+            CreateLocation(LocationType.Forest, "Lumberyard", layout.Forest.Min, layout.Forest.Max, layout.Forest.Anchor, new Color(0.58f, 0.42f, 0.24f), layout.Forest.RoadAccess);
+            CreateLocation(LocationType.Sawmill, "Sawmill", layout.Sawmill.Min, layout.Sawmill.Max, layout.Sawmill.Anchor, new Color(0.3f, 0.52f, 0.8f), layout.Sawmill.RoadAccess);
+            CreateLocation(LocationType.Motel, "Motel", layout.Motel.Min, layout.Motel.Max, layout.Motel.Anchor, new Color(0.91f, 0.87f, 0.74f), layout.Motel.RoadAccess);
+        }
+
+        CreateLocation(LocationType.IntercityStop, "Intercity Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f), layout.BusStop.RoadAccess);
 
         SessionDebugLogger.Log(
             "WORLD",
             selectedGameStartMode == GameStartMode.Debug
                 ? $"Generated debug layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, Sawmill {FormatPlacement(layout.Sawmill)}, Motel {FormatPlacement(layout.Motel)}, BusStop {FormatPlacement(layout.BusStop)}."
-                : $"Generated user layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, BusStop {FormatPlacement(layout.BusStop)}. Motel/Sawmill skipped for Build menu.");
+                : $"Generated user layout: BusStop {FormatPlacement(layout.BusStop)}. Parking/Warehouse skipped for Build menu; all production/service tutorial buildings skipped.");
     }
 
     private bool HasRequiredLayoutRoads(GeneratedWorldLayout layout)
     {
-        if (FindRoadBuildPath(layout.Parking.Anchor, layout.GasStation.Anchor, cell => IsPlacementCell(layout, cell)) == null ||
-            FindRoadBuildPath(layout.GasStation.Anchor, layout.Warehouse.Anchor, cell => IsPlacementCell(layout, cell)) == null ||
-            FindRoadBuildPath(layout.Warehouse.Anchor, layout.Forest.Anchor, cell => IsPlacementCell(layout, cell)) == null)
+        if (selectedGameStartMode == GameStartMode.Clear)
         {
-            return false;
+            return true;
         }
 
         if (selectedGameStartMode == GameStartMode.User)
         {
-            return FindRoadBuildPath(layout.Warehouse.Anchor, layout.BusStop.Anchor, cell => IsPlacementCell(layout, cell)) != null;
+            return true;
         }
 
-        return FindRoadBuildPath(layout.Forest.Anchor, layout.Sawmill.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
-               FindRoadBuildPath(layout.Sawmill.Anchor, layout.Warehouse.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
-               FindRoadBuildPath(layout.Warehouse.Anchor, layout.Motel.Anchor, cell => IsPlacementCell(layout, cell)) != null &&
-               FindRoadBuildPath(layout.Motel.Anchor, layout.BusStop.Anchor, cell => IsPlacementCell(layout, cell)) != null;
+        if (!CanBuildWideRoadPath(layout.Parking.RoadAccess, layout.GasStation.RoadAccess, cell => IsPlacementCell(layout, cell)) ||
+            !CanBuildWideRoadPath(layout.GasStation.RoadAccess, layout.Warehouse.RoadAccess, cell => IsPlacementCell(layout, cell)) ||
+            !CanBuildWideRoadPath(layout.Warehouse.RoadAccess, layout.Forest.RoadAccess, cell => IsPlacementCell(layout, cell)))
+        {
+            return false;
+        }
+
+        return CanBuildWideRoadPath(layout.Forest.RoadAccess, layout.Sawmill.RoadAccess, cell => IsPlacementCell(layout, cell)) &&
+               CanBuildWideRoadPath(layout.Sawmill.RoadAccess, layout.Warehouse.RoadAccess, cell => IsPlacementCell(layout, cell)) &&
+               CanBuildWideRoadPath(layout.Warehouse.RoadAccess, layout.Motel.RoadAccess, cell => IsPlacementCell(layout, cell)) &&
+               CanBuildWideRoadPath(layout.Warehouse.RoadAccess, layout.BusStop.RoadAccess, cell => IsPlacementCell(layout, cell));
     }
 
     private static bool IsPlacementCell(GeneratedWorldLayout layout, Vector2Int cell)
@@ -71,7 +87,7 @@ public partial class GameBootstrap
 
     private void GenerateTerrainHeights()
     {
-        terrainHeights = TerrainHeightGenerator.Generate(GridWidth, GridHeight, GetWorldPlacements());
+        terrainHeights = TerrainHeightGenerator.Generate(GridWidth, GridHeight, GetWorldPlacements(), hillZones);
     }
 
     private IEnumerable<WorldLocationPlacement> GetWorldPlacements()
@@ -82,7 +98,8 @@ public partial class GameBootstrap
             {
                 Min = location.Min,
                 Max = location.Max,
-                Anchor = location.Anchor
+                Anchor = location.Anchor,
+                RoadAccess = location.RoadAccess
             };
         }
 
@@ -92,7 +109,8 @@ public partial class GameBootstrap
             {
                 Min = stop.Min,
                 Max = stop.Max,
-                Anchor = stop.Anchor
+                Anchor = stop.Anchor,
+                RoadAccess = stop.RoadAccess
             };
         }
     }
@@ -150,13 +168,16 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("WORLD", $"Planning {plannedCells.Count} misc cells");
         for (int i = 0; i < plannedCells.Count; i++)
         {
-            float roll = Random.value;
-            if (roll < FlowerPatchSpawnChance)
+            MiscDecorationKind kind = MiscDecorationSpawnService.ChooseKind(
+                Random.value,
+                FlowerPatchSpawnChance,
+                BerryBushSpawnChance);
+            if (kind == MiscDecorationKind.FlowerPatch)
             {
                 CreateFlowerPatch(plannedCells[i], i);
                 flowerCount++;
             }
-            else if (roll < FlowerPatchSpawnChance + BerryBushSpawnChance)
+            else if (kind == MiscDecorationKind.BerryBush)
             {
                 CreateBerryBush(plannedCells[i], i);
                 bushCount++;
@@ -172,7 +193,8 @@ public partial class GameBootstrap
 
     private static string FormatPlacement(WorldLocationPlacement placement)
     {
-        return $"min({placement.Min.x},{placement.Min.y}) max({placement.Max.x},{placement.Max.y}) anchor({placement.Anchor.x},{placement.Anchor.y})";
+        Vector2Int access = placement.RoadAccess == default ? placement.Anchor : placement.RoadAccess;
+        return $"min({placement.Min.x},{placement.Min.y}) max({placement.Max.x},{placement.Max.y}) anchor({placement.Anchor.x},{placement.Anchor.y}) access({access.x},{access.y})";
     }
 
     private bool GetFurnitureFactoryPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
@@ -232,7 +254,80 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
+        RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Furniture Factory at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool TryPlaceParkingAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.Parking))
+        {
+            SessionDebugLogger.Log("BUILD", "Parking placement rejected: parking already exists.");
+            return false;
+        }
+
+        if (!TryGetRotatedBuildingPlacement(anchorCell, LocationType.Parking, 3, 2, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Parking placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.Parking, "Parking", min, max, anchorCell, new Color(0.46f, 0.46f, 0.52f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        RebuildRoadSigns();
+        SessionDebugLogger.Log("BUILD", $"Placed Parking at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool TryPlaceWarehouseAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.Warehouse))
+        {
+            SessionDebugLogger.Log("BUILD", "Warehouse placement rejected: warehouse already exists.");
+            return false;
+        }
+
+        if (!TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Warehouse, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Warehouse placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.Warehouse, "Warehouse", min, max, anchorCell, new Color(0.7f, 0.52f, 0.3f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        RebuildRoadSigns();
+        SessionDebugLogger.Log("BUILD", $"Placed Warehouse at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool TryPlaceForestAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.Forest))
+        {
+            SessionDebugLogger.Log("BUILD", "Lumberjack Camp placement rejected: camp already exists.");
+            return false;
+        }
+
+        if (!TryGetForestPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Lumberjack Camp placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.Forest, "Lumberjack Camp", min, max, anchorCell, new Color(0.42f, 0.30f, 0.18f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        RebuildRoadSigns();
+        SessionDebugLogger.Log("BUILD", $"Placed Lumberjack Camp at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         return true;
     }
 
@@ -255,6 +350,7 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
+        RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Bar at anchor ({anchorCell.x},{anchorCell.y}).");
         return true;
     }
@@ -272,6 +368,7 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
+        RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Stop at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         return true;
     }
@@ -295,6 +392,7 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
+        RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Canteen at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         return true;
     }
@@ -318,8 +416,86 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
+        RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Gambling Hall at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         return true;
+    }
+
+    private bool TryPlaceCityParkAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.CityPark))
+        {
+            SessionDebugLogger.Log("BUILD", "City Park placement rejected: already exists.");
+            return false;
+        }
+
+        if (!TryGetCityParkPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"City Park placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        // Anchor equals min (park has no road driveway)
+        CreateLocation(LocationType.CityPark, "City Park", min, max, min, new Color(0.30f, 0.52f, 0.22f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        RebuildRoadSigns();
+        SessionDebugLogger.Log("BUILD", $"Placed City Park at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool TryPlacePersonalHouseAtAnchor(Vector2Int anchorCell)
+    {
+        if (!TryGetRotatedBuildingPlacement(anchorCell, LocationType.PersonalHouse, 5, 6, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Personal House placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.PersonalHouse, "Personal House", min, max, anchorCell, new Color(0.88f, 0.82f, 0.70f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        RebuildRoadSigns();
+        SessionDebugLogger.Log("BUILD", $"Placed Personal House at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool TryPlaceCarMarketAtAnchor(Vector2Int anchorCell)
+    {
+        if (locations.ContainsKey(LocationType.CarMarket))
+        {
+            SessionDebugLogger.Log("BUILD", "Car Market placement rejected: already exists.");
+            return false;
+        }
+
+        if (!TryGetRotatedBuildingPlacement(anchorCell, LocationType.CarMarket, 5, 5, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Car Market placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.CarMarket, "Car Market", min, max, anchorCell, new Color(0.64f, 0.52f, 0.38f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        RebuildRoadSigns();
+        SessionDebugLogger.Log("BUILD", $"Placed Car Market at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool GetPersonalHousePlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.PersonalHouse, 5, 6, out previewPosition, out previewScale);
+    }
+
+    private bool GetCarMarketPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.CarMarket, 5, 5, out previewPosition, out previewScale);
     }
 
     private bool TryPlaceSawmillAtAnchor(Vector2Int anchorCell)
@@ -341,6 +517,7 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
+        RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Sawmill at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         NotifyTutorialSawmillBuilt();
         return true;
@@ -366,7 +543,10 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
+        RebuildRoadSigns();
         TryShowTutorial(TutorialTrigger.FirstMotelBuilt);
+        MoveStarterIdleWorkersToMotel();
+        SetupAmbientCats();
         SessionDebugLogger.Log("BUILD", $"Placed Motel at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         return true;
     }
@@ -374,6 +554,11 @@ public partial class GameBootstrap
     private bool TryGetBarPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
         return TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Bar, out min, out max);
+    }
+
+    private bool TryGetForestPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
+    {
+        return TryGetRotatedBuildingPlacement(anchorCell, LocationType.Forest, 3, 3, out min, out max);
     }
 
     private bool TryGetCanteenPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
@@ -384,6 +569,48 @@ public partial class GameBootstrap
     private bool TryGetGamblingHallPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
         return TryGetRotatedBuildingPlacement(anchorCell, LocationType.GamblingHall, 3, 3, out min, out max);
+    }
+
+    private bool TryGetCityParkPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
+    {
+        // Park uses the clicked cell as its SW corner (rotation-independent, symmetric 8x8).
+        // No road adjacency required — the park can be placed anywhere on open ground.
+        min = anchorCell;
+        max = new Vector2Int(anchorCell.x + 7, anchorCell.y + 7);
+
+        if (locations.ContainsKey(LocationType.CityPark))
+            return false;
+
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                Vector2Int cell = new(x, y);
+                if (!IsInsideGrid(cell) || roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) ||
+                    miscOccupiedCells.Contains(cell) || IsLocationCell(cell) || IsWaterOrBeachCell(cell))
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    private bool GetCityParkPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
+        previewScale = new Vector3(0.98f, 0.04f, 0.98f);
+        Vector2Int min = anchorCell;
+        Vector2Int max = new Vector2Int(anchorCell.x + 7, anchorCell.y + 7);
+        buildPreviewFootprintCells.Clear();
+        buildPreviewDrivewayCell = null;
+        for (int x = min.x; x <= max.x; x++)
+            for (int y = min.y; y <= max.y; y++)
+                buildPreviewFootprintCells.Add(new Vector2Int(x, y));
+        bool canPlace = TryGetCityParkPlacement(anchorCell, out _, out _);
+        float cx = (min.x + max.x + 1) * 0.5f;
+        float cz = (min.y + max.y + 1) * 0.5f;
+        previewPosition = new Vector3(cx, SampleTerrainHeight(cx, cz) + RoadHeight + 0.03f, cz);
+        previewScale = new Vector3(8f * 0.94f, 0.04f, 8f * 0.94f);
+        return canPlace;
     }
 
     private bool TryGetStopPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
@@ -405,69 +632,27 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (!IsInsideGrid(anchorCell) || !IsInsideGrid(min) || !IsInsideGrid(max))
-        {
-            return false;
-        }
-
-        if (roadCells.Contains(anchorCell) || edgeHighwayCells.Contains(anchorCell) ||
-            miscOccupiedCells.Contains(anchorCell) || IsLocationCell(anchorCell) || IsWaterOrBeachCell(anchorCell))
-        {
-            return false;
-        }
-
-        for (int x = min.x; x <= max.x; x++)
-        {
-            for (int y = min.y; y <= max.y; y++)
-            {
-                Vector2Int cell = new(x, y);
-                if (!IsInsideGrid(cell) || roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) ||
-                    miscOccupiedCells.Contains(cell) || IsLocationCell(cell) || IsWaterOrBeachCell(cell))
-                {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        return BuildingPlacementService.IsFootprintClear(anchorCell, min, max, IsInsideGrid, IsBuildingPlacementBlockedCell);
     }
 
     private void GetRotatedBuildingFootprint(Vector2Int anchorCell, int width, int depth, out Vector2Int min, out Vector2Int max)
     {
-        int left = width / 2;
-        int right = width - left - 1;
-        switch (buildPlacementRotationIndex % 4)
-        {
-            case 1:
-                min = new Vector2Int(anchorCell.x + 1, anchorCell.y - left);
-                max = new Vector2Int(anchorCell.x + depth, anchorCell.y + right);
-                break;
-            case 2:
-                min = new Vector2Int(anchorCell.x - left, anchorCell.y - depth);
-                max = new Vector2Int(anchorCell.x + right, anchorCell.y - 1);
-                break;
-            case 3:
-                min = new Vector2Int(anchorCell.x - depth, anchorCell.y - left);
-                max = new Vector2Int(anchorCell.x - 1, anchorCell.y + right);
-                break;
-            default:
-                min = new Vector2Int(anchorCell.x - left, anchorCell.y + 1);
-                max = new Vector2Int(anchorCell.x + right, anchorCell.y + depth);
-                break;
-        }
+        BuildingPlacementService.GetRotatedFootprint(anchorCell, width, depth, buildPlacementRotationIndex, out min, out max);
+    }
+
+    private bool IsBuildingPlacementBlockedCell(Vector2Int cell)
+    {
+        return roadCells.Contains(cell) ||
+               edgeHighwayCells.Contains(cell) ||
+               miscOccupiedCells.Contains(cell) ||
+               IsLocationCell(cell) ||
+               IsWaterOrBeachCell(cell);
     }
 
     private void SetBuildFootprintPreviewCells(Vector2Int min, Vector2Int max, Vector2Int drivewayCell)
     {
-        buildPreviewFootprintCells.Clear();
+        BuildingPlacementService.FillFootprintCells(buildPreviewFootprintCells, min, max);
         buildPreviewDrivewayCell = drivewayCell;
-        for (int x = min.x; x <= max.x; x++)
-        {
-            for (int y = min.y; y <= max.y; y++)
-            {
-                buildPreviewFootprintCells.Add(new Vector2Int(x, y));
-            }
-        }
     }
 
     private bool GetBarPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
@@ -479,11 +664,26 @@ public partial class GameBootstrap
         bool canPlace = TryGetBarPlacement(anchorCell, out Vector2Int min, out Vector2Int max);
         if (!canPlace) return false;
 
-        float centerX = (min.x + max.x + 1) * 0.5f;
-        float centerZ = (min.y + max.y + 1) * 0.5f;
-        previewPosition = new Vector3(centerX, SampleTerrainHeight(centerX, centerZ) + RoadHeight + 0.03f, centerZ);
-        previewScale = new Vector3((max.x - min.x + 1) * 0.94f, 0.04f, (max.y - min.y + 1) * 0.94f);
+        BuildingPlacementPreview preview = BuildingPlacementService.CreatePreview(min, max);
+        Vector2 center = BuildingPlacementService.GetFootprintCenter(preview.Min, preview.Max);
+        previewPosition = new Vector3(center.x, SampleTerrainHeight(center.x, center.y) + RoadHeight + 0.03f, center.y);
+        previewScale = preview.Scale;
         return true;
+    }
+
+    private bool GetForestPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.Forest, 3, 3, out previewPosition, out previewScale);
+    }
+
+    private bool GetParkingPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.Parking, 3, 2, out previewPosition, out previewScale);
+    }
+
+    private bool GetWarehousePlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.Warehouse, out previewPosition, out previewScale);
     }
 
     private bool GetSawmillPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
@@ -522,11 +722,27 @@ public partial class GameBootstrap
             return false;
         }
 
-        float centerX = (min.x + max.x + 1) * 0.5f;
-        float centerZ = (min.y + max.y + 1) * 0.5f;
-        previewPosition = new Vector3(centerX, SampleTerrainHeight(centerX, centerZ) + RoadHeight + 0.03f, centerZ);
-        previewScale = new Vector3((max.x - min.x + 1) * 0.94f, 0.04f, (max.y - min.y + 1) * 0.94f);
+        BuildingPlacementPreview preview = BuildingPlacementService.CreatePreview(min, max);
+        Vector2 center = BuildingPlacementService.GetFootprintCenter(preview.Min, preview.Max);
+        previewPosition = new Vector3(center.x, SampleTerrainHeight(center.x, center.y) + RoadHeight + 0.03f, center.y);
+        previewScale = preview.Scale;
         return true;
+    }
+
+    private void CreateServiceGlowPanel(Transform parent, Vector3 worldPosition, Vector3 localScale, Color tint)
+    {
+        GameObject glow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        glow.transform.SetParent(parent, false);
+        glow.transform.position = worldPosition;
+        glow.transform.localScale = localScale;
+        Renderer renderer = glow.GetComponent<Renderer>();
+        renderer.material = CreateTransparentOverlayMaterial(tint);
+        renderer.shadowCastingMode = ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+        if (glow.TryGetComponent(out Collider collider))
+        {
+            Object.Destroy(collider);
+        }
     }
 
     private void CreateBarDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -558,7 +774,7 @@ public partial class GameBootstrap
         ApplyColor(chimney, new Color(0.28f, 0.22f, 0.18f));
         ConfigureStaticVisual(chimney);
 
-        // Door (faces south toward anchor) вЂ” on south face of body
+        // Door faces south toward the road anchor.
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.transform.SetParent(parent, false);
         door.transform.position = center + new Vector3(0f, 0.22f * scale, -0.81f * scale);
@@ -573,6 +789,7 @@ public partial class GameBootstrap
         doorFrame.transform.localScale = new Vector3(0.44f * scale, 0.62f * scale, 0.03f * scale);
         ApplyColor(doorFrame, new Color(0.55f, 0.35f, 0.18f));
         ConfigureStaticVisual(doorFrame);
+        CreateServiceGlowPanel(parent, center + new Vector3(0f, 0.44f * scale, -0.79f * scale), new Vector3(0.5f * scale, 0.44f * scale, 0.02f * scale), new Color(1f, 0.7f, 0.32f, 0.1f));
 
         // Sign board above door
         GameObject signBg = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -581,6 +798,7 @@ public partial class GameBootstrap
         signBg.transform.localScale = new Vector3(0.68f * scale, 0.22f * scale, 0.04f * scale);
         ApplyColor(signBg, new Color(0.92f, 0.88f, 0.72f));
         ConfigureStaticVisual(signBg);
+        CreateServiceGlowPanel(parent, signBg.transform.position + new Vector3(0f, 0f, -0.025f * scale), new Vector3(0.82f * scale, 0.28f * scale, 0.02f * scale), new Color(1f, 0.72f, 0.34f, 0.18f));
 
         GameObject facade = GameObject.CreatePrimitive(PrimitiveType.Cube);
         facade.transform.SetParent(parent, false);
@@ -612,9 +830,10 @@ public partial class GameBootstrap
         lightObj.transform.position = center + new Vector3(0f, 0.9f * scale, -0.9f * scale);
         Light barLight = lightObj.AddComponent<Light>();
         barLight.type = LightType.Point;
-        barLight.color = new Color(1f, 0.85f, 0.5f);
-        barLight.intensity = 0.35f;
-        barLight.range = 3f;
+        ServiceDecorationLightStyle barLightStyle = ServiceDecorationStyleService.GetLightStyle(ServiceDecorationKind.Bar);
+        barLight.color = barLightStyle.Color;
+        barLight.intensity = barLightStyle.Intensity;
+        barLight.range = barLightStyle.Range;
         barLight.shadows = LightShadows.None;
 
         // Walkway from entrance to anchor
@@ -663,6 +882,7 @@ public partial class GameBootstrap
         servingWindow.transform.localScale = new Vector3(0.92f * scale, 0.34f * scale, 0.04f * scale);
         ApplyColor(servingWindow, new Color(0.34f, 0.64f, 0.72f));
         ConfigureStaticVisual(servingWindow);
+        CreateServiceGlowPanel(parent, servingWindow.transform.position + new Vector3(0f, 0f, -0.02f * scale), new Vector3(1.02f * scale, 0.4f * scale, 0.02f * scale), new Color(0.54f, 0.9f, 0.98f, 0.12f));
 
         GameObject sign = GameObject.CreatePrimitive(PrimitiveType.Cube);
         sign.transform.SetParent(parent, false);
@@ -670,6 +890,7 @@ public partial class GameBootstrap
         sign.transform.localScale = new Vector3(1.18f * scale, 0.2f * scale, 0.04f * scale);
         ApplyColor(sign, new Color(0.96f, 0.78f, 0.22f));
         ConfigureStaticVisual(sign);
+        CreateServiceGlowPanel(parent, sign.transform.position + new Vector3(0f, 0f, -0.022f * scale), new Vector3(1.34f * scale, 0.26f * scale, 0.02f * scale), new Color(1f, 0.9f, 0.58f, 0.16f));
 
         for (int i = 0; i < 3; i++)
         {
@@ -696,9 +917,10 @@ public partial class GameBootstrap
         lightObj.transform.position = center + new Vector3(0.35f * scale, 0.88f * scale, -0.9f * scale);
         Light canteenLight = lightObj.AddComponent<Light>();
         canteenLight.type = LightType.Point;
-        canteenLight.color = new Color(1f, 0.78f, 0.42f);
-        canteenLight.intensity = 0.32f;
-        canteenLight.range = 2.8f;
+        ServiceDecorationLightStyle canteenLightStyle = ServiceDecorationStyleService.GetLightStyle(ServiceDecorationKind.Canteen);
+        canteenLight.color = canteenLightStyle.Color;
+        canteenLight.intensity = canteenLightStyle.Intensity;
+        canteenLight.range = canteenLightStyle.Range;
         canteenLight.shadows = LightShadows.None;
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
@@ -739,6 +961,7 @@ public partial class GameBootstrap
         neon.transform.localScale = new Vector3(1.54f * scale, 0.24f * scale, 0.06f * scale);
         ApplyColor(neon, new Color(1f, 0.82f, 0.08f));
         ConfigureStaticVisual(neon);
+        CreateServiceGlowPanel(parent, neon.transform.position + new Vector3(0f, 0f, -0.03f * scale), new Vector3(1.84f * scale, 0.34f * scale, 0.02f * scale), new Color(1f, 0.56f, 0.84f, 0.18f));
 
         GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Cube);
         canopy.transform.SetParent(parent, false);
@@ -762,6 +985,7 @@ public partial class GameBootstrap
             neonPillar.transform.localScale = new Vector3(0.14f * scale, 0.92f * scale, 0.12f * scale);
             ApplyColor(neonPillar, side < 0 ? new Color(0.24f, 0.92f, 0.86f) : new Color(1f, 0.36f, 0.72f));
             ConfigureStaticVisual(neonPillar);
+            CreateServiceGlowPanel(parent, neonPillar.transform.position + new Vector3(0f, 0f, -0.02f * scale), new Vector3(0.22f * scale, 1.04f * scale, 0.02f * scale), side < 0 ? new Color(0.24f, 0.92f, 0.86f, 0.12f) : new Color(1f, 0.36f, 0.72f, 0.12f));
         }
 
         GameObject lightObj = new("GamblingHallLight");
@@ -769,12 +993,236 @@ public partial class GameBootstrap
         lightObj.transform.position = center + new Vector3(0f, 1.08f * scale, -0.86f * scale);
         Light gamblingLight = lightObj.AddComponent<Light>();
         gamblingLight.type = LightType.Point;
-        gamblingLight.color = new Color(1f, 0.48f, 0.82f);
-        gamblingLight.intensity = 0.48f;
-        gamblingLight.range = 4.2f;
+        ServiceDecorationLightStyle gamblingLightStyle = ServiceDecorationStyleService.GetLightStyle(ServiceDecorationKind.GamblingHall);
+        gamblingLight.color = gamblingLightStyle.Color;
+        gamblingLight.intensity = gamblingLightStyle.Intensity;
+        gamblingLight.range = gamblingLightStyle.Range;
         gamblingLight.shadows = LightShadows.None;
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
+    }
+
+    private void CreateCityParkDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        cityParkBenchPositions.Clear();
+        System.Array.Clear(cityParkBenchOccupied, 0, cityParkBenchOccupied.Length);
+
+        const float groundY    = -0.20f; // grass surface relative to center.y
+        Color woodColor    = new Color(0.56f, 0.39f, 0.20f);
+        Color stoneColor   = new Color(0.66f, 0.64f, 0.58f);
+        Color trunkColor   = new Color(0.40f, 0.24f, 0.12f);
+        Color crownA       = new Color(0.22f, 0.52f, 0.18f);
+        Color crownB       = new Color(0.28f, 0.48f, 0.14f);
+        Color bushColor    = new Color(0.24f, 0.50f, 0.16f);
+        Color benchColor   = new Color(0.52f, 0.38f, 0.22f);
+        Color lampColor    = new Color(0.34f, 0.34f, 0.34f);
+
+        // ── Paths (cross through center) ──────────────────────────────
+        void MakePath(Vector3 offset, Vector3 scale)
+        {
+            GameObject p = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            p.name = "ParkPath";
+            p.transform.SetParent(parent, false);
+            p.transform.position = center + new Vector3(offset.x, groundY + 0.01f, offset.z);
+            p.transform.localScale = scale;
+            ApplyColor(p, stoneColor);
+            ConfigureStaticVisual(p);
+        }
+        MakePath(Vector3.zero, new Vector3(0.55f, 0.02f, 8.0f));
+        MakePath(Vector3.zero, new Vector3(8.0f,  0.02f, 0.55f));
+
+        // ── Fence ─────────────────────────────────────────────────────
+        const float parkHalf = 4.0f;
+        const float gapHalf  = 0.85f;
+        const float railH    = 0.06f;
+        const float railD    = 0.09f;
+        const float railTop  = 0.30f;
+        const float postH    = 0.54f;
+
+        void MakeFenceRail(Vector3 offset, Vector3 scale)
+        {
+            GameObject r = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            r.name = "FenceRail";
+            r.transform.SetParent(parent, false);
+            r.transform.position = center + new Vector3(offset.x, groundY + railTop, offset.z);
+            r.transform.localScale = scale;
+            ApplyColor(r, woodColor);
+            ConfigureStaticVisual(r);
+        }
+        void MakeFencePost(float px, float pz)
+        {
+            GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            post.name = "FencePost";
+            post.transform.SetParent(parent, false);
+            post.transform.position = center + new Vector3(px, groundY + postH * 0.5f, pz);
+            post.transform.localScale = new Vector3(0.10f, postH, 0.10f);
+            ApplyColor(post, woodColor);
+            ConfigureStaticVisual(post);
+        }
+
+        float sideLen = parkHalf - gapHalf;
+        // Four entrance gaps keep the park usable no matter which side workers approach from.
+        MakeFenceRail(new Vector3(-(gapHalf + sideLen * 0.5f), 0, -parkHalf), new Vector3(sideLen, railH, railD));
+        MakeFenceRail(new Vector3( (gapHalf + sideLen * 0.5f), 0, -parkHalf), new Vector3(sideLen, railH, railD));
+        MakeFenceRail(new Vector3(-(gapHalf + sideLen * 0.5f), 0, parkHalf), new Vector3(sideLen, railH, railD));
+        MakeFenceRail(new Vector3( (gapHalf + sideLen * 0.5f), 0, parkHalf), new Vector3(sideLen, railH, railD));
+        MakeFenceRail(new Vector3(-parkHalf, 0, -(gapHalf + sideLen * 0.5f)), new Vector3(railD, railH, sideLen));
+        MakeFenceRail(new Vector3(-parkHalf, 0,  (gapHalf + sideLen * 0.5f)), new Vector3(railD, railH, sideLen));
+        MakeFenceRail(new Vector3( parkHalf, 0, -(gapHalf + sideLen * 0.5f)), new Vector3(railD, railH, sideLen));
+        MakeFenceRail(new Vector3( parkHalf, 0,  (gapHalf + sideLen * 0.5f)), new Vector3(railD, railH, sideLen));
+
+        float[] postX = { -parkHalf, -2.65f, -1.32f, 0f, 1.32f, 2.65f, parkHalf };
+        float[] postZ = { -parkHalf, -2.65f, -1.32f, 0f, 1.32f, 2.65f, parkHalf };
+        // South posts (skip entrance gap)
+        foreach (float px in postX)
+        {
+            if (px > -gapHalf - 0.05f && px < gapHalf + 0.05f) continue;
+            MakeFencePost(px, -parkHalf);
+        }
+        // North posts (skip entrance gap)
+        foreach (float px in postX)
+        {
+            if (px > -gapHalf - 0.05f && px < gapHalf + 0.05f) continue;
+            MakeFencePost(px, parkHalf);
+        }
+        // West/East posts (skip already-placed corners)
+        foreach (float pz in postZ)
+        {
+            if (pz == -parkHalf || pz == parkHalf) continue;
+            if (pz > -gapHalf - 0.05f && pz < gapHalf + 0.05f) continue;
+            MakeFencePost(-parkHalf, pz);
+            MakeFencePost( parkHalf, pz);
+        }
+
+        // ── Trees ─────────────────────────────────────────────────────
+        (Vector3 pos, Color crown, float scale)[] treeDefs = {
+            (center + new Vector3(-2.5f, 0, -2.5f), crownA, 1.0f),
+            (center + new Vector3( 2.5f, 0, -2.5f), crownB, 1.0f),
+            (center + new Vector3(-2.5f, 0,  2.5f), crownB, 1.0f),
+            (center + new Vector3( 2.5f, 0,  2.5f), crownA, 1.0f),
+            (center + new Vector3(-0.8f, 0,  3.3f), bushColor, 0.62f),
+            (center + new Vector3( 0.8f, 0,  3.3f), bushColor, 0.62f),
+            (center + new Vector3(-3.3f, 0,  0.8f), crownB,    0.68f),
+            (center + new Vector3( 3.3f, 0, -0.8f), crownA,    0.68f),
+        };
+        foreach (var (tp, crown, sc) in treeDefs)
+        {
+            float trunkH = 0.88f * sc;
+            GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            trunk.name = "TreeTrunk";
+            trunk.transform.SetParent(parent, false);
+            trunk.transform.position = new Vector3(tp.x, center.y + groundY + trunkH * 0.5f, tp.z);
+            trunk.transform.localScale = new Vector3(0.19f * sc, trunkH * 0.5f, 0.19f * sc);
+            ApplyColor(trunk, trunkColor);
+            ConfigureStaticVisual(trunk);
+
+            float crownR = 1.20f * sc;
+            GameObject crownObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            crownObj.name = "TreeCrown";
+            crownObj.transform.SetParent(parent, false);
+            crownObj.transform.position = new Vector3(tp.x, center.y + groundY + trunkH + crownR * 0.5f, tp.z);
+            crownObj.transform.localScale = new Vector3(crownR, crownR * 0.82f, crownR);
+            ApplyColor(crownObj, crown);
+            ConfigureStaticVisual(crownObj);
+        }
+
+        // ── Bushes ────────────────────────────────────────────────────
+        float[] bx = { -3.4f,  3.4f, -3.4f,  3.4f, -1.5f,  1.5f, -1.5f,  1.5f };
+        float[] bz = { -1.5f, -1.5f,  1.5f,  1.5f, -3.4f, -3.4f,  3.4f,  3.4f };
+        for (int i = 0; i < bx.Length; i++)
+        {
+            GameObject bush = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            bush.name = "Bush";
+            bush.transform.SetParent(parent, false);
+            bush.transform.position = center + new Vector3(bx[i], groundY + 0.16f, bz[i]);
+            bush.transform.localScale = new Vector3(0.38f, 0.26f, 0.38f);
+            ApplyColor(bush, bushColor);
+            ConfigureStaticVisual(bush);
+        }
+
+        // ── Benches ───────────────────────────────────────────────────
+        (Vector3 bpos, float rotY)[] benchDefs = {
+            (center + new Vector3(-1.5f, 0, 0f),   90f),
+            (center + new Vector3( 1.5f, 0, 0f),  -90f),
+            (center + new Vector3(0f, 0, -1.5f),    0f),
+            (center + new Vector3(0f, 0,  1.5f),  180f),
+        };
+        foreach (var (bpos, rotY) in benchDefs)
+        {
+            Quaternion brot = Quaternion.Euler(0f, rotY, 0f);
+            if (cityParkBenchPositions.Count < cityParkBenchOccupied.Length)
+            {
+                Vector3 sitPos = new(bpos.x, center.y + groundY + 0.08f, bpos.z);
+                cityParkBenchPositions.Add(sitPos);
+            }
+            // Seat
+            GameObject seat = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            seat.name = "BenchSeat";
+            seat.transform.SetParent(parent, false);
+            seat.transform.position = new Vector3(bpos.x, center.y + groundY + 0.27f, bpos.z);
+            seat.transform.rotation = brot;
+            seat.transform.localScale = new Vector3(0.62f, 0.05f, 0.22f);
+            ApplyColor(seat, benchColor);
+            ConfigureStaticVisual(seat);
+            // Legs
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Vector3 legOff = brot * new Vector3(s * 0.24f, 0f, 0f);
+                GameObject leg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                leg.name = "BenchLeg";
+                leg.transform.SetParent(parent, false);
+                leg.transform.position = new Vector3(bpos.x + legOff.x, center.y + groundY + 0.12f, bpos.z + legOff.z);
+                leg.transform.rotation = brot;
+                leg.transform.localScale = new Vector3(0.06f, 0.24f, 0.18f);
+                ApplyColor(leg, benchColor);
+                ConfigureStaticVisual(leg);
+            }
+        }
+
+        // ── Flowers ───────────────────────────────────────────────────
+        (float fx, float fz, Color fc)[] flowerDefs = {
+            (-3.1f,  2.0f, new Color(0.88f, 0.22f, 0.22f)),
+            ( 3.1f,  2.0f, new Color(0.88f, 0.82f, 0.18f)),
+            (-3.1f, -2.0f, new Color(0.88f, 0.82f, 0.18f)),
+            ( 3.1f, -2.0f, new Color(0.88f, 0.22f, 0.22f)),
+            (-1.8f,  3.1f, new Color(0.88f, 0.22f, 0.22f)),
+            ( 1.8f,  3.1f, new Color(0.88f, 0.82f, 0.18f)),
+            (-1.8f, -3.1f, new Color(0.88f, 0.82f, 0.18f)),
+            ( 1.8f, -3.1f, new Color(0.88f, 0.22f, 0.22f)),
+        };
+        foreach (var (fx, fz, fc) in flowerDefs)
+        {
+            GameObject flower = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            flower.name = "Flower";
+            flower.transform.SetParent(parent, false);
+            flower.transform.position = center + new Vector3(fx, groundY + 0.07f, fz);
+            flower.transform.localScale = new Vector3(0.11f, 0.08f, 0.11f);
+            ApplyColor(flower, fc);
+            ConfigureStaticVisual(flower);
+        }
+
+        // ── Lamp posts (lights are added by CreateLocationNightLights) ─
+        float[] lpx = { -2.5f,  2.5f, -2.5f,  2.5f };
+        float[] lpz = { -2.5f, -2.5f,  2.5f,  2.5f };
+        for (int i = 0; i < 4; i++)
+        {
+            float postHeight = 1.30f;
+            GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            post.name = "LampPost";
+            post.transform.SetParent(parent, false);
+            post.transform.position = center + new Vector3(lpx[i], groundY + postHeight * 0.5f, lpz[i]);
+            post.transform.localScale = new Vector3(0.07f, postHeight * 0.5f, 0.07f);
+            ApplyColor(post, lampColor);
+            ConfigureStaticVisual(post);
+
+            GameObject head = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            head.name = "LampHead";
+            head.transform.SetParent(parent, false);
+            head.transform.position = center + new Vector3(lpx[i], groundY + postHeight + 0.07f, lpz[i]);
+            head.transform.localScale = new Vector3(0.16f, 0.12f, 0.16f);
+            ApplyColor(head, new Color(0.80f, 0.78f, 0.65f));
+            ConfigureStaticVisual(head);
+        }
     }
 
     private bool TryGetFurnitureFactoryPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
@@ -782,305 +1230,331 @@ public partial class GameBootstrap
         return TryGetRotatedBuildingPlacement(anchorCell, LocationType.FurnitureFactory, 3, 2, out min, out max);
     }
 
-    private void CreateMiscTree(Vector2Int cell, int variantIndex)
+    private void CreatePersonalHouseDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
-        if (miscRoot == null)
-        {
-            return;
-        }
+        // Oriented root: local +Z toward anchor (road/front), -Z = back of house.
+        Vector3 anchorWorld = new Vector3(anchor.x + 0.5f, center.y, anchor.y + 0.5f);
+        Vector3 toAnchorRaw = anchorWorld - center;
+        toAnchorRaw.y = 0f;
+        Vector3 toAnchor = Mathf.Abs(toAnchorRaw.x) >= Mathf.Abs(toAnchorRaw.z)
+            ? new Vector3(Mathf.Sign(toAnchorRaw.x), 0f, 0f)
+            : new Vector3(0f, 0f, Mathf.Sign(toAnchorRaw.z));
 
-        GameObject treeRoot = new($"MiscTree_{cell.x}_{cell.y}");
-        treeRoot.transform.SetParent(miscRoot, false);
-        treeRoot.transform.position = GetCellCenter(cell);
-        treeRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-        treeRoot.transform.localScale = Vector3.one * Random.Range(1.18f, 1.58f) * MiscTreeWorldScaleMultiplier;
-        CreateTreeVariant(treeRoot.transform, variantIndex);
-        bool isLumberTree = RegisterLumberTree(cell, treeRoot.transform, variantIndex);
-        if (!isLumberTree)
-        {
-            RegisterMiscTreeSway(treeRoot.transform, cell, variantIndex);
-            RegisterMiscTreePerchPoint(treeRoot.transform, cell, variantIndex);
-        }
-        miscOccupiedCells.Add(cell);
-    }
+        GameObject orientedRoot = new("HouseOriented");
+        orientedRoot.transform.SetParent(parent, false);
+        orientedRoot.transform.position = center;
+        orientedRoot.transform.rotation = Quaternion.LookRotation(toAnchor, Vector3.up);
+        orientedRoot.transform.localScale = Vector3.one * BuildingDecorScale;
+        Transform or = orientedRoot.transform;
 
-    private void CreateBerryBush(Vector2Int cell, int variantSeed)
-    {
-        if (miscRoot == null)
-        {
-            return;
-        }
+        // Local coord reference:
+        //   footprint 5×6 grid cells → local ≈ ±1.60 wide (X), -1.92 back to +1.92 front (Z)
+        //   base block top at local Y ≈ 0.22 ("ground level" for decorations)
 
-        GameObject bushRoot = new($"BerryBush_{cell.x}_{cell.y}");
-        bushRoot.transform.SetParent(miscRoot, false);
-        bushRoot.transform.position = GetCellCenter(cell);
-        bushRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-        bushRoot.transform.localScale = Vector3.one * Random.Range(0.78f, 1.02f);
-
-        Color leafDark = new Color(0.16f, 0.42f, 0.2f);
-        Color leafLight = new Color(0.22f, 0.52f, 0.26f);
-        Color berryColor = new Color(0.9f, 0.08f, 0.12f);
-        Color berryHighlight = new Color(0.98f, 0.2f, 0.24f);
-
-        Vector3[] clumpPositions =
-        {
-            new Vector3(-0.12f, 0.18f, -0.02f),
-            new Vector3(0.14f, 0.22f, 0.04f),
-            new Vector3(0.02f, 0.25f, -0.14f)
-        };
-
-        Vector3[] clumpScales =
-        {
-            new Vector3(0.32f, 0.24f, 0.3f),
-            new Vector3(0.36f, 0.28f, 0.32f),
-            new Vector3(0.28f, 0.22f, 0.26f)
-        };
-
-        for (int i = 0; i < clumpPositions.Length; i++)
-        {
-            GameObject clump = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            clump.transform.SetParent(bushRoot.transform, false);
-            clump.transform.localPosition = clumpPositions[i];
-            clump.transform.localScale = clumpScales[i];
-            ApplyColor(clump, i % 2 == 0 ? leafLight : leafDark);
-            ConfigureStaticVisual(clump);
-        }
-
-        for (int i = 0; i < 12; i++)
-        {
-            float angle = (i / 12f) * Mathf.PI * 2f + variantSeed * 0.37f;
-            float radius = 0.08f + (i % 3) * 0.035f;
-            GameObject berry = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            berry.transform.SetParent(bushRoot.transform, false);
-            berry.transform.localPosition = new Vector3(
-                Mathf.Cos(angle) * radius,
-                0.13f + (i % 4) * 0.045f,
-                Mathf.Sin(angle) * radius * 0.88f);
-            berry.transform.localScale = new Vector3(0.085f, 0.085f, 0.085f);
-            ApplyColor(berry, i % 3 == 0 ? berryHighlight : berryColor);
-            ConfigureStaticVisual(berry);
-        }
-
-        miscOccupiedCells.Add(cell);
-    }
-
-    private void CreateFlowerPatch(Vector2Int cell, int variantSeed)
-    {
-        if (miscRoot == null)
-        {
-            return;
-        }
-
-        GameObject patchRoot = new($"FlowerPatch_{cell.x}_{cell.y}");
-        patchRoot.transform.SetParent(miscRoot, false);
-        patchRoot.transform.position = GetCellCenter(cell);
-        patchRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-        patchRoot.transform.localScale = Vector3.one * Random.Range(0.82f, 1.08f);
-
-        Color stemColor = new Color(0.2f, 0.5f, 0.24f);
-        Color[] petalColors =
-        {
-            new Color(0.94f, 0.88f, 0.24f),
-            new Color(0.96f, 0.62f, 0.22f),
-            new Color(0.92f, 0.48f, 0.58f),
-            new Color(0.86f, 0.78f, 0.96f)
-        };
-
-        int flowerCount = 4 + (variantSeed % 3);
-        for (int i = 0; i < flowerCount; i++)
-        {
-            float angle = (i / Mathf.Max(1f, flowerCount)) * Mathf.PI * 2f + variantSeed * 0.31f;
-            float radius = 0.08f + (i % 2) * 0.06f;
-            Vector3 baseOffset = new Vector3(
-                Mathf.Cos(angle) * radius,
-                0.04f,
-                Mathf.Sin(angle) * radius);
-
-            GameObject stem = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            stem.transform.SetParent(patchRoot.transform, false);
-            stem.transform.localPosition = baseOffset + new Vector3(0f, 0.08f, 0f);
-            stem.transform.localScale = new Vector3(0.018f, 0.08f, 0.018f);
-            ApplyColor(stem, stemColor);
-            ConfigureStaticVisual(stem);
-
-            GameObject bloom = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            bloom.transform.SetParent(patchRoot.transform, false);
-            bloom.transform.localPosition = baseOffset + new Vector3(0f, 0.17f + (i % 2) * 0.015f, 0f);
-            bloom.transform.localScale = new Vector3(0.08f, 0.035f, 0.08f);
-            ApplyColor(bloom, petalColors[(variantSeed + i) % petalColors.Length]);
-            ConfigureStaticVisual(bloom);
-        }
-
-        GameObject grassClump = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        grassClump.transform.SetParent(patchRoot.transform, false);
-        grassClump.transform.localPosition = new Vector3(0f, 0.03f, 0f);
-        grassClump.transform.localScale = new Vector3(0.28f, 0.08f, 0.24f);
-        ApplyColor(grassClump, new Color(0.24f, 0.56f, 0.28f));
-        ConfigureStaticVisual(grassClump);
-
-        flowerBeePoints.Add(patchRoot.transform.position + new Vector3(0f, 0.08f, 0f));
-        miscOccupiedCells.Add(cell);
-    }
-
-    private void RegisterMiscTreeSway(Transform treeRoot, Vector2Int cell, int variantIndex)
-    {
-        if (treeRoot == null)
-        {
-            return;
-        }
-
-        miscTreeSways.Add(new MiscTreeSway
-        {
-            RootTransform = treeRoot,
-            BaseRotation = treeRoot.localRotation,
-            PhaseOffset = (cell.x * 0.73f) + (cell.y * 1.17f) + variantIndex * 0.41f,
-            SecondaryPhaseOffset = (cell.x * 1.31f) + (cell.y * 0.57f) + variantIndex * 0.88f,
-            Speed = 0.55f + ((cell.x + cell.y + variantIndex) % 5) * 0.06f,
-            PitchAmplitude = 1.2f + ((cell.x + variantIndex) % 4) * 0.18f,
-            RollAmplitude = 0.9f + ((cell.y + variantIndex) % 4) * 0.14f
-        });
-    }
-
-    private void RegisterMiscTreePerchPoint(Transform treeRoot, Vector2Int cell, int variantIndex)
-    {
-        if (treeRoot == null)
-        {
-            return;
-        }
-
-        float canopyHeight = treeRoot.localScale.y * Random.Range(0.76f, 0.9f);
-        Vector3 perchOffset = new(
-            (((cell.x + variantIndex) % 3) - 1) * 0.05f,
-            canopyHeight,
-            (((cell.y + variantIndex * 2) % 3) - 1) * 0.05f);
-        miscTreePerchPoints.Add(treeRoot.position + perchOffset);
-    }
-
-    private void UpdateMiscTreeSways()
-    {
-        if (miscTreeSways.Count == 0)
-        {
-            return;
-        }
-
-        float time = Time.time;
-        for (int i = miscTreeSways.Count - 1; i >= 0; i--)
-        {
-            MiscTreeSway sway = miscTreeSways[i];
-            if (sway.RootTransform == null)
-            {
-                miscTreeSways.RemoveAt(i);
-                continue;
-            }
-
-            float primary = Mathf.Sin(time * sway.Speed + sway.PhaseOffset);
-            float secondary = Mathf.Sin(time * (sway.Speed * 0.63f) + sway.SecondaryPhaseOffset);
-            float pitch = primary * sway.PitchAmplitude;
-            float roll = secondary * sway.RollAmplitude;
-            sway.RootTransform.localRotation = sway.BaseRotation * Quaternion.Euler(pitch, 0f, roll);
-        }
-    }
-
-    private void CreateTreeVariant(Transform parent, int variantIndex)
-    {
-        int variant = Mathf.Abs(variantIndex) % 3;
+        int variant = Random.Range(0, 5);
         switch (variant)
         {
-            case 0:
-                CreateMiscTreeTall(parent);
-                break;
-            case 1:
-                CreateMiscTreeRound(parent);
-                break;
-            default:
-                CreateMiscTreePine(parent);
-                break;
+            case 0:  HouseRanch(or);      break;
+            case 1:  HouseCapeCod(or);    break;
+            case 2:  HouseColonial(or);   break;
+            case 3:  HouseCraftsman(or);  break;
+            default: HouseSplitLevel(or); break;
+        }
+
+        CreateDrivewayToAnchor(parent, min, max, anchor, 0.72f);
+    }
+
+    // ── Local helper shared by all house variants ────────────────────────────
+
+    private GameObject HQ(Transform p, Vector3 pos, Vector3 size, Color col)
+    {
+        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        go.transform.SetParent(p, false);
+        go.transform.localPosition = pos;
+        go.transform.localScale = size;
+        ApplyColor(go, col);
+        ConfigureStaticVisual(go);
+        return go;
+    }
+
+    private void HouseFence(Transform p, float xFrom, float xTo, float fz, Color col)
+    {
+        // Two horizontal rails
+        float cx = (xFrom + xTo) * 0.5f;
+        float len = Mathf.Abs(xTo - xFrom);
+        HQ(p, new Vector3(cx, 0.38f, fz), new Vector3(len, 0.04f, 0.04f), col);
+        HQ(p, new Vector3(cx, 0.30f, fz), new Vector3(len, 0.04f, 0.04f), col);
+        // Posts every ~0.38 units
+        int posts = Mathf.Max(2, Mathf.RoundToInt(len / 0.38f) + 1);
+        for (int i = 0; i < posts; i++)
+        {
+            float px = xFrom + (xTo - xFrom) * i / Mathf.Max(1, posts - 1);
+            HQ(p, new Vector3(px, 0.30f, fz), new Vector3(0.05f, 0.22f, 0.05f), col);
         }
     }
 
-    private void CreateMiscTreeTall(Transform parent)
+    private void HouseTree(Transform p, float x, float z)
     {
-        GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        trunk.transform.SetParent(parent, false);
-        trunk.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.34f, 0f));
-        trunk.transform.localScale = ScaleTreeLocalScale(new Vector3(0.12f, 0.34f, 0.12f));
-        ApplyColor(trunk, new Color(0.44f, 0.28f, 0.16f));
-        ConfigureStaticVisual(trunk);
-
-        GameObject crownBottom = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        crownBottom.transform.SetParent(parent, false);
-        crownBottom.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.9f, 0f));
-        crownBottom.transform.localScale = ScaleTreeLocalScale(new Vector3(0.62f, 0.42f, 0.62f));
-        ApplyColor(crownBottom, new Color(0.22f, 0.56f, 0.27f));
-        ConfigureStaticVisual(crownBottom);
-
-        GameObject crownTop = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        crownTop.transform.SetParent(parent, false);
-        crownTop.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 1.16f, 0f));
-        crownTop.transform.localScale = ScaleTreeLocalScale(new Vector3(0.44f, 0.34f, 0.44f));
-        ApplyColor(crownTop, new Color(0.18f, 0.5f, 0.24f));
-        ConfigureStaticVisual(crownTop);
+        Color trunk = new Color(0.30f, 0.20f, 0.12f);
+        Color canopy = new Color(0.22f, 0.44f, 0.18f);
+        GameObject tr = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        tr.transform.SetParent(p, false);
+        tr.transform.localPosition = new Vector3(x, 0.44f, z);
+        tr.transform.localScale = new Vector3(0.08f, 0.22f, 0.08f);
+        ApplyColor(tr, trunk); ConfigureStaticVisual(tr);
+        GameObject cn = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        cn.transform.SetParent(p, false);
+        cn.transform.localPosition = new Vector3(x, 0.82f, z);
+        cn.transform.localScale = new Vector3(0.50f, 0.42f, 0.50f);
+        ApplyColor(cn, canopy); ConfigureStaticVisual(cn);
     }
 
-    private void CreateMiscTreeRound(Transform parent)
+    private void HouseShrub(Transform p, float x, float z)
     {
-        GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        trunk.transform.SetParent(parent, false);
-        trunk.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.28f, 0f));
-        trunk.transform.localScale = ScaleTreeLocalScale(new Vector3(0.11f, 0.28f, 0.11f));
-        ApplyColor(trunk, new Color(0.42f, 0.25f, 0.15f));
-        ConfigureStaticVisual(trunk);
-
-        GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        canopy.transform.SetParent(parent, false);
-        canopy.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.84f, 0f));
-        canopy.transform.localScale = ScaleTreeLocalScale(new Vector3(0.72f, 0.66f, 0.72f));
-        ApplyColor(canopy, new Color(0.3f, 0.62f, 0.31f));
-        ConfigureStaticVisual(canopy);
-
-        GameObject sideBlob = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        sideBlob.transform.SetParent(parent, false);
-        sideBlob.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0.18f, 0.78f, -0.1f));
-        sideBlob.transform.localScale = ScaleTreeLocalScale(new Vector3(0.34f, 0.28f, 0.34f));
-        ApplyColor(sideBlob, new Color(0.24f, 0.56f, 0.28f));
-        ConfigureStaticVisual(sideBlob);
+        GameObject s = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        s.transform.SetParent(p, false);
+        s.transform.localPosition = new Vector3(x, 0.32f, z);
+        s.transform.localScale = new Vector3(0.30f, 0.24f, 0.30f);
+        ApplyColor(s, new Color(0.26f, 0.48f, 0.20f));
+        ConfigureStaticVisual(s);
     }
 
-    private void CreateMiscTreePine(Transform parent)
+    // ── Variant 0: Ranch (white, horizontal, left garage) ───────────────────
+
+    private void HouseRanch(Transform p)
     {
-        GameObject trunk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        trunk.transform.SetParent(parent, false);
-        trunk.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.24f, 0f));
-        trunk.transform.localScale = ScaleTreeLocalScale(new Vector3(0.1f, 0.24f, 0.1f));
-        ApplyColor(trunk, new Color(0.4f, 0.24f, 0.14f));
-        ConfigureStaticVisual(trunk);
+        Color white   = new Color(0.94f, 0.92f, 0.88f);
+        Color roof    = new Color(0.22f, 0.15f, 0.08f);
+        Color gray    = new Color(0.82f, 0.81f, 0.78f);
+        Color darkPnl = new Color(0.24f, 0.24f, 0.22f);
+        Color brick   = new Color(0.62f, 0.26f, 0.16f);
+        Color winBlue = new Color(0.56f, 0.76f, 0.86f);
+        Color fence   = new Color(0.94f, 0.92f, 0.88f);
+        Color conc    = new Color(0.68f, 0.67f, 0.64f);
 
-        GameObject lower = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        lower.transform.SetParent(parent, false);
-        lower.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 0.7f, 0f));
-        lower.transform.localScale = ScaleTreeLocalScale(new Vector3(0.36f, 0.24f, 0.36f));
-        ApplyColor(lower, new Color(0.16f, 0.44f, 0.23f));
-        ConfigureStaticVisual(lower);
-
-        GameObject upper = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        upper.transform.SetParent(parent, false);
-        upper.transform.localPosition = ScaleTreeLocalPosition(new Vector3(0f, 1.05f, 0f));
-        upper.transform.localScale = ScaleTreeLocalScale(new Vector3(0.24f, 0.22f, 0.24f));
-        ApplyColor(upper, new Color(0.12f, 0.36f, 0.2f));
-        ConfigureStaticVisual(upper);
+        // House body (wide, low, back-center)
+        HQ(p, new Vector3(0.30f,  0.47f, -1.05f), new Vector3(2.50f, 0.50f, 1.60f), white);
+        // Roof flat cap
+        HQ(p, new Vector3(0.30f,  0.75f, -1.05f), new Vector3(2.65f, 0.08f, 1.75f), roof);
+        // Gable ends
+        HQ(p, new Vector3(-0.95f, 0.82f, -1.05f), new Vector3(0.07f, 0.22f, 1.75f), roof);
+        HQ(p, new Vector3( 1.55f, 0.82f, -1.05f), new Vector3(0.07f, 0.22f, 1.75f), roof);
+        // Garage (left, front section)
+        HQ(p, new Vector3(-0.90f, 0.41f, -0.12f), new Vector3(0.82f, 0.38f, 0.85f), gray);
+        HQ(p, new Vector3(-0.90f, 0.63f, -0.12f), new Vector3(0.88f, 0.07f, 0.90f), roof);
+        // Garage door (front face: z = -0.12 + 0.425 = 0.305)
+        HQ(p, new Vector3(-0.90f, 0.42f,  0.32f), new Vector3(0.72f, 0.35f, 0.04f), darkPnl);
+        // Front door (front face of house: z = -1.05 + 0.80 = -0.25)
+        HQ(p, new Vector3( 0.90f, 0.42f, -0.24f), new Vector3(0.17f, 0.44f, 0.05f), new Color(0.72f, 0.18f, 0.12f));
+        // Step
+        HQ(p, new Vector3( 0.90f, 0.15f, -0.06f), new Vector3(0.32f, 0.14f, 0.22f), conc);
+        // Windows
+        HQ(p, new Vector3(-0.05f, 0.53f, -0.24f), new Vector3(0.30f, 0.20f, 0.04f), winBlue);
+        HQ(p, new Vector3( 0.55f, 0.53f, -0.24f), new Vector3(0.30f, 0.20f, 0.04f), winBlue);
+        // Chimney (right side)
+        HQ(p, new Vector3( 1.30f, 0.82f, -0.90f), new Vector3(0.14f, 0.38f, 0.14f), brick);
+        HQ(p, new Vector3( 1.30f, 1.02f, -0.90f), new Vector3(0.18f, 0.06f, 0.18f), brick);
+        // Driveway (left side)
+        HQ(p, new Vector3(-0.90f, 0.22f,  1.00f), new Vector3(0.76f, 0.012f, 1.70f), conc);
+        // Fence (gap at left driveway x = -0.90 ± 0.38)
+        HouseFence(p, -1.55f, -1.30f,  1.72f, fence);
+        HouseFence(p, -0.50f,  1.55f,  1.72f, fence);
+        HouseTree(p, -1.40f, 1.10f);
+        HouseTree(p,  1.40f, 0.80f);
+        HouseShrub(p, 0.20f, -0.06f);
+        HouseShrub(p, 1.10f, -0.06f);
     }
 
-    private static Vector3 ScaleTreeLocalPosition(Vector3 source)
+    // ── Variant 1: Cape Cod (steel blue, steep roof, right garage) ──────────
+
+    private void HouseCapeCod(Transform p)
     {
-        source.y *= TreeHeightScale;
-        return source;
+        Color blue   = new Color(0.46f, 0.60f, 0.74f);
+        Color dark   = new Color(0.22f, 0.22f, 0.24f);
+        Color white  = new Color(0.93f, 0.93f, 0.91f);
+        Color navy   = new Color(0.14f, 0.22f, 0.44f);
+        Color winBlue= new Color(0.56f, 0.76f, 0.86f);
+        Color conc   = new Color(0.68f, 0.67f, 0.64f);
+        Color fence  = new Color(0.94f, 0.92f, 0.88f);
+
+        // House body (left-center, back)
+        HQ(p, new Vector3(-0.40f, 0.53f, -0.90f), new Vector3(1.90f, 0.62f, 1.55f), blue);
+        // Steep roof (tall block on top)
+        HQ(p, new Vector3(-0.40f, 0.94f, -0.90f), new Vector3(1.96f, 0.65f, 1.62f), dark);
+        // White corner trim
+        HQ(p, new Vector3(-1.38f, 0.53f, -0.90f), new Vector3(0.07f, 0.62f, 1.55f), white);
+        HQ(p, new Vector3( 0.56f, 0.53f, -0.90f), new Vector3(0.07f, 0.62f, 1.55f), white);
+        // Dormer window (small bump on roof front)
+        HQ(p, new Vector3(-0.20f, 1.28f, -0.88f), new Vector3(0.50f, 0.36f, 0.40f), blue);
+        HQ(p, new Vector3(-0.20f, 1.47f, -0.88f), new Vector3(0.52f, 0.06f, 0.42f), dark);
+        HQ(p, new Vector3(-0.20f, 1.30f, -0.67f), new Vector3(0.22f, 0.16f, 0.04f), winBlue);
+        // Garage (right, front section)
+        HQ(p, new Vector3( 1.00f, 0.41f, -0.12f), new Vector3(0.82f, 0.38f, 0.85f), white);
+        HQ(p, new Vector3( 1.00f, 0.63f, -0.12f), new Vector3(0.88f, 0.07f, 0.90f), dark);
+        HQ(p, new Vector3( 1.00f, 0.42f,  0.32f), new Vector3(0.72f, 0.35f, 0.04f), new Color(0.26f, 0.26f, 0.24f));
+        // Front door (front face at z = -0.90 + 0.775 = -0.125)
+        HQ(p, new Vector3(-0.55f, 0.45f, -0.11f), new Vector3(0.18f, 0.46f, 0.05f), navy);
+        // Step
+        HQ(p, new Vector3(-0.55f, 0.15f,  0.06f), new Vector3(0.34f, 0.14f, 0.24f), conc);
+        // Windows
+        HQ(p, new Vector3(-1.10f, 0.56f, -0.11f), new Vector3(0.26f, 0.20f, 0.04f), winBlue);
+        HQ(p, new Vector3( 0.20f, 0.56f, -0.11f), new Vector3(0.26f, 0.20f, 0.04f), winBlue);
+        // Driveway (right side)
+        HQ(p, new Vector3( 1.00f, 0.22f,  1.00f), new Vector3(0.76f, 0.012f, 1.70f), conc);
+        // Fence (gap at right driveway)
+        HouseFence(p, -1.55f, 0.60f,  1.72f, fence);
+        HouseFence(p,  1.40f, 1.55f,  1.72f, fence);
+        HouseTree(p, -1.40f, 0.90f);
+        HouseTree(p,  1.50f, 1.30f);
+        HouseShrub(p, -0.80f, -0.05f);
     }
 
-    private static Vector3 ScaleTreeLocalScale(Vector3 source)
+    // ── Variant 2: Colonial (cream, tall, symmetrical, columns) ─────────────
+
+    private void HouseColonial(Transform p)
     {
-        source.y *= TreeHeightScale;
-        return source;
+        Color cream  = new Color(0.96f, 0.94f, 0.86f);
+        Color dark   = new Color(0.20f, 0.20f, 0.18f);
+        Color winYlw = new Color(0.88f, 0.82f, 0.58f);
+        Color conc   = new Color(0.76f, 0.74f, 0.70f);
+        Color fence  = new Color(0.94f, 0.92f, 0.88f);
+
+        // House body (tall, centered)
+        HQ(p, new Vector3(0f,  0.57f, -0.85f), new Vector3(2.55f, 0.70f, 1.65f), cream);
+        // Roof
+        HQ(p, new Vector3(0f,  0.96f, -0.85f), new Vector3(2.68f, 0.08f, 1.78f), dark);
+        // Gable ends
+        HQ(p, new Vector3(-1.30f, 1.02f, -0.85f), new Vector3(0.07f, 0.22f, 1.78f), dark);
+        HQ(p, new Vector3( 1.30f, 1.02f, -0.85f), new Vector3(0.07f, 0.22f, 1.78f), dark);
+        // Porch platform (front, between columns)
+        HQ(p, new Vector3(0f,  0.26f,  0.22f), new Vector3(1.85f, 0.07f, 0.60f), conc);
+        // Porch pediment (narrow roof over columns)
+        HQ(p, new Vector3(0f,  0.72f,  0.20f), new Vector3(2.0f,  0.07f, 0.62f), dark);
+        // 4 white columns (Cylinder)
+        foreach (float cx in new float[] { -0.68f, -0.22f, 0.22f, 0.68f })
+        {
+            GameObject col = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            col.transform.SetParent(p, false);
+            col.transform.localPosition = new Vector3(cx, 0.49f, 0.48f);
+            col.transform.localScale = new Vector3(0.09f, 0.24f, 0.09f);
+            ApplyColor(col, cream); ConfigureStaticVisual(col);
+        }
+        // Front door (front face: z = -0.85 + 0.825 = -0.025)
+        HQ(p, new Vector3(0f,    0.48f, -0.01f), new Vector3(0.22f, 0.52f, 0.05f), dark);
+        // 4 symmetrical windows
+        HQ(p, new Vector3(-0.88f, 0.61f, -0.01f), new Vector3(0.24f, 0.26f, 0.04f), winYlw);
+        HQ(p, new Vector3(-0.44f, 0.61f, -0.01f), new Vector3(0.24f, 0.26f, 0.04f), winYlw);
+        HQ(p, new Vector3( 0.44f, 0.61f, -0.01f), new Vector3(0.24f, 0.26f, 0.04f), winYlw);
+        HQ(p, new Vector3( 0.88f, 0.61f, -0.01f), new Vector3(0.24f, 0.26f, 0.04f), winYlw);
+        // Small garage on right
+        HQ(p, new Vector3( 1.05f, 0.41f, -0.12f), new Vector3(0.82f, 0.38f, 0.90f), cream);
+        HQ(p, new Vector3( 1.05f, 0.63f, -0.12f), new Vector3(0.88f, 0.07f, 0.94f), dark);
+        HQ(p, new Vector3( 1.05f, 0.42f,  0.33f), new Vector3(0.72f, 0.35f, 0.04f), new Color(0.26f, 0.26f, 0.24f));
+        // Driveway (right side)
+        HQ(p, new Vector3( 1.05f, 0.22f,  1.00f), new Vector3(0.76f, 0.012f, 1.70f), new Color(0.68f, 0.67f, 0.64f));
+        // Fence
+        HouseFence(p, -1.55f, 0.65f, 1.72f, fence);
+        HouseFence(p,  1.45f, 1.55f, 1.72f, fence);
+        HouseTree(p, -1.40f, 0.90f);
+        HouseTree(p,  1.50f, 1.20f);
+        HouseShrub(p, -1.0f, 0.18f);
+        HouseShrub(p,  0.6f, 0.18f);
+    }
+
+    // ── Variant 3: Craftsman (tan, wide porch, chimney) ─────────────────────
+
+    private void HouseCraftsman(Transform p)
+    {
+        Color tan    = new Color(0.78f, 0.66f, 0.48f);
+        Color dbrown = new Color(0.26f, 0.18f, 0.10f);
+        Color stone  = new Color(0.54f, 0.52f, 0.48f);
+        Color winGrn = new Color(0.52f, 0.72f, 0.56f);
+        Color conc   = new Color(0.68f, 0.67f, 0.64f);
+        Color fence  = new Color(0.94f, 0.92f, 0.88f);
+
+        // House body
+        HQ(p, new Vector3(0f,    0.47f, -0.92f), new Vector3(2.20f, 0.50f, 1.45f), tan);
+        // Main gable roof (wide, extends to cover porch)
+        HQ(p, new Vector3(0f,    0.75f, -0.60f), new Vector3(2.35f, 0.08f, 2.15f), dbrown);
+        // Gable ends
+        HQ(p, new Vector3(-1.12f, 0.82f, -0.60f), new Vector3(0.07f, 0.22f, 2.15f), dbrown);
+        HQ(p, new Vector3( 1.12f, 0.82f, -0.60f), new Vector3(0.07f, 0.22f, 2.15f), dbrown);
+        // Wide front porch platform
+        HQ(p, new Vector3(0f,    0.25f,  0.25f), new Vector3(2.30f, 0.07f, 0.80f), new Color(0.60f, 0.48f, 0.32f));
+        // Porch knee walls (short side walls)
+        HQ(p, new Vector3(-1.10f, 0.35f,  0.22f), new Vector3(0.07f, 0.20f, 0.78f), tan);
+        HQ(p, new Vector3( 1.10f, 0.35f,  0.22f), new Vector3(0.07f, 0.20f, 0.78f), tan);
+        // Porch columns (4 square posts)
+        foreach (float cx in new float[] { -0.78f, -0.26f, 0.26f, 0.78f })
+        {
+            HQ(p, new Vector3(cx, 0.49f, 0.60f), new Vector3(0.09f, 0.48f, 0.09f), dbrown);
+        }
+        // Exposed rafter tails
+        foreach (float cx in new float[] { -0.90f, -0.44f, 0f, 0.44f, 0.90f })
+        {
+            HQ(p, new Vector3(cx, 0.74f, 0.68f), new Vector3(0.06f, 0.06f, 0.12f), dbrown);
+        }
+        // Stone chimney (wide)
+        HQ(p, new Vector3(-0.45f, 0.80f, -0.40f), new Vector3(0.22f, 0.40f, 0.22f), stone);
+        HQ(p, new Vector3(-0.45f, 1.03f, -0.40f), new Vector3(0.27f, 0.06f, 0.27f), stone);
+        // Front door
+        HQ(p, new Vector3(-0.55f, 0.47f, -0.15f), new Vector3(0.18f, 0.44f, 0.05f), new Color(0.44f, 0.28f, 0.12f));
+        HQ(p, new Vector3(-0.55f, 0.16f,  0.08f), new Vector3(0.34f, 0.14f, 0.24f), conc);
+        // Windows (large, multi-pane style)
+        HQ(p, new Vector3( 0.40f, 0.50f, -0.15f), new Vector3(0.46f, 0.28f, 0.04f), winGrn);
+        HQ(p, new Vector3( 1.00f, 0.50f, -0.15f), new Vector3(0.26f, 0.28f, 0.04f), winGrn);
+        // Left garage
+        HQ(p, new Vector3(-0.92f, 0.41f, -0.12f), new Vector3(0.82f, 0.38f, 0.85f), tan);
+        HQ(p, new Vector3(-0.92f, 0.63f, -0.12f), new Vector3(0.88f, 0.07f, 0.90f), dbrown);
+        HQ(p, new Vector3(-0.92f, 0.42f,  0.32f), new Vector3(0.72f, 0.35f, 0.04f), new Color(0.26f, 0.26f, 0.24f));
+        // Driveway
+        HQ(p, new Vector3(-0.92f, 0.22f,  1.00f), new Vector3(0.76f, 0.012f, 1.70f), conc);
+        // Fence
+        HouseFence(p, -1.55f, -1.33f, 1.72f, fence);
+        HouseFence(p, -0.52f,  1.55f, 1.72f, fence);
+        HouseTree(p,  1.40f, 0.90f);
+        HouseShrub(p,  0.90f, 0.50f);
+        HouseShrub(p,  1.30f, 0.50f);
+    }
+
+    // ── Variant 4: Split-Level (beige, two heights, right garage) ───────────
+
+    private void HouseSplitLevel(Transform p)
+    {
+        Color beige  = new Color(0.88f, 0.82f, 0.70f);
+        Color lbeige = new Color(0.92f, 0.88f, 0.78f);
+        Color dark   = new Color(0.20f, 0.18f, 0.14f);
+        Color slate  = new Color(0.54f, 0.56f, 0.58f);
+        Color winBlue= new Color(0.56f, 0.76f, 0.86f);
+        Color conc   = new Color(0.68f, 0.67f, 0.64f);
+        Color fence  = new Color(0.94f, 0.92f, 0.88f);
+
+        // Upper / main block (tall, right side)
+        HQ(p, new Vector3( 0.42f, 0.63f, -0.88f), new Vector3(2.00f, 0.82f, 1.72f), beige);
+        HQ(p, new Vector3( 0.42f, 1.08f, -0.88f), new Vector3(2.10f, 0.07f, 1.82f), dark);
+        // Lower block (garage level, left)
+        HQ(p, new Vector3(-0.95f, 0.41f, -0.12f), new Vector3(0.88f, 0.46f, 0.90f), lbeige);
+        HQ(p, new Vector3(-0.95f, 0.67f, -0.12f), new Vector3(0.92f, 0.07f, 0.94f), dark);
+        // Connecting step piece
+        HQ(p, new Vector3(-0.26f, 0.32f, -0.22f), new Vector3(0.38f, 0.24f, 0.08f), beige);
+        // Garage door
+        HQ(p, new Vector3(-0.95f, 0.42f,  0.33f), new Vector3(0.78f, 0.38f, 0.04f), new Color(0.26f, 0.26f, 0.24f));
+        // Accent stripe between levels
+        HQ(p, new Vector3(-0.49f, 0.60f, -0.88f), new Vector3(0.08f, 0.82f, 1.72f), slate);
+        // Front door (front face of upper block: z = -0.88 + 0.86 = -0.02)
+        HQ(p, new Vector3( 0.60f, 0.58f, -0.01f), new Vector3(0.18f, 0.46f, 0.05f), new Color(0.68f, 0.14f, 0.10f));
+        HQ(p, new Vector3( 0.60f, 0.18f,  0.18f), new Vector3(0.34f, 0.14f, 0.26f), conc);
+        // Windows
+        HQ(p, new Vector3(-0.05f, 0.72f, -0.01f), new Vector3(0.36f, 0.30f, 0.04f), winBlue);
+        HQ(p, new Vector3( 1.10f, 0.72f, -0.01f), new Vector3(0.36f, 0.30f, 0.04f), winBlue);
+        HQ(p, new Vector3( 0.62f, 0.72f, -0.01f), new Vector3(0.22f, 0.30f, 0.04f), winBlue);
+        // Driveway (left side)
+        HQ(p, new Vector3(-0.95f, 0.22f,  1.00f), new Vector3(0.82f, 0.012f, 1.70f), conc);
+        // Fence
+        HouseFence(p, -1.55f, -1.38f, 1.72f, fence);
+        HouseFence(p, -0.55f,  1.55f, 1.72f, fence);
+        HouseTree(p,  1.45f, 1.10f);
+        HouseTree(p, -1.42f, 0.90f);
+        HouseShrub(p, -0.15f, 0.50f);
     }
 }
-
-

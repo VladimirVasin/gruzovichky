@@ -6,6 +6,14 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
+    private static readonly string[] CarModelNames = { "Sedan", "Pickup", "Hatchback" };
+    private static readonly Color[] CarBodyColors =
+    {
+        new(0.22f, 0.38f, 0.70f),
+        new(0.75f, 0.18f, 0.15f),
+        new(0.48f, 0.62f, 0.22f)
+    };
+
     private static readonly string[] WorkerMaleFirstNames =
     {
         // Disco Elysium style
@@ -92,12 +100,142 @@ public partial class GameBootstrap
         return $"{first} {last}";
     }
 
+    private GameObject CreateCarModel(int modelIndex, Transform parent)
+    {
+        int idx = Mathf.Clamp(modelIndex, 0, CarModelNames.Length - 1);
+        GameObject root = new($"Car_{CarModelNames[idx]}");
+        root.transform.SetParent(parent, false);
+
+        switch (idx)
+        {
+            case 1:
+                BuildPickupCar(root.transform, CarBodyColors[idx]);
+                break;
+            case 2:
+                BuildHatchbackCar(root.transform, CarBodyColors[idx]);
+                break;
+            default:
+                BuildSedanCar(root.transform, CarBodyColors[idx]);
+                break;
+        }
+
+        return root;
+    }
+
+    private void BuildSedanCar(Transform parent, Color bodyColor)
+    {
+        CreateCarCube(parent, "SedanBody", new Vector3(0f, 0.14f, 0f), new Vector3(0.92f, 0.22f, 0.44f), bodyColor);
+        CreateCarCube(parent, "SedanRoof", new Vector3(-0.08f, 0.30f, 0f), new Vector3(0.50f, 0.16f, 0.40f), Color.Lerp(bodyColor, Color.white, 0.12f));
+        CreateCarCube(parent, "SedanWindshield", new Vector3(0.20f, 0.31f, 0f), new Vector3(0.06f, 0.12f, 0.36f), new Color(0.65f, 0.84f, 0.92f));
+        CreateCarCube(parent, "SedanRearGlass", new Vector3(-0.36f, 0.30f, 0f), new Vector3(0.05f, 0.12f, 0.34f), new Color(0.58f, 0.78f, 0.88f));
+        CreateCarWheels(parent, 0.34f, 0.25f, 0.095f, 0.08f);
+    }
+
+    private void BuildPickupCar(Transform parent, Color bodyColor)
+    {
+        CreateCarCube(parent, "PickupBody", new Vector3(0f, 0.17f, 0f), new Vector3(0.88f, 0.30f, 0.48f), bodyColor);
+        CreateCarCube(parent, "PickupCab", new Vector3(0.22f, 0.40f, 0f), new Vector3(0.42f, 0.24f, 0.44f), Color.Lerp(bodyColor, Color.white, 0.10f));
+        CreateCarCube(parent, "PickupBedLeft", new Vector3(-0.24f, 0.38f, -0.24f), new Vector3(0.46f, 0.12f, 0.05f), Color.Lerp(bodyColor, Color.black, 0.12f));
+        CreateCarCube(parent, "PickupBedRight", new Vector3(-0.24f, 0.38f, 0.24f), new Vector3(0.46f, 0.12f, 0.05f), Color.Lerp(bodyColor, Color.black, 0.12f));
+        CreateCarCube(parent, "PickupBedGate", new Vector3(-0.48f, 0.38f, 0f), new Vector3(0.05f, 0.12f, 0.46f), Color.Lerp(bodyColor, Color.black, 0.12f));
+        CreateCarCube(parent, "PickupWindshield", new Vector3(0.45f, 0.41f, 0f), new Vector3(0.05f, 0.13f, 0.34f), new Color(0.65f, 0.84f, 0.92f));
+        CreateCarWheels(parent, 0.35f, 0.28f, 0.115f, 0.10f);
+    }
+
+    private void BuildHatchbackCar(Transform parent, Color bodyColor)
+    {
+        CreateCarCube(parent, "HatchBody", new Vector3(0f, 0.15f, 0f), new Vector3(0.74f, 0.26f, 0.42f), bodyColor);
+        CreateCarCube(parent, "HatchRoof", new Vector3(0.02f, 0.28f, 0f), new Vector3(0.68f, 0.18f, 0.40f), Color.Lerp(bodyColor, Color.white, 0.10f));
+        CreateCarCube(parent, "HatchWindshield", new Vector3(0.38f, 0.28f, 0f), new Vector3(0.05f, 0.12f, 0.34f), new Color(0.65f, 0.84f, 0.92f));
+        CreateCarCube(parent, "HatchRearGlass", new Vector3(-0.34f, 0.27f, 0f), new Vector3(0.05f, 0.13f, 0.34f), new Color(0.58f, 0.78f, 0.88f));
+        CreateCarWheels(parent, 0.28f, 0.24f, 0.09f, 0.07f);
+    }
+
+    private GameObject CreateCarCube(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Color color)
+    {
+        GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        part.name = name;
+        part.transform.SetParent(parent, false);
+        part.transform.localPosition = localPosition;
+        part.transform.localScale = localScale;
+        ApplyColor(part, color);
+        ConfigureShadowVisual(part);
+        DisableCarCollider(part);
+        return part;
+    }
+
+    private GameObject CreateCarWheel(Transform parent, string name, Vector3 localPosition, float radius, float width)
+    {
+        GameObject wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        wheel.name = name;
+        wheel.transform.SetParent(parent, false);
+        wheel.transform.localPosition = localPosition;
+        wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        wheel.transform.localScale = new Vector3(radius, width * 0.5f, radius);
+        ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f));
+        ConfigureShadowVisual(wheel);
+        DisableCarCollider(wheel);
+        return wheel;
+    }
+
+    private void CreateCarWheels(Transform parent, float xOffset, float zOffset, float radius, float width)
+    {
+        CreateCarWheel(parent, "WheelFrontLeft", new Vector3(xOffset, 0.08f, -zOffset), radius, width);
+        CreateCarWheel(parent, "WheelFrontRight", new Vector3(xOffset, 0.08f, zOffset), radius, width);
+        CreateCarWheel(parent, "WheelRearLeft", new Vector3(-xOffset, 0.08f, -zOffset), radius, width);
+        CreateCarWheel(parent, "WheelRearRight", new Vector3(-xOffset, 0.08f, zOffset), radius, width);
+    }
+
+    private static void DisableCarCollider(GameObject part)
+    {
+        if (part != null && part.TryGetComponent(out Collider collider))
+        {
+            collider.enabled = false;
+        }
+    }
+
+    private void SpawnWorkerCarAtParking(DriverAgent driver)
+    {
+        if (driver == null || driver.OwnedCarModelIndex < 0 || !locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            return;
+        }
+
+        if (driver.OwnedCarObject != null)
+        {
+            Object.Destroy(driver.OwnedCarObject);
+            driver.OwnedCarObject = null;
+        }
+
+        int slotIndex = Mathf.Max(0, driverAgents.IndexOf(driver));
+        Vector3 center = GetLocationCenter(parking);
+        Vector3 pos = new(
+            center.x + ((slotIndex % 4) - 1.5f) * 1.3f,
+            0f,
+            center.z - 3f - (slotIndex / 4) * 1.6f);
+        pos.y = SampleTerrainHeight(pos.x, pos.z) + RoadHeight + 0.15f;
+
+        GameObject car = CreateCarModel(driver.OwnedCarModelIndex, worldRoot);
+        car.transform.position = pos;
+        car.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+        car.transform.localScale = Vector3.one;
+        driver.OwnedCarObject = car;
+    }
+
     private void SetupTruck()
     {
-        TruckAgent firstTruck = CreateAndRegisterTruckAgent(1, 0);
-        LoadTruckState(firstTruck);
-        SessionDebugLogger.Log("TRUCK", $"Spawned initial {firstTruck.DisplayName} in parking slot {firstTruck.ParkingSlotIndex}.");
-        if (locations.ContainsKey(LocationType.Motel))
+        if (locations.ContainsKey(LocationType.Parking))
+        {
+            TruckAgent firstTruck = CreateAndRegisterTruckAgent(1, 0);
+            LoadTruckState(firstTruck);
+            SessionDebugLogger.Log("TRUCK", $"Spawned initial {firstTruck.DisplayName} in parking slot {firstTruck.ParkingSlotIndex}.");
+        }
+        else
+        {
+            SessionDebugLogger.Log("TRUCK", "Initial truck skipped: Parking not available in this mode.");
+        }
+
+        if (locations.ContainsKey(LocationType.Motel) || selectedGameStartMode == GameStartMode.User)
         {
             int spawnCount = selectedGameStartMode == GameStartMode.Debug ? 9 : InitialWorkerCount;
             for (int i = 0; i < spawnCount; i++)
@@ -108,7 +246,7 @@ public partial class GameBootstrap
         }
         else
         {
-            SessionDebugLogger.Log("DRIVER", $"Initial workers skipped: Motel is not generated in this mode. Requested starter workers: {InitialWorkerCount}.");
+            SessionDebugLogger.Log("DRIVER", $"Initial workers skipped: no starter idle hub available. Requested starter workers: {InitialWorkerCount}.");
         }
     }
 
@@ -157,6 +295,13 @@ public partial class GameBootstrap
         ConfigureShadowVisual(body);
         truckBodyTransform = body.transform;
 
+        GameObject bodyStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        bodyStripe.transform.SetParent(truckVisualRoot, false);
+        bodyStripe.transform.localPosition = new Vector3(0f, 0.28f, 0f);
+        bodyStripe.transform.localScale = new Vector3(0.74f, 0.05f, 1.02f);
+        ApplyColor(bodyStripe, new Color(0.96f, 0.9f, 0.72f));
+        ConfigureShadowVisual(bodyStripe);
+
         GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cabin.transform.SetParent(truckVisualRoot, false);
         cabin.transform.localPosition = new Vector3(0f, 0.4f, 0.2f);
@@ -165,10 +310,35 @@ public partial class GameBootstrap
         ConfigureShadowVisual(cabin);
         truckCabinTransform = cabin.transform;
 
+        GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        windshield.transform.SetParent(truckVisualRoot, false);
+        windshield.transform.localPosition = new Vector3(0f, 0.43f, 0.42f);
+        windshield.transform.localScale = new Vector3(0.42f, 0.18f, 0.04f);
+        ApplyColor(windshield, new Color(0.68f, 0.86f, 0.94f));
+        ConfigureShadowVisual(windshield);
+
+        GameObject truckShadowBlob = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        truckShadowBlob.transform.SetParent(truckVisualRoot, false);
+        truckShadowBlob.transform.localPosition = new Vector3(0f, -0.01f, 0f);
+        truckShadowBlob.transform.localScale = new Vector3(0.88f, 0.01f, 1.16f);
+        Renderer truckShadowRenderer = truckShadowBlob.GetComponent<Renderer>();
+        truckShadowRenderer.material = CreateTransparentOverlayMaterial(new Color(0f, 0f, 0f, 0.14f));
+        truckShadowRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        truckShadowRenderer.receiveShadows = false;
+        if (truckShadowBlob.TryGetComponent(out Collider truckShadowCollider))
+        {
+            Object.Destroy(truckShadowCollider);
+        }
+
         CreateTruckHeadlightVisual(new Vector3(-0.18f, 0.39f, 0.46f), true);
         CreateTruckHeadlightVisual(new Vector3(0.18f, 0.39f, 0.46f), false);
         CreateTruckHeadlightBeam(new Vector3(-0.18f, 0.39f, 0.5f));
         CreateTruckHeadlightBeam(new Vector3(0.18f, 0.39f, 0.5f));
+
+        GameObject cargoVisualRoot = new("CargoVisualRoot");
+        cargoVisualRoot.transform.SetParent(truckVisualRoot, false);
+        cargoVisualRoot.transform.localPosition = new Vector3(0f, 0.47f, -0.24f);
+        cargoVisualRoot.SetActive(false);
 
         Vector3[] wheelOffsets =
         {
@@ -207,11 +377,136 @@ public partial class GameBootstrap
             EngineAudioPitchBias = Random.Range(0.965f, 1.04f),
             EngineAudioVolumeBias = Random.Range(0.94f, 1.08f)
         };
+        truckAgent.TruckCargoVisualRoot = cargoVisualRoot.transform;
 
         SaveTruckState(truckAgent);
+        UpdateTruckCargoVisual(truckAgent, forceRebuild: true);
         truckAgents.Add(truckAgent);
         SessionDebugLogger.Log("TRUCK", $"Registered {truckAgent.DisplayName} at parking slot {parkingSlotIndex}.");
         return truckAgent;
+    }
+
+    private void UpdateTruckCargoVisual(TruckAgent truckAgent, bool forceRebuild = false)
+    {
+        if (truckAgent?.TruckCargoVisualRoot == null)
+        {
+            return;
+        }
+
+        CargoType cargoType = truckAgent.TruckCargoType;
+        int cargoAmount = truckAgent.TruckCargoAmount;
+        bool hasCargo = cargoAmount > 0 && cargoType != CargoType.None;
+        if (!forceRebuild &&
+            truckAgent.TruckCargoVisualType == cargoType &&
+            truckAgent.TruckCargoVisualAmount == cargoAmount)
+        {
+            truckAgent.TruckCargoVisualRoot.gameObject.SetActive(hasCargo);
+            return;
+        }
+
+        for (int i = truckAgent.TruckCargoVisualRoot.childCount - 1; i >= 0; i--)
+        {
+            Object.Destroy(truckAgent.TruckCargoVisualRoot.GetChild(i).gameObject);
+        }
+
+        truckAgent.TruckCargoVisualType = cargoType;
+        truckAgent.TruckCargoVisualAmount = cargoAmount;
+        truckAgent.TruckCargoVisualRoot.gameObject.SetActive(hasCargo);
+
+        if (!hasCargo)
+        {
+            return;
+        }
+
+        int visibleUnits = Mathf.Clamp(cargoAmount, 1, 5);
+        switch (cargoType)
+        {
+            case CargoType.Logs:
+                BuildTruckLogCargo(truckAgent.TruckCargoVisualRoot, visibleUnits);
+                break;
+            case CargoType.Boards:
+                BuildTruckBoardCargo(truckAgent.TruckCargoVisualRoot, visibleUnits);
+                break;
+            case CargoType.Cotton:
+                BuildTruckBlockCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.96f, 0.95f, 0.88f), new Vector3(0.24f, 0.18f, 0.22f), 0.08f);
+                break;
+            case CargoType.Textile:
+                BuildTruckBlockCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.54f, 0.45f, 0.78f), new Vector3(0.25f, 0.12f, 0.24f), 0.055f);
+                break;
+            case CargoType.Furniture:
+                BuildTruckBlockCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.58f, 0.36f, 0.18f), new Vector3(0.22f, 0.22f, 0.22f), 0.09f);
+                break;
+            case CargoType.Fuel:
+                BuildTruckBarrelCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.86f, 0.68f, 0.16f));
+                break;
+            case CargoType.Alcohol:
+                BuildTruckBarrelCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.20f, 0.13f, 0.10f));
+                break;
+            case CargoType.Food:
+                BuildTruckBlockCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.74f, 0.46f, 0.22f), new Vector3(0.22f, 0.15f, 0.22f), 0.07f);
+                break;
+        }
+    }
+
+    private void BuildTruckLogCargo(Transform parent, int visibleUnits)
+    {
+        int count = Mathf.Clamp(visibleUnits + 1, 2, 5);
+        for (int i = 0; i < count; i++)
+        {
+            GameObject log = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            log.transform.SetParent(parent, false);
+            log.transform.localPosition = new Vector3(Mathf.Lerp(-0.22f, 0.22f, count == 1 ? 0.5f : i / (float)(count - 1)), 0.02f + (i % 2) * 0.045f, 0f);
+            log.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            log.transform.localScale = new Vector3(0.055f, 0.34f, 0.055f);
+            ApplyColor(log, new Color(0.42f, 0.24f, 0.12f));
+            ConfigureShadowVisual(log);
+        }
+    }
+
+    private void BuildTruckBoardCargo(Transform parent, int visibleUnits)
+    {
+        int count = Mathf.Clamp(visibleUnits + 1, 2, 5);
+        for (int i = 0; i < count; i++)
+        {
+            GameObject board = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            board.transform.SetParent(parent, false);
+            board.transform.localPosition = new Vector3(0f, 0.018f + i * 0.028f, Mathf.Lerp(-0.22f, 0.22f, count == 1 ? 0.5f : i / (float)(count - 1)));
+            board.transform.localScale = new Vector3(0.46f, 0.025f, 0.12f);
+            ApplyColor(board, new Color(0.78f, 0.58f, 0.32f));
+            ConfigureShadowVisual(board);
+        }
+    }
+
+    private void BuildTruckBlockCargo(Transform parent, int visibleUnits, Color color, Vector3 scale, float stackStep)
+    {
+        for (int i = 0; i < visibleUnits; i++)
+        {
+            GameObject block = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            block.transform.SetParent(parent, false);
+            float x = i % 2 == 0 ? -0.14f : 0.14f;
+            float z = -0.16f + (i / 2) * 0.16f;
+            block.transform.localPosition = new Vector3(x, 0.035f + (i / 2) * stackStep, z);
+            block.transform.localScale = scale;
+            ApplyColor(block, color * Random.Range(0.92f, 1.06f));
+            ConfigureShadowVisual(block);
+        }
+    }
+
+    private void BuildTruckBarrelCargo(Transform parent, int visibleUnits, Color color)
+    {
+        int count = Mathf.Clamp(visibleUnits, 1, 5);
+        for (int i = 0; i < count; i++)
+        {
+            GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            barrel.transform.SetParent(parent, false);
+            float x = i % 2 == 0 ? -0.13f : 0.13f;
+            float z = -0.18f + (i / 2) * 0.18f;
+            barrel.transform.localPosition = new Vector3(x, 0.045f, z);
+            barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            barrel.transform.localScale = new Vector3(0.09f, 0.11f, 0.09f);
+            ApplyColor(barrel, color);
+            ConfigureShadowVisual(barrel);
+        }
     }
 
     private DriverAgent CreateAndRegisterDriverAgent(bool spawnInMotel = true)
@@ -230,7 +525,7 @@ public partial class GameBootstrap
         headlight.transform.SetParent(truckVisualRoot, false);
         headlight.transform.localPosition = localPosition;
         headlight.transform.localScale = new Vector3(0.12f, 0.08f, 0.04f);
-        ApplyColor(headlight, new Color(1f, 0.93f, 0.75f));
+        ApplyColor(headlight, new Color(1f, 0.82f, 0.52f));
 
         Renderer rendererComponent = headlight.GetComponent<Renderer>();
         if (isLeft)
@@ -254,7 +549,7 @@ public partial class GameBootstrap
 
         Light headlight = lightObject.AddComponent<Light>();
         headlight.type = LightType.Spot;
-        headlight.color = new Color(1f, 0.86f, 0.62f);
+        headlight.color = new Color(1f, 0.72f, 0.42f);
         headlight.intensity = 0f;
         headlight.range = 5.4f;
         headlight.spotAngle = 44f;
@@ -268,11 +563,11 @@ public partial class GameBootstrap
     {
         float darkness = 1f - stylizedDaylight;
         bool headlightsOn = darkness > 0.55f;
-        float headlightIntensity = headlightsOn ? Mathf.Lerp(0.7f, 3.1f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+        float headlightIntensity = headlightsOn ? Mathf.Lerp(0.78f, 3.35f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color lampColor = Color.Lerp(
-            new Color(0.3f, 0.26f, 0.2f),
-            new Color(1f, 0.94f, 0.78f),
-            Mathf.Clamp01(headlightIntensity / 3.1f));
+            new Color(0.34f, 0.22f, 0.11f),
+            new Color(1f, 0.80f, 0.50f),
+            Mathf.Clamp01(headlightIntensity / 3.35f));
 
         foreach (Light headlight in truckHeadlights)
         {
@@ -295,7 +590,6 @@ public partial class GameBootstrap
             truckHeadlightRightMaterial.color = lampColor;
         }
 
-        UpdateLocationNightLights(stylizedDaylight);
         UpdateDriverFlashlight(driver, stylizedDaylight);
     }
 
@@ -316,8 +610,9 @@ public partial class GameBootstrap
             float maxIntensity = i < locationNightLightMaxIntensities.Count ? locationNightLightMaxIntensities[i] : 1.15f;
             float range = i < locationNightLightRanges.Count ? locationNightLightRanges[i] : 3.2f;
             Color onColor = i < locationNightLightOnColors.Count ? locationNightLightOnColors[i] : new Color(1f, 0.9f, 0.72f);
-            lightComponent.enabled = lightsOn;
-            lightComponent.intensity = lightsOn ? Mathf.Lerp(0.18f, maxIntensity, nightT) : 0f;
+            bool realLightOn = lightsOn;
+            lightComponent.enabled = realLightOn;
+            lightComponent.intensity = realLightOn ? Mathf.Lerp(0.18f, maxIntensity, nightT) : 0f;
             lightComponent.color = onColor;
             lightComponent.range = range;
         }
@@ -383,15 +678,16 @@ public partial class GameBootstrap
                 flickerBlend = softPulse * randomPulse * blinkPulse;
             }
 
-            float lightIntensity = Mathf.Lerp(0.18f, 1.42f, baseActivation) * flickerBlend;
+            float lightIntensity = Mathf.Lerp(0.2f, 1.56f, baseActivation) * flickerBlend;
             float glowStrength = Mathf.Lerp(0.14f, 1f, baseActivation) * Mathf.Lerp(0.92f, 1f, flickerBlend);
             Color lanternColor = Color.Lerp(
-                new Color(0.22f, 0.19f, 0.15f),
-                new Color(1f, 0.9f, 0.72f),
+                new Color(0.26f, 0.16f, 0.08f),
+                new Color(1f, 0.78f, 0.42f),
                 Mathf.Clamp01(glowStrength));
 
-            roadLantern.Light.enabled = lightsOn;
-            roadLantern.Light.intensity = lightIntensity;
+            bool realLightOn = lightsOn;
+            roadLantern.Light.enabled = realLightOn;
+            roadLantern.Light.intensity = realLightOn ? lightIntensity : 0f;
             roadLantern.Light.color = lanternColor;
             roadLantern.GlowMaterial.color = lanternColor;
         }
@@ -406,11 +702,11 @@ public partial class GameBootstrap
 
         float darkness = 1f - stylizedDaylight;
         bool flashlightOn = IsDriverBusyWalkPhase(driver) && driver.DriverObject != null && driver.DriverObject.activeSelf && darkness > 0.55f;
-        float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.65f, 2.2f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+        float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.7f, 2.45f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color flashlightColor = Color.Lerp(
-            new Color(0.24f, 0.22f, 0.18f),
-            new Color(1f, 0.92f, 0.74f),
-            Mathf.Clamp01(flashlightIntensity / 2.2f));
+            new Color(0.28f, 0.18f, 0.10f),
+            new Color(1f, 0.82f, 0.50f),
+            Mathf.Clamp01(flashlightIntensity / 2.45f));
 
         driver.DriverFlashlightLight.enabled = flashlightOn;
         driver.DriverFlashlightLight.intensity = flashlightIntensity;
@@ -442,12 +738,56 @@ public partial class GameBootstrap
         driver.DriverVisualRoot = new GameObject("DriverVisualRoot").transform;
         driver.DriverVisualRoot.SetParent(driver.DriverObject.transform, false);
 
+        GameObject driverShadowBlob = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        driverShadowBlob.transform.SetParent(driver.DriverVisualRoot, false);
+        driverShadowBlob.transform.localPosition = new Vector3(0f, -0.01f, 0f);
+        driverShadowBlob.transform.localScale = new Vector3(0.34f, 0.008f, 0.34f);
+        Renderer driverShadowRenderer = driverShadowBlob.GetComponent<Renderer>();
+        driverShadowRenderer.material = CreateTransparentOverlayMaterial(new Color(0f, 0f, 0f, 0.16f));
+        driverShadowRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        driverShadowRenderer.receiveShadows = false;
+        if (driverShadowBlob.TryGetComponent(out Collider driverShadowCollider))
+        {
+            Object.Destroy(driverShadowCollider);
+        }
+
         bool isFemale = driver.Gender == WorkerGender.Female;
 
-        // Shirt/clothing color: blue for men, teal for women
-        Color shirtColor = isFemale ? new Color(0.20f, 0.56f, 0.52f) : new Color(0.22f, 0.44f, 0.88f);
-        // Trouser color: dark navy for men, dark teal for women
-        Color trouserColor = isFemale ? new Color(0.14f, 0.26f, 0.28f) : new Color(0.18f, 0.22f, 0.36f);
+        Color[] femaleShirts =
+        {
+            new Color(0.2f, 0.56f, 0.52f),
+            new Color(0.78f, 0.42f, 0.34f),
+            new Color(0.58f, 0.34f, 0.72f),
+            new Color(0.36f, 0.6f, 0.28f)
+        };
+        Color[] maleShirts =
+        {
+            new Color(0.22f, 0.44f, 0.88f),
+            new Color(0.82f, 0.38f, 0.22f),
+            new Color(0.28f, 0.6f, 0.34f),
+            new Color(0.68f, 0.52f, 0.2f)
+        };
+        Color[] femaleTrousers =
+        {
+            new Color(0.14f, 0.26f, 0.28f),
+            new Color(0.28f, 0.2f, 0.2f),
+            new Color(0.2f, 0.18f, 0.32f),
+            new Color(0.16f, 0.28f, 0.18f)
+        };
+        Color[] maleTrousers =
+        {
+            new Color(0.18f, 0.22f, 0.36f),
+            new Color(0.24f, 0.18f, 0.18f),
+            new Color(0.16f, 0.26f, 0.18f),
+            new Color(0.3f, 0.24f, 0.14f)
+        };
+
+        Color shirtColor = isFemale
+            ? femaleShirts[(driver.DriverId - 1) % femaleShirts.Length]
+            : maleShirts[(driver.DriverId - 1) % maleShirts.Length];
+        Color trouserColor = isFemale
+            ? femaleTrousers[(driver.DriverId - 1) % femaleTrousers.Length]
+            : maleTrousers[(driver.DriverId - 1) % maleTrousers.Length];
 
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         body.transform.SetParent(driver.DriverVisualRoot, false);
@@ -606,16 +946,21 @@ public partial class GameBootstrap
         uiAudioSource.ignoreListenerPause = true;
         ambientAudioSource = CreateAudioSource("AmbientWind", worldRoot, true, 0.42f, 0f, false);
         dayBirdsAudioSource = CreateAudioSource("DayBirds", worldRoot, true, 0.34f, 0f, false);
-        forestAudioSource = CreateAudioSource("ForestAmbience", locations[LocationType.Forest].RootObject.transform, true, 0.52f, 0.82f, false);
-        forestWorkerAudioSource = CreateAudioSource("ForestWorkers", locations[LocationType.Forest].RootObject.transform, false, 0.44f, 0.9f, false);
+        Transform forestAudioParent = locations.TryGetValue(LocationType.Forest, out LocationData forestLocation)
+            ? forestLocation.RootObject.transform : worldRoot;
+        forestAudioSource = CreateAudioSource("ForestAmbience", forestAudioParent, true, 0.52f, 0.82f, false);
+        forestWorkerAudioSource = CreateAudioSource("ForestWorkers", forestAudioParent, false, 0.44f, 0.9f, false);
         nightWindAudioSource = CreateAudioSource("NightWind", worldRoot, true, 0.34f, 0f, false);
-        nightCricketsAudioSource = CreateAudioSource("NightCrickets", locations[LocationType.Forest].RootObject.transform, true, 0.33f, 0.82f, false);
-        gasStationAudioSource = CreateAudioSource("GasStationHum", locations[LocationType.GasStation].RootObject.transform, true, 0.28f, 0.84f, false);
+        nightCricketsAudioSource = CreateAudioSource("NightCrickets", forestAudioParent, true, 0.33f, 0.82f, false);
+        Transform gasStationAudioParent = locations.TryGetValue(LocationType.GasStation, out LocationData gasStationLocation)
+            ? gasStationLocation.RootObject.transform : worldRoot;
+        gasStationAudioSource = CreateAudioSource("GasStationHum", gasStationAudioParent, true, 0.28f, 0.84f, false);
         Transform sawmillAudioParent = locations.TryGetValue(LocationType.Sawmill, out LocationData sawmillLocation)
-            ? sawmillLocation.RootObject.transform
-            : worldRoot;
+            ? sawmillLocation.RootObject.transform : worldRoot;
         townAudioSource = CreateAudioSource("SawmillAmbience", sawmillAudioParent, true, 0.44f, 0.9f, false);
-        warehouseAudioSource = CreateAudioSource("WarehouseAmbience", locations[LocationType.Warehouse].RootObject.transform, false, 0.26f, 0.88f, false);
+        Transform warehouseAudioParent = locations.TryGetValue(LocationType.Warehouse, out LocationData warehouseLocation)
+            ? warehouseLocation.RootObject.transform : worldRoot;
+        warehouseAudioSource = CreateAudioSource("WarehouseAmbience", warehouseAudioParent, false, 0.26f, 0.88f, false);
         ambienceFxAudioSource = CreateAudioSource("AmbienceFX", worldRoot, false, 0.34f, 0f, false);
         riverAmbientAudioSource = CreateAudioSource("RiverAmbient", worldRoot, true, 0.38f, 0f, false);
 

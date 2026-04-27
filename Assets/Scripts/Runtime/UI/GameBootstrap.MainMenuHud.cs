@@ -47,9 +47,12 @@ public partial class GameBootstrap
         public RectTransform PatchNotesContentRoot;
         public Button PatchNotesCloseButton;
         public Text PatchNotesCloseButtonText;
+        public Button NewGameClearButton;
+        public Text NewGameClearButtonText;
         public MainMenuButtonFx ContinueButtonFx;
         public MainMenuButtonFx NewGameButtonFx;
         public MainMenuButtonFx NewGameUserButtonFx;
+        public MainMenuButtonFx NewGameClearButtonFx;
         public MainMenuButtonFx PatchNotesButtonFx;
         public MainMenuButtonFx ExitButtonFx;
         public MainMenuButtonFx EnglishButtonFx;
@@ -60,7 +63,7 @@ public partial class GameBootstrap
     private GameObject loadingOverlayCanvas;
     private Image loadingBarFill;
     private Text loadingStatusText;
-    private static readonly bool IsUserModeTemporarilyDisabled = true;
+    private static readonly bool IsUserModeTemporarilyDisabled = false;
     private const string UserModeWorkInProgressLabel = "Work in progress";
     private const string MainMenuVersionLabel = "Lo-fi Delivery Co. v.0.0.2";
     private const string PatchNotesButtonLabel = "Patch Notes";
@@ -162,7 +165,7 @@ public partial class GameBootstrap
         window.anchorMax = new Vector2(0f, 0f);
         window.pivot = new Vector2(0f, 0f);
         window.anchoredPosition = new Vector2(48f, 58f);
-        window.sizeDelta = new Vector2(360f, 326f);
+        window.sizeDelta = new Vector2(360f, 384f);
         mainMenuHud.WindowRoot = window;
 
         VerticalLayoutGroup windowLayout = window.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -180,7 +183,7 @@ public partial class GameBootstrap
         buttonLayout.childControlHeight = true;
         buttonLayout.childForceExpandWidth = true;
         buttonLayout.childForceExpandHeight = false;
-        buttonStack.gameObject.AddComponent<LayoutElement>().preferredHeight = 208f;
+        buttonStack.gameObject.AddComponent<LayoutElement>().preferredHeight = 266f;
 
         mainMenuHud.ContinueButton = CreateButton("ContinueButton", buttonStack, uiFont, out mainMenuHud.ContinueButtonText, "Continue", 18, new Color(0.22f, 0.54f, 0.30f, 1f), Color.white);
         mainMenuHud.ContinueButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
@@ -200,6 +203,11 @@ public partial class GameBootstrap
         {
             mainMenuHud.NewGameUserButton.onClick.AddListener(() => StartGameFromMainMenu(GameStartMode.User));
         }
+
+        mainMenuHud.NewGameClearButton = CreateButton("NewGameClearButton", buttonStack, uiFont, out mainMenuHud.NewGameClearButtonText, "New Game Clear", 18, new Color(0.34f, 0.28f, 0.52f, 1f), Color.white);
+        mainMenuHud.NewGameClearButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
+        mainMenuHud.NewGameClearButtonFx = SetupMainMenuButtonFx(mainMenuHud.NewGameClearButton, new Color(0.34f, 0.28f, 0.52f, 1f), new Color(0.48f, 0.38f, 0.70f, 1f));
+        mainMenuHud.NewGameClearButton.onClick.AddListener(() => StartGameFromMainMenu(GameStartMode.Clear));
 
         mainMenuHud.PatchNotesButton = CreateButton("PatchNotesButton", buttonStack, uiFont, out mainMenuHud.PatchNotesButtonText, PatchNotesButtonLabel, 18, new Color(0.27f, 0.33f, 0.43f, 1f), Color.white);
         mainMenuHud.PatchNotesButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
@@ -280,6 +288,7 @@ public partial class GameBootstrap
         UpdateMainMenuButtonFx(mainMenuHud.ContinueButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.NewGameButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.NewGameUserButtonFx);
+        UpdateMainMenuButtonFx(mainMenuHud.NewGameClearButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.PatchNotesButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.ExitButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.EnglishButtonFx);
@@ -297,6 +306,7 @@ public partial class GameBootstrap
         if (mainMenuHud.ContinueButtonText != null) mainMenuHud.ContinueButtonText.text = L("Continue");
         if (mainMenuHud.NewGameButtonText != null) mainMenuHud.NewGameButtonText.text = L("New Game Debug");
         if (mainMenuHud.NewGameUserButtonText != null) mainMenuHud.NewGameUserButtonText.text = IsUserModeTemporarilyDisabled ? UserModeWorkInProgressLabel : L("New Game User");
+        if (mainMenuHud.NewGameClearButtonText != null) mainMenuHud.NewGameClearButtonText.text = L("New Game Clear");
         if (mainMenuHud.PatchNotesButtonText != null) mainMenuHud.PatchNotesButtonText.text = PatchNotesButtonLabel;
         if (mainMenuHud.ExitButtonText != null) mainMenuHud.ExitButtonText.text = L("Exit");
         if (mainMenuHud.LanguageLabelText != null) mainMenuHud.LanguageLabelText.text = L("Language:");
@@ -675,6 +685,9 @@ public partial class GameBootstrap
     {
         SessionDebugLogger.Log("BOOT", $"Building world for {selectedGameStartMode} mode.");
 
+        isFarZoomVisualLodActive = false;
+        shadowLodRenderers.Clear();
+        gridLinesRoot = null;
         worldRoot = new GameObject("PrototypeWorld").transform;
         roadsRoot = new GameObject("Roads").transform;
         roadsRoot.SetParent(worldRoot, false);
@@ -682,17 +695,19 @@ public partial class GameBootstrap
         lanternsRoot.SetParent(worldRoot, false);
         roadsidePropsRoot = new GameObject("RoadsideProps").transform;
         roadsidePropsRoot.SetParent(worldRoot, false);
+        roadsideSignsRoot = new GameObject("RoadsideSigns").transform;
+        roadsideSignsRoot.SetParent(worldRoot, false);
         miscRoot = new GameObject("Misc").transform;
         miscRoot.SetParent(worldRoot, false);
 
-        const int totalSteps = 24;
+        const int totalSteps = 25;
         int step = 0;
 
         SetLoadingProgress(++step / (float)totalSteps, "Camera & lighting..."); yield return null;
         SetupCamera(); SetupLighting(); SetupDioramaPostProcessing(); SetupSurfaceMaterials();
 
         SetLoadingProgress(++step / (float)totalSteps, "Populating water..."); yield return null;
-        PopulateWaterCells();
+        GenerateNaturalZones(); PopulateWaterCells();
 
         SetLoadingProgress(++step / (float)totalSteps, "Setting up locations..."); yield return null;
         SetupLocations();
@@ -708,6 +723,7 @@ public partial class GameBootstrap
 
         SetLoadingProgress(++step / (float)totalSteps, "Applying terrain..."); yield return null;
         ApplyTerrainHeightsToWorld();
+        RebuildUnifiedRoadVisuals();
 
         SetLoadingProgress(++step / (float)totalSteps, "Setting up ground..."); yield return null;
         yield return StartCoroutine(SetupGroundAsync()); CreateWaterLayer();
@@ -719,7 +735,7 @@ public partial class GameBootstrap
         SetupEdgeHighway(); SetupEdgeHighwayBuses(); SetupLocalBusRuntime(); SetupRiverBoats();
 
         SetLoadingProgress(++step / (float)totalSteps, "Atmosphere..."); yield return null;
-        SetupDistantClouds(); SetupAmbientAirParticles();
+        SetupDistantClouds(); SetupAmbientAirParticles(); SetupExhaustSmoke();
 
         SetLoadingProgress(++step / (float)totalSteps, "Road lanterns..."); yield return null;
         RebuildRoadLanterns();
@@ -730,8 +746,11 @@ public partial class GameBootstrap
         SetLoadingProgress(++step / (float)totalSteps, "Placing benches..."); yield return null;
         RebuildRoadsideBenches();
 
+        SetLoadingProgress(++step / (float)totalSteps, "Road signs..."); yield return null;
+        RebuildRoadSigns();
+
         SetLoadingProgress(++step / (float)totalSteps, "Wildlife..."); yield return null;
-        SetupMiscBirds(); SetupAmbientCats(); SetupAmbientBees(); SetupAmbientLanternMoths(); SetupRiverFish();
+        SetupMiscBirds(); SetupAmbientCats(); SetupAmbientSquirrels(); SetupAmbientBees(); SetupAmbientLanternMoths(); SetupRiverFish(); SetupNightSky();
 
         SetLoadingProgress(++step / (float)totalSteps, "Water effects..."); yield return null;
         waterVisualLodLevel = -1; UpdateWaterVisualLod();

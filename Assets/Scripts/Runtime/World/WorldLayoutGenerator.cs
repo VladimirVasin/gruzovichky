@@ -7,14 +7,17 @@ public static class WorldLayoutGenerator
     private const int FarFromParkingDistance = 8;
     private const int DecorativeBottomRoadOccupiedRows = 2;
     private const int DecorativeBottomRoadClearanceRows = 2;
+    private const int LayoutGenerationAttempts = 180;
 
     public static GeneratedWorldLayout Generate(int gridWidth, int gridHeight, HashSet<Vector2Int> blockedCells = null, System.Func<GeneratedWorldLayout, bool> isValidLayout = null)
     {
         blockedCells ??= new HashSet<Vector2Int>();
         GeneratedWorldLayout bestCandidate = null;
+        GeneratedWorldLayout bestValidCandidate = null;
         int bestScore = int.MinValue;
+        int bestValidScore = int.MinValue;
 
-        for (int attempt = 0; attempt < 30; attempt++)
+        for (int attempt = 0; attempt < LayoutGenerationAttempts; attempt++)
         {
             Dictionary<string, WorldLocationPlacement> candidate = new();
             if (!TryPlaceParking(candidate, gridWidth, gridHeight, blockedCells))
@@ -84,10 +87,21 @@ public static class WorldLayoutGenerator
             }
 
             bool passesValidation = isValidLayout == null || isValidLayout(layout);
+            if (passesValidation && score > bestValidScore)
+            {
+                bestValidScore = score;
+                bestValidCandidate = layout;
+            }
+
             if (score >= 34 && passesValidation)
             {
                 return layout;
             }
+        }
+
+        if (bestValidCandidate != null)
+        {
+            return bestValidCandidate;
         }
 
         if (bestCandidate != null && (isValidLayout == null || isValidLayout(bestCandidate)))
@@ -95,7 +109,7 @@ public static class WorldLayoutGenerator
             return bestCandidate;
         }
 
-        return CreateFallbackLayout();
+        return CreateFallbackLayout(gridWidth, gridHeight);
     }
 
     private static bool TryPlaceParking(Dictionary<string, WorldLocationPlacement> placements, int gridWidth, int gridHeight, HashSet<Vector2Int> blockedCells)
@@ -244,7 +258,28 @@ public static class WorldLayoutGenerator
                 break;
         }
 
+        placement.RoadAccess = GetRoadAccessCell(placement, facing, gridWidth, gridHeight);
         return IsPlacementInsideGrid(placement, gridWidth, gridHeight) && !placement.Contains(anchor);
+    }
+
+    private static Vector2Int GetRoadAccessCell(WorldLocationPlacement placement, WorldPlacementFacing facing, int gridWidth, int gridHeight)
+    {
+        Vector2Int outward = facing switch
+        {
+            WorldPlacementFacing.North => Vector2Int.up,
+            WorldPlacementFacing.South => Vector2Int.down,
+            WorldPlacementFacing.East  => Vector2Int.right,
+            _                          => Vector2Int.left
+        };
+
+        Vector2Int access = placement.Anchor + outward * 2;
+        if (IsInsideGrid(access, gridWidth, gridHeight))
+        {
+            return access;
+        }
+
+        access = placement.Anchor + outward;
+        return IsInsideGrid(access, gridWidth, gridHeight) ? access : placement.Anchor;
     }
 
     private static bool PlacementFits(WorldLocationPlacement placement, IEnumerable<WorldLocationPlacement> existingPlacements, int padding, int gridWidth, int gridHeight)
@@ -284,13 +319,22 @@ public static class WorldLayoutGenerator
             {
                 return false;
             }
+
+            if (blockedCells.Contains(placement.RoadAccess))
+            {
+                return false;
+            }
+
         }
 
         foreach (WorldLocationPlacement existing in existingPlacements)
         {
             if (RectanglesOverlapExpanded(placement, existing, padding) ||
                 existing.Contains(placement.Anchor) ||
+                existing.Contains(placement.RoadAccess) ||
                 placement.Contains(existing.Anchor) ||
+                placement.Contains(existing.RoadAccess) ||
+                placement.RoadAccess == existing.Anchor ||
                 placement.Anchor == existing.Anchor)
             {
                 return false;
@@ -308,9 +352,15 @@ public static class WorldLayoutGenerator
 
         for (int attempt = 0; attempt < 48; attempt++)
         {
-            Vector2Int anchor = new(Random.Range(minAnchorX, maxAnchorX + 1), DecorativeBottomRoadOccupiedRows - 1);
-            if (!TryCreatePlacementFromAnchor(anchor, 2, 1, WorldPlacementFacing.South, gridWidth, gridHeight, out WorldLocationPlacement busStop) ||
-                !PlacementFits(busStop, placements.Values, PlacementPadding, gridWidth, gridHeight, true, blockedCells))
+            Vector2Int anchor = new(Random.Range(minAnchorX, maxAnchorX + 1), DecorativeBottomRoadOccupiedRows);
+            if (!TryCreateBusStopPlacement(anchor, gridWidth, gridHeight, out WorldLocationPlacement busStop))
+            {
+                continue;
+            }
+
+            busStop.RoadAccess = GetBusStopRoadAccessCell(busStop, gridWidth, gridHeight);
+
+            if (!PlacementFits(busStop, placements.Values, PlacementPadding, gridWidth, gridHeight, true, blockedCells))
             {
                 continue;
             }
@@ -322,17 +372,50 @@ public static class WorldLayoutGenerator
         return false;
     }
 
+    private static bool TryCreateBusStopPlacement(Vector2Int anchor, int gridWidth, int gridHeight, out WorldLocationPlacement placement)
+    {
+        placement = new WorldLocationPlacement
+        {
+            Anchor = anchor,
+            Min = new Vector2Int(anchor.x - 1, anchor.y),
+            Max = new Vector2Int(anchor.x, anchor.y)
+        };
+
+        placement.RoadAccess = GetBusStopRoadAccessCell(placement, gridWidth, gridHeight);
+        return IsPlacementInsideGrid(placement, gridWidth, gridHeight) && !placement.Contains(placement.RoadAccess);
+    }
+
+    private static Vector2Int GetBusStopRoadAccessCell(WorldLocationPlacement placement, int gridWidth, int gridHeight)
+    {
+        Vector2Int rightSideAccess = placement.Anchor + Vector2Int.right * 2;
+        if (IsInsideGrid(rightSideAccess, gridWidth, gridHeight) && !placement.Contains(rightSideAccess))
+        {
+            return rightSideAccess;
+        }
+
+        Vector2Int leftSideAccess = placement.Anchor + Vector2Int.left * 2;
+        if (IsInsideGrid(leftSideAccess, gridWidth, gridHeight) && !placement.Contains(leftSideAccess))
+        {
+            return leftSideAccess;
+        }
+
+        return placement.Anchor;
+    }
+
     private static bool IsPlacementInsideGrid(WorldLocationPlacement placement, int gridWidth, int gridHeight)
     {
         return IsInsideGrid(placement.Min, gridWidth, gridHeight) &&
                IsInsideGrid(placement.Max, gridWidth, gridHeight) &&
-               IsInsideGrid(placement.Anchor, gridWidth, gridHeight);
+               IsInsideGrid(placement.Anchor, gridWidth, gridHeight) &&
+               IsInsideGrid(placement.RoadAccess, gridWidth, gridHeight);
     }
 
     private static bool IsTooCloseToDecorativeBottomRoad(WorldLocationPlacement placement)
     {
         int firstAllowedY = DecorativeBottomRoadOccupiedRows + DecorativeBottomRoadClearanceRows;
-        return placement.Min.y < firstAllowedY || placement.Anchor.y < firstAllowedY;
+        return placement.Min.y < firstAllowedY ||
+               placement.Anchor.y < firstAllowedY ||
+               placement.RoadAccess.y < firstAllowedY;
     }
 
     private static bool IsInsideGrid(Vector2Int cell, int gridWidth, int gridHeight)
@@ -357,6 +440,7 @@ public static class WorldLayoutGenerator
             layout.Warehouse.Anchor,
             layout.Forest.Anchor,
             layout.Sawmill.Anchor,
+            layout.Motel.Anchor,
             layout.BusStop.Anchor
         };
 
@@ -428,18 +512,32 @@ public static class WorldLayoutGenerator
         };
     }
 
-    private static GeneratedWorldLayout CreateFallbackLayout()
+    private static GeneratedWorldLayout CreateFallbackLayout(int gridWidth, int gridHeight)
     {
+        TryCreateBusStopPlacement(new Vector2Int(31, 2), gridWidth, gridHeight, out WorldLocationPlacement busStop);
+
         return new GeneratedWorldLayout
         {
-            Parking = new WorldLocationPlacement { Min = new Vector2Int(4, 8), Max = new Vector2Int(8, 10), Anchor = new Vector2Int(6, 12) },
-            GasStation = new WorldLocationPlacement { Min = new Vector2Int(16, 16), Max = new Vector2Int(18, 18), Anchor = new Vector2Int(16, 20) },
-            Forest = new WorldLocationPlacement { Min = new Vector2Int(44, 38), Max = new Vector2Int(48, 42), Anchor = new Vector2Int(46, 36) },
-            Warehouse = new WorldLocationPlacement { Min = new Vector2Int(44, 20), Max = new Vector2Int(46, 22), Anchor = new Vector2Int(44, 18) },
-            Sawmill = new WorldLocationPlacement { Min = new Vector2Int(32, 44), Max = new Vector2Int(34, 46), Anchor = new Vector2Int(32, 42) },
-            Motel = new WorldLocationPlacement { Min = new Vector2Int(22, 22), Max = new Vector2Int(24, 24), Anchor = new Vector2Int(22, 20) },
-            BusStop = new WorldLocationPlacement { Min = new Vector2Int(28, 4), Max = new Vector2Int(30, 4), Anchor = new Vector2Int(30, 2) }
+            Parking = CreateFallbackPlacement(new Vector2Int(8, 12), 3, 2, WorldPlacementFacing.North, gridWidth, gridHeight),
+            GasStation = CreateFallbackPlacement(new Vector2Int(17, 16), 2, 2, WorldPlacementFacing.North, gridWidth, gridHeight),
+            Forest = CreateFallbackPlacement(new Vector2Int(48, 36), 3, 3, WorldPlacementFacing.South, gridWidth, gridHeight),
+            Warehouse = CreateFallbackPlacement(new Vector2Int(44, 19), 2, 2, WorldPlacementFacing.South, gridWidth, gridHeight),
+            Sawmill = CreateFallbackPlacement(new Vector2Int(34, 41), 2, 2, WorldPlacementFacing.South, gridWidth, gridHeight),
+            Motel = CreateFallbackPlacement(new Vector2Int(23, 22), 2, 2, WorldPlacementFacing.South, gridWidth, gridHeight),
+            BusStop = busStop
         };
+    }
+
+    private static WorldLocationPlacement CreateFallbackPlacement(Vector2Int anchor, int width, int height, WorldPlacementFacing facing, int gridWidth, int gridHeight)
+    {
+        if (TryCreatePlacementFromAnchor(anchor, width, height, facing, gridWidth, gridHeight, out WorldLocationPlacement placement))
+        {
+            return placement;
+        }
+
+        Vector2Int clampedAnchor = new(Mathf.Clamp(anchor.x, 1, gridWidth - 2), Mathf.Clamp(anchor.y, 1, gridHeight - 2));
+        TryCreatePlacementFromAnchor(clampedAnchor, width, height, facing, gridWidth, gridHeight, out placement);
+        return placement;
     }
 }
 

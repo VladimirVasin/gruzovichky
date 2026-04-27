@@ -340,7 +340,7 @@ public partial class GameBootstrap : MonoBehaviour
         road.transform.SetParent(parent, false);
         road.transform.position = GetCellCenter(cell) + new Vector3(0f, RoadHeight - 0.015f, 0f);
         road.transform.localScale = new Vector3(horizontal ? 1.12f : 0.94f, 0.16f, vertical ? 1.12f : 0.94f);
-        ApplyColor(road, new Color(0.16f, 0.17f, 0.19f));
+        ApplyStylizedRoadMaterial(road, cell.x, cell.y, isHighway: true, isShoulder: false);
         ConfigureStaticVisual(road);
 
         GameObject roadTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -348,7 +348,7 @@ public partial class GameBootstrap : MonoBehaviour
         roadTop.transform.SetParent(road.transform, false);
         roadTop.transform.localPosition = new Vector3(0f, 0.32f, 0f);
         roadTop.transform.localScale = new Vector3(horizontal ? 0.94f : 0.74f, 0.16f, vertical ? 0.94f : 0.74f);
-        ApplyColor(roadTop, new Color(0.56f, 0.58f, 0.6f));
+        ApplyStylizedRoadMaterial(roadTop, cell.x, cell.y, isHighway: true, isShoulder: true);
         ConfigureStaticVisual(roadTop);
 
         if (horizontal)
@@ -470,11 +470,11 @@ public partial class GameBootstrap : MonoBehaviour
 
             float darkness = 1f - currentStylizedDaylight;
             bool headlightsOn = darkness > 0.55f;
-            float headlightIntensity = headlightsOn ? Mathf.Lerp(0.4f, 1.75f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+            float headlightIntensity = headlightsOn ? Mathf.Lerp(0.48f, 1.95f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
             Color lampColor = Color.Lerp(
-                new Color(0.34f, 0.3f, 0.22f),
-                new Color(1f, 0.94f, 0.78f),
-                Mathf.Clamp01(headlightIntensity / 1.75f));
+                new Color(0.34f, 0.22f, 0.12f),
+                new Color(1f, 0.82f, 0.5f),
+                Mathf.Clamp01(headlightIntensity / 1.95f));
 
             if (bus.HeadlightLeft != null)
             {
@@ -602,6 +602,13 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyColor(body, bodyColor);
         ConfigureShadowVisual(body);
 
+        GameObject lowerBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        lowerBody.transform.SetParent(parent, false);
+        lowerBody.transform.localPosition = new Vector3(0f, 0.16f, 0f);
+        lowerBody.transform.localScale = new Vector3(1.18f, 0.1f, 0.42f);
+        ApplyColor(lowerBody, bodyColor * 0.72f);
+        ConfigureShadowVisual(lowerBody);
+
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(parent, false);
         roof.transform.localPosition = new Vector3(-0.02f, 0.56f, 0f);
@@ -651,12 +658,32 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f));
         ConfigureShadowVisual(sideStripe);
 
+        GameObject roofStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roofStripe.transform.SetParent(parent, false);
+        roofStripe.transform.localPosition = new Vector3(-0.02f, 0.64f, 0f);
+        roofStripe.transform.localScale = new Vector3(1.08f, 0.03f, 0.42f);
+        ApplyColor(roofStripe, new Color(0.98f, 0.9f, 0.7f));
+        ConfigureShadowVisual(roofStripe);
+
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.transform.SetParent(parent, false);
         door.transform.localPosition = new Vector3(0.18f, 0.23f, -0.22f);
         door.transform.localScale = new Vector3(0.24f, 0.32f, 0.05f);
         ApplyColor(door, new Color(0.92f, 0.94f, 0.98f));
         ConfigureShadowVisual(door);
+
+        GameObject shadowBlob = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        shadowBlob.transform.SetParent(parent, false);
+        shadowBlob.transform.localPosition = new Vector3(0f, -0.01f, 0f);
+        shadowBlob.transform.localScale = new Vector3(1.28f, 0.008f, 0.52f);
+        Renderer shadowRenderer = shadowBlob.GetComponent<Renderer>();
+        shadowRenderer.material = CreateTransparentOverlayMaterial(new Color(0f, 0f, 0f, 0.14f));
+        shadowRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        shadowRenderer.receiveShadows = false;
+        if (shadowBlob.TryGetComponent(out Collider shadowCollider))
+        {
+            Object.Destroy(shadowCollider);
+        }
 
         float[] wheelX = { -0.38f, 0.38f };
         float[] wheelZ = { -0.18f, 0.18f };

@@ -1,0 +1,17 @@
+name: Project Sanity
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  line-count:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check C# line-count limit
+        shell: pwsh
+        run: ./tools/check-line-count.ps1 -MaxLines 1500

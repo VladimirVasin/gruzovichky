@@ -41,6 +41,16 @@ public partial class GameBootstrap
         public int              LastSpinBet;
     }
 
+    private sealed class PersonalHouseResidentRowUi
+    {
+        public RectTransform Root;
+        public Text NameText;
+        public Button ActionButton;
+        public Text ActionButtonText;
+        public Image ActionButtonImage;
+        public int CurrentDriverId = -1;
+    }
+
     private sealed class BuildingQuickHudRefs
     {
         public GameObject CanvasRoot;
@@ -62,6 +72,9 @@ public partial class GameBootstrap
         public RectTransform WorkerSlotsSection;
         public Text WorkerSlotsSectionHeader;
         public ServiceWorkerSlotUi[] WorkerSlots;
+        public RectTransform PersonalHouseSection;
+        public Text PersonalHouseSectionHeader;
+        public PersonalHouseResidentRowUi[] ResidentRows;
         public Image      FlashOverlay;
         public Vector2    OriginalPos;
     }
@@ -112,6 +125,7 @@ public partial class GameBootstrap
         selectedDriverId = 0;
         selectedLocation = null;
         selectedLocalStopIndex = -1;
+        selectedPersonalHouseIndex = -1;
         selectedDebugCell = null;
 
         if (truckQuickHud?.CanvasRoot != null) truckQuickHud.CanvasRoot.SetActive(false);
@@ -187,6 +201,7 @@ public partial class GameBootstrap
 
             selectedLocation = null;
             selectedLocalStopIndex = -1;
+            selectedPersonalHouseIndex = -1;
             RefreshSelectionVisuals();
             PlayUiSound(uiPanelCloseClip, 0.82f);
         });
@@ -304,6 +319,51 @@ public partial class GameBootstrap
             slot.ProgressBarFillImage = fillImage;
         }
 
+        // ── Personal house residents section ─────────────────────────────────────
+        RectTransform houseSection = CreateUiObject("PersonalHouseSection", root).GetComponent<RectTransform>();
+        VerticalLayoutGroup houseSectionLayout = houseSection.gameObject.AddComponent<VerticalLayoutGroup>();
+        houseSectionLayout.spacing = 4f;
+        houseSectionLayout.childControlWidth  = true;
+        houseSectionLayout.childControlHeight = true;
+        houseSectionLayout.childForceExpandWidth  = true;
+        houseSectionLayout.childForceExpandHeight = false;
+        houseSection.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        buildingQuickHud.PersonalHouseSection = houseSection;
+
+        buildingQuickHud.PersonalHouseSectionHeader = CreateBodyText("HouseResidentsHeader", houseSection, uiFont, "Residents", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        buildingQuickHud.PersonalHouseSectionHeader.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+        const int MaxResidentRows = 8;
+        buildingQuickHud.ResidentRows = new PersonalHouseResidentRowUi[MaxResidentRows];
+        for (int i = 0; i < MaxResidentRows; i++)
+        {
+            PersonalHouseResidentRowUi resRow = new PersonalHouseResidentRowUi();
+            buildingQuickHud.ResidentRows[i] = resRow;
+
+            RectTransform rowRoot = CreateUiObject($"ResidentRow{i}", houseSection).GetComponent<RectTransform>();
+            rowRoot.gameObject.AddComponent<Image>().color = new Color(0.14f, 0.18f, 0.25f, 1f);
+            rowRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
+            HorizontalLayoutGroup rowLayout = rowRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+            rowLayout.padding = new RectOffset(10, 6, 4, 4);
+            rowLayout.spacing = 8f;
+            rowLayout.childControlWidth  = true;
+            rowLayout.childControlHeight = true;
+            rowLayout.childForceExpandWidth  = false;
+            rowLayout.childForceExpandHeight = true;
+            resRow.Root = rowRoot;
+
+            resRow.NameText = CreateBodyText($"ResidentName{i}", rowRoot, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
+            resRow.NameText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+            int capturedIndex = i;
+            resRow.ActionButton = CreateButton($"ResidentBtn{i}", rowRoot, uiFont, out resRow.ActionButtonText, "+", 12, FleetPrimaryButtonColor, Color.white);
+            resRow.ActionButtonImage = resRow.ActionButton.GetComponent<Image>();
+            resRow.ActionButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 64f;
+            resRow.ActionButton.onClick.AddListener(() => OnResidentRowButtonClick(capturedIndex));
+
+            rowRoot.gameObject.SetActive(false);
+        }
+
         RectTransform actionRow = CreateLayoutRow("BuildingQuickHudActionRow", root, 34f, 10f);
         buildingQuickHud.ContextButton = CreateButton("ContextButton", actionRow, uiFont, out buildingQuickHud.ContextButtonText, "Open", 13, FleetPrimaryButtonColor, Color.white);
         LayoutElement contextLayout = buildingQuickHud.ContextButton.gameObject.AddComponent<LayoutElement>();
@@ -352,7 +412,7 @@ public partial class GameBootstrap
         }
 
         bool shouldShow =
-            (selectedLocation.HasValue || selectedLocalStopIndex >= 0) &&
+            (selectedLocation.HasValue || selectedLocalStopIndex >= 0 || selectedPersonalHouseIndex >= 0) &&
             !isTruckDetailsOpen &&
             !isFleetPanelOpen &&
             !isDriversPanelOpen &&
@@ -378,10 +438,14 @@ public partial class GameBootstrap
 
         bool ru = IsRussianLanguage();
         buildingQuickHud.HeaderText.text = location.Label;
-        string categoryTag = IsProductionLocation(selectedBuildingType) ? "  [Production]" : "  [Service]";
+        string categoryTag = IsProductionLocation(selectedBuildingType) ? "  [Production]"
+            : selectedBuildingType == LocationType.PersonalHouse ? "  [Housing]"
+            : "  [Service]";
         buildingQuickHud.TypeText.text = GetSelectedLocationDisplayName(selectedBuildingType) + categoryTag;
         buildingQuickHud.StatusText.text = GetBuildingQuickStatusText(selectedBuildingType);
-        buildingQuickHud.ResourceText.text = GetBuildingQuickResourceText(selectedBuildingType);
+        buildingQuickHud.ResourceText.text = selectedBuildingType == LocationType.PersonalHouse
+            ? GetPersonalHouseQuickResourceText()
+            : GetBuildingQuickResourceText(selectedBuildingType);
         bool showContextBtn = HasBuildingContextAction(selectedBuildingType);
         buildingQuickHud.ContextButton.gameObject.SetActive(showContextBtn);
         if (showContextBtn)
@@ -395,7 +459,19 @@ public partial class GameBootstrap
             buildingQuickHud.StopNumberLabelText.text = ru ? $"Номер остановки: {stopNumber}" : $"Stop Number: {stopNumber}";
         }
 
-        UpdateBuildingServiceWorkerSlots(selectedBuildingType, ru);
+        bool isPersonalHouse = selectedBuildingType == LocationType.PersonalHouse;
+        if (buildingQuickHud.PersonalHouseSection != null)
+            buildingQuickHud.PersonalHouseSection.gameObject.SetActive(isPersonalHouse);
+        if (isPersonalHouse)
+        {
+            if (buildingQuickHud.WorkerSlotsSection != null)
+                buildingQuickHud.WorkerSlotsSection.gameObject.SetActive(false);
+            UpdatePersonalHouseResidentsSection();
+        }
+        else
+        {
+            UpdateBuildingServiceWorkerSlots(selectedBuildingType, ru);
+        }
         UpdateHudGamblingEffects();
 
         LocalizeCanvas(buildingQuickHud.CanvasRoot);
@@ -409,6 +485,7 @@ public partial class GameBootstrap
         bool isServiceWithVisitors = locationType == LocationType.Bar ||
                                      locationType == LocationType.Canteen ||
                                      locationType == LocationType.GamblingHall ||
+                                     locationType == LocationType.CityPark ||
                                      locationType == LocationType.Motel;
 
         buildingQuickHud.WorkerSlotsSection.gameObject.SetActive(isServiceWithVisitors);
@@ -726,6 +803,7 @@ public partial class GameBootstrap
             DriverRescuePhase.IdleAtBar          => LocationType.Bar,
             DriverRescuePhase.IdleAtCanteen      => LocationType.Canteen,
             DriverRescuePhase.IdleAtGamblingHall => LocationType.GamblingHall,
+            DriverRescuePhase.IdleAtCityPark     => LocationType.CityPark,
             _                                    => (LocationType?)null
         };
     }
@@ -737,6 +815,7 @@ public partial class GameBootstrap
             LocationType.Bar          => WorkerLeisureDuration,
             LocationType.Canteen      => WorkerCanteenDuration,
             LocationType.GamblingHall => WorkerGamblingHallDuration,
+            LocationType.CityPark     => WorkerCityParkDuration,
             LocationType.Motel        => DriverSleepDuration,
             _                         => 1f
         };
@@ -749,6 +828,7 @@ public partial class GameBootstrap
             LocationType.Bar          => ru ? "Пьёт" : "Drinking",
             LocationType.Canteen      => ru ? "Ест" : "Eating",
             LocationType.GamblingHall => ru ? "Играет в автоматы" : "Playing slots",
+            LocationType.CityPark     => ru ? "Гуляет в парке" : "Strolling in park",
             LocationType.Motel        => ru ? "Спит" : "Sleeping",
             _                         => ru ? "Внутри" : "Inside"
         };
@@ -836,6 +916,9 @@ public partial class GameBootstrap
             LocationType.Canteen      => "Service canteen - visitors pay $10 for meals",
             LocationType.Bar          => "Social hub - idle drivers gather here",
             LocationType.GamblingHall => "Gambling Hall - free leisure for workers.",
+            LocationType.CityPark     => IsRussianLanguage() ? "Городской парк — рабочие гуляют и сидят на лавочках." : "City Park — workers stroll and sit on benches.",
+            LocationType.PersonalHouse => IsRussianLanguage() ? "Жилой дом — пригородный коттедж." : "Personal House — suburban residential home.",
+            LocationType.CarMarket     => IsRussianLanguage() ? "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 \u043b\u0438\u0447\u043d\u044b\u0435 \u0430\u0432\u0442\u043e." : "Car Market - workers buy personal cars here.",
             _                         => string.Empty
         };
     }
@@ -860,8 +943,80 @@ public partial class GameBootstrap
             LocationType.Bar          => GetBarQuickResourceText(),
             LocationType.Canteen      => GetCanteenQuickResourceText(),
             LocationType.GamblingHall => GetGamblingHallQuickResourceText(),
+            LocationType.CityPark     => GetServiceBuildingQuickResourceText(locationType),
+            LocationType.CarMarket    => FormatValueLine(IsRussianLanguage() ? "\u041a\u0430\u0441\u0441\u0430" : "Bank", $"${locations[LocationType.CarMarket].BuildingBank}"),
             _ => string.Empty
         };
+    }
+
+    private string GetPersonalHouseQuickResourceText()
+    {
+        int residentCount = 0;
+        foreach (DriverAgent d in driverAgents)
+        {
+            if (d.AssignedPersonalHouseIndex == selectedPersonalHouseIndex)
+                residentCount++;
+        }
+        bool ru = IsRussianLanguage();
+        return FormatValueLine(ru ? "Жильцов" : "Residents", residentCount.ToString());
+    }
+
+    private void UpdatePersonalHouseResidentsSection()
+    {
+        if (buildingQuickHud?.ResidentRows == null) return;
+
+        bool ru = IsRussianLanguage();
+        buildingQuickHud.PersonalHouseSectionHeader.text = ru ? "Жильцы" : "Residents";
+
+        List<DriverAgent> assigned  = new();
+        List<DriverAgent> available = new();
+        foreach (DriverAgent d in driverAgents)
+        {
+            if (d.AssignedPersonalHouseIndex == selectedPersonalHouseIndex)
+                assigned.Add(d);
+            else
+                available.Add(d);
+        }
+
+        List<DriverAgent> ordered = new(assigned.Count + available.Count);
+        ordered.AddRange(assigned);
+        ordered.AddRange(available);
+
+        for (int i = 0; i < buildingQuickHud.ResidentRows.Length; i++)
+        {
+            PersonalHouseResidentRowUi row = buildingQuickHud.ResidentRows[i];
+            if (i >= ordered.Count)
+            {
+                row.Root.gameObject.SetActive(false);
+                row.CurrentDriverId = -1;
+                continue;
+            }
+
+            DriverAgent d = ordered[i];
+            row.CurrentDriverId = d.DriverId;
+            row.Root.gameObject.SetActive(true);
+            row.NameText.text = d.DriverName;
+
+            bool isResident = d.AssignedPersonalHouseIndex == selectedPersonalHouseIndex;
+            row.ActionButtonText.text = isResident ? (ru ? "Убрать" : "Remove") : (ru ? "Назначить" : "Assign");
+            Color btnColor = isResident ? new Color(0.45f, 0.20f, 0.18f, 1f) : new Color(0.20f, 0.38f, 0.22f, 1f);
+            if (row.ActionButtonImage != null) row.ActionButtonImage.color = btnColor;
+            row.NameText.color = isResident ? Color.white : FleetMutedTextColor;
+        }
+    }
+
+    private void OnResidentRowButtonClick(int rowIndex)
+    {
+        if (buildingQuickHud?.ResidentRows == null) return;
+        if (rowIndex < 0 || rowIndex >= buildingQuickHud.ResidentRows.Length) return;
+        int driverId = buildingQuickHud.ResidentRows[rowIndex].CurrentDriverId;
+        if (driverId <= 0) return;
+        DriverAgent d = driverAgents.Find(x => x.DriverId == driverId);
+        if (d == null) return;
+
+        d.AssignedPersonalHouseIndex = d.AssignedPersonalHouseIndex == selectedPersonalHouseIndex ? -1 : selectedPersonalHouseIndex;
+        isDriversScreenDirty = true;
+        PlayUiSound(uiSelectClip, 0.85f);
     }
 
     private string GetServiceBuildingQuickResourceText(LocationType locationType)
@@ -934,6 +1089,8 @@ public partial class GameBootstrap
     private static bool HasBuildingContextAction(LocationType locationType)
     {
         return locationType != LocationType.GamblingHall &&
+               locationType != LocationType.CityPark &&
+               locationType != LocationType.PersonalHouse &&
                locationType != LocationType.IntercityStop &&
                locationType != LocationType.Stop;
     }
@@ -990,5 +1147,4 @@ public partial class GameBootstrap
     }
 
 }
-
 

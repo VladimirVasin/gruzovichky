@@ -106,6 +106,7 @@ public partial class GameBootstrap
         { "Building Bank", "Касса здания" },
         { "Build", "Стройка" },
         { "Building", "Стройка" },
+        { "Lumberjack Camp", "Лагерь лесорубов" },
         { "R - rotate", "R - повернуть" },
         { "Map", "Карта" },
         { "Speed", "Скорость" },
@@ -336,6 +337,25 @@ public partial class GameBootstrap
         { "No trips available.", "Рейсов нет." },
     };
 
+    private static LocalizedStringTable russianUiTable;
+    private static LocalizedStringTable RussianUiTable => russianUiTable ??= LoadRussianUiTable();
+
+    private static LocalizedStringTable LoadRussianUiTable()
+    {
+        Dictionary<string, string> merged = new(RussianUi);
+        TextAsset externalTable = Resources.Load<TextAsset>("Localization/ui.ru");
+        if (externalTable != null)
+        {
+            Dictionary<string, string> externalValues = LocalizationJsonLoader.ParseFlatJsonObject(externalTable.text);
+            foreach (KeyValuePair<string, string> pair in externalValues)
+            {
+                merged[pair.Key] = pair.Value;
+            }
+        }
+
+        return new LocalizedStringTable(merged);
+    }
+
     private static bool IsRussianLanguage() => selectedLanguage == GameLanguage.Russian;
 
     private static string L(string value)
@@ -345,7 +365,7 @@ public partial class GameBootstrap
             return value;
         }
 
-        if (RussianUi.TryGetValue(value, out string translated))
+        if (RussianUiTable.TryTranslate(value, out string translated))
         {
             return translated;
         }
@@ -356,15 +376,7 @@ public partial class GameBootstrap
     private static string LocalizeCommonFragments(string value)
     {
         string translated = value;
-        foreach (KeyValuePair<string, string> pair in RussianUi)
-        {
-            if (pair.Key.Length < 4)
-            {
-                continue;
-            }
-
-            translated = translated.Replace(pair.Key, pair.Value);
-        }
+        translated = RussianUiTable.TranslateCommonFragments(translated);
 
         translated = translated
             .Replace("Import x1", "Импорт x1")
@@ -391,15 +403,7 @@ public partial class GameBootstrap
             return value;
         }
 
-        foreach (KeyValuePair<string, string> pair in RussianUi)
-        {
-            if (pair.Value == value)
-            {
-                return pair.Key;
-            }
-        }
-
-        return value;
+        return RussianUiTable.ToSourceKeyIfKnown(value);
     }
 
     private void SetLanguage(GameLanguage language)
@@ -454,4 +458,3 @@ public partial class GameBootstrap
         // UI update function, so the periodic full-scene scan is no longer needed.
     }
 }
-

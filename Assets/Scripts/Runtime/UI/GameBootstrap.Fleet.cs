@@ -87,7 +87,8 @@ public partial class GameBootstrap
         {
             isShiftsHighlightPersistent = false;
             selectedLocation = null;
-            selectedLocalStopIndex = -1;   // close building microhud (Forest was selected by tutorial 6)
+            selectedLocalStopIndex = -1;
+            selectedPersonalHouseIndex = -1;   // close building microhud (Forest was selected by tutorial 6)
             if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
             {
                 isTutorialOpen     = false;
@@ -416,7 +417,7 @@ public partial class GameBootstrap
             return "Arriving by bus";
         }
 
-        if (driver.RestPhase == DriverRestPhase.Sleeping)
+        if (driver.RestPhase == DriverRestPhase.Sleeping || driver.RestPhase == DriverRestPhase.SleepingAtHome)
         {
             return "Sleeping";
         }
@@ -507,7 +508,7 @@ public partial class GameBootstrap
         Color previousColor = GUI.color;
         GUI.color = roadModeActive ? new Color(1f, 0.9f, 0.35f) : Color.white;
 
-        if (GUI.Button(new Rect(panelRect.x + 12f, panelRect.y + 58f, 72f, 56f), "ROAD"))
+        if (GUI.Button(new Rect(panelRect.x + 12f, panelRect.y + 58f, 72f, 56f), "2-WAY"))
         {
             activeBuildTool = roadModeActive ? BuildTool.None : BuildTool.Road;
                     LogUiInput($"Build: switched tool to {activeBuildTool}");
@@ -516,7 +517,7 @@ public partial class GameBootstrap
         }
 
         GUI.color = previousColor;
-        GUI.Label(new Rect(panelRect.x + 96f, panelRect.y + 66f, panelRect.width - 108f, 20f), "Road", labelStyle);
+        GUI.Label(new Rect(panelRect.x + 96f, panelRect.y + 66f, panelRect.width - 108f, 20f), "Two-Way Road", labelStyle);
         GUI.Label(
             new Rect(panelRect.x + 96f, panelRect.y + 88f, panelRect.width - 108f, 34f),
             roadModeActive ? "Mode active: left click builds, right click removes." : "Click to enter road building mode.",

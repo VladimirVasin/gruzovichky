@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -7,8 +7,8 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap : MonoBehaviour
 {
-    private const int GridWidth = 64;
-    private const int GridHeight = 64;
+    private const int GridWidth = 100;
+    private const int GridHeight = 100;
     private const int WaterRiverWidth = 4;
     private const float CellSize = 1f;
     private const float RoadHeight = 0.12f;
@@ -30,15 +30,16 @@ public partial class GameBootstrap : MonoBehaviour
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
     private const float CameraZoomSpeed = 8f;
-    private const float CameraMinHeight = 6f;
-    private const float CameraMaxHeight = 70f;
+    private const float CameraMinHeight = 3.6f;
+    private const float CameraMaxHeight = 120f;
     private const float CameraMinDistance = 6f;
-    private const float CameraMaxDistance = 70f;
+    private const float CameraMaxDistance = 120f;
     private const float EdgeHighwayBusSpeed = 2.8f;
     private const float EdgeHighwayBusSpawnIntervalMin = 14f;
     private const float EdgeHighwayBusSpawnIntervalMax = 30f;
     private const float EdgeHighwayBusSpawnSpacing = 5.5f;
     private const float EdgeHighwayBusLaneOffset = 0.32f;
+    private const float RoadLaneOffset = 0.22f;
     private const float EdgeHighwayBusLift = 0.24f;
     private const float EdgeHighwayBusPassbyDistance = 5.5f;
     private const float LocalBusStopDwellGameMinutes = 5f;
@@ -56,14 +57,20 @@ public partial class GameBootstrap : MonoBehaviour
     private const float TruckFuelCapacity = 100f;
     private const float TruckFuelPerCell = 0.5f;
     internal const float TruckAutoRefuelThreshold = 50f;
-    private const float WaterEffectsUpdateInterval = 1f / 30f;
+    private const float WaterEffectsUpdateInterval = 1f / 24f;
     private const float WaterLodMediumCameraHeight = 18f;
     private const float WaterLodFarCameraHeight = 28f;
+    private const float FarZoomVisualLodEnterHeight = 46f;
+    private const float FarZoomVisualLodExitHeight = 40f;
     private const float DriverSleepDuration = DayNightCycleDuration / 24f * 8f;
     private const float WorkerCanteenDuration = DayNightCycleDuration / 24f * 1f;
     private const float WorkerLeisureDuration = DayNightCycleDuration / 24f * 2f;
     private const float WorkerGamblingHallDuration = DayNightCycleDuration / 24f * 2.5f;
+    private const float WorkerCityParkDuration     = DayNightCycleDuration / 24f * 1.5f;
     private const int   WorkerGamblingMinBalance   = 5;
+    private const int   HousePurchasePrice         = 300;
+    private const int   MaxPersonalHouseResidents  = 2;
+    private const int   CarPurchasePrice           = 100;
     private const int   WorkerGamblingMinBet       = 5;
     private const int   WorkerGamblingMaxBet       = 10;
     private const float WorkerFreeIdleMinDuration = DayNightCycleDuration / 24f * 1f;
@@ -79,14 +86,24 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DriverIdleConversationCooldownMin = 7.5f;
     private const float DriverIdleConversationCooldownMax = 12.5f;
     private const float DriverIdleConversationStartChance = 0.3f;
+    private const int SmokingParticlePoolSize = 5;
+    private const float SmokingParticleEmitInterval = 1.1f;
+    private const float SmokingParticleMaxLife = 3.2f;
     private const int AmbientAirGlobalParticleCount = 34;
     private const int AmbientAirForestParticleCount = 18;
     private const int AmbientAirHighwayDustParticleCount = 20;
-    private const int MiscBirdCount = 5;
+    private const int MiscBirdCount = 10;
     private const int AmbientCatCount = 3;
+    private const int AmbientSquirrelCount = 6;
+    private const int NightStarCount = 120;
     private const int AmbientBeeCount = 8;
     private const int AmbientLanternMothSwarmMaxCount = 8;
     private const int RiverFishMaxActiveCount = 6;
+    private const int ExhaustSmokePoolSize = 36;
+    private const int TruckDirtDustPoolSize = 28;
+    private const float ExhaustEmitInterval = 0.28f;
+    private const float TruckDirtDustEmitInterval = 0.13f;
+    private const float BuildingSmokeEmitInterval = 0.38f;
     private const int StartingTreasury = 350;
     private const int DefaultDailyBuildingTaxPercent = 10;
     private const int MinDailyBuildingTaxPercent = 0;
@@ -102,12 +119,15 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DriverShiftArrivalLeadHours = 1f;
     private const int ProductionWorkStartHour = 8;
     private const int ProductionWorkEndHour = 18;
-    private const float DioramaCameraPitch = 42f;
-    private static readonly Vector3 DioramaCameraOffset = new(-16f, 20f, -16f);
+    private const float DioramaCameraMinPitch = 20f;
+    private const float DioramaCameraPitch = 52f;
+    private static readonly Vector3 DioramaCameraOffset = new(-24f, 30f, -24f);
     private static readonly Vector3 CloudTravelDir = new Vector3(1f, 0f, 0.4f).normalized;
-    private const float CloudTravelLength = 80f;  // full path spawnв†’exit (wider spawn X=-30 needs longer path)
+    private const float CloudTravelLength = 260f; // Full cloud path from off-map spawn to exit.
 
     private readonly HashSet<Vector2Int> waterCells = new();
+    private readonly HashSet<Vector2Int> lakeWaterCells = new();
+    private readonly HashSet<Vector2Int> naturalBeachCells = new();
     private readonly HashSet<Vector2Int> roadCells = new();
     private readonly HashSet<Vector2Int> edgeHighwayCells = new();
     private readonly HashSet<Vector2Int> miscOccupiedCells = new();
@@ -128,6 +148,8 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly Dictionary<Vector2Int, (GameObject Root, RoadLanternData Data)> roadCellLanternMap = new();
     private readonly Dictionary<Vector2Int, (GameObject Root, Vector2Int SideCell)> roadCellBenchMap = new();
     private readonly HashSet<Vector2Int> benchSideCells = new();
+    private readonly Dictionary<Vector2Int, (GameObject Root, Vector2Int SideCell)> roadCellSignMap = new();
+    private readonly HashSet<Vector2Int> signSideCells = new();
     private readonly List<TruckAgent> truckAgents = new();
     private readonly List<DriverAgent> driverAgents = new();
     private readonly List<ForestWorkerAmbient> forestWorkers = new();
@@ -139,6 +161,9 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<MiscBirdData> miscBirds = new();
     private readonly List<Vector3> ambientCatRoamPoints = new();
     private readonly List<AmbientCatData> ambientCats = new();
+    private readonly List<Vector3> ambientSquirrelRoamPoints = new();
+    private readonly List<AmbientSquirrelData> ambientSquirrels = new();
+    private readonly List<NightStarData> nightStars = new();
     private readonly List<Vector3> flowerBeePoints = new();
     private readonly List<AmbientBeeData> ambientBees = new();
     private readonly List<AmbientLanternMothSwarmData> ambientLanternMothSwarms = new();
@@ -149,14 +174,21 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<RiverFishData> riverFish = new();
     private readonly List<DistantCloudData> distantClouds = new();
     private readonly List<AmbientAirParticleData> ambientAirParticles = new();
+    private readonly List<ShadowLodRendererData> shadowLodRenderers = new();
     private readonly List<MoneyLedgerEntry> moneyLedgerEntries = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
     private readonly Dictionary<LocationType, GameObject> locationSelectionHighlights = new();
     private readonly List<GameObject> localStopSelectionHighlights = new();
+    private readonly List<LocationData> personalHouses = new();
+    private readonly List<GameObject> personalHouseSelectionHighlights = new();
+    private int selectedPersonalHouseIndex = -1;
     private readonly List<EdgeHighwayBusData> edgeHighwayBuses = new();
     private readonly List<RiverBoatData> riverBoats = new();
     private LocalBusRouteData localBusRoute;
     private float[,] terrainHeights = new float[GridWidth, GridHeight];
+    private readonly List<NaturalZoneData> forestZones = new();
+    private readonly List<NaturalZoneData> hillZones = new();
+    private readonly List<NaturalZoneData> lakeZones = new();
 
     private Camera mainCamera;
     private GameObject truckObject;
@@ -169,19 +201,38 @@ public partial class GameBootstrap : MonoBehaviour
     private Material truckHeadlightRightMaterial;
     private Transform worldRoot;
     private Transform groundRoot;
+    private Transform gridLinesRoot;
     private Transform roadsRoot;
+    private Transform unifiedRoadVisualRoot;
+    private bool suppressUnifiedRoadVisualRebuild;
+    private bool suppressRoadsideRefresh;
+    private readonly HashSet<Vector2Int> pendingRoadsideRefreshCells = new();
     private Transform lanternsRoot;
     private Transform roadsidePropsRoot;
+    private Transform roadsideSignsRoot;
     private readonly List<Vector3> roadsideBenchPositions = new();
-    private readonly bool[] benchOccupied = new bool[64];
+    private readonly bool[] benchOccupied = new bool[GridWidth * GridHeight / 16];
+    private readonly List<Vector3> cityParkBenchPositions = new();
+    private readonly bool[] cityParkBenchOccupied = new bool[8];
     private Transform miscRoot;
     private Transform ambientAirRoot;
+    private Transform exhaustSmokeRoot;
+    private Transform truckDirtDustRoot;
+    private readonly List<ExhaustSmokeParticle> exhaustSmokePool = new();
+    private readonly List<ExhaustSmokeParticle> truckDirtDustPool = new();
+    private float localBusExhaustEmitTimer;
+    private float sawmillSmokeEmitTimer;
+    private float furnitureFactorySmokeEmitTimer;
     private Transform miscBirdRoot;
     private Transform ambientCatRoot;
+    private Transform ambientSquirrelRoot;
+    private Transform nightSkyRoot;
+    private Material moonMaterial;
     private Transform ambientBeeRoot;
     private Transform ambientLanternMothRoot;
     private Transform waterEffectsRoot;
     private Transform riverFishRoot;
+    private bool isFarZoomVisualLodActive;
     private AudioSource uiAudioSource;
     private AudioSource ambientAudioSource;
     private AudioSource forestAudioSource;
@@ -204,9 +255,20 @@ public partial class GameBootstrap : MonoBehaviour
     private Material waterDeepMaterial;
     private Material beachSurfaceMaterial;
     private Material shoreSurfaceMaterial;
+    private Material roadSurfaceMaterial;
+    private Material roadShoulderMaterial;
+    private Material highwaySurfaceMaterial;
+    private Material highwayShoulderMaterial;
     private Texture2D groundSurfaceTexture;
     private Texture2D grassSurfaceTexture;
+    private Texture2D roadSurfaceTexture;
     private Light mainDirectionalLight;
+    private Volume dioramaVolume;
+    private VolumeProfile dioramaVolumeProfile;
+    private ColorAdjustments dioramaColorAdjustments;
+    private Bloom dioramaBloom;
+    private DepthOfField dioramaDepthOfField;
+    private Vignette dioramaVignette;
     private GameObject selectedLocationLabelRoot;
     private TextMesh selectedLocationLabelText;
     private readonly List<TextMesh> selectedLocationLabelOutlines = new();
@@ -215,7 +277,11 @@ public partial class GameBootstrap : MonoBehaviour
     private GameObject buildHoverDrivewayHighlight;
     private readonly List<GameObject> buildHoverCellHighlights = new();
     private readonly List<Vector2Int> buildPreviewFootprintCells = new();
+    private readonly List<Vector2Int> buildPreviewRoadDirections = new();
     private Vector2Int? buildPreviewDrivewayCell;
+    private Vector2Int? roadPathStart;
+    private GameObject roadPathStartHighlight;
+    private GameObject roadPathStartSideHighlight;
     private int buildPlacementRotationIndex;
     private GameObject selectedDebugCellHighlight;
     private GameObject selectedDebugCellOutline;
@@ -294,7 +360,7 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isTradeActionDropdownOpen;
     private int nextTradeOrderId = 1;
 
-    private sealed class TradeHudOrder
+    public sealed class TradeHudOrder
     {
         public int Id;
         public TradeResourceType ResourceType;
@@ -345,6 +411,12 @@ public partial class GameBootstrap : MonoBehaviour
         public float FlickerSpeed;
         public float FlickerStrength;
         public float FlickerThreshold;
+    }
+
+    private sealed class ShadowLodRendererData
+    {
+        public Renderer Renderer;
+        public ShadowCastingMode OriginalShadowMode;
     }
 
     private sealed class MoneyLedgerEntry
@@ -523,7 +595,10 @@ public partial class GameBootstrap : MonoBehaviour
         Stop,
         Bar,
         Canteen,
-        GamblingHall
+        GamblingHall,
+        CityPark,
+        PersonalHouse,
+        CarMarket
     }
 
     /// <summary>
@@ -605,23 +680,31 @@ public partial class GameBootstrap : MonoBehaviour
     private enum BuildTool
     {
         None,
+        Parking,
+        Warehouse,
+        SingleRoad,
         Road,
         Stop,
+        Forest,
         FurnitureFactory,
         Sawmill,
         Motel,
         Bar,
         Canteen,
-        GamblingHall
+        GamblingHall,
+        CityPark,
+        PersonalHouse,
+        CarMarket
     }
 
     private enum GameStartMode
     {
         Debug,
-        User
+        User,
+        Clear
     }
 
-    private enum TripPhase
+    public enum TripPhase
     {
         None,
         ToPickup,
@@ -631,7 +714,7 @@ public partial class GameBootstrap : MonoBehaviour
         ReturnToParking
     }
 
-    private enum RefuelPhase
+    public enum RefuelPhase
     {
         None,
         ToGasStation,
@@ -657,6 +740,8 @@ public partial class GameBootstrap : MonoBehaviour
         IdleAtCanteen,
         IdleWalkToGamblingHall,
         IdleAtGamblingHall,
+        IdleWalkToCityPark,
+        IdleAtCityPark,
         IdleSmoking,
         IdlePhoneCall,
         WalkToLocalBusStop,
@@ -671,7 +756,10 @@ public partial class GameBootstrap : MonoBehaviour
         LumberCarryLogToBuilding,
         LumberReturnToTreeForPlanting,
         LumberPlanting,
-        LumberReturnToBuilding
+        LumberReturnToBuilding,
+        ToPersonalHouseForPurchase,
+        ToPersonalHouseEntrance,
+        ToCarMarketForPurchase
     }
 
     private enum DriverRestPhase
@@ -681,6 +769,7 @@ public partial class GameBootstrap : MonoBehaviour
         ParkAtMotel,
         DriverWalkToMotel,
         Sleeping,
+        SleepingAtHome,
         DriverWalkToTruck,
         ReturnToParking
     }
@@ -692,6 +781,8 @@ public partial class GameBootstrap : MonoBehaviour
         Eat,
         Leisure,
         Sleep,
+        BuyHouse,
+        BuyCar,
         Idle
     }
 
@@ -716,7 +807,7 @@ public partial class GameBootstrap : MonoBehaviour
         Logistics   // assigned to a production building
     }
 
-    private enum TradeResourceType
+    public enum TradeResourceType
     {
         Logs,
         Boards,
@@ -728,7 +819,7 @@ public partial class GameBootstrap : MonoBehaviour
         Food
     }
 
-    private enum TradeOrderType
+    public enum TradeOrderType
     {
         Buy,
         Sell
@@ -748,6 +839,7 @@ public partial class GameBootstrap : MonoBehaviour
         public Vector2Int Min;
         public Vector2Int Max;
         public Vector2Int Anchor;
+        public Vector2Int RoadAccess;
         public Color BaseColor;
         public int StopNumber;
         public int LogsStored;
@@ -828,6 +920,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private sealed class MiscTreeSway
     {
+        public Vector2Int Cell;
         public Transform RootTransform;
         public Quaternion BaseRotation;
         public float PhaseOffset;
@@ -870,10 +963,30 @@ public partial class GameBootstrap : MonoBehaviour
         public bool IsHighwayDust;
     }
 
+    private sealed class ExhaustSmokeParticle
+    {
+        public Transform Transform;
+        public Material Material;
+        public Vector3 Velocity;
+        public float LifeTimer;
+        public float MaxLife;
+        public float BaseScale;
+        public bool IsActive;
+    }
+
     private enum MiscBirdState
     {
         Perched,
         Flying
+    }
+
+    private sealed class NightStarData
+    {
+        public Transform Transform;
+        public Material Material;
+        public Color BaseColor;
+        public float TwinkleSpeed;
+        public float TwinklePhase;
     }
 
     private sealed class MiscBirdData
@@ -899,6 +1012,33 @@ public partial class GameBootstrap : MonoBehaviour
     {
         Lazing,
         Walking
+    }
+
+    private enum AmbientSquirrelState
+    {
+        Idle,
+        Running,
+        Foraging
+    }
+
+    private sealed class AmbientSquirrelData
+    {
+        public Transform RootTransform;
+        public Transform BodyTransform;
+        public Transform HeadTransform;
+        public Transform TailTransform;
+        public Vector3 CurrentPosition;
+        public Vector3 StartPosition;
+        public Vector3 TargetPosition;
+        public int CurrentPointIndex;
+        public int TargetPointIndex;
+        public float StateTimer;
+        public float MoveDuration;
+        public float MoveProgress;
+        public float AnimationPhase;
+        public float TailPhase;
+        public float Yaw;
+        public AmbientSquirrelState State;
     }
 
     private sealed class AmbientCatData
@@ -966,7 +1106,9 @@ public partial class GameBootstrap : MonoBehaviour
         public Renderer Renderer;
         public Material Material;
         public Transform Transform;
+        public Mesh Mesh;
         public float BaseY;
+        public float CurrentTopY;
         public Vector2Int Cell;
         public float BobAmplitude;
         public float BobSpeed;
@@ -977,8 +1119,11 @@ public partial class GameBootstrap : MonoBehaviour
     private sealed class WaterBodyTileData
     {
         public Transform Transform;
+        public Mesh Mesh;
         public float BaseY;
         public float BaseTopY;
+        public float BottomY;
+        public float CurrentTopY;
         public Vector2Int Cell;
         public float PhaseOffset;
     }
@@ -1040,6 +1185,9 @@ public partial class GameBootstrap : MonoBehaviour
         public Transform TruckVisualRoot;
         public Transform TruckBodyTransform;
         public Transform TruckCabinTransform;
+        public Transform TruckCargoVisualRoot;
+        public CargoType TruckCargoVisualType = CargoType.None;
+        public int TruckCargoVisualAmount = -1;
         public Renderer TruckHeadlightLeftRenderer;
         public Renderer TruckHeadlightRightRenderer;
         public Material TruckHeadlightLeftMaterial;
@@ -1084,6 +1232,8 @@ public partial class GameBootstrap : MonoBehaviour
         public LocationType? ActiveServiceLocation;
         public LocationType? QueuedServiceLocation;
         public int ParkingSlotIndex;
+        public float ExhaustEmitTimer;
+        public float DirtDustEmitTimer;
     }
 
     private sealed class WorkerEffectState
@@ -1104,7 +1254,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         Alcoholism,
         Gambler,
-        Nightowl,        // Р Р°Р±РѕС‚Р°РµС‚ Р»СѓС‡С€Рµ РІ РЅРѕС‡РЅСѓСЋ СЃРјРµРЅСѓ
+        Nightowl,        // Works better during night shifts
         Ironman,         // РњРµРґР»РµРЅРЅРµРµ СѓСЃС‚Р°С‘С‚, СЂРµР¶Рµ РЅСѓР¶РµРЅ РѕС‚РґС‹С…
         Motorhead,       // Р‘РѕРЅСѓСЃ Рє РІРѕР¶РґРµРЅРёСЋ Рё С‚РµС…РѕР±СЃР»СѓР¶РёРІР°РЅРёСЋ
         Trader,          // РўРѕСЂРіРѕРІС‹Рµ СЂРµР№СЃС‹ РїСЂРёРЅРѕСЃСЏС‚ Р±РѕР»СЊС€Рµ РїСЂРёР±С‹Р»Рё
@@ -1181,7 +1331,14 @@ public partial class GameBootstrap : MonoBehaviour
         public float IdleConversationCooldownTimer;
         public bool IsArrivingByBus;
         public int SittingBenchIndex = -1;
+        public int CityParkBenchIndex = -1;
+        public int CityParkPromenadeStep;
         public float IdleActivityTimer;
+        public Transform[] SmokingParticles;
+        public Material[] SmokingParticleMaterials;
+        public float[] SmokingParticleLives;
+        public Vector3[] SmokingParticleVelocities;
+        public float SmokingEmitTimer;
         public WorkerLifeGoal LifeGoal = WorkerLifeGoal.None;
         public int LifeCycleLastHour = -1;
         public bool NeedsCycleResetPending;
@@ -1208,569 +1365,16 @@ public partial class GameBootstrap : MonoBehaviour
         public Vector3 BusFinalTargetWorld;
         public string BusTravelReason = string.Empty;
         public bool BusRideFareExempt;
+        public int AssignedPersonalHouseIndex = -1;
+        public int OwnedCarModelIndex = -1;
+        public GameObject OwnedCarObject;
         public LocationType? AssignedBuildingType;      // logistics only: building this worker is assigned to
         public bool IsInsideBuilding;                   // true while physically inside the assigned building
         public LocationType? WarehouseDeliveryTarget;   // warehouse worker: current delivery destination
         public WarehouseResourceType WarehouseDeliveryResourceType;
         public int WarehouseDeliveryAmount;
         public bool IsCarryingWarehouseDelivery;
-    }
-
-    private int GetCurrentHour()
-    {
-        float normalized = dayNightCycleTimer / DayNightCycleDuration;
-        return Mathf.FloorToInt(normalized * 24f) % 24;
-    }
-
-    private bool IsNightTime()
-    {
-        float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
-        return normalizedTime < 0.25f;
-    }
-
-    private int GetCurrentTotalMinutes()
-    {
-        float normalized = dayNightCycleTimer / DayNightCycleDuration;
-        return Mathf.FloorToInt(normalized * 24f * 60f) % (24 * 60);
-    }
-
-    private int GetMinutesUntilShiftStart(DriverAgent driver)
-    {
-        if (driver == null || driver.ShiftStartHour < 0)
-        {
-            return int.MaxValue;
-        }
-
-        int currentMinutes = GetCurrentTotalMinutes();
-        int shiftStartMinutes = driver.ShiftStartHour * 60;
-        return (shiftStartMinutes - currentMinutes + 24 * 60) % (24 * 60);
-    }
-
-    private bool IsWeekend() => (currentDay - 1) % 7 >= 5;
-
-    // Returns true if 'hour' falls within the 8-hour window starting at 'shiftStart'
-    private bool IsHourInShiftWindow(int hour, int shiftStart)
-    {
-        if (IsWeekend()) return false;
-        return (hour - shiftStart + 24) % 24 < 8;
-    }
-
-    private bool IsProductionWorkHour(int hour)
-    {
-        if (IsWeekend()) return false;
-        return hour >= ProductionWorkStartHour && hour < ProductionWorkEndHour;
-    }
-
-    private static string GetProductionWorkRangeLabel()
-    {
-        return $"{ProductionWorkStartHour:00}:00 - {ProductionWorkEndHour:00}:00";
-    }
-
-    // Shift display string: "06:00 \u2013 14:00"
-    private static string GetShiftRangeLabel(int shiftStart)
-    {
-        int end = (shiftStart + 8) % 24;
-        return $"{shiftStart:00}:00 \u2013 {end:00}:00";
-    }
-
-    private void Awake()
-    {
-        SessionDebugLogger.SetGameTimeProvider(() => GetDayNightClockLabel());
-        SessionDebugLogger.StartNewSession($"{nameof(GameBootstrap)} on {gameObject.scene.name}");
-        Time.timeScale = 0f;
-        Time.fixedDeltaTime = 0f;
-        gameSpeedMultiplier = 0;
-        lastActiveGameSpeedMultiplier = 1;
-        AudioListener.pause = true;
-        SessionDebugLogger.Log("BOOT", "Initializing main menu bootstrap.");
-        SetupMainMenuHud();
-        SessionDebugLogger.Log("BOOT", "Main menu ready. World generation waits for selected new game mode.");
-        StartMainMenuMusic();
-        TryConsumePendingAutoStartMode();
-    }
-
-    private void OnApplicationQuit()
-    {
-        SessionDebugLogger.EndSession("Application quit");
-    }
-
-    private void OnDestroy()
-    {
-        SessionDebugLogger.EndSession("Play mode object destroyed");
-    }
-
-    private void Update()
-    {
-        bool shouldUpdateWaterEffects = ConsumeThrottledUpdate(ref waterEffectsUpdateTimer, WaterEffectsUpdateInterval);
-        UpdateMainMenuHud();
-        if (isLoadingWorld || isMainMenuOpen)
-        {
-            SetEventFeedVisible(false);
-            ClearEventFeedEntries();
-            return;
-        }
-
-        UpdateTutorialUi();
-        if (isTutorialOpen && ShouldPauseSimulationForTutorial())
-        {
-            return;
-        }
-
-        if (isRacingActive)
-        {
-            SetEventFeedVisible(false);
-            UpdateRacingMinigame();
-            return;
-        }
-        UpdateJoinRaceButton();
-        if (UpdateJoinRaceButtonInputFallback())
-        {
-            return;
-        }
-
-        bool blockPlayerInputForTutorial = isTutorialOpen;
-        if (!blockPlayerInputForTutorial)
-        {
-            HandleHotkeys();
-            HandleCameraInput();
-            HandleRoadRemovalInput();
-            HandleRoadPlacementInput();
-            UpdateBuildHoverHighlight();
-        }
-
-        UpdateWaterVisualLod();
-        ProduceForestWood();
-        UpdateSawmillProcessing();
-        UpdateFurnitureFactoryProcessing();
-        UpdateDayNightCycle();
-        UpdateSelectedLocationLabel();
-        UpdateForestTreeWobbles();
-        UpdateMiscTreeSways();
-        UpdateMiscBirds();
-        UpdateAmbientCats();
-        UpdateAmbientBees();
-        UpdateAmbientLanternMoths();
-        if (shouldUpdateWaterEffects)
-        {
-            UpdateWaterEffects();
-        }
-        UpdateRiverFish();
-        UpdateHiringDriverArrival();
-        UpdateLocalBusRoute();
-        UpdateEdgeHighwayBuses();
-        UpdateRiverBoats();
-        UpdateDistantClouds();
-        UpdateAmbientAirParticles();
-        UpdateMoneyPopups();
-        UpdateForestWorkers();
-        UpdateActiveTradeRun();
-        UpdateTradeAutoDispatch();
-        foreach (DriverAgent driver in driverAgents)
-        {
-            UpdateWorkerNeedsClock(driver);
-            UpdateWorkerEffectsClock(driver);
-        }
-
-        for (int i = 0; i < truckAgents.Count; i++)
-        {
-            TruckAgent ta = truckAgents[i];
-            if (ShouldSkipTruckRuntimeForTrade(ta))
-            {
-                continue;
-            }
-
-            DriverAgent da = ta.Driver;
-            LoadTruckState(ta);
-            UpdateTruckMovement();
-            UpdateTruckInteraction();
-            UpdateAssignedTrip(da);   // award trip money BEFORE salary deduction
-            UpdateRefuelOrder(da);
-            UpdateDriverShiftEnd(ta, da);
-            UpdateDriverShiftActivation(da);
-            UpdateIdleRecall(da);
-            UpdateDriverWalk(da);
-            UpdateDriverRest(da);
-            UpdateDriverVisualAnimation(da);
-            UpdateTruckAutoMode();
-
-            if (!isTruckMoving &&
-                !isTruckInteracting &&
-                !isDriverRescueActive &&
-                (da == null || da.RestPhase == DriverRestPhase.None) &&
-                truckCell == locations[LocationType.Parking].Anchor)
-            {
-                Vector3 parkedPosition = GetParkingSlotWorldPosition(ta.ParkingSlotIndex);
-                truckObject.transform.position = parkedPosition;
-                truckTargetWorld = parkedPosition;
-                truckSegmentStartWorld = parkedPosition;
-                truckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
-            }
-
-            SaveTruckState(ta);
-        }
-
-        UpdateAudio();
-
-        foreach (DriverAgent driver in driverAgents)
-        {
-            if (GetCurrentTruckForDriver(driver) != null)
-            {
-                continue;
-            }
-
-            UpdateDriverShiftPreparation(driver);
-            UpdateDriverShiftActivation(driver);
-            UpdateBusDriverShiftEnd(driver);
-            UpdateLogisticsShiftEnd(driver);
-            UpdateWarehouseDelivery(driver);
-            UpdateDriverRest(driver);
-            UpdateDriverIdleWander(driver);
-            UpdateDriverWalk(driver);
-            UpdateDriverVisualAnimation(driver);
-            UpdateDriverFlashlight(driver, currentStylizedDaylight);
-        }
-
-        UpdateMoneyPopup();
-        UpdateFleetScreenUi();
-        UpdateDriversScreenUi();
-        UpdateShiftsScreenUi();
-        UpdateResourcesScreenUi();
-        UpdateEconomyScreenUi();
-        UpdateBuildScreenUi();
-        UpdateWorldMapScreenUi();
-        UpdateStatesScreenUi();
-        UpdateEventFeedUi();
-        CloseQuickHudsWhenBlockingHudIsOpen();
-        UpdateTruckQuickHud();
-        UpdateLocalBusQuickHud();
-        UpdateDriverQuickHud();
-        UpdateBuildingQuickHud();
-        UpdateCellQuickHud();
-        UpdateRuntimeLocalizationTick();
-    }
-
-    private static bool ConsumeThrottledUpdate(ref float accumulator, float interval)
-    {
-        accumulator += Time.deltaTime;
-        if (accumulator < interval)
-        {
-            return false;
-        }
-
-        accumulator = Mathf.Repeat(accumulator, interval);
-        return true;
-    }
-
-    private void UpdateWaterVisualLod()
-    {
-        int targetLod = GetWaterVisualLodLevel();
-        if (targetLod == waterVisualLodLevel)
-        {
-            return;
-        }
-
-        waterVisualLodLevel = targetLod;
-        ApplyWaterVisualLod(targetLod);
-    }
-
-    private int GetWaterVisualLodLevel()
-    {
-        float cameraHeight = truckObject != null && isTruckCameraFocused
-            ? mainCamera != null ? mainCamera.transform.position.y : CameraMinHeight
-            : cameraOffset.y;
-
-        if (cameraHeight >= WaterLodFarCameraHeight)
-        {
-            return 2;
-        }
-
-        if (cameraHeight >= WaterLodMediumCameraHeight)
-        {
-            return 1;
-        }
-
-        return 0;
-    }
-
-    private void OnGUI()
-    {
-        if (isMainMenuOpen)
-        {
-            return;
-        }
-
-        try
-        {
-            Color prevColor = GUI.color;
-            bool prevEnabled = GUI.enabled;
-
-            if (!isRacingActive && !isWorldMapPanelOpen)
-            {
-                DrawMoneyHud();
-                DrawTimeHud();
-                DrawSpeedHud();
-                DrawPauseOverlay();
-                DrawMenuBar();
-                DrawBuildModeLegend();
-                if (isFleetPanelOpen) DrawFleetPanel();
-            }
-            // Shifts panel is now Canvas-based (ShiftsScreenCanvas)
-            // Drivers panel is now Canvas-based (DriversScreenCanvas)
-            // Resources panel is now Canvas-based (ResourcesScreenCanvas)
-            // Economy panel is now Canvas-based (EconomyScreenCanvas)
-            // Build panel is now Canvas-based (BuildScreenCanvas)
-
-            DrawDebugServicePanel();
-
-            GUI.color = prevColor;
-            GUI.enabled = prevEnabled;
-        }
-        catch (System.Exception ex)
-        {
-            SessionDebugLogger.Log("GUI", $"OnGUI exception: {ex.Message}");
-            GUI.color = Color.white;
-            GUI.enabled = true;
-        }
-    }
-
-    private void DrawBuildModeLegend()
-    {
-        if (!IsBuildingBuildTool(activeBuildTool))
-        {
-            return;
-        }
-
-        Rect rect = new(Screen.width - 242f, Screen.height - 86f, 212f, 56f);
-        Color prevColor = GUI.color;
-        Color prevContentColor = GUI.contentColor;
-
-        try
-        {
-            GUI.color = new Color(0.05f, 0.07f, 0.1f, 0.82f);
-            GUI.Box(rect, string.Empty);
-
-            GUI.Label(
-                new Rect(rect.x + 16f, rect.y + 12f, rect.width - 32f, rect.height - 24f),
-                L("R - rotate"),
-                new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 18,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal    = { textColor = Color.white }
-                });
-        }
-        finally
-        {
-            GUI.color = prevColor;
-            GUI.contentColor = prevContentColor;
-        }
-    }
-
-    private void SetupCamera()
-    {
-        mainCamera = Camera.main;
-        if (mainCamera == null)
-        {
-            GameObject cameraObject = new("Main Camera");
-            cameraObject.tag = "MainCamera";
-            mainCamera = cameraObject.AddComponent<Camera>();
-            cameraObject.AddComponent<AudioListener>();
-        }
-
-        mainCamera.transform.position = DioramaCameraOffset;
-        mainCamera.transform.rotation = GetDioramaCameraRotation();
-        mainCamera.fieldOfView = 30f;
-        mainCamera.nearClipPlane = 0.1f;
-        mainCamera.farClipPlane = 120f;
-        mainCamera.backgroundColor = new Color(0.82f, 0.9f, 0.97f);
-        mainCamera.clearFlags = CameraClearFlags.SolidColor;
-        cameraFocusPoint = new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
-        cameraOffset = DioramaCameraOffset;
-        cameraTargetOffset = DioramaCameraOffset;
-    }
-
-    private void SetupLighting()
-    {
-        Light keyLight = FindAnyObjectByType<Light>();
-        if (keyLight == null)
-        {
-            keyLight = new GameObject("Directional Light").AddComponent<Light>();
-        }
-
-        mainDirectionalLight = keyLight;
-        keyLight.type = LightType.Directional;
-        keyLight.transform.rotation = Quaternion.Euler(48f, -34f, 0f);
-        keyLight.color = new Color(1f, 0.94f, 0.78f);
-        keyLight.intensity = 1.22f;
-        keyLight.shadows = LightShadows.Soft;
-        keyLight.shadowStrength = 0.9f;
-        keyLight.shadowBias = 0.04f;
-        keyLight.shadowNormalBias = 0.32f;
-        keyLight.shadowNearPlane = 0.2f;
-        // shadowResolution is Built-In RP only вЂ” shadow quality in URP is set via the renderer asset
-
-        Light[] allLights = FindObjectsByType<Light>();
-        foreach (Light lightComponent in allLights)
-        {
-            lightComponent.enabled = lightComponent == keyLight;
-        }
-
-        RenderSettings.ambientMode = AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.84f, 0.84f, 0.8f);
-    }
-
-    private void UpdateDayNightCycle(float deltaTime = -1f)
-    {
-        if (mainDirectionalLight == null || mainCamera == null)
-        {
-            return;
-        }
-
-        float cycleDeltaTime = deltaTime >= 0f ? deltaTime : Time.deltaTime;
-        bool didWrapDay = dayNightCycleTimer + cycleDeltaTime >= DayNightCycleDuration;
-        if (didWrapDay) currentDay++;
-        dayNightCycleTimer = Mathf.Repeat(dayNightCycleTimer + cycleDeltaTime, DayNightCycleDuration);
-        if (didWrapDay)
-        {
-            CollectDailyBuildingTaxes();
-        }
-        float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
-        float dayHour = normalizedTime * 24f;
-        float sunriseBlend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(4.8f, 7.2f, dayHour));
-        float sunsetBlend = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(18f, 20.6f, dayHour));
-        float daylight = Mathf.Clamp01(sunriseBlend * sunsetBlend);
-        float stylizedDaylight = Mathf.SmoothStep(0.04f, 1f, daylight);
-        currentStylizedDaylight = stylizedDaylight;
-
-        float sunTravel = Mathf.Clamp01(Mathf.InverseLerp(4.5f, 20.5f, dayHour));
-        float sunArc = Mathf.Sin(sunTravel * Mathf.PI);
-        float lowSun = 1f - Mathf.SmoothStep(0.18f, 0.72f, sunArc);
-        float sunPitch = Mathf.Lerp(14f, 68f, sunArc);
-        float sunYaw = Mathf.Lerp(-62f, -8f, sunTravel);
-        mainDirectionalLight.transform.rotation = Quaternion.Euler(sunPitch, sunYaw, 0f);
-        mainDirectionalLight.intensity = Mathf.Lerp(0.18f, 1.38f, stylizedDaylight) * Mathf.Lerp(0.82f, 1f, sunArc);
-        mainDirectionalLight.color = Color.Lerp(
-            new Color(0.66f, 0.54f, 0.58f),
-            Color.Lerp(
-                new Color(1f, 0.72f, 0.46f),
-                new Color(1f, 0.97f, 0.84f),
-                Mathf.SmoothStep(0f, 1f, sunArc)),
-            stylizedDaylight);
-        mainDirectionalLight.shadowStrength = Mathf.Lerp(0.76f, 0.95f, stylizedDaylight);
-        mainDirectionalLight.shadowBias = Mathf.Lerp(0.06f, 0.03f, sunArc);
-        mainDirectionalLight.shadowNormalBias = Mathf.Lerp(0.48f, 0.24f, sunArc);
-
-        RenderSettings.ambientLight = Color.Lerp(
-            Color.Lerp(new Color(0.16f, 0.12f, 0.14f), new Color(0.35f, 0.24f, 0.18f), lowSun * daylight),
-            new Color(0.93f, 0.88f, 0.76f),
-            stylizedDaylight);
-
-        Color backgroundColor = Color.Lerp(
-            Color.Lerp(new Color(0.08f, 0.06f, 0.09f), new Color(0.52f, 0.3f, 0.24f), lowSun * daylight),
-            new Color(0.56f, 0.74f, 0.94f),
-            stylizedDaylight);
-        mainCamera.backgroundColor = backgroundColor;
-
-        float zoomT = Mathf.InverseLerp(CameraMinHeight, CameraMaxHeight, cameraOffset.y);
-        float fogZoom = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.58f, 0.96f, zoomT));
-        RenderSettings.fog = fogZoom > 0.001f;
-        RenderSettings.fogMode = FogMode.Linear;
-        float fogStrength = fogZoom * 0.26f;
-        RenderSettings.fogColor = Color.Lerp(backgroundColor, Color.Lerp(backgroundColor, Color.white, 0.12f), fogStrength);
-        RenderSettings.fogStartDistance = Mathf.Lerp(110f, 62f, fogZoom);
-        RenderSettings.fogEndDistance = Mathf.Lerp(150f, 92f, fogZoom);
-
-        for (int i = 0; i < truckAgents.Count; i++)
-        {
-            LoadTruckState(truckAgents[i]);
-            UpdateTruckHeadlights(stylizedDaylight, truckAgents[i].Driver);
-            SaveTruckState(truckAgents[i]);
-        }
-    }
-
-    private void CollectDailyBuildingTaxes()
-    {
-        if (lastTaxCollectionDay == currentDay)
-        {
-            return;
-        }
-
-        int treasuryBefore = money;
-        int totalCollected = 0;
-        int taxedBuildings = 0;
-        int taxableBankTotal = 0;
-        List<string> taxedBreakdown = new();
-
-        foreach (KeyValuePair<LocationType, LocationData> pair in locations)
-        {
-            LocationData location = pair.Value;
-            if (location == null || location.RootObject == null || location.BuildingBank <= 0)
-            {
-                continue;
-            }
-
-            taxableBankTotal += location.BuildingBank;
-            int taxAmount = Mathf.FloorToInt(location.BuildingBank * (dailyBuildingTaxPercent / 100f));
-            if (taxAmount <= 0)
-            {
-                continue;
-            }
-
-            location.BuildingBank -= taxAmount;
-            totalCollected += taxAmount;
-            taxedBuildings++;
-            taxedBreakdown.Add($"{location.Label} ${taxAmount}");
-        }
-
-        money += totalCollected;
-        lastTaxCollectionDay = currentDay;
-        lastTaxCollectedAmount = totalCollected;
-        lastTaxedBuildingCount = taxedBuildings;
-        if (totalCollected > 0)
-        {
-            RecordMoneyMovement(
-                totalCollected,
-                "Building Taxes",
-                "Treasury",
-                $"Daily tax collection from {taxedBuildings} building(s)",
-                money);
-        }
-        else
-        {
-            isEconomyScreenDirty = true;
-        }
-
-        string breakdown = taxedBreakdown.Count > 0 ? string.Join(", ", taxedBreakdown) : "none";
-        SessionDebugLogger.Log(
-            "TAX",
-            $"Collected ${totalCollected} on day {currentDay} from {taxedBuildings} building(s). Taxable bank total=${taxableBankTotal}. Breakdown: {breakdown}.");
-
-        int actualTreasuryDelta = money - treasuryBefore;
-        if (actualTreasuryDelta != totalCollected)
-        {
-            SessionDebugLogger.Log(
-                "TAX",
-                $"Treasury delta mismatch after tax collection. Expected ${totalCollected}, actual ${actualTreasuryDelta}.");
-        }
-    }
-
-    private int GetCurrentTaxableBuildingBankTotal()
-    {
-        int total = 0;
-        foreach (KeyValuePair<LocationType, LocationData> pair in locations)
-        {
-            LocationData location = pair.Value;
-            if (location == null || location.RootObject == null || location.BuildingBank <= 0)
-            {
-                continue;
-            }
-
-            total += location.BuildingBank;
-        }
-
-        return total;
+        public string LastWorkerDecisionDebugKey;
     }
 
 }
-

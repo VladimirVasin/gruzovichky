@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
-    private void CreateLocation(LocationType type, string label, Vector2Int min, Vector2Int max, Vector2Int anchor, Color baseColor)
+    private void CreateLocation(LocationType type, string label, Vector2Int min, Vector2Int max, Vector2Int anchor, Color baseColor, Vector2Int? roadAccess = null)
     {
         LocationData data = new()
         {
@@ -14,6 +14,7 @@ public partial class GameBootstrap
             Min = min,
             Max = max,
             Anchor = anchor,
+            RoadAccess = roadAccess ?? anchor,
             BaseColor = baseColor,
             StopNumber = type == LocationType.Stop ? GetNextStopNumber() : 0,
             Workers = 0,
@@ -78,6 +79,24 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(size.x * 0.92f, 0.14f, size.y * 0.64f);
             ApplyColor(baseBlock, new Color(0.78f, 0.74f, 0.68f));
         }
+        else if (type == LocationType.CityPark)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
+            ApplyColor(baseBlock, new Color(0.30f, 0.52f, 0.22f));
+        }
+        else if (type == LocationType.PersonalHouse)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
+            ApplyColor(baseBlock, new Color(0.32f, 0.48f, 0.22f));
+        }
+        else if (type == LocationType.CarMarket)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
+            ApplyColor(baseBlock, new Color(0.18f, 0.19f, 0.20f));
+        }
         else
         {
             baseBlock.transform.position = center;
@@ -136,23 +155,36 @@ public partial class GameBootstrap
         {
             CreateGamblingHallDecoration(root.transform, center, min, max, anchor);
         }
+        else if (type == LocationType.CityPark)
+        {
+            CreateCityParkDecoration(root.transform, center, min, max, anchor);
+        }
+        else if (type == LocationType.PersonalHouse)
+        {
+            CreatePersonalHouseDecoration(root.transform, center, min, max, anchor);
+        }
+        else if (type == LocationType.CarMarket)
+        {
+            CreateCarMarketDecoration(root.transform, center, min, max, anchor);
+        }
         else
         {
             CreateMotelDecoration(root.transform, center, min, max, anchor);
         }
 
         CreateLocationNightLights(type, root.transform, center, size);
+        CreateLocationWindowLanguage(type, root.transform, center, size);
 
         // в”Ђв”Ђ Category indicator stripe в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         // Production (Forest / Sawmill / FurnitureFactory) = amber
         // Service (everything else) = slate blue
-        // Forest and BusStop have no upright base block вЂ” skip.
-        if (type != LocationType.Forest && type != LocationType.IntercityStop && type != LocationType.Stop)
+        // Forest and BusStop have no upright base block - skip.
+        if (type != LocationType.Forest && type != LocationType.IntercityStop && type != LocationType.Stop && type != LocationType.CityPark && type != LocationType.PersonalHouse && type != LocationType.CarMarket)
         {
             bool isProduction = IsProductionLocation(type);
             Color stripeColor = isProduction
-                ? new Color(0.95f, 0.58f, 0.10f)   // amber  вЂ” production
-                : new Color(0.28f, 0.55f, 0.84f);   // blue   вЂ” service
+                ? new Color(0.95f, 0.58f, 0.10f)   // amber - production
+                : new Color(0.28f, 0.55f, 0.84f);   // blue - service
 
             GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
             stripe.name = "CategoryStripe";
@@ -177,6 +209,19 @@ public partial class GameBootstrap
             if (worldRoot != null)
             {
                 localStopSelectionHighlights.Add(SelectionVisualService.CreateHighlight(
+                    worldRoot,
+                    data.Label,
+                    ApplyColor,
+                    ConfigureStaticVisual));
+            }
+        }
+        else if (type == LocationType.PersonalHouse)
+        {
+            personalHouses.Add(data);
+            root.transform.position = new Vector3(0f, GetLocationBaseHeight(data), 0f);
+            if (worldRoot != null)
+            {
+                personalHouseSelectionHighlights.Add(SelectionVisualService.CreateHighlight(
                     worldRoot,
                     data.Label,
                     ApplyColor,
@@ -375,24 +420,20 @@ public partial class GameBootstrap
     private List<LocationData> GetOrderedLocalStops()
     {
         List<LocationData> orderedStops = new(localStops);
-        orderedStops.Sort((a, b) =>
+        List<BusStopOrderKey> orderKeys = new();
+        for (int i = 0; i < orderedStops.Count; i++)
         {
-            int numberCompare = a.StopNumber.CompareTo(b.StopNumber);
-            if (numberCompare != 0)
-            {
-                return numberCompare;
-            }
+            orderKeys.Add(new BusStopOrderKey(i, orderedStops[i].StopNumber, orderedStops[i].Anchor));
+        }
 
-            int xCompare = a.Anchor.x.CompareTo(b.Anchor.x);
-            if (xCompare != 0)
-            {
-                return xCompare;
-            }
+        List<int> orderedIndices = BusStopOrderingService.GetOrderedIndices(orderKeys);
+        List<LocationData> result = new();
+        for (int i = 0; i < orderedIndices.Count; i++)
+        {
+            result.Add(orderedStops[orderedIndices[i]]);
+        }
 
-            return a.Anchor.y.CompareTo(b.Anchor.y);
-        });
-
-        return orderedStops;
+        return result;
     }
 
     private void CreateForestStoredLogsVisuals(Transform parent, Vector3 basePosition)
@@ -627,6 +668,68 @@ public partial class GameBootstrap
         }
     }
 
+    private void CreateCarMarketDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        GameObject asphalt = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        asphalt.transform.SetParent(parent, false);
+        asphalt.transform.position = center + new Vector3(0f, -0.19f, 0f);
+        asphalt.transform.localScale = new Vector3(4.8f, 0.04f, 4.8f);
+        ApplyColor(asphalt, new Color(0.12f, 0.13f, 0.14f));
+        ConfigureStaticVisual(asphalt);
+
+        Vector3 officePos = center + new Vector3(-1.35f, 0.35f, 1.35f);
+        GameObject office = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        office.transform.SetParent(parent, false);
+        office.transform.position = officePos;
+        office.transform.localScale = new Vector3(1.4f, 0.9f, 1.2f);
+        ApplyColor(office, new Color(0.74f, 0.68f, 0.56f));
+        ConfigureShadowVisual(office);
+
+        GameObject awning = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        awning.transform.SetParent(parent, false);
+        awning.transform.position = officePos + new Vector3(0f, 0.5f, -0.66f);
+        awning.transform.localScale = new Vector3(1.55f, 0.12f, 0.34f);
+        ApplyColor(awning, new Color(0.84f, 0.42f, 0.18f));
+        ConfigureShadowVisual(awning);
+
+        GameObject sign = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        sign.transform.SetParent(parent, false);
+        sign.transform.position = officePos + new Vector3(0f, 0.64f, -0.82f);
+        sign.transform.localScale = new Vector3(1.05f, 0.22f, 0.04f);
+        ApplyColor(sign, new Color(0.95f, 0.78f, 0.28f));
+        ConfigureStaticVisual(sign);
+
+        Vector3[] standOffsets =
+        {
+            new(0.75f, -0.08f, 1.2f),
+            new(1.35f, -0.08f, 0f),
+            new(0.75f, -0.08f, -1.2f)
+        };
+
+        for (int i = 0; i < standOffsets.Length; i++)
+        {
+            Vector3 standCenter = center + standOffsets[i];
+            GameObject stand = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            stand.transform.SetParent(parent, false);
+            stand.transform.position = standCenter;
+            stand.transform.localScale = new Vector3(1.1f, 0.06f, 0.7f);
+            ApplyColor(stand, new Color(0.22f, 0.23f, 0.24f));
+            ConfigureStaticVisual(stand);
+
+            GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            stripe.transform.SetParent(parent, false);
+            stripe.transform.position = standCenter + new Vector3(0f, 0.04f, 0f);
+            stripe.transform.localScale = new Vector3(0.08f, 0.02f, 0.64f);
+            ApplyColor(stripe, new Color(0.92f, 0.9f, 0.82f));
+            ConfigureStaticVisual(stripe);
+
+            GameObject car = CreateCarModel(i, parent);
+            car.transform.position = standCenter + new Vector3(0f, 0.12f, 0f);
+            car.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            car.transform.localScale = Vector3.one * 0.7f;
+        }
+    }
+
     private void CreateFurnitureFactoryDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
@@ -718,7 +821,7 @@ public partial class GameBootstrap
         orientedRoot.transform.localScale = Vector3.one * BuildingDecorScale;
         Transform or = orientedRoot.transform;
 
-        // === BUILDING вЂ” back half of footprint (local Z < 0 = away from anchor) ===
+        // === BUILDING - back half of footprint (local Z < 0 = away from anchor) ===
 
         // Main body
         GameObject mainBlock = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -734,7 +837,7 @@ public partial class GameBootstrap
         roofBlock.transform.localScale = new Vector3(1.92f, 0.09f, 0.82f);
         ApplyColor(roofBlock, new Color(0.76f, 0.22f, 0.18f));
 
-        // Facade canopy вЂ” on the front face of the building body (toward anchor side)
+        // Facade canopy - on the front face of the building body (toward anchor side)
         GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Cube);
         canopy.transform.SetParent(or, false);
         canopy.transform.localPosition = new Vector3(0f, 0.58f, -0.06f);
@@ -759,7 +862,7 @@ public partial class GameBootstrap
         sign.transform.localScale = new Vector3(0.72f, 0.18f, 0.06f);
         ApplyColor(sign, new Color(0.98f, 0.84f, 0.12f));
 
-        // === PARKING AREA вЂ” front half of footprint (local Z > 0 = toward anchor) ===
+        // === PARKING AREA - front half of footprint (local Z > 0 = toward anchor) ===
 
         // Two flat parking panels on the ground in front of the building.
         // localY = 0.37 puts them just above the top of the location base block (top = 0.35 local).
@@ -788,6 +891,33 @@ public partial class GameBootstrap
                 new Color(1f, 0.9f, 0.72f),
                 1.15f,
                 3.2f);
+            return;
+        }
+
+        if (type == LocationType.CityPark)
+        {
+            float[] lx = { -2.5f,  2.5f, -2.5f,  2.5f };
+            float[] lz = { -2.5f, -2.5f,  2.5f,  2.5f };
+            for (int li = 0; li < 4; li++)
+            {
+                CreateLocationNightLight(
+                    parent,
+                    center + new Vector3(lx[li], 1.3f, lz[li]),
+                    new Color(0.18f, 0.22f, 0.14f),
+                    new Color(1f, 0.94f, 0.72f),
+                    0.88f,
+                    4.0f);
+            }
+            return;
+        }
+
+        if (type == LocationType.PersonalHouse)
+        {
+            // Two porch lanterns flanking the front door
+            CreateLocationNightLight(parent, center + new Vector3(-0.4f, 1.0f, 0f),
+                new Color(0.24f, 0.20f, 0.14f), new Color(1f, 0.90f, 0.68f), 0.75f, 3.0f);
+            CreateLocationNightLight(parent, center + new Vector3(0.4f, 1.0f, 0f),
+                new Color(0.24f, 0.20f, 0.14f), new Color(1f, 0.90f, 0.68f), 0.75f, 3.0f);
             return;
         }
 
@@ -891,20 +1021,95 @@ public partial class GameBootstrap
         locationNightLights.Add(lamp);
     }
 
-    private void CreateGridLine(Transform parent, Material lineMaterial, Vector3 start, Vector3 end)
+    private void CreateLocationWindowLanguage(LocationType type, Transform parent, Vector3 center, Vector2Int size)
     {
-        GameObject lineObject = new($"GridLine_{start.x}_{start.z}_{end.x}_{end.z}");
-        lineObject.transform.SetParent(parent, false);
-        LineRenderer lineRenderer = lineObject.AddComponent<LineRenderer>();
-        lineRenderer.useWorldSpace = false;
-        lineRenderer.positionCount = 2;
-        lineRenderer.SetPosition(0, start);
-        lineRenderer.SetPosition(1, end);
-        lineRenderer.widthMultiplier = 0.03f;
-        lineRenderer.material = lineMaterial;
-        lineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        lineRenderer.receiveShadows = false;
+        if (type == LocationType.IntercityStop || type == LocationType.Stop || type == LocationType.CityPark || type == LocationType.PersonalHouse)
+        {
+            return;
+        }
+
+        Color offColor = new Color(0.12f, 0.10f, 0.06f, 0f);
+        Color onColor  = new Color(1f, 0.88f, 0.55f, 0.92f);
+
+        switch (type)
+        {
+            case LocationType.Parking:
+                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.84f, -0.56f), new Vector3(size.x * 0.44f, 0.16f, 0.06f), offColor, onColor);
+                break;
+            case LocationType.GasStation:
+                CreateLocationGlowStrip(parent, center + new Vector3(-0.44f, 0.78f, -0.74f), new Vector3(0.38f, 0.14f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0.44f, 0.78f, -0.74f), new Vector3(0.38f, 0.14f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.96f, 0.14f), new Vector3(0.92f, 0.10f, 0.06f), offColor, onColor);
+                break;
+            case LocationType.Forest:
+                // Window on the shed front face, to the right of the door, upper wall
+                CreateLocationGlowStrip(parent, center + new Vector3(0.38f, 0.20f, -0.34f), new Vector3(0.24f, 0.16f, 0.06f), offColor, onColor);
+                break;
+            case LocationType.Warehouse:
+                CreateLocationGlowStrip(parent, center + new Vector3(-0.68f, 0.84f, -0.94f), new Vector3(0.34f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.84f, -0.94f), new Vector3(0.34f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0.68f, 0.84f, -0.94f), new Vector3(0.34f, 0.18f, 0.06f), offColor, onColor);
+                break;
+            case LocationType.Motel:
+                CreateLocationGlowStrip(parent, center + new Vector3(-0.52f, 0.78f, -0.82f), new Vector3(0.32f, 0.16f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.78f, -0.82f), new Vector3(0.32f, 0.16f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0.52f, 0.78f, -0.82f), new Vector3(0.32f, 0.16f, 0.06f), offColor, onColor);
+                break;
+            case LocationType.Sawmill:
+                CreateLocationGlowStrip(parent, center + new Vector3(-0.42f, 0.8f, -0.82f), new Vector3(0.28f, 0.22f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0.42f, 0.8f, -0.82f), new Vector3(0.28f, 0.22f, 0.06f), offColor, onColor);
+                break;
+            case LocationType.FurnitureFactory:
+                CreateLocationGlowStrip(parent, center + new Vector3(-0.72f, 0.84f, -0.9f), new Vector3(0.32f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.84f, -0.9f), new Vector3(0.32f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0.72f, 0.84f, -0.9f), new Vector3(0.32f, 0.18f, 0.06f), offColor, onColor);
+                break;
+            case LocationType.Bar:
+                CreateLocationGlowStrip(parent, center + new Vector3(-0.55f, 0.85f, -1.22f), new Vector3(0.28f, 0.24f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0.55f, 0.85f, -1.22f), new Vector3(0.28f, 0.24f, 0.06f), offColor, onColor);
+                break;
+            case LocationType.Canteen:
+                CreateLocationGlowStrip(parent, center + new Vector3(size.x * 0.28f, 0.72f, -1.17f), new Vector3(size.x * 0.58f, 0.38f, 0.06f), offColor, onColor);
+                break;
+            case LocationType.GamblingHall:
+                CreateLocationGlowStrip(parent, center + new Vector3(-0.60f, 0.88f, -1.05f), new Vector3(0.30f, 0.22f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.88f, -1.05f), new Vector3(0.34f, 0.26f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(parent, center + new Vector3(0.60f, 0.88f, -1.05f), new Vector3(0.30f, 0.22f, 0.06f), offColor, onColor);
+                break;
+            default:
+                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.82f, -0.82f), new Vector3(Mathf.Max(0.4f, size.x * 0.34f), 0.16f, 0.06f), offColor, onColor);
+                break;
+        }
     }
+
+    private void CreateLocationGlowStrip(Transform parent, Vector3 localPosition, Vector3 localScale, Color offColor, Color onColor)
+    {
+        GameObject strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        strip.transform.SetParent(parent, false);
+        strip.transform.localPosition = localPosition;
+        strip.transform.localScale = localScale;
+
+        Renderer rendererComponent = strip.GetComponent<Renderer>();
+        if (rendererComponent != null)
+        {
+            Material glowMaterial = CreateTransparentOverlayMaterial(offColor);
+            rendererComponent.sharedMaterial = glowMaterial;
+            rendererComponent.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            rendererComponent.receiveShadows = false;
+            locationNightLightRenderers.Add(rendererComponent);
+            locationNightLightMaterials.Add(rendererComponent.material);
+            locationNightLightOffColors.Add(offColor);
+            locationNightLightOnColors.Add(onColor);
+            locationNightLightMaxIntensities.Add(0f);
+            locationNightLightRanges.Add(0f);
+        }
+
+        if (strip.TryGetComponent(out Collider stripCollider))
+        {
+            stripCollider.enabled = false;
+        }
+    }
+
 }
 
 

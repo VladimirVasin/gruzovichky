@@ -187,7 +187,7 @@ public partial class GameBootstrap
         renderer.receiveShadows = true;
     }
 
-    private static void ConfigureShadowVisual(GameObject target)
+    private void ConfigureShadowVisual(GameObject target)
     {
         if (!target.TryGetComponent(out Renderer renderer))
         {
@@ -196,6 +196,7 @@ public partial class GameBootstrap
 
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
         renderer.receiveShadows = true;
+        RegisterShadowLodRenderer(renderer);
     }
 
     private bool IsInsideGrid(Vector2Int cell)

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -333,6 +333,7 @@ public partial class GameBootstrap
         isDriverDetailsOpen = false;
         selectedLocation = null;
         selectedLocalStopIndex = -1;
+        selectedPersonalHouseIndex = -1;
         LogUiInput("Selection: focused Local Bus");
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelOpenClip, 0.9f);

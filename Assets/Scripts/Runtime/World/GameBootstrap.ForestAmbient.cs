@@ -514,11 +514,11 @@ public partial class GameBootstrap
 
         float darkness = 1f - currentStylizedDaylight;
         bool flashlightOn = darkness > 0.55f;
-        float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.45f, 1.7f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+        float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.5f, 1.9f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color flashlightColor = Color.Lerp(
-            new Color(0.24f, 0.22f, 0.18f),
-            new Color(1f, 0.92f, 0.74f),
-            Mathf.Clamp01(flashlightIntensity / 1.7f));
+            new Color(0.28f, 0.18f, 0.1f),
+            new Color(1f, 0.8f, 0.48f),
+            Mathf.Clamp01(flashlightIntensity / 1.9f));
 
         worker.FlashlightLight.enabled = flashlightOn;
         worker.FlashlightLight.intensity = flashlightIntensity;

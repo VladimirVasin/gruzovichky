@@ -17,11 +17,10 @@ public partial class GameBootstrap : MonoBehaviour
         const float waterCellHeight = 0.22f;
         const float waterBaseTopHeight = 0.04f;
         const float waterSurfaceTop = 0.22f;
-        const float waterSurfaceThickness = 0.035f;
         // Opaque water body sits low; transparent surface stack floats above it.
-        float waterSurfaceCenterY    = waterCellHeight - 0.006f;  // 0.214 вЂ” top layer
-        float waterMidSurfaceCenterY = waterCellHeight - 0.012f;  // 0.208 вЂ” mid layer
-        float waterLowSurfaceCenterY = waterCellHeight - 0.018f;  // 0.202 вЂ” low layer
+        float waterSurfaceCenterY    = waterCellHeight - 0.005f;
+        float waterMidSurfaceCenterY = waterCellHeight - 0.012f;
+        float waterLowSurfaceCenterY = waterCellHeight - 0.019f;
         waterSurfaceTiles.Clear();
         waterBodyTiles.Clear();
 
@@ -30,65 +29,64 @@ public partial class GameBootstrap : MonoBehaviour
             for (int y = 0; y < GridHeight; y++)
             {
                 bool isWater = waterCells.Contains(new Vector2Int(x, y));
-                bool isNearBeach = y == beachNearRow;
+                bool isNearBeach = y == beachNearRow || naturalBeachCells.Contains(new Vector2Int(x, y));
                 bool isFarBeach = y == beachFarRow;
                 bool isBeach = isNearBeach || isFarBeach;
 
                 float terrainHeight = isWater ? waterBaseTopHeight : terrainHeights[x, y];
                 float thickness = isWater ? 0.18f : 0.28f + terrainHeight;
 
-                GameObject groundTile = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                groundTile.name = isWater ? $"Water_{x}_{y}" : $"Ground_{x}_{y}";
-                groundTile.transform.SetParent(groundRoot, false);
-                groundTile.transform.position = new Vector3(x + 0.5f, terrainHeight - thickness * 0.5f - 0.02f, y + 0.5f);
-                groundTile.transform.localScale = new Vector3(1.02f, thickness, 1.02f);
+                float bottomY = terrainHeight - thickness - 0.02f;
+                GameObject groundTile = isWater
+                    ? CreateWaterBodyCellMesh($"Water_{x}_{y}", x, y, waterBaseTopHeight, bottomY)
+                    : CreateTerrainCellMesh($"Ground_{x}_{y}", x, y, bottomY, 0.01f);
 
                 if (isWater)
                 {
-                    // t=0 в†’ shore (shallow), t=1 в†’ deepest row
-                    float t = (float)(y - shoreRow) / Mathf.Max(WaterRiverWidth - 1, 1);
+                    float t = lakeWaterCells.Contains(new Vector2Int(x, y))
+                        ? GetLakeWaterDepth01(x, y)
+                        : (float)(y - shoreRow) / Mathf.Max(WaterRiverWidth - 1, 1);
 
                     // Solid tile: per-tile depth colour (instance material)
                     Color baseWaterColor = Color.Lerp(
-                        new Color(0.38f, 0.74f, 0.88f),  // shallow: bright cyan
-                        new Color(0.08f, 0.26f, 0.58f),  // deep: dark navy
+                        new Color(0.26f, 0.62f, 0.78f),
+                        new Color(0.03f, 0.14f, 0.38f),
                         t);
                     Renderer r = groundTile.GetComponent<Renderer>();
                     r.material = CreateSurfaceMaterial(null, baseWaterColor, 0.92f);
                     r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     r.receiveShadows = true;
-                    if (groundTile.TryGetComponent(out Collider wc)) Object.Destroy(wc);
                     float wavePhase = Random.Range(0f, 10f);
                     waterBodyTiles.Add(new WaterBodyTileData
                     {
                         Transform = groundTile.transform,
-                        BaseY = groundTile.transform.position.y,
-                        BaseTopY = groundTile.transform.position.y + thickness * 0.5f,
+                        Mesh = groundTile.GetComponent<MeshFilter>().sharedMesh,
+                        BaseY = 0f,
+                        BaseTopY = waterBaseTopHeight,
+                        BottomY = bottomY,
+                        CurrentTopY = waterBaseTopHeight,
                         Cell = new Vector2Int(x, y),
                         PhaseOffset = wavePhase
                     });
 
                     // Top shimmer layer вЂ” wide, light, animated bob
                     Color topColor = Color.Lerp(
-                        new Color(0.75f, 0.94f, 1.00f, 0.18f),
-                        new Color(0.18f, 0.50f, 0.85f, 0.11f), t);
-                    GameObject waterSurface = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    waterSurface.name = $"WaterSurface_{x}_{y}";
-                    waterSurface.transform.SetParent(groundRoot, false);
-                    waterSurface.transform.position = new Vector3(x + 0.5f, waterSurfaceCenterY, y + 0.5f);
-                    waterSurface.transform.localScale = new Vector3(1.01f, waterSurfaceThickness, 1.01f);
+                        new Color(0.86f, 0.98f, 1.00f, 0.11f),
+                        new Color(0.14f, 0.44f, 0.78f, 0.055f), t);
+                    GameObject waterSurface = CreateWaterSurfaceCellMesh($"WaterSurface_{x}_{y}", x, y, waterSurfaceCenterY, 1f);
                     Renderer surfaceRenderer = waterSurface.GetComponent<Renderer>();
                     surfaceRenderer.material = CreateTransparentOverlayMaterial(topColor);
                     surfaceRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     surfaceRenderer.receiveShadows = false;
-                    if (waterSurface.TryGetComponent(out Collider waterSurfaceCollider)) Object.Destroy(waterSurfaceCollider);
 
                     waterSurfaceTiles.Add(new WaterSurfaceTileData
                     {
                         Renderer = surfaceRenderer,
                         Material = surfaceRenderer.material,
                         Transform = waterSurface.transform,
+                        Mesh = waterSurface.GetComponent<MeshFilter>().sharedMesh,
                         BaseY = waterSurfaceCenterY,
+                        CurrentTopY = waterSurfaceCenterY,
                         Cell = new Vector2Int(x, y),
                         BobAmplitude = y == shoreRow ? 0.028f : 0.04f,
                         BobSpeed = y == shoreRow ? 0.78f : 1.02f,
@@ -98,24 +96,21 @@ public partial class GameBootstrap : MonoBehaviour
 
                     // Mid layer вЂ” slightly smaller, more saturated
                     Color midColor = Color.Lerp(
-                        new Color(0.42f, 0.78f, 0.92f, 0.16f),
-                        new Color(0.10f, 0.36f, 0.72f, 0.11f), t);
-                    GameObject waterMidSurface = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    waterMidSurface.name = $"WaterMidSurface_{x}_{y}";
-                    waterMidSurface.transform.SetParent(groundRoot, false);
-                    waterMidSurface.transform.position = new Vector3(x + 0.5f, waterMidSurfaceCenterY, y + 0.5f);
-                    waterMidSurface.transform.localScale = new Vector3(0.88f, 0.03f, 0.88f);
+                        new Color(0.44f, 0.78f, 0.92f, 0.09f),
+                        new Color(0.07f, 0.28f, 0.58f, 0.055f), t);
+                    GameObject waterMidSurface = CreateWaterSurfaceCellMesh($"WaterMidSurface_{x}_{y}", x, y, waterMidSurfaceCenterY, 1.0f);
                     Renderer midSurfaceRenderer = waterMidSurface.GetComponent<Renderer>();
                     midSurfaceRenderer.material = CreateTransparentOverlayMaterial(midColor);
                     midSurfaceRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     midSurfaceRenderer.receiveShadows = false;
-                    if (waterMidSurface.TryGetComponent(out Collider waterMidSurfaceCollider)) Object.Destroy(waterMidSurfaceCollider);
                     waterSurfaceTiles.Add(new WaterSurfaceTileData
                     {
                         Renderer = midSurfaceRenderer,
                         Material = midSurfaceRenderer.material,
                         Transform = waterMidSurface.transform,
+                        Mesh = waterMidSurface.GetComponent<MeshFilter>().sharedMesh,
                         BaseY = waterMidSurfaceCenterY,
+                        CurrentTopY = waterMidSurfaceCenterY,
                         Cell = new Vector2Int(x, y),
                         BobAmplitude = y == shoreRow ? 0.022f : 0.03f,
                         BobSpeed = y == shoreRow ? 0.74f : 0.96f,
@@ -125,24 +120,21 @@ public partial class GameBootstrap : MonoBehaviour
 
                     // Low layer вЂ” noticeably smaller, darkest, acts as "depth shadow"
                     Color lowColor = Color.Lerp(
-                        new Color(0.22f, 0.58f, 0.78f, 0.30f),
-                        new Color(0.04f, 0.18f, 0.52f, 0.22f), t);
-                    GameObject waterLowSurface = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    waterLowSurface.name = $"WaterLowSurface_{x}_{y}";
-                    waterLowSurface.transform.SetParent(groundRoot, false);
-                    waterLowSurface.transform.position = new Vector3(x + 0.5f, waterLowSurfaceCenterY, y + 0.5f);
-                    waterLowSurface.transform.localScale = new Vector3(0.72f, 0.028f, 0.72f);
+                        new Color(0.16f, 0.46f, 0.68f, 0.16f),
+                        new Color(0.02f, 0.12f, 0.34f, 0.10f), t);
+                    GameObject waterLowSurface = CreateWaterSurfaceCellMesh($"WaterLowSurface_{x}_{y}", x, y, waterLowSurfaceCenterY, 1f);
                     Renderer lowSurfaceRenderer = waterLowSurface.GetComponent<Renderer>();
                     lowSurfaceRenderer.material = CreateTransparentOverlayMaterial(lowColor);
                     lowSurfaceRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     lowSurfaceRenderer.receiveShadows = false;
-                    if (waterLowSurface.TryGetComponent(out Collider waterLowSurfaceCollider)) Object.Destroy(waterLowSurfaceCollider);
                     waterSurfaceTiles.Add(new WaterSurfaceTileData
                     {
                         Renderer = lowSurfaceRenderer,
                         Material = lowSurfaceRenderer.material,
                         Transform = waterLowSurface.transform,
+                        Mesh = waterLowSurface.GetComponent<MeshFilter>().sharedMesh,
                         BaseY = waterLowSurfaceCenterY,
+                        CurrentTopY = waterLowSurfaceCenterY,
                         Cell = new Vector2Int(x, y),
                         BobAmplitude = y == shoreRow ? 0.016f : 0.022f,
                         BobSpeed = y == shoreRow ? 0.7f : 0.9f,
@@ -159,7 +151,7 @@ public partial class GameBootstrap : MonoBehaviour
                         foamStrip.transform.localScale = new Vector3(0.94f, 0.012f, 0.12f);
                         Renderer foamRenderer = foamStrip.GetComponent<Renderer>();
                         foamRenderer.sharedMaterial = waterShallowMaterial;
-                        foamRenderer.material.color = new Color(0.9f, 0.96f, 1f);
+                        foamRenderer.material.color = new Color(0.88f, 0.94f, 0.98f);
                         foamRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                         foamRenderer.receiveShadows = false;
                         if (foamStrip.TryGetComponent(out Collider foamCollider)) Object.Destroy(foamCollider);
@@ -190,9 +182,128 @@ public partial class GameBootstrap : MonoBehaviour
         CreateDioramaBase();
     }
 
+    private GameObject CreateTerrainCellMesh(string name, int x, int y, float bottomY, float lift)
+    {
+        GameObject cell = new(name);
+        cell.transform.SetParent(groundRoot, false);
+
+        float x0 = x;
+        float x1 = x + 1f;
+        float z0 = y;
+        float z1 = y + 1f;
+
+        float h00 = SampleTerrainHeight(x0, z0) + lift;
+        float h10 = SampleTerrainHeight(x1, z0) + lift;
+        float h01 = SampleTerrainHeight(x0, z1) + lift;
+        float h11 = SampleTerrainHeight(x1, z1) + lift;
+        CreateCellBoxMesh(cell, x0, x1, z0, z1, h00, h10, h01, h11, bottomY);
+        return cell;
+    }
+
+    private GameObject CreateWaterBodyCellMesh(string name, int x, int y, float topY, float bottomY)
+    {
+        GameObject cell = new(name);
+        cell.transform.SetParent(groundRoot, false);
+        CreateCellBoxMesh(cell, x, x + 1f, y, y + 1f, topY, topY, topY, topY, bottomY);
+        cell.GetComponent<MeshFilter>().sharedMesh.MarkDynamic();
+        return cell;
+    }
+
+    private GameObject CreateWaterSurfaceCellMesh(string name, int x, int y, float topY, float size)
+    {
+        GameObject cell = new(name);
+        cell.transform.SetParent(groundRoot, false);
+
+        float inset = (1f - size) * 0.5f;
+        float x0 = x + inset;
+        float x1 = x + 1f - inset;
+        float z0 = y + inset;
+        float z1 = y + 1f - inset;
+
+        Mesh mesh = new();
+        mesh.name = $"{name}_Mesh";
+        mesh.MarkDynamic();
+        mesh.vertices = new[]
+        {
+            new Vector3(x0, topY, z0),
+            new Vector3(x1, topY, z0),
+            new Vector3(x0, topY, z1),
+            new Vector3(x1, topY, z1),
+        };
+        mesh.triangles = new[] { 0, 2, 1, 1, 2, 3 };
+        mesh.uv = new[]
+        {
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
+        };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        MeshFilter filter = cell.AddComponent<MeshFilter>();
+        filter.sharedMesh = mesh;
+        cell.AddComponent<MeshRenderer>();
+        return cell;
+    }
+
+    private static void CreateCellBoxMesh(
+        GameObject target,
+        float x0,
+        float x1,
+        float z0,
+        float z1,
+        float h00,
+        float h10,
+        float h01,
+        float h11,
+        float bottomY)
+    {
+        Mesh mesh = new();
+        mesh.name = $"{target.name}_Mesh";
+        mesh.vertices = new[]
+        {
+            new Vector3(x0, h00, z0),
+            new Vector3(x1, h10, z0),
+            new Vector3(x0, h01, z1),
+            new Vector3(x1, h11, z1),
+            new Vector3(x0, bottomY, z0),
+            new Vector3(x1, bottomY, z0),
+            new Vector3(x0, bottomY, z1),
+            new Vector3(x1, bottomY, z1),
+        };
+        mesh.triangles = new[]
+        {
+            0, 2, 1, 1, 2, 3,
+            4, 5, 6, 5, 7, 6,
+            0, 1, 4, 1, 5, 4,
+            2, 6, 3, 3, 6, 7,
+            0, 4, 2, 2, 4, 6,
+            1, 3, 5, 3, 7, 5,
+        };
+        mesh.uv = new[]
+        {
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
+        };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        target.AddComponent<MeshFilter>().sharedMesh = mesh;
+        target.AddComponent<MeshRenderer>();
+    }
+
     private void PopulateWaterCells()
     {
         waterCells.Clear();
+        lakeWaterCells.Clear();
+        naturalBeachCells.Clear();
         int topStart = GridHeight - WaterRiverWidth;
         for (int x = 0; x < GridWidth; x++)
         {
@@ -201,6 +312,8 @@ public partial class GameBootstrap : MonoBehaviour
                 waterCells.Add(new Vector2Int(x, y));
             }
         }
+
+        AddLakeWaterCellsFromNaturalZones();
     }
 
     private void FlattenTerrainNearWater()
@@ -214,6 +327,25 @@ public partial class GameBootstrap : MonoBehaviour
         // Keep water cells at a fixed explicit level so the strip reads clearly against the beach shelf.
         foreach (Vector2Int cell in waterCells)
             terrainHeights[cell.x, cell.y] = waterCellHeight;
+
+        foreach (Vector2Int cell in naturalBeachCells)
+        {
+            terrainHeights[cell.x, cell.y] = Mathf.Min(terrainHeights[cell.x, cell.y], 0.06f);
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                for (int dy = -1; dy <= 1; dy++)
+                {
+                    Vector2Int slope = new(cell.x + dx, cell.y + dy);
+                    if (slope.x < 0 || slope.x >= GridWidth || slope.y < 0 || slope.y >= GridHeight ||
+                        waterCells.Contains(slope) || naturalBeachCells.Contains(slope))
+                    {
+                        continue;
+                    }
+
+                    terrainHeights[slope.x, slope.y] = Mathf.Min(terrainHeights[slope.x, slope.y], 0.26f);
+                }
+            }
+        }
 
         if (beachNearRow >= 0)
             for (int x = 0; x < GridWidth; x++)
@@ -257,9 +389,9 @@ public partial class GameBootstrap : MonoBehaviour
 
         int segmentCount = Mathf.Max(6, Mathf.RoundToInt(GridWidth / 4f));
         float segmentWidth = fullWidth / segmentCount + 0.18f;
-        for (int ring = 0; ring < 2; ring++)
+        for (int ring = 0; ring < 3; ring++)
         {
-            int targetRow = ring == 0 ? beachNearRow : beachFarRow;
+            int targetRow = ring == 0 ? beachNearRow : ring == 1 ? beachFarRow : shoreRow;
             if (targetRow < 0)
             {
                 continue;
@@ -272,7 +404,8 @@ public partial class GameBootstrap : MonoBehaviour
                 washPatch.transform.SetParent(waterEffectsRoot, false);
                 washPatch.transform.localScale = new Vector3(segmentWidth, 0.008f, ring == 0 ? 0.86f : 0.78f);
                 Renderer washRenderer = washPatch.GetComponent<Renderer>();
-                washRenderer.sharedMaterial = CreateTransparentOverlayMaterial(new Color(0.78f, 0.95f, 1f, ring == 0 ? 0.22f : 0.16f));
+                float baseAlpha = ring == 0 ? 0.20f : ring == 1 ? 0.14f : 0.1f;
+                washRenderer.sharedMaterial = CreateTransparentOverlayMaterial(new Color(0.78f, 0.95f, 1f, baseAlpha));
                 washRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 washRenderer.receiveShadows = false;
                 if (washPatch.TryGetComponent(out Collider washCollider))
@@ -281,8 +414,8 @@ public partial class GameBootstrap : MonoBehaviour
                 }
 
                 float baseX = 0.4f + segmentWidth * 0.5f + segmentIndex * (fullWidth / segmentCount);
-                float baseZ = targetRow + 0.5f;
-                float baseY = ring == 0 ? 0.038f : 0.026f;
+                float baseZ = ring == 0 ? targetRow + 0.56f : ring == 1 ? targetRow + 0.52f : targetRow + 0.18f;
+                float baseY = ring == 0 ? 0.04f : ring == 1 ? 0.028f : 0.224f;
                 washPatch.transform.position = new Vector3(baseX, baseY, baseZ);
 
                 waterShoreWashPatches.Add(new WaterShoreWashPatchData
@@ -294,7 +427,7 @@ public partial class GameBootstrap : MonoBehaviour
                     BaseY = baseY,
                     BaseZ = baseZ,
                     Width = segmentWidth,
-                    Depth = ring == 0 ? 0.86f : 0.78f,
+                    Depth = ring == 0 ? 0.92f : ring == 1 ? 0.78f : 0.46f,
                     ShoreRingIndex = ring,
                     SegmentIndex = segmentIndex,
                     PhaseOffset = Random.Range(0f, 1f)
@@ -302,12 +435,12 @@ public partial class GameBootstrap : MonoBehaviour
             }
         }
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 4; i++)
         {
             GameObject foam = GameObject.CreatePrimitive(PrimitiveType.Cube);
             foam.name = $"WaterShoreFoamBand_{i + 1}";
             foam.transform.SetParent(waterEffectsRoot, false);
-            foam.transform.localScale = new Vector3(fullWidth, 0.01f, 0.08f + i * 0.025f);
+            foam.transform.localScale = new Vector3(fullWidth, 0.01f, 0.07f + i * 0.02f);
             ApplyColor(foam, new Color(0.92f, 0.97f, 1f));
             ConfigureStaticVisual(foam);
             if (foam.TryGetComponent(out Collider foamCollider))
@@ -315,8 +448,8 @@ public partial class GameBootstrap : MonoBehaviour
                 foamCollider.enabled = false;
             }
 
-            float z = shoreRow + 0.14f + i * 0.08f;
-            foam.transform.position = new Vector3(centerX, 0.238f + i * 0.003f, z);
+            float z = shoreRow + 0.12f + i * 0.06f;
+            foam.transform.position = new Vector3(centerX, 0.236f + i * 0.0025f, z);
 
             Renderer foamRenderer = foam.GetComponent<Renderer>();
             waterShoreFoams.Add(new WaterShoreFoamData
@@ -324,7 +457,7 @@ public partial class GameBootstrap : MonoBehaviour
                 RootTransform = foam.transform,
                 Renderer = foamRenderer,
                 Material = foamRenderer != null ? foamRenderer.material : null,
-                BaseY = 0.238f + i * 0.003f,
+                BaseY = 0.236f + i * 0.0025f,
                 BaseZ = z,
                 Width = fullWidth,
                 DriftSpeed = Random.Range(0.18f, 0.34f),
@@ -419,6 +552,98 @@ public partial class GameBootstrap : MonoBehaviour
         });
     }
 
+    private void SetupNightSky()
+    {
+        nightStars.Clear();
+        if (nightSkyRoot != null)
+        {
+            Destroy(nightSkyRoot.gameObject);
+        }
+
+        if (worldRoot == null)
+        {
+            return;
+        }
+
+        nightSkyRoot = new GameObject("NightSky").transform;
+        nightSkyRoot.SetParent(worldRoot, false);
+
+        GameObject moonObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        moonObj.name = "Moon";
+        moonObj.transform.SetParent(nightSkyRoot, false);
+        moonObj.transform.position = new Vector3(GridWidth * 0.5f, 68f, GridHeight + 62f);
+        moonObj.transform.localScale = Vector3.one * 7f;
+        moonMaterial = CreateTransparentOverlayMaterial(new Color(1f, 0.98f, 0.92f, 0f));
+        Renderer moonRend = moonObj.GetComponent<Renderer>();
+        moonRend.sharedMaterial = moonMaterial;
+        moonRend.shadowCastingMode = ShadowCastingMode.Off;
+        moonRend.receiveShadows = false;
+        if (moonObj.TryGetComponent(out Collider moonCol)) moonCol.enabled = false;
+
+        for (int i = 0; i < NightStarCount; i++)
+        {
+            float x = Random.Range(-30f, GridWidth + 30f);
+            float y = Random.Range(54f, 84f);
+            float z = Random.Range(-40f, GridHeight + 50f);
+            float scale = Random.Range(0.24f, 0.62f);
+
+            int ct = i % 3;
+            Color baseColor = ct == 0
+                ? new Color(1f, 0.90f, 0.76f, 0f)
+                : ct == 1
+                  ? new Color(0.90f, 0.94f, 1f, 0f)
+                  : new Color(1f, 1f, 0.98f, 0f);
+
+            GameObject starObj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            starObj.name = $"Star_{i + 1}";
+            starObj.transform.SetParent(nightSkyRoot, false);
+            starObj.transform.position = new Vector3(x, y, z);
+            starObj.transform.localScale = Vector3.one * scale;
+
+            Material starMat = CreateTransparentOverlayMaterial(baseColor);
+            Renderer sr = starObj.GetComponent<Renderer>();
+            sr.sharedMaterial = starMat;
+            sr.shadowCastingMode = ShadowCastingMode.Off;
+            sr.receiveShadows = false;
+            if (starObj.TryGetComponent(out Collider starCol)) starCol.enabled = false;
+
+            nightStars.Add(new NightStarData
+            {
+                Transform    = starObj.transform,
+                Material     = starMat,
+                BaseColor    = baseColor,
+                TwinkleSpeed = Random.Range(0.7f, 2.4f),
+                TwinklePhase = Random.Range(0f, 10f)
+            });
+        }
+    }
+
+    private void UpdateNightSky()
+    {
+        float nightStrength = 1f - Mathf.SmoothStep(0.05f, 0.38f, currentStylizedDaylight);
+        float time = Time.time;
+
+        if (moonMaterial != null)
+        {
+            moonMaterial.color = new Color(1f, 0.98f, 0.92f, nightStrength * 0.97f);
+        }
+
+        for (int i = nightStars.Count - 1; i >= 0; i--)
+        {
+            NightStarData star = nightStars[i];
+            if (star.Transform == null)
+            {
+                nightStars.RemoveAt(i);
+                continue;
+            }
+
+            float twinkle = 1f + Mathf.Sin(time * star.TwinkleSpeed + star.TwinklePhase) * 0.17f;
+            float alpha = nightStrength * Mathf.Clamp01(twinkle);
+            Color c = star.BaseColor;
+            star.Material.color = new Color(c.r, c.g, c.b, alpha);
+        }
+    }
+
     private void SetupDioramaPostProcessing()
     {
         UniversalAdditionalCameraData cameraData = mainCamera.GetUniversalAdditionalCameraData();
@@ -434,46 +659,95 @@ public partial class GameBootstrap : MonoBehaviour
         Volume volume = volumeObject.AddComponent<Volume>();
         volume.isGlobal = true;
         volume.priority = 100f;
+        dioramaVolume = volume;
 
         VolumeProfile profile = ScriptableObject.CreateInstance<VolumeProfile>();
         volume.sharedProfile = profile;
+        dioramaVolumeProfile = profile;
 
         ColorAdjustments colorAdjustments = profile.Add<ColorAdjustments>(true);
-        colorAdjustments.postExposure.Override(0.08f);
-        colorAdjustments.contrast.Override(10f);
-        colorAdjustments.saturation.Override(12f);
-        colorAdjustments.colorFilter.Override(new Color(1f, 0.97f, 0.93f, 1f));
+        colorAdjustments.postExposure.Override(0.04f);
+        colorAdjustments.contrast.Override(14f);
+        colorAdjustments.saturation.Override(10f);
+        colorAdjustments.colorFilter.Override(new Color(1f, 0.98f, 0.95f, 1f));
+        dioramaColorAdjustments = colorAdjustments;
 
         Bloom bloom = profile.Add<Bloom>(true);
-        bloom.threshold.Override(0.86f);
-        bloom.intensity.Override(0.12f);
-        bloom.scatter.Override(0.52f);
-        bloom.tint.Override(new Color(1f, 0.94f, 0.84f, 1f));
-        bloom.highQualityFiltering.Override(false);
+        bloom.threshold.Override(0.84f);
+        bloom.intensity.Override(0.14f);
+        bloom.scatter.Override(0.58f);
+        bloom.tint.Override(new Color(1f, 0.93f, 0.84f, 1f));
+        bloom.highQualityFiltering.Override(true);
+        dioramaBloom = bloom;
 
         DepthOfField depthOfField = profile.Add<DepthOfField>(true);
         depthOfField.mode.Override(DepthOfFieldMode.Gaussian);
-        depthOfField.gaussianStart.Override(36f);
-        depthOfField.gaussianEnd.Override(78f);
-        depthOfField.gaussianMaxRadius.Override(0.018f);
-        depthOfField.highQualitySampling.Override(false);
+        depthOfField.gaussianStart.Override(32f);
+        depthOfField.gaussianEnd.Override(72f);
+        depthOfField.gaussianMaxRadius.Override(0.022f);
+        depthOfField.highQualitySampling.Override(true);
+        dioramaDepthOfField = depthOfField;
 
         Vignette vignette = profile.Add<Vignette>(true);
-        vignette.intensity.Override(0.045f);
-        vignette.smoothness.Override(0.42f);
-        vignette.rounded.Override(false);
+        vignette.intensity.Override(0.052f);
+        vignette.smoothness.Override(0.44f);
+        vignette.rounded.Override(true);
+        dioramaVignette = vignette;
+
+        UpdateDioramaPostProcessing(1f, 0f, 1f, mainCamera.backgroundColor);
+    }
+
+    private void UpdateDioramaPostProcessing(float stylizedDaylight, float lowSun, float sunArc, Color backgroundColor)
+    {
+        if (dioramaColorAdjustments == null || dioramaBloom == null || dioramaDepthOfField == null || dioramaVignette == null)
+        {
+            return;
+        }
+
+        float dawnDuskStrength = Mathf.Clamp01(lowSun * Mathf.Lerp(0.2f, 1f, stylizedDaylight));
+        float nightStrength = 1f - stylizedDaylight;
+        float zoomT = Mathf.InverseLerp(CameraMinHeight, CameraMaxHeight, cameraOffset.y);
+        float farBloomBoost = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.32f, 1f, zoomT));
+
+        dioramaColorAdjustments.postExposure.Override(Mathf.Lerp(-0.18f, 0.1f, stylizedDaylight) + dawnDuskStrength * 0.03f + farBloomBoost * 0.08f);
+        dioramaColorAdjustments.contrast.Override(Mathf.Lerp(8f, 17f, stylizedDaylight));
+        dioramaColorAdjustments.saturation.Override(Mathf.Lerp(-6f, 14f, stylizedDaylight));
+        dioramaColorAdjustments.colorFilter.Override(Color.Lerp(
+            Color.Lerp(new Color(0.84f, 0.88f, 1f, 1f), new Color(1f, 0.88f, 0.78f, 1f), dawnDuskStrength),
+            new Color(1f, 0.985f, 0.955f, 1f),
+            stylizedDaylight));
+
+        dioramaBloom.threshold.Override(Mathf.Max(0.34f, Mathf.Lerp(0.72f, 0.86f, stylizedDaylight) - farBloomBoost * 0.32f));
+        dioramaBloom.intensity.Override(Mathf.Lerp(0.22f, 0.16f, stylizedDaylight) + dawnDuskStrength * 0.34f + farBloomBoost * Mathf.Lerp(0.55f, 0.82f, stylizedDaylight));
+        dioramaBloom.scatter.Override(Mathf.Min(0.95f, Mathf.Lerp(0.66f, 0.56f, stylizedDaylight) + farBloomBoost * 0.24f + dawnDuskStrength * 0.18f));
+        dioramaBloom.tint.Override(Color.Lerp(
+            new Color(0.88f, 0.92f, 1f, 1f),
+            Color.Lerp(new Color(1f, 0.84f, 0.72f, 1f), new Color(1f, 0.95f, 0.88f, 1f), sunArc),
+            Mathf.Lerp(stylizedDaylight, 1f, dawnDuskStrength)));
+
+        dioramaDepthOfField.gaussianStart.Override(Mathf.Lerp(26f, 40f, zoomT));
+        dioramaDepthOfField.gaussianEnd.Override(Mathf.Lerp(60f, 86f, zoomT));
+        dioramaDepthOfField.gaussianMaxRadius.Override(Mathf.Lerp(0.026f, 0.016f, zoomT));
+
+        dioramaVignette.intensity.Override(Mathf.Lerp(0.07f, 0.045f, stylizedDaylight) + nightStrength * 0.01f);
+        dioramaVignette.smoothness.Override(Mathf.Lerp(0.5f, 0.4f, stylizedDaylight));
     }
 
     private void SetupSurfaceMaterials()
     {
         groundSurfaceTexture = CreateStylizedGroundTexture(128);
         grassSurfaceTexture = CreateStylizedGrassTexture(128);
-        groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.96f, 0.93f, 0.86f), 0.09f);
-        grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.74f, 0.82f, 0.72f), 0.07f);
-        shoreSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.84f, 0.76f, 0.58f), 0.05f);
-        beachSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.92f, 0.84f, 0.66f), 0.07f);
-        waterShallowMaterial = CreateSurfaceMaterial(null, new Color(0.44f, 0.78f, 0.9f), 0.95f);
-        waterDeepMaterial    = CreateSurfaceMaterial(null, new Color(0.14f, 0.39f, 0.7f), 0.98f);
+        roadSurfaceTexture = CreateStylizedRoadTexture(128);
+        groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.95f, 0.91f, 0.84f), 0.1f);
+        grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.72f, 0.82f, 0.69f), 0.08f);
+        shoreSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.76f, 0.67f, 0.55f), 0.08f);
+        beachSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.92f, 0.84f, 0.70f), 0.1f);
+        roadSurfaceMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.21f, 0.22f, 0.24f), 0.16f);
+        roadShoulderMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.54f, 0.49f, 0.41f), 0.11f);
+        highwaySurfaceMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.16f, 0.17f, 0.19f), 0.2f);
+        highwayShoulderMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.44f, 0.46f, 0.49f), 0.14f);
+        waterShallowMaterial = CreateSurfaceMaterial(null, new Color(0.48f, 0.82f, 0.92f), 0.96f);
+        waterDeepMaterial    = CreateSurfaceMaterial(null, new Color(0.09f, 0.31f, 0.62f), 0.99f);
     }
 
     private static Shader GetUrpLitShader()
@@ -555,9 +829,10 @@ public partial class GameBootstrap : MonoBehaviour
         texture.wrapMode = TextureWrapMode.Repeat;
         texture.filterMode = FilterMode.Bilinear;
 
-        Color baseColor = new(0.79f, 0.73f, 0.61f);
-        Color warmPatch = new(0.87f, 0.8f, 0.66f);
-        Color coolPatch = new(0.69f, 0.64f, 0.54f);
+        Color baseColor = new(0.8f, 0.74f, 0.62f);
+        Color warmPatch = new(0.9f, 0.82f, 0.67f);
+        Color coolPatch = new(0.67f, 0.62f, 0.52f);
+        Color dustyPatch = new(0.74f, 0.66f, 0.55f);
         Vector2[] blotchCenters =
         {
             new(0.18f, 0.22f),
@@ -575,6 +850,7 @@ public partial class GameBootstrap : MonoBehaviour
                 float largeNoise = Mathf.PerlinNoise(u * 2.4f + 0.11f, v * 2.4f + 0.37f);
                 float detailNoise = Mathf.PerlinNoise(u * 7.2f + 1.2f, v * 7.2f + 2.4f);
                 float diagonal = Mathf.Sin((u + v) * 8.5f) * 0.015f;
+                float dryNoise = Mathf.PerlinNoise(u * 5.1f + 6.4f, v * 4.7f + 8.9f);
 
                 float warmMask = 0f;
                 for (int i = 0; i < blotchCenters.Length; i++)
@@ -586,6 +862,7 @@ public partial class GameBootstrap : MonoBehaviour
 
                 Color color = Color.Lerp(coolPatch, baseColor, largeNoise);
                 color = Color.Lerp(color, warmPatch, warmMask);
+                color = Color.Lerp(color, dustyPatch, Mathf.Clamp01((dryNoise - 0.58f) * 0.55f));
                 color *= 0.96f + detailNoise * 0.08f + diagonal;
                 texture.SetPixel(x, y, color);
             }
@@ -602,9 +879,10 @@ public partial class GameBootstrap : MonoBehaviour
         texture.wrapMode = TextureWrapMode.Repeat;
         texture.filterMode = FilterMode.Bilinear;
 
-        Color darkGreen = new(0.12f, 0.3f, 0.11f);
-        Color baseGreen = new(0.22f, 0.46f, 0.2f);
-        Color lightGreen = new(0.38f, 0.6f, 0.29f);
+        Color darkGreen = new(0.12f, 0.28f, 0.11f);
+        Color baseGreen = new(0.22f, 0.44f, 0.2f);
+        Color lightGreen = new(0.38f, 0.61f, 0.3f);
+        Color mossGreen = new(0.2f, 0.38f, 0.16f);
 
         for (int x = 0; x < size; x++)
         {
@@ -616,11 +894,46 @@ public partial class GameBootstrap : MonoBehaviour
                 float fineNoise = Mathf.PerlinNoise(u * 9.2f + 2.3f, v * 9.2f + 3.7f);
                 float bladeNoise = Mathf.PerlinNoise(u * 17.5f + 4.1f, v * 15.2f + 5.6f);
                 float stripe = Mathf.Sin((u * 0.95f + v * 1.2f) * 20f) * 0.055f;
+                float mossNoise = Mathf.PerlinNoise(u * 4.1f + 9.3f, v * 4.6f + 10.8f);
 
                 Color color = Color.Lerp(darkGreen, baseGreen, broadNoise);
                 color = Color.Lerp(color, lightGreen, Mathf.Clamp01(fineNoise * 0.78f));
+                color = Color.Lerp(color, mossGreen, Mathf.Clamp01((mossNoise - 0.55f) * 0.45f));
                 color = Color.Lerp(color, lightGreen * 1.05f, Mathf.Clamp01((bladeNoise - 0.52f) * 1.8f));
                 color *= 0.96f + stripe;
+                texture.SetPixel(x, y, color);
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    private Texture2D CreateStylizedRoadTexture(int size)
+    {
+        Texture2D texture = new(size, size, TextureFormat.RGBA32, false);
+        texture.name = "StylizedRoadTexture";
+        texture.wrapMode = TextureWrapMode.Repeat;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color darkAsphalt = new(0.18f, 0.19f, 0.22f);
+        Color baseAsphalt = new(0.24f, 0.25f, 0.28f);
+        Color lightAsphalt = new(0.31f, 0.32f, 0.35f);
+        Color dustTint = new(0.42f, 0.38f, 0.31f);
+
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                float u = x / (float)(size - 1);
+                float v = y / (float)(size - 1);
+                float broadNoise = Mathf.PerlinNoise(u * 3.1f + 0.7f, v * 3.1f + 1.4f);
+                float detailNoise = Mathf.PerlinNoise(u * 12.4f + 3.6f, v * 12.4f + 5.2f);
+                float edgeDust = Mathf.Pow(Mathf.Abs(v - 0.5f) * 2f, 1.6f);
+
+                Color color = Color.Lerp(darkAsphalt, baseAsphalt, broadNoise);
+                color = Color.Lerp(color, lightAsphalt, Mathf.Clamp01((detailNoise - 0.42f) * 1.25f));
+                color = Color.Lerp(color, dustTint, edgeDust * 0.12f);
                 texture.SetPixel(x, y, color);
             }
         }
@@ -659,6 +972,59 @@ public partial class GameBootstrap : MonoBehaviour
         renderer.material = material;
     }
 
+    private void ApplyStylizedRoadMaterial(GameObject target, int x, int y, bool isHighway, bool isShoulder)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        if (!target.TryGetComponent(out Renderer renderer))
+        {
+            return;
+        }
+
+        Material sourceMaterial =
+            isHighway
+                ? (isShoulder ? highwayShoulderMaterial : highwaySurfaceMaterial)
+                : (isShoulder ? roadShoulderMaterial : roadSurfaceMaterial);
+
+        if (sourceMaterial == null)
+        {
+            ApplyColor(target, isHighway
+                ? (isShoulder ? new Color(0.44f, 0.46f, 0.49f) : new Color(0.16f, 0.17f, 0.19f))
+                : (isShoulder ? new Color(0.54f, 0.49f, 0.41f) : new Color(0.21f, 0.22f, 0.24f)));
+            return;
+        }
+
+        Material material = new(sourceMaterial);
+        float tintNoise = Mathf.PerlinNoise((x + 1) * 0.29f + (isShoulder ? 5.3f : 1.7f), (y + 1) * 0.31f + (isHighway ? 8.1f : 2.9f));
+        Color darkTint;
+        Color lightTint;
+
+        if (isHighway)
+        {
+            darkTint = isShoulder ? new Color(0.39f, 0.41f, 0.44f) : new Color(0.14f, 0.15f, 0.17f);
+            lightTint = isShoulder ? new Color(0.52f, 0.54f, 0.57f) : new Color(0.2f, 0.21f, 0.24f);
+        }
+        else
+        {
+            darkTint = isShoulder ? new Color(0.49f, 0.44f, 0.37f) : new Color(0.18f, 0.19f, 0.21f);
+            lightTint = isShoulder ? new Color(0.61f, 0.56f, 0.46f) : new Color(0.25f, 0.26f, 0.29f);
+        }
+
+        Color tint = Color.Lerp(darkTint, lightTint, tintNoise);
+        material.color = tint;
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", tint);
+        }
+
+        material.mainTextureScale = isShoulder ? new Vector2(0.52f, 0.9f) : new Vector2(0.7f, 1.15f);
+        material.mainTextureOffset = new Vector2((x % 7) * 0.09f, (y % 7) * 0.08f);
+        renderer.material = material;
+    }
+
     private bool IsGrassGroundCell(int x, int y)
     {
         if (grassSurfaceMaterial == null)
@@ -667,7 +1033,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         float grassPatchNoise = Mathf.PerlinNoise((x + 1) * 0.18f + 4.2f, (y + 1) * 0.2f + 7.4f);
-        if (IsDenseForestCell(x, y))
+        if (IsDenseForestCell(x, y) || IsNaturalForestZoneCell(x, y))
         {
             return true;
         }
@@ -677,6 +1043,11 @@ public partial class GameBootstrap : MonoBehaviour
 
     private bool IsDenseForestCell(int x, int y)
     {
+        if (IsNaturalForestZoneCell(x, y))
+        {
+            return true;
+        }
+
         int shoreRow = GridHeight - WaterRiverWidth;
         float centerX = GridWidth * 0.28f;
         float centerY = shoreRow * 0.34f;
@@ -696,7 +1067,8 @@ public partial class GameBootstrap : MonoBehaviour
 
     private float GetDenseForestCellPriority(Vector2Int cell)
     {
-        if (!IsDenseForestCell(cell.x, cell.y))
+        float zoneInfluence = GetForestZoneInfluence(cell.x, cell.y);
+        if (!IsDenseForestCell(cell.x, cell.y) && zoneInfluence <= 0f)
         {
             return 0f;
         }
@@ -708,7 +1080,7 @@ public partial class GameBootstrap : MonoBehaviour
         float dy = (cell.y - centerY) / Mathf.Max(1f, GridHeight * 0.16f);
         float radialFalloff = 1f - Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
         float localNoise = Mathf.PerlinNoise((cell.x + 7) * 0.19f + 11.7f, (cell.y + 9) * 0.21f + 23.5f);
-        return radialFalloff * 10f + localNoise;
+        return radialFalloff * 10f + zoneInfluence * 14f + localNoise;
     }
 
     private bool IsWaterOrBeachCell(Vector2Int cell)
@@ -718,8 +1090,29 @@ public partial class GameBootstrap : MonoBehaviour
             return true;
         }
 
-        int shoreRow = GridHeight - WaterRiverWidth;
-        return cell.y == shoreRow - 1 || cell.y == shoreRow - 2;
+        return IsNaturalBeachCell(cell);
+    }
+
+    private float GetLakeWaterDepth01(int x, int y)
+    {
+        int neighborWaterCount = 0;
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                {
+                    continue;
+                }
+
+                if (lakeWaterCells.Contains(new Vector2Int(x + dx, y + dy)))
+                {
+                    neighborWaterCount++;
+                }
+            }
+        }
+
+        return Mathf.Clamp01(neighborWaterCount / 8f);
     }
 
     private void ApplyStylizedGrassMaterial(GameObject target, float seedX, float seedY)
@@ -784,33 +1177,73 @@ public partial class GameBootstrap : MonoBehaviour
 
     private System.Collections.IEnumerator SetupGridAsync()
     {
+        yield return null; // one-frame defer so callers stay async-compatible
+
         GameObject gridRoot = new("GridLines");
         gridRoot.transform.SetParent(worldRoot, false);
+        gridLinesRoot = gridRoot.transform;
 
         Material lineMaterial = new(ShaderRefs.Sprites)
         {
             color = new Color(0f, 0f, 0f, 0.18f)
         };
 
+        BuildGridLineMesh(gridRoot.transform, lineMaterial);
+    }
+
+    private void BuildGridLineMesh(Transform parent, Material material)
+    {
+        const float halfW = 0.015f; // half of the 0.03 line width
+        int vertCount = (GridWidth + 1) * GridHeight + GridWidth * (GridHeight + 1);
+        Vector3[] verts = new Vector3[vertCount * 4];
+        int[]     tris  = new int[vertCount * 6];
+        int vi = 0, ti = 0;
+
+        // vertical segments: run along Z at each X line
         for (int x = 0; x <= GridWidth; x++)
         {
             for (int y = 0; y < GridHeight; y++)
             {
-                float edgeHeight = GetVerticalEdgeHeight(x, y) + 0.025f;
-                CreateGridLine(gridRoot.transform, lineMaterial, new Vector3(x, edgeHeight, y), new Vector3(x, edgeHeight, y + 1f));
+                float h = GetVerticalEdgeHeight(x, y) + 0.025f;
+                int b = vi;
+                verts[vi++] = new Vector3(x - halfW, h, y);
+                verts[vi++] = new Vector3(x + halfW, h, y);
+                verts[vi++] = new Vector3(x - halfW, h, y + 1f);
+                verts[vi++] = new Vector3(x + halfW, h, y + 1f);
+                tris[ti++] = b; tris[ti++] = b + 2; tris[ti++] = b + 1;
+                tris[ti++] = b + 1; tris[ti++] = b + 2; tris[ti++] = b + 3;
             }
-            if (x % 8 == 7) yield return null;
         }
 
+        // horizontal segments: run along X at each Y line
         for (int y = 0; y <= GridHeight; y++)
         {
             for (int x = 0; x < GridWidth; x++)
             {
-                float edgeHeight = GetHorizontalEdgeHeight(x, y) + 0.025f;
-                CreateGridLine(gridRoot.transform, lineMaterial, new Vector3(x, edgeHeight, y), new Vector3(x + 1f, edgeHeight, y));
+                float h = GetHorizontalEdgeHeight(x, y) + 0.025f;
+                int b = vi;
+                verts[vi++] = new Vector3(x,       h, y - halfW);
+                verts[vi++] = new Vector3(x,       h, y + halfW);
+                verts[vi++] = new Vector3(x + 1f,  h, y - halfW);
+                verts[vi++] = new Vector3(x + 1f,  h, y + halfW);
+                tris[ti++] = b; tris[ti++] = b + 1; tris[ti++] = b + 2;
+                tris[ti++] = b + 2; tris[ti++] = b + 1; tris[ti++] = b + 3;
             }
-            if (y % 8 == 7) yield return null;
         }
+
+        Mesh mesh = new() { name = "GridLinesMesh" };
+        mesh.indexFormat = IndexFormat.UInt32;
+        mesh.vertices = verts;
+        mesh.triangles = tris;
+        mesh.UploadMeshData(true); // mark as non-readable for GPU memory savings
+
+        GameObject obj = new("GridLinesMesh");
+        obj.transform.SetParent(parent, false);
+        obj.AddComponent<MeshFilter>().sharedMesh = mesh;
+        MeshRenderer mr = obj.AddComponent<MeshRenderer>();
+        mr.sharedMaterial = material;
+        mr.shadowCastingMode = ShadowCastingMode.Off;
+        mr.receiveShadows = false;
     }
 
 }

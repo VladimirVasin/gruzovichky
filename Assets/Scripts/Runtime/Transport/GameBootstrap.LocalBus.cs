@@ -109,6 +109,17 @@ public partial class GameBootstrap
         return world;
     }
 
+    private Vector3 GetBusRoadWorldPosition(Vector2Int fromCell, Vector2Int toCell)
+    {
+        Vector3 world = GetBusRoadWorldPosition(toCell);
+        if (!IsAnchorCell(fromCell) && !IsAnchorCell(toCell) && roadCells.Contains(toCell) && !IsRoadDeadEnd(toCell))
+        {
+            world += GetRightHandLaneOffset(toCell - fromCell);
+        }
+
+        return world;
+    }
+
     private static Quaternion GetLocalBusFacingRotation(Vector3 flatDirection)
     {
         if (flatDirection.sqrMagnitude <= 0.0001f)
@@ -302,7 +313,15 @@ public partial class GameBootstrap
                 continue;
             }
 
-            if (localBusRoute.PassengerCount >= localBusRoute.PassengerCapacity)
+            bool fareExempt = passenger.BusRideFareExempt;
+            LocalBusPassengerBoardingDecision boardingDecision = LocalBusPassengerService.EvaluateBoarding(
+                localBusRoute.PassengerCount,
+                localBusRoute.PassengerCapacity,
+                passenger.Money,
+                LocalBusFare,
+                fareExempt);
+
+            if (boardingDecision.Kind == LocalBusPassengerBoardingDecisionKind.ContinueWaiting)
             {
                 SessionDebugLogger.Log(
                     "BUS_PASSENGER",
@@ -310,8 +329,7 @@ public partial class GameBootstrap
                 continue;
             }
 
-            bool fareExempt = passenger.BusRideFareExempt;
-            if (!fareExempt && passenger.Money < LocalBusFare)
+            if (boardingDecision.Kind == LocalBusPassengerBoardingDecisionKind.FallBackToWalking)
             {
                 DriverRescuePhase finalWalkPhase = passenger.BusFinalWalkPhase;
                 Vector3 finalTarget = passenger.BusFinalTargetWorld;
@@ -331,11 +349,11 @@ public partial class GameBootstrap
                 continue;
             }
 
-            if (!fareExempt)
+            if (boardingDecision.FareCharged > 0)
             {
-                passenger.Money = Mathf.Max(0, passenger.Money - LocalBusFare);
-                localBusRoute.Bank += LocalBusFare;
-                SpawnMoneySpendPopup(stopWaitPoint, LocalBusFare);
+                passenger.Money = Mathf.Max(0, passenger.Money - boardingDecision.FareCharged);
+                localBusRoute.Bank += boardingDecision.FareCharged;
+                SpawnMoneySpendPopup(stopWaitPoint, boardingDecision.FareCharged);
             }
 
             passenger.DriverObject.SetActive(false);
@@ -373,8 +391,9 @@ public partial class GameBootstrap
                 break;
 
             case LocalBusPhase.WaitingAtStop:
-                localBusRoute.DwellTimer -= dt;
-                if (localBusRoute.DwellTimer <= 0f)
+                LocalBusDwellTick dwellTick = LocalBusRuntimeService.TickDwell(localBusRoute.DwellTimer, dt);
+                localBusRoute.DwellTimer = dwellTick.Timer;
+                if (dwellTick.IsComplete)
                 {
                     if (driver.NeedsShiftEndReturn)
                     {
@@ -418,37 +437,25 @@ public partial class GameBootstrap
             return;
         }
 
-        Vector3 position = localBusRoute.RootTransform.position;
         Vector3 target = localBusRoute.Waypoints[localBusRoute.WaypointIndex];
-        target.y = SampleTerrainHeight(target.x, target.z) + RoadHeight + EdgeHighwayBusLift;
-
-        Vector3 flatDelta = new Vector3(target.x - position.x, 0f, target.z - position.z);
-        float remaining = flatDelta.magnitude;
-        if (remaining <= 0.001f)
+        LocalBusMovementStep movement = LocalBusRuntimeService.StepTowardWaypoint(
+            localBusRoute.RootTransform.position,
+            target,
+            localBusRoute.Speed,
+            dt,
+            SampleTerrainHeight,
+            RoadHeight + EdgeHighwayBusLift);
+        localBusRoute.RootTransform.position = movement.Position;
+        if (movement.HasFacingDirection)
         {
-            localBusRoute.RootTransform.position = target;
-            localBusRoute.WaypointIndex++;
-            CompleteLocalBusCurrentSegment();
-            return;
+            localBusRoute.RootTransform.rotation = GetLocalBusFacingRotation(movement.FacingDirection);
         }
 
-        float step = localBusRoute.Speed * dt;
-        if (step >= remaining)
+        if (movement.ReachedWaypoint)
         {
-            localBusRoute.RootTransform.position = target;
             localBusRoute.WaypointIndex++;
-            if (flatDelta.sqrMagnitude > 0.0001f)
-            {
-                localBusRoute.RootTransform.rotation = GetLocalBusFacingRotation(flatDelta);
-            }
             CompleteLocalBusCurrentSegment();
-            return;
         }
-
-        Vector3 nextPosition = position + flatDelta.normalized * step;
-        nextPosition.y = SampleTerrainHeight(nextPosition.x, nextPosition.z) + RoadHeight + EdgeHighwayBusLift;
-        localBusRoute.RootTransform.position = nextPosition;
-        localBusRoute.RootTransform.rotation = GetLocalBusFacingRotation(flatDelta);
     }
 
     private void CompleteLocalBusCurrentSegment()
@@ -514,12 +521,10 @@ public partial class GameBootstrap
             return true;
         }
 
-        int currentIndex = Mathf.Clamp(localBusRoute.CurrentStopIndex, 0, orderedStops.Count - 1);
-
-        // Finish the current out-and-back route cycle before parking:
-        // ascending leg: keep going until the far terminal and come back;
-        // descending leg: once we reach Stop #1, the cycle is complete.
-        return currentIndex == 0 && localBusRoute.TravelDirection < 0;
+        return LocalBusRoutePlanner.ShouldReturnToParkingAfterCurrentStop(
+            orderedStops.Count,
+            localBusRoute.CurrentStopIndex,
+            localBusRoute.TravelDirection);
     }
 
     private bool BeginLocalBusRouteFromParking()
@@ -554,36 +559,21 @@ public partial class GameBootstrap
         }
 
         int currentIndex = Mathf.Clamp(localBusRoute.CurrentStopIndex, 0, orderedStops.Count - 1);
-        int nextIndex;
-        if (localBusRoute.TravelDirection > 0)
+        LocalBusNextStopDecision decision = LocalBusRoutePlanner.GetNextStop(
+            orderedStops.Count,
+            currentIndex,
+            localBusRoute.TravelDirection);
+        if (!decision.HasNextStop)
         {
-            if (currentIndex >= orderedStops.Count - 1)
-            {
-                localBusRoute.TravelDirection = -1;
-                nextIndex = orderedStops.Count - 2;
-            }
-            else
-            {
-                nextIndex = currentIndex + 1;
-            }
-        }
-        else
-        {
-            if (currentIndex <= 0)
-            {
-                localBusRoute.TravelDirection = 1;
-                nextIndex = 1;
-            }
-            else
-            {
-                nextIndex = currentIndex - 1;
-            }
+            BeginLocalBusReturnToParking();
+            return true;
         }
 
         Vector2Int startAnchor = orderedStops[currentIndex].Anchor;
-        Vector2Int nextAnchor = orderedStops[nextIndex].Anchor;
-        localBusRoute.CurrentStopIndex = nextIndex;
-        SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute.Driver?.DriverName ?? "Bus driver"} heading to next stop #{orderedStops[nextIndex].StopNumber} ({(localBusRoute.TravelDirection > 0 ? "ascending" : "descending")} leg).");
+        Vector2Int nextAnchor = orderedStops[decision.NextStopIndex].Anchor;
+        localBusRoute.TravelDirection = decision.TravelDirection;
+        localBusRoute.CurrentStopIndex = decision.NextStopIndex;
+        SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute.Driver?.DriverName ?? "Bus driver"} heading to next stop #{orderedStops[decision.NextStopIndex].StopNumber} ({(localBusRoute.TravelDirection > 0 ? "ascending" : "descending")} leg).");
         return TryBeginLocalBusDriveSegment(startAnchor, nextAnchor, LocalBusPhase.DrivingRoute);
     }
 
@@ -622,7 +612,7 @@ public partial class GameBootstrap
         localBusRoute.Waypoints.Clear();
         for (int i = 1; i < path.Count; i++)
         {
-            localBusRoute.Waypoints.Add(GetBusRoadWorldPosition(path[i]));
+            localBusRoute.Waypoints.Add(GetBusRoadWorldPosition(path[i - 1], path[i]));
         }
 
         if (localBusRoute.Waypoints.Count == 0)
@@ -650,11 +640,11 @@ public partial class GameBootstrap
 
         float darkness = 1f - currentStylizedDaylight;
         bool headlightsOn = darkness > 0.55f;
-        float headlightIntensity = headlightsOn ? Mathf.Lerp(0.4f, 1.75f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+        float headlightIntensity = headlightsOn ? Mathf.Lerp(0.48f, 1.95f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color lampColor = Color.Lerp(
-            new Color(0.34f, 0.3f, 0.22f),
-            new Color(1f, 0.94f, 0.78f),
-            Mathf.Clamp01(headlightIntensity / 1.75f));
+            new Color(0.34f, 0.22f, 0.12f),
+            new Color(1f, 0.82f, 0.5f),
+            Mathf.Clamp01(headlightIntensity / 1.95f));
 
         if (localBusRoute.HeadlightLeft != null)
         {

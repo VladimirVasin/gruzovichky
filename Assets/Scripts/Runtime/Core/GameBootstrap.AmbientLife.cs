@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -10,25 +10,33 @@ public partial class GameBootstrap : MonoBehaviour
     {
         distantClouds.Clear();
 
-        // SpawnPosition = behind left/near edge; clouds travel along CloudTravelDir, staggered via initialOffset
-        // Args: spawnPosition, travelSpeed, bobAmplitude, bobSpeed, phaseOffset, scale, initialOffset
-        // Z spread covers from well before the grid to well beyond it, matching full screen top-to-bottom
-        Vector3 center = new(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
-        Vector3 spawnBase = center + new Vector3(-30f, 0f, -4f);
+        // High sky layer. Rows start off-map and cover the full enlarged grid as they drift.
+        float startX = -48f;
+        float[] zRows =
+        {
+            -30f, -12f, 6f, 24f, 42f,
+            60f, 78f, 96f, 114f, 132f, 150f
+        };
 
-        // Near (bottom screen) вЂ” lower Y so they sit closer to ground-level perspective
-        CreateDistantCloud(spawnBase + new Vector3(0f, 10f, -18f), 1.0f, 0.7f,  0.44f, 0.30f, 1.8f,   4f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 11f, -12f), 0.8f, 0.85f, 0.38f, 1.50f, 2.0f,  22f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 12f,  -7f), 1.2f, 0.75f, 0.41f, 0.80f, 2.15f,  0f);
-        // Mid (center screen)
-        CreateDistantCloud(spawnBase + new Vector3(0f, 14f,  -1f), 1.1f, 0.9f,  0.36f, 2.10f, 2.35f, 14f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 15f,   5f), 0.9f, 0.72f, 0.48f, 0.60f, 2.05f, 36f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 16f,  11f), 1.3f, 0.95f, 0.32f, 1.90f, 2.4f,  50f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 14f,   8f), 0.8f, 0.68f, 0.34f, 1.20f, 1.95f, 28f);
-        // Far (top screen)
-        CreateDistantCloud(spawnBase + new Vector3(0f, 17f,  17f), 1.5f, 0.82f, 0.38f, 2.80f, 2.2f,   9f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 18f,  23f), 1.0f, 0.9f,  0.42f, 0.40f, 2.35f, 42f);
-        CreateDistantCloud(spawnBase + new Vector3(0f, 17f,  30f), 1.2f, 0.78f, 0.46f, 1.60f, 2.1f,  18f);
+        for (int i = 0; i < zRows.Length; i++)
+        {
+            float height = 36f + (i % 4) * 4.5f + (i % 3) * 1.2f;
+            float speed = 0.55f + (i % 5) * 0.11f;
+            float bobAmplitude = 0.55f + (i % 4) * 0.14f;
+            float bobSpeed = 0.24f + (i % 5) * 0.045f;
+            float phase = i * 0.73f;
+            float scale = 2.15f + (i % 5) * 0.22f;
+            float initialOffset = (i * 31f) % CloudTravelLength;
+
+            CreateDistantCloud(
+                new Vector3(startX, height, zRows[i]),
+                speed,
+                bobAmplitude,
+                bobSpeed,
+                phase,
+                scale,
+                initialOffset);
+        }
     }
 
     private void CreateDistantCloud(Vector3 spawnPosition, float travelSpeed, float bobAmplitude, float bobSpeed, float phaseOffset, float scaleMultiplier, float initialOffset)
@@ -331,7 +339,7 @@ public partial class GameBootstrap : MonoBehaviour
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         body.transform.SetParent(birdRoot.transform, false);
         body.transform.localPosition = Vector3.zero;
-        body.transform.localScale = new Vector3(0.12f, 0.09f, 0.18f);
+        body.transform.localScale = new Vector3(0.22f, 0.17f, 0.34f);
         ApplyColor(body, new Color(0.22f, 0.2f, 0.18f));
         ConfigureStaticVisual(body);
         if (body.TryGetComponent(out Collider bodyCollider))
@@ -341,8 +349,8 @@ public partial class GameBootstrap : MonoBehaviour
 
         GameObject leftWing = GameObject.CreatePrimitive(PrimitiveType.Cube);
         leftWing.transform.SetParent(birdRoot.transform, false);
-        leftWing.transform.localPosition = new Vector3(-0.06f, 0.01f, 0f);
-        leftWing.transform.localScale = new Vector3(0.12f, 0.02f, 0.18f);
+        leftWing.transform.localPosition = new Vector3(-0.12f, 0.01f, 0f);
+        leftWing.transform.localScale = new Vector3(0.22f, 0.03f, 0.32f);
         ApplyColor(leftWing, new Color(0.28f, 0.26f, 0.24f));
         ConfigureStaticVisual(leftWing);
         if (leftWing.TryGetComponent(out Collider leftCollider))
@@ -352,8 +360,8 @@ public partial class GameBootstrap : MonoBehaviour
 
         GameObject rightWing = GameObject.CreatePrimitive(PrimitiveType.Cube);
         rightWing.transform.SetParent(birdRoot.transform, false);
-        rightWing.transform.localPosition = new Vector3(0.06f, 0.01f, 0f);
-        rightWing.transform.localScale = new Vector3(0.12f, 0.02f, 0.18f);
+        rightWing.transform.localPosition = new Vector3(0.12f, 0.01f, 0f);
+        rightWing.transform.localScale = new Vector3(0.22f, 0.03f, 0.32f);
         ApplyColor(rightWing, new Color(0.28f, 0.26f, 0.24f));
         ConfigureStaticVisual(rightWing);
         if (rightWing.TryGetComponent(out Collider rightCollider))
@@ -363,8 +371,8 @@ public partial class GameBootstrap : MonoBehaviour
 
         GameObject beak = GameObject.CreatePrimitive(PrimitiveType.Cube);
         beak.transform.SetParent(birdRoot.transform, false);
-        beak.transform.localPosition = new Vector3(0f, 0f, 0.11f);
-        beak.transform.localScale = new Vector3(0.03f, 0.02f, 0.05f);
+        beak.transform.localPosition = new Vector3(0f, 0f, 0.20f);
+        beak.transform.localScale = new Vector3(0.05f, 0.04f, 0.09f);
         ApplyColor(beak, new Color(0.92f, 0.74f, 0.2f));
         ConfigureStaticVisual(beak);
         if (beak.TryGetComponent(out Collider beakCollider))
@@ -388,7 +396,7 @@ public partial class GameBootstrap : MonoBehaviour
             TargetPosition = perchPosition,
             CurrentPerchIndex = perchIndex,
             TargetPerchIndex = perchIndex,
-            StateTimer = Random.Range(3.8f, 8.2f),
+            StateTimer = Random.Range(5.0f, 10.0f),
             FlightDuration = 0f,
             FlightProgress = 0f,
             BobPhase = Random.Range(0f, 10f),
@@ -400,8 +408,14 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void UpdateMiscBirds()
     {
-        if (miscBirds.Count == 0 || miscTreePerchPoints.Count < 2)
+        if (miscTreePerchPoints.Count < 2)
         {
+            return;
+        }
+
+        if (miscBirds.Count == 0)
+        {
+            SetupMiscBirds();
             return;
         }
 
@@ -428,7 +442,7 @@ public partial class GameBootstrap : MonoBehaviour
                             bird.RootTransform.rotation,
                             Quaternion.Euler(0f, bird.PerchYaw, 0f),
                             6f * Time.deltaTime);
-                        float wingFold = 8f + Mathf.Sin(time * 1.8f + bird.WingPhase) * 3f;
+                        float wingFold = 10f + Mathf.Sin(time * 2.2f + bird.WingPhase) * 5f;
                         ApplyMiscBirdWingPose(bird, wingFold);
                     }
 
@@ -436,7 +450,7 @@ public partial class GameBootstrap : MonoBehaviour
                     {
                         if (!birdsShouldFly)
                         {
-                            bird.StateTimer = Random.Range(3.8f, 8.2f);
+                            bird.StateTimer = Random.Range(5.0f, 10.0f);
                             break;
                         }
 
@@ -447,7 +461,7 @@ public partial class GameBootstrap : MonoBehaviour
                             bird.TargetPosition = miscTreePerchPoints[nextPerchIndex];
                             bird.FlightProgress = 0f;
                             float travelDistance = Vector3.Distance(bird.StartPosition, bird.TargetPosition);
-                            bird.FlightDuration = Mathf.Clamp(travelDistance / 2.9f, 0.8f, 2.1f);
+                            bird.FlightDuration = Mathf.Clamp(travelDistance / 1.45f, 1.6f, 4.8f);
                             bird.State = MiscBirdState.Flying;
                         }
                         else
@@ -461,7 +475,7 @@ public partial class GameBootstrap : MonoBehaviour
                     bird.FlightProgress += dt / Mathf.Max(0.001f, bird.FlightDuration);
                     float flightT = Mathf.Clamp01(bird.FlightProgress);
                     Vector3 flightPosition = Vector3.Lerp(bird.StartPosition, bird.TargetPosition, flightT);
-                    flightPosition.y += Mathf.Sin(flightT * Mathf.PI) * 0.75f + Mathf.Sin(time * 8.5f + bird.BobPhase) * 0.03f;
+                    flightPosition.y += Mathf.Sin(flightT * Mathf.PI) * 0.75f + Mathf.Sin(time * 5.2f + bird.BobPhase) * 0.03f;
                     bird.RootTransform.position = flightPosition;
 
                     Vector3 toTarget = bird.TargetPosition - flightPosition;
@@ -474,7 +488,7 @@ public partial class GameBootstrap : MonoBehaviour
                             10f * Time.deltaTime);
                     }
 
-                    float wingFlap = 42f + Mathf.Sin(time * 18f + bird.WingPhase) * 24f;
+                    float wingFlap = 52f + Mathf.Sin(time * 14f + bird.WingPhase) * 32f;
                     ApplyMiscBirdWingPose(bird, wingFlap);
 
                     if (flightT >= 1f)
@@ -483,7 +497,7 @@ public partial class GameBootstrap : MonoBehaviour
                         bird.StartPosition = bird.TargetPosition;
                         bird.PerchYaw = bird.RootTransform.eulerAngles.y;
                         bird.State = MiscBirdState.Perched;
-                        bird.StateTimer = Random.Range(4.4f, 9.6f);
+                        bird.StateTimer = Random.Range(6.0f, 12.0f);
                     }
                     break;
             }
@@ -606,6 +620,7 @@ public partial class GameBootstrap : MonoBehaviour
                     new Vector2(2.35f, -0.55f),
                     new Vector2(-2.35f, 0.7f)
                 });
+            return;
         }
 
         if (locations.TryGetValue(LocationType.IntercityStop, out _))
@@ -967,441 +982,306 @@ public partial class GameBootstrap : MonoBehaviour
         return candidates[Random.Range(0, candidates.Count)];
     }
 
-    private void SetupAmbientBees()
+    private void SetupAmbientSquirrels()
     {
-        ambientBees.Clear();
-        if (ambientBeeRoot != null)
+        ambientSquirrels.Clear();
+        ambientSquirrelRoamPoints.Clear();
+        if (ambientSquirrelRoot != null)
         {
-            Destroy(ambientBeeRoot.gameObject);
+            Destroy(ambientSquirrelRoot.gameObject);
         }
 
-        if (worldRoot == null || flowerBeePoints.Count == 0)
+        if (worldRoot == null || miscTreePerchPoints.Count < 2)
         {
             return;
         }
 
-        ambientBeeRoot = new GameObject("AmbientBees").transform;
-        ambientBeeRoot.SetParent(worldRoot, false);
+        ambientSquirrelRoot = new GameObject("AmbientSquirrels").transform;
+        ambientSquirrelRoot.SetParent(worldRoot, false);
 
-        int beeCount = Mathf.Min(AmbientBeeCount, flowerBeePoints.Count * 2);
-        for (int i = 0; i < beeCount; i++)
+        foreach (Vector3 perch in miscTreePerchPoints)
         {
-            CreateAmbientBee(i);
+            float groundY = SampleTerrainHeight(perch.x, perch.z);
+            ambientSquirrelRoamPoints.Add(new Vector3(perch.x, groundY, perch.z));
+        }
+
+        int count = Mathf.Min(AmbientSquirrelCount, ambientSquirrelRoamPoints.Count);
+        for (int i = 0; i < count; i++)
+        {
+            CreateAmbientSquirrel(i);
         }
     }
 
-    private void CreateAmbientBee(int beeIndex)
+    private void CreateAmbientSquirrel(int squirrelIndex)
     {
-        if (ambientBeeRoot == null || flowerBeePoints.Count == 0)
+        if (ambientSquirrelRoot == null || ambientSquirrelRoamPoints.Count == 0)
         {
             return;
         }
 
-        GameObject beeRoot = new($"AmbientBee_{beeIndex + 1}");
-        beeRoot.transform.SetParent(ambientBeeRoot, false);
+        Color bodyColor = new(0.72f, 0.42f, 0.14f);
+        Color headColor = new(0.80f, 0.50f, 0.20f);
+        Color tailColor = new(0.78f, 0.48f, 0.18f);
+        Color earColor  = new(0.68f, 0.38f, 0.12f);
+
+        GameObject sqRoot = new($"AmbientSquirrel_{squirrelIndex + 1}");
+        sqRoot.transform.SetParent(ambientSquirrelRoot, false);
 
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        body.transform.SetParent(beeRoot.transform, false);
-        body.transform.localPosition = Vector3.zero;
+        body.transform.SetParent(sqRoot.transform, false);
+        body.transform.localPosition = new Vector3(0f, 0.10f, 0f);
         body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-        body.transform.localScale = new Vector3(0.035f, 0.055f, 0.035f);
-        ApplyColor(body, new Color(0.96f, 0.78f, 0.12f));
+        body.transform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
+        ApplyColor(body, bodyColor);
         ConfigureStaticVisual(body);
-        if (body.TryGetComponent(out Collider bodyCollider))
-        {
-            bodyCollider.enabled = false;
-        }
+        if (body.TryGetComponent(out Collider bodyCol)) bodyCol.enabled = false;
 
-        GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        stripe.transform.SetParent(beeRoot.transform, false);
-        stripe.transform.localPosition = new Vector3(0f, 0f, -0.005f);
-        stripe.transform.localScale = new Vector3(0.04f, 0.04f, 0.018f);
-        ApplyColor(stripe, new Color(0.16f, 0.14f, 0.12f));
-        ConfigureStaticVisual(stripe);
-        if (stripe.TryGetComponent(out Collider stripeCollider))
-        {
-            stripeCollider.enabled = false;
-        }
+        GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        head.transform.SetParent(sqRoot.transform, false);
+        head.transform.localPosition = new Vector3(0f, 0.16f, 0.12f);
+        head.transform.localScale = new Vector3(0.10f, 0.09f, 0.09f);
+        ApplyColor(head, headColor);
+        ConfigureStaticVisual(head);
+        if (head.TryGetComponent(out Collider headCol)) headCol.enabled = false;
 
-        GameObject leftWing = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        leftWing.transform.SetParent(beeRoot.transform, false);
-        leftWing.transform.localPosition = new Vector3(-0.025f, 0.02f, 0f);
-        leftWing.transform.localScale = new Vector3(0.055f, 0.01f, 0.035f);
-        ApplyColor(leftWing, new Color(0.92f, 0.96f, 1f));
-        ConfigureStaticVisual(leftWing);
-        if (leftWing.TryGetComponent(out Collider leftWingCollider))
-        {
-            leftWingCollider.enabled = false;
-        }
+        GameObject leftEar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        leftEar.transform.SetParent(head.transform, false);
+        leftEar.transform.localPosition = new Vector3(-0.35f, 0.55f, 0f);
+        leftEar.transform.localRotation = Quaternion.Euler(0f, 0f, 18f);
+        leftEar.transform.localScale = new Vector3(0.25f, 0.50f, 0.22f);
+        ApplyColor(leftEar, earColor);
+        ConfigureStaticVisual(leftEar);
+        if (leftEar.TryGetComponent(out Collider lEarCol)) lEarCol.enabled = false;
 
-        GameObject rightWing = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightWing.transform.SetParent(beeRoot.transform, false);
-        rightWing.transform.localPosition = new Vector3(0.025f, 0.02f, 0f);
-        rightWing.transform.localScale = new Vector3(0.055f, 0.01f, 0.035f);
-        ApplyColor(rightWing, new Color(0.92f, 0.96f, 1f));
-        ConfigureStaticVisual(rightWing);
-        if (rightWing.TryGetComponent(out Collider rightWingCollider))
-        {
-            rightWingCollider.enabled = false;
-        }
+        GameObject rightEar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        rightEar.transform.SetParent(head.transform, false);
+        rightEar.transform.localPosition = new Vector3(0.35f, 0.55f, 0f);
+        rightEar.transform.localRotation = Quaternion.Euler(0f, 0f, -18f);
+        rightEar.transform.localScale = new Vector3(0.25f, 0.50f, 0.22f);
+        ApplyColor(rightEar, earColor);
+        ConfigureStaticVisual(rightEar);
+        if (rightEar.TryGetComponent(out Collider rEarCol)) rEarCol.enabled = false;
 
-        int flowerIndex = beeIndex % flowerBeePoints.Count;
-        Vector3 flowerPoint = flowerBeePoints[flowerIndex];
-        float orbitAngle = Random.Range(0f, Mathf.PI * 2f);
-        beeRoot.transform.position = flowerPoint + new Vector3(Mathf.Cos(orbitAngle), 0f, Mathf.Sin(orbitAngle)) * 0.12f + new Vector3(0f, 0.24f, 0f);
+        GameObject tail = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        tail.transform.SetParent(sqRoot.transform, false);
+        tail.transform.localPosition = new Vector3(0f, 0.18f, -0.12f);
+        tail.transform.localRotation = Quaternion.Euler(-55f, 0f, 0f);
+        tail.transform.localScale = new Vector3(0.06f, 0.16f, 0.06f);
+        ApplyColor(tail, tailColor);
+        ConfigureStaticVisual(tail);
+        if (tail.TryGetComponent(out Collider tailCol)) tailCol.enabled = false;
 
-        Renderer bodyRenderer = body.GetComponent<Renderer>();
-        Renderer stripeRenderer = stripe.GetComponent<Renderer>();
-        Renderer leftWingRenderer = leftWing.GetComponent<Renderer>();
-        Renderer rightWingRenderer = rightWing.GetComponent<Renderer>();
-        ambientBees.Add(new AmbientBeeData
+        int pointIndex = Mathf.Abs(squirrelIndex * 5) % ambientSquirrelRoamPoints.Count;
+        Vector3 position = ambientSquirrelRoamPoints[pointIndex];
+        float yaw = Random.Range(0f, 360f);
+        sqRoot.transform.position = position;
+        sqRoot.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+        ambientSquirrels.Add(new AmbientSquirrelData
         {
-            RootTransform = beeRoot.transform,
-            BodyRenderer = bodyRenderer,
-            StripeRenderer = stripeRenderer,
-            LeftWingRenderer = leftWingRenderer,
-            RightWingRenderer = rightWingRenderer,
-            BodyMaterial = bodyRenderer != null ? bodyRenderer.material : null,
-            StripeMaterial = stripeRenderer != null ? stripeRenderer.material : null,
-            LeftWingMaterial = leftWingRenderer != null ? leftWingRenderer.material : null,
-            RightWingMaterial = rightWingRenderer != null ? rightWingRenderer.material : null,
-            LeftWingTransform = leftWing.transform,
-            RightWingTransform = rightWing.transform,
-            FlowerPointIndex = flowerIndex,
-            OrbitRadius = Random.Range(0.08f, 0.16f),
-            OrbitHeight = Random.Range(0.18f, 0.28f),
-            OrbitSpeed = Random.Range(1.6f, 2.6f),
-            OrbitAngle = orbitAngle,
-            VerticalBobAmplitude = Random.Range(0.015f, 0.04f),
-            VerticalBobSpeed = Random.Range(2.2f, 3.6f),
-            PhaseOffset = Random.Range(0f, 10f),
-            Visibility = AreAmbientBeesActive() ? 1f : 0f
+            RootTransform    = sqRoot.transform,
+            BodyTransform    = body.transform,
+            HeadTransform    = head.transform,
+            TailTransform    = tail.transform,
+            CurrentPosition  = position,
+            StartPosition    = position,
+            TargetPosition   = position,
+            CurrentPointIndex = pointIndex,
+            TargetPointIndex  = pointIndex,
+            StateTimer       = Random.Range(2f, 5f),
+            AnimationPhase   = Random.Range(0f, 10f),
+            TailPhase        = Random.Range(0f, 10f),
+            Yaw              = yaw,
+            State            = AmbientSquirrelState.Idle
         });
     }
 
-    private void UpdateAmbientBees()
+    private void UpdateAmbientSquirrels()
     {
-        if (ambientBees.Count == 0 || flowerBeePoints.Count == 0)
+        if (ambientSquirrels.Count == 0 || ambientSquirrelRoamPoints.Count == 0)
         {
             return;
         }
 
-        bool beesActive = AreAmbientBeesActive();
-        float dt = Time.deltaTime * gameSpeedMultiplier;
+        bool active = AreAmbientSquirrelsActive();
+        float dt   = Time.deltaTime * gameSpeedMultiplier;
         float time = Time.time;
-        for (int i = ambientBees.Count - 1; i >= 0; i--)
+
+        for (int i = ambientSquirrels.Count - 1; i >= 0; i--)
         {
-            AmbientBeeData bee = ambientBees[i];
-            if (bee.RootTransform == null)
+            AmbientSquirrelData sq = ambientSquirrels[i];
+            if (sq.RootTransform == null)
             {
-                ambientBees.RemoveAt(i);
+                ambientSquirrels.RemoveAt(i);
                 continue;
             }
 
-            int flowerIndex = Mathf.Clamp(bee.FlowerPointIndex, 0, flowerBeePoints.Count - 1);
-            Vector3 flowerPoint = flowerBeePoints[flowerIndex];
-            float targetVisibility = beesActive ? 1f : 0f;
-            bee.Visibility = Mathf.MoveTowards(bee.Visibility, targetVisibility, dt * 0.85f);
-
-            ApplyAmbientBeeVisibility(bee);
-            if (bee.Visibility <= 0.001f && !beesActive)
+            switch (sq.State)
             {
-                continue;
-            }
+                case AmbientSquirrelState.Idle:
+                    sq.StateTimer -= dt;
 
-            if (beesActive)
-            {
-                bee.OrbitAngle += dt * bee.OrbitSpeed;
-            }
+                    float idleBob = Mathf.Sin(time * 2.4f + sq.AnimationPhase) * 0.012f;
+                    sq.RootTransform.position = sq.CurrentPosition + new Vector3(0f, idleBob, 0f);
+                    sq.RootTransform.rotation = Quaternion.Slerp(
+                        sq.RootTransform.rotation,
+                        Quaternion.Euler(0f, sq.Yaw, 0f),
+                        6f * Time.deltaTime);
 
-            Vector3 offset = new Vector3(Mathf.Cos(bee.OrbitAngle), 0f, Mathf.Sin(bee.OrbitAngle)) * bee.OrbitRadius;
-            float verticalBob = beesActive
-                ? Mathf.Sin(time * bee.VerticalBobSpeed + bee.PhaseOffset) * bee.VerticalBobAmplitude
-                : Mathf.Sin(time * 0.8f + bee.PhaseOffset) * 0.004f;
-            Vector3 position = flowerPoint + offset + new Vector3(0f, bee.OrbitHeight + verticalBob, 0f);
-            bee.RootTransform.position = position;
+                    if (sq.HeadTransform != null)
+                    {
+                        sq.HeadTransform.localRotation = Quaternion.Euler(
+                            Mathf.Sin(time * 1.1f + sq.AnimationPhase) * 6f,
+                            Mathf.Sin(time * 0.7f + sq.AnimationPhase) * 12f,
+                            0f);
+                    }
 
-            Vector3 tangent = new Vector3(-Mathf.Sin(bee.OrbitAngle), 0f, Mathf.Cos(bee.OrbitAngle));
-            if (tangent.sqrMagnitude > 0.0001f)
-            {
-                bee.RootTransform.rotation = Quaternion.Slerp(
-                    bee.RootTransform.rotation,
-                    Quaternion.LookRotation(tangent.normalized, Vector3.up),
-                    10f * Time.deltaTime);
-            }
+                    if (sq.TailTransform != null)
+                    {
+                        sq.TailTransform.localRotation = Quaternion.Euler(
+                            -55f + Mathf.Sin(time * 1.8f + sq.TailPhase) * 8f,
+                            Mathf.Sin(time * 1.4f + sq.TailPhase) * 10f,
+                            0f);
+                    }
 
-            float wingAngle = beesActive
-                ? 48f + Mathf.Sin(time * 34f + bee.PhaseOffset) * 32f
-                : 12f + Mathf.Sin(time * 4.5f + bee.PhaseOffset) * 5f;
-            if (bee.LeftWingTransform != null)
-            {
-                bee.LeftWingTransform.localRotation = Quaternion.Euler(0f, 0f, wingAngle);
-            }
+                    if (sq.StateTimer <= 0f)
+                    {
+                        if (!active)
+                        {
+                            sq.StateTimer = Random.Range(2f, 5f);
+                            break;
+                        }
 
-            if (bee.RightWingTransform != null)
-            {
-                bee.RightWingTransform.localRotation = Quaternion.Euler(0f, 0f, -wingAngle);
-            }
-        }
-    }
+                        int next = FindNextSquirrelRoamPoint(sq);
+                        if (next >= 0 && next != sq.CurrentPointIndex)
+                        {
+                            if (Random.value < 0.3f)
+                            {
+                                sq.State     = AmbientSquirrelState.Foraging;
+                                sq.StateTimer = Random.Range(1.5f, 3f);
+                            }
+                            else
+                            {
+                                sq.TargetPointIndex = next;
+                                sq.StartPosition    = sq.CurrentPosition;
+                                sq.TargetPosition   = ambientSquirrelRoamPoints[next];
+                                sq.MoveProgress     = 0f;
+                                sq.MoveDuration     = Mathf.Clamp(
+                                    Vector3.Distance(sq.StartPosition, sq.TargetPosition) / 2.2f,
+                                    0.6f, 2.8f);
+                                sq.State = AmbientSquirrelState.Running;
+                            }
+                        }
+                        else
+                        {
+                            sq.StateTimer = Random.Range(2f, 5f);
+                        }
+                    }
+                    break;
 
-    private static void ApplyAmbientBeeVisibility(AmbientBeeData bee)
-    {
-        if (bee?.RootTransform == null)
-        {
-            return;
-        }
+                case AmbientSquirrelState.Foraging:
+                    sq.StateTimer -= dt;
 
-        bool visible = bee.Visibility > 0.001f;
-        if (bee.RootTransform.gameObject.activeSelf != visible)
-        {
-            bee.RootTransform.gameObject.SetActive(visible);
-        }
+                    float forageBob = Mathf.Abs(Mathf.Sin(time * 6f + sq.AnimationPhase)) * 0.06f;
+                    sq.RootTransform.position = sq.CurrentPosition + new Vector3(0f, forageBob, 0f);
 
-        if (!visible)
-        {
-            return;
-        }
+                    if (sq.HeadTransform != null)
+                    {
+                        float nod = Mathf.Sin(time * 7f + sq.AnimationPhase) * 22f;
+                        sq.HeadTransform.localRotation = Quaternion.Euler(nod, 0f, 0f);
+                    }
 
-        Color bodyColor = new Color(0.96f, 0.78f, 0.12f) * Mathf.Lerp(0.15f, 1f, bee.Visibility);
-        Color stripeColor = new Color(0.16f, 0.14f, 0.12f) * Mathf.Lerp(0.2f, 1f, bee.Visibility);
-        Color wingColor = Color.Lerp(new Color(0.92f, 0.96f, 1f) * 0.2f, new Color(0.92f, 0.96f, 1f), bee.Visibility);
+                    if (sq.TailTransform != null)
+                    {
+                        sq.TailTransform.localRotation = Quaternion.Euler(-72f, 0f, 0f);
+                    }
 
-        if (bee.BodyMaterial != null)
-        {
-            bee.BodyMaterial.color = bodyColor;
-        }
+                    if (sq.StateTimer <= 0f)
+                    {
+                        sq.State     = AmbientSquirrelState.Idle;
+                        sq.StateTimer = Random.Range(2f, 5f);
+                    }
+                    break;
 
-        if (bee.StripeMaterial != null)
-        {
-            bee.StripeMaterial.color = stripeColor;
-        }
+                case AmbientSquirrelState.Running:
+                    sq.MoveProgress += dt / Mathf.Max(0.001f, sq.MoveDuration);
+                    float runT = Mathf.Clamp01(sq.MoveProgress);
 
-        if (bee.LeftWingMaterial != null)
-        {
-            bee.LeftWingMaterial.color = wingColor;
-        }
+                    Vector3 runPos = Vector3.Lerp(sq.StartPosition, sq.TargetPosition, runT);
+                    runPos.y += Mathf.Abs(Mathf.Sin(time * 14f + sq.AnimationPhase)) * 0.025f;
+                    sq.RootTransform.position = runPos;
 
-        if (bee.RightWingMaterial != null)
-        {
-            bee.RightWingMaterial.color = wingColor;
-        }
-    }
+                    Vector3 toTarget = sq.TargetPosition - runPos;
+                    toTarget.y = 0f;
+                    if (toTarget.sqrMagnitude > 0.0001f)
+                    {
+                        sq.RootTransform.rotation = Quaternion.Slerp(
+                            sq.RootTransform.rotation,
+                            Quaternion.LookRotation(toTarget.normalized, Vector3.up),
+                            14f * Time.deltaTime);
+                    }
 
-    private void SetupAmbientLanternMoths()
-    {
-        ambientLanternMothSwarms.Clear();
-        if (ambientLanternMothRoot != null)
-        {
-            Destroy(ambientLanternMothRoot.gameObject);
-        }
+                    if (sq.BodyTransform != null)
+                    {
+                        sq.BodyTransform.localScale = new Vector3(0.14f, 0.09f, 0.20f);
+                    }
 
-        if (worldRoot == null)
-        {
-            return;
-        }
+                    if (sq.TailTransform != null)
+                    {
+                        sq.TailTransform.localRotation = Quaternion.Euler(
+                            -10f + Mathf.Sin(time * 10f + sq.TailPhase) * 8f,
+                            0f, 0f);
+                    }
 
-        ambientLanternMothRoot = new GameObject("AmbientLanternMoths").transform;
-        ambientLanternMothRoot.SetParent(worldRoot, false);
-
-        int swarmCount = Mathf.Clamp(Mathf.CeilToInt(roadLanterns.Count * 0.18f), 1, AmbientLanternMothSwarmMaxCount);
-        if (roadLanterns.Count == 0)
-        {
-            swarmCount = 0;
-        }
-
-        for (int i = 0; i < swarmCount; i++)
-        {
-            CreateAmbientLanternMothSwarm(i);
-        }
-
-        ReselectAmbientLanternMothLanterns();
-        wereAmbientLanternMothsActiveLastFrame = AreAmbientLanternMothsActive();
-    }
-
-    private void RefreshAmbientLanternMoths()
-    {
-        SetupAmbientLanternMoths();
-    }
-
-    private void CreateAmbientLanternMothSwarm(int swarmIndex)
-    {
-        if (ambientLanternMothRoot == null)
-        {
-            return;
-        }
-
-        GameObject swarmRoot = new($"LanternMothSwarm_{swarmIndex + 1}");
-        swarmRoot.transform.SetParent(ambientLanternMothRoot, false);
-
-        AmbientLanternMothSwarmData swarm = new()
-        {
-            RootTransform = swarmRoot.transform,
-            OrbitRadius = Random.Range(0.16f, 0.26f),
-            OrbitHeight = Random.Range(0.06f, 0.16f),
-            OrbitSpeed = Random.Range(0.8f, 1.45f),
-            VerticalBobAmplitude = Random.Range(0.02f, 0.05f),
-            VerticalBobSpeed = Random.Range(1.8f, 3.2f),
-            PhaseOffset = Random.Range(0f, 10f),
-            Visibility = 0f
-        };
-
-        int particleCount = Random.Range(5, 9);
-        for (int i = 0; i < particleCount; i++)
-        {
-            GameObject particle = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            particle.name = $"MothDot_{i + 1}";
-            particle.transform.SetParent(swarmRoot.transform, false);
-            particle.transform.localScale = Vector3.one * Random.Range(0.026f, 0.04f);
-            ApplyColor(particle, new Color(0.9f, 0.87f, 0.65f));
-            ConfigureStaticVisual(particle);
-            if (particle.TryGetComponent(out Collider particleCollider))
-            {
-                particleCollider.enabled = false;
-            }
-
-            Renderer particleRenderer = particle.GetComponent<Renderer>();
-            swarm.ParticleTransforms.Add(particle.transform);
-            swarm.ParticleRenderers.Add(particleRenderer);
-            swarm.ParticleMaterials.Add(particleRenderer != null ? particleRenderer.material : null);
-        }
-
-        ambientLanternMothSwarms.Add(swarm);
-        ApplyAmbientLanternMothVisibility(swarm);
-    }
-
-    private void ReselectAmbientLanternMothLanterns()
-    {
-        if (ambientLanternMothSwarms.Count == 0)
-        {
-            return;
-        }
-
-        List<int> availableLanternIndices = new();
-        for (int i = 0; i < roadLanterns.Count; i++)
-        {
-            if (roadLanterns[i]?.Light != null)
-            {
-                availableLanternIndices.Add(i);
-            }
-        }
-
-        for (int i = 0; i < ambientLanternMothSwarms.Count; i++)
-        {
-            AmbientLanternMothSwarmData swarm = ambientLanternMothSwarms[i];
-            swarm.LanternIndex = -1;
-            if (availableLanternIndices.Count == 0)
-            {
-                continue;
-            }
-
-            int pick = Random.Range(0, availableLanternIndices.Count);
-            swarm.LanternIndex = availableLanternIndices[pick];
-            availableLanternIndices.RemoveAt(pick);
-            swarm.OrbitRadius = Random.Range(0.16f, 0.26f);
-            swarm.OrbitHeight = Random.Range(0.06f, 0.16f);
-            swarm.OrbitSpeed = Random.Range(0.8f, 1.45f);
-            swarm.VerticalBobAmplitude = Random.Range(0.02f, 0.05f);
-            swarm.VerticalBobSpeed = Random.Range(1.8f, 3.2f);
-            swarm.PhaseOffset = Random.Range(0f, 10f);
-        }
-    }
-
-    private void UpdateAmbientLanternMoths()
-    {
-        if (ambientLanternMothSwarms.Count == 0)
-        {
-            return;
-        }
-
-        bool mothsActive = AreAmbientLanternMothsActive();
-        if (mothsActive && !wereAmbientLanternMothsActiveLastFrame)
-        {
-            ReselectAmbientLanternMothLanterns();
-        }
-        wereAmbientLanternMothsActiveLastFrame = mothsActive;
-
-        float dt = Time.deltaTime * gameSpeedMultiplier;
-        float time = Time.time;
-        for (int i = ambientLanternMothSwarms.Count - 1; i >= 0; i--)
-        {
-            AmbientLanternMothSwarmData swarm = ambientLanternMothSwarms[i];
-            if (swarm?.RootTransform == null)
-            {
-                ambientLanternMothSwarms.RemoveAt(i);
-                continue;
-            }
-
-            bool hasLantern = swarm.LanternIndex >= 0 &&
-                swarm.LanternIndex < roadLanterns.Count &&
-                roadLanterns[swarm.LanternIndex]?.Light != null;
-
-            float targetVisibility = mothsActive && hasLantern ? 1f : 0f;
-            swarm.Visibility = Mathf.MoveTowards(swarm.Visibility, targetVisibility, dt * 0.8f);
-            ApplyAmbientLanternMothVisibility(swarm);
-
-            if (swarm.Visibility <= 0.001f && !mothsActive)
-            {
-                continue;
-            }
-
-            if (!hasLantern)
-            {
-                continue;
-            }
-
-            Vector3 center = roadLanterns[swarm.LanternIndex].Light.transform.position + new Vector3(0f, 0.05f, 0f);
-            for (int p = 0; p < swarm.ParticleTransforms.Count; p++)
-            {
-                Transform particleTransform = swarm.ParticleTransforms[p];
-                if (particleTransform == null)
-                {
-                    continue;
-                }
-
-                float particleT = time * swarm.OrbitSpeed + swarm.PhaseOffset + p * 0.92f;
-                float radius = swarm.OrbitRadius * (0.75f + Mathf.Sin(particleT * 1.37f) * 0.18f);
-                Vector3 orbit = new Vector3(
-                    Mathf.Cos(particleT) * radius,
-                    swarm.OrbitHeight + Mathf.Sin(particleT * swarm.VerticalBobSpeed) * swarm.VerticalBobAmplitude,
-                    Mathf.Sin(particleT * 1.14f) * radius);
-                particleTransform.position = center + orbit;
+                    if (runT >= 1f)
+                    {
+                        sq.CurrentPointIndex = sq.TargetPointIndex;
+                        sq.CurrentPosition   = sq.TargetPosition;
+                        sq.Yaw               = sq.RootTransform.eulerAngles.y;
+                        if (sq.BodyTransform != null)
+                        {
+                            sq.BodyTransform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
+                        }
+                        sq.State     = AmbientSquirrelState.Idle;
+                        sq.StateTimer = Random.Range(1.5f, 3.5f);
+                    }
+                    break;
             }
         }
     }
 
-    private static void ApplyAmbientLanternMothVisibility(AmbientLanternMothSwarmData swarm)
+    private bool AreAmbientSquirrelsActive()
     {
-        if (swarm?.RootTransform == null)
+        int hour = GetCurrentHour();
+        return hour >= 6 && hour < 18;
+    }
+
+    private int FindNextSquirrelRoamPoint(AmbientSquirrelData sq)
+    {
+        int current = sq?.CurrentPointIndex ?? -1;
+        if (ambientSquirrelRoamPoints.Count < 2 || current < 0 || current >= ambientSquirrelRoamPoints.Count)
         {
-            return;
+            return -1;
         }
 
-        bool visible = swarm.Visibility > 0.001f;
-        if (swarm.RootTransform.gameObject.activeSelf != visible)
+        List<int> candidates = new();
+        Vector3 currentPos = ambientSquirrelRoamPoints[current];
+        for (int i = 0; i < ambientSquirrelRoamPoints.Count; i++)
         {
-            swarm.RootTransform.gameObject.SetActive(visible);
-        }
-
-        if (!visible)
-        {
-            return;
-        }
-
-        Color dotColor = Color.Lerp(
-            new Color(0.22f, 0.2f, 0.14f),
-            new Color(0.94f, 0.9f, 0.72f),
-            swarm.Visibility);
-        for (int i = 0; i < swarm.ParticleMaterials.Count; i++)
-        {
-            Material particleMaterial = swarm.ParticleMaterials[i];
-            if (particleMaterial != null)
+            if (i == current) continue;
+            float dist = Vector3.Distance(currentPos, ambientSquirrelRoamPoints[i]);
+            if (dist >= 1.5f && dist <= 8f)
             {
-                particleMaterial.color = dotColor;
+                candidates.Add(i);
             }
         }
+
+        if (candidates.Count == 0)
+        {
+            return (current + 1) % ambientSquirrelRoamPoints.Count;
+        }
+
+        return candidates[Random.Range(0, candidates.Count)];
     }
 
 }
-
-

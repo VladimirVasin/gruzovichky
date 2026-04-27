@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-04-06
+Last updated: 2026-04-26
 
 Purpose: describe the real implemented architecture and current hotspots.
 
@@ -20,6 +20,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 - This is still fast for prototype iteration.
 - It still couples presentation and simulation, but the runtime is now split into concern-based partial scripts under `Assets/Scripts/Runtime/`.
+- Large prototype files are kept below roughly 1500 lines by splitting feature clusters into focused partials such as `Runtime/Racing/`, `Runtime/UI/FleetCanvas/`, `GameBootstrap.RuntimeLoop.cs`, `GameBootstrap.AmbientLife.Particles.cs`, and `GameBootstrap.Drivers.*.cs`.
 - Small changes are easy; larger feature growth will increase risk quickly.
 
 ## Current Hotspots
@@ -33,9 +34,75 @@ Purpose: describe the real implemented architecture and current hotspots.
 - Highest-risk gameplay file after the refactor.
 - Owns pathfinding, road connectivity, and truck movement.
 
+### `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.BuildRoad.cs`
+
+- Owns build-mode road preview, footprint placement, turn filling, and post-placement road-building flow.
+- Keep two-lane road invariants here when changing road build tools.
+- Footprint offset and structural placement checks now delegate to `RoadBuildPlacementService`; the partial still owns preview visuals, actual `AddRoad()` calls, turn-fill logging, and input state.
+
+### `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.Road*.cs`
+
+- Regular road logic is split into focused partials:
+  - `GameBootstrap.Transport.Roads.cs`: core path/road occupancy helpers and add/remove entrypoints.
+  - `GameBootstrap.Transport.RoadGeneration.cs`: starter road generation and validation logging.
+  - `GameBootstrap.Transport.RoadVisuals.cs`: unified road mesh/cap visual generation.
+  - `GameBootstrap.Transport.RoadMarkings.cs`: primitive road markings and corner dashes.
+  - `GameBootstrap.Transport.RoadsideProps.cs`: lanterns, edge-highway lanterns, and roadside benches.
+
+### `Assets/Scripts/Runtime/Racing/`
+
+- Racing mode is split by concern: controls, track generation, vehicle state, HUD, world setup, and atmosphere.
+- `GameBootstrap.Racing.cs` remains the race-mode coordinator and shared state owner.
+
+### `Assets/Scripts/Runtime/UI/FleetCanvas/`
+
+- Large management screens are split by panel: Workers, Shifts setup/runtime, Build, Resources, Economy, World Map, and tutorial helpers.
+- Shared UI refs and helper types remain in `GameBootstrap.FleetCanvas.ManagementScreens.cs`.
+
+### `Assets/Scripts/Runtime/Actors/GameBootstrap.Drivers.*.cs`
+
+- Driver/worker behavior is split into general movement/logistics, life cycle and needs, and hiring/shift orchestration.
+
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
 
 - Owns the active trip/refuel state machine.
+- Runtime guards are delegated to `TruckRuntimeGuardService`.
+- Trip and refuel phase-step decisions are delegated to `TruckTripRuntimeService` and `TruckRefuelRuntimeService`; the partial still owns Unity-side effects such as movement commands, interactions, audio, salary/rest handoff, and feed/debug output.
+
+### `Assets/Scripts/Runtime/Transport/Services/TruckRuntimeGuardService.cs`
+
+- Pure guard seam for deciding whether assigned-trip and refuel update loops should run.
+- Keeps conflict-state checks testable while the actual truck phase transitions still live in `GameBootstrap.RouteRuntime.cs`.
+
+### `Assets/Scripts/Runtime/Transport/Services/TruckTripRuntimeService.cs`
+
+- Pure phase-step service for regular assigned truck trips.
+- Decides whether to move to pickup/dropoff/parking, start load/unload, wait, or complete a trip.
+
+### `Assets/Scripts/Runtime/Transport/Services/TruckRefuelRuntimeService.cs`
+
+- Pure phase-step service for truck refuel orders.
+- Decides whether to move to Gas Station/Parking, start refueling, wait, or complete the refuel order.
+
+### `Assets/Scripts/Runtime/Core/Services/TradeAutoDispatchService.cs`
+
+- Pure timing/gating seam for trade auto-dispatch retry intervals and weekend blocking.
+- `GameBootstrap.Trade.cs` still owns concrete order lookup and dispatch execution.
+
+### `Assets/Scripts/Runtime/Core/Services/TradeDispatchPreconditionService.cs`
+
+- Pure precondition helper for trade dispatch blocking reasons.
+- `GameBootstrap.Trade.cs` gathers live driver/truck/world/resource facts, then delegates the final dispatch/no-dispatch decision to this service.
+
+### `Assets/Scripts/Runtime/Core/Services/TradeOrderQueueService.cs`
+
+- Pure helper for active trade-order creation, queue peek, first-order completion, and cancel-by-id removal.
+- Economy and World Map still own UI and dispatch side effects, but queue lifecycle rules are now covered by editor smoke tests.
+
+### `Assets/Scripts/Runtime/Core/Services/TradeRunRuntimeService.cs`
+
+- Pure trade-run phase helper for driver-to-parking, truck target arrival/movement, highway departure, out-of-map timing, and buy/sell return routing.
+- `GameBootstrap.Trade.cs` still owns concrete path building, object visibility, cargo mutation, money ledger, event feed, and driver rest handoff.
 
 ### `Assets/Scripts/Runtime/UI/GameBootstrap.Orders.cs`
 
@@ -50,6 +117,89 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 - Shared grid BFS helper.
 - Used by truck routing, starter road generation, and driver rescue walking.
+
+### `Assets/Scripts/Runtime/Transport/Services/TwoLaneRoadGeometry.cs`
+
+- Pure helper for two-lane road direction normalization, right-lane offsets, footprints, and turn fill bounds.
+- Covered by editor smoke tests because road geometry regressions quickly break transport.
+
+### `Assets/Scripts/Runtime/Transport/Services/RoadBuildPlacementService.cs`
+
+- Pure build-mode road placement helper for resolving the second lane offset, blocking buildings/highway/misc cells, and detecting third parallel lane attempts.
+- Used by `GameBootstrap.Input.BuildRoad.cs` and covered by editor smoke tests.
+
+### `Assets/Scripts/Runtime/Transport/Services/BusStopOrderingService.cs`
+
+- Pure helper for deterministic local bus-stop ordering by stop number and anchor coordinates.
+- Runtime still owns `LocationData`, but ordering decisions are now testable outside `GameBootstrap`.
+
+### `Assets/Scripts/Runtime/Transport/Services/RoadMarkingPlanner.cs`
+
+- Pure helper for regular two-lane road visual-axis and center-dash decisions.
+- `GameBootstrap.Transport.Roads.cs` still owns actual road mesh/primitive creation, but lane-marking rules now have a testable seam.
+
+### `Assets/Scripts/Runtime/Transport/Services/LocalBusRoutePlanner.cs`
+
+- First extracted local-bus route-state helper.
+- Owns pure stop-index/direction decisions for the local route bus out-and-back cycle while `GameBootstrap.LocalBus.cs` still owns runtime objects, passengers, and movement.
+
+### `Assets/Scripts/Runtime/Transport/Services/LocalBusRuntimeService.cs`
+
+- Pure-ish local bus runtime seam for dwell countdown and waypoint movement stepping.
+- Passenger ownership, bus-driver shift lifecycle, and object wiring still remain in `GameBootstrap.LocalBus.cs`.
+
+### `Assets/Scripts/Runtime/Transport/Services/LocalBusPassengerService.cs`
+
+- Pure helper for local-bus passenger boarding decisions.
+- Encodes capacity, fare exemption, paid fare, and fallback-to-walking rules while `GameBootstrap.LocalBus.cs` keeps concrete worker/object mutations.
+
+### `Assets/Scripts/Runtime/Transport/Services/WarehouseBusDeliveryService.cs`
+
+- Pure helper for deciding whether a warehouse delivery should attempt local-bus travel or walk directly.
+- `GameBootstrap.Drivers.cs` still owns cargo mutation, path building, and worker state changes, but bus-vs-walk reasons are now testable and written into debug logs.
+
+### `Assets/Scripts/Runtime/World/WorldLayoutRoadValidator.cs`
+
+- Pure helper for validating whether required generated-world road-access pairs can support a wide two-lane road.
+- `GameBootstrap.Transport.Roads.cs` delegates its layout road feasibility check here, while runtime road creation still owns actual cell mutation/visual rebuilding.
+- Also exposes a smoke-test path-appending helper so tests can build a generated starter road network and verify actual connectivity across required destinations.
+- Editor smoke tests use this service to validate Debug and User world-layout route chains across deterministic seeds.
+
+### `Assets/Scripts/Runtime/World/BuildingPlacementService.cs`
+
+- Pure helper for rotated building footprints, footprint blockage checks, preview footprint cells, and preview scale/center calculations.
+- `GameBootstrap.World.cs` still owns concrete building creation and CityPark-specific implementation, but generic placement/preview math is now testable outside the partial.
+
+### `Assets/Scripts/Runtime/World/MiscDecorationSpawnService.cs`
+
+- Pure helper for choosing misc decoration buckets (`FlowerPatch`, `BerryBush`, `Tree`) from spawn chances.
+- Keeps part of `GameBootstrap.World.cs` world-decoration behavior testable while concrete low-poly prop construction remains in the world partial.
+
+### `Assets/Scripts/Runtime/World/GameBootstrap.World.MiscDecorations.cs`
+
+- Partial world-decoration split for misc trees, berry bushes, flower patches, tree sway, perch points, and tree primitive variants.
+- Keeps `GameBootstrap.World.cs` focused more on placement/service/city-park construction while preserving existing runtime behavior.
+
+### `Assets/Scripts/Runtime/World/ServiceDecorationStyleService.cs`
+
+- Shared style helper for service-building light identity (`Bar`, `Canteen`, `GamblingHall`).
+- Concrete primitive constructors still live in `GameBootstrap.World.cs`, but color/intensity/range choices are now centralized and smoke-tested.
+
+### `Assets/Scripts/Runtime/UI/FleetCanvas/FleetCanvasUiFactory.cs`
+
+- First extracted UI factory service for FleetCanvas primitive UI creation.
+- `GameBootstrap.FleetCanvas.cs` still exposes compatibility wrappers, but low-level object/text/button/section-card/tab-row/scroll-panel/scrollbar/spacer creation now has a real service seam.
+
+### `Assets/Scripts/Runtime/UI/Localization/LocalizedStringTable.cs`
+
+- First table-style localization seam.
+- Existing Russian strings still live in `GameBootstrap.Localization.cs`, but lookup/reverse lookup/common-fragment translation now goes through a reusable table object.
+- `Assets/Resources/Localization/ui.ru.json` exists as the first external localization-table seed; the built-in dictionary remains the authoritative fallback until migration is completed.
+
+### `Assets/Scripts/Runtime/UI/Localization/LocalizationJsonLoader.cs`
+
+- Loads simple flat JSON localization tables from `Resources`.
+- `GameBootstrap.Localization.cs` merges the external Russian JSON table over the built-in dictionary so migration can happen incrementally without breaking fallback coverage.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.Interaction.cs`
 
@@ -84,3 +234,5 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 - The project is now in an intermediate refactor state: one runtime owner, several partial scripts.
 - The next healthy seam after this is moving trucks, world generation, and HUD into fully separate classes/services rather than only partial-class slices.
+- `tools/check-line-count.ps1` and `.github/workflows/project-sanity.yml` guard the approximate 1500-line file ceiling.
+- `Assets/Editor/Tests/WorldGenerationSmokeTests.cs` covers world layout placement validity, two-lane geometry, and required road-access chain feasibility for Debug/User starts.

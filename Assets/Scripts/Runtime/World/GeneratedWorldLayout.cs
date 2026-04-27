@@ -6,6 +6,7 @@ public sealed class WorldLocationPlacement
     public Vector2Int Min;
     public Vector2Int Max;
     public Vector2Int Anchor;
+    public Vector2Int RoadAccess;
 
     public bool Contains(Vector2Int cell)
     {

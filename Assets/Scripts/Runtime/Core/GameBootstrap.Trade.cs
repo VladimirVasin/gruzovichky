@@ -3,7 +3,7 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private enum TradeRunPhase
+    public enum TradeRunPhase
     {
         None,
         DriverToParking,
@@ -593,78 +593,49 @@ public partial class GameBootstrap
         driver = GetIntercityAssignedDriver();
         truckAgent = null;
 
-        if (HasActiveTradeRun())
-        {
-            blockReason = "Another trade run is already active";
-            return false;
-        }
-
-        if (driver == null)
-        {
-            blockReason = "Assign an Intercity driver first";
-            return false;
-        }
-
-        if (driver.IsArrivingByBus)
-        {
-            blockReason = "Intercity driver is still arriving";
-            return false;
-        }
-
-        if (driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || IsDriverIdleConversing(driver))
-        {
-            blockReason = "Intercity driver is busy";
-            return false;
-        }
-
-        truckAgent = GetAssignedTruckForDriver(driver);
-        if (truckAgent == null)
-        {
-            blockReason = "Intercity driver needs an assigned truck";
-            return false;
-        }
-
-        if (truckAgent.CurrentAssignedTrip != TripType.None ||
-            truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
-            truckAgent.IsTruckMoving ||
-            truckAgent.IsTruckInteracting ||
-            truckAgent.IsDriverRescueActive)
-        {
-            blockReason = $"{truckAgent.DisplayName} is busy";
-            return false;
-        }
-
-        if (truckAgent.Driver != null && truckAgent.Driver != driver)
-        {
-            blockReason = $"{truckAgent.DisplayName} is using another driver";
-            return false;
-        }
-
-        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking) ||
-            !locations.TryGetValue(LocationType.IntercityStop, out LocationData busStop) ||
-            !HasPath(parking.Anchor, busStop.Anchor))
-        {
-            blockReason = "Highway access is not connected";
-            return false;
-        }
-
-        if (truckAgent.TruckCell != parking.Anchor && truckAgent.Driver != driver)
-        {
-            blockReason = $"{truckAgent.DisplayName} must be parked first";
-            return false;
-        }
-
         int quantity = GetTradeRunQuantity(selectedTradeResourceType);
         int price = GetTradeRunPrice(selectedTradeResourceType, selectedTradeOrderType);
-        if (selectedTradeOrderType == TradeOrderType.Buy && money < price)
-        {
-            blockReason = $"Need ${price} Treasury for this trade buy";
-            return false;
-        }
+        string resourceLabel = GetTradeResourceLabel(selectedTradeResourceType);
+        bool hasDriver = driver != null;
+        bool driverArriving = driver != null && driver.IsArrivingByBus;
+        bool driverBusy = driver != null && (driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || IsDriverIdleConversing(driver));
+        truckAgent = driver != null ? GetAssignedTruckForDriver(driver) : null;
+        bool hasTruck = truckAgent != null;
+        bool truckBusy = truckAgent != null &&
+                         (truckAgent.CurrentAssignedTrip != TripType.None ||
+                          truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
+                          truckAgent.IsTruckMoving ||
+                          truckAgent.IsTruckInteracting ||
+                          truckAgent.IsDriverRescueActive);
+        bool truckHasOtherDriver = truckAgent != null && truckAgent.Driver != null && truckAgent.Driver != driver;
+        bool highwayConnected =
+            locations.TryGetValue(LocationType.Parking, out LocationData parking) &&
+            locations.TryGetValue(LocationType.IntercityStop, out LocationData busStop) &&
+            HasPath(parking.Anchor, busStop.Anchor);
+        bool truckParkedOrDriverOnboard = truckAgent != null && (!locations.TryGetValue(LocationType.Parking, out parking) || truckAgent.TruckCell == parking.Anchor || truckAgent.Driver == driver);
 
-        if (selectedTradeOrderType == TradeOrderType.Sell && GetStoredTradeResourceAmount(selectedTradeResourceType) < quantity)
+        TradeDispatchPreconditionResult result = TradeDispatchPreconditionService.Evaluate(
+            new TradeDispatchPreconditionInput(
+                HasActiveTradeRun(),
+                hasDriver,
+                driverArriving,
+                driverBusy,
+                hasTruck,
+                truckBusy,
+                truckHasOtherDriver,
+                highwayConnected,
+                truckParkedOrDriverOnboard,
+                selectedTradeOrderType == TradeOrderType.Buy,
+                money,
+                price,
+                GetStoredTradeResourceAmount(selectedTradeResourceType),
+                quantity,
+                truckAgent?.DisplayName,
+                resourceLabel));
+
+        if (!result.CanDispatch)
         {
-            blockReason = $"Need {quantity} {GetTradeResourceLabel(selectedTradeResourceType)} to sell";
+            blockReason = result.BlockReason;
             return false;
         }
 
@@ -674,28 +645,49 @@ public partial class GameBootstrap
 
     private void TryAutoDispatchNextHudOrder()
     {
-        if (HasActiveTradeRun() || activeTradeHudOrders.Count == 0) return;
-        TradeHudOrder next = activeTradeHudOrders[0];
+        if (HasActiveTradeRun())
+        {
+            SessionDebugLogger.Log("TRADE_AUTO", $"Auto-dispatch skipped: active run phase={GetTradePhaseLabel(activeTradeRun.Phase)}, queuedOrders={activeTradeHudOrders.Count}.");
+            return;
+        }
+
+        if (!TradeOrderQueueService.TryPeek(activeTradeHudOrders, out TradeHudOrder next))
+        {
+            return;
+        }
+
         selectedTradeResourceType  = next.ResourceType;
         selectedTradeOrderType     = next.OrderType;
         selectedTradeOrderAmount   = Mathf.Clamp(next.Amount, 1, 5);
+        SessionDebugLogger.Log(
+            "TRADE_AUTO",
+            $"Trying queued order #{next.Id}: {next.OrderType} {next.ResourceType} x{next.Amount}, targetRegion={next.TargetRegionIndex}, queue={activeTradeHudOrders.Count}.");
         bool dispatched = BeginTradeRun();
         isEconomyScreenDirty = true;
-        if (dispatched) tradeAutoDispatchRetryTimer = 0f;
+        if (dispatched)
+        {
+            tradeAutoDispatchRetryTimer = 0f;
+        }
+        else
+        {
+            SessionDebugLogger.Log("TRADE_AUTO", $"Queued order #{next.Id} dispatch blocked: {tradeDispatchStatusText}.");
+        }
     }
 
     private void UpdateTradeAutoDispatch()
     {
-        if (IsWeekend()) { tradeAutoDispatchRetryTimer = 0f; return; }
-        if (HasActiveTradeRun() || activeTradeHudOrders.Count == 0)
+        TradeAutoDispatchTick tick = TradeAutoDispatchService.Tick(
+            IsWeekend(),
+            HasActiveTradeRun(),
+            activeTradeHudOrders.Count,
+            tradeAutoDispatchRetryTimer,
+            Time.deltaTime,
+            TradeAutoDispatchRetryInterval);
+        tradeAutoDispatchRetryTimer = tick.RetryTimer;
+        if (tick.ShouldDispatch)
         {
-            tradeAutoDispatchRetryTimer = 0f;
-            return;
+            TryAutoDispatchNextHudOrder();
         }
-        tradeAutoDispatchRetryTimer += Time.deltaTime;
-        if (tradeAutoDispatchRetryTimer < TradeAutoDispatchRetryInterval) return;
-        tradeAutoDispatchRetryTimer = 0f;
-        TryAutoDispatchNextHudOrder();
     }
 
     private bool BeginTradeRun()
@@ -704,6 +696,9 @@ public partial class GameBootstrap
         if (!TryGetTradeDispatchContext(out DriverAgent driver, out TruckAgent truckAgent, out string blockReason))
         {
             tradeDispatchStatusText = blockReason;
+            SessionDebugLogger.Log(
+                "TRADE_BLOCK",
+                $"Dispatch blocked for {selectedTradeOrderType} {selectedTradeResourceType} x{selectedTradeOrderAmount}: {blockReason}; treasury=${money}, stored={GetStoredTradeResourceAmount(selectedTradeResourceType)}, queue={activeTradeHudOrders.Count}.");
             return false;
         }
 
@@ -767,7 +762,7 @@ public partial class GameBootstrap
 
         SessionDebugLogger.Log(
             "TRADE",
-            $"{driver.DriverName} dispatched on trade run with {truckAgent.DisplayName}: {(selectedTradeOrderType == TradeOrderType.Buy ? "buy" : "sell")} {resourceLabel} x{quantity}.");
+            $"{driver.DriverName} dispatched on trade run with {truckAgent.DisplayName}: {(selectedTradeOrderType == TradeOrderType.Buy ? "buy" : "sell")} {resourceLabel} x{quantity}; price=${price}; treasury=${money}; truckCargo={truckAgent.TruckCargoType} x{truckAgent.TruckCargoAmount}.");
         return true;
     }
 
@@ -825,42 +820,52 @@ public partial class GameBootstrap
 
     private void UpdateTradeRunDriverToParking(DriverAgent driver, TruckAgent truckAgent)
     {
-        if (truckAgent.Driver == driver)
-        {
-            TradeRunPhase nextPhase = activeTradeRun.OrderType == TradeOrderType.Sell
-                ? TradeRunPhase.DrivingToWarehouse
-                : TradeRunPhase.DrivingToHighway;
-            SetTradeRunPhase(nextPhase, $"{driver.DriverName} already boarded {truckAgent.DisplayName}.");
-            tradeDispatchStatusText = GetTradeRunStatusLabel();
-            return;
-        }
+        TradeRunDriverParkingAction action = TradeRunRuntimeService.EvaluateDriverToParking(
+            truckAgent.Driver == driver,
+            driver.WaitingForShiftAtParking,
+            driver.WalkPhase == DriverRescuePhase.None && !driver.WaitingForShiftAtParking,
+            activeTradeRun.OrderType == TradeOrderType.Sell);
 
-        if (driver.WalkPhase == DriverRescuePhase.None && !driver.WaitingForShiftAtParking)
+        switch (action.Kind)
         {
-            StartDriverTradeCommuteToParking(driver);
-            tradeDispatchStatusText = GetTradeRunStatusLabel();
-            return;
-        }
-
-        if (driver.WaitingForShiftAtParking)
-        {
-            TryBoardDriverToAssignedTruck(driver);
-            if (truckAgent.Driver == driver)
-            {
-                TradeRunPhase nextPhase = activeTradeRun.OrderType == TradeOrderType.Sell
-                    ? TradeRunPhase.DrivingToWarehouse
-                    : TradeRunPhase.DrivingToHighway;
-                SetTradeRunPhase(nextPhase, $"{driver.DriverName} boarded {truckAgent.DisplayName} at Parking.");
+            case TradeRunDriverParkingActionKind.Advance:
+                SetTradeRunPhase(action.NextPhase, $"{driver.DriverName} already boarded {truckAgent.DisplayName}.");
                 tradeDispatchStatusText = GetTradeRunStatusLabel();
-                SessionDebugLogger.Log("TRADE", $"{driver.DriverName} boarded {truckAgent.DisplayName} for Intercity trade.");
-            }
+                return;
+
+            case TradeRunDriverParkingActionKind.StartCommute:
+                StartDriverTradeCommuteToParking(driver);
+                tradeDispatchStatusText = GetTradeRunStatusLabel();
+                return;
+
+            case TradeRunDriverParkingActionKind.TryBoard:
+                TryBoardDriverToAssignedTruck(driver);
+                if (truckAgent.Driver == driver)
+                {
+                    TradeRunPhase nextPhase = TradeRunRuntimeService.GetLoadedNextPhase(activeTradeRun.OrderType == TradeOrderType.Sell);
+                    SetTradeRunPhase(nextPhase, $"{driver.DriverName} boarded {truckAgent.DisplayName} at Parking.");
+                    tradeDispatchStatusText = GetTradeRunStatusLabel();
+                    SessionDebugLogger.Log("TRADE", $"{driver.DriverName} boarded {truckAgent.DisplayName} for Intercity trade.");
+                }
+                return;
+
+            case TradeRunDriverParkingActionKind.Wait:
+            default:
+                tradeDispatchStatusText = GetTradeRunStatusLabel();
+                return;
         }
     }
 
     private void UpdateTradeRunDrivingToWarehouse(DriverAgent driver, TruckAgent truckAgent)
     {
         Vector2Int warehouseAnchor = locations[LocationType.Warehouse].Anchor;
-        if (truckAgent.TruckCell == warehouseAnchor && !truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        TradeRunTruckTargetAction action = TradeRunRuntimeService.EvaluateTruckTarget(
+            truckAgent.TruckCell,
+            warehouseAnchor,
+            truckAgent.IsTruckMoving,
+            truckAgent.IsTruckInteracting);
+
+        if (action.Kind == TradeRunTruckTargetActionKind.Arrived)
         {
             LoadTruckState(truckAgent);
             if (TryStartTruckInteraction(TruckInteractionType.TradeLoadAtWarehouse, LocationType.Warehouse))
@@ -872,10 +877,10 @@ public partial class GameBootstrap
             return;
         }
 
-        if (!truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        if (action.Kind == TradeRunTruckTargetActionKind.MoveToTarget)
         {
             LoadTruckState(truckAgent);
-            StartMoveTo(warehouseAnchor);
+            StartMoveTo(action.TargetCell);
             SaveTruckState(truckAgent);
         }
 
@@ -895,7 +900,7 @@ public partial class GameBootstrap
         int boardsAfter = GetTotalBoardsResourceAmount();
         Debug.Log($"[TRADE] {truckAgent.DisplayName} finished loading {resourceLabel} x{activeTradeRun.Quantity}. " +
                   $"Truck cargo: {truckAgent.TruckCargoAmount} {truckAgent.TruckCargoType}. " +
-                  $"Resource totals after load вЂ” Logs:{logsAfter} Boards:{boardsAfter}");
+                  $"Resource totals after load - Logs:{logsAfter} Boards:{boardsAfter}");
         SessionDebugLogger.Log("TRADE", $"{truckAgent.DisplayName} loaded {resourceLabel} x{activeTradeRun.Quantity} from Warehouse.");
         SetTradeRunPhase(TradeRunPhase.DrivingToHighway, $"{truckAgent.DisplayName} finished Warehouse loading.");
         tradeDispatchStatusText = GetTradeRunStatusLabel();
@@ -904,42 +909,45 @@ public partial class GameBootstrap
 
     private void UpdateTradeRunDrivingToHighway(DriverAgent driver, TruckAgent truckAgent)
     {
-        if (truckAgent.Driver != driver)
-        {
-            SetTradeRunPhase(TradeRunPhase.DriverToParking, $"{driver.DriverName} was not onboard {truckAgent.DisplayName}; restarting Parking commute.");
-            tradeDispatchStatusText = GetTradeRunStatusLabel();
-            if (!driver.WaitingForShiftAtParking && driver.WalkPhase == DriverRescuePhase.None)
-            {
-                StartDriverTradeCommuteToParking(driver);
-            }
-            return;
-        }
-
         Vector2Int highwayDepartureEdgeCell = GetTradeHighwayDepartureEdgeCell();
-        if (truckAgent.TruckCell == highwayDepartureEdgeCell && !truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
-        {
-            SetTradeRunPhase(TradeRunPhase.OutOfMap, $"{truckAgent.DisplayName} reached edge highway cell ({highwayDepartureEdgeCell.x},{highwayDepartureEdgeCell.y}).");
-            tradeDispatchStatusText = GetTradeRunStatusLabel();
-            SessionDebugLogger.Log("TRADE", $"{truckAgent.DisplayName} reached the end of the edge highway and is leaving the map.");
-            if (truckAgent.TruckObject != null)
-            {
-                truckAgent.TruckObject.SetActive(false);
-            }
-            truckAgent.TruckCargoAmount = 0;
-            truckAgent.TruckCargoType   = CargoType.None;
-            activeTradeRun.OutOfMapTimer = activeTradeRun.OutOfMapDuration;
-            isEconomyScreenDirty = true;
-            return;
-        }
+        TradeRunHighwayDepartureAction action = TradeRunRuntimeService.EvaluateDrivingToHighway(
+            truckAgent.Driver == driver,
+            !driver.WaitingForShiftAtParking && driver.WalkPhase == DriverRescuePhase.None,
+            truckAgent.TruckCell,
+            highwayDepartureEdgeCell,
+            truckAgent.IsTruckMoving,
+            truckAgent.IsTruckInteracting);
 
-        if (!truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        switch (action.Kind)
         {
-            LoadTruckState(truckAgent);
-            if (!StartTradeMoveToHighwayEdge(truckAgent))
-            {
-                tradeDispatchStatusText = "Trade route blocked near Parking/Highway";
-            }
-            SaveTruckState(truckAgent);
+            case TradeRunHighwayDepartureActionKind.RestartDriverCommute:
+                SetTradeRunPhase(TradeRunPhase.DriverToParking, $"{driver.DriverName} was not onboard {truckAgent.DisplayName}; restarting Parking commute.");
+                tradeDispatchStatusText = GetTradeRunStatusLabel();
+                StartDriverTradeCommuteToParking(driver);
+                return;
+
+            case TradeRunHighwayDepartureActionKind.LeaveMap:
+                SetTradeRunPhase(TradeRunPhase.OutOfMap, $"{truckAgent.DisplayName} reached edge highway cell ({highwayDepartureEdgeCell.x},{highwayDepartureEdgeCell.y}).");
+                tradeDispatchStatusText = GetTradeRunStatusLabel();
+                SessionDebugLogger.Log("TRADE", $"{truckAgent.DisplayName} reached the end of the edge highway and is leaving the map.");
+                if (truckAgent.TruckObject != null)
+                {
+                    truckAgent.TruckObject.SetActive(false);
+                }
+                truckAgent.TruckCargoAmount = 0;
+                truckAgent.TruckCargoType   = CargoType.None;
+                activeTradeRun.OutOfMapTimer = activeTradeRun.OutOfMapDuration;
+                isEconomyScreenDirty = true;
+                return;
+
+            case TradeRunHighwayDepartureActionKind.StartHighwayMove:
+                LoadTruckState(truckAgent);
+                if (!StartTradeMoveToHighwayEdge(truckAgent))
+                {
+                    tradeDispatchStatusText = "Trade route blocked near Parking/Highway";
+                }
+                SaveTruckState(truckAgent);
+                break;
         }
 
         tradeDispatchStatusText = GetTradeRunStatusLabel();
@@ -951,11 +959,15 @@ public partial class GameBootstrap
 
     private void UpdateTradeRunOutOfMap(DriverAgent driver, TruckAgent truckAgent)
     {
-        if (isRacingActive) return;
-        activeTradeRun.OutOfMapTimer = Mathf.Max(0f, activeTradeRun.OutOfMapTimer - Time.deltaTime * gameSpeedMultiplier);
+        TradeRunOutOfMapTick tick = TradeRunRuntimeService.TickOutOfMap(
+            isRacingActive,
+            activeTradeRun.OutOfMapTimer,
+            Time.deltaTime,
+            gameSpeedMultiplier);
+        activeTradeRun.OutOfMapTimer = tick.Timer;
         tradeDispatchStatusText = GetTradeRunStatusLabel();
 
-        if (activeTradeRun.OutOfMapTimer > 0f)
+        if (!tick.ShouldReturn)
         {
             return;
         }
@@ -996,17 +1008,23 @@ public partial class GameBootstrap
     private void UpdateTradeRunReturningFromOffMap(DriverAgent driver, TruckAgent truckAgent)
     {
         Vector2Int cityRoadCell = GetTradeHighwayRoadConnectionCell();
-        if (truckAgent.TruckCell == cityRoadCell && !truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        TradeRunTruckTargetAction action = TradeRunRuntimeService.EvaluateTruckTarget(
+            truckAgent.TruckCell,
+            cityRoadCell,
+            truckAgent.IsTruckMoving,
+            truckAgent.IsTruckInteracting);
+
+        if (action.Kind == TradeRunTruckTargetActionKind.Arrived)
         {
             SetTradeRunPhase(
-                activeTradeRun.OrderType == TradeOrderType.Buy ? TradeRunPhase.ReturningToWarehouse : TradeRunPhase.ReturningToParking,
+                TradeRunRuntimeService.GetReturnEntryNextPhase(activeTradeRun.OrderType == TradeOrderType.Buy),
                 $"{truckAgent.DisplayName} left highway and reached city road connection ({cityRoadCell.x},{cityRoadCell.y}).");
             tradeDispatchStatusText = GetTradeRunStatusLabel();
             SessionDebugLogger.Log("TRADE", $"{truckAgent.DisplayName} re-entered the playable map from the highway edge.");
             return;
         }
 
-        if (!truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        if (action.Kind == TradeRunTruckTargetActionKind.MoveToTarget)
         {
             LoadTruckState(truckAgent);
             if (!StartTradeMoveFromHighwayEdge(truckAgent))
@@ -1022,7 +1040,13 @@ public partial class GameBootstrap
     private void UpdateTradeRunReturningToWarehouse(DriverAgent driver, TruckAgent truckAgent)
     {
         Vector2Int warehouseAnchor = locations[LocationType.Warehouse].Anchor;
-        if (truckAgent.TruckCell == warehouseAnchor && !truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        TradeRunTruckTargetAction action = TradeRunRuntimeService.EvaluateTruckTarget(
+            truckAgent.TruckCell,
+            warehouseAnchor,
+            truckAgent.IsTruckMoving,
+            truckAgent.IsTruckInteracting);
+
+        if (action.Kind == TradeRunTruckTargetActionKind.Arrived)
         {
             LoadTruckState(truckAgent);
             if (TryStartTruckInteraction(TruckInteractionType.TradeUnloadAtWarehouse, LocationType.Warehouse))
@@ -1035,10 +1059,10 @@ public partial class GameBootstrap
             return;
         }
 
-        if (!truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        if (action.Kind == TradeRunTruckTargetActionKind.MoveToTarget)
         {
             LoadTruckState(truckAgent);
-            StartMoveTo(warehouseAnchor);
+            StartMoveTo(action.TargetCell);
             SaveTruckState(truckAgent);
         }
 
@@ -1063,16 +1087,22 @@ public partial class GameBootstrap
     private void UpdateTradeRunReturning(DriverAgent driver, TruckAgent truckAgent)
     {
         Vector2Int parkingAnchor = locations[LocationType.Parking].Anchor;
-        if (truckAgent.TruckCell == parkingAnchor && !truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        TradeRunTruckTargetAction action = TradeRunRuntimeService.EvaluateTruckTarget(
+            truckAgent.TruckCell,
+            parkingAnchor,
+            truckAgent.IsTruckMoving,
+            truckAgent.IsTruckInteracting);
+
+        if (action.Kind == TradeRunTruckTargetActionKind.Arrived)
         {
             CompleteTradeRun(driver, truckAgent);
             return;
         }
 
-        if (!truckAgent.IsTruckMoving && !truckAgent.IsTruckInteracting)
+        if (action.Kind == TradeRunTruckTargetActionKind.MoveToTarget)
         {
             LoadTruckState(truckAgent);
-            StartMoveTo(parkingAnchor);
+            StartMoveTo(action.TargetCell);
             SaveTruckState(truckAgent);
         }
 
@@ -1115,8 +1145,7 @@ public partial class GameBootstrap
         StartDriverMotelRest(truckAgent, driver);
         activeTradeRun = null;
         RemoveCompletedTradeDispatchLedgerEntry(completedOrderType, completedResourceType, completedQuantity);
-        if (activeTradeHudOrders.Count > 0)
-            activeTradeHudOrders.RemoveAt(0);
+        TradeOrderQueueService.RemoveFirst(activeTradeHudOrders);
         tradeDispatchStatusText = "Ready to dispatch via edge highway";
         isEconomyScreenDirty = true;
         isFleetScreenDirty = true;
@@ -1130,7 +1159,7 @@ public partial class GameBootstrap
         int quantity = GetTradeRunQuantity(resourceType);
         int price = GetTradeRunPrice(resourceType, orderType);
         string action = orderType == TradeOrderType.Buy ? "Import" : "Export";
-        return $"{action} x{quantity}  вЂў  ${price}";
+        return $"{action} x{quantity}  \u2022  ${price}";
     }
 
     private string GetTradeEtaLabel()
@@ -1148,12 +1177,10 @@ public partial class GameBootstrap
                 TradeRunPhase.ReturningToWarehouse => "ETA: warehouse unload",
                 TradeRunPhase.UnloadingAtWarehouse => "ETA: unloading",
                 TradeRunPhase.ReturningToParking => "ETA: parking return",
-                _ => "ETA вЂ”"
+                _ => "ETA \u2014"
             };
         }
 
         return $"ETA {Mathf.CeilToInt(GetTradeRunDuration(selectedTradeResourceType))}s";
     }
 }
-
-
