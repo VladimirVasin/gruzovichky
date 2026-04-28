@@ -26,6 +26,17 @@ public partial class GameBootstrap
         NeedSawmill,
         SawmillBuilt,
         FirstTradeOpened,
+        UserWelcome,
+        UserBuildRoadPrompt,
+        UserCoreBuildingsPrompt,
+        UserWarehouseBuiltInfo,
+        UserMotelBuiltInfo,
+        UserParkingBuiltInfo,
+        UserBuildLumberjackCampPrompt,
+        UserLumberjackCampBuiltInfo,
+        UserLumberjackWorkerAssignedInfo,
+        UserBuyTruckPrompt,
+        UserTruckPurchasedArrivalInfo,
         BeeEasterEgg
     }
 
@@ -34,7 +45,7 @@ public partial class GameBootstrap
         public GameObject     CanvasRoot;
         public GameObject     OverlayRoot;          // dark fullscreen bg parent
         public Image          OverlayImage;         // tinted in center mode, transparent in side mode
-        public RectTransform  WindowRect;           // the floating card вЂ” repositioned per mode
+        public RectTransform  WindowRect;           // the floating card, repositioned per mode
         public LayoutElement  BodyPanelLayout;      // body height changed per mode
         public Text TitleText;
         public Text StepText;
@@ -65,6 +76,8 @@ public partial class GameBootstrap
     private float tutorialBobTime;
     private bool isTutorialCameraFocusActive;
     private Vector3 tutorialCameraFocusTarget;
+    private Vector3 tutorialCameraFocusOffset = TutorialForestZoomOffset;
+    private TruckAgent tutorialCameraFollowTruck;
     private float tutorialCameraWanderTime;
     private string tutorialWindowFullText = string.Empty;
     private float tutorialWindowTypeTime;
@@ -111,27 +124,98 @@ public partial class GameBootstrap
     private TutorialHudRefs tutorialHud;
     private TutorialTrigger activeTutorialTrigger;
     private const int TutorialStepCount = 17;
+    private const int NewUserTutorialStepCount = 11;
+    private static readonly Vector3 UserWelcomeCameraOffset = new(-13f, 14f, -13f);
+
+    private static bool IsNewUserTutorialTrigger(TutorialTrigger trigger)
+    {
+        return trigger is TutorialTrigger.UserWelcome
+            or TutorialTrigger.UserBuildRoadPrompt
+            or TutorialTrigger.UserCoreBuildingsPrompt
+            or TutorialTrigger.UserWarehouseBuiltInfo
+            or TutorialTrigger.UserMotelBuiltInfo
+            or TutorialTrigger.UserParkingBuiltInfo
+            or TutorialTrigger.UserBuildLumberjackCampPrompt
+            or TutorialTrigger.UserLumberjackCampBuiltInfo
+            or TutorialTrigger.UserLumberjackWorkerAssignedInfo
+            or TutorialTrigger.UserBuyTruckPrompt
+            or TutorialTrigger.UserTruckPurchasedArrivalInfo;
+    }
+
+    private int GetNextUserCoreBuildingInfoTutorialStep()
+    {
+        int step = Mathf.Clamp(nextUserCoreBuildingInfoTutorialStep, 4, NewUserTutorialStepCount);
+        nextUserCoreBuildingInfoTutorialStep = Mathf.Clamp(nextUserCoreBuildingInfoTutorialStep + 1, 4, NewUserTutorialStepCount);
+        return step;
+    }
 
     private bool IsTutorialEnabledForCurrentMode()
     {
-        // Legacy User tutorial is intentionally disabled while the new onboarding flow is redesigned.
-        return false;
+        return selectedGameStartMode == GameStartMode.User;
     }
 
     private bool ShouldPauseSimulationForTutorial()
     {
-        return activeTutorialTrigger != TutorialTrigger.ForestWorkerStarted;
+        return activeTutorialTrigger != TutorialTrigger.ForestWorkerStarted &&
+            activeTutorialTrigger != TutorialTrigger.UserTruckPurchasedArrivalInfo;
     }
 
-    private void ScheduleTutorial(TutorialTrigger trigger)
+    private void ScheduleTutorial(TutorialTrigger trigger, float delay = 0.12f)
     {
         pendingTutorialTrigger = trigger;
-        pendingTutorialDelay   = 0.12f;
+        pendingTutorialDelay   = Mathf.Max(0f, delay);
+    }
+
+    private void ResetTutorialFlowForNewGame()
+    {
+        isTutorialSkipped = false;
+        isTutorialOpen = false;
+        hasShownWelcomeTutorial = false;
+        hasShownFirstMotelTutorial = false;
+        hasShownWorkersPanelTutorial = false;
+        hasShownFirstDriverHiredTutorial = false;
+        hasShownForestIntroTutorial = false;
+        hasShownForestWorkerStartedTutorial = false;
+        hasShownNeedSawmillTutorial = false;
+        hasShownFleetIntroTutorial = false;
+        hasShownUserCoreBuildingsTutorial = false;
+        hasShownUserWarehouseBuiltTutorial = false;
+        hasShownUserMotelBuiltTutorial = false;
+        hasShownUserParkingBuiltTutorial = false;
+        nextUserCoreBuildingInfoTutorialStep = 4;
+        hasShownUserBuildLumberjackCampTutorial = false;
+        hasShownUserLumberjackCampBuiltTutorial = false;
+        hasShownUserLumberjackWorkerAssignedTutorial = false;
+        hasShownUserBuyTruckTutorial = false;
+        hasShownUserTruckArrivalTutorial = false;
+        hasShownFleetSelectTruckTutorial = false;
+        hasShownFleetAssignDriverTutorial = false;
+        hasShownFleetPickDriverTutorial = false;
+        hasShownAssignSawmillWorkerTutorial = false;
+        hasShownSawmillWorkerAssignedTutorial = false;
+        hasShownSawmillBuiltTutorial = false;
+        pendingTutorialTrigger = null;
+        pendingTutorialDelay = 0f;
+        isTutorialCameraFocusActive = false;
+        tutorialCameraFollowTruck = null;
+        HideTutorialOrbitHud();
+        if (tutorialHud?.CanvasRoot != null)
+        {
+            tutorialHud.CanvasRoot.SetActive(false);
+        }
     }
 
     private void TryShowTutorial(TutorialTrigger trigger)
     {
-        if (!IsTutorialEnabledForCurrentMode() || isTutorialOpen)
+        bool isBeeEasterEgg = trigger == TutorialTrigger.BeeEasterEgg;
+        if ((!isBeeEasterEgg && !IsTutorialEnabledForCurrentMode()) || isTutorialOpen)
+        {
+            return;
+        }
+
+        if (selectedGameStartMode == GameStartMode.User &&
+            !IsNewUserTutorialTrigger(trigger) &&
+            !isBeeEasterEgg)
         {
             return;
         }
@@ -139,18 +223,159 @@ public partial class GameBootstrap
         switch (trigger)
         {
             case TutorialTrigger.GameStarted:
+                return;
+            case TutorialTrigger.UserWelcome:
                 if (hasShownWelcomeTutorial)
                 {
                     return;
                 }
 
                 hasShownWelcomeTutorial = true;
-                CenterCameraOnWorldForTutorial();
+                FocusCameraOnUserStartStopForTutorial();
                 ShowTutorialWindow(
-                    TutorialTrigger.GameStarted,
+                    TutorialTrigger.UserWelcome,
                     1,
                     "Welcome to Lo-Fi Delivery Co.",
-                    "This is User mode. The town starts with missing buildings, roads, and workers.\n\nYour goal is simple: build the missing pieces, connect them with roads, hire workers, assign jobs, and move resources with trucks.\n\nStart by building a Motel.");
+                    "Welcome to User mode.\n\nYou start with an almost empty map, a highway connection, a bus stop, and a few workers.\n\nBefore building, learn the camera controls: zoom in, zoom out, move the map, and rotate the view.");
+                break;
+            case TutorialTrigger.UserBuildRoadPrompt:
+                ShowTutorialWindow(
+                    TutorialTrigger.UserBuildRoadPrompt,
+                    2,
+                    "Build the first road",
+                    "Now build your first road.\n\nOpen the Build menu from the top HUD or press B. Choose a road tool, then left-click a cell to place the road.\n\nHold Shift and drag to build a longer road segment. Press R to rotate the road direction before placing.");
+                break;
+            case TutorialTrigger.UserCoreBuildingsPrompt:
+                if (hasShownUserCoreBuildingsTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserCoreBuildingsTutorial = true;
+                UnlockBuildTool(BuildTool.Warehouse);
+                UnlockBuildTool(BuildTool.Motel);
+                UnlockBuildTool(BuildTool.Parking);
+                isBuildHighlightPersistent = true;
+                ShowTutorialWindow(
+                    TutorialTrigger.UserCoreBuildingsPrompt,
+                    3,
+                    "Build the town core",
+                    "The road is only useful when it connects important places.\n\nThree core buildings are now unlocked: Warehouse, Motel, and Parking.\n\nBuild all three from the Build menu. You can open Build from the top HUD or press B.");
+                break;
+            case TutorialTrigger.UserWarehouseBuiltInfo:
+                if (hasShownUserWarehouseBuiltTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserWarehouseBuiltTutorial = true;
+                ShowTutorialWindow(
+                    TutorialTrigger.UserWarehouseBuiltInfo,
+                    GetNextUserCoreBuildingInfoTutorialStep(),
+                    "Warehouse",
+                    "Warehouse is your central storage.\n\nFinished resources are collected here, and future routes will use it as the main place for loading and unloading goods.");
+                break;
+            case TutorialTrigger.UserMotelBuiltInfo:
+                if (hasShownUserMotelBuiltTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserMotelBuiltTutorial = true;
+                ShowTutorialWindow(
+                    TutorialTrigger.UserMotelBuiltInfo,
+                    GetNextUserCoreBuildingInfoTutorialStep(),
+                    "Motel",
+                    "Motel gives workers a place to check in, rest, and return to when they have no active task.\n\nAfter this building exists, workers and cats can move from the starting stop into their normal idle area.");
+                break;
+            case TutorialTrigger.UserParkingBuiltInfo:
+                if (hasShownUserParkingBuiltTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserParkingBuiltTutorial = true;
+                ShowTutorialWindow(
+                    TutorialTrigger.UserParkingBuiltInfo,
+                    GetNextUserCoreBuildingInfoTutorialStep(),
+                    "Parking",
+                    "Parking is the base for vehicles.\n\nTrucks and local buses start from here, return here, and use it as the town transport yard.");
+                break;
+            case TutorialTrigger.UserBuildLumberjackCampPrompt:
+                if (hasShownUserBuildLumberjackCampTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserBuildLumberjackCampTutorial = true;
+                UnlockBuildTool(BuildTool.Forest);
+                isBuildHighlightPersistent = true;
+                ShowTutorialWindow(
+                    TutorialTrigger.UserBuildLumberjackCampPrompt,
+                    7,
+                    "Build a Lumberjack Camp",
+                    "The town needs its first production building.\n\nLumberjack Camp gathers Logs from nearby trees. Build it close to a dense patch of forest so workers do not spend the whole day walking.");
+                break;
+            case TutorialTrigger.UserLumberjackCampBuiltInfo:
+                if (hasShownUserLumberjackCampBuiltTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserLumberjackCampBuiltTutorial = true;
+                isBuildHighlightPersistent = false;
+                isShiftsHighlightPersistent = true;
+                ShowTutorialWindow(
+                    TutorialTrigger.UserLumberjackCampBuiltInfo,
+                    8,
+                    "Assign a Lumberjack",
+                    "The Lumberjack Camp is built, but buildings do not work by themselves.\n\nOpen Vacancies, select the Lumberjack Camp vacancy, choose a worker, and assign them.");
+                break;
+            case TutorialTrigger.UserLumberjackWorkerAssignedInfo:
+                if (hasShownUserLumberjackWorkerAssignedTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserLumberjackWorkerAssignedTutorial = true;
+                isShiftsHighlightPersistent = false;
+                ShowTutorialWindow(
+                    TutorialTrigger.UserLumberjackWorkerAssignedInfo,
+                    9,
+                    "Lumberjack Work",
+                    "The assigned worker will go to the camp during production hours, walk to nearby trees, chop them into Logs, and carry those Logs back one by one.\n\nLater you will move those Logs through the logistics chain.");
+                break;
+            case TutorialTrigger.UserBuyTruckPrompt:
+                if (hasShownUserBuyTruckTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserBuyTruckTutorial = true;
+                bool buyTruckRu = IsRussianLanguage();
+                ShowTutorialWindow(
+                    TutorialTrigger.UserBuyTruckPrompt,
+                    10,
+                    buyTruckRu ? "Купи первый грузовик" : "Buy the first truck",
+                    buyTruckRu
+                        ? "Ресурсы не перемещаются сами. Грузовики перевозят груз между зданиями, а позже смогут возить товары во внешние торговые маршруты.\n\nОткрой Вакансии в верхнем HUD и купи первый грузовик. Он стоит $300."
+                        : "Resources do not move by themselves. Trucks move cargo between buildings and, later, toward outside trade routes.\n\nOpen Vacancies from the top HUD and buy your first truck. It costs $300.");
+                break;
+            case TutorialTrigger.UserTruckPurchasedArrivalInfo:
+                if (hasShownUserTruckArrivalTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserTruckArrivalTutorial = true;
+                bool truckArrivalRu = IsRussianLanguage();
+                ShowTutorialWindow(
+                    TutorialTrigger.UserTruckPurchasedArrivalInfo,
+                    11,
+                    truckArrivalRu ? "Грузовик в пути" : "Truck en route",
+                    truckArrivalRu
+                        ? "Купленный грузовик въезжает с магистрали и направляется к Парковке.\n\nКогда он припаркуется, он станет частью автопарка и его можно будет использовать в логистике."
+                        : "The purchased truck is entering from the highway and heading to your Parking.\n\nWhen it parks, it becomes part of your fleet and can be assigned to logistics work.");
                 break;
             case TutorialTrigger.BuildMotelPrompt:
                 isBuildHighlightPersistent = true;
@@ -356,7 +581,9 @@ public partial class GameBootstrap
         ApplyTutorialWindowLayout();
         tutorialHud.TitleText.text = L(title);
         bool isEasterEgg = trigger == TutorialTrigger.BeeEasterEgg;
-        tutorialHud.StepText.text = isEasterEgg ? string.Empty : $"{stepNumber}/{TutorialStepCount}";
+        bool isNewUserTutorial = IsNewUserTutorialTrigger(trigger);
+        int stepCount = isNewUserTutorial ? NewUserTutorialStepCount : TutorialStepCount;
+        tutorialHud.StepText.text = isEasterEgg ? string.Empty : $"{stepNumber}/{stepCount}";
         tutorialWindowFullText = L(body);
         tutorialWindowTypeTime = 0f;
         tutorialHud.BodyText.text = string.Empty;
@@ -405,7 +632,7 @@ public partial class GameBootstrap
 
     private void OpenBuildPanelFromTutorial()
     {
-        // Close all panels then open Build вЂ” same effect as clicking the Building button
+        // Close all panels then open Build, same effect as clicking the Building button.
         isFleetPanelOpen      = false;
         isShiftsPanelOpen     = false;
         isDriversPanelOpen    = false;
@@ -493,8 +720,8 @@ public partial class GameBootstrap
         tutorialHud.OverlayImage = overlay.GetComponent<Image>();
         tutorialHud.OverlayImage.raycastTarget = false;   // window button handles its own input
         tutorialHud.BuildMenuOutlineRoot   = CreateTutorialMenuButtonOutline("TutorialBuildMenuOutline",   canvasObject.transform, 397f);
-        tutorialHud.WorkersMenuOutlineRoot = CreateTutorialMenuButtonOutline("TutorialWorkersMenuOutline", canvasObject.transform, 112f);
-        tutorialHud.ShiftsMenuOutlineRoot  = CreateTutorialMenuButtonOutline("TutorialShiftsMenuOutline",  canvasObject.transform, 207f);
+        tutorialHud.WorkersMenuOutlineRoot = CreateTutorialMenuButtonOutline("TutorialWorkersMenuOutline", canvasObject.transform, 17f);
+        tutorialHud.ShiftsMenuOutlineRoot  = CreateTutorialMenuButtonOutline("TutorialShiftsMenuOutline",  canvasObject.transform, 112f);
         tutorialHud.FleetMenuOutlineRoot   = CreateTutorialMenuButtonOutline("TutorialFleetMenuOutline",   canvasObject.transform, 17f);
         tutorialHud.HireWorkerOutlineRoot  = CreateTutorialHireButtonOutline("TutorialHireWorkerOutline",  canvasObject.transform);
         tutorialHud.FirstWorkerOutlineRoot = CreateTutorialDynamicOutline("TutorialFirstWorkerOutline", canvasObject.transform);
@@ -619,6 +846,33 @@ public partial class GameBootstrap
         mainCamera.transform.rotation = GetDioramaCameraRotation();
     }
 
+    private void FocusCameraOnUserStartStopForTutorial()
+    {
+        if (mainCamera == null)
+        {
+            return;
+        }
+
+        isTruckCameraFocused = false;
+        isCameraReturningToDiorama = false;
+        isCameraRotatingToTarget = false;
+
+        Vector3 focus = new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
+        if (locations.TryGetValue(LocationType.IntercityStop, out LocationData stop))
+        {
+            focus = GetLocationCenter(stop);
+            focus += new Vector3(-1.6f, 0f, -1.0f);
+        }
+
+        focus.y = 0f;
+        tutorialCameraFocusTarget = focus;
+        tutorialCameraFocusOffset = UserWelcomeCameraOffset;
+        tutorialCameraWanderTime = 0f;
+        isTutorialCameraFocusActive = true;
+        cameraTargetOffset = UserWelcomeCameraOffset;
+        SessionDebugLogger.Log("TUTORIAL", $"Started smooth User welcome camera focus on start stop at ({focus.x:F1},{focus.z:F1}).");
+    }
+
     private void CloseCurrentTutorialWindow()
     {
         if (tutorialHud == null)
@@ -630,6 +884,7 @@ public partial class GameBootstrap
         {
             isTutorialSkipped = true;
             isTutorialCameraFocusActive = false;
+            ResetTutorialGoalsForNewGame();
             isBuildHighlightPersistent = false;
             isWorkersHighlightPersistent = false;
             isHireWorkerHighlightPersistent = false;
@@ -661,6 +916,51 @@ public partial class GameBootstrap
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.GameStarted)
         {
             ScheduleTutorial(TutorialTrigger.BuildMotelPrompt);
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserWelcome)
+        {
+            BeginCameraControlTutorialGoals();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserBuildRoadPrompt)
+        {
+            BeginRoadBuildTutorialGoals();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserCoreBuildingsPrompt)
+        {
+            BeginCoreBuildingsTutorialGoals();
+            OpenBuildPanelFromTutorial();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserBuildLumberjackCampPrompt)
+        {
+            BeginLumberjackCampTutorialGoals();
+            OpenBuildPanelFromTutorial();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserBuyTruckPrompt)
+        {
+            BeginBuyTruckTutorialGoals();
+            isFleetPanelOpen = false;
+            isFleetHighlightPersistent = false;
+            isLogisticsTabActive = false;
+            isShiftsPanelOpen = true;
+            isShiftsScreenDirty = true;
+            LogUiInput("Tutorial: opened Vacancies for first truck purchase.");
+            PlayUiSound(uiPanelOpenClip, 0.9f);
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserLumberjackCampBuiltInfo)
+        {
+            isBuildPanelOpen = false;
+            isShiftsHighlightPersistent = false;
+            isLogisticsTabActive = true;
+            isShiftsPanelOpen = true;
+            isShiftsScreenDirty = true;
+            LogUiInput("Tutorial: opened Vacancies for Lumberjack Camp assignment.");
+            PlayUiSound(uiPanelOpenClip, 0.9f);
         }
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.BuildMotelPrompt)
@@ -749,6 +1049,109 @@ public partial class GameBootstrap
         {
             StartTutorialBusStopWorkerArrival();
         }
+
+        if (activeTutorialTrigger == TutorialTrigger.UserTruckPurchasedArrivalInfo)
+        {
+            tutorialCameraFollowTruck = null;
+            isTutorialCameraFocusActive = false;
+            isCameraReturningToDiorama = true;
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserLumberjackWorkerAssignedInfo)
+        {
+            ScheduleTutorial(TutorialTrigger.UserBuyTruckPrompt, 0.8f);
+        }
+    }
+
+    private void NotifyTutorialLumberjackCampBuilt()
+    {
+        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
+        {
+            return;
+        }
+
+        MarkTutorialGoalComplete(TutorialGoalKind.BuildLumberjackCamp);
+        TryShowTutorial(TutorialTrigger.UserLumberjackCampBuiltInfo);
+        SessionDebugLogger.Log("TUTORIAL", "Lumberjack Camp build tutorial notified.");
+    }
+
+    private void NotifyTutorialLumberjackWorkerAssigned()
+    {
+        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
+        {
+            return;
+        }
+
+        MarkTutorialGoalComplete(TutorialGoalKind.AssignLumberjackWorker);
+        if (!hasShownUserLumberjackWorkerAssignedTutorial)
+        {
+            isShiftsPanelOpen = false;
+            isShiftsScreenDirty = true;
+            TryShowTutorial(TutorialTrigger.UserLumberjackWorkerAssignedInfo);
+        }
+
+        SessionDebugLogger.Log("TUTORIAL", "Lumberjack worker assignment tutorial notified.");
+    }
+
+    private void NotifyTutorialTruckPurchased(TruckAgent truckAgent)
+    {
+        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
+        {
+            return;
+        }
+
+        MarkTutorialGoalComplete(TutorialGoalKind.BuyFirstTruck);
+        if (!hasShownUserTruckArrivalTutorial && truckAgent != null)
+        {
+            isFleetPanelOpen = false;
+            isFleetHighlightPersistent = false;
+            isShiftsPanelOpen = false;
+            isShiftsScreenDirty = true;
+            FocusTruck(truckAgent.TruckNumber);
+            isTruckCameraFocused = false;
+            isCameraReturningToDiorama = false;
+            isCameraRotatingToTarget = false;
+            tutorialCameraFollowTruck = truckAgent;
+            tutorialCameraFocusTarget = truckAgent.TruckObject != null
+                ? new Vector3(truckAgent.TruckObject.transform.position.x, 0f, truckAgent.TruckObject.transform.position.z)
+                : Vector3.zero;
+            tutorialCameraFocusOffset = new Vector3(-13f, 18f, -13f);
+            isTutorialCameraFocusActive = true;
+            ScheduleTutorial(TutorialTrigger.UserTruckPurchasedArrivalInfo, 0.25f);
+            SessionDebugLogger.Log("TUTORIAL", $"First truck purchase tutorial focus started for {truckAgent.DisplayName}.");
+        }
+    }
+
+    private void NotifyTutorialCoreBuildingBuilt(LocationType type)
+    {
+        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
+        {
+            return;
+        }
+
+        TutorialGoalKind goal;
+        TutorialTrigger trigger;
+        switch (type)
+        {
+            case LocationType.Warehouse:
+                goal = TutorialGoalKind.BuildWarehouse;
+                trigger = TutorialTrigger.UserWarehouseBuiltInfo;
+                break;
+            case LocationType.Motel:
+                goal = TutorialGoalKind.BuildMotel;
+                trigger = TutorialTrigger.UserMotelBuiltInfo;
+                break;
+            case LocationType.Parking:
+                goal = TutorialGoalKind.BuildParking;
+                trigger = TutorialTrigger.UserParkingBuiltInfo;
+                break;
+            default:
+                return;
+        }
+
+        MarkTutorialGoalComplete(goal);
+        TryShowTutorial(trigger);
+        SessionDebugLogger.Log("TUTORIAL", $"Core building tutorial notified: {type}.");
     }
 
 }

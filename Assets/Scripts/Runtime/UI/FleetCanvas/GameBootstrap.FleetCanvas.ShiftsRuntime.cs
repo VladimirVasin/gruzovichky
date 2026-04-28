@@ -21,6 +21,12 @@ public partial class GameBootstrap
         if (!shouldShow) return;
         if (!isShiftsScreenDirty) return;
 
+        if (UseVacanciesScreen())
+        {
+            UpdateVacanciesScreenUi();
+            return;
+        }
+
         bool ru = IsRussianLanguage();
         if (shiftsScreenUi.TitleText != null)
         {
@@ -239,6 +245,7 @@ public partial class GameBootstrap
 
         UpdateIntercitySlotUi(selectedDriver);
         UpdateBusDriverSlotsUi(selectedDriver);
+        UpdateEmbeddedFleetUi(selectedDriver);
 
         if (isLogisticsTabActive)
         {
@@ -267,53 +274,7 @@ public partial class GameBootstrap
         float tabContentHeight = GetShiftsTabContentHeight();
         ApplyFixedLayoutHeight(shiftsTransportPanel, tabContentHeight);
         ApplyFixedLayoutHeight(shiftsLogisticsPanel, tabContentHeight);
-    }
-
-    private static float GetShiftsTabContentHeight()
-    {
-        const float rightPanelVerticalPadding = 30f;
-        const float rightPanelInterBlockSpacing = 24f;
-        float available = ShiftsInnerPanelHeight - rightPanelVerticalPadding - rightPanelInterBlockSpacing - ShiftsSelectionCardHeight - ShiftsTabRowHeight;
-        return Mathf.Max(280f, available);
-    }
-
-    private static void ApplyFixedLayoutSize(RectTransform rect, float width, float height)
-    {
-        if (rect == null)
-        {
-            return;
-        }
-
-        LayoutElement layout = rect.GetComponent<LayoutElement>();
-        if (layout == null)
-        {
-            return;
-        }
-
-        layout.minWidth = width;
-        layout.preferredWidth = width;
-        layout.flexibleWidth = 0f;
-        layout.minHeight = height;
-        layout.preferredHeight = height;
-        layout.flexibleHeight = 0f;
-    }
-
-    private static void ApplyFixedLayoutHeight(RectTransform rect, float height)
-    {
-        if (rect == null)
-        {
-            return;
-        }
-
-        LayoutElement layout = rect.GetComponent<LayoutElement>();
-        if (layout == null)
-        {
-            return;
-        }
-
-        layout.minHeight = height;
-        layout.preferredHeight = height;
-        layout.flexibleHeight = 0f;
+        ApplyFixedLayoutHeight(shiftsScreenUi.VacancyFlowPanel, tabContentHeight + ShiftsTabRowHeight + 12f);
     }
 
     private void LogShiftsHudState(string reason, bool force = false)
@@ -431,6 +392,80 @@ public partial class GameBootstrap
         {
             label.color = isActive ? FleetAccentColor : Color.white;
             label.fontStyle = isActive ? FontStyle.BoldAndItalic : FontStyle.Bold;
+        }
+    }
+
+    private void UpdateEmbeddedFleetUi(DriverAgent selectedDriver)
+    {
+        if (shiftsScreenUi == null)
+        {
+            return;
+        }
+
+        bool ru = IsRussianLanguage();
+        if (shiftsScreenUi.FleetSectionTitleText != null)
+        {
+            shiftsScreenUi.FleetSectionTitleText.text = ru ? "\u0410\u0432\u0442\u043e\u043f\u0430\u0440\u043a" : "Fleet";
+        }
+
+        if (shiftsScreenUi.FleetCountText != null)
+        {
+            shiftsScreenUi.FleetCountText.text = $"{GetOwnedTruckCount()} / {MaxTruckCount} {(ru ? "\u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u043e\u0432" : "trucks")}";
+        }
+
+        if (shiftsScreenUi.FleetSectionSummaryText != null)
+        {
+            shiftsScreenUi.FleetSectionSummaryText.text = ru
+                ? "\u041f\u043e\u043a\u0443\u043f\u043a\u0430 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u043e\u0432 \u0438 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435 \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u0432 \u044d\u043a\u0438\u043f\u0430\u0436. \u0421\u043c\u0435\u043d\u044b \u0434\u043b\u044f \u044d\u043a\u0438\u043f\u0430\u0436\u0430 \u0437\u0430\u0434\u0430\u044e\u0442\u0441\u044f \u043d\u0438\u0436\u0435."
+                : "Buy trucks and assign the selected worker to a truck crew. Crew shift timing is managed below.";
+        }
+
+        bool canHireTruck = locations.ContainsKey(LocationType.Parking) && GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
+        if (shiftsScreenUi.FleetBuyTruckButton != null)
+        {
+            shiftsScreenUi.FleetBuyTruckButton.interactable = canHireTruck;
+        }
+        if (shiftsScreenUi.FleetBuyTruckButtonText != null)
+        {
+            shiftsScreenUi.FleetBuyTruckButtonText.text = ru
+                ? $"\u041a\u0443\u043f\u0438\u0442\u044c \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a - ${HireTruckCost}"
+                : $"{L("Buy New Truck")} - ${HireTruckCost}";
+        }
+        if (shiftsScreenUi.FleetBuyTruckStatusText != null)
+        {
+            shiftsScreenUi.FleetBuyTruckStatusText.text = GetFleetBuyStatusLabel();
+            shiftsScreenUi.FleetBuyTruckStatusText.color = canHireTruck ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
+        }
+
+        for (int i = 0; i < shiftsScreenUi.FleetTruckRows.Count; i++)
+        {
+            ShiftsFleetTruckRowUi row = shiftsScreenUi.FleetTruckRows[i];
+            TruckAgent truck = GetTruckAgent(row.TruckNumber);
+            bool active = truck != null;
+            row.Root.gameObject.SetActive(active);
+            if (!active)
+            {
+                continue;
+            }
+
+            bool selected = selectedTruckNumber == truck.TruckNumber;
+            row.Background.color = selected ? ShiftsCardSelected : ShiftsCardColor;
+            row.NameText.text = truck.DisplayName;
+            row.StatusText.text = L(GetTruckListStatusForFleet(truck));
+            row.CrewText.text = ru
+                ? $"\u042d\u043a\u0438\u043f\u0430\u0436: {GetTruckAssignedDriverSummary(truck)}"
+                : $"Crew: {GetTruckAssignedDriverSummary(truck)}";
+            row.CargoText.text = FormatTruckCargoValue(truck.TruckCargoAmount, truck.TruckCargoType);
+
+            bool canAssignSelected = selectedDriver != null && CanAssignDriverToTruckRoster(truck, selectedDriver);
+            row.AssignButton.interactable = canAssignSelected;
+            row.AssignButtonText.text = selectedDriver == null
+                ? (ru ? "\u0412\u044b\u0431\u0435\u0440\u0438" : "Select")
+                : truck.AssignedDrivers.Count >= 2
+                    ? (ru ? "\u042d\u043a\u0438\u043f\u0430\u0436 \u043f\u043e\u043b\u043e\u043d" : "Crew full")
+                    : canAssignSelected
+                        ? (ru ? "\u0412 \u044d\u043a\u0438\u043f\u0430\u0436" : "Assign")
+                        : (ru ? "\u041d\u0435\u043b\u044c\u0437\u044f" : "Blocked");
         }
     }
 

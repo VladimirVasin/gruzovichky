@@ -595,7 +595,16 @@ public partial class GameBootstrap
 
     private string GetTruckListStatusForFleet(TruckAgent truckAgent)
     {
-        return GetTruckFleetStatusLabel();
+        if (truckAgent == null) return "Idle";
+        if (IsTruckOnActiveTradeRun(truckAgent)) return "Trade";
+        if (truckAgent.IsPurchaseArrivalActive) return "Moving";
+        if (truckAgent.IsTruckInteracting) return "Busy";
+        if (truckAgent.IsTruckWaitingForService) return "Queue";
+        if (truckAgent.IsDriverRescueActive) return "Rescue";
+        if (truckAgent.IsTruckMoving) return "Moving";
+        if (truckAgent.CurrentRefuelPhase != RefuelPhase.None) return "Refuel";
+        if (truckAgent.CurrentAssignedTrip != TripType.None) return "Assigned";
+        return IsTruckInsideParking(truckAgent) ? "Parked" : "Idle";
     }
 
     private string GetTruckCargoSummary(TruckAgent truckAgent)
@@ -625,7 +634,9 @@ public partial class GameBootstrap
             return $"{L("Need")} ${HireTruckCost} {L("to hire a new truck.")}";
         }
 
-        return L("Adds a new truck directly to parking.");
+        return IsRussianLanguage()
+            ? "Новый грузовик приедет с магистрали и сам припаркуется."
+            : "A new truck arrives from the highway and parks itself.";
     }
 
     private string GetTruckAssignedDriverName(TruckAgent truckAgent)
@@ -1199,10 +1210,10 @@ public partial class GameBootstrap
         txt.color = Color.white;
         txt.raycastTarget = false;
 
-        // Render on top вЂ” move to last sibling
+        // Render on top by moving to the last sibling.
         go.transform.SetAsLastSibling();
     }
 
-    // в”Ђв”Ђ Drivers Canvas Screen в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // Drivers Canvas Screen
 }
 

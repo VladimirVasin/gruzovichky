@@ -625,7 +625,7 @@ public partial class GameBootstrap
     private bool TryPlaceRoadFootprint(Vector2Int cell, Vector2Int roadDirection)
     {
         Vector2Int dir = NormalizeRoadDirection(roadDirection);
-        if (!TryResolveRoadFootprintOffset(cell, dir, requireNewRoadCell: true, IsLocationCell, out Vector2Int widthOffset))
+        if (!TryResolveRoadFootprintOffset(cell, dir, requireNewRoadCell: true, IsBuildRoadBlockedCell, out Vector2Int widthOffset))
         {
             return false;
         }
@@ -831,18 +831,19 @@ public partial class GameBootstrap
             return false;
         }
 
+        RemoveMiscObjectAtCell(cell);
         AddRoad(cell);
         return roadCells.Contains(cell);
     }
 
     private bool CanPlaceRoadFootprint(Vector2Int cell, Vector2Int roadDirection, bool requireNewRoadCell)
     {
-        return CanPlaceRoadFootprint(cell, roadDirection, requireNewRoadCell, IsLocationCell);
+        return CanPlaceRoadFootprint(cell, roadDirection, requireNewRoadCell, IsBuildRoadBlockedCell);
     }
 
     private bool CanPlaceSingleRoadCell(Vector2Int cell, bool requireNewRoadCell)
     {
-        if (!IsRoadFootprintCellStructurallyClear(cell, IsLocationCell, out bool isNewRoadCell))
+        if (!IsRoadFootprintCellStructurallyClear(cell, IsBuildRoadBlockedCell, out bool isNewRoadCell))
         {
             return false;
         }
@@ -871,7 +872,7 @@ public partial class GameBootstrap
             GridHeight,
             roadCells,
             edgeHighwayCells,
-            miscOccupiedCells,
+            null,
             isBlockedLocationCell);
         widthOffset = result.WidthOffset;
         return result.CanPlace;
@@ -891,7 +892,7 @@ public partial class GameBootstrap
             GridHeight,
             roadCells,
             edgeHighwayCells,
-            miscOccupiedCells,
+            null,
             isBlockedLocationCell);
     }
 
@@ -903,9 +904,14 @@ public partial class GameBootstrap
             GridHeight,
             roadCells,
             edgeHighwayCells,
-            miscOccupiedCells,
+            null,
             isBlockedLocationCell,
             out isNewRoadCell);
+    }
+
+    private bool IsBuildRoadBlockedCell(Vector2Int cell)
+    {
+        return IsLocationCell(cell) || IsWaterOrBeachCell(cell);
     }
 
     private bool TryHandleRoadPlacement(Vector2Int cell)
@@ -914,7 +920,12 @@ public partial class GameBootstrap
         if (!shiftHeld)
         {
             CancelRoadPathMode();
-            return TryPlaceRoadAtCell(cell);
+            bool builtSingleCell = TryPlaceRoadAtCell(cell);
+            if (builtSingleCell)
+            {
+                MarkTutorialGoalComplete(TutorialGoalKind.RoadSingleCell);
+            }
+            return builtSingleCell;
         }
 
         if (!roadPathStart.HasValue)
@@ -932,6 +943,10 @@ public partial class GameBootstrap
         }
 
         bool built = TryBuildRoadPath(roadPathStart.Value, cell);
+        if (built)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.RoadShiftPath);
+        }
         CancelRoadPathMode();
         return built;
     }
@@ -947,7 +962,7 @@ public partial class GameBootstrap
                     : TryPlaceRoadFootprint(start, GetBuildRoadDirection());
             }
 
-            List<Vector2Int> path = FindRoadBuildPath(start, end, IsLocationCell);
+            List<Vector2Int> path = FindRoadBuildPath(start, end, IsBuildRoadBlockedCell);
             if (path == null || path.Count < 2) return false;
 
             bool anyBuilt = false;
@@ -968,7 +983,7 @@ public partial class GameBootstrap
                 if (i > 0)
                 {
                     Vector2Int previousDirection = GetRoadPathPreviewDirection(path, i - 1);
-                    anyBuilt |= TryFillRoadTurnFootprint(path[i - 1], previousDirection, path[i], direction, IsLocationCell, "player");
+                    anyBuilt |= TryFillRoadTurnFootprint(path[i - 1], previousDirection, path[i], direction, IsBuildRoadBlockedCell, "player");
                 }
             }
             return anyBuilt;
@@ -977,7 +992,7 @@ public partial class GameBootstrap
 
     private void UpdateRoadPathPreview(Vector2Int hoverCell, Vector2Int startCell)
     {
-        List<Vector2Int> path = FindRoadBuildPath(startCell, hoverCell, IsLocationCell);
+        List<Vector2Int> path = FindRoadBuildPath(startCell, hoverCell, IsBuildRoadBlockedCell);
         bool hasPath = path != null && path.Count > 1;
         bool pathBuildable = hasPath;
 

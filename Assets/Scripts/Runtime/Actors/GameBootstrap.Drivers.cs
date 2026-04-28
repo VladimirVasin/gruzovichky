@@ -300,7 +300,8 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase != DriverRescuePhase.IdleAtGamblingHall &&
                driver.WalkPhase != DriverRescuePhase.IdleAtCityPark &&
                driver.WalkPhase != DriverRescuePhase.IdleSmoking &&
-               driver.WalkPhase != DriverRescuePhase.IdlePhoneCall;
+               driver.WalkPhase != DriverRescuePhase.IdlePhoneCall &&
+               driver.WalkPhase != DriverRescuePhase.IdlePettingCat;
     }
 
     private void ReleaseBench(DriverAgent driver)
@@ -333,7 +334,9 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase == DriverRescuePhase.IdleWalkToCityPark ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCityPark ||
                driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
-               driver.WalkPhase == DriverRescuePhase.IdlePhoneCall;
+               driver.WalkPhase == DriverRescuePhase.IdlePhoneCall ||
+               driver.WalkPhase == DriverRescuePhase.IdleWalkToCat ||
+               driver.WalkPhase == DriverRescuePhase.IdlePettingCat;
     }
 
     private bool ShouldDriverHeadToShift(DriverAgent driver)

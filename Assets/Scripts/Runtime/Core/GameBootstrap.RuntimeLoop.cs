@@ -169,6 +169,12 @@ public partial class GameBootstrap
         for (int i = 0; i < truckAgents.Count; i++)
         {
             TruckAgent ta = truckAgents[i];
+            if (UpdatePurchasedTruckArrival(ta, Time.deltaTime))
+            {
+                UpdateTruckCargoVisual(ta);
+                continue;
+            }
+
             if (ShouldSkipTruckRuntimeForTrade(ta))
             {
                 continue;
@@ -237,6 +243,7 @@ public partial class GameBootstrap
         UpdateWorldMapScreenUi();
         UpdateStatesScreenUi();
         UpdateEventFeedUi();
+        UpdateTutorialGoalsRuntime();
         CloseQuickHudsWhenBlockingHudIsOpen();
         UpdateTruckQuickHud();
         UpdateLocalBusQuickHud();
@@ -423,7 +430,10 @@ public partial class GameBootstrap
             return;
         }
 
-        Rect rect = new(Screen.width - 242f, Screen.height - 86f, 212f, 56f);
+        bool isRoadTool = IsRoadBuildTool(activeBuildTool);
+        Rect rect = isRoadTool
+            ? new Rect(Screen.width - 302f, Screen.height - 112f, 272f, 82f)
+            : new Rect(Screen.width - 242f, Screen.height - 86f, 212f, 56f);
         Color prevColor = GUI.color;
         Color prevContentColor = GUI.contentColor;
 
@@ -432,16 +442,27 @@ public partial class GameBootstrap
             GUI.color = new Color(0.05f, 0.07f, 0.1f, 0.82f);
             GUI.Box(rect, string.Empty);
 
+            GUI.contentColor = Color.white;
+            GUIStyle legendStyle = new(GUI.skin.label)
+            {
+                fontSize = isRoadTool ? 15 : 18,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = true
+            };
+            legendStyle.normal.textColor = Color.white;
+            legendStyle.hover.textColor = Color.white;
+            legendStyle.active.textColor = Color.white;
+            legendStyle.focused.textColor = Color.white;
+
+            string text = isRoadTool
+                ? $"{L("R - rotate")}\n{L("Shift - drag road")}"
+                : L("R - rotate");
+
             GUI.Label(
                 new Rect(rect.x + 16f, rect.y + 12f, rect.width - 32f, rect.height - 24f),
-                L("R - rotate"),
-                new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 18,
-                    fontStyle = FontStyle.Bold,
-                    alignment = TextAnchor.MiddleCenter,
-                    normal    = { textColor = Color.white }
-                });
+                text,
+                legendStyle);
         }
         finally
         {

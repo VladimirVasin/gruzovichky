@@ -85,6 +85,16 @@ public partial class GameBootstrap
     private bool hasShownForestWorkerStartedTutorial;
     private bool hasShownNeedSawmillTutorial;
     private bool hasShownSawmillBuiltTutorial;
+    private bool hasShownUserCoreBuildingsTutorial;
+    private bool hasShownUserWarehouseBuiltTutorial;
+    private bool hasShownUserMotelBuiltTutorial;
+    private bool hasShownUserParkingBuiltTutorial;
+    private int nextUserCoreBuildingInfoTutorialStep = 4;
+    private bool hasShownUserBuildLumberjackCampTutorial;
+    private bool hasShownUserLumberjackCampBuiltTutorial;
+    private bool hasShownUserLumberjackWorkerAssignedTutorial;
+    private bool hasShownUserBuyTruckTutorial;
+    private bool hasShownUserTruckArrivalTutorial;
     private bool hasShownFleetIntroTutorial;
     private bool hasShownFleetSelectTruckTutorial;
     private bool hasShownFleetAssignDriverTutorial;
@@ -108,7 +118,7 @@ public partial class GameBootstrap
             return;
         }
 
-        EnsureFleetEventSystem(); // buttons require an EventSystem вЂ” create it eagerly
+        EnsureFleetEventSystem(); // buttons require an EventSystem - create it eagerly
         Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         mainMenuHud = new MainMenuHudRefs();
 
@@ -599,6 +609,8 @@ public partial class GameBootstrap
         gameSpeedMultiplier = 1;
         lastActiveGameSpeedMultiplier = 1;
         InitUnlockedBuildTools();
+        ResetTutorialFlowForNewGame();
+        ResetTutorialGoalsForNewGame();
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;
         AudioListener.pause = false;
@@ -607,7 +619,15 @@ public partial class GameBootstrap
         UpdateDayNightCycle(0f);
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.9f);
-        TryShowTutorial(TutorialTrigger.GameStarted);
+        if (selectedGameStartMode == GameStartMode.User)
+        {
+            ScheduleTutorial(TutorialTrigger.UserWelcome, 2f);
+        }
+        else
+        {
+            TryShowTutorial(TutorialTrigger.GameStarted);
+        }
+
         if (selectedGameStartMode == GameStartMode.Debug)
         {
             foreach (TradeResourceType res in System.Enum.GetValues(typeof(TradeResourceType)))
@@ -634,7 +654,7 @@ public partial class GameBootstrap
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
 
-        // No full-screen overlay вЂ” main menu stays visible underneath
+        // No full-screen overlay - main menu stays visible underneath
         Transform canvasRoot = loadingOverlayCanvas.transform;
 
         // Bottom bar background (full width, 14px tall)

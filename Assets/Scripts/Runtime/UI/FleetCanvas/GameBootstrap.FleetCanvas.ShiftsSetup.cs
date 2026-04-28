@@ -147,22 +147,20 @@ public partial class GameBootstrap
             int rowIndex = i;
             row.SelectButton.onClick.AddListener(() =>
             {
-                if (rowIndex >= driverAgents.Count)
+                if (rowIndex >= vacancyViewModels.Count)
                 {
                     return;
                 }
 
-                DriverAgent driver = driverAgents[rowIndex];
-                bool isSelected = selectedShiftDriverId == driver.DriverId;
-                selectedShiftDriverId = isSelected ? 0 : driver.DriverId;
-                LogUiInput($"Shifts Canvas: {(isSelected ? $"deselected {driver.DriverName}" : $"selected {driver.DriverName}")}");
+                bool isSelected = selectedVacancyIndex == rowIndex;
+                selectedVacancyIndex = isSelected ? -1 : rowIndex;
+                selectedVacancyShiftIndex = -1;
+                selectedVacancyTruckNumber = 0;
+                string vacancyTitle = vacancyViewModels[rowIndex].Title;
+                LogUiInput($"Vacancies Canvas: {(isSelected ? $"deselected {vacancyTitle}" : $"selected {vacancyTitle}")}");
                 PlayUiSound(uiSelectClip, 0.8f);
                 isShiftsScreenDirty = true;
                 isDriversScreenDirty = true;
-                if (!isSelected)
-                {
-                    CompleteProductionWorkerSelectionTutorial(driver);
-                }
             });
 
             shiftsScreenUi.DriverRows.Add(row);
@@ -214,6 +212,7 @@ public partial class GameBootstrap
 
         // ── Tab toggle row ───────────────────────────────────────────────────
         RectTransform tabRow = CreateTabRow("ShiftsTabRow", rightPanel, ShiftsTabRowHeight, 8f);
+        shiftsScreenUi.TabRowRoot = tabRow;
         LayoutElement tabRowLE = tabRow.GetComponent<LayoutElement>();
         tabRowLE.minHeight = ShiftsTabRowHeight;
         tabRowLE.flexibleHeight = 0f;
@@ -246,6 +245,67 @@ public partial class GameBootstrap
         });
 
         // ── Transportation panel (existing shift cards + intercity) ──────────
+        RectTransform vacancyFlowPanel = CreateStyledPanel("VacancyFlowPanel", rightPanel, ShiftsCardColor);
+        shiftsScreenUi.VacancyFlowPanel = vacancyFlowPanel;
+        LayoutElement vacancyFlowLayoutElement = vacancyFlowPanel.gameObject.AddComponent<LayoutElement>();
+        vacancyFlowLayoutElement.preferredHeight = GetShiftsTabContentHeight();
+        vacancyFlowLayoutElement.minHeight = GetShiftsTabContentHeight();
+        vacancyFlowLayoutElement.flexibleHeight = 0f;
+        VerticalLayoutGroup vacancyFlowLayout = vacancyFlowPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        vacancyFlowLayout.padding = new RectOffset(14, 14, 12, 12);
+        vacancyFlowLayout.spacing = 8;
+        vacancyFlowLayout.childControlWidth = true;
+        vacancyFlowLayout.childControlHeight = true;
+        vacancyFlowLayout.childForceExpandWidth = true;
+        vacancyFlowLayout.childForceExpandHeight = false;
+
+        shiftsScreenUi.VacancyFlowTitleText = CreateHeaderText("VacancyFlowTitle", vacancyFlowPanel, font, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.VacancyFlowTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        shiftsScreenUi.VacancyFlowHintText = CreateBodyText("VacancyFlowHint", vacancyFlowPanel, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        shiftsScreenUi.VacancyFlowHintText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
+
+        for (int i = 0; i < MaxVacancyOptionRows; i++)
+        {
+            GameObject optionObj = CreateUiObject($"VacancyOptionRow{i + 1}", vacancyFlowPanel);
+            RectTransform optionRoot = optionObj.GetComponent<RectTransform>();
+            optionObj.AddComponent<LayoutElement>().preferredHeight = 48f;
+            Image optionBg = optionObj.AddComponent<Image>();
+            optionBg.color = FleetCardMutedColor;
+            optionBg.raycastTarget = true;
+            VerticalLayoutGroup optionLayout = optionObj.AddComponent<VerticalLayoutGroup>();
+            optionLayout.padding = new RectOffset(12, 12, 6, 6);
+            optionLayout.spacing = 2;
+            optionLayout.childControlWidth = true;
+            optionLayout.childControlHeight = true;
+            optionLayout.childForceExpandWidth = true;
+            optionLayout.childForceExpandHeight = false;
+
+            Text optionTitle = CreateHeaderText($"VacancyOptionTitle{i + 1}", optionRoot, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
+            optionTitle.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+            Text optionSubtitle = CreateBodyText($"VacancyOptionSubtitle{i + 1}", optionRoot, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            optionSubtitle.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+
+            Button optionButton = optionObj.AddComponent<Button>();
+            ColorBlock optionColors = optionButton.colors;
+            optionColors.normalColor = Color.white;
+            optionColors.highlightedColor = new Color(1f, 1f, 1f, 0.96f);
+            optionColors.pressedColor = new Color(0.94f, 0.94f, 0.94f, 1f);
+            optionColors.selectedColor = Color.white;
+            optionColors.fadeDuration = 0.08f;
+            optionButton.colors = optionColors;
+            int optionIndex = i;
+            optionButton.onClick.AddListener(() => OnVacancyFlowOptionPressed(optionIndex));
+
+            shiftsScreenUi.VacancyOptionRows.Add(new VacancyOptionRowUi
+            {
+                Root = optionRoot,
+                Background = optionBg,
+                TitleText = optionTitle,
+                SubtitleText = optionSubtitle,
+                Button = optionButton
+            });
+        }
+
         GameObject transportPanelObj = CreateUiObject("TransportPanel", rightPanel);
         shiftsTransportPanel = transportPanelObj.GetComponent<RectTransform>();
         LayoutElement transportPanelLayout = transportPanelObj.AddComponent<LayoutElement>();
@@ -290,6 +350,132 @@ public partial class GameBootstrap
         transportIntroLayout.spacing = 6f;
         shiftsScreenUi.LogisticsSectionTitleText = CreateHeaderText("AssignmentsLogisticsSectionTitle", transportIntroBody, font, "Logistics", 16, TextAnchor.MiddleLeft, Color.white);
         shiftsScreenUi.LogisticsSectionSummaryText = CreateBodyText("AssignmentsLogisticsSectionSummary", transportIntroBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+
+        RectTransform fleetCard = CreateSectionCard(transportContent, font, string.Empty, out RectTransform fleetBody, false);
+        fleetCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 392f;
+        VerticalLayoutGroup fleetBodyLayout = fleetBody.GetComponent<VerticalLayoutGroup>();
+        fleetBodyLayout.spacing = 8f;
+
+        RectTransform fleetHeaderRow = CreateLayoutRow("AssignmentsFleetHeaderRow", fleetBody, 26f, 8f);
+        shiftsScreenUi.FleetSectionTitleText = CreateHeaderText("AssignmentsFleetTitle", fleetHeaderRow, font, "Fleet", 16, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.FleetSectionTitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        shiftsScreenUi.FleetCountText = CreateBodyText("AssignmentsFleetCount", fleetHeaderRow, font, string.Empty, 12, TextAnchor.MiddleRight, FleetSecondaryTextColor);
+        shiftsScreenUi.FleetCountText.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
+        shiftsScreenUi.FleetSectionSummaryText = CreateBodyText("AssignmentsFleetSummary", fleetBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        shiftsScreenUi.FleetSectionSummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 32f;
+
+        RectTransform fleetBuyPanel = CreateStyledPanel("AssignmentsFleetBuyPanel", fleetBody, FleetCardMutedColor);
+        fleetBuyPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 70f;
+        VerticalLayoutGroup fleetBuyLayout = fleetBuyPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        fleetBuyLayout.padding = new RectOffset(10, 10, 8, 8);
+        fleetBuyLayout.spacing = 5f;
+        fleetBuyLayout.childControlWidth = true;
+        fleetBuyLayout.childControlHeight = true;
+        fleetBuyLayout.childForceExpandWidth = true;
+        fleetBuyLayout.childForceExpandHeight = false;
+        shiftsScreenUi.FleetBuyTruckButton = CreateButton("AssignmentsFleetBuyTruckButton", fleetBuyPanel, font, out shiftsScreenUi.FleetBuyTruckButtonText, "Buy New Truck", 13, FleetPrimaryButtonColor, Color.white);
+        shiftsScreenUi.FleetBuyTruckButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
+        shiftsScreenUi.FleetBuyTruckButton.onClick.AddListener(() =>
+        {
+            HireNewTruck();
+            isShiftsScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.85f);
+        });
+        shiftsScreenUi.FleetBuyTruckStatusText = CreateBodyText("AssignmentsFleetBuyTruckStatus", fleetBuyPanel, font, string.Empty, 11, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
+        shiftsScreenUi.FleetBuyTruckStatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+        RectTransform fleetListPanel = CreateStyledPanel("AssignmentsFleetListPanel", fleetBody, FleetInsetColor);
+        fleetListPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 238f;
+        VerticalLayoutGroup fleetListLayout = fleetListPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        fleetListLayout.padding = new RectOffset(8, 8, 8, 8);
+        fleetListLayout.spacing = 6f;
+        fleetListLayout.childControlWidth = true;
+        fleetListLayout.childControlHeight = true;
+        fleetListLayout.childForceExpandWidth = true;
+        fleetListLayout.childForceExpandHeight = false;
+
+        for (int fleetRowIndex = 0; fleetRowIndex < MaxTruckCount; fleetRowIndex++)
+        {
+            ShiftsFleetTruckRowUi row = new() { TruckNumber = fleetRowIndex + 1 };
+            GameObject rowObj = CreateUiObject($"AssignmentsFleetTruckRow{fleetRowIndex + 1}", fleetListPanel);
+            row.Root = rowObj.GetComponent<RectTransform>();
+            row.Root.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
+            row.Background = rowObj.AddComponent<Image>();
+            row.Background.color = ShiftsCardColor;
+            Outline rowOutline = rowObj.AddComponent<Outline>();
+            rowOutline.effectColor = new Color(0f, 0f, 0f, 0.22f);
+            rowOutline.effectDistance = new Vector2(1f, -1f);
+
+            HorizontalLayoutGroup rowLayout = rowObj.AddComponent<HorizontalLayoutGroup>();
+            rowLayout.padding = new RectOffset(10, 8, 5, 5);
+            rowLayout.spacing = 8f;
+            rowLayout.childControlWidth = true;
+            rowLayout.childControlHeight = true;
+            rowLayout.childForceExpandWidth = false;
+            rowLayout.childForceExpandHeight = true;
+
+            RectTransform textColumn = CreateUiObject($"AssignmentsFleetTruckTextColumn{fleetRowIndex + 1}", row.Root).GetComponent<RectTransform>();
+            textColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            VerticalLayoutGroup textLayout = textColumn.gameObject.AddComponent<VerticalLayoutGroup>();
+            textLayout.spacing = 1f;
+            textLayout.childControlWidth = true;
+            textLayout.childControlHeight = true;
+            textLayout.childForceExpandWidth = true;
+            textLayout.childForceExpandHeight = false;
+
+            RectTransform topLine = CreateLayoutRow($"AssignmentsFleetTruckTopLine{fleetRowIndex + 1}", textColumn, 17f, 6f);
+            row.NameText = CreateHeaderText($"AssignmentsFleetTruckName{fleetRowIndex + 1}", topLine, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+            row.NameText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            row.StatusText = CreateBodyText($"AssignmentsFleetTruckStatus{fleetRowIndex + 1}", topLine, font, string.Empty, 11, TextAnchor.MiddleRight, FleetAccentColor);
+            row.StatusText.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
+            RectTransform bottomLine = CreateLayoutRow($"AssignmentsFleetTruckBottomLine{fleetRowIndex + 1}", textColumn, 16f, 8f);
+            row.CrewText = CreateBodyText($"AssignmentsFleetTruckCrew{fleetRowIndex + 1}", bottomLine, font, string.Empty, 10, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            row.CrewText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            row.CargoText = CreateBodyText($"AssignmentsFleetTruckCargo{fleetRowIndex + 1}", bottomLine, font, string.Empty, 10, TextAnchor.MiddleRight, FleetSecondaryTextColor);
+            row.CargoText.gameObject.AddComponent<LayoutElement>().preferredWidth = 110f;
+
+            row.AssignButton = CreateButton($"AssignmentsFleetTruckAssign{fleetRowIndex + 1}", row.Root, font, out row.AssignButtonText, "Assign", 10, FleetPrimaryButtonColor, Color.white);
+            row.AssignButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 110f;
+            int capturedTruckNumber = fleetRowIndex + 1;
+            row.AssignButton.onClick.AddListener(() =>
+            {
+                TruckAgent truck = GetTruckAgent(capturedTruckNumber);
+                DriverAgent selectedDriver = driverAgents.Find(driver => driver.DriverId == selectedShiftDriverId);
+                if (truck == null || selectedDriver == null)
+                {
+                    return;
+                }
+
+                if (AssignDriverToTruck(truck, selectedDriver))
+                {
+                    FocusTruck(truck.TruckNumber);
+                    CompleteFleetPickDriverTutorial();
+                    isShiftsScreenDirty = true;
+                    isDriversScreenDirty = true;
+                    isFleetScreenDirty = true;
+                }
+            });
+
+            row.FocusButton = rowObj.AddComponent<Button>();
+            row.FocusButton.targetGraphic = row.Background;
+            int focusTruckNumber = fleetRowIndex + 1;
+            row.FocusButton.onClick.AddListener(() =>
+            {
+                TruckAgent truck = GetTruckAgent(focusTruckNumber);
+                if (truck == null)
+                {
+                    return;
+                }
+
+                FocusTruck(truck.TruckNumber);
+                selectedTruckNumber = truck.TruckNumber;
+                isFleetScreenDirty = true;
+                isShiftsScreenDirty = true;
+                PlayUiSound(uiSelectClip, 0.72f);
+            });
+
+            shiftsScreenUi.FleetTruckRows.Add(row);
+        }
 
         for (int i = 0; i < ShiftPresetHours.Length; i++)
         {
@@ -608,7 +794,11 @@ public partial class GameBootstrap
                 if (selectedDriver == null) return;
                 AssignWorkerToBuilding(selectedDriver, logisticsSlots[capturedIndex]);
                 PlayUiSound(uiSelectClip, 0.85f);
-                if (capturedIndex == 0) CompleteForestAssignmentTutorial();
+                if (capturedIndex == 0)
+                {
+                    NotifyTutorialLumberjackWorkerAssigned();
+                    CompleteForestAssignmentTutorial();
+                }
                 else if (capturedIndex == 1) CompleteSawmillWorkerAssignedTutorial();
             });
             slot.RemoveButton.onClick.AddListener(() =>

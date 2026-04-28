@@ -48,6 +48,20 @@ public partial class GameBootstrap
         { "Done!", "Готово!" },
 
         { "Welcome to Lo-Fi Delivery Co.", "Добро пожаловать в Lo-Fi Delivery Co." },
+        { "Welcome to User mode.\n\nYou start with an almost empty map, a highway connection, a bus stop, and a few workers.\n\nBefore building, learn the camera controls: zoom in, zoom out, move the map, and rotate the view.", "Добро пожаловать в User mode.\n\nТы начинаешь почти с пустой картой, подключением к магистрали, автобусной остановкой и несколькими рабочими.\n\nПеред строительством освой управление камерой: приблизь, отдали, сдвинь карту и поверни обзор." },
+        { "Build the first road", "Построй первую дорогу" },
+        { "Now build your first road.\n\nOpen the Build menu from the top HUD or press B. Choose a road tool, then left-click a cell to place the road.\n\nHold Shift and drag to build a longer road segment. Press R to rotate the road direction before placing.", "Теперь построй первую дорогу.\n\nОткрой меню Стройка сверху или нажми B. Выбери инструмент дороги и нажми левой кнопкой по клетке, чтобы поставить дорогу.\n\nЗажми Shift и протяни мышью, чтобы построить длинный участок. Нажми R, чтобы повернуть направление дороги перед установкой." },
+        { "Build the town core", "Построй основу города" },
+        { "The road is only useful when it connects important places.\n\nThree core buildings are now unlocked: Warehouse, Motel, and Parking.\n\nBuild all three from the Build menu. You can open Build from the top HUD or press B.", "Дорога полезна только тогда, когда соединяет важные места.\n\nТеперь открыты три основных здания: Склад, Мотель и Парковка.\n\nПострой все три через меню Стройка. Его можно открыть сверху или клавишей B." },
+        { "Warehouse is your central storage.\n\nFinished resources are collected here, and future routes will use it as the main place for loading and unloading goods.", "Склад - это центральное хранилище.\n\nЗдесь собираются готовые ресурсы, а будущие маршруты будут использовать его как основное место погрузки и разгрузки." },
+        { "Motel gives workers a place to check in, rest, and return to when they have no active task.\n\nAfter this building exists, workers and cats can move from the starting stop into their normal idle area.", "Мотель даёт рабочим место для регистрации, отдыха и возвращения, когда у них нет активной задачи.\n\nПосле постройки рабочие и коты смогут уйти от стартовой остановки в свою обычную idle-зону." },
+        { "Parking is the base for vehicles.\n\nTrucks and local buses start from here, return here, and use it as the town transport yard.", "Парковка - это база транспорта.\n\nГрузовики и городские автобусы стартуют отсюда, возвращаются сюда и используют её как транспортный двор города." },
+        { "Build a Lumberjack Camp", "Построй Лагерь лесорубов" },
+        { "The town needs its first production building.\n\nLumberjack Camp gathers Logs from nearby trees. Build it close to a dense patch of forest so workers do not spend the whole day walking.", "Городу нужно первое производственное здание.\n\nЛагерь лесорубов добывает Брёвна из ближайших деревьев. Построй его рядом с густым лесом, чтобы рабочие не тратили весь день на дорогу." },
+        { "Assign a Lumberjack", "Назначь лесоруба" },
+        { "The Lumberjack Camp is built, but buildings do not work by themselves.\n\nOpen Vacancies, select the Lumberjack Camp vacancy, choose a worker, and assign them.", "Лагерь лесорубов построен, но здания сами не работают.\n\nОткрой Вакансии, выбери вакансию Лагеря лесорубов, затем выбери рабочего и назначь его." },
+        { "Lumberjack Work", "Работа лесоруба" },
+        { "The assigned worker will go to the camp during production hours, walk to nearby trees, chop them into Logs, and carry those Logs back one by one.\n\nLater you will move those Logs through the logistics chain.", "Назначенный рабочий будет приходить в лагерь в рабочие часы, идти к ближайшим деревьям, рубить их на Брёвна и носить Брёвна обратно по одному.\n\nПозже эти Брёвна нужно будет отправлять дальше по логистической цепочке." },
         { "Skip tutorial", "Пропустить обучение" },
         { "OK", "OK" },
         { "Bees", "Пчёлки" },
@@ -91,8 +105,9 @@ public partial class GameBootstrap
         { "Worker", "Рабочий" },
         { "Workers", "Рабочие" },
         { "Drivers", "Водители" },
-        { "Assignments", "Роли" },
-        { "Roles", "Роли" },
+        { "Assignments", "Вакансии" },
+        { "Roles", "Вакансии" },
+        { "Vacancies", "Вакансии" },
         { "Shifts", "Смены" },
         { "Resources", "Ресурсы" },
         { "Economy", "Экономика" },
@@ -108,6 +123,7 @@ public partial class GameBootstrap
         { "Building", "Стройка" },
         { "Lumberjack Camp", "Лагерь лесорубов" },
         { "R - rotate", "R - повернуть" },
+        { "Shift - drag road", "Shift - протянуть дорогу" },
         { "Map", "Карта" },
         { "Speed", "Скорость" },
         { "Time", "Время" },
@@ -430,6 +446,7 @@ public partial class GameBootstrap
         isBuildScreenDirty = true;
         isWorldMapScreenDirty = true;
         isStatesScreenDirty = true;
+        UpdateTutorialGoalsLocalization();
     }
 
     private void RefreshAllTextComponentsForLanguage()

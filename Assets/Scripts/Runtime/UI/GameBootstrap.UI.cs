@@ -488,7 +488,9 @@ public partial class GameBootstrap
         money -= HireTruckCost;
         RecordMoneyMovement(-HireTruckCost, "Treasury", "Fleet Expansion", $"Hire {hiredTruck.DisplayName}", money);
         SessionDebugLogger.Log("TRUCK", $"Hired {hiredTruck.DisplayName} for ${HireTruckCost}. Money now ${money}.");
-        LogTruckReaction(hiredTruck, $"purchased and spawned in parking for ${HireTruckCost}");
+        StartPurchasedTruckArrival(hiredTruck);
+        NotifyTutorialTruckPurchased(hiredTruck);
+        LogTruckReaction(hiredTruck, $"purchased for ${HireTruckCost}; arriving from edge highway");
         TruckAgent selectedTruck = GetTruckAgent(selectedTruckNumber) ?? GetTruckAgent(1);
         if (selectedTruck != null)
         {

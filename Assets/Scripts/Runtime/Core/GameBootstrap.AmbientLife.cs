@@ -605,6 +605,49 @@ public partial class GameBootstrap : MonoBehaviour
         }
     }
 
+    private void MoveAmbientCatsToCurrentHome()
+    {
+        if (ambientCats.Count == 0)
+        {
+            SetupAmbientCats();
+            return;
+        }
+
+        ambientCatRoamPoints.Clear();
+        RegisterAmbientCatRoamPoints();
+        if (ambientCatRoamPoints.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < ambientCats.Count; i++)
+        {
+            AmbientCatData cat = ambientCats[i];
+            if (cat == null || cat.RootTransform == null)
+            {
+                continue;
+            }
+
+            Vector3 currentPosition = cat.RootTransform.position;
+            currentPosition.y = SampleTerrainHeight(currentPosition.x, currentPosition.z);
+            int targetIndex = FindNearestAmbientCatRoamPointIndex(currentPosition, i);
+            Vector3 targetPosition = ambientCatRoamPoints[targetIndex];
+
+            cat.CurrentPosition = currentPosition;
+            cat.StartPosition = currentPosition;
+            cat.TargetPosition = targetPosition;
+            cat.CurrentPointIndex = Mathf.Clamp(targetIndex, 0, ambientCatRoamPoints.Count - 1);
+            cat.TargetPointIndex = targetIndex;
+            cat.MoveProgress = 0f;
+            cat.MoveDuration = Mathf.Clamp(Vector3.Distance(currentPosition, targetPosition) / 0.85f, 2.2f, 12f);
+            cat.StateTimer = 0f;
+            cat.IsRelocatingHome = true;
+            cat.State = AmbientCatState.Walking;
+        }
+
+        SessionDebugLogger.Log("AMBIENT", $"Moved {ambientCats.Count} ambient cats toward current home points instead of respawning them.");
+    }
+
     private void RegisterAmbientCatRoamPoints()
     {
         if (locations.TryGetValue(LocationType.Motel, out _))
@@ -835,7 +878,7 @@ public partial class GameBootstrap : MonoBehaviour
                     break;
 
                 case AmbientCatState.Walking:
-                    if (catsShouldSleep)
+                    if (catsShouldSleep && !cat.IsRelocatingHome)
                     {
                         cat.CurrentPosition = cat.RootTransform.position;
                         cat.StartPosition = cat.CurrentPosition;
@@ -850,7 +893,7 @@ public partial class GameBootstrap : MonoBehaviour
                     float walkT = Mathf.Clamp01(cat.MoveProgress);
                     Vector3 walkPosition = Vector3.Lerp(cat.StartPosition, cat.TargetPosition, walkT);
                     walkPosition.y += Mathf.Abs(Mathf.Sin(time * 9f + cat.AnimationPhase)) * 0.03f;
-                    if (IsAmbientCatPositionCrowded(cat, walkPosition, 0.3f))
+                    if (!cat.IsRelocatingHome && IsAmbientCatPositionCrowded(cat, walkPosition, 0.3f))
                     {
                         cat.CurrentPosition = cat.RootTransform.position;
                         cat.StartPosition = cat.CurrentPosition;
@@ -896,10 +939,51 @@ public partial class GameBootstrap : MonoBehaviour
                         cat.CurrentPointIndex = cat.TargetPointIndex;
                         cat.CurrentPosition = cat.TargetPosition;
                         cat.Yaw = cat.RootTransform.eulerAngles.y;
+                        cat.IsRelocatingHome = false;
                         cat.State = AmbientCatState.Lazing;
                         cat.StateTimer = Random.Range(6.4f, 13.5f);
                     }
                     break;
+
+                case AmbientCatState.BeingPetted:
+                {
+                    cat.PettingTimer -= dt;
+                    DriverAgent petter = cat.PettedByDriverId >= 0 ? GetDriverAgentById(cat.PettedByDriverId) : null;
+                    bool driverStillPetting = petter != null &&
+                        petter.WalkPhase == DriverRescuePhase.IdlePettingCat &&
+                        petter.IdleCatPetTargetIndex >= 0 &&
+                        petter.IdleCatPetTargetIndex < ambientCats.Count &&
+                        ambientCats[petter.IdleCatPetTargetIndex] == cat;
+                    if (!driverStillPetting || cat.PettingTimer <= 0f)
+                    {
+                        cat.State = AmbientCatState.Lazing;
+                        cat.StateTimer = Random.Range(5f, 10f);
+                        cat.PettedByDriverId = -1;
+                        break;
+                    }
+
+                    if (petter.DriverObject != null)
+                    {
+                        Vector3 faceDir = petter.DriverObject.transform.position - cat.RootTransform.position;
+                        faceDir.y = 0f;
+                        if (faceDir.sqrMagnitude > 0.0001f)
+                        {
+                            cat.RootTransform.rotation = Quaternion.Slerp(
+                                cat.RootTransform.rotation,
+                                Quaternion.LookRotation(faceDir.normalized, Vector3.up),
+                                6f * Time.deltaTime);
+                        }
+                    }
+
+                    cat.RootTransform.position = cat.CurrentPosition;
+                    if (cat.BodyTransform != null)
+                        cat.BodyTransform.localScale = new Vector3(0.16f, 0.13f, 0.22f);
+                    if (cat.HeadTransform != null)
+                        cat.HeadTransform.localRotation = Quaternion.Euler(-10f, Mathf.Sin(time * 1.5f + cat.AnimationPhase) * 6f, 0f);
+                    if (cat.TailTransform != null)
+                        cat.TailTransform.localRotation = Quaternion.Euler(30f + Mathf.Sin(time * 3f + cat.TailPhase) * 10f, 0f, 0f);
+                    break;
+                }
             }
         }
     }
@@ -941,6 +1025,34 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         return false;
+    }
+
+    private int FindNearestAmbientCatRoamPointIndex(Vector3 sourcePosition, int fallbackOffset)
+    {
+        if (ambientCatRoamPoints.Count == 0)
+        {
+            return 0;
+        }
+
+        int bestIndex = Mathf.Abs(fallbackOffset) % ambientCatRoamPoints.Count;
+        float bestDistance = float.MaxValue;
+        for (int i = 0; i < ambientCatRoamPoints.Count; i++)
+        {
+            Vector3 point = ambientCatRoamPoints[i];
+            float distance = Vector3.SqrMagnitude(point - sourcePosition);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                bestIndex = i;
+            }
+        }
+
+        if (ambientCats.Count > 1)
+        {
+            bestIndex = (bestIndex + Mathf.Abs(fallbackOffset)) % ambientCatRoamPoints.Count;
+        }
+
+        return bestIndex;
     }
 
     private int FindNextAmbientCatRoamPoint(AmbientCatData cat)

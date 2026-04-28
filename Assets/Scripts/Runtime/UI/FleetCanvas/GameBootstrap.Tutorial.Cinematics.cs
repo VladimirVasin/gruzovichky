@@ -6,7 +6,7 @@ public partial class GameBootstrap
 {
     private void StartHireArrivalCinematic()
     {
-        if (hiringDriverArrival == null) return;   // bus already gone вЂ” nothing to track
+        if (hiringDriverArrival == null) return;   // bus already gone, nothing to track
         tutorialCinematicDriver = hiringDriverArrival.Driver;
         tutorialCinematicPhase  = TutorialCinematicPhase.TrackingBus;
         tutorialCinematicShouldShowForestIntro = true;
@@ -129,7 +129,7 @@ public partial class GameBootstrap
                     cameraTargetOffset      = DioramaCameraOffset;
                     tutorialCinematicDriver = null;
                     tutorialCinematicPhase  = TutorialCinematicPhase.None;
-                    // Show tutorial 6 immediately вЂ” camera pan to Forest happens inside TryShowTutorial
+                    // Show tutorial 6 immediately; camera pan to Forest happens inside TryShowTutorial.
                     if (tutorialCinematicShouldShowForestIntro)
                     {
                         ScheduleTutorial(TutorialTrigger.ForestIntroduction);
@@ -153,6 +153,7 @@ public partial class GameBootstrap
         }
 
         tutorialCameraFocusTarget = GetLocationCenter(locationType);
+        tutorialCameraFocusOffset = TutorialForestZoomOffset;
         tutorialCameraFocusTarget.y = 0f;
         if (placeLocationOnRight)
         {
@@ -179,7 +180,14 @@ public partial class GameBootstrap
             return;
         }
 
-        // Wander mode: Tutorial 9 (ForestWorkerStarted) вЂ” camera drifts gently around Forest while open
+        bool isTruckFollowMode = tutorialCameraFollowTruck?.TruckObject != null;
+        if (isTruckFollowMode)
+        {
+            Vector3 truckPosition = tutorialCameraFollowTruck.TruckObject.transform.position;
+            tutorialCameraFocusTarget = new Vector3(truckPosition.x, 0f, truckPosition.z);
+        }
+
+        // Wander mode: Tutorial 9 (ForestWorkerStarted) keeps the camera drifting gently around Forest while open.
         bool isWanderMode = isTutorialOpen && activeTutorialTrigger == TutorialTrigger.ForestWorkerStarted;
         if (isWanderMode)
             tutorialCameraWanderTime += dt;
@@ -195,22 +203,22 @@ public partial class GameBootstrap
         float focusLerp = 1f - Mathf.Exp(-TutorialCameraFocusSpeed * dt);
         float offsetLerp = 1f - Mathf.Exp(-(TutorialCameraFocusSpeed * 1.15f) * dt);
         cameraFocusPoint = Vector3.Lerp(cameraFocusPoint, focusTarget, focusLerp);
-        cameraOffset = Vector3.Lerp(cameraOffset, TutorialForestZoomOffset, offsetLerp);
+        cameraOffset = Vector3.Lerp(cameraOffset, tutorialCameraFocusOffset, offsetLerp);
         cameraTargetOffset = cameraOffset;
 
         mainCamera.transform.position = cameraFocusPoint + cameraOffset;
         mainCamera.transform.rotation = GetDioramaCameraRotation();
 
-        // In wander mode the focus never "completes" вЂ” it stays active until OK is pressed
-        if (!isWanderMode)
+        // In wander mode the focus never completes; it stays active until OK is pressed.
+        if (!isWanderMode && !isTruckFollowMode)
         {
             bool focusDone = (cameraFocusPoint - focusTarget).sqrMagnitude < 0.05f;
-            bool offsetDone = (cameraOffset - TutorialForestZoomOffset).sqrMagnitude < 0.01f;
+            bool offsetDone = (cameraOffset - tutorialCameraFocusOffset).sqrMagnitude < 0.01f;
             if (focusDone && offsetDone)
             {
                 cameraFocusPoint = tutorialCameraFocusTarget;
-                cameraOffset = TutorialForestZoomOffset;
-                cameraTargetOffset = TutorialForestZoomOffset;
+                cameraOffset = tutorialCameraFocusOffset;
+                cameraTargetOffset = tutorialCameraFocusOffset;
                 mainCamera.transform.position = cameraFocusPoint + cameraOffset;
                 mainCamera.transform.rotation = GetDioramaCameraRotation();
                 isTutorialCameraFocusActive = false;
@@ -241,8 +249,10 @@ public partial class GameBootstrap
 
     private bool IsFleetTutorialHighlightActive()
     {
-        return (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetIntroduction)
-               || isFleetHighlightPersistent;
+        // Fleet is now embedded under Roles > Logistics, so the old top-level Fleet outline is intentionally disabled.
+        bool legacyWouldHighlight = (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetIntroduction)
+                                    || isFleetHighlightPersistent;
+        return legacyWouldHighlight && false;
     }
 
     private bool IsShiftsTutorialHighlightActive()

@@ -8,6 +8,8 @@ public partial class GameBootstrap
 {
     private void CreateLocation(LocationType type, string label, Vector2Int min, Vector2Int max, Vector2Int anchor, Color baseColor, Vector2Int? roadAccess = null)
     {
+        PrepareBuildSiteForLocation(type, min, max);
+
         LocationData data = new()
         {
             Label = label,

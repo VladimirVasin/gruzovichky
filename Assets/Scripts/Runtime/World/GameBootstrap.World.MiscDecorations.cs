@@ -2,6 +2,96 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private bool RemoveMiscObjectAtCell(Vector2Int cell)
+    {
+        bool removed = miscOccupiedCells.Remove(cell);
+        bool destroyedRoot = DestroyMiscRootByName($"MiscTree_{cell.x}_{cell.y}");
+        destroyedRoot |= DestroyMiscRootByName($"BerryBush_{cell.x}_{cell.y}");
+        destroyedRoot |= DestroyMiscRootByName($"FlowerPatch_{cell.x}_{cell.y}");
+
+        if (lumberTrees.TryGetValue(cell, out LumberTreeRuntimeData lumberTree))
+        {
+            if (lumberTree.RootTransform != null)
+            {
+                Destroy(lumberTree.RootTransform.gameObject);
+                destroyedRoot = true;
+            }
+
+            for (int i = 0; i < lumberTree.GroundLogs.Count; i++)
+            {
+                if (lumberTree.GroundLogs[i]?.RootObject != null)
+                {
+                    Destroy(lumberTree.GroundLogs[i].RootObject);
+                }
+            }
+
+            lumberTrees.Remove(cell);
+            removed = true;
+        }
+
+        for (int i = miscTreeSways.Count - 1; i >= 0; i--)
+        {
+            if (miscTreeSways[i].Cell == cell)
+            {
+                miscTreeSways.RemoveAt(i);
+                removed = true;
+            }
+        }
+
+        RemoveNearbyPointEntries(miscTreePerchPoints, cell, 2.5f);
+        RemoveNearbyPointEntries(flowerBeePoints, cell, 1.6f);
+        RemoveNearbyPointEntries(ambientSquirrelRoamPoints, cell, 1.6f);
+
+        if (destroyedRoot)
+        {
+            removed = true;
+        }
+
+        if (removed)
+        {
+            SessionDebugLogger.Log("BUILD", $"Removed misc object at ({cell.x},{cell.y}) for construction.");
+        }
+
+        return removed;
+    }
+
+    private bool DestroyMiscRootByName(string objectName)
+    {
+        if (miscRoot == null)
+        {
+            return false;
+        }
+
+        Transform child = miscRoot.Find(objectName);
+        if (child == null)
+        {
+            return false;
+        }
+
+        Destroy(child.gameObject);
+        return true;
+    }
+
+    private static void RemoveNearbyPointEntries(System.Collections.Generic.List<Vector3> points, Vector2Int cell, float radius)
+    {
+        if (points == null || points.Count == 0)
+        {
+            return;
+        }
+
+        Vector3 center = new(cell.x + 0.5f, 0f, cell.y + 0.5f);
+        float radiusSqr = radius * radius;
+        for (int i = points.Count - 1; i >= 0; i--)
+        {
+            Vector3 delta = points[i] - center;
+            delta.y = 0f;
+            if (delta.sqrMagnitude <= radiusSqr)
+            {
+                points.RemoveAt(i);
+            }
+        }
+    }
+
     private void CreateMiscTree(Vector2Int cell, int variantIndex)
     {
         if (miscRoot == null)

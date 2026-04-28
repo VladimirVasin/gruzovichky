@@ -12,7 +12,7 @@ public partial class GameBootstrap
 
     private const float WorkerMealSeekHours = 6f;
     private const float WorkerSleepSeekHours = 15f;
-    private const float WorkerLeisureSeekHours = 18f;
+    private const float WorkerLeisureSeekHours = 10f;
 
     private void UpdateWorkerNeedsClock(DriverAgent driver)
     {

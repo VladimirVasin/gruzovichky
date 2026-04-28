@@ -579,6 +579,7 @@ public partial class GameBootstrap : MonoBehaviour
             if (IsDriverIdleWanderPhase(driver) || IsDriverInIdleActivity(driver))
             {
                 ReleaseBench(driver);
+                ReleaseCatInteraction(driver);
                 driver.WalkPhase = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
@@ -630,7 +631,8 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
             driver.WalkPhase == DriverRescuePhase.IdleAtCityPark ||
             driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
-            driver.WalkPhase == DriverRescuePhase.IdlePhoneCall)
+            driver.WalkPhase == DriverRescuePhase.IdlePhoneCall ||
+            driver.WalkPhase == DriverRescuePhase.IdlePettingCat)
         {
             driver.IdleActivityTimer -= Time.deltaTime * gameSpeedMultiplier;
             if (driver.IdleActivityTimer <= 0f)
@@ -650,6 +652,11 @@ public partial class GameBootstrap : MonoBehaviour
                 if (completedPhase == DriverRescuePhase.IdleSmoking)
                 {
                     StopDriverSmokingParticles(driver);
+                }
+
+                if (completedPhase == DriverRescuePhase.IdlePettingCat)
+                {
+                    ReleaseCatInteraction(driver);
                 }
 
                 driver.WalkPhase = DriverRescuePhase.None;
@@ -763,6 +770,10 @@ public partial class GameBootstrap : MonoBehaviour
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started smoking break.");
             LogWorkerDecision(driver, "idle-activity", $"smoking, roll={roll:0.00}", true);
         }
+        else if (roll < 0.97f && TryStartWorkerPetCat(driver, startPosition))
+        {
+            LogWorkerDecision(driver, "idle-activity", $"walking to pet cat, roll={roll:0.00}", true);
+        }
         else
         {
             driver.IdleActivityTimer = Random.Range(8f, 25f);
@@ -770,6 +781,63 @@ public partial class GameBootstrap : MonoBehaviour
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} making a phone call.");
             LogWorkerDecision(driver, "idle-activity", $"phone call, roll={roll:0.00}", true);
         }
+    }
+
+    private bool TryStartWorkerPetCat(DriverAgent driver, Vector3 startPosition)
+    {
+        if (ambientCats.Count == 0 || AreAmbientCatsSleepingNight()) return false;
+
+        const float searchRadiusSqr = 49f; // 7 units
+        int bestIndex = -1;
+        float bestDistSqr = searchRadiusSqr;
+
+        for (int i = 0; i < ambientCats.Count; i++)
+        {
+            AmbientCatData cat = ambientCats[i];
+            if (cat == null || cat.RootTransform == null || cat.State == AmbientCatState.BeingPetted) continue;
+
+            Vector3 delta = cat.RootTransform.position - startPosition;
+            delta.y = 0f;
+            float distSqr = delta.sqrMagnitude;
+            if (distSqr < bestDistSqr)
+            {
+                bestDistSqr = distSqr;
+                bestIndex = i;
+            }
+        }
+
+        if (bestIndex < 0) return false;
+
+        AmbientCatData targetCat = ambientCats[bestIndex];
+        Vector3 catPos = targetCat.RootTransform.position;
+        catPos.y = SampleTerrainHeight(catPos.x, catPos.z);
+
+        driver.IdleCatPetTargetIndex = bestIndex;
+        driver.IdleActivityTimer = Random.Range(4f, 8f);
+        driver.WalkAnimationTime = 0f;
+        driver.WalkPhase = DriverRescuePhase.IdleWalkToCat;
+        BuildDriverWalkPath(driver, startPosition, catPos);
+        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading toward a cat to pet it.");
+        return true;
+    }
+
+    private void ReleaseCatInteraction(DriverAgent driver)
+    {
+        if (driver == null) return;
+
+        int idx = driver.IdleCatPetTargetIndex;
+        if (idx >= 0 && idx < ambientCats.Count)
+        {
+            AmbientCatData cat = ambientCats[idx];
+            if (cat != null && cat.PettedByDriverId == driver.DriverId)
+            {
+                cat.State = AmbientCatState.Lazing;
+                cat.StateTimer = Random.Range(4f, 8f);
+                cat.PettedByDriverId = -1;
+            }
+        }
+
+        driver.IdleCatPetTargetIndex = -1;
     }
 
     private Vector3 FindDriverIdleWanderTarget(DriverAgent driver, Vector3 startPosition)

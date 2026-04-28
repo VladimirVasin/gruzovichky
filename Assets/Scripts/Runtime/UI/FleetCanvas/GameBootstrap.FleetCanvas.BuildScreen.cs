@@ -9,47 +9,20 @@ public partial class GameBootstrap
     private void InitUnlockedBuildTools()
     {
         unlockedBuildTools = new HashSet<BuildTool>();
-        if (selectedGameStartMode == GameStartMode.User)
-        {
-            unlockedBuildTools.Add(BuildTool.Parking);
-            unlockedBuildTools.Add(BuildTool.Warehouse);
-            unlockedBuildTools.Add(BuildTool.SingleRoad);
-            unlockedBuildTools.Add(BuildTool.Road);
-            unlockedBuildTools.Add(BuildTool.Motel);
-            unlockedBuildTools.Add(BuildTool.Stop);
-            unlockedBuildTools.Add(BuildTool.Forest);
-            unlockedBuildTools.Add(BuildTool.Sawmill);
-            unlockedBuildTools.Add(BuildTool.FurnitureFactory);
-            unlockedBuildTools.Add(BuildTool.Bar);
-            unlockedBuildTools.Add(BuildTool.Canteen);
-            unlockedBuildTools.Add(BuildTool.GamblingHall);
-            unlockedBuildTools.Add(BuildTool.CityPark);
-            unlockedBuildTools.Add(BuildTool.PersonalHouse);
-            unlockedBuildTools.Add(BuildTool.CarMarket);
-        }
-        else
-        {
-            unlockedBuildTools.Add(BuildTool.Parking);
-            unlockedBuildTools.Add(BuildTool.Warehouse);
-            unlockedBuildTools.Add(BuildTool.SingleRoad);
-            unlockedBuildTools.Add(BuildTool.Road);
-            unlockedBuildTools.Add(BuildTool.Motel);
-            unlockedBuildTools.Add(BuildTool.Stop);
-            unlockedBuildTools.Add(BuildTool.Forest);
-            unlockedBuildTools.Add(BuildTool.Sawmill);
-            unlockedBuildTools.Add(BuildTool.FurnitureFactory);
-            unlockedBuildTools.Add(BuildTool.Bar);
-            unlockedBuildTools.Add(BuildTool.Canteen);
-            unlockedBuildTools.Add(BuildTool.GamblingHall);
-            unlockedBuildTools.Add(BuildTool.CityPark);
-            unlockedBuildTools.Add(BuildTool.PersonalHouse);
-            unlockedBuildTools.Add(BuildTool.CarMarket);
-        }
+        UnlockDefaultRoadBuildTools();
+    }
+
+    private void UnlockDefaultRoadBuildTools()
+    {
+        unlockedBuildTools?.Add(BuildTool.SingleRoad);
+        unlockedBuildTools?.Add(BuildTool.Road);
     }
 
     private bool IsBuildToolUnlocked(BuildTool tool)
     {
-        return unlockedBuildTools == null || unlockedBuildTools.Contains(tool);
+        return unlockedBuildTools != null
+            ? unlockedBuildTools.Contains(tool)
+            : tool == BuildTool.SingleRoad || tool == BuildTool.Road;
     }
 
     private void UnlockBuildTool(BuildTool tool)
@@ -249,8 +222,8 @@ public partial class GameBootstrap
     private void CreateBuildAccentVisual(RectTransform accentStrip, Font font, BuildTool tool, string abbrev)
     {
         // Accent strip: 68px wide, 72px tall.  Local helpers:
-        // P(ax,ay,bx,by,col) — anchor-based rect (0..1 range).
-        // R(cx,cy,w,h,col,rot) — pivot-centered rect with optional rotation (pixel coords from strip center).
+        // P(ax,ay,bx,by,col) uses anchor-based rects (0..1 range).
+        // R(cx,cy,w,h,col,rot) uses pivot-centered rects with optional rotation.
 
         RectTransform P(float ax, float ay, float bx, float by, Color col)
         {
@@ -596,7 +569,7 @@ public partial class GameBootstrap
         hLG.childForceExpandWidth  = false;
         hLG.childForceExpandHeight = true;
 
-        Text arrowText = CreateBodyText("Arrow", headerRoot, font, expanded ? "▼" : "▶", 13, TextAnchor.MiddleLeft, new Color(0.65f, 0.72f, 0.82f));
+        Text arrowText = CreateBodyText("Arrow", headerRoot, font, expanded ? "v" : ">", 13, TextAnchor.MiddleLeft, new Color(0.65f, 0.72f, 0.82f));
         arrowText.gameObject.AddComponent<LayoutElement>().preferredWidth = 14f;
         cat.ArrowText = arrowText;
 
@@ -649,17 +622,24 @@ public partial class GameBootstrap
             foreach (BuildItemUi ci in cat.Items)
                 if (IsBuildToolUnlocked(ci.Tool)) { anyUnlocked = true; break; }
 
+            foreach (BuildItemUi item in cat.Items)
+            {
+                item.Root.gameObject.SetActive(false);
+            }
             cat.HeaderRoot.gameObject.SetActive(anyUnlocked);
             if (!anyUnlocked) continue;
 
             cat.HeaderText.text = ru ? cat.LabelRu : cat.LabelEn;
-            cat.ArrowText.text  = cat.IsExpanded ? "▼" : "▶";
+            cat.ArrowText.text  = cat.IsExpanded ? "v" : ">";
 
             foreach (BuildItemUi item in cat.Items)
             {
                 bool unlocked = IsBuildToolUnlocked(item.Tool);
                 bool visible  = unlocked && cat.IsExpanded;
-                item.Root.gameObject.SetActive(visible);
+                if (visible)
+                {
+                    item.Root.gameObject.SetActive(true);
+                }
                 if (!visible) continue;
 
                 bool isActive = activeBuildTool == item.Tool;

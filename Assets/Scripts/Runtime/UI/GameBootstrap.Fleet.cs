@@ -66,7 +66,7 @@ public partial class GameBootstrap
         if (panelName == "Building")
         {
             isBuildHighlightPersistent = false;
-            // If tutorial 2 is open, dismiss it вЂ” user found the button themselves
+            // If tutorial 2 is open, dismiss it; user found the button themselves.
             if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.BuildMotelPrompt)
             {
                 isTutorialOpen     = false;
@@ -148,9 +148,8 @@ public partial class GameBootstrap
             }
 
             float x = bar.x + MenuBtnGap;
-            MenuBtn("Fleet", "Fleet", ref isFleetPanelOpen, x, IsFleetTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Workers", "Workers", ref isDriversPanelOpen, x, IsWorkersTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Shifts", "Roles", ref isShiftsPanelOpen, x, IsShiftsTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Vacancies", "Vacancies", ref isShiftsPanelOpen, x, IsShiftsTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Trade", "Economy", ref isEconomyPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Building", "Building", ref isBuildPanelOpen, x, IsBuildMenuTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
@@ -283,7 +282,7 @@ public partial class GameBootstrap
                     }
                     if (selectedShiftDriverId == d.DriverId) selectedShiftDriverId = 0;
                     PlayUiSound(uiSelectClip, 0.85f);
-                    SessionDebugLogger.Log("SHIFT", $"{d.DriverName} removed from shift вЂ” now Idle.");
+                    SessionDebugLogger.Log("SHIFT", $"{d.DriverName} removed from shift - now Idle.");
                     LogDriverReaction(d, "shift removed; now idle");
                 }
                 ry += 30f;
@@ -363,7 +362,7 @@ public partial class GameBootstrap
 
             // Salary row
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 82f, 90f, 18f), $"Salary: ${d.Salary}", labelMid);
-            if (GUI.Button(new Rect(cardRect.x + 100f, cardRect.y + 80f, 22f, 20f), "вЂ“", btnSmall))
+            if (GUI.Button(new Rect(cardRect.x + 100f, cardRect.y + 80f, 22f, 20f), "-", btnSmall))
             {
                 d.Salary = Mathf.Max(0, d.Salary - 25);
                 LogUiInput($"Drivers: {d.DriverName} salary decreased to ${d.Salary}");
@@ -681,7 +680,7 @@ public partial class GameBootstrap
         }
 
         if (isFleetPanelOpen && GetFleetPanelRect().Contains(guiPosition)) return true;
-        // Shifts / Drivers / Resources / Economy / Build panels are Canvas-based вЂ” handled by EventSystem.IsPointerOverGameObject above
+        // Shifts / Drivers / Resources / Economy / Build panels are Canvas-based; handled by EventSystem.IsPointerOverGameObject above.
         if (isTruckDetailsOpen && GetTruckDetailsHudRect().Contains(guiPosition)) return true;
 
         return false;
@@ -775,5 +774,3 @@ public partial class GameBootstrap
         PlayUiSound(clip, volumeScale);
     }
 }
-
-

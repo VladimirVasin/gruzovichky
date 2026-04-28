@@ -463,6 +463,31 @@ public partial class GameBootstrap
                 SessionDebugLogger.Log("IDLE", $"{driver.DriverName} reached bench and is sitting down.");
                 return;
 
+            case DriverRescuePhase.IdleWalkToCat:
+            {
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                int catIdx = driver.IdleCatPetTargetIndex;
+                if (catIdx >= 0 && catIdx < ambientCats.Count)
+                {
+                    AmbientCatData targetCat = ambientCats[catIdx];
+                    if (targetCat != null && targetCat.RootTransform != null && targetCat.State != AmbientCatState.BeingPetted)
+                    {
+                        targetCat.State = AmbientCatState.BeingPetted;
+                        targetCat.PettedByDriverId = driver.DriverId;
+                        targetCat.PettingTimer = driver.IdleActivityTimer + 4f;
+                        driver.WalkPhase = DriverRescuePhase.IdlePettingCat;
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started petting a cat.");
+                        return;
+                    }
+                }
+                driver.IdleCatPetTargetIndex = -1;
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+                return;
+            }
+
             case DriverRescuePhase.IdleWalkToBar:
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
@@ -832,6 +857,27 @@ public partial class GameBootstrap
             }
         }
 
+        if (!isWalking && driver.WalkPhase == DriverRescuePhase.IdlePettingCat)
+        {
+            int catIdx = driver.IdleCatPetTargetIndex;
+            if (catIdx >= 0 && catIdx < ambientCats.Count)
+            {
+                AmbientCatData petCat = ambientCats[catIdx];
+                if (petCat?.RootTransform != null)
+                {
+                    Vector3 faceDir = petCat.RootTransform.position - driver.DriverObject.transform.position;
+                    faceDir.y = 0f;
+                    if (faceDir.sqrMagnitude > 0.0001f)
+                    {
+                        driver.DriverObject.transform.rotation = Quaternion.Slerp(
+                            driver.DriverObject.transform.rotation,
+                            Quaternion.LookRotation(faceDir.normalized, Vector3.up),
+                            6f * Time.deltaTime);
+                    }
+                }
+            }
+        }
+
         float swing = isWalking ? Mathf.Sin(driver.WalkAnimationTime) : 0f;
         float bob = isWalking
             ? Mathf.Abs(Mathf.Sin(driver.WalkAnimationTime * 2f)) * 0.06f
@@ -847,6 +893,9 @@ public partial class GameBootstrap
                 return;
             case DriverRescuePhase.IdlePhoneCall:
                 ApplyDriverPhoneCallPose(driver);
+                return;
+            case DriverRescuePhase.IdlePettingCat:
+                ApplyDriverPettingCatPose(driver);
                 return;
             case DriverRescuePhase.LumberChopping:
             case DriverRescuePhase.LumberPlanting:
@@ -998,6 +1047,28 @@ public partial class GameBootstrap
                 driver.SmokingParticleMaterials[i].color = new Color(0.84f, 0.84f, 0.84f, 0f);
             }
         }
+    }
+
+    private void ApplyDriverPettingCatPose(DriverAgent driver)
+    {
+        float pet = Mathf.Sin(Time.time * 2.8f) * 8f;
+        driver.DriverVisualRoot.localPosition = new Vector3(0f, -0.08f, 0f);
+        driver.DriverVisualRoot.localRotation = Quaternion.identity;
+
+        if (driver.DriverBodyTransform != null)
+            driver.DriverBodyTransform.localRotation = Quaternion.Euler(22f, 0f, 0f);
+        if (driver.DriverHeadTransform != null)
+            driver.DriverHeadTransform.localRotation = Quaternion.Euler(12f, 0f, 0f);
+        if (driver.DriverCapTransform != null)
+            driver.DriverCapTransform.localRotation = Quaternion.identity;
+        if (driver.DriverLeftArmTransform != null)
+            driver.DriverLeftArmTransform.localRotation = Quaternion.Euler(40f + pet, 0f, 0f);
+        if (driver.DriverRightArmTransform != null)
+            driver.DriverRightArmTransform.localRotation = Quaternion.Euler(15f, 0f, 0f);
+        if (driver.DriverLeftLegTransform != null)
+            driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(10f, 0f, 0f);
+        if (driver.DriverRightLegTransform != null)
+            driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-10f, 0f, 0f);
     }
 
     private void ApplyDriverPhoneCallPose(DriverAgent driver)

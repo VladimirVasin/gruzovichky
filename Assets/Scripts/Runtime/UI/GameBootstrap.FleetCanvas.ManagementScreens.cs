@@ -15,7 +15,8 @@ public partial class GameBootstrap
     private int  selectedWorkerPanelDriverId = 0;
     private bool isEconomyScreenDirty = true;
     private const int MaxDriverCardSlots = 8;
-    private const int MaxShiftDriverSlots = 16;
+    private const int MaxShiftDriverSlots = 32;
+    private const int MaxVacancyOptionRows = 18;
     private const int MaxEconomyRowSlots = 64;
     private static readonly Color ShiftsScreenTint = new(0.06f, 0.08f, 0.11f, 0.76f);
     private static readonly Color ShiftsCardColor = new(0.13f, 0.16f, 0.21f, 0.98f);
@@ -30,6 +31,9 @@ public partial class GameBootstrap
     private ShiftsScreenUiRefs shiftsScreenUi;
     private bool isShiftsScreenDirty = true;
     private bool isLogisticsTabActive = false;
+    private int selectedVacancyIndex = -1;
+    private int selectedVacancyShiftIndex = -1;
+    private int selectedVacancyTruckNumber = 0;
     private Button shiftsLogisticsTabBtn;
     private Button shiftsTransportTabBtn;
     private Text shiftsLogisticsTabText;
@@ -39,6 +43,8 @@ public partial class GameBootstrap
     private string lastShiftsHudDebugState = string.Empty;
     private bool hasLoggedLegacyShiftsHudDraw;
     private readonly LogisticsSlotUi[] logisticsSlots = new LogisticsSlotUi[6];
+    private readonly List<VacancyViewModel> vacancyViewModels = new();
+    private readonly List<VacancyFlowOption> vacancyFlowOptions = new();
     private BuildScreenUiRefs buildScreenUi;
     private bool isBuildScreenDirty = true;
     private WorldMapScreenUiRefs worldMapScreenUi;
@@ -137,14 +143,26 @@ public partial class GameBootstrap
         public Text SelectionProfessionText;
         public Text SelectionStatusText;
         public Text SelectionHintText;
+        public RectTransform TabRowRoot;
+        public RectTransform VacancyFlowPanel;
+        public Text VacancyFlowTitleText;
+        public Text VacancyFlowHintText;
+        public readonly List<VacancyOptionRowUi> VacancyOptionRows = new();
         public Text LogisticsSectionTitleText;
         public Text LogisticsSectionSummaryText;
+        public Text FleetSectionTitleText;
+        public Text FleetSectionSummaryText;
+        public Text FleetCountText;
+        public Button FleetBuyTruckButton;
+        public Text FleetBuyTruckButtonText;
+        public Text FleetBuyTruckStatusText;
         public Text ProductionSectionTitleText;
         public Text ProductionSectionSummaryText;
         public Text BusDriverGroupTitleText;
         public Text BusDriverGroupSummaryText;
         public readonly List<ShiftDriverRowUi> DriverRows = new();
         public readonly List<ShiftCardUi> ShiftCards = new();
+        public readonly List<ShiftsFleetTruckRowUi> FleetTruckRows = new();
         public IntercitySlotUi IntercitySlot;
         public readonly List<IntercitySlotUi> BusDriverSlots = new();
     }
@@ -173,6 +191,70 @@ public partial class GameBootstrap
         public Text AssignButtonText;
         public Button AssignButton;
         public Image ActiveBorderImage;
+    }
+
+    private enum VacancyKind
+    {
+        TruckDriver,
+        Intercity,
+        BusDriver,
+        Production
+    }
+
+    private enum VacancyFlowOptionKind
+    {
+        Shift,
+        Truck,
+        Worker,
+        Remove,
+        BuyTruck
+    }
+
+    private sealed class VacancyViewModel
+    {
+        public VacancyKind Kind;
+        public string Title;
+        public string Subtitle;
+        public string Schedule;
+        public bool IsOccupied;
+        public DriverAgent AssignedWorker;
+        public LocationType BuildingType;
+        public int SlotIndex;
+        public int ShiftIndex = -1;
+        public int TruckNumber;
+    }
+
+    private sealed class VacancyFlowOption
+    {
+        public VacancyFlowOptionKind Kind;
+        public string Title;
+        public string Subtitle;
+        public int ShiftIndex = -1;
+        public int TruckNumber;
+        public DriverAgent Worker;
+    }
+
+    private sealed class VacancyOptionRowUi
+    {
+        public RectTransform Root;
+        public Image Background;
+        public Text TitleText;
+        public Text SubtitleText;
+        public Button Button;
+    }
+
+    private sealed class ShiftsFleetTruckRowUi
+    {
+        public int TruckNumber;
+        public RectTransform Root;
+        public Image Background;
+        public Text NameText;
+        public Text StatusText;
+        public Text CrewText;
+        public Text CargoText;
+        public Button FocusButton;
+        public Button AssignButton;
+        public Text AssignButtonText;
     }
 
     private sealed class IntercitySlotUi

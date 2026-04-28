@@ -41,12 +41,14 @@ public partial class GameBootstrap
         {
             if (Keyboard.current.qKey.wasPressedThisFrame)
             {
+                MarkTutorialGoalComplete(TutorialGoalKind.CameraRotate);
                 RotateDioramaCamera(-1);
                 return;
             }
 
             if (Keyboard.current.eKey.wasPressedThisFrame)
             {
+                MarkTutorialGoalComplete(TutorialGoalKind.CameraRotate);
                 RotateDioramaCamera(1);
                 return;
             }
@@ -369,6 +371,7 @@ public partial class GameBootstrap
             float panSpeed = CameraPanSpeed * Mathf.Lerp(1f, 6f, zoomT);
             cameraFocusPoint += pan.normalized * (panSpeed * cameraDeltaTime);
             isCameraRotatingToTarget = false;
+            MarkTutorialGoalComplete(TutorialGoalKind.CameraPan);
         }
 
         if (Mouse.current != null)
@@ -394,6 +397,7 @@ public partial class GameBootstrap
                     cameraFocusPoint -= right * (mouseDelta.x * CameraDragPanMultiplier);
                     cameraFocusPoint -= forward * (mouseDelta.y * CameraDragPanMultiplier);
                     isCameraRotatingToTarget = false;
+                    MarkTutorialGoalComplete(TutorialGoalKind.CameraPan);
                 }
 
                 lastMousePosition = mousePosition;
@@ -414,6 +418,7 @@ public partial class GameBootstrap
                     cameraFocusPoint -= right   * (middleDelta.x * dragMultiplier);
                     cameraFocusPoint -= forward * (middleDelta.y * dragMultiplier);
                     isCameraRotatingToTarget = false;
+                    MarkTutorialGoalComplete(TutorialGoalKind.CameraPan);
                 }
                 lastMiddleMousePosition = mousePosition;
             }
@@ -443,6 +448,7 @@ public partial class GameBootstrap
                 cameraOffset = nextOffset;
                 cameraTargetOffset = cameraOffset;
                 isCameraRotatingToTarget = false;
+                MarkTutorialGoalComplete(isZoomingOut ? TutorialGoalKind.CameraZoomOut : TutorialGoalKind.CameraZoomIn);
             }
         }
 
@@ -539,9 +545,9 @@ public partial class GameBootstrap
 
         float yaw = Mathf.Atan2(lookDirection.x, lookDirection.z) * Mathf.Rad2Deg;
         float zoomT = Mathf.InverseLerp(CameraMinHeight, CameraMaxHeight, cameraOffset.y);
-        float pitchT = zoomT >= 0.3f
+        float pitchT = zoomT >= 0.2f
             ? 1f
-            : Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.3f, zoomT));
+            : Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.2f, zoomT));
         float pitch = Mathf.Lerp(DioramaCameraMinPitch, DioramaCameraPitch, pitchT);
         return Quaternion.Euler(pitch, yaw, 0f);
     }

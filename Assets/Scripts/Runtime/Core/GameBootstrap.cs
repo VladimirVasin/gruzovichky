@@ -30,9 +30,9 @@ public partial class GameBootstrap : MonoBehaviour
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
     private const float CameraZoomSpeed = 8f;
-    private const float CameraMinHeight = 3.6f;
+    private const float CameraMinHeight = 2.2f;
     private const float CameraMaxHeight = 120f;
-    private const float CameraMinDistance = 6f;
+    private const float CameraMinDistance = 5.2f;
     private const float CameraMaxDistance = 120f;
     private const float EdgeHighwayBusSpeed = 2.8f;
     private const float EdgeHighwayBusSpawnIntervalMin = 14f;
@@ -119,7 +119,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DriverShiftArrivalLeadHours = 1f;
     private const int ProductionWorkStartHour = 8;
     private const int ProductionWorkEndHour = 18;
-    private const float DioramaCameraMinPitch = 20f;
+    private const float DioramaCameraMinPitch = 8f;
     private const float DioramaCameraPitch = 52f;
     private static readonly Vector3 DioramaCameraOffset = new(-24f, 30f, -24f);
     private static readonly Vector3 CloudTravelDir = new Vector3(1f, 0f, 0.4f).normalized;
@@ -744,6 +744,8 @@ public partial class GameBootstrap : MonoBehaviour
         IdleAtCityPark,
         IdleSmoking,
         IdlePhoneCall,
+        IdleWalkToCat,
+        IdlePettingCat,
         WalkToLocalBusStop,
         WaitingAtLocalBusStop,
         RidingLocalBus,
@@ -1011,7 +1013,8 @@ public partial class GameBootstrap : MonoBehaviour
     private enum AmbientCatState
     {
         Lazing,
-        Walking
+        Walking,
+        BeingPetted
     }
 
     private enum AmbientSquirrelState
@@ -1058,7 +1061,10 @@ public partial class GameBootstrap : MonoBehaviour
         public float AnimationPhase;
         public float TailPhase;
         public float Yaw;
+        public bool IsRelocatingHome;
         public AmbientCatState State;
+        public float PettingTimer;
+        public int PettedByDriverId = -1;
     }
 
     private sealed class AmbientBeeData
@@ -1234,6 +1240,10 @@ public partial class GameBootstrap : MonoBehaviour
         public int ParkingSlotIndex;
         public float ExhaustEmitTimer;
         public float DirtDustEmitTimer;
+        public bool IsPurchaseArrivalActive;
+        public readonly List<Vector3> PurchaseArrivalWaypoints = new();
+        public int PurchaseArrivalWaypointIndex;
+        public float PurchaseArrivalSpeed = 4.6f;
     }
 
     private sealed class WorkerEffectState
@@ -1366,6 +1376,7 @@ public partial class GameBootstrap : MonoBehaviour
         public string BusTravelReason = string.Empty;
         public bool BusRideFareExempt;
         public int AssignedPersonalHouseIndex = -1;
+        public int IdleCatPetTargetIndex = -1;
         public int OwnedCarModelIndex = -1;
         public GameObject OwnedCarObject;
         public LocationType? AssignedBuildingType;      // logistics only: building this worker is assigned to
