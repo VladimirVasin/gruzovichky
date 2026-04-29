@@ -630,29 +630,73 @@ public partial class GameBootstrap
             return;
         }
 
-        DriverAgent hiredDriver = CreateAndRegisterDriverAgent(spawnInMotel: false);
+        bool tutorialWaveHire = ShouldStartTutorialWorkerHireWave();
+        int hireCount = tutorialWaveHire ? TutorialHireWorkerWaveCount : 1;
+        DriverAgent hiredDriver = null;
+        List<DriverAgent> hiredDrivers = new(hireCount);
+        for (int i = 0; i < hireCount; i++)
+        {
+            DriverAgent driver = CreateAndRegisterDriverAgent(spawnInMotel: false);
+            hiredDrivers.Add(driver);
+            hiredDriver ??= driver;
+        }
+
         money -= HireDriverCost;
-        RecordMoneyMovement(-HireDriverCost, "Treasury", "Hiring", $"Hire {hiredDriver.DriverName}", money);
+        RecordMoneyMovement(
+            -HireDriverCost,
+            "Treasury",
+            "Hiring",
+            tutorialWaveHire ? $"Tutorial hiring wave x{hireCount}" : $"Hire {hiredDriver.DriverName}",
+            money);
         hiringDriverArrival = new HiringDriverArrivalData
         {
             Driver = hiredDriver,
+            IsTutorialWave = tutorialWaveHire,
             Phase = HiringDriverArrivalPhase.WaitingLaneClear
         };
-        SessionDebugLogger.Log("DRIVER", $"Hired {hiredDriver.DriverName} for ${HireDriverCost}. Money now ${money}.");
-        LogDriverReaction(hiredDriver, $"hired for ${HireDriverCost} and arriving by bus");
+        hiringDriverArrival.Drivers.AddRange(hiredDrivers);
+
+        SessionDebugLogger.Log("DRIVER", tutorialWaveHire
+            ? $"Tutorial hired {hireCount} workers for ${HireDriverCost}. Money now ${money}."
+            : $"Hired {hiredDriver.DriverName} for ${HireDriverCost}. Money now ${money}.");
+        for (int i = 0; i < hiredDrivers.Count; i++)
+        {
+            LogDriverReaction(
+                hiredDrivers[i],
+                tutorialWaveHire
+                    ? $"hired in tutorial worker wave for ${HireDriverCost} and arriving by bus"
+                    : $"hired for ${HireDriverCost} and arriving by bus");
+        }
+
         PushFeedEvent(
-            $"Hired {hiredDriver.DriverName}. Arrival bus is on the way.",
-            $"Нанят {hiredDriver.DriverName}. Автобус с новым рабочим уже в пути.",
+            tutorialWaveHire ? $"Hired {hireCount} workers. Arrival bus is on the way." : $"Hired {hiredDriver.DriverName}. Arrival bus is on the way.",
+            tutorialWaveHire ? $"Нанято рабочих: {hireCount}. Автобус уже в пути." : $"Нанят {hiredDriver.DriverName}. Автобус с новым рабочим уже в пути.",
             FeedEventType.Success);
-        isDriversPanelOpen = false;
+        if (tutorialWaveHire)
+        {
+            isDriversPanelOpen = false;
+        }
         isDriversScreenDirty = true;
-        ScheduleTutorial(TutorialTrigger.FirstDriverHired);
+        NotifyTutorialWorkerHiredByPlayer();
+        if (!tutorialWaveHire)
+        {
+            ScheduleTutorial(TutorialTrigger.FirstDriverHired);
+        }
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isEconomyScreenDirty = true;
         PlayUiSound(uiSelectClip, 0.96f);
     }
 
+    private bool ShouldStartTutorialWorkerHireWave()
+    {
+        return selectedGameStartMode == GameStartMode.User &&
+               !isTutorialSkipped &&
+               isTutorialGoalsActive &&
+               tutorialGoalsMode == TutorialGoalsMode.WorkerCard &&
+               activeTutorialGoals.Contains(TutorialGoalKind.HireNewWorker) &&
+               !completedTutorialGoals.Contains(TutorialGoalKind.HireNewWorker);
+    }
     private void DrawAvailableTripsHud()
     {
         Rect panelRect = GetAvailableTripsHudRect();

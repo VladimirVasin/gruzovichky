@@ -179,6 +179,18 @@ public partial class GameBootstrap
             Vector3 truckPosition = tutorialCameraFollowTruck.TruckObject.transform.position;
             tutorialCameraFocusTarget = new Vector3(truckPosition.x, 0f, truckPosition.z);
         }
+        else if (tutorialCameraFollowHiringBus)
+        {
+            if (hiringDriverArrival?.BusRootTransform != null)
+            {
+                Vector3 busPosition = hiringDriverArrival.BusRootTransform.position;
+                tutorialCameraFocusTarget = new Vector3(busPosition.x, 0f, busPosition.z);
+            }
+            else
+            {
+                tutorialCameraFocusTarget = new Vector3(-1f, 0f, GetEdgeHighwayBusLaneWorldZ(isCitySideLane: false));
+            }
+        }
 
         // Wander mode: Tutorial 9 (ForestWorkerStarted) keeps the camera drifting gently around Forest while open.
         bool isWanderMode = isTutorialOpen && activeTutorialTrigger == TutorialTrigger.ForestWorkerStarted;
@@ -203,7 +215,7 @@ public partial class GameBootstrap
         mainCamera.transform.rotation = GetDioramaCameraRotation();
 
         // In wander mode the focus never completes; it stays active until OK is pressed.
-        if (!isWanderMode && !isTruckFollowMode)
+        if (!isWanderMode && !isTruckFollowMode && !tutorialCameraFollowHiringBus)
         {
             bool focusDone = (cameraFocusPoint - focusTarget).sqrMagnitude < 0.05f;
             bool offsetDone = (cameraOffset - tutorialCameraFocusOffset).sqrMagnitude < 0.01f;

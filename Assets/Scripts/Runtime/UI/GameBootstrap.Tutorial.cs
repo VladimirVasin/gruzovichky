@@ -48,6 +48,10 @@ public partial class GameBootstrap
         UserGamblingHallBuiltInfo,
         UserCityParkBuiltInfo,
         UserWorkersOverviewInfo,
+        UserWorkerHiringBusInfo,
+        UserWarehouseLoadersInfo,
+        UserLocalTransportInfo,
+        UserLocalBusRoutesInfo,
         BeeEasterEgg
     }
 
@@ -89,6 +93,7 @@ public partial class GameBootstrap
     private Vector3 tutorialCameraFocusTarget;
     private Vector3 tutorialCameraFocusOffset = TutorialForestZoomOffset;
     private TruckAgent tutorialCameraFollowTruck;
+    private bool tutorialCameraFollowHiringBus;
     private float tutorialCameraWanderTime;
     private string tutorialWindowFullText = string.Empty;
     private float tutorialWindowTypeTime;
@@ -97,7 +102,7 @@ public partial class GameBootstrap
     private TutorialHudRefs tutorialHud;
     private TutorialTrigger activeTutorialTrigger;
     private const int TutorialStepCount = 17;
-    private const int NewUserTutorialStepCount = 20;
+    private const int NewUserTutorialStepCount = 24;
     private static readonly Vector3 UserWelcomeCameraOffset = new(-13f, 14f, -13f);
 
     private static bool IsNewUserTutorialTrigger(TutorialTrigger trigger)
@@ -123,7 +128,11 @@ public partial class GameBootstrap
             or TutorialTrigger.UserGasStationBuiltInfo
             or TutorialTrigger.UserGamblingHallBuiltInfo
             or TutorialTrigger.UserCityParkBuiltInfo
-            or TutorialTrigger.UserWorkersOverviewInfo;
+            or TutorialTrigger.UserWorkersOverviewInfo
+            or TutorialTrigger.UserWorkerHiringBusInfo
+            or TutorialTrigger.UserWarehouseLoadersInfo
+            or TutorialTrigger.UserLocalTransportInfo
+            or TutorialTrigger.UserLocalBusRoutesInfo;
     }
 
     private int GetNextUserCoreBuildingInfoTutorialStep()
@@ -162,7 +171,11 @@ public partial class GameBootstrap
             or TutorialTrigger.UserGasStationBuiltInfo
             or TutorialTrigger.UserGamblingHallBuiltInfo
             or TutorialTrigger.UserCityParkBuiltInfo
-            or TutorialTrigger.UserWorkersOverviewInfo;
+            or TutorialTrigger.UserWorkersOverviewInfo
+            or TutorialTrigger.UserWorkerHiringBusInfo
+            or TutorialTrigger.UserWarehouseLoadersInfo
+            or TutorialTrigger.UserLocalTransportInfo
+            or TutorialTrigger.UserLocalBusRoutesInfo;
     }
 
     private void ScheduleTutorial(TutorialTrigger trigger, float delay = 0.12f)
@@ -204,6 +217,10 @@ public partial class GameBootstrap
         hasShownUserGamblingHallBuiltTutorial = false;
         hasShownUserCityParkBuiltTutorial = false;
         hasShownUserWorkersOverviewTutorial = false;
+        hasShownUserWorkerHiringBusTutorial = false;
+        hasShownUserWarehouseLoadersTutorial = false;
+        hasShownUserLocalTransportTutorial = false;
+        hasShownUserLocalBusRoutesTutorial = false;
         nextUserServiceBuildingInfoTutorialStep = 15;
         hasShownFleetSelectTruckTutorial = false;
         hasShownFleetAssignDriverTutorial = false;
@@ -217,6 +234,7 @@ public partial class GameBootstrap
         isTutorialTruckDriverVacancyUnlocked = false;
         isTutorialCameraFocusActive = false;
         tutorialCameraFollowTruck = null;
+        tutorialCameraFollowHiringBus = false;
         HideTutorialOrbitHud();
         if (tutorialHud?.CanvasRoot != null)
         {
@@ -548,8 +566,39 @@ public partial class GameBootstrap
                     20,
                     overviewRu ? "\u0420\u0430\u0431\u043e\u0447\u0438\u0435" : "Workers",
                     overviewRu
-                        ? "\u0423 \u043a\u0430\u0436\u0434\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u0435\u0441\u0442\u044c \u043d\u0430\u0432\u044b\u043a\u0438, \u0434\u0435\u043d\u044c\u0433\u0438, \u043d\u0443\u0436\u0434\u044b, \u043f\u0435\u0440\u043a\u0438 \u0438 \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u044b\u0435 \u044d\u0444\u0444\u0435\u043a\u0442\u044b.\n\n\u041d\u0443\u0436\u0434\u044b \u043f\u043e\u0434\u0441\u043a\u0430\u0436\u0443\u0442, \u0447\u0442\u043e \u0447\u0435\u043b\u043e\u0432\u0435\u043a\u0443 \u0441\u0435\u0439\u0447\u0430\u0441 \u043d\u0443\u0436\u043d\u043e: \u0435\u0434\u0430, \u0441\u043e\u043d \u0438\u043b\u0438 \u0434\u043e\u0441\u0443\u0433.\n\n\u041e\u0442\u043a\u0440\u043e\u0439 \u043c\u0435\u043d\u044e \u0420\u0430\u0431\u043e\u0447\u0438\u0435, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e."
-                        : "Each worker has skills, money, needs, perks, and temporary effects.\n\nNeeds tell you what the person currently requires: food, sleep, or leisure.\n\nOpen the Workers menu to inspect a worker card.");
+                        ? "\u0423 \u043a\u0430\u0436\u0434\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u0435\u0441\u0442\u044c \u043d\u0430\u0432\u044b\u043a\u0438, \u0434\u0435\u043d\u044c\u0433\u0438, \u043d\u0443\u0436\u0434\u044b, \u043f\u0435\u0440\u043a\u0438 \u0438 \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u044b\u0435 \u044d\u0444\u0444\u0435\u043a\u0442\u044b.\n\n\u041d\u0443\u0436\u0434\u044b \u043f\u043e\u0434\u0441\u043a\u0430\u0436\u0443\u0442, \u0447\u0442\u043e \u0447\u0435\u043b\u043e\u0432\u0435\u043a\u0443 \u0441\u0435\u0439\u0447\u0430\u0441 \u043d\u0443\u0436\u043d\u043e: \u0435\u0434\u0430, \u0441\u043e\u043d \u0438\u043b\u0438 \u0434\u043e\u0441\u0443\u0433.\n\n\u041e\u0442\u043a\u0440\u043e\u0439 \u0420\u0430\u0431\u043e\u0447\u0438\u0445, \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0438 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0438 \u043d\u0430\u0439\u043c\u0438 \u043d\u043e\u0432\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e."
+                        : "Each worker has skills, money, needs, perks, and temporary effects.\n\nNeeds tell you what the person currently requires: food, sleep, or leisure.\n\nOpen Workers, inspect a worker card, and hire a new worker.");
+                break;
+            case TutorialTrigger.UserWorkerHiringBusInfo:
+                if (hasShownUserWorkerHiringBusTutorial) return;
+                hasShownUserWorkerHiringBusTutorial = true;
+                FocusCameraOnHiringBusForTutorial();
+                bool hireBusRu = IsRussianLanguage();
+                ShowTutorialWindow(
+                    TutorialTrigger.UserWorkerHiringBusInfo,
+                    21,
+                    hireBusRu ? "\u041d\u043e\u0432\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0432 \u043f\u0443\u0442\u0438" : "New Workers En Route",
+                    hireBusRu
+                        ? "\u041d\u043e\u0432\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0435\u0437\u0436\u0430\u044e\u0442 \u0438\u0437\u0432\u043d\u0435 \u043d\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435. \u041e\u043d\u0438 \u0432\u044b\u0439\u0434\u0443\u0442 \u0443 \u043c\u0435\u0436\u0434\u0443\u0433\u043e\u0440\u043e\u0434\u043d\u0435\u0439 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438 \u0438 \u043f\u043e\u0439\u0434\u0443\u0442 \u043a \u041c\u043e\u0442\u0435\u043b\u044e.\n\n\u0412 \u044d\u0442\u043e\u043c \u043e\u0431\u0443\u0447\u0430\u044e\u0449\u0435\u043c \u0437\u0430\u0435\u0437\u0434\u0435 \u0430\u0432\u0442\u043e\u0431\u0443\u0441 \u043f\u0440\u0438\u0432\u0435\u0437\u0451\u0442 \u0441\u0440\u0430\u0437\u0443 7 \u0440\u0430\u0431\u043e\u0447\u0438\u0445, \u0447\u0442\u043e\u0431\u044b \u0433\u043e\u0440\u043e\u0434 \u0431\u044b\u0441\u0442\u0440\u0435\u0435 \u043e\u0436\u0438\u043b."
+                        : "New workers arrive from outside by bus. They get off at the intercity stop and walk to the Motel.\n\nFor this tutorial run, the bus brings 7 workers at once so the town can become busy faster.");
+                break;
+            case TutorialTrigger.UserWarehouseLoadersInfo:
+                if (hasShownUserWarehouseLoadersTutorial) return;
+                hasShownUserWarehouseLoadersTutorial = true;
+                bool warehouseLoadersRu = IsRussianLanguage();
+                ShowTutorialWindow(
+                    TutorialTrigger.UserWarehouseLoadersInfo,
+                    22,
+                    warehouseLoadersRu ? "\u0420\u0435\u0441\u0443\u0440\u0441\u044b \u0438 \u0433\u0440\u0443\u0437\u0447\u0438\u043a\u0438" : "Resources and Loaders",
+                    warehouseLoadersRu
+                        ? "\u041c\u0435\u043d\u044e \u0420\u0435\u0441\u0443\u0440\u0441\u044b \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u0442, \u0447\u0442\u043e \u043d\u0430\u043a\u043e\u043f\u043b\u0435\u043d\u043e \u0432 \u0433\u043e\u0440\u043e\u0434\u0435 \u0438 \u043d\u0430 \u0421\u043a\u043b\u0430\u0434\u0435.\n\n\u0421\u043a\u043b\u0430\u0434 \u043d\u0435 \u0442\u043e\u043b\u044c\u043a\u043e \u0445\u0440\u0430\u043d\u0438\u0442 \u0442\u043e\u0432\u0430\u0440\u044b. \u0421\u043a\u043b\u0430\u0434\u0441\u043a\u0438\u0435 \u0433\u0440\u0443\u0437\u0447\u0438\u043a\u0438 \u0440\u0430\u0437\u043d\u043e\u0441\u044f\u0442 \u0437\u0430\u043f\u0430\u0441\u044b \u043f\u043e \u0441\u0435\u0440\u0432\u0438\u0441\u043d\u044b\u043c \u0437\u0434\u0430\u043d\u0438\u044f\u043c: \u0435\u0434\u0443, \u0430\u043b\u043a\u043e\u0433\u043e\u043b\u044c \u0438 \u0442\u043e\u043f\u043b\u0438\u0432\u043e.\n\n\u041e\u0442\u043a\u0440\u043e\u0439 \u0412\u0430\u043a\u0430\u043d\u0441\u0438\u0438 \u0438 \u043d\u0430\u0437\u043d\u0430\u0447\u044c 3 \u0433\u0440\u0443\u0437\u0447\u0438\u043a\u043e\u0432 \u043d\u0430 \u0421\u043a\u043b\u0430\u0434."
+                        : "The Resources menu shows what the town and Warehouse have stored.\n\nWarehouse does more than store goods. Warehouse loaders carry supplies to service buildings: food, alcohol, and fuel.\n\nOpen Vacancies and assign 3 loaders to the Warehouse.");
+                break;
+            case TutorialTrigger.UserLocalTransportInfo:
+                ShowUserLocalTransportTutorial();
+                break;
+            case TutorialTrigger.UserLocalBusRoutesInfo:
+                ShowUserLocalBusRoutesTutorial();
                 break;
             case TutorialTrigger.BuildMotelPrompt:
                 ShowTutorialWindow(
@@ -780,36 +829,6 @@ public partial class GameBootstrap
         }
     }
 
-    private void OpenWorkersPanelFromTutorial()
-    {
-        isFleetPanelOpen     = false;
-        isShiftsPanelOpen    = false;
-        isResourcesPanelOpen = false;
-        isEconomyPanelOpen   = false;
-        isBuildPanelOpen     = false;
-        isWorldMapPanelOpen  = false;
-        isDriversPanelOpen   = true;
-        isDriversScreenDirty = true;
-        ScheduleTutorial(TutorialTrigger.WorkersPanelOpened);
-        LogUiInput("Tutorial: auto-opened Workers panel after tutorial 3 OK");
-        PlayUiSound(uiPanelOpenClip, 0.9f);
-    }
-
-    private void OpenBuildPanelFromTutorial()
-    {
-        // Close all panels then open Build, same effect as clicking the Building button.
-        isFleetPanelOpen      = false;
-        isShiftsPanelOpen     = false;
-        isDriversPanelOpen    = false;
-        isResourcesPanelOpen  = false;
-        isEconomyPanelOpen    = false;
-        isWorldMapPanelOpen   = false;
-        isBuildPanelOpen      = true;
-        isBuildScreenDirty    = true;
-        LogUiInput("Tutorial: auto-opened Build panel after tutorial 2 OK");
-        PlayUiSound(uiPanelOpenClip, 0.9f);
-    }
-
     private static readonly Color OverlayColorFull        = new(0.02f, 0.03f, 0.05f, 0.56f);
     private static readonly Color OverlayColorTransparent = new(0f, 0f, 0f, 0f);
 
@@ -817,6 +836,7 @@ public partial class GameBootstrap
     {
         if (tutorialHud?.WindowRect == null) return;
         if (activeTutorialTrigger is TutorialTrigger.UserTruckPurchasedArrivalInfo
+            or TutorialTrigger.UserWorkerHiringBusInfo
             or TutorialTrigger.UserTruckAssignedFreightInfo
             or TutorialTrigger.UserWorkersLeisureInfo
             or TutorialTrigger.UserBuildServiceBuildingsPrompt
@@ -825,10 +845,14 @@ public partial class GameBootstrap
             or TutorialTrigger.UserGasStationBuiltInfo
             or TutorialTrigger.UserGamblingHallBuiltInfo
             or TutorialTrigger.UserCityParkBuiltInfo
-            or TutorialTrigger.UserWorkersOverviewInfo)
+            or TutorialTrigger.UserWorkersOverviewInfo
+            or TutorialTrigger.UserLocalTransportInfo
+            or TutorialTrigger.UserLocalBusRoutesInfo)
         {
             tutorialHud.WindowRect.sizeDelta        = new Vector2(520f, 330f);
-            tutorialHud.WindowRect.anchoredPosition = new Vector2(260f, 92f);
+            tutorialHud.WindowRect.anchoredPosition = activeTutorialTrigger == TutorialTrigger.UserWorkerHiringBusInfo
+                ? new Vector2(350f, 126f)
+                : new Vector2(260f, 92f);
             if (tutorialHud.BodyPanelLayout != null) tutorialHud.BodyPanelLayout.preferredHeight = 150f;
             if (tutorialHud.OverlayImage    != null) tutorialHud.OverlayImage.color = OverlayColorTransparent;
             tutorialBobTime = 0f;
@@ -1219,6 +1243,26 @@ public partial class GameBootstrap
             tutorialCameraFollowTruck = null;
             isTutorialCameraFocusActive = false;
             isCameraReturningToDiorama = true;
+        }
+
+        if (activeTutorialTrigger == TutorialTrigger.UserWorkerHiringBusInfo)
+        {
+            tutorialCameraFollowHiringBus = false;
+            isTutorialCameraFocusActive = false;
+            isCameraReturningToDiorama = true;
+            UnlockAllBuildTools();
+            UnlockAllTutorialVacancies();
+            SessionDebugLogger.Log("TUTORIAL", "Unlocked all build tools and vacancies after tutorial hiring bus info.");
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserWarehouseLoadersInfo)
+        {
+            BeginWarehouseLoadersTutorialGoals();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserLocalTransportInfo)
+        {
+            BeginLocalTransportTutorialGoals();
         }
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserTruckAssignedFreightInfo)

@@ -24,7 +24,11 @@ public partial class GameBootstrap
         BuildCanteen,
         BuildGasStation,
         BuildCityPark,
-        OpenWorkersCard
+        OpenWorkersCard,
+        HireNewWorker,
+        AssignWarehouseLoaders,
+        BuildLocalBusStops,
+        AssignBusDrivers
     }
 
     private enum TutorialGoalsMode
@@ -35,7 +39,9 @@ public partial class GameBootstrap
         LumberjackCamp,
         BuyTruck,
         ServiceBuildings,
-        WorkerCard
+        WorkerCard,
+        WarehouseLoaders,
+        LocalTransport
     }
 
     private sealed class TutorialGoalRowUi
@@ -71,6 +77,8 @@ public partial class GameBootstrap
     private bool shouldShowWorkerShiftTutorialAfterLumberjackGoals;
     private bool shouldShowTruckFreightTutorialAfterBuyTruckGoals;
     private bool shouldShowWorkersOverviewAfterServiceGoals;
+    private bool shouldShowLocalTransportAfterWarehouseLoadersGoals;
+    private bool shouldShowLocalBusRoutesAfterTransportGoals;
     private TutorialGoalsMode tutorialGoalsMode;
 
     private void ResetTutorialGoalsForNewGame()
@@ -87,6 +95,8 @@ public partial class GameBootstrap
         shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
         shouldShowTruckFreightTutorialAfterBuyTruckGoals = false;
         shouldShowWorkersOverviewAfterServiceGoals = false;
+        shouldShowLocalTransportAfterWarehouseLoadersGoals = false;
+        shouldShowLocalBusRoutesAfterTransportGoals = false;
         tutorialGoalsMode = TutorialGoalsMode.CameraControls;
         if (tutorialGoalsHud?.CanvasRoot != null)
         {
@@ -231,6 +241,7 @@ public partial class GameBootstrap
         activeTutorialGoals.Clear();
         ClearTutorialGoalContinuationFlags();
         activeTutorialGoals.Add(TutorialGoalKind.OpenWorkersCard);
+        activeTutorialGoals.Add(TutorialGoalKind.HireNewWorker);
         isTutorialGoalsActive = true;
         isTutorialGoalsComplete = false;
         tutorialGoalsSuccessTimer = 0f;
@@ -242,7 +253,44 @@ public partial class GameBootstrap
             MarkTutorialGoalComplete(TutorialGoalKind.OpenWorkersCard);
         }
 
-        SessionDebugLogger.Log("TUTORIAL", "Worker card goal started.");
+        SessionDebugLogger.Log("TUTORIAL", "Worker card and hiring goals started.");
+    }
+
+    private void BeginWarehouseLoadersTutorialGoals()
+    {
+        EnsureTutorialGoalsHud();
+        completedTutorialGoals.Clear();
+        activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
+        activeTutorialGoals.Add(TutorialGoalKind.AssignWarehouseLoaders);
+        isTutorialGoalsActive = true;
+        isTutorialGoalsComplete = false;
+        tutorialGoalsSuccessTimer = 0f;
+        tutorialGoalsSuccessDuration = 0f;
+        tutorialGoalsMode = TutorialGoalsMode.WarehouseLoaders;
+        shouldShowLocalTransportAfterWarehouseLoadersGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        ShowTutorialGoalsHud();
+        CheckTutorialWarehouseLoaderGoal();
+        SessionDebugLogger.Log("TUTORIAL", "Warehouse loader goals started.");
+    }
+
+    private void BeginLocalTransportTutorialGoals()
+    {
+        EnsureTutorialGoalsHud();
+        completedTutorialGoals.Clear();
+        activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
+        activeTutorialGoals.Add(TutorialGoalKind.BuildLocalBusStops);
+        activeTutorialGoals.Add(TutorialGoalKind.AssignBusDrivers);
+        isTutorialGoalsActive = true;
+        isTutorialGoalsComplete = false;
+        tutorialGoalsSuccessTimer = 0f;
+        tutorialGoalsSuccessDuration = 0f;
+        tutorialGoalsMode = TutorialGoalsMode.LocalTransport;
+        shouldShowLocalBusRoutesAfterTransportGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        ShowTutorialGoalsHud();
+        CheckTutorialLocalTransportGoals();
+        SessionDebugLogger.Log("TUTORIAL", "Local transport goals started.");
     }
 
     private void ClearTutorialGoalContinuationFlags()
@@ -253,6 +301,8 @@ public partial class GameBootstrap
         shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
         shouldShowTruckFreightTutorialAfterBuyTruckGoals = false;
         shouldShowWorkersOverviewAfterServiceGoals = false;
+        shouldShowLocalTransportAfterWarehouseLoadersGoals = false;
+        shouldShowLocalBusRoutesAfterTransportGoals = false;
     }
 
     private void ShowTutorialGoalsHud()
@@ -371,6 +421,10 @@ public partial class GameBootstrap
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildGasStation);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildCityPark);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.OpenWorkersCard);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.HireNewWorker);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignWarehouseLoaders);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildLocalBusStops);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignBusDrivers);
 
         RectTransform flash = FleetCanvasUiFactory.CreateUiObject("SuccessFlash", panel).GetComponent<RectTransform>();
         flash.anchorMin = Vector2.zero;
@@ -458,7 +512,9 @@ public partial class GameBootstrap
             TutorialGoalsMode.LumberjackCamp => ru ? "\u0417\u0430\u043f\u0443\u0441\u0442\u0438 \u043f\u0435\u0440\u0432\u0443\u044e \u0434\u043e\u0431\u044b\u0447\u0443 \u0434\u0435\u0440\u0435\u0432\u0430." : "Start your first logging production.",
             TutorialGoalsMode.BuyTruck => ru ? "\u041a\u0443\u043f\u0438 \u043f\u0435\u0440\u0432\u044b\u0439 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a." : "Buy the first truck.",
             TutorialGoalsMode.ServiceBuildings => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0441\u0435\u0440\u0432\u0438\u0441\u044b \u0434\u043b\u044f \u043b\u044e\u0434\u0435\u0439 \u0438 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u0430." : "Build services for workers and vehicles.",
-            TutorialGoalsMode.WorkerCard => ru ? "\u041e\u0442\u043a\u0440\u043e\u0439 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e." : "Open a worker card.",
+            TutorialGoalsMode.WorkerCard => ru ? "\u041e\u0442\u043a\u0440\u043e\u0439 \u0420\u0430\u0431\u043e\u0447\u0438\u0445 \u0438 \u043d\u0430\u0439\u043c\u0438 \u043d\u043e\u0432\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e." : "Open Workers and hire a new worker.",
+            TutorialGoalsMode.WarehouseLoaders => ru ? "\u041d\u0430\u0439\u043c\u0438 \u0433\u0440\u0443\u0437\u0447\u0438\u043a\u043e\u0432 \u043d\u0430 \u0421\u043a\u043b\u0430\u0434." : "Assign loaders to the Warehouse.",
+            TutorialGoalsMode.LocalTransport => ru ? "\u041f\u043e\u0441\u0442\u0430\u0432\u044c 2 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438 \u0438 \u043d\u0430\u0437\u043d\u0430\u0447\u044c 3 \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u0435\u0439 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0430." : "Place 2 stops and assign 3 bus drivers.",
             _ => ru ? "\u041e\u0441\u0432\u043e\u0439 \u043a\u0430\u043c\u0435\u0440\u0443 \u043f\u0435\u0440\u0435\u0434 \u0441\u0442\u0440\u043e\u0439\u043a\u043e\u0439." : "Learn the camera before building."
         };
 
@@ -513,6 +569,10 @@ public partial class GameBootstrap
             TutorialGoalKind.BuildGasStation => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0417\u0430\u043f\u0440\u0430\u0432\u043a\u0443" : "Build Gas Station",
             TutorialGoalKind.BuildCityPark => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 City Park" : "Build City Park",
             TutorialGoalKind.OpenWorkersCard => ru ? "\u041e\u0442\u043a\u0440\u043e\u0439 \u043c\u0435\u043d\u044e \u0420\u0430\u0431\u043e\u0447\u0438\u0435" : "Open the Workers menu",
+            TutorialGoalKind.HireNewWorker => ru ? "\u041d\u0430\u0439\u043c\u0438 \u043d\u043e\u0432\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e" : "Hire a new worker",
+            TutorialGoalKind.AssignWarehouseLoaders => ru ? "\u041d\u0430\u0437\u043d\u0430\u0447\u044c 3 \u0433\u0440\u0443\u0437\u0447\u0438\u043a\u043e\u0432 \u043d\u0430 \u0421\u043a\u043b\u0430\u0434" : "Assign 3 loaders to Warehouse",
+            TutorialGoalKind.BuildLocalBusStops => ru ? "\u041f\u043e\u0441\u0442\u0430\u0432\u044c 2 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043d\u044b\u0435 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438" : "Place 2 bus stops",
+            TutorialGoalKind.AssignBusDrivers => ru ? "\u041d\u0430\u0437\u043d\u0430\u0447\u044c 3 \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u0435\u0439 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0430" : "Assign 3 bus drivers",
             _ => string.Empty
         };
     }
@@ -540,7 +600,9 @@ public partial class GameBootstrap
             TutorialGoalsMode.LumberjackCamp => kind is TutorialGoalKind.BuildLumberjackCamp or TutorialGoalKind.AssignLumberjackWorker,
             TutorialGoalsMode.BuyTruck => kind is TutorialGoalKind.BuyFirstTruck or TutorialGoalKind.AssignTruckDriverShift,
             TutorialGoalsMode.ServiceBuildings => kind is TutorialGoalKind.BuildBar or TutorialGoalKind.BuildGamblingHall or TutorialGoalKind.BuildCanteen or TutorialGoalKind.BuildGasStation or TutorialGoalKind.BuildCityPark,
-            TutorialGoalsMode.WorkerCard => kind is TutorialGoalKind.OpenWorkersCard,
+            TutorialGoalsMode.WorkerCard => kind is TutorialGoalKind.OpenWorkersCard or TutorialGoalKind.HireNewWorker,
+            TutorialGoalsMode.WarehouseLoaders => kind is TutorialGoalKind.AssignWarehouseLoaders,
+            TutorialGoalsMode.LocalTransport => kind is TutorialGoalKind.BuildLocalBusStops or TutorialGoalKind.AssignBusDrivers,
             _ => kind is TutorialGoalKind.CameraZoomIn or TutorialGoalKind.CameraZoomOut or TutorialGoalKind.CameraPan or TutorialGoalKind.CameraRotate
         };
     }
@@ -621,6 +683,16 @@ public partial class GameBootstrap
             {
                 shouldShowWorkersOverviewAfterServiceGoals = false;
                 ScheduleTutorial(TutorialTrigger.UserWorkersOverviewInfo, 0.8f);
+            }
+            else if (shouldShowLocalTransportAfterWarehouseLoadersGoals && !isTutorialSkipped)
+            {
+                shouldShowLocalTransportAfterWarehouseLoadersGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserLocalTransportInfo, 0.8f);
+            }
+            else if (shouldShowLocalBusRoutesAfterTransportGoals && !isTutorialSkipped)
+            {
+                shouldShowLocalBusRoutesAfterTransportGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserLocalBusRoutesInfo, 0.8f);
             }
         }
     }

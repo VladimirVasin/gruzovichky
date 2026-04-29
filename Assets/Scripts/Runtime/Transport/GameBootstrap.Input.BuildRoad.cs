@@ -1171,6 +1171,16 @@ public partial class GameBootstrap
                     Vector2Int previousDirection = GetRoadPathPreviewDirection(path, i - 1);
                     anyBuilt |= TryFillRoadTurnFootprint(path[i - 1], previousDirection, path[i], direction, IsBuildRoadBlockedCell, "player");
                 }
+                else
+                {
+                    // Fill corner where this path starts adjacent to an existing perpendicular road
+                    Vector2Int behindCell = path[0] - direction;
+                    if (roadCells.Contains(behindCell))
+                    {
+                        anyBuilt |= TryFillRoadTurnFootprint(behindCell, new Vector2Int(-direction.y, direction.x), path[0], direction, IsBuildRoadBlockedCell, "player-junction");
+                        anyBuilt |= TryFillRoadTurnFootprint(behindCell, new Vector2Int(direction.y, -direction.x), path[0], direction, IsBuildRoadBlockedCell, "player-junction");
+                    }
+                }
             }
             return anyBuilt;
         });
@@ -1224,6 +1234,18 @@ public partial class GameBootstrap
                 {
                     Vector2Int previousDirection = GetRoadPathPreviewDirection(path, i - 1);
                     AddRoadTurnPreviewFootprint(path[i - 1], previousDirection, pathOffsets[i - 1], path[i], direction, pathOffsets[i]);
+                }
+                else if (activeBuildTool != BuildTool.SingleRoad)
+                {
+                    // Preview corner fill where path starts adjacent to an existing perpendicular road
+                    Vector2Int behindCell = path[0] - direction;
+                    if (roadCells.Contains(behindCell))
+                    {
+                        Vector2Int perpA = new Vector2Int(-direction.y, direction.x);
+                        AddRoadTurnPreviewFootprint(behindCell, perpA, GetExistingRoadWidthOffset(behindCell, perpA), path[0], direction, widthOffset);
+                        Vector2Int perpB = new Vector2Int(direction.y, -direction.x);
+                        AddRoadTurnPreviewFootprint(behindCell, perpB, GetExistingRoadWidthOffset(behindCell, perpB), path[0], direction, widthOffset);
+                    }
                 }
             }
         }

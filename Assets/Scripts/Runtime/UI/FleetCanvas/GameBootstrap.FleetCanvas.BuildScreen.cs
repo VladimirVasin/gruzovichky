@@ -565,6 +565,34 @@ public partial class GameBootstrap
                 break;
             }
 
+            // ── Gas Station ───────────────────────────────────────────────────
+            case BuildTool.GasStation:
+            {
+                Color canopy = new(0.84f, 0.68f, 0.26f); // yellow canopy
+                Color pole   = new(0.55f, 0.56f, 0.58f); // steel poles
+                Color pump   = new(0.22f, 0.24f, 0.28f); // dark pump body
+                Color screen = new(0.50f, 0.82f, 0.96f); // blue display
+                Color nozzle = new(0.18f, 0.18f, 0.20f); // nozzle/hose
+                Color asph   = new(0.20f, 0.20f, 0.22f); // asphalt ground
+                // Ground strip
+                P(0.06f, 0.08f, 0.94f, 0.16f, asph);
+                // Canopy support poles
+                P(0.13f, 0.14f, 0.19f, 0.72f, pole);
+                P(0.81f, 0.14f, 0.87f, 0.72f, pole);
+                // Canopy roof
+                P(0.06f, 0.70f, 0.94f, 0.84f, canopy);
+                // Fuel pump body
+                P(0.38f, 0.16f, 0.62f, 0.64f, pump);
+                // Pump screen (blue display)
+                P(0.42f, 0.46f, 0.58f, 0.60f, screen);
+                // Pump nozzle hook (horizontal arm + vertical drop)
+                P(0.24f, 0.36f, 0.38f, 0.41f, nozzle);
+                P(0.24f, 0.22f, 0.30f, 0.38f, nozzle);
+                // Red fuel indicator dot on pump
+                P(0.42f, 0.30f, 0.52f, 0.40f, new Color(0.90f, 0.22f, 0.18f));
+                break;
+            }
+
             // ── Warehouse ─────────────────────────────────────────────────────
             case BuildTool.Warehouse:
             {

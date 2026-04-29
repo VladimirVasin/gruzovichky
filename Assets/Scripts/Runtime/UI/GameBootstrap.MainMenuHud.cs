@@ -103,6 +103,10 @@ public partial class GameBootstrap
     private bool hasShownUserGamblingHallBuiltTutorial;
     private bool hasShownUserCityParkBuiltTutorial;
     private bool hasShownUserWorkersOverviewTutorial;
+    private bool hasShownUserWorkerHiringBusTutorial;
+    private bool hasShownUserWarehouseLoadersTutorial;
+    private bool hasShownUserLocalTransportTutorial;
+    private bool hasShownUserLocalBusRoutesTutorial;
     private int nextUserServiceBuildingInfoTutorialStep = 15;
     private bool hasShownFleetIntroTutorial;
     private bool hasShownFleetSelectTruckTutorial;

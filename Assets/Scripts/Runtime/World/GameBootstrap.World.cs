@@ -374,6 +374,7 @@ public partial class GameBootstrap
         RebuildRoadsideBenches();
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Stop at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        NotifyTutorialLocalBusStopBuilt();
         return true;
     }
 

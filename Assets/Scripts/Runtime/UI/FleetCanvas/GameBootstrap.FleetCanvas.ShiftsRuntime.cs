@@ -623,6 +623,10 @@ public partial class GameBootstrap
                 SessionDebugLogger.Log("TUTORIAL", "Closed Vacancies after Lumberjack Camp worker assignment.");
             }
         }
+        else if (slot.BuildingType == LocationType.Warehouse)
+        {
+            NotifyTutorialWarehouseLoaderAssigned();
+        }
 
         LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {slot.BuildingType} ({GetProductionWorkRangeLabel()})");
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType} production work ({GetProductionWorkRangeLabel()}).");
@@ -752,6 +756,11 @@ public partial class GameBootstrap
     {
         if (driver == null) return;
         if (driver.IsArrivingByBus || driver.DutyMode == DriverDutyMode.Intercity) return;
+        if (driver.AssignedTruckNumber <= 0)
+        {
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} intercity assignment rejected: no truck assigned.");
+            return;
+        }
 
         if (HasActiveTradeRun())
         {
@@ -763,6 +772,11 @@ public partial class GameBootstrap
         DriverAgent currentIntercity = GetIntercityAssignedDriver();
         if (currentIntercity != null && currentIntercity != driver)
         {
+            TruckAgent currentTruck = GetAssignedTruckForDriver(currentIntercity);
+            if (currentTruck != null)
+            {
+                UnassignDriverFromTruck(currentTruck, currentIntercity);
+            }
             SetDriverDutyMode(currentIntercity, DriverDutyMode.Local);
         }
 
@@ -830,6 +844,7 @@ public partial class GameBootstrap
             StartBusDriverShiftCommute(driver);
         }
         LogDriverReaction(driver, $"assigned to bus duty {ShiftNames[slotIndex]} ({GetShiftRangeLabel(ShiftPresetHours[slotIndex])})");
+        NotifyTutorialBusDriverAssigned();
         isShiftsScreenDirty = true;
         isDriversScreenDirty = true;
     }
@@ -850,6 +865,11 @@ public partial class GameBootstrap
         }
 
         SetDriverDutyMode(intercityDriver, DriverDutyMode.Local);
+        TruckAgent assignedTruck = GetAssignedTruckForDriver(intercityDriver);
+        if (assignedTruck != null)
+        {
+            UnassignDriverFromTruck(assignedTruck, intercityDriver);
+        }
         intercityDriverId = 0;
         PlayUiSound(uiSelectClip, 0.85f);
         SessionDebugLogger.Log("SHIFT", $"{intercityDriver.DriverName} removed from Intercity slot.");

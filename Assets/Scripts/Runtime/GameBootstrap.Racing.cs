@@ -333,14 +333,20 @@ public partial class GameBootstrap : MonoBehaviour
 
         bool shouldShow = isGameStarted &&
                           !isRacingActive &&
-                          (selectedGameStartMode == GameStartMode.Debug ||
-                           (activeTradeRun != null && activeTradeRun.Phase == TradeRunPhase.OutOfMap));
+                          IsRaceJoinWindowOpen();
 
         if (joinRaceButtonRoot.activeSelf != shouldShow)
             joinRaceButtonRoot.SetActive(shouldShow);
     }
 
     // в”Ђв”Ђ Minigame entry / exit в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+
+    private bool IsRaceJoinWindowOpen()
+    {
+        if (activeTradeRun == null || activeTradeRun.Phase != TradeRunPhase.OutOfMap) return false;
+        float elapsed = activeTradeRun.OutOfMapDuration - activeTradeRun.OutOfMapTimer;
+        return elapsed <= DayNightCycleDuration / 24f;
+    }
 
     private bool TryHandleJoinRaceButtonClick(Vector2 screenPosition)
     {

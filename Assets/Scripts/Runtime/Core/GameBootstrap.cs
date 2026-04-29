@@ -118,6 +118,10 @@ public partial class GameBootstrap : MonoBehaviour
     private const int MaxTruckCount = 5;
     private const int HireTruckCost = 300;
     private const int HireDriverCost = 50;
+    private const int TutorialHireWorkerWaveCount = 7;
+    private const int TutorialWarehouseLoaderGoalCount = 3;
+    private const int TutorialLocalBusStopGoalCount = 2;
+    private const int TutorialBusDriverGoalCount = 3;
     private const int InitialWorkerCount = 3;
     private const int MaxMoneyLedgerEntries = 128;
     private const float DayNightCycleDuration = 440f; // 4 periods × 110s = 7m20s full day
@@ -517,6 +521,8 @@ public partial class GameBootstrap : MonoBehaviour
     private sealed class HiringDriverArrivalData
     {
         public DriverAgent Driver;
+        public readonly List<DriverAgent> Drivers = new();
+        public bool IsTutorialWave;
         public Transform BusRootTransform;
         public Renderer HeadlightLeftRenderer;
         public Renderer HeadlightRightRenderer;

@@ -32,8 +32,12 @@ public partial class GameBootstrap
                 : type == LocationType.GasStation
                     ? GasStationMaxFuelStorage
                     : 0,
-            AlcoholStored = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
-            FoodStored    = type == LocationType.Warehouse ? WarehouseResourceStartAmount : 0,
+            AlcoholStored = type == LocationType.Warehouse ? WarehouseResourceStartAmount
+                          : type == LocationType.Bar      ? BarMaxAlcoholStorage
+                          : 0,
+            FoodStored    = type == LocationType.Warehouse ? WarehouseResourceStartAmount
+                          : type == LocationType.Canteen  ? CanteenMaxFoodStorage
+                          : 0,
             BuildingBank  = type == LocationType.GamblingHall ? 50 : 0,
         };
 

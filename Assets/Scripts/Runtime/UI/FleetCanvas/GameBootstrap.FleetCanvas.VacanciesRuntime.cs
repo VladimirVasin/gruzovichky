@@ -155,7 +155,7 @@ public partial class GameBootstrap
         if (vacancy == null) return 0;
         if (vacancy.IsOccupied) return 4;
         if (VacancyRequiresShiftStep(vacancy) && !HasSelectedVacancyShift(vacancy)) return 1;
-        if (vacancy.Kind == VacancyKind.TruckDriver)
+        if (VacancyRequiresTruckStep(vacancy))
         {
             if (selectedVacancyTruckNumber <= 0) return 2;
             return 3;
@@ -168,8 +168,13 @@ public partial class GameBootstrap
         if (vacancy == null) return step == 0;
         if (step == 0 || step == 3) return true;
         if (step == 1) return VacancyRequiresShiftStep(vacancy);
-        if (step == 2) return vacancy.Kind == VacancyKind.TruckDriver;
+        if (step == 2) return VacancyRequiresTruckStep(vacancy);
         return false;
+    }
+
+    private static bool VacancyRequiresTruckStep(VacancyViewModel vacancy)
+    {
+        return vacancy != null && (vacancy.Kind == VacancyKind.TruckDriver || vacancy.Kind == VacancyKind.Intercity);
     }
 
     private static bool VacancyRequiresShiftStep(VacancyViewModel vacancy)
@@ -249,7 +254,7 @@ public partial class GameBootstrap
         if (vacancy == null) return empty;
         if (vacancy.TruckNumber > 0) return $"Truck #{vacancy.TruckNumber}";
         if (selectedVacancyTruckNumber > 0) return $"Truck #{selectedVacancyTruckNumber}";
-        return vacancy.Kind == VacancyKind.TruckDriver ? empty : "—";
+        return VacancyRequiresTruckStep(vacancy) ? empty : "—";
     }
 
     private void UnlockAllTutorialVacancies()
@@ -373,6 +378,7 @@ public partial class GameBootstrap
                 Subtitle = ru ? "внешние рейсы и торговля" : "external trade runs",
                 IsOccupied = intercity != null,
                 AssignedWorker = intercity,
+                TruckNumber = intercity?.AssignedTruckNumber ?? 0,
                 RequiredEducation = WorkerEducation.Basic
             });
         }
@@ -465,7 +471,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (vacancy.Kind == VacancyKind.TruckDriver && selectedVacancyTruckNumber <= 0)
+        if (VacancyRequiresTruckStep(vacancy) && selectedVacancyTruckNumber <= 0)
         {
             bool hasAvailableTruck = false;
             for (int i = 1; i <= MaxTruckCount; i++)
@@ -476,8 +482,10 @@ public partial class GameBootstrap
                     continue;
                 }
 
-                bool shiftOccupiedOnTruck = IsTruckShiftOccupied(truck, selectedVacancyShiftIndex);
-                bool hasCrewSpace = truck.AssignedDrivers.Count < 2 || HasTruckRosterDriverWithoutShift(truck);
+                bool shiftOccupiedOnTruck = vacancy.Kind == VacancyKind.TruckDriver && IsTruckShiftOccupied(truck, selectedVacancyShiftIndex);
+                bool hasCrewSpace = vacancy.Kind == VacancyKind.TruckDriver
+                    ? truck.AssignedDrivers.Count < 2 || HasTruckRosterDriverWithoutShift(truck)
+                    : truck.AssignedDrivers.Count < 2;
                 hasAvailableTruck = hasAvailableTruck || (!shiftOccupiedOnTruck && hasCrewSpace);
                 vacancyFlowOptions.Add(new VacancyFlowOption
                 {
@@ -514,7 +522,7 @@ public partial class GameBootstrap
             return;
         }
 
-        bool show = selectedVacancy?.Kind == VacancyKind.TruckDriver && !selectedVacancy.IsOccupied;
+        bool show = VacancyRequiresTruckStep(selectedVacancy) && !selectedVacancy.IsOccupied;
         shiftsScreenUi.VacancyTransportParkCard.gameObject.SetActive(show);
         if (!show)
         {
@@ -525,8 +533,8 @@ public partial class GameBootstrap
         int ownedTruckCount = GetOwnedTruckCount();
         bool hasParking = locations.ContainsKey(LocationType.Parking);
         bool canHireTruck = hasParking && ownedTruckCount < MaxTruckCount && money >= HireTruckCost;
-        bool hasSelectedShift = selectedVacancyShiftIndex >= 0;
-        bool hasAvailableTruck = hasSelectedShift && HasAvailableTruckForVacancyShift();
+        bool hasSelectedShift = HasSelectedVacancyShift(selectedVacancy);
+        bool hasAvailableTruck = hasSelectedShift && HasAvailableTruckForVacancy(selectedVacancy);
 
         if (shiftsScreenUi.VacancyTransportParkTitleText != null)
         {
@@ -582,9 +590,9 @@ public partial class GameBootstrap
         }
     }
 
-    private bool HasAvailableTruckForVacancyShift()
+    private bool HasAvailableTruckForVacancy(VacancyViewModel vacancy)
     {
-        if (selectedVacancyShiftIndex < 0)
+        if (!VacancyRequiresTruckStep(vacancy) || !HasSelectedVacancyShift(vacancy))
         {
             return false;
         }
@@ -597,8 +605,10 @@ public partial class GameBootstrap
                 continue;
             }
 
-            bool shiftOccupiedOnTruck = IsTruckShiftOccupied(truck, selectedVacancyShiftIndex);
-            bool hasCrewSpace = truck.AssignedDrivers.Count < 2 || HasTruckRosterDriverWithoutShift(truck);
+            bool shiftOccupiedOnTruck = vacancy.Kind == VacancyKind.TruckDriver && IsTruckShiftOccupied(truck, selectedVacancyShiftIndex);
+            bool hasCrewSpace = vacancy.Kind == VacancyKind.TruckDriver
+                ? truck.AssignedDrivers.Count < 2 || HasTruckRosterDriverWithoutShift(truck)
+                : truck.AssignedDrivers.Count < 2;
             if (!shiftOccupiedOnTruck && hasCrewSpace)
             {
                 return true;
@@ -661,6 +671,7 @@ public partial class GameBootstrap
             VacancyKind.BusDriver when !HasSelectedVacancyShift(vacancy) => ru ? "Выбери смену" : "Choose Shift",
             VacancyKind.Production when !HasSelectedVacancyShift(vacancy) => ru ? "Выбери смену" : "Choose Shift",
             VacancyKind.Intercity when !HasSelectedVacancyShift(vacancy) => ru ? "Выбери смену" : "Choose Shift",
+            VacancyKind.Intercity when selectedVacancyTruckNumber <= 0 => ru ? "Выбери грузовик" : "Choose Truck",
             _ => ru ? "Выбери рабочего" : "Choose Worker"
         };
     }
@@ -703,6 +714,7 @@ public partial class GameBootstrap
             VacancyKind.BusDriver when !HasSelectedVacancyShift(vacancy) => ru ? "Сначала выбери смену городского автобуса." : "First choose the local bus shift.",
             VacancyKind.Production when !HasSelectedVacancyShift(vacancy) => ru ? "Подтверди рабочую смену этого здания." : "Confirm this building's work shift.",
             VacancyKind.Intercity when !HasSelectedVacancyShift(vacancy) => ru ? "Подтверди межгороднюю смену." : "Confirm the intercity duty shift.",
+            VacancyKind.Intercity when selectedVacancyTruckNumber <= 0 => ru ? "Выбери грузовик, на котором рабочий будет выполнять межгородние рейсы." : "Choose the truck this worker will use for intercity runs.",
             _ => ru ? "Выбери доступного рабочего из списка." : "Choose an available worker from the list."
         };
     }
@@ -770,7 +782,17 @@ public partial class GameBootstrap
         if (option.Kind == VacancyFlowOptionKind.Truck)
         {
             TruckAgent truck = GetTruckAgent(option.TruckNumber);
-            return truck == null || IsTruckShiftOccupied(truck, selectedVacancyShiftIndex) || (truck.AssignedDrivers.Count >= 2 && !HasTruckRosterDriverWithoutShift(truck));
+            if (truck == null)
+            {
+                return true;
+            }
+
+            if (vacancy.Kind == VacancyKind.Intercity)
+            {
+                return truck.AssignedDrivers.Count >= 2;
+            }
+
+            return IsTruckShiftOccupied(truck, selectedVacancyShiftIndex) || (truck.AssignedDrivers.Count >= 2 && !HasTruckRosterDriverWithoutShift(truck));
         }
 
         if (option.Kind == VacancyFlowOptionKind.BuyTruck)
@@ -857,11 +879,16 @@ public partial class GameBootstrap
 
         if (vacancy.Kind == VacancyKind.Intercity)
         {
+            TruckAgent truck = GetTruckAgent(selectedVacancyTruckNumber);
+            if (truck == null || selectedVacancyTruckNumber <= 0)
+            {
+                return false;
+            }
             if (driver.AssignedTruckNumber > 0 || driver.DutyMode == DriverDutyMode.Logistics || IsDriverBusDriver(driver) || IsDriverOnActiveTradeRun(driver))
             {
                 return false;
             }
-            return driver.DutyMode == DriverDutyMode.Local;
+            return driver.DutyMode == DriverDutyMode.Local && CanAssignDriverToTruckRoster(truck, driver);
         }
 
         if (vacancy.Kind == VacancyKind.BusDriver)
@@ -925,7 +952,7 @@ public partial class GameBootstrap
                 AssignWorkerToBuilding(worker, FindLogisticsSlot(vacancy.BuildingType, vacancy.SlotIndex));
                 break;
             case VacancyKind.Intercity:
-                AssignDriverToIntercitySlot(worker);
+                assigned = AssignIntercityVacancy(worker);
                 break;
             case VacancyKind.BusDriver:
                 AssignDriverToBusSlot(worker, selectedVacancyShiftIndex);
@@ -1009,6 +1036,33 @@ public partial class GameBootstrap
         }
 
         return true;
+    }
+
+    private bool AssignIntercityVacancy(DriverAgent worker)
+    {
+        TruckAgent truck = GetTruckAgent(selectedVacancyTruckNumber);
+        if (truck == null || worker == null)
+        {
+            return false;
+        }
+
+        if (worker.AssignedTruckNumber != truck.TruckNumber && !AssignDriverToTruck(truck, worker))
+        {
+            return false;
+        }
+
+        worker.ShiftStartHour = -1;
+        worker.IsOnActiveShift = false;
+        worker.WaitingForShiftAtParking = false;
+        worker.NeedsShiftEndReturn = false;
+        AssignDriverToIntercitySlot(worker);
+
+        bool assigned = IsDriverIntercity(worker) && worker.AssignedTruckNumber == truck.TruckNumber;
+        if (assigned)
+        {
+            SessionDebugLogger.Log("SHIFT", $"{worker.DriverName} assigned to Intercity with {truck.DisplayName}.");
+        }
+        return assigned;
     }
 
     private void RemoveVacancyAssignment(VacancyViewModel vacancy)

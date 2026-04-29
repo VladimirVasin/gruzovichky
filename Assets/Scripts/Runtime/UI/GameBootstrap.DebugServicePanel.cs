@@ -203,6 +203,35 @@ public partial class GameBootstrap
             GUI.backgroundColor = new Color(0.18f, 0.34f, 0.58f);
             if (GUILayout.Button("  AUTO ASSIGN ALL  ", adjBtn, GUILayout.Height(36f), GUILayout.ExpandWidth(false)))
                 DebugAutoAssignAllAvailableWorkers();
+            GUILayout.Space(24f);
+
+            // ── Weather buttons ───────────────────────────────────────
+            GUIStyle weatherBtn = new GUIStyle(GUI.skin.button) { fontSize = 16, fontStyle = FontStyle.Bold };
+            WeatherState[] weatherStates = { WeatherState.Clear, WeatherState.Overcast, WeatherState.Rainy, WeatherState.Foggy, WeatherState.Windy };
+            foreach (WeatherState ws in weatherStates)
+            {
+                bool isCurrent = !isWeatherTransitioning && currentWeatherState == ws;
+                bool isTarget  =  isWeatherTransitioning && nextWeatherState   == ws;
+                GUI.backgroundColor = isCurrent ? new Color(0.85f, 0.70f, 0.05f)
+                                    : isTarget  ? new Color(0.10f, 0.45f, 0.70f)
+                                    :             new Color(0.20f, 0.22f, 0.26f);
+                if (GUILayout.Button(GetWeatherStateIcon(ws), weatherBtn, GUILayout.Width(42f), GUILayout.Height(36f)))
+                    DebugSetWeather(ws);
+                GUILayout.Space(2f);
+            }
+            GUI.backgroundColor = prevBg;
+            GUILayout.Space(24f);
+
+            // ── Join the Race ─────────────────────────────────────────
+            GUIStyle raceBtn = new GUIStyle(GUI.skin.button) { fontSize = 14, fontStyle = FontStyle.Bold };
+            GUI.backgroundColor = isRacingActive ? new Color(0.20f, 0.22f, 0.26f) : new Color(0.65f, 0.30f, 0.08f);
+            GUI.enabled = !isRacingActive;
+            if (GUILayout.Button("  JOIN THE RACE  ", raceBtn, GUILayout.Height(36f), GUILayout.ExpandWidth(false)))
+            {
+                ToggleDebugServicePanel();
+                StartRacingMinigame();
+            }
+            GUI.enabled = true;
             GUI.backgroundColor = prevBg;
             GUILayout.FlexibleSpace();
             GUI.backgroundColor = new Color(0.35f, 0.18f, 0.18f);
@@ -476,6 +505,7 @@ public partial class GameBootstrap
         int intercityAssignments = 0;
 
         DebugNormalizeTruckRosterShiftAssignments(assignments, ref shiftAssignments);
+        intercityAssignments += DebugAutoAssignIntercitySlot(assignments);
 
         if (truckAgents != null)
         {
@@ -520,7 +550,6 @@ public partial class GameBootstrap
 
         productionAssignments += DebugAutoAssignProductionSlots(assignments);
         busAssignments += DebugAutoAssignBusDriverSlots(assignments);
-        intercityAssignments += DebugAutoAssignIntercitySlot(assignments);
 
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
@@ -685,15 +714,41 @@ public partial class GameBootstrap
             return 0;
         }
 
-        DriverAgent worker = DebugFindNextAutoAssignableWorker();
+        TruckAgent intercityTruck = null;
+        if (truckAgents != null)
+        {
+            for (int i = 0; i < truckAgents.Count; i++)
+            {
+                TruckAgent candidateTruck = truckAgents[i];
+                if (candidateTruck != null && candidateTruck.AssignedDrivers.Count < 2)
+                {
+                    intercityTruck = candidateTruck;
+                    break;
+                }
+            }
+        }
+
+        if (intercityTruck == null)
+        {
+            assignments.Add("Intercity: no truck with free crew slot.");
+            return 0;
+        }
+
+        DriverAgent worker = DebugFindNextAutoAssignableWorker(d => CanAssignDriverToTruckRoster(intercityTruck, d));
         if (worker == null)
         {
             assignments.Add("Intercity: no available worker.");
             return 0;
         }
 
+        if (!AssignDriverToTruck(intercityTruck, worker))
+        {
+            assignments.Add($"Intercity: failed to assign {worker.DriverName} to {intercityTruck.DisplayName}.");
+            return 0;
+        }
+
         AssignDriverToIntercitySlot(worker);
-        assignments.Add($"{worker.DriverName}: assigned to Intercity.");
+        assignments.Add($"{worker.DriverName}: assigned to Intercity with {intercityTruck.DisplayName}.");
         return 1;
     }
 
@@ -839,5 +894,18 @@ public partial class GameBootstrap
         }
 
         return !IsBusDriverOnActiveRoute(worker);
+    }
+
+    private void DebugSetWeather(WeatherState target)
+    {
+        if (!isWeatherTransitioning && currentWeatherState == target) return;
+        if ( isWeatherTransitioning && nextWeatherState   == target) return;
+
+        nextWeatherState          = target;
+        weatherTransitionDuration = 30f;
+        weatherTransitionTimer    = 0f;
+        isWeatherTransitioning    = true;
+        weatherHoldTimer          = GetWeatherHoldDuration(target);
+        SessionDebugLogger.Log("DEBUG", $"[DBG] Weather forced → {target}.");
     }
 }
