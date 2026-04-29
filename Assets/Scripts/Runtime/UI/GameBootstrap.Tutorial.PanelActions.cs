@@ -1,20 +1,5 @@
 public partial class GameBootstrap
 {
-    private void OpenWorkersPanelFromTutorial()
-    {
-        isFleetPanelOpen = false;
-        isShiftsPanelOpen = false;
-        isResourcesPanelOpen = false;
-        isEconomyPanelOpen = false;
-        isBuildPanelOpen = false;
-        isWorldMapPanelOpen = false;
-        isDriversPanelOpen = true;
-        isDriversScreenDirty = true;
-        ScheduleTutorial(TutorialTrigger.WorkersPanelOpened);
-        LogUiInput("Tutorial: auto-opened Workers panel after tutorial 3 OK");
-        PlayUiSound(uiPanelOpenClip, 0.9f);
-    }
-
     private void OpenBuildPanelFromTutorial()
     {
         isFleetPanelOpen = false;

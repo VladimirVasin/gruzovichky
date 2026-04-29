@@ -9,17 +9,17 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         GUI.Box(panelRect, ru ? "Погода" : "Weather");
 
-        GUIStyle iconStyle = new GUIStyle(GUI.skin.label)
+        GUIStyle contentStyle = new GUIStyle(GUI.skin.label)
         {
             alignment = TextAnchor.MiddleCenter,
-            fontSize = 22,
+            fontSize = 16,
         };
 
-        string icon = isWeatherTransitioning
-            ? $"{GetWeatherStateIcon(currentWeatherState)}  {GetWeatherStateIcon(nextWeatherState)}"
-            : GetWeatherStateIcon(currentWeatherState);
+        string content = isWeatherTransitioning
+            ? $"{GetWeatherStateIcon(currentWeatherState)} → {GetWeatherStateIcon(nextWeatherState)}"
+            : $"{GetWeatherStateIcon(currentWeatherState)}  {GetWeatherStateLabel(currentWeatherState, ru)}";
 
-        GUI.Label(new Rect(panelRect.x, panelRect.y + 20f, panelRect.width, panelRect.height - 20f), icon, iconStyle);
+        GUI.Label(new Rect(panelRect.x, panelRect.y + 20f, panelRect.width, panelRect.height - 20f), content, contentStyle);
     }
 
     private static string GetWeatherStateIcon(WeatherState state) => state switch

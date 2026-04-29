@@ -471,7 +471,7 @@ public partial class GameBootstrap
 
     private void UpdateLogisticsTabUi(DriverAgent selectedDriver)
     {
-        bool forestTutorialActive = IsTutorialEnabledForCurrentMode() && !hasShownForestWorkerStartedTutorial;
+        bool forestTutorialActive = false;
         bool ru = IsRussianLanguage();
 
         // For Warehouse: only show the card once (slot index 3 controls Root visibility)

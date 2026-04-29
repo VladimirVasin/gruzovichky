@@ -527,7 +527,6 @@ public partial class GameBootstrap
         RebuildRoadsideBenches();
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Sawmill at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
-        NotifyTutorialSawmillBuilt();
         return true;
     }
 
@@ -552,11 +551,6 @@ public partial class GameBootstrap
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         RebuildRoadSigns();
-        if (selectedGameStartMode != GameStartMode.User)
-        {
-            TryShowTutorial(TutorialTrigger.FirstMotelBuilt);
-        }
-
         NotifyTutorialCoreBuildingBuilt(LocationType.Motel);
         MoveStarterIdleWorkersToMotel();
         MoveAmbientCatsToCurrentHome();

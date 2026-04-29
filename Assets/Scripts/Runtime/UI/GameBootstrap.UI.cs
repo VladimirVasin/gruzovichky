@@ -678,10 +678,6 @@ public partial class GameBootstrap
         }
         isDriversScreenDirty = true;
         NotifyTutorialWorkerHiredByPlayer();
-        if (!tutorialWaveHire)
-        {
-            ScheduleTutorial(TutorialTrigger.FirstDriverHired);
-        }
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isEconomyScreenDirty = true;

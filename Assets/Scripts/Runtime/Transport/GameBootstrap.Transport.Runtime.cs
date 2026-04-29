@@ -676,7 +676,6 @@ public partial class GameBootstrap
                     enteredBuilding.Workers = driver.AssignedBuildingType == LocationType.Warehouse
                         ? Mathf.Min(enteredBuilding.Workers + 1, WarehouseMaxWorkers)
                         : 1;
-                    NotifyTutorialProductionWorkerEntered(driver.AssignedBuildingType.Value);
                     SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} entered {enteredBuilding.Label} - building operational.");
                 }
                 return;

@@ -6,26 +6,6 @@ public partial class GameBootstrap
 {
     private enum TutorialTrigger
     {
-        GameStarted,
-        BuildMotelPrompt,
-        BuildMenuOpened,
-        FirstRoadBuilt,
-        FirstMotelBuilt,
-        WorkersPanelOpened,
-        FirstDriverHired,
-        ForestIntroduction,
-        SelectProductionWorker,
-        AssignForestProductionWorker,
-        ForestWorkerStarted,
-        FleetIntroduction,
-        FleetSelectTruck,
-        FleetAssignDriver,
-        FleetPickDriver,
-        AssignSawmillProductionWorker,
-        SawmillWorkerAssigned,
-        NeedSawmill,
-        SawmillBuilt,
-        FirstTradeOpened,
         UserWelcome,
         UserBuildRoadPrompt,
         UserCoreBuildingsPrompt,
@@ -69,16 +49,6 @@ public partial class GameBootstrap
         public Text TitleText;
         public Text StepText;
         public Text BodyText;
-        public GameObject BuildMenuOutlineRoot;
-        public GameObject WorkersMenuOutlineRoot;
-        public GameObject HireWorkerOutlineRoot;
-        public GameObject ShiftsMenuOutlineRoot;
-        public GameObject FleetMenuOutlineRoot;
-        public GameObject FirstWorkerOutlineRoot;
-        public GameObject ForestAssignOutlineRoot;
-        public GameObject FleetTruckOutlineRoot;
-        public GameObject FleetAssignDriverOutlineRoot;
-        public GameObject FleetDriverPickerOutlineRoot;
         public Toggle SkipToggle;
         public Text SkipToggleText;
         public Button OkButton;
@@ -86,26 +56,21 @@ public partial class GameBootstrap
     }
 
     private const float TutorialSidePanelBaseX  = 570f;   // right of the 760-wide Drivers panel
-    private const float TutorialSidePanelLeftX  = -340f;  // left of center for Forest tutorial
     private const float TutorialCameraFocusSpeed = 2.8f;
     private static readonly Vector3 TutorialForestZoomOffset = new(-8f, 12f, -8f);
-    private static readonly Vector3 TutorialCinematicZoomOffset = new(-5f, 8f, -5f); // close-up during hire cinematic
     private bool  isTutorialSideMode;
-    private bool  tutorialSideOnLeft;   // side card on left side instead of right
     private float tutorialBobTime;
     private bool isTutorialCameraFocusActive;
     private Vector3 tutorialCameraFocusTarget;
     private Vector3 tutorialCameraFocusOffset = TutorialForestZoomOffset;
     private TruckAgent tutorialCameraFollowTruck;
     private bool tutorialCameraFollowHiringBus;
-    private float tutorialCameraWanderTime;
     private string tutorialWindowFullText = string.Empty;
     private float tutorialWindowTypeTime;
     private const float TutorialWindowTypeSpeed = 40f;
 
     private TutorialHudRefs tutorialHud;
     private TutorialTrigger activeTutorialTrigger;
-    private const int TutorialStepCount = 17;
     private const int NewUserTutorialStepCount = 28;
     private static readonly Vector3 UserWelcomeCameraOffset = new(-13f, 14f, -13f);
 
@@ -169,8 +134,7 @@ public partial class GameBootstrap
 
     private static bool IsNonPausingTutorialTrigger(TutorialTrigger trigger)
     {
-        return trigger is TutorialTrigger.ForestWorkerStarted
-            or TutorialTrigger.UserTruckPurchasedArrivalInfo
+        return trigger is TutorialTrigger.UserTruckPurchasedArrivalInfo
             or TutorialTrigger.UserTruckAssignedFreightInfo
             or TutorialTrigger.UserWorkersLeisureInfo
             or TutorialTrigger.UserBuildServiceBuildingsPrompt
@@ -201,13 +165,6 @@ public partial class GameBootstrap
         isTutorialSkipped = false;
         isTutorialOpen = false;
         hasShownWelcomeTutorial = false;
-        hasShownFirstMotelTutorial = false;
-        hasShownWorkersPanelTutorial = false;
-        hasShownFirstDriverHiredTutorial = false;
-        hasShownForestIntroTutorial = false;
-        hasShownForestWorkerStartedTutorial = false;
-        hasShownNeedSawmillTutorial = false;
-        hasShownFleetIntroTutorial = false;
         hasShownUserCoreBuildingsTutorial = false;
         hasShownUserWarehouseBuiltTutorial = false;
         hasShownUserMotelBuiltTutorial = false;
@@ -238,12 +195,6 @@ public partial class GameBootstrap
         hasShownUserTradeRaceTutorial = false;
         hasShownUserDemoCompleteTutorial = false;
         nextUserServiceBuildingInfoTutorialStep = 15;
-        hasShownFleetSelectTruckTutorial = false;
-        hasShownFleetAssignDriverTutorial = false;
-        hasShownFleetPickDriverTutorial = false;
-        hasShownAssignSawmillWorkerTutorial = false;
-        hasShownSawmillWorkerAssignedTutorial = false;
-        hasShownSawmillBuiltTutorial = false;
         pendingTutorialTrigger = null;
         pendingTutorialDelay = 0f;
         areTutorialVacanciesFullyUnlocked = false;
@@ -251,7 +202,6 @@ public partial class GameBootstrap
         isTutorialCameraFocusActive = false;
         tutorialCameraFollowTruck = null;
         tutorialCameraFollowHiringBus = false;
-        HideTutorialOrbitHud();
         if (tutorialHud?.CanvasRoot != null)
         {
             tutorialHud.CanvasRoot.SetActive(false);
@@ -275,8 +225,6 @@ public partial class GameBootstrap
 
         switch (trigger)
         {
-            case TutorialTrigger.GameStarted:
-                return;
             case TutorialTrigger.UserWelcome:
                 if (hasShownWelcomeTutorial)
                 {
@@ -450,7 +398,6 @@ public partial class GameBootstrap
                 hasShownUserTruckArrivalTutorial = true;
                 bool truckArrivalRu = IsRussianLanguage();
                 isTutorialSideMode = false;
-                tutorialSideOnLeft = false;
                 ShowTutorialWindow(
                     TutorialTrigger.UserTruckPurchasedArrivalInfo,
                     11,
@@ -628,187 +575,6 @@ public partial class GameBootstrap
             case TutorialTrigger.UserDemoCompleteInfo:
                 ShowUserDemoCompleteTutorial();
                 break;
-            case TutorialTrigger.BuildMotelPrompt:
-                ShowTutorialWindow(
-                    TutorialTrigger.BuildMotelPrompt,
-                    2,
-                    "Build a Motel",
-                    "The Motel unlocks worker hiring and gives workers a place to rest.\n\nOpen Building at the top, or press B. Choose Motel and place it near your road plan.\n\nIn Build mode, press R to rotate the building before placing it.");
-                break;
-            case TutorialTrigger.FirstMotelBuilt:
-                if (hasShownFirstMotelTutorial) return;
-                hasShownFirstMotelTutorial = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.FirstMotelBuilt,
-                    3,
-                    "Open the Workers Panel",
-                    "The Motel is ready, so you can hire workers.\n\nOpen the Workers panel at the top of the screen. This is where new workers are hired and tracked.");
-                break;
-            case TutorialTrigger.WorkersPanelOpened:
-                if (hasShownWorkersPanelTutorial) return;
-                hasShownWorkersPanelTutorial = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.WorkersPanelOpened,
-                    4,
-                    "Hire a Worker",
-                    "Use the Hire New Worker button at the bottom of the Workers panel.\n\nHiring costs money. New workers arrive by bus before they become available.");
-                break;
-            case TutorialTrigger.FirstDriverHired:
-                if (hasShownFirstDriverHiredTutorial) return;
-                hasShownFirstDriverHiredTutorial = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.FirstDriverHired,
-                    5,
-                    "The Worker is on Their Way!",
-                    "Your new worker is arriving by bus.\n\nWait for the bus to stop and for the worker to walk to the Motel. After that, the worker can be assigned to jobs.");
-                break;
-            case TutorialTrigger.ForestIntroduction:
-                if (hasShownForestIntroTutorial) return;
-                hasShownForestIntroTutorial = true;
-                // Focus camera on Forest and select it (microhud appears)
-                if (locations.ContainsKey(LocationType.Forest))
-                {
-                    StartTutorialCameraFocus(LocationType.Forest, placeLocationOnRight: true);
-                    selectedLocation = LocationType.Forest;
-                    RefreshSelectionVisuals();
-                }
-                isTutorialSideMode = true;
-                tutorialSideOnLeft = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.ForestIntroduction,
-                    6,
-                    "Forest Production",
-                    "Forest produces Logs.\n\nTo start production, assign a worker to Forest in Shifts > Productions. Production workers operate from 08:00 to 18:00.");
-                break;
-            case TutorialTrigger.SelectProductionWorker:
-                if (driverAgents.Count == 0) return;
-                isTutorialSideMode = true;
-                tutorialSideOnLeft = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.SelectProductionWorker,
-                    7,
-                    "Select a Worker",
-                    "Select a free worker from the list on the left.\n\nYou can also press OK and the first available worker will be selected automatically.");
-                break;
-            case TutorialTrigger.AssignForestProductionWorker:
-                if (GetFirstAssignableProductionWorker() == null) return;
-                isTutorialSideMode = true;
-                tutorialSideOnLeft = false;
-                ShowTutorialWindow(
-                    TutorialTrigger.AssignForestProductionWorker,
-                    8,
-                    "Assign to Forest",
-                    "Press Assign on the Forest row to send the selected worker there.\n\nYou can also press OK and the tutorial will assign the worker for you.");
-                break;
-            case TutorialTrigger.ForestWorkerStarted:
-                if (hasShownForestWorkerStartedTutorial) return;
-                hasShownForestWorkerStartedTutorial = true;
-                if (locations.ContainsKey(LocationType.Forest))
-                {
-                    StartTutorialCameraFocus(LocationType.Forest, placeLocationOnRight: true);
-                }
-                selectedLocation = null;
-                selectedLocalStopIndex = -1;
-                selectedPersonalHouseIndex = -1;
-                ClearSelectedDebugCell();
-                RefreshSelectionVisuals();
-                isTutorialSideMode = true;
-                tutorialSideOnLeft = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.ForestWorkerStarted,
-                    9,
-                    "Forest Is Working",
-                    "The worker is now producing Logs at Forest.\n\nLogs are raw material. They must be moved and processed before they become useful for the town.");
-                tutorialHud.BodyText.fontSize = 13;   // compact font so text fits neatly
-                break;
-            case TutorialTrigger.FleetIntroduction:
-                if (hasShownFleetIntroTutorial) return;
-                hasShownFleetIntroTutorial = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.FleetIntroduction,
-                    10,
-                    "Use Trucks",
-                    "Resources do not move automatically.\n\nOpen Fleet, assign a driver to a truck, then choose a route to move cargo between buildings.");
-                break;
-            case TutorialTrigger.FleetSelectTruck:
-                if (hasShownFleetSelectTruckTutorial) return;
-                hasShownFleetSelectTruckTutorial = true;
-                isTutorialSideMode = true;
-                tutorialSideOnLeft = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.FleetSelectTruck,
-                    13,
-                    "Select the Truck",
-                    "Select Truck #1 in the Fleet list.\n\nYou can also press OK and the tutorial will select the truck automatically.");
-                tutorialHud.BodyText.fontSize = 13;
-                break;
-            case TutorialTrigger.FleetAssignDriver:
-                if (hasShownFleetAssignDriverTutorial) return;
-                hasShownFleetAssignDriverTutorial = true;
-                isTutorialSideMode = true;
-                tutorialSideOnLeft = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.FleetAssignDriver,
-                    14,
-                    "Assign a Driver",
-                    "Truck #1 needs a driver before it can run routes.\n\nPress Assign in Driver Slot 1. Only free workers can be assigned to trucks.");
-                tutorialHud.BodyText.fontSize = 13;
-                break;
-            case TutorialTrigger.FleetPickDriver:
-                if (hasShownFleetPickDriverTutorial) return;
-                hasShownFleetPickDriverTutorial = true;
-                isTutorialSideMode = true;
-                tutorialSideOnLeft = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.FleetPickDriver,
-                    15,
-                    "Choose a Driver",
-                    "Choose any free worker from the driver list.\n\nWorkers already assigned to production are not shown here. The tutorial will continue after you assign a driver.");
-                tutorialHud.BodyText.fontSize = 13;
-                break;
-            case TutorialTrigger.AssignSawmillProductionWorker:
-                if (hasShownAssignSawmillWorkerTutorial) return;
-                hasShownAssignSawmillWorkerTutorial = true;
-                isTutorialSideMode = false;
-                tutorialSideOnLeft = false;
-                ShowTutorialWindow(
-                    TutorialTrigger.AssignSawmillProductionWorker,
-                    16,
-                    "Staff the Sawmill",
-                    "You have assigned a worker to Forest. Now assign a worker to Sawmill.\n\nOpen Shifts, go to Productions, and assign a free worker to the Sawmill row.");
-                break;
-            case TutorialTrigger.SawmillWorkerAssigned:
-                if (hasShownSawmillWorkerAssignedTutorial) return;
-                hasShownSawmillWorkerAssignedTutorial = true;
-                isTutorialSideMode = false;
-                tutorialSideOnLeft = false;
-                ShowTutorialWindow(
-                    TutorialTrigger.SawmillWorkerAssigned,
-                    17,
-                    "Sawmill Ready",
-                    "The Sawmill now has a worker.\n\nNext, use Fleet routes to deliver Logs from Forest to Sawmill, then move Boards onward to Warehouse.");
-                break;
-            case TutorialTrigger.NeedSawmill:
-                if (hasShownNeedSawmillTutorial) return;
-                hasShownNeedSawmillTutorial = true;
-                UnlockBuildTool(BuildTool.Sawmill);
-                isTutorialSideMode = false;
-                tutorialSideOnLeft = false;
-                ShowTutorialWindow(
-                    TutorialTrigger.NeedSawmill,
-                    10,
-                    "Build a Sawmill",
-                    "Logs must be processed into Boards.\n\nOpen Building, choose Sawmill, and place it with its entrance connected to a road.");
-                break;
-            case TutorialTrigger.SawmillBuilt:
-                if (hasShownSawmillBuiltTutorial) return;
-                hasShownSawmillBuiltTutorial = true;
-                ShowTutorialWindow(
-                    TutorialTrigger.SawmillBuilt,
-                    11,
-                    "Sawmill Placed",
-                    "Sawmill converts Logs into Boards.\n\nResources still need transport: use trucks to deliver Logs from Forest to Sawmill and move finished Boards onward.");
-                break;
         }
     }
 
@@ -816,16 +582,12 @@ public partial class GameBootstrap
     {
         SetupTutorialUi();
         activeTutorialTrigger = trigger;
-        // isTutorialSideMode / tutorialSideOnLeft may have been pre-set by the caller; only
-        // auto-assign when the caller left them at their default (right-side = drivers panel open).
-        if (!tutorialSideOnLeft && trigger != TutorialTrigger.AssignForestProductionWorker)
-            isTutorialSideMode = isDriversPanelOpen;
+        isTutorialSideMode = isDriversPanelOpen;
         tutorialHud.BodyText.fontSize = 15;   // default; callers may override after this returns
         ApplyTutorialWindowLayout();
         tutorialHud.TitleText.text = L(title);
         bool isEasterEgg = trigger == TutorialTrigger.BeeEasterEgg;
-        bool isNewUserTutorial = IsNewUserTutorialTrigger(trigger);
-        int stepCount = isNewUserTutorial ? NewUserTutorialStepCount : TutorialStepCount;
+        int stepCount = NewUserTutorialStepCount;
         tutorialHud.StepText.text = isEasterEgg ? string.Empty : $"{stepNumber}/{stepCount}";
         tutorialWindowFullText = L(body);
         tutorialWindowTypeTime = 0f;
@@ -841,12 +603,11 @@ public partial class GameBootstrap
     private void ShowBeeEasterEggHud()
     {
         isTutorialSideMode = false;
-        tutorialSideOnLeft = false;
         ShowTutorialWindow(
             TutorialTrigger.BeeEasterEgg,
             0,
             "Bees",
-            "Р”СѓСЂР°С‡РѕРє, РЅРµ РјРµС€Р°Р№ РїС‡С‘Р»РєР°Рј");
+            "Дурачок, не мешай пчёлкам");
         if (tutorialHud?.WindowRect != null)
         {
             tutorialHud.WindowRect.sizeDelta = new Vector2(500f, 260f);
@@ -891,31 +652,9 @@ public partial class GameBootstrap
 
         if (isTutorialSideMode)
         {
-            float xBase = activeTutorialTrigger switch
-            {
-                TutorialTrigger.SelectProductionWorker => -640f,
-                TutorialTrigger.AssignForestProductionWorker => 640f,
-                TutorialTrigger.FleetSelectTruck => -640f,
-                TutorialTrigger.FleetAssignDriver => -640f,
-                TutorialTrigger.FleetPickDriver => -500f,
-                _ => tutorialSideOnLeft ? TutorialSidePanelLeftX : TutorialSidePanelBaseX
-            };
-            // Left-offset mode needs full-size window to fit longer text; right side uses compact card
-            bool isNarrowTutorial = activeTutorialTrigger is TutorialTrigger.SelectProductionWorker
-                or TutorialTrigger.AssignForestProductionWorker
-                or TutorialTrigger.FleetSelectTruck
-                or TutorialTrigger.FleetAssignDriver
-                or TutorialTrigger.FleetPickDriver;
-            bool isTallNarrowTutorial = activeTutorialTrigger is TutorialTrigger.SelectProductionWorker
-                or TutorialTrigger.FleetSelectTruck
-                or TutorialTrigger.FleetAssignDriver
-                or TutorialTrigger.FleetPickDriver;
-            float w          = isNarrowTutorial ? 320f : tutorialSideOnLeft ? 480f : 360f;
-            float h          = isTallNarrowTutorial ? 350f : activeTutorialTrigger == TutorialTrigger.AssignForestProductionWorker ? 270f : tutorialSideOnLeft ? 380f : 290f;
-            float bodyH      = isTallNarrowTutorial ? 205f : activeTutorialTrigger == TutorialTrigger.AssignForestProductionWorker ? 128f : tutorialSideOnLeft ? 200f : 148f;
-            tutorialHud.WindowRect.sizeDelta        = new Vector2(w, h);
-            tutorialHud.WindowRect.anchoredPosition = new Vector2(xBase, 0f);
-            if (tutorialHud.BodyPanelLayout != null) tutorialHud.BodyPanelLayout.preferredHeight = bodyH;
+            tutorialHud.WindowRect.sizeDelta        = new Vector2(360f, 290f);
+            tutorialHud.WindowRect.anchoredPosition = new Vector2(TutorialSidePanelBaseX, 0f);
+            if (tutorialHud.BodyPanelLayout != null) tutorialHud.BodyPanelLayout.preferredHeight = 148f;
             if (tutorialHud.OverlayImage    != null) tutorialHud.OverlayImage.color = OverlayColorTransparent;
             tutorialBobTime = 0f;
         }
@@ -956,16 +695,6 @@ public partial class GameBootstrap
         tutorialHud.OverlayRoot  = overlay.gameObject;
         tutorialHud.OverlayImage = overlay.GetComponent<Image>();
         tutorialHud.OverlayImage.raycastTarget = false;   // window button handles its own input
-        tutorialHud.BuildMenuOutlineRoot   = CreateTutorialMenuButtonOutline("TutorialBuildMenuOutline",   canvasObject.transform, 397f);
-        tutorialHud.WorkersMenuOutlineRoot = CreateTutorialMenuButtonOutline("TutorialWorkersMenuOutline", canvasObject.transform, 17f);
-        tutorialHud.ShiftsMenuOutlineRoot  = CreateTutorialMenuButtonOutline("TutorialShiftsMenuOutline",  canvasObject.transform, 112f);
-        tutorialHud.FleetMenuOutlineRoot   = CreateTutorialMenuButtonOutline("TutorialFleetMenuOutline",   canvasObject.transform, 17f);
-        tutorialHud.HireWorkerOutlineRoot  = CreateTutorialHireButtonOutline("TutorialHireWorkerOutline",  canvasObject.transform);
-        tutorialHud.FirstWorkerOutlineRoot = CreateTutorialDynamicOutline("TutorialFirstWorkerOutline", canvasObject.transform);
-        tutorialHud.ForestAssignOutlineRoot = CreateTutorialDynamicOutline("TutorialForestAssignOutline", canvasObject.transform);
-        tutorialHud.FleetTruckOutlineRoot = CreateTutorialDynamicOutline("TutorialFleetTruckOutline", canvasObject.transform);
-        tutorialHud.FleetAssignDriverOutlineRoot = CreateTutorialDynamicOutline("TutorialFleetAssignDriverOutline", canvasObject.transform);
-        tutorialHud.FleetDriverPickerOutlineRoot = CreateTutorialDynamicOutline("TutorialFleetDriverPickerOutline", canvasObject.transform);
 
         // Window stays a child of the overlay (same coordinate space = full canvas)
         RectTransform window = CreateStyledPanel("TutorialWindow", overlay, FleetPanelColor);
@@ -1104,7 +833,6 @@ public partial class GameBootstrap
         focus.y = 0f;
         tutorialCameraFocusTarget = focus;
         tutorialCameraFocusOffset = UserWelcomeCameraOffset;
-        tutorialCameraWanderTime = 0f;
         isTutorialCameraFocusActive = true;
         cameraTargetOffset = UserWelcomeCameraOffset;
         SessionDebugLogger.Log("TUTORIAL", $"Started smooth User welcome camera focus on start stop at ({focus.x:F1},{focus.z:F1}).");
@@ -1124,7 +852,6 @@ public partial class GameBootstrap
             UnlockAllTutorialVacancies();
             isTutorialCameraFocusActive = false;
             ResetTutorialGoalsForNewGame();
-            HideTutorialOrbitHud();
             selectedLocation = null;
             selectedLocalStopIndex = -1;
             selectedPersonalHouseIndex = -1;
@@ -1134,7 +861,6 @@ public partial class GameBootstrap
 
         isTutorialOpen     = false;
         isTutorialSideMode = false;
-        tutorialSideOnLeft = false;
         tutorialWindowFullText = string.Empty;
         tutorialWindowTypeTime = 0f;
         if (tutorialHud.SkipToggle != null)
@@ -1142,16 +868,6 @@ public partial class GameBootstrap
             tutorialHud.SkipToggle.gameObject.SetActive(true);
         }
         PlayUiSound(uiPanelCloseClip, 0.82f);
-
-        if (activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
-        {
-            isTutorialCameraFocusActive = false;
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.GameStarted)
-        {
-            ScheduleTutorial(TutorialTrigger.BuildMotelPrompt);
-        }
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserWelcome)
         {
@@ -1180,92 +896,6 @@ public partial class GameBootstrap
             isBuildPanelOpen = false;
             isShiftsScreenDirty = true;
             LogUiInput("Tutorial: Lumberjack Camp assignment prompt closed; waiting for player to open Vacancies.");
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.BuildMotelPrompt)
-        {
-            OpenBuildPanelFromTutorial();
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.FirstMotelBuilt)
-        {
-            OpenWorkersPanelFromTutorial();
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.WorkersPanelOpened)
-        {
-            HireNewDriver();
-        }
-
-        if (activeTutorialTrigger == TutorialTrigger.FirstDriverHired)
-        {
-            StartHireArrivalCinematic();
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
-        {
-            selectedLocation            = null;       // close microhud
-            selectedLocalStopIndex      = -1;
-            isLogisticsTabActive        = true;
-            isShiftsPanelOpen           = true;
-            isShiftsScreenDirty         = true;
-            LogUiInput("Tutorial: auto-opened Shifts panel after tutorial 6 OK");
-            PlayUiSound(uiPanelOpenClip, 0.9f);
-            ScheduleTutorial(TutorialTrigger.SelectProductionWorker);
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.SelectProductionWorker)
-        {
-            SelectFirstWorkerForProductionTutorial();
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.AssignForestProductionWorker)
-        {
-            AssignSelectedWorkerToForestFromTutorial();
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.ForestWorkerStarted)
-        {
-            selectedLocation = null;
-            selectedLocalStopIndex = -1;
-            selectedPersonalHouseIndex = -1;
-            isTutorialCameraFocusActive = false;
-            tutorialCinematicPhase = TutorialCinematicPhase.Returning;   // smooth camera back to default
-            ScheduleTutorial(TutorialTrigger.NeedSawmill);
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.NeedSawmill)
-        {
-            OpenBuildPanelFromTutorial();
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.FleetSelectTruck)
-        {
-            SelectTruckForFleetTutorial();
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.FleetAssignDriver)
-        {
-            OpenFleetDriverPickerForTutorial();
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.FleetPickDriver)
-        {
-            LogUiInput("Tutorial: Fleet driver picker hint closed; waiting for player driver choice.");
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.AssignSawmillProductionWorker)
-        {
-            isLogisticsTabActive = true;
-            isShiftsPanelOpen = true;
-            isShiftsScreenDirty = true;
-            LogUiInput("Tutorial: opened Shifts/Productions for Sawmill worker assignment.");
-            PlayUiSound(uiPanelOpenClip, 0.9f);
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.SawmillBuilt)
-        {
-            StartTutorialBusStopWorkerArrival();
         }
 
         if (activeTutorialTrigger == TutorialTrigger.UserTruckPurchasedArrivalInfo)

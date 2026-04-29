@@ -305,12 +305,6 @@ public partial class GameBootstrap
                 }
 
                 fleetAssignDriverTargetSlot = assignSlotIndex;
-                if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetAssignDriver && assignSlotIndex == 0)
-                {
-                    CompleteFleetAssignDriverTutorial();
-                    return;
-                }
-
                 ToggleFleetDriverAssignmentPicker();
             });
             fleetScreenUi.AssignDriverButtons.Add(assignButton);
@@ -422,7 +416,7 @@ public partial class GameBootstrap
             return;
         }
 
-        bool hideBuyPanelForTutorial = isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetSelectTruck;
+        bool hideBuyPanelForTutorial = false;
         if (fleetScreenUi.BuyTruckContainer.gameObject.activeSelf == !hideBuyPanelForTutorial)
         {
             return;
@@ -475,7 +469,7 @@ public partial class GameBootstrap
         }
 
         bool canHireTruck = locations.ContainsKey(LocationType.Parking) && GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
-        bool hideBuyPanelForTutorial = isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetSelectTruck;
+        bool hideBuyPanelForTutorial = false;
         ApplyFleetTutorialVisibility();
 
         if (hideBuyPanelForTutorial)
@@ -824,7 +818,6 @@ public partial class GameBootstrap
             UpdateFleetDriverPickerLayout(false, false);
             fleetAssignDriverTargetSlot = -1;
             isFleetScreenDirty = true;
-            CompleteFleetPickDriverTutorial();
         }
     }
 
@@ -1019,7 +1012,6 @@ public partial class GameBootstrap
         {
             LogUiInput($"Fleet Canvas: selected {GetTruckDisplayName(row.TruckNumber)} from fleet list");
             FocusTruck(row.TruckNumber);
-            CompleteFleetTruckSelectionTutorial(row.TruckNumber);
         });
 
         GameObject accentObject = CreateUiObject("Accent", row.Root);

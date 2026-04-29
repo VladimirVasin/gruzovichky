@@ -62,40 +62,15 @@ public partial class GameBootstrap
         isWorldMapPanelOpen = false;
         isStatesPanelOpen = false;
         target = !wasOpen;
-        // Clear persistent tutorial highlights when the highlighted button is clicked
-        if (panelName == "Building")
-        {
-            // If tutorial 2 is open, dismiss it; user found the button themselves.
-            if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.BuildMotelPrompt)
-            {
-                isTutorialOpen     = false;
-                isTutorialSideMode = false;
-            }
-        }
         if (panelName == "Workers")
         {
             MarkTutorialGoalComplete(TutorialGoalKind.OpenWorkersCard);
-            if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FirstMotelBuilt)
-            {
-                isTutorialOpen     = false;
-                isTutorialSideMode = false;
-            }
-            ScheduleTutorial(TutorialTrigger.WorkersPanelOpened);
         }
         if (panelName == "Shifts")
         {
             selectedLocation = null;
             selectedLocalStopIndex = -1;
             selectedPersonalHouseIndex = -1;   // close building microhud (Forest was selected by tutorial 6)
-            if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
-            {
-                isTutorialOpen     = false;
-                isTutorialSideMode = false;
-                tutorialSideOnLeft = false;
-            }
-        }
-        if (panelName == "Fleet")
-        {
         }
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
@@ -145,11 +120,11 @@ public partial class GameBootstrap
             }
 
             float x = bar.x + MenuBtnGap;
-            MenuBtn("Workers", "Workers", ref isDriversPanelOpen, x, IsWorkersTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Vacancies", "Vacancies", ref isShiftsPanelOpen, x, IsShiftsTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Workers", "Workers", ref isDriversPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Vacancies", "Vacancies", ref isShiftsPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Trade", "Economy", ref isEconomyPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Building", "Building", ref isBuildPanelOpen, x, IsBuildMenuTutorialHighlightActive()); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Building", "Building", ref isBuildPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Map", "Map", ref isWorldMapPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("States", "States", ref isStatesPanelOpen, x);
         }

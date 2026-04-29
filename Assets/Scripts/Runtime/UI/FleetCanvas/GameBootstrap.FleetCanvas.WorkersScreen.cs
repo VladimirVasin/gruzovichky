@@ -95,11 +95,6 @@ public partial class GameBootstrap
         driversScreenUi.HireButton.onClick.AddListener(() =>
         {
             LogUiInput("Drivers Canvas: clicked Hire New Driver");
-            if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.WorkersPanelOpened)
-            {
-                isTutorialOpen     = false;
-                isTutorialSideMode = false;
-            }
             HireNewDriver();
             isDriversScreenDirty = true;
         });

@@ -526,7 +526,6 @@ public partial class GameBootstrap
                 if (AssignDriverToTruck(truck, selectedDriver))
                 {
                     FocusTruck(truck.TruckNumber);
-                    CompleteFleetPickDriverTutorial();
                     isShiftsScreenDirty = true;
                     isDriversScreenDirty = true;
                     isFleetScreenDirty = true;
@@ -874,9 +873,7 @@ public partial class GameBootstrap
                 if (capturedIndex == 0)
                 {
                     NotifyTutorialLumberjackWorkerAssigned();
-                    CompleteForestAssignmentTutorial();
                 }
-                else if (capturedIndex == 1) CompleteSawmillWorkerAssignedTutorial();
             });
             slot.RemoveButton.onClick.AddListener(() =>
             {

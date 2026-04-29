@@ -73,15 +73,8 @@ public partial class GameBootstrap
     private bool isTutorialOpen;
     private bool isTutorialSkipped;
     private bool hasShownWelcomeTutorial;
-    private bool hasShownFirstMotelTutorial;
-    private bool hasShownWorkersPanelTutorial;
     private TutorialTrigger? pendingTutorialTrigger;
     private float pendingTutorialDelay;
-    private bool hasShownFirstDriverHiredTutorial;
-    private bool hasShownForestIntroTutorial;
-    private bool hasShownForestWorkerStartedTutorial;
-    private bool hasShownNeedSawmillTutorial;
-    private bool hasShownSawmillBuiltTutorial;
     private bool hasShownUserCoreBuildingsTutorial;
     private bool hasShownUserWarehouseBuiltTutorial;
     private bool hasShownUserMotelBuiltTutorial;
@@ -112,16 +105,6 @@ public partial class GameBootstrap
     private bool hasShownUserTradeRaceTutorial;
     private bool hasShownUserDemoCompleteTutorial;
     private int nextUserServiceBuildingInfoTutorialStep = 15;
-    private bool hasShownFleetIntroTutorial;
-    private bool hasShownFleetSelectTruckTutorial;
-    private bool hasShownFleetAssignDriverTutorial;
-    private bool hasShownFleetPickDriverTutorial;
-    private bool hasShownAssignSawmillWorkerTutorial;
-    private bool hasShownSawmillWorkerAssignedTutorial;
-    private enum TutorialCinematicPhase { None, TrackingBus, TrackingWorker, TrackingWorkerBackCloseup, Returning }
-    private TutorialCinematicPhase tutorialCinematicPhase;
-    private DriverAgent             tutorialCinematicDriver;
-    private bool tutorialCinematicShouldShowForestIntro;
     private bool isLoadingWorld;
     private static GameStartMode? pendingAutoStartMode;
     // mainMenuMusicLoadCoroutine removed (music disabled)
@@ -635,10 +618,6 @@ public partial class GameBootstrap
         if (selectedGameStartMode == GameStartMode.User)
         {
             ScheduleTutorial(TutorialTrigger.UserWelcome, 2f);
-        }
-        else
-        {
-            TryShowTutorial(TutorialTrigger.GameStarted);
         }
 
         if (selectedGameStartMode == GameStartMode.Debug)
