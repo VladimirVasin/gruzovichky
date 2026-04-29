@@ -729,6 +729,7 @@ public partial class GameBootstrap
             ShiftStartHour = -1,
             IsOnActiveShift = false
         };
+        driver.Age = Random.Range(18, 51);
         AssignWorkerPortrait(driver);
         AssignWorkerStats(driver);
         nextDriverId++;

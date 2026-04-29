@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
@@ -95,7 +95,6 @@ public partial class GameBootstrap
         driversScreenUi.HireButton.onClick.AddListener(() =>
         {
             LogUiInput("Drivers Canvas: clicked Hire New Driver");
-            isHireWorkerHighlightPersistent = false;
             if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.WorkersPanelOpened)
             {
                 isTutorialOpen     = false;
@@ -359,6 +358,18 @@ public partial class GameBootstrap
         driversScreenUi.DetailCarLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
         driversScreenUi.DetailCarText = CreateBodyText("CarV", carRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailCarText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        RectTransform educationRow = CreateLayoutRow("EducationRow", assignBody, 20f, 12f);
+        driversScreenUi.DetailEducationLabel = CreateBodyText("EduL", educationRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailEducationLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+        driversScreenUi.DetailEducationText = CreateBodyText("EduV", educationRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailEducationText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        RectTransform ageRow = CreateLayoutRow("AgeRow", assignBody, 20f, 12f);
+        driversScreenUi.DetailAgeLabel = CreateBodyText("AgeL", ageRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailAgeLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
+        driversScreenUi.DetailAgeText = CreateBodyText("AgeV", ageRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
+        driversScreenUi.DetailAgeText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
         // Stats card (salary, balance) — compact
         RectTransform statsCard = CreateSectionCard(detailRoot.transform, font, string.Empty, out RectTransform statsBody, false);
@@ -905,6 +916,10 @@ public partial class GameBootstrap
                 driversScreenUi.DetailHomeLabel.text = ru ? "Жилой дом" : "Home";
             if (driversScreenUi.DetailCarLabel != null)
                 driversScreenUi.DetailCarLabel.text = ru ? "\u0410\u0432\u0442\u043e" : "Car";
+            if (driversScreenUi.DetailEducationLabel != null)
+                driversScreenUi.DetailEducationLabel.text = ru ? "\u041e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435" : "Education";
+            if (driversScreenUi.DetailAgeLabel != null)
+                driversScreenUi.DetailAgeLabel.text = ru ? "\u0412\u043e\u0437\u0440\u0430\u0441\u0442" : "Age";
             if (driversScreenUi.DetailWorkTitleText != null)
                 driversScreenUi.DetailWorkTitleText.text = ru ? "Работа" : "Work";
             if (driversScreenUi.DetailSalaryLabel != null)
@@ -931,6 +946,23 @@ public partial class GameBootstrap
                 bool hasCar = sel.OwnedCarModelIndex >= 0 && sel.OwnedCarModelIndex < CarModelNames.Length;
                 driversScreenUi.DetailCarText.text = hasCar ? CarModelNames[sel.OwnedCarModelIndex] : "\u2014";
                 driversScreenUi.DetailCarText.color = hasCar ? Color.white : FleetMutedTextColor;
+            }
+
+            if (driversScreenUi.DetailEducationText != null)
+            {
+                driversScreenUi.DetailEducationText.text = sel.Education switch
+                {
+                    WorkerEducation.Skilled => ru ? "\u041a\u0432\u0430\u043b\u0438\u0444\u0438\u0446\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439" : "Skilled",
+                    _                       => ru ? "\u0411\u0430\u0437\u043e\u0432\u043e\u0435" : "Basic"
+                };
+                driversScreenUi.DetailEducationText.color = sel.Education == WorkerEducation.Skilled
+                    ? new Color(0.55f, 0.88f, 0.55f, 1f)
+                    : Color.white;
+            }
+
+            if (driversScreenUi.DetailAgeText != null)
+            {
+                driversScreenUi.DetailAgeText.text = sel.Age > 0 ? (ru ? $"{sel.Age} \u043b\u0435\u0442" : $"{sel.Age} y.o.") : "\u2014";
             }
 
             bool hasShift = sel.ShiftStartHour >= 0;

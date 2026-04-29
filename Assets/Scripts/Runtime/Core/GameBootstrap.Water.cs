@@ -238,8 +238,8 @@ public partial class GameBootstrap : MonoBehaviour
                     continue;
                 }
 
-                GetWaterWaveState(time, cell, bobSpeed, GetDeterministicWaterPhase(cell), out _, out _, out float travelImpulse);
-                total += travelImpulse * 1.8f;
+                GetWaterWaveState(time, cell, bobSpeed, GetDeterministicWaterPhase(cell), out _, out float localWaveHeight, out float travelImpulse);
+                total += lakeWaterCells.Contains(cell) ? (localWaveHeight * 0.5f + 0.5f) * 0.038f : travelImpulse * 1.8f;
                 count++;
             }
         }
@@ -354,7 +354,8 @@ public partial class GameBootstrap : MonoBehaviour
                     break;
             }
 
-            Color tileColor = Color.Lerp(shoreColor, deepColor, nearShoreT);
+            float nightDim = Mathf.Lerp(0.14f, 1f, currentStylizedDaylight);
+            Color tileColor = Color.Lerp(shoreColor, deepColor, nearShoreT) * nightDim;
             float whitecap = Mathf.Clamp01(travelImpulse * Mathf.Lerp(1f, 0.28f, nearShoreT));
             float highlight = highlightBase + (localWaveHeight * 0.5f + 0.5f) * highlightWave + whitecap * 0.08f;
             tileColor = Color.Lerp(tileColor, new Color(0.9f, 0.97f, 1f), highlight);
@@ -511,6 +512,130 @@ public partial class GameBootstrap : MonoBehaviour
                 riverFish.RemoveAt(i);
             }
         }
+    }
+
+    private void UpdateLakeFish()
+    {
+        if (lakeFishRoot == null) return;
+
+        float dt = Time.deltaTime * Mathf.Max(0.35f, gameSpeedMultiplier);
+        float time = Time.time;
+        float brightness = Mathf.Lerp(0.3f, 0.72f, currentStylizedDaylight);
+
+        for (int i = lakeFish.Count - 1; i >= 0; i--)
+        {
+            LakeFishData fish = lakeFish[i];
+            if (fish?.RootTransform == null) { lakeFish.RemoveAt(i); continue; }
+
+            fish.JumpCooldown -= dt;
+
+            if (fish.IsJumping)
+            {
+                fish.JumpProgress += dt / fish.JumpDuration;
+                if (fish.JumpProgress >= 1f)
+                {
+                    fish.IsJumping = false;
+                    fish.JumpProgress = 0f;
+                    fish.IdleTimer = Random.Range(0.8f, 2f);
+                    fish.RootTransform.position = new Vector3(fish.WorldX, fish.DepthY, fish.WorldZ);
+                    fish.RootTransform.rotation = Quaternion.Euler(0f, fish.Yaw, 0f);
+                }
+                else
+                {
+                    float t = fish.JumpProgress;
+                    float jumpY = fish.DepthY + fish.JumpPeakHeight * 4f * t * (1f - t);
+                    float pitch = Mathf.Lerp(-52f, 52f, t);
+                    fish.RootTransform.position = new Vector3(fish.WorldX, jumpY, fish.WorldZ);
+                    fish.RootTransform.rotation = Quaternion.Euler(pitch, fish.Yaw, 0f);
+                    if (fish.BodyTransform != null)
+                        fish.BodyTransform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    if (fish.TailTransform != null)
+                        fish.TailTransform.localRotation = Quaternion.Euler(0f, Mathf.Sin(time * 14f + fish.TailPhase) * 30f, 0f);
+                }
+
+                if (fish.BodyMaterial != null) fish.BodyMaterial.color = fish.BodyColor * brightness;
+                if (fish.TailMaterial != null) fish.TailMaterial.color = Color.Lerp(fish.BodyColor * 0.85f, new Color(0.54f, 0.66f, 0.52f), 0.2f) * brightness;
+                continue;
+            }
+
+            // Trigger jump when cooldown expires and fish is resting
+            if (fish.JumpCooldown <= 0f && fish.IdleTimer > 0f)
+            {
+                fish.IsJumping = true;
+                fish.JumpProgress = 0f;
+                fish.JumpDuration = Random.Range(0.5f, 0.8f);
+                fish.JumpPeakHeight = Random.Range(0.28f, 0.55f);
+                fish.JumpCooldown = Random.Range(10f, 24f);
+                continue;
+            }
+
+            if (fish.IdleTimer > 0f)
+            {
+                fish.IdleTimer -= dt;
+                float bob = Mathf.Sin(time * 1.4f + fish.BobPhase) * 0.008f;
+                fish.RootTransform.position = new Vector3(fish.WorldX, fish.DepthY + bob, fish.WorldZ);
+                fish.RootTransform.rotation = Quaternion.Euler(0f, fish.Yaw, 0f);
+                if (fish.TailTransform != null)
+                    fish.TailTransform.localRotation = Quaternion.Euler(0f, Mathf.Sin(time * 4f + fish.TailPhase) * 12f, 0f);
+            }
+            else
+            {
+                float dx = fish.TargetX - fish.WorldX;
+                float dz = fish.TargetZ - fish.WorldZ;
+                float dist = Mathf.Sqrt(dx * dx + dz * dz);
+                if (dist < 0.25f)
+                {
+                    fish.IdleTimer = Random.Range(1.5f, 3.5f);
+                    PickLakeFishTarget(fish);
+                }
+                else
+                {
+                    float step = fish.SwimSpeed * dt / dist;
+                    fish.WorldX += dx * step;
+                    fish.WorldZ += dz * step;
+                    fish.Yaw = Mathf.Atan2(dx, dz) * Mathf.Rad2Deg;
+                    float bob = Mathf.Sin(time * 1.8f + fish.BobPhase) * 0.01f;
+                    fish.RootTransform.position = new Vector3(fish.WorldX, fish.DepthY + bob, fish.WorldZ);
+                    fish.RootTransform.rotation = Quaternion.Slerp(
+                        fish.RootTransform.rotation,
+                        Quaternion.Euler(0f, fish.Yaw, 0f),
+                        4f * Time.deltaTime);
+                    if (fish.TailTransform != null)
+                        fish.TailTransform.localRotation = Quaternion.Euler(0f, Mathf.Sin(time * 10f + fish.TailPhase) * 22f, 0f);
+                }
+            }
+
+            if (fish.BodyTransform != null)
+                fish.BodyTransform.localRotation = Quaternion.Euler(90f, 0f, Mathf.Sin(time * 5f + fish.TailPhase) * 3f);
+
+            if (fish.BodyMaterial != null) fish.BodyMaterial.color = fish.BodyColor * brightness;
+            if (fish.TailMaterial != null) fish.TailMaterial.color = Color.Lerp(fish.BodyColor * 0.85f, new Color(0.54f, 0.66f, 0.52f), 0.2f) * brightness;
+        }
+    }
+
+    private void PickLakeFishTarget(LakeFishData fish)
+    {
+        if (fish.LakeIndex < 0 || fish.LakeIndex >= perLakeWaterCells.Count) return;
+        List<Vector2Int> cells = perLakeWaterCells[fish.LakeIndex];
+        if (cells.Count == 0) return;
+
+        for (int attempt = 0; attempt < 8; attempt++)
+        {
+            Vector2Int cell = cells[Random.Range(0, cells.Count)];
+            float tx = cell.x + 0.5f;
+            float tz = cell.y + 0.5f;
+            float d = Mathf.Sqrt((fish.WorldX - tx) * (fish.WorldX - tx) + (fish.WorldZ - tz) * (fish.WorldZ - tz));
+            if (d >= 0.8f && d <= 5f)
+            {
+                fish.TargetX = tx;
+                fish.TargetZ = tz;
+                return;
+            }
+        }
+
+        Vector2Int fallback = cells[Random.Range(0, cells.Count)];
+        fish.TargetX = fallback.x + 0.5f;
+        fish.TargetZ = fallback.y + 0.5f;
     }
 
     private void CreateCloudLump(Transform parent, Vector3 localPosition, Vector3 localScale)

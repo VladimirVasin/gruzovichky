@@ -9,7 +9,17 @@ public partial class GameBootstrap
     private void InitUnlockedBuildTools()
     {
         unlockedBuildTools = new HashSet<BuildTool>();
-        UnlockDefaultRoadBuildTools();
+        if (selectedGameStartMode == GameStartMode.User)
+        {
+            UnlockDefaultRoadBuildTools();
+            return;
+        }
+
+        foreach (BuildTool tool in System.Enum.GetValues(typeof(BuildTool)))
+        {
+            if (tool == BuildTool.None) continue;
+            unlockedBuildTools.Add(tool);
+        }
     }
 
     private void UnlockDefaultRoadBuildTools()
@@ -33,6 +43,23 @@ public partial class GameBootstrap
             isBuildScreenDirty = true;
             SessionDebugLogger.Log("BUILD", $"Build tool unlocked: {tool}.");
         }
+    }
+
+    private void UnlockAllBuildTools()
+    {
+        if (unlockedBuildTools == null)
+        {
+            InitUnlockedBuildTools();
+        }
+
+        foreach (BuildTool tool in System.Enum.GetValues(typeof(BuildTool)))
+        {
+            if (tool == BuildTool.None) continue;
+            unlockedBuildTools.Add(tool);
+        }
+
+        isBuildScreenDirty = true;
+        SessionDebugLogger.Log("BUILD", "All build tools unlocked.");
     }
 
     private void SetupBuildScreenUi()
@@ -115,6 +142,7 @@ public partial class GameBootstrap
             CreateBuildCategory(cardList, font, "Services", "Сервисы", false,
                 (BuildTool.Bar,          "BR", "Bar",          new Color(0.52f, 0.20f, 0.20f)),
                 (BuildTool.Canteen,      "CT", "Canteen",      new Color(0.20f, 0.42f, 0.50f)),
+                (BuildTool.GasStation,   "GS", "Gas Station",  new Color(0.84f, 0.68f, 0.26f)),
                 (BuildTool.GamblingHall, "GH", "Gambling Hall",  new Color(0.52f, 0.38f, 0.08f)),
                 (BuildTool.CityPark,     "CP", "City Park",      new Color(0.22f, 0.48f, 0.22f)),
                 (BuildTool.PersonalHouse,"PH", "Personal House", new Color(0.55f, 0.42f, 0.30f)),
@@ -537,6 +565,31 @@ public partial class GameBootstrap
                 break;
             }
 
+            // ── Warehouse ─────────────────────────────────────────────────────
+            case BuildTool.Warehouse:
+            {
+                Color wall   = new(0.76f, 0.64f, 0.44f);
+                Color roof   = new(0.50f, 0.34f, 0.18f);
+                Color stripe = new(0.62f, 0.50f, 0.32f);
+                Color bay    = new(0.12f, 0.10f, 0.08f);
+                Color win    = new(0.62f, 0.80f, 0.92f);
+                // Building body
+                P(0.08f, 0.14f, 0.92f, 0.58f, wall);
+                // Barrel arch roof — three stepped layers faking a curve
+                P(0.06f, 0.56f, 0.94f, 0.66f, roof);
+                P(0.12f, 0.64f, 0.88f, 0.74f, roof);
+                P(0.22f, 0.72f, 0.78f, 0.80f, roof);
+                // Corrugated panel dividers
+                P(0.18f, 0.16f, 0.22f, 0.56f, stripe);
+                P(0.78f, 0.16f, 0.82f, 0.56f, stripe);
+                // Large loading bay (double door)
+                P(0.30f, 0.14f, 0.70f, 0.50f, bay);
+                P(0.48f, 0.14f, 0.52f, 0.50f, stripe); // center divider
+                // Small side window
+                P(0.74f, 0.40f, 0.88f, 0.54f, win);
+                break;
+            }
+
             default:
             {
                 Text lbl = CreateHeaderText("AccentLabel", accentStrip, font, abbrev, 17, TextAnchor.MiddleCenter, Color.white);
@@ -687,6 +740,7 @@ public partial class GameBootstrap
             BuildTool.FurnitureFactory => locations.ContainsKey(LocationType.FurnitureFactory),
             BuildTool.Bar              => locations.ContainsKey(LocationType.Bar),
             BuildTool.Canteen          => locations.ContainsKey(LocationType.Canteen),
+            BuildTool.GasStation       => locations.ContainsKey(LocationType.GasStation),
             BuildTool.GamblingHall     => locations.ContainsKey(LocationType.GamblingHall),
             BuildTool.CityPark         => locations.ContainsKey(LocationType.CityPark),
             BuildTool.PersonalHouse    => false,
@@ -719,6 +773,7 @@ public partial class GameBootstrap
                 BuildTool.CityPark         => ru ? $"Режим активен: поставь городской парк 8x8 с входом. R — поворот ({rot})." : $"Mode active: place one 8x8 city park from its entrance cell. R rotates ({rot}).",
                 BuildTool.PersonalHouse    => ru ? $"Режим активен: жилой дом 5x6, вход со стороны дороги. R — поворот ({rot})." : $"Mode active: 5x6 personal house, entrance faces the road. R rotates ({rot}).",
                 BuildTool.CarMarket        => $"Mode active: place one 5x5 car market from its driveway cell. R rotates ({rot}).",
+                BuildTool.GasStation       => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0437\u0430\u043f\u0440\u0430\u0432\u043a\u0443 2x2 \u0441 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u043e\u043c. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place one 2x2 gas station from its driveway cell. R rotates ({rot}).",
                 _                          => string.Empty
             };
         }
@@ -741,6 +796,7 @@ public partial class GameBootstrap
             BuildTool.CityPark         => locations.ContainsKey(LocationType.CityPark)         ? alreadyBuilt : (ru ? "Парк 8x8: рабочие гуляют и сидят на лавочках. Бесплатно, повышает настроение." : "8x8 park: workers stroll and sit on benches. Free entry, boosts leisure need."),
             BuildTool.PersonalHouse    => ru ? "Жилой дом 5x6 — американский пригородный дом в одной из 5 случайных вариаций." : "5x6 suburban house — one of 5 random American home styles. Decorative for now.",
             BuildTool.CarMarket        => locations.ContainsKey(LocationType.CarMarket) ? alreadyBuilt : "5x5 car market: workers with $100 can buy personal cars here.",
+            BuildTool.GasStation       => locations.ContainsKey(LocationType.GasStation) ? alreadyBuilt : (ru ? "\u0417\u0430\u043f\u0440\u0430\u0432\u043a\u0430 2x2: \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0438 \u0435\u0434\u0443\u0442 \u0441\u044e\u0434\u0430 \u0437\u0430 \u0442\u043e\u043f\u043b\u0438\u0432\u043e\u043c, \u043a\u043e\u0433\u0434\u0430 \u0440\u0435\u0439\u0441\u044b \u0441\u0442\u0430\u043d\u043e\u0432\u044f\u0442\u0441\u044f \u0441\u043b\u0438\u0448\u043a\u043e\u043c \u0434\u043b\u0438\u043d\u043d\u044b\u043c\u0438." : "2x2 fuel service: trucks refuel here when routes get too long."),
             _                          => string.Empty
         };
     }

@@ -75,9 +75,6 @@ public partial class GameBootstrap
     private bool hasShownWelcomeTutorial;
     private bool hasShownFirstMotelTutorial;
     private bool hasShownWorkersPanelTutorial;
-    private bool isBuildHighlightPersistent;
-    private bool isWorkersHighlightPersistent;
-    private bool isHireWorkerHighlightPersistent;
     private TutorialTrigger? pendingTutorialTrigger;
     private float pendingTutorialDelay;
     private bool hasShownFirstDriverHiredTutorial;
@@ -93,16 +90,26 @@ public partial class GameBootstrap
     private bool hasShownUserBuildLumberjackCampTutorial;
     private bool hasShownUserLumberjackCampBuiltTutorial;
     private bool hasShownUserLumberjackWorkerAssignedTutorial;
+    private bool hasShownUserWorkerShiftInfoTutorial;
+    private bool hasShownUserLogisticsSetupTutorial;
     private bool hasShownUserBuyTruckTutorial;
     private bool hasShownUserTruckArrivalTutorial;
+    private bool hasShownUserTruckFreightTutorial;
+    private bool hasShownUserWorkersLeisureTutorial;
+    private bool hasShownUserBuildServiceBuildingsTutorial;
+    private bool hasShownUserBarBuiltTutorial;
+    private bool hasShownUserCanteenBuiltTutorial;
+    private bool hasShownUserGasStationBuiltTutorial;
+    private bool hasShownUserGamblingHallBuiltTutorial;
+    private bool hasShownUserCityParkBuiltTutorial;
+    private bool hasShownUserWorkersOverviewTutorial;
+    private int nextUserServiceBuildingInfoTutorialStep = 15;
     private bool hasShownFleetIntroTutorial;
     private bool hasShownFleetSelectTruckTutorial;
     private bool hasShownFleetAssignDriverTutorial;
     private bool hasShownFleetPickDriverTutorial;
     private bool hasShownAssignSawmillWorkerTutorial;
     private bool hasShownSawmillWorkerAssignedTutorial;
-    private bool isShiftsHighlightPersistent;
-    private bool isFleetHighlightPersistent;
     private enum TutorialCinematicPhase { None, TrackingBus, TrackingWorker, TrackingWorkerBackCloseup, Returning }
     private TutorialCinematicPhase tutorialCinematicPhase;
     private DriverAgent             tutorialCinematicDriver;
@@ -708,6 +715,7 @@ public partial class GameBootstrap
         isFarZoomVisualLodActive = false;
         shadowLodRenderers.Clear();
         gridLinesRoot = null;
+        ResetSquirrelMemorialWorldState();
         worldRoot = new GameObject("PrototypeWorld").transform;
         roadsRoot = new GameObject("Roads").transform;
         roadsRoot.SetParent(worldRoot, false);
@@ -761,7 +769,7 @@ public partial class GameBootstrap
         RebuildRoadLanterns();
 
         SetLoadingProgress(++step / (float)totalSteps, "Planting trees..."); yield return null;
-        PopulateMiscTrees();
+        PopulateMiscTrees(); PopulateLakeDecorations();
 
         SetLoadingProgress(++step / (float)totalSteps, "Placing benches..."); yield return null;
         RebuildRoadsideBenches();
@@ -770,7 +778,7 @@ public partial class GameBootstrap
         RebuildRoadSigns();
 
         SetLoadingProgress(++step / (float)totalSteps, "Wildlife..."); yield return null;
-        SetupMiscBirds(); SetupAmbientCats(); SetupAmbientSquirrels(); SetupAmbientBees(); SetupAmbientLanternMoths(); SetupRiverFish(); SetupNightSky();
+        SetupMiscBirds(); SetupAmbientCats(); SetupAmbientSquirrels(); SetupAmbientBees(); SetupAmbientLanternMoths(); SetupAmbientFallingLeaves(); SetupAmbientFireflies(); SetupAmbientFrogs(); SetupRiverFish(); SetupLakeFish(); SetupNightSky(); SetupWeatherSystem();
 
         SetLoadingProgress(++step / (float)totalSteps, "Water effects..."); yield return null;
         waterVisualLodLevel = -1; UpdateWaterVisualLod();

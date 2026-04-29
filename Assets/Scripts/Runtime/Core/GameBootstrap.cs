@@ -94,11 +94,16 @@ public partial class GameBootstrap : MonoBehaviour
     private const int AmbientAirHighwayDustParticleCount = 20;
     private const int MiscBirdCount = 10;
     private const int AmbientCatCount = 3;
-    private const int AmbientSquirrelCount = 6;
+    private const int AmbientSquirrelCount = 22;
     private const int NightStarCount = 120;
     private const int AmbientBeeCount = 8;
     private const int AmbientLanternMothSwarmMaxCount = 8;
+    private const int AmbientFireflyCount = 25;
+    private const int AmbientFallingLeafCount = 30;
+    private const int AmbientFrogCount = 5;
+    private const int RainDropCount = 280;
     private const int RiverFishMaxActiveCount = 6;
+    private const int LakeFishMaxCount = 5;
     private const int ExhaustSmokePoolSize = 36;
     private const int TruckDirtDustPoolSize = 28;
     private const float ExhaustEmitInterval = 0.28f;
@@ -162,16 +167,23 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<Vector3> ambientCatRoamPoints = new();
     private readonly List<AmbientCatData> ambientCats = new();
     private readonly List<Vector3> ambientSquirrelRoamPoints = new();
+    private readonly List<float> ambientSquirrelPerchHeights = new();
     private readonly List<AmbientSquirrelData> ambientSquirrels = new();
     private readonly List<NightStarData> nightStars = new();
     private readonly List<Vector3> flowerBeePoints = new();
     private readonly List<AmbientBeeData> ambientBees = new();
     private readonly List<AmbientLanternMothSwarmData> ambientLanternMothSwarms = new();
+    private readonly List<AmbientFireflyData> ambientFireflies = new();
+    private readonly List<AmbientFallingLeafData> ambientFallingLeaves = new();
+    private readonly List<AmbientFrogData> ambientFrogs = new();
+    private readonly List<Vector2Int> ambientFrogRoamCells = new();
     private readonly List<WaterSurfaceTileData> waterSurfaceTiles = new();
     private readonly List<WaterBodyTileData> waterBodyTiles = new();
     private readonly List<WaterShoreFoamData> waterShoreFoams = new();
     private readonly List<WaterShoreWashPatchData> waterShoreWashPatches = new();
     private readonly List<RiverFishData> riverFish = new();
+    private readonly List<LakeFishData> lakeFish = new();
+    private readonly List<List<Vector2Int>> perLakeWaterCells = new();
     private readonly List<DistantCloudData> distantClouds = new();
     private readonly List<AmbientAirParticleData> ambientAirParticles = new();
     private readonly List<ShadowLodRendererData> shadowLodRenderers = new();
@@ -230,8 +242,12 @@ public partial class GameBootstrap : MonoBehaviour
     private Material moonMaterial;
     private Transform ambientBeeRoot;
     private Transform ambientLanternMothRoot;
+    private Transform ambientFireflyRoot;
+    private Transform ambientFallingLeafRoot;
+    private Transform ambientFrogRoot;
     private Transform waterEffectsRoot;
     private Transform riverFishRoot;
+    private Transform lakeFishRoot;
     private bool isFarZoomVisualLodActive;
     private AudioSource uiAudioSource;
     private AudioSource ambientAudioSource;
@@ -311,7 +327,7 @@ public partial class GameBootstrap : MonoBehaviour
     private float truckInteractionTimer;
     private float moneyPopupTimer;
     private float truckFuel = TruckFuelCapacity;
-    private float dayNightCycleTimer = DayNightCycleDuration * 0.25f; // start at 06:00 вЂ” morning
+    private float dayNightCycleTimer = DayNightCycleDuration * 0.25f; // start at 06:00 - morning
     private int   currentDay = 1;
     private int   dailyBuildingTaxPercent = DefaultDailyBuildingTaxPercent;
     private int   lastTaxCollectionDay;
@@ -391,6 +407,8 @@ public partial class GameBootstrap : MonoBehaviour
     private TripType currentAssignedTrip = TripType.None;
     private BuildTool activeBuildTool = BuildTool.None;
     private HashSet<BuildTool> unlockedBuildTools;
+    private bool areTutorialVacanciesFullyUnlocked;
+    private bool isTutorialTruckDriverVacancyUnlocked;
     private readonly List<LocationData> localStops = new();
     private Vector2Int? hoveredBuildCell;
     private Vector2Int? selectedDebugCell;
@@ -574,7 +592,18 @@ public partial class GameBootstrap : MonoBehaviour
     private AudioClip riverSplashClip;
     private AudioClip boatMotorClip;
     private bool wereAmbientLanternMothsActiveLastFrame;
+    private bool wereAmbientFirefliesActiveLastFrame;
     private float riverFishSpawnTimer;
+    private WeatherState currentWeatherState = WeatherState.Clear;
+    private WeatherState nextWeatherState    = WeatherState.Clear;
+    private WeatherParams activeWeatherParams;
+    private float weatherHoldTimer = 180f;
+    private float weatherTransitionTimer;
+    private float weatherTransitionDuration;
+    private bool  isWeatherTransitioning;
+    private float weatherRainIntensity;
+    private Transform rainRoot;
+    private readonly List<RainDropData> rainDrops = new();
     private float truckEngineAudioPhaseOffset;
     private float truckEngineAudioWobbleSpeed = 1f;
     private float truckEngineAudioPitchBias = 1f;
@@ -671,6 +700,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         None,
         ForestToSawmill,
+        ForestToWarehouse,
         SawmillToWarehouse,
         WarehouseToFurnitureFactoryBoards,
         WarehouseToFurnitureFactoryTextile,
@@ -691,6 +721,7 @@ public partial class GameBootstrap : MonoBehaviour
         Motel,
         Bar,
         Canteen,
+        GasStation,
         GamblingHall,
         CityPark,
         PersonalHouse,
@@ -930,6 +961,7 @@ public partial class GameBootstrap : MonoBehaviour
         public float Speed;
         public float PitchAmplitude;
         public float RollAmplitude;
+        public float CurrentWindMult = 1f;
     }
 
     private sealed class DistantCloudData
@@ -1021,7 +1053,9 @@ public partial class GameBootstrap : MonoBehaviour
     {
         Idle,
         Running,
-        Foraging
+        Foraging,
+        ClimbingUp,
+        ClimbingDown,
     }
 
     private sealed class AmbientSquirrelData
@@ -1042,6 +1076,10 @@ public partial class GameBootstrap : MonoBehaviour
         public float TailPhase;
         public float Yaw;
         public AmbientSquirrelState State;
+        public bool IsAtTreeTop;
+        public float ClimbProgress;
+        public float ClimbDuration;
+        public float ClimbCooldown;
     }
 
     private sealed class AmbientCatData
@@ -1105,6 +1143,74 @@ public partial class GameBootstrap : MonoBehaviour
         public float VerticalBobSpeed;
         public float PhaseOffset;
         public float Visibility;
+    }
+
+    private sealed class AmbientFireflyData
+    {
+        public Transform Transform;
+        public Material Material;
+        public Vector3 BasePosition;
+        public float DriftPhaseX;
+        public float DriftPhaseY;
+        public float DriftPhaseZ;
+        public float DriftSpeedX;
+        public float DriftSpeedY;
+        public float DriftSpeedZ;
+        public float DriftRadius;
+        public float BaseGroundY;
+        public float GlowPhase;
+        public float GlowSpeed;
+        public float Visibility;
+    }
+
+    private enum AmbientFrogState { Sitting, Croaking, Hopping }
+
+    private sealed class AmbientFrogData
+    {
+        public Transform RootTransform;
+        public Transform BodyTransform;
+        public Transform HeadTransform;
+        public Vector3 CurrentPosition;
+        public Vector3 StartPosition;
+        public Vector3 TargetPosition;
+        public int CurrentCellIndex;
+        public float StateTimer;
+        public float HopProgress;
+        public float HopDuration;
+        public float AnimPhase;
+        public float Yaw;
+        public AmbientFrogState State;
+    }
+
+    private enum WeatherState { Clear, Overcast, Rainy, Foggy, Windy }
+
+    private struct WeatherParams
+    {
+        public float FogMult;
+        public float SatOffset;
+        public float ExposureOffset;
+        public float WindMult;
+        public float BloomScatterAdd;
+    }
+
+    private static readonly WeatherParams[] WeatherTargetParams =
+    {
+        new() { FogMult = 1.00f, SatOffset =   0f, ExposureOffset =  0.00f, WindMult = 1.0f, BloomScatterAdd = 0.00f },
+        new() { FogMult = 0.82f, SatOffset = -10f, ExposureOffset = -0.08f, WindMult = 1.3f, BloomScatterAdd = 0.04f },
+        new() { FogMult = 0.72f, SatOffset = -16f, ExposureOffset = -0.16f, WindMult = 1.8f, BloomScatterAdd = 0.08f },
+        new() { FogMult = 0.66f, SatOffset =  -8f, ExposureOffset = -0.04f, WindMult = 0.6f, BloomScatterAdd = 0.08f },
+        new() { FogMult = 0.92f, SatOffset =  +3f, ExposureOffset = +0.02f, WindMult = 2.8f, BloomScatterAdd = 0.00f },
+    };
+
+    private sealed class RainDropData
+    {
+        public Transform T;
+        public Renderer Renderer;
+        public Material Material;
+        public float Y;
+        public float Speed;
+        public float XOff;
+        public float ZOff;
     }
 
     private sealed class WaterSurfaceTileData
@@ -1183,209 +1289,30 @@ public partial class GameBootstrap : MonoBehaviour
         public Color BodyColor;
     }
 
-    private sealed class TruckAgent
+    private sealed class LakeFishData
     {
-        public int TruckNumber;
-        public string DisplayName;
-        public GameObject TruckObject;
-        public Transform TruckVisualRoot;
-        public Transform TruckBodyTransform;
-        public Transform TruckCabinTransform;
-        public Transform TruckCargoVisualRoot;
-        public CargoType TruckCargoVisualType = CargoType.None;
-        public int TruckCargoVisualAmount = -1;
-        public Renderer TruckHeadlightLeftRenderer;
-        public Renderer TruckHeadlightRightRenderer;
-        public Material TruckHeadlightLeftMaterial;
-        public Material TruckHeadlightRightMaterial;
-        public readonly List<Transform> TruckWheels = new();
-        public readonly List<Transform> TruckFrontWheels = new();
-        public readonly List<Light> TruckHeadlights = new();
-        public readonly List<DriverAgent> AssignedDrivers = new();
-        public DriverAgent Driver;
-        public AudioSource TruckLoopAudioSource;
-        public AudioSource TruckFxAudioSource;
-        public float EngineAudioPhaseOffset;
-        public float EngineAudioWobbleSpeed = 1f;
-        public float EngineAudioPitchBias = 1f;
-        public float EngineAudioVolumeBias = 1f;
-        public readonly List<Vector2Int> ActivePath = new();
-        public Vector2Int TruckCell;
-        public Vector3 TruckTargetWorld;
-        public Vector3 TruckSegmentStartWorld;
-        public Vector3 TruckSmoothedForward = Vector3.forward;
-        public bool IsTruckMoving;
-        public bool IsTruckInteracting;
-        public bool IsTruckWaitingForService;
-        public bool IsDriverRescueActive;
-        public bool IsTruckAutoModeEnabled;
-        public CargoType TruckCargoType = CargoType.None;
-        public int TruckCargoAmount;
-        public float TruckSegmentProgress;
-        public float TruckSegmentDuration;
-        public float TruckWheelSpinAngle;
-        public float TruckSteerAngle;
-        public float TruckInteractionTimer;
-        public float TruckFuel = TruckFuelCapacity;
-        public int CurrentAssignedTripReward;
-        public TripType CurrentAssignedTrip = TripType.None;
-        public TripPhase CurrentTripPhase = TripPhase.None;
-        public RefuelPhase CurrentRefuelPhase = RefuelPhase.None;
-        public TruckInteractionType ActiveTruckInteraction = TruckInteractionType.None;
-        public TruckInteractionType QueuedTruckInteraction = TruckInteractionType.None;
-        public Quaternion TruckInteractionTargetRotation;
-        public Vector3 TruckInteractionBuildingPoint;
-        public LocationType? ActiveServiceLocation;
-        public LocationType? QueuedServiceLocation;
-        public int ParkingSlotIndex;
-        public float ExhaustEmitTimer;
-        public float DirtDustEmitTimer;
-        public bool IsPurchaseArrivalActive;
-        public readonly List<Vector3> PurchaseArrivalWaypoints = new();
-        public int PurchaseArrivalWaypointIndex;
-        public float PurchaseArrivalSpeed = 4.6f;
-    }
-
-    private sealed class WorkerEffectState
-    {
-        public string EffectId;
-        public string EnglishName;
-        public string RussianName;
-        public string EnglishDescription;
-        public string RussianDescription;
-        public int DrivingDelta;
-        public int StaminaDelta;
-        public int ProductionDelta;
-        public int LogisticsDelta;
-        public float RemainingHours;
-    }
-
-    private enum WorkerPerkKind
-    {
-        Alcoholism,
-        Gambler,
-        Nightowl,        // Works better during night shifts
-        Ironman,         // РњРµРґР»РµРЅРЅРµРµ СѓСЃС‚Р°С‘С‚, СЂРµР¶Рµ РЅСѓР¶РµРЅ РѕС‚РґС‹С…
-        Motorhead,       // Р‘РѕРЅСѓСЃ Рє РІРѕР¶РґРµРЅРёСЋ Рё С‚РµС…РѕР±СЃР»СѓР¶РёРІР°РЅРёСЋ
-        Trader,          // РўРѕСЂРіРѕРІС‹Рµ СЂРµР№СЃС‹ РїСЂРёРЅРѕСЃСЏС‚ Р±РѕР»СЊС€Рµ РїСЂРёР±С‹Р»Рё
-        Handyman,        // РЈСЃРєРѕСЂСЏРµС‚ РїСЂРѕРёР·РІРѕРґСЃС‚РІРѕ РЅР° РІСЃРµС… Р·РґР°РЅРёСЏС…
-        Socialite,       // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РґРѕСЃСѓРі Р±С‹СЃС‚СЂРµРµ Рё РґРµС€РµРІР»Рµ
-        Frugal,          // РўСЂР°С‚РёС‚ РјРµРЅСЊС€Рµ РЅР° СЃРµСЂРІРёСЃРЅС‹Рµ РЅСѓР¶РґС‹
-        Quicklearner     // Р‘С‹СЃС‚СЂРµРµ РїСЂРѕРєР°С‡РёРІР°РµС‚ РЅР°РІС‹РєРё РѕС‚ РѕРїС‹С‚Р°
-    }
-
-    private enum WorkerPerkType
-    {
-        Positive,
-        Negative
-    }
-
-    private enum WorkerGender { Male, Female }
-
-    private sealed class DriverAgent
-    {
-        public int DriverId;
-        public string DriverName;
-        public WorkerGender Gender;
-        public bool HasPortrait;
-        public int PortraitSkinTone;
-        public int PortraitHairStyle;
-        public int PortraitHairColor;
-        public int PortraitEyeStyle;
-        public int PortraitMouthStyle;
-        public int PortraitAccessory;
-        public int PortraitHeadShape;
-        public bool HasWorkerStats;
-        public int DrivingSkill;
-        public int StaminaSkill;
-        public int ProductionSkill;
-        public int LogisticsSkill;
-        public readonly List<WorkerPerkKind> Perks = new();
-        public readonly List<WorkerEffectState> ActiveEffects = new();
-        public DriverDutyMode DutyMode = DriverDutyMode.Local;
-        // ShiftStartHour: -1 = idle/no shift assigned
-        public int ShiftStartHour = -1;
-        public bool IsOnActiveShift;
-        public GameObject DriverObject;
-        public Transform DriverVisualRoot;
-        public Transform DriverBodyTransform;
-        public Transform DriverHeadTransform;
-        public Transform DriverCapTransform;
-        public Transform DriverLeftArmTransform;
-        public Transform DriverRightArmTransform;
-        public Transform DriverLeftLegTransform;
-        public Transform DriverRightLegTransform;
-        public Transform DriverFuelCanTransform;
-        public Transform DriverFlashlightTransform;
-        public Light DriverFlashlightLight;
-        public Renderer DriverFlashlightRenderer;
-        public Material DriverFlashlightMaterial;
-        public DriverRestPhase RestPhase = DriverRestPhase.None;
-        public float SleepTimer;
-        public Vector3 MotelIdlePosition;
-        public int AssignedTruckNumber;
-        public int Salary = 25;
-        public int Money  = 30;
-        public bool WaitingForShiftAtParking;
-        public bool NeedsShiftEndReturn;
-        public bool IsShiftSalaryPending;
-        public DriverRescuePhase WalkPhase = DriverRescuePhase.None;
-        public Vector3 WalkTargetWorld;
-        public readonly List<Vector3> WalkPath = new();
-        public int WalkWaypointIndex;
-        public float WalkAnimationTime;
-        public int IdleWanderPointIndex = -1;
-        public float IdleWanderPauseTimer;
-        public float IdleConversationTimer;
-        public int IdleConversationPartnerId = -1;
-        public float IdleConversationCooldownTimer;
-        public bool IsArrivingByBus;
-        public int SittingBenchIndex = -1;
-        public int CityParkBenchIndex = -1;
-        public int CityParkPromenadeStep;
-        public float IdleActivityTimer;
-        public Transform[] SmokingParticles;
-        public Material[] SmokingParticleMaterials;
-        public float[] SmokingParticleLives;
-        public Vector3[] SmokingParticleVelocities;
-        public float SmokingEmitTimer;
-        public WorkerLifeGoal LifeGoal = WorkerLifeGoal.None;
-        public int LifeCycleLastHour = -1;
-        public bool NeedsCycleResetPending;
-        public bool WorkedToday;
-        public bool AteToday;
-        public bool HadLeisureToday;
-        public int  GamblingBet;          // bet placed this visit; 0 = not gambling
-        public int  GamblingPayout;       // payout received ($0 on loss)
-        public int  GamblingMultiplier;   // 0=loss, 1=x1, 5=x5, 10=x10
-        public bool GamblingMoneyPending; // true until money is actually applied after animation
-        public int  GamblingBetCount;     // how many bets placed this visit (for 2-bet limit)
-        public bool GamblerLostLastTime;  // Gambler perk: true after a loss (doubles next bet)
-        public bool GamblerBroke;         // Gambler perk: Money < min bet, visits but skips bet
-        public bool SleptToday;
-        public float HoursSinceMeal = 0f;
-        public float HoursSinceSleep = 0f;
-        public float HoursSinceLeisure = 0f;
-        public WorkerNeedStatus LastMealNeedStatus = WorkerNeedStatus.Ok;
-        public WorkerNeedStatus LastSleepNeedStatus = WorkerNeedStatus.Ok;
-        public WorkerNeedStatus LastLeisureNeedStatus = WorkerNeedStatus.Ok;
-        public int BusOriginStopNumber = -1;
-        public int BusDestinationStopNumber = -1;
-        public DriverRescuePhase BusFinalWalkPhase = DriverRescuePhase.None;
-        public Vector3 BusFinalTargetWorld;
-        public string BusTravelReason = string.Empty;
-        public bool BusRideFareExempt;
-        public int AssignedPersonalHouseIndex = -1;
-        public int IdleCatPetTargetIndex = -1;
-        public int OwnedCarModelIndex = -1;
-        public GameObject OwnedCarObject;
-        public LocationType? AssignedBuildingType;      // logistics only: building this worker is assigned to
-        public bool IsInsideBuilding;                   // true while physically inside the assigned building
-        public LocationType? WarehouseDeliveryTarget;   // warehouse worker: current delivery destination
-        public WarehouseResourceType WarehouseDeliveryResourceType;
-        public int WarehouseDeliveryAmount;
-        public bool IsCarryingWarehouseDelivery;
-        public string LastWorkerDecisionDebugKey;
+        public Transform RootTransform;
+        public Transform BodyTransform;
+        public Transform TailTransform;
+        public Material BodyMaterial;
+        public Material TailMaterial;
+        public float WorldX;
+        public float WorldZ;
+        public float DepthY;
+        public float BobPhase;
+        public float TailPhase;
+        public float IdleTimer;
+        public float TargetX;
+        public float TargetZ;
+        public float SwimSpeed;
+        public Color BodyColor;
+        public int LakeIndex;
+        public float Yaw;
+        public bool IsJumping;
+        public float JumpProgress;
+        public float JumpDuration;
+        public float JumpPeakHeight;
+        public float JumpCooldown;
     }
 
 }

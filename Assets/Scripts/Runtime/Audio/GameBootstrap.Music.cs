@@ -88,6 +88,12 @@ public partial class GameBootstrap
             musicActiveBand = band;
         }
 
+        AudioSource activeSource = GetActiveMusicSource(band);
+        if (activeSource != null && !activeSource.isPlaying && !AudioListener.pause)
+        {
+            activeSource.UnPause();
+        }
+
         float vm = band == 1 ? MusicLayerMaxVolume : 0f;
         float vd = band == 2 ? MusicLayerMaxVolume : 0f;
         float ve = band == 3 ? MusicLayerMaxVolume : 0f;
@@ -106,7 +112,7 @@ public partial class GameBootstrap
         if (band != 0 && musicNightSource.volume   == 0f && musicNightSource.isPlaying)   musicNightSource.Pause();
     }
 
-    // 0=night  1=morning  2=day  3=evening вЂ” mirrors GetTimeOfDayLabel() thresholds
+    // 0=night, 1=morning, 2=day, 3=evening; mirrors GetTimeOfDayLabel() thresholds
     private int GetDayNightBand()
     {
         float norm = dayNightCycleTimer / DayNightCycleDuration;

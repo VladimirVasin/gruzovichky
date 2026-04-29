@@ -110,8 +110,15 @@ public partial class GameBootstrap
             {
                 if (truckAgent.TruckFuel < TruckAutoRefuelThreshold)
                 {
-                    truckAgent.CurrentRefuelPhase = RefuelPhase.ToGasStation;
-                    LogTruckReaction(truckAgent, $"queued refuel because fuel is low ({Mathf.CeilToInt(truckAgent.TruckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)})");
+                    if (locations.ContainsKey(LocationType.GasStation))
+                    {
+                        truckAgent.CurrentRefuelPhase = RefuelPhase.ToGasStation;
+                        LogTruckReaction(truckAgent, $"queued refuel because fuel is low ({Mathf.CeilToInt(truckAgent.TruckFuel)}/{Mathf.CeilToInt(TruckFuelCapacity)})");
+                    }
+                    else
+                    {
+                        LogTruckReaction(truckAgent, "skipped auto refuel because Gas Station is not built");
+                    }
                 }
                 else
                 {
@@ -142,6 +149,7 @@ public partial class GameBootstrap
         LogCommand($"StartRefuelOrder({truckAgent?.DisplayName ?? "null"})");
         if (truckAgent == null ||
             truckAgent.Driver == null ||
+            !locations.ContainsKey(LocationType.GasStation) ||
             truckAgent.CurrentAssignedTrip != TripType.None ||
             truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
             truckAgent.Driver.RestPhase != DriverRestPhase.None ||
@@ -204,6 +212,7 @@ public partial class GameBootstrap
         int handlingBonus = 12;
         int locationBonus = tripType switch
         {
+            TripType.ForestToWarehouse => 7,
             TripType.SawmillToWarehouse => 10,
             TripType.WarehouseToFurnitureFactoryBoards => 10,
             TripType.WarehouseToFurnitureFactoryTextile => 10,
@@ -224,6 +233,7 @@ public partial class GameBootstrap
         return tripType switch
         {
             TripType.ForestToSawmill => LocationType.Forest,
+            TripType.ForestToWarehouse => LocationType.Forest,
             TripType.SawmillToWarehouse => LocationType.Sawmill,
             TripType.WarehouseToFurnitureFactoryBoards => LocationType.Warehouse,
             TripType.WarehouseToFurnitureFactoryTextile => LocationType.Warehouse,
@@ -237,6 +247,7 @@ public partial class GameBootstrap
         return tripType switch
         {
             TripType.ForestToSawmill => LocationType.Sawmill,
+            TripType.ForestToWarehouse => LocationType.Warehouse,
             TripType.SawmillToWarehouse => LocationType.Warehouse,
             TripType.WarehouseToFurnitureFactoryBoards => LocationType.FurnitureFactory,
             TripType.WarehouseToFurnitureFactoryTextile => LocationType.FurnitureFactory,
@@ -250,6 +261,7 @@ public partial class GameBootstrap
         return tripType switch
         {
             TripType.ForestToSawmill => TruckInteractionType.LoadAtForest,
+            TripType.ForestToWarehouse => TruckInteractionType.LoadAtForest,
             TripType.SawmillToWarehouse => TruckInteractionType.LoadAtSawmill,
             TripType.WarehouseToFurnitureFactoryBoards => TruckInteractionType.LoadBoardsAtWarehouse,
             TripType.WarehouseToFurnitureFactoryTextile => TruckInteractionType.LoadTextileAtWarehouse,
@@ -263,6 +275,7 @@ public partial class GameBootstrap
         return tripType switch
         {
             TripType.ForestToSawmill => TruckInteractionType.UnloadAtSawmill,
+            TripType.ForestToWarehouse => TruckInteractionType.UnloadAtWarehouse,
             TripType.SawmillToWarehouse => TruckInteractionType.UnloadAtWarehouse,
             TripType.WarehouseToFurnitureFactoryBoards => TruckInteractionType.UnloadBoardsAtFurnitureFactory,
             TripType.WarehouseToFurnitureFactoryTextile => TruckInteractionType.UnloadTextileAtFurnitureFactory,

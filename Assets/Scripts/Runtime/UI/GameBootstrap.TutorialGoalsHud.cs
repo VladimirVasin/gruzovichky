@@ -17,7 +17,14 @@ public partial class GameBootstrap
         BuildParking,
         BuildLumberjackCamp,
         AssignLumberjackWorker,
-        BuyFirstTruck
+        BuyFirstTruck,
+        AssignTruckDriverShift,
+        BuildBar,
+        BuildGamblingHall,
+        BuildCanteen,
+        BuildGasStation,
+        BuildCityPark,
+        OpenWorkersCard
     }
 
     private enum TutorialGoalsMode
@@ -26,7 +33,9 @@ public partial class GameBootstrap
         RoadBuilding,
         CoreBuildings,
         LumberjackCamp,
-        BuyTruck
+        BuyTruck,
+        ServiceBuildings,
+        WorkerCard
     }
 
     private sealed class TutorialGoalRowUi
@@ -59,6 +68,9 @@ public partial class GameBootstrap
     private bool shouldShowRoadTutorialAfterCameraGoals;
     private bool shouldShowCoreBuildingsTutorialAfterRoadGoals;
     private bool shouldShowLumberjackCampTutorialAfterCoreGoals;
+    private bool shouldShowWorkerShiftTutorialAfterLumberjackGoals;
+    private bool shouldShowTruckFreightTutorialAfterBuyTruckGoals;
+    private bool shouldShowWorkersOverviewAfterServiceGoals;
     private TutorialGoalsMode tutorialGoalsMode;
 
     private void ResetTutorialGoalsForNewGame()
@@ -72,6 +84,9 @@ public partial class GameBootstrap
         shouldShowRoadTutorialAfterCameraGoals = false;
         shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
+        shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
+        shouldShowTruckFreightTutorialAfterBuyTruckGoals = false;
+        shouldShowWorkersOverviewAfterServiceGoals = false;
         tutorialGoalsMode = TutorialGoalsMode.CameraControls;
         if (tutorialGoalsHud?.CanvasRoot != null)
         {
@@ -84,6 +99,7 @@ public partial class GameBootstrap
         EnsureTutorialGoalsHud();
         completedTutorialGoals.Clear();
         activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
         activeTutorialGoals.Add(TutorialGoalKind.CameraZoomIn);
         activeTutorialGoals.Add(TutorialGoalKind.CameraZoomOut);
         activeTutorialGoals.Add(TutorialGoalKind.CameraPan);
@@ -95,6 +111,7 @@ public partial class GameBootstrap
         shouldShowRoadTutorialAfterCameraGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
         shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
+        shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
         tutorialGoalsMode = TutorialGoalsMode.CameraControls;
         ShowTutorialGoalsHud();
         SessionDebugLogger.Log("TUTORIAL", "Camera control goals started.");
@@ -105,6 +122,7 @@ public partial class GameBootstrap
         EnsureTutorialGoalsHud();
         completedTutorialGoals.Clear();
         activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
         activeTutorialGoals.Add(TutorialGoalKind.RoadSingleCell);
         activeTutorialGoals.Add(TutorialGoalKind.RoadShiftPath);
         isTutorialGoalsActive = true;
@@ -114,6 +132,7 @@ public partial class GameBootstrap
         shouldShowRoadTutorialAfterCameraGoals = false;
         shouldShowCoreBuildingsTutorialAfterRoadGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
+        shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
         tutorialGoalsMode = TutorialGoalsMode.RoadBuilding;
         ShowTutorialGoalsHud();
         SessionDebugLogger.Log("TUTORIAL", "Road build goals started.");
@@ -124,6 +143,7 @@ public partial class GameBootstrap
         EnsureTutorialGoalsHud();
         completedTutorialGoals.Clear();
         activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
         activeTutorialGoals.Add(TutorialGoalKind.BuildWarehouse);
         activeTutorialGoals.Add(TutorialGoalKind.BuildMotel);
         activeTutorialGoals.Add(TutorialGoalKind.BuildParking);
@@ -134,6 +154,7 @@ public partial class GameBootstrap
         shouldShowRoadTutorialAfterCameraGoals = false;
         shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
         shouldShowLumberjackCampTutorialAfterCoreGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
         tutorialGoalsMode = TutorialGoalsMode.CoreBuildings;
         ShowTutorialGoalsHud();
         SessionDebugLogger.Log("TUTORIAL", "Core building goals started.");
@@ -144,6 +165,7 @@ public partial class GameBootstrap
         EnsureTutorialGoalsHud();
         completedTutorialGoals.Clear();
         activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
         activeTutorialGoals.Add(TutorialGoalKind.BuildLumberjackCamp);
         activeTutorialGoals.Add(TutorialGoalKind.AssignLumberjackWorker);
         isTutorialGoalsActive = true;
@@ -153,6 +175,7 @@ public partial class GameBootstrap
         shouldShowRoadTutorialAfterCameraGoals = false;
         shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
+        shouldShowWorkerShiftTutorialAfterLumberjackGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
         tutorialGoalsMode = TutorialGoalsMode.LumberjackCamp;
         ShowTutorialGoalsHud();
         SessionDebugLogger.Log("TUTORIAL", "Lumberjack Camp goals started.");
@@ -163,7 +186,9 @@ public partial class GameBootstrap
         EnsureTutorialGoalsHud();
         completedTutorialGoals.Clear();
         activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
         activeTutorialGoals.Add(TutorialGoalKind.BuyFirstTruck);
+        activeTutorialGoals.Add(TutorialGoalKind.AssignTruckDriverShift);
         isTutorialGoalsActive = true;
         isTutorialGoalsComplete = false;
         tutorialGoalsSuccessTimer = 0f;
@@ -171,9 +196,63 @@ public partial class GameBootstrap
         shouldShowRoadTutorialAfterCameraGoals = false;
         shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
+        shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
+        shouldShowTruckFreightTutorialAfterBuyTruckGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
         tutorialGoalsMode = TutorialGoalsMode.BuyTruck;
         ShowTutorialGoalsHud();
-        SessionDebugLogger.Log("TUTORIAL", "Buy truck goal started.");
+        SessionDebugLogger.Log("TUTORIAL", "Truck logistics goals started.");
+    }
+
+    private void BeginServiceBuildingsTutorialGoals()
+    {
+        EnsureTutorialGoalsHud();
+        completedTutorialGoals.Clear();
+        activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
+        activeTutorialGoals.Add(TutorialGoalKind.BuildBar);
+        activeTutorialGoals.Add(TutorialGoalKind.BuildGamblingHall);
+        activeTutorialGoals.Add(TutorialGoalKind.BuildCanteen);
+        activeTutorialGoals.Add(TutorialGoalKind.BuildGasStation);
+        activeTutorialGoals.Add(TutorialGoalKind.BuildCityPark);
+        isTutorialGoalsActive = true;
+        isTutorialGoalsComplete = false;
+        tutorialGoalsSuccessTimer = 0f;
+        tutorialGoalsSuccessDuration = 0f;
+        shouldShowWorkersOverviewAfterServiceGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        tutorialGoalsMode = TutorialGoalsMode.ServiceBuildings;
+        ShowTutorialGoalsHud();
+        SessionDebugLogger.Log("TUTORIAL", "Service building goals started.");
+    }
+
+    private void BeginWorkerCardTutorialGoals()
+    {
+        EnsureTutorialGoalsHud();
+        completedTutorialGoals.Clear();
+        activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
+        activeTutorialGoals.Add(TutorialGoalKind.OpenWorkersCard);
+        isTutorialGoalsActive = true;
+        isTutorialGoalsComplete = false;
+        tutorialGoalsSuccessTimer = 0f;
+        tutorialGoalsSuccessDuration = 0f;
+        tutorialGoalsMode = TutorialGoalsMode.WorkerCard;
+        ShowTutorialGoalsHud();
+        if (isDriversPanelOpen)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.OpenWorkersCard);
+        }
+
+        SessionDebugLogger.Log("TUTORIAL", "Worker card goal started.");
+    }
+
+    private void ClearTutorialGoalContinuationFlags()
+    {
+        shouldShowRoadTutorialAfterCameraGoals = false;
+        shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
+        shouldShowLumberjackCampTutorialAfterCoreGoals = false;
+        shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
+        shouldShowTruckFreightTutorialAfterBuyTruckGoals = false;
+        shouldShowWorkersOverviewAfterServiceGoals = false;
     }
 
     private void ShowTutorialGoalsHud()
@@ -242,7 +321,7 @@ public partial class GameBootstrap
         GameObject canvasObject = new("TutorialGoalsCanvas", typeof(Canvas), typeof(CanvasScaler));
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 7;
+        canvas.sortingOrder = 3;
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1600f, 900f);
@@ -285,6 +364,13 @@ public partial class GameBootstrap
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildLumberjackCamp);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignLumberjackWorker);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuyFirstTruck);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignTruckDriverShift);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildBar);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildGamblingHall);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildCanteen);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildGasStation);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildCityPark);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.OpenWorkersCard);
 
         RectTransform flash = FleetCanvasUiFactory.CreateUiObject("SuccessFlash", panel).GetComponent<RectTransform>();
         flash.anchorMin = Vector2.zero;
@@ -364,10 +450,22 @@ public partial class GameBootstrap
             _ => ru ? "Освой камеру перед строительством." : "Learn the camera before building."
         };
 
+        tutorialGoalsHud.TitleText.text = ru ? "\u0426\u0435\u043b\u0438" : "Goals";
+        tutorialGoalsHud.SubtitleText.text = tutorialGoalsMode switch
+        {
+            TutorialGoalsMode.RoadBuilding => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0434\u043e\u0440\u043e\u0433\u0443 \u0434\u0432\u0443\u043c\u044f \u0441\u043f\u043e\u0441\u043e\u0431\u0430\u043c\u0438." : "Build roads in two ways.",
+            TutorialGoalsMode.CoreBuildings => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0431\u0430\u0437\u043e\u0432\u044b\u0435 \u0437\u0434\u0430\u043d\u0438\u044f \u0433\u043e\u0440\u043e\u0434\u0430." : "Build the town core buildings.",
+            TutorialGoalsMode.LumberjackCamp => ru ? "\u0417\u0430\u043f\u0443\u0441\u0442\u0438 \u043f\u0435\u0440\u0432\u0443\u044e \u0434\u043e\u0431\u044b\u0447\u0443 \u0434\u0435\u0440\u0435\u0432\u0430." : "Start your first logging production.",
+            TutorialGoalsMode.BuyTruck => ru ? "\u041a\u0443\u043f\u0438 \u043f\u0435\u0440\u0432\u044b\u0439 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a." : "Buy the first truck.",
+            TutorialGoalsMode.ServiceBuildings => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0441\u0435\u0440\u0432\u0438\u0441\u044b \u0434\u043b\u044f \u043b\u044e\u0434\u0435\u0439 \u0438 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u0430." : "Build services for workers and vehicles.",
+            TutorialGoalsMode.WorkerCard => ru ? "\u041e\u0442\u043a\u0440\u043e\u0439 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e." : "Open a worker card.",
+            _ => ru ? "\u041e\u0441\u0432\u043e\u0439 \u043a\u0430\u043c\u0435\u0440\u0443 \u043f\u0435\u0440\u0435\u0434 \u0441\u0442\u0440\u043e\u0439\u043a\u043e\u0439." : "Learn the camera before building."
+        };
+
         foreach (TutorialGoalRowUi row in tutorialGoalsHud.Rows)
         {
             row.Root.SetActive(IsTutorialGoalVisible(row.Kind));
-            row.LabelText.text = GetTutorialGoalLabel(row.Kind, ru);
+            row.LabelText.text = GetTutorialGoalLabelSafe(row.Kind, ru);
         }
     }
 
@@ -387,9 +485,38 @@ public partial class GameBootstrap
             TutorialGoalKind.BuildLumberjackCamp => ru ? "Построй Лагерь лесорубов" : "Build Lumberjack Camp",
             TutorialGoalKind.AssignLumberjackWorker => ru ? "Назначь рабочего в Лагерь лесорубов" : "Assign a worker to Lumberjack Camp",
             TutorialGoalKind.BuyFirstTruck => ru ? "Купи первый грузовик" : "Buy the first truck",
+            TutorialGoalKind.AssignTruckDriverShift => ru ? "Назначь водителя грузовика на смену" : "Assign a truck driver to a shift",
             _ => string.Empty
         };
     }
+
+    private static string GetTutorialGoalLabelSafe(TutorialGoalKind kind, bool ru)
+    {
+        return kind switch
+        {
+            TutorialGoalKind.CameraZoomIn => ru ? "Zoom In: \u043f\u0440\u0438\u0431\u043b\u0438\u0437\u044c \u043a\u0430\u043c\u0435\u0440\u0443" : "Zoom In: move camera closer",
+            TutorialGoalKind.CameraZoomOut => ru ? "Zoom Out: \u043e\u0442\u0434\u0430\u043b\u0438 \u043a\u0430\u043c\u0435\u0440\u0443" : "Zoom Out: move camera away",
+            TutorialGoalKind.CameraPan => ru ? "Scroll \u043a\u0430\u0440\u0442\u044b: \u0441\u0434\u0432\u0438\u043d\u044c \u043e\u0431\u0437\u043e\u0440" : "Map scroll: pan the view",
+            TutorialGoalKind.CameraRotate => ru ? "\u041f\u043e\u0432\u043e\u0440\u043e\u0442 \u043a\u0430\u0440\u0442\u044b: Q / E" : "Rotate map: Q / E",
+            TutorialGoalKind.RoadSingleCell => ru ? "\u041f\u043e\u0441\u0442\u0430\u0432\u044c \u043e\u0434\u043d\u0443 \u043a\u043b\u0435\u0442\u043a\u0443 \u0434\u043e\u0440\u043e\u0433\u0438: \u041b\u041a\u041c" : "Place one road cell: left click",
+            TutorialGoalKind.RoadShiftPath => ru ? "\u041f\u0440\u043e\u0442\u044f\u043d\u0438 \u0443\u0447\u0430\u0441\u0442\u043e\u043a \u0434\u043e\u0440\u043e\u0433\u0438: Shift + \u041b\u041a\u041c" : "Build a road segment: Shift + left click",
+            TutorialGoalKind.BuildWarehouse => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0421\u043a\u043b\u0430\u0434" : "Build Warehouse",
+            TutorialGoalKind.BuildMotel => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u041c\u043e\u0442\u0435\u043b\u044c" : "Build Motel",
+            TutorialGoalKind.BuildParking => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u041f\u0430\u0440\u043a\u043e\u0432\u043a\u0443" : "Build Parking",
+            TutorialGoalKind.BuildLumberjackCamp => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u041b\u0430\u0433\u0435\u0440\u044c \u043b\u0435\u0441\u043e\u0440\u0443\u0431\u043e\u0432" : "Build Lumberjack Camp",
+            TutorialGoalKind.AssignLumberjackWorker => ru ? "\u041d\u0430\u0437\u043d\u0430\u0447\u044c \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u0432 \u041b\u0430\u0433\u0435\u0440\u044c \u043b\u0435\u0441\u043e\u0440\u0443\u0431\u043e\u0432" : "Assign a worker to Lumberjack Camp",
+            TutorialGoalKind.BuyFirstTruck => ru ? "\u041a\u0443\u043f\u0438 \u043f\u0435\u0440\u0432\u044b\u0439 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a" : "Buy the first truck",
+            TutorialGoalKind.AssignTruckDriverShift => ru ? "\u041d\u0430\u0437\u043d\u0430\u0447\u044c \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0430 \u043d\u0430 \u0441\u043c\u0435\u043d\u0443" : "Assign a truck driver to a shift",
+            TutorialGoalKind.BuildBar => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0411\u0430\u0440" : "Build Bar",
+            TutorialGoalKind.BuildGamblingHall => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0418\u0433\u0440\u043e\u0432\u044b\u0435 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u044b" : "Build Gambling Hall",
+            TutorialGoalKind.BuildCanteen => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0421\u0442\u043e\u043b\u043e\u0432\u0443\u044e" : "Build Canteen",
+            TutorialGoalKind.BuildGasStation => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0417\u0430\u043f\u0440\u0430\u0432\u043a\u0443" : "Build Gas Station",
+            TutorialGoalKind.BuildCityPark => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 City Park" : "Build City Park",
+            TutorialGoalKind.OpenWorkersCard => ru ? "\u041e\u0442\u043a\u0440\u043e\u0439 \u043c\u0435\u043d\u044e \u0420\u0430\u0431\u043e\u0447\u0438\u0435" : "Open the Workers menu",
+            _ => string.Empty
+        };
+    }
+
     private int GetActiveCompletedGoalCount()
     {
         int count = 0;
@@ -411,7 +538,9 @@ public partial class GameBootstrap
             TutorialGoalsMode.RoadBuilding => kind is TutorialGoalKind.RoadSingleCell or TutorialGoalKind.RoadShiftPath,
             TutorialGoalsMode.CoreBuildings => kind is TutorialGoalKind.BuildWarehouse or TutorialGoalKind.BuildMotel or TutorialGoalKind.BuildParking,
             TutorialGoalsMode.LumberjackCamp => kind is TutorialGoalKind.BuildLumberjackCamp or TutorialGoalKind.AssignLumberjackWorker,
-            TutorialGoalsMode.BuyTruck => kind is TutorialGoalKind.BuyFirstTruck,
+            TutorialGoalsMode.BuyTruck => kind is TutorialGoalKind.BuyFirstTruck or TutorialGoalKind.AssignTruckDriverShift,
+            TutorialGoalsMode.ServiceBuildings => kind is TutorialGoalKind.BuildBar or TutorialGoalKind.BuildGamblingHall or TutorialGoalKind.BuildCanteen or TutorialGoalKind.BuildGasStation or TutorialGoalKind.BuildCityPark,
+            TutorialGoalsMode.WorkerCard => kind is TutorialGoalKind.OpenWorkersCard,
             _ => kind is TutorialGoalKind.CameraZoomIn or TutorialGoalKind.CameraZoomOut or TutorialGoalKind.CameraPan or TutorialGoalKind.CameraRotate
         };
     }
@@ -477,6 +606,21 @@ public partial class GameBootstrap
             {
                 shouldShowLumberjackCampTutorialAfterCoreGoals = false;
                 ScheduleTutorial(TutorialTrigger.UserBuildLumberjackCampPrompt, 2f);
+            }
+            else if (shouldShowWorkerShiftTutorialAfterLumberjackGoals && !isTutorialSkipped)
+            {
+                shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserWorkerShiftInfo, 0.8f);
+            }
+            else if (shouldShowTruckFreightTutorialAfterBuyTruckGoals && !isTutorialSkipped)
+            {
+                shouldShowTruckFreightTutorialAfterBuyTruckGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserTruckAssignedFreightInfo, 0.35f);
+            }
+            else if (shouldShowWorkersOverviewAfterServiceGoals && !isTutorialSkipped)
+            {
+                shouldShowWorkersOverviewAfterServiceGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserWorkersOverviewInfo, 0.8f);
             }
         }
     }

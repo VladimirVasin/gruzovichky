@@ -355,6 +355,7 @@ public partial class GameBootstrap
         RebuildRoadsideBenches();
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Bar at anchor ({anchorCell.x},{anchorCell.y}).");
+        NotifyTutorialServiceBuildingBuilt(LocationType.Bar);
         return true;
     }
 
@@ -397,6 +398,7 @@ public partial class GameBootstrap
         RebuildRoadsideBenches();
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Canteen at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        NotifyTutorialServiceBuildingBuilt(LocationType.Canteen);
         return true;
     }
 
@@ -421,6 +423,7 @@ public partial class GameBootstrap
         RebuildRoadsideBenches();
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Gambling Hall at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        NotifyTutorialServiceBuildingBuilt(LocationType.GamblingHall);
         return true;
     }
 
@@ -446,6 +449,7 @@ public partial class GameBootstrap
         RebuildRoadsideBenches();
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed City Park at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        NotifyTutorialServiceBuildingBuilt(LocationType.CityPark);
         return true;
     }
 
@@ -1230,6 +1234,8 @@ public partial class GameBootstrap
             ApplyColor(head, new Color(0.80f, 0.78f, 0.65f));
             ConfigureStaticVisual(head);
         }
+
+        TryCreateSquirrelMemorialSign(parent, center + new Vector3(-2.2f, groundY + 0.02f, -3.55f), Quaternion.identity);
     }
 
     private bool TryGetFurnitureFactoryPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)

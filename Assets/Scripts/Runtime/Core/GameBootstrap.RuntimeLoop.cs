@@ -131,6 +131,7 @@ public partial class GameBootstrap
         ProduceForestWood();
         UpdateSawmillProcessing();
         UpdateFurnitureFactoryProcessing();
+        UpdateWeather(Time.deltaTime);
         UpdateDayNightCycle();
         UpdateNightSky();
         UpdateSelectedLocationLabel();
@@ -141,7 +142,11 @@ public partial class GameBootstrap
         UpdateAmbientSquirrels();
         UpdateAmbientBees();
         UpdateAmbientLanternMoths();
+        UpdateAmbientFallingLeaves();
+        UpdateAmbientFireflies();
+        UpdateAmbientFrogs();
         UpdateRiverFish();
+        UpdateLakeFish();
         if (shouldUpdateWaterEffects)
         {
             UpdateWaterEffects();
@@ -324,6 +329,7 @@ public partial class GameBootstrap
         isFarZoomVisualLodActive = active;
         SetRootActive(gridLinesRoot, !active);
         SetRootActive(ambientAirRoot, !active);
+        SetRootActive(ambientFallingLeafRoot, !active);
         SetRootActive(exhaustSmokeRoot, !active);
         SetRootActive(truckDirtDustRoot, !active);
 
@@ -399,6 +405,7 @@ public partial class GameBootstrap
                 DrawMoneyHud();
                 DrawTimeHud();
                 DrawSpeedHud();
+                DrawWeatherHud();
                 DrawPauseOverlay();
                 DrawMenuBar();
                 DrawBuildModeLegend();
@@ -442,6 +449,7 @@ public partial class GameBootstrap
             GUI.color = new Color(0.05f, 0.07f, 0.1f, 0.82f);
             GUI.Box(rect, string.Empty);
 
+            GUI.color = Color.white;
             GUI.contentColor = Color.white;
             GUIStyle legendStyle = new(GUI.skin.label)
             {
@@ -541,6 +549,7 @@ public partial class GameBootstrap
         if (didWrapDay)
         {
             CollectDailyBuildingTaxes();
+            TickWorkerAging();
         }
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
         float dayHour = normalizedTime * 24f;
@@ -593,7 +602,8 @@ public partial class GameBootstrap
 
         float zoomT = Mathf.InverseLerp(CameraMinHeight, CameraMaxHeight, cameraOffset.y);
         float fogZoom = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.58f, 0.96f, zoomT));
-        RenderSettings.fog = fogZoom > 0.001f;
+        float weatherFogMult = Mathf.Clamp(activeWeatherParams.FogMult, 0.58f, 1.35f);
+        RenderSettings.fog = fogZoom > 0.001f || weatherFogMult < 0.95f;
         RenderSettings.fogMode = FogMode.Linear;
         float hazeStrength = Mathf.Lerp(0.1f, 0.24f, fogZoom) * Mathf.Lerp(0.82f, 1.12f, lowSun);
         Color hazeColor = Color.Lerp(
@@ -602,10 +612,11 @@ public partial class GameBootstrap
             stylizedDaylight);
         Color fogColor = Color.Lerp(backgroundColor, hazeColor, hazeStrength);
         RenderSettings.fogColor = fogColor;
-        RenderSettings.fogStartDistance = Mathf.Lerp(126f, 64f, fogZoom);
-        RenderSettings.fogEndDistance = Mathf.Lerp(186f, 98f, fogZoom);
+        RenderSettings.fogStartDistance = Mathf.Max(46f, Mathf.Lerp(126f, 64f, fogZoom) * weatherFogMult);
+        RenderSettings.fogEndDistance   = Mathf.Max(92f, Mathf.Lerp(186f, 98f, fogZoom) * weatherFogMult);
 
         UpdateDioramaPostProcessing(stylizedDaylight, lowSun, sunArc, backgroundColor);
+        ApplyWeatherToPostProcessing(stylizedDaylight);
         UpdateLocationNightLights(stylizedDaylight);
 
         for (int i = 0; i < truckAgents.Count; i++)
@@ -613,6 +624,19 @@ public partial class GameBootstrap
             LoadTruckState(truckAgents[i]);
             UpdateTruckHeadlights(stylizedDaylight, truckAgents[i].Driver);
             SaveTruckState(truckAgents[i]);
+        }
+    }
+
+    private void TickWorkerAging()
+    {
+        foreach (DriverAgent driver in driverAgents)
+        {
+            driver.DaysOnMap++;
+            if (driver.DaysOnMap % 7 == 0)
+            {
+                driver.Age++;
+                isDriversScreenDirty = true;
+            }
         }
     }
 

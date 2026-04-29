@@ -258,9 +258,9 @@ public partial class GameBootstrap
         const float lift = RoadHeight + 0.132f;
 
         Vector3 corner = new(
-            cell.x + (horizontalSign > 0 ? 0f : 1f),
+            cell.x + (horizontalSign > 0 ? 1f : 0f),
             0f,
-            cell.y + (verticalSign > 0 ? 0f : 1f));
+            cell.y + (verticalSign > 0 ? 1f : 0f));
 
         Vector3[] vertices = new Vector3[segments + 2];
         Vector2[] uvs = new Vector2[vertices.Length];
@@ -272,9 +272,9 @@ public partial class GameBootstrap
             float t = i / (float)segments;
             float angle = t * Mathf.PI * 0.5f;
             Vector3 point = corner + new Vector3(
-                horizontalSign * Mathf.Cos(angle) * radius,
+                -horizontalSign * Mathf.Cos(angle) * radius,
                 0f,
-                verticalSign * Mathf.Sin(angle) * radius);
+                -verticalSign * Mathf.Sin(angle) * radius);
             vertices[i + 1] = WithSampledRoadMaskHeight(point, lift);
             uvs[i + 1] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
         }
@@ -315,9 +315,9 @@ public partial class GameBootstrap
         const float lift = RoadHeight + 0.137f;
 
         Vector3 corner = new(
-            cell.x + (horizontalSign > 0 ? 0f : 1f),
+            cell.x + (horizontalSign > 0 ? 1f : 0f),
             0f,
-            cell.y + (verticalSign > 0 ? 0f : 1f));
+            cell.y + (verticalSign > 0 ? 1f : 0f));
 
         Vector3[] vertices = new Vector3[(segments + 1) * 2];
         Vector2[] uvs = new Vector2[vertices.Length];
@@ -328,9 +328,9 @@ public partial class GameBootstrap
             float t = i / (float)segments;
             float angle = t * Mathf.PI * 0.5f;
             Vector3 radial = new(
-                horizontalSign * Mathf.Cos(angle),
+                -horizontalSign * Mathf.Cos(angle),
                 0f,
-                verticalSign * Mathf.Sin(angle));
+                -verticalSign * Mathf.Sin(angle));
             vertices[i * 2] = WithSampledRoadMaskHeight(corner + radial * innerRadius, lift);
             vertices[i * 2 + 1] = WithSampledRoadMaskHeight(corner + radial * outerRadius, lift);
             uvs[i * 2] = new Vector2(t, 0f);

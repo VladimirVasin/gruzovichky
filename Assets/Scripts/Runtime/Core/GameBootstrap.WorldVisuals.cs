@@ -366,6 +366,9 @@ public partial class GameBootstrap : MonoBehaviour
         waterShoreFoams.Clear();
         waterShoreWashPatches.Clear();
         riverFish.Clear();
+        lakeFish.Clear();
+        perLakeWaterCells.Clear();
+        lakeFishRoot = null;
         if (waterEffectsRoot != null)
         {
             Destroy(waterEffectsRoot.gameObject);
@@ -552,6 +555,114 @@ public partial class GameBootstrap : MonoBehaviour
         });
     }
 
+    private void SetupLakeFish()
+    {
+        lakeFish.Clear();
+        perLakeWaterCells.Clear();
+        if (lakeFishRoot != null)
+        {
+            for (int i = lakeFishRoot.childCount - 1; i >= 0; i--)
+                Destroy(lakeFishRoot.GetChild(i).gameObject);
+        }
+
+        if (lakeWaterCells.Count < 4 || waterEffectsRoot == null) return;
+
+        lakeFishRoot = new GameObject("LakeFish").transform;
+        lakeFishRoot.SetParent(waterEffectsRoot, false);
+
+        // Flood-fill lakeWaterCells into connected components (individual lakes).
+        var allCells = new List<Vector2Int>(lakeWaterCells);
+        var visited = new HashSet<Vector2Int>();
+        var bfsQueue = new Queue<Vector2Int>();
+        foreach (Vector2Int seed in allCells)
+        {
+            if (visited.Contains(seed)) continue;
+            var component = new List<Vector2Int>();
+            bfsQueue.Enqueue(seed);
+            visited.Add(seed);
+            while (bfsQueue.Count > 0)
+            {
+                Vector2Int cur = bfsQueue.Dequeue();
+                component.Add(cur);
+                Vector2Int[] neighbors = { cur + Vector2Int.right, cur + Vector2Int.left, cur + Vector2Int.up, cur + Vector2Int.down };
+                foreach (Vector2Int nb in neighbors)
+                {
+                    if (!visited.Contains(nb) && lakeWaterCells.Contains(nb))
+                    {
+                        visited.Add(nb);
+                        bfsQueue.Enqueue(nb);
+                    }
+                }
+            }
+            if (component.Count >= 2) perLakeWaterCells.Add(component);
+        }
+
+        for (int lakeIdx = 0; lakeIdx < perLakeWaterCells.Count; lakeIdx++)
+        {
+            List<Vector2Int> cells = perLakeWaterCells[lakeIdx];
+            int fishForLake = Mathf.Clamp(cells.Count / 4, 1, LakeFishMaxCount);
+            for (int i = 0; i < fishForLake; i++)
+                CreateLakeFish(lakeIdx, cells);
+        }
+    }
+
+    private void CreateLakeFish(int lakeIndex, List<Vector2Int> cells)
+    {
+        Vector2Int startCell = cells[Random.Range(0, cells.Count)];
+        float startX = startCell.x + Random.Range(0.2f, 0.8f);
+        float startZ = startCell.y + Random.Range(0.2f, 0.8f);
+        float waterTop = GetCurrentVisualWaterHeight(startCell);
+        float depthY = waterTop - Random.Range(0.04f, 0.08f);
+
+        GameObject fishRoot = new($"LakeFish_{lakeFish.Count + 1}");
+        fishRoot.transform.SetParent(lakeFishRoot, false);
+        fishRoot.transform.position = new Vector3(startX, depthY, startZ);
+
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        body.transform.SetParent(fishRoot.transform, false);
+        body.transform.localPosition = Vector3.zero;
+        body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        body.transform.localScale = new Vector3(0.09f, 0.15f, 0.07f);
+        Color bodyColor = Color.Lerp(new Color(0.26f, 0.42f, 0.28f), new Color(0.42f, 0.58f, 0.38f), Random.value);
+        ApplyColor(body, bodyColor);
+        ConfigureStaticVisual(body);
+        if (body.TryGetComponent(out Collider bodyCol)) bodyCol.enabled = false;
+
+        GameObject tail = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        tail.transform.SetParent(fishRoot.transform, false);
+        tail.transform.localPosition = new Vector3(0f, 0f, -0.14f);
+        tail.transform.localScale = new Vector3(0.08f, 0.065f, 0.018f);
+        ApplyColor(tail, Color.Lerp(bodyColor * 0.9f, new Color(0.5f, 0.62f, 0.48f), 0.2f));
+        ConfigureStaticVisual(tail);
+        if (tail.TryGetComponent(out Collider tailCol)) tailCol.enabled = false;
+
+        Renderer bodyRenderer = body.GetComponent<Renderer>();
+        Renderer tailRenderer = tail.GetComponent<Renderer>();
+
+        Vector2Int targetCell = cells[Random.Range(0, cells.Count)];
+        lakeFish.Add(new LakeFishData
+        {
+            RootTransform = fishRoot.transform,
+            BodyTransform = body.transform,
+            TailTransform = tail.transform,
+            BodyMaterial = bodyRenderer != null ? bodyRenderer.material : null,
+            TailMaterial = tailRenderer != null ? tailRenderer.material : null,
+            WorldX = startX,
+            WorldZ = startZ,
+            DepthY = depthY,
+            BobPhase = Random.Range(0f, 10f),
+            TailPhase = Random.Range(0f, 10f),
+            IdleTimer = Random.Range(0.5f, 2f),
+            TargetX = targetCell.x + 0.5f,
+            TargetZ = targetCell.y + 0.5f,
+            SwimSpeed = Random.Range(0.28f, 0.52f),
+            BodyColor = bodyColor,
+            LakeIndex = lakeIndex,
+            Yaw = Random.Range(0f, 360f),
+            JumpCooldown = Random.Range(5f, 18f),
+        });
+    }
+
     private void SetupNightSky()
     {
         nightStars.Clear();
@@ -731,6 +842,170 @@ public partial class GameBootstrap : MonoBehaviour
 
         dioramaVignette.intensity.Override(Mathf.Lerp(0.07f, 0.045f, stylizedDaylight) + nightStrength * 0.01f);
         dioramaVignette.smoothness.Override(Mathf.Lerp(0.5f, 0.4f, stylizedDaylight));
+    }
+
+    private void SetupWeatherSystem()
+    {
+        rainDrops.Clear();
+        if (rainRoot != null) Destroy(rainRoot.gameObject);
+        if (worldRoot == null) return;
+
+        rainRoot = new GameObject("RainRoot").transform;
+        rainRoot.SetParent(worldRoot, false);
+
+        Color dropColor = new(0.62f, 0.72f, 0.82f, 0f);
+        for (int i = 0; i < RainDropCount; i++)
+        {
+            GameObject drop = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Object.Destroy(drop.GetComponent<Collider>());
+            drop.name = "RainDrop";
+            drop.transform.SetParent(rainRoot, false);
+            drop.transform.localScale = new Vector3(0.011f, 0.20f, 0.011f);
+            Renderer r = drop.GetComponent<Renderer>();
+            Material mat = CreateTransparentOverlayMaterial(dropColor);
+            r.material = mat;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
+            r.enabled = false;
+            rainDrops.Add(new RainDropData
+            {
+                T        = drop.transform,
+                Renderer = r,
+                Material = mat,
+                Y        = Random.Range(-8f, 12f),
+                Speed    = Random.Range(7.5f, 11f),
+                XOff     = Random.Range(-22f, 22f),
+                ZOff     = Random.Range(-22f, 22f),
+            });
+        }
+
+        activeWeatherParams = WeatherTargetParams[(int)WeatherState.Clear];
+        weatherHoldTimer = Random.Range(180f, 420f);
+        weatherRainIntensity = 0f;
+    }
+
+    private void UpdateWeather(float dt)
+    {
+        if (isWeatherTransitioning)
+        {
+            weatherTransitionTimer += dt;
+            float t = Mathf.SmoothStep(0f, 1f, weatherTransitionTimer / weatherTransitionDuration);
+            activeWeatherParams = LerpWeatherParams(
+                WeatherTargetParams[(int)currentWeatherState],
+                WeatherTargetParams[(int)nextWeatherState],
+                t);
+            if (weatherTransitionTimer >= weatherTransitionDuration)
+            {
+                currentWeatherState    = nextWeatherState;
+                activeWeatherParams    = WeatherTargetParams[(int)currentWeatherState];
+                isWeatherTransitioning = false;
+                weatherHoldTimer       = GetWeatherHoldDuration(currentWeatherState);
+            }
+        }
+        else
+        {
+            weatherHoldTimer -= dt;
+            if (weatherHoldTimer <= 0f)
+            {
+                nextWeatherState          = PickNextWeatherState();
+                weatherTransitionDuration = Random.Range(28f, 85f);
+                weatherTransitionTimer    = 0f;
+                isWeatherTransitioning    = true;
+            }
+        }
+
+        float targetRain = currentWeatherState == WeatherState.Rainy ? 1f : 0f;
+        if (isWeatherTransitioning && nextWeatherState == WeatherState.Rainy)
+            targetRain = Mathf.SmoothStep(0f, 1f, weatherTransitionTimer / weatherTransitionDuration);
+        else if (isWeatherTransitioning && currentWeatherState == WeatherState.Rainy)
+            targetRain = 1f - Mathf.SmoothStep(0f, 1f, weatherTransitionTimer / weatherTransitionDuration);
+        weatherRainIntensity = Mathf.MoveTowards(weatherRainIntensity, targetRain, dt * 0.35f);
+
+        UpdateRainParticles(dt);
+
+        float targetWind = activeWeatherParams.WindMult;
+        for (int i = 0; i < miscTreeSways.Count; i++)
+            miscTreeSways[i].CurrentWindMult = Mathf.MoveTowards(miscTreeSways[i].CurrentWindMult, targetWind, dt * 0.6f);
+    }
+
+    private void UpdateRainParticles(float dt)
+    {
+        if (rainDrops.Count == 0 || mainCamera == null) return;
+        bool rainVisible = weatherRainIntensity > 0.005f;
+        Vector3 camPos = mainCamera.transform.position;
+        Color dropColor = new(0.62f, 0.72f, 0.82f, weatherRainIntensity * 0.68f);
+
+        for (int i = 0; i < rainDrops.Count; i++)
+        {
+            RainDropData d = rainDrops[i];
+            if (d.T == null) continue;
+
+            if (!rainVisible)
+            {
+                if (d.Renderer.enabled) d.Renderer.enabled = false;
+                continue;
+            }
+
+            if (!d.Renderer.enabled) d.Renderer.enabled = true;
+            d.Y -= d.Speed * dt;
+            if (d.Y < camPos.y - 9f)
+            {
+                d.Y    = camPos.y + 13f;
+                d.XOff = Random.Range(-22f, 22f);
+                d.ZOff = Random.Range(-22f, 22f);
+            }
+            d.T.position = new Vector3(camPos.x + d.XOff, d.Y, camPos.z + d.ZOff);
+            d.Material.color = dropColor;
+        }
+    }
+
+    private void ApplyWeatherToPostProcessing(float stylizedDaylight)
+    {
+        if (dioramaColorAdjustments == null || dioramaBloom == null) return;
+        float nightStr = 1f - stylizedDaylight;
+        float foggyNightExpBoost = activeWeatherParams.FogMult < 0.2f ? nightStr * 0.08f : 0f;
+
+        dioramaColorAdjustments.saturation.Override(dioramaColorAdjustments.saturation.value + activeWeatherParams.SatOffset);
+        dioramaColorAdjustments.postExposure.Override(dioramaColorAdjustments.postExposure.value + activeWeatherParams.ExposureOffset + foggyNightExpBoost);
+        dioramaBloom.scatter.Override(Mathf.Min(0.95f, dioramaBloom.scatter.value + activeWeatherParams.BloomScatterAdd));
+    }
+
+    private static WeatherParams LerpWeatherParams(WeatherParams a, WeatherParams b, float t)
+    {
+        return new WeatherParams
+        {
+            FogMult         = Mathf.Lerp(a.FogMult,         b.FogMult,         t),
+            SatOffset       = Mathf.Lerp(a.SatOffset,       b.SatOffset,       t),
+            ExposureOffset  = Mathf.Lerp(a.ExposureOffset,  b.ExposureOffset,  t),
+            WindMult        = Mathf.Lerp(a.WindMult,        b.WindMult,        t),
+            BloomScatterAdd = Mathf.Lerp(a.BloomScatterAdd, b.BloomScatterAdd, t),
+        };
+    }
+
+    private WeatherState PickNextWeatherState()
+    {
+        float r = Random.value;
+        WeatherState next = r < 0.38f ? WeatherState.Clear
+            : r < 0.64f ? WeatherState.Overcast
+            : r < 0.80f ? WeatherState.Rainy
+            : r < 0.92f ? WeatherState.Foggy
+            : WeatherState.Windy;
+        if (next == currentWeatherState)
+            next = (WeatherState)(((int)next + 1) % 5);
+        return next;
+    }
+
+    private static float GetWeatherHoldDuration(WeatherState state)
+    {
+        return state switch
+        {
+            WeatherState.Clear    => Random.Range(180f, 480f),
+            WeatherState.Overcast => Random.Range(120f, 360f),
+            WeatherState.Rainy    => Random.Range(90f,  240f),
+            WeatherState.Foggy    => Random.Range(60f,  180f),
+            WeatherState.Windy    => Random.Range(60f,  150f),
+            _                     => 180f,
+        };
     }
 
     private void SetupSurfaceMaterials()
@@ -1173,77 +1448,6 @@ public partial class GameBootstrap : MonoBehaviour
         boundary.transform.position = position;
         boundary.transform.localScale = scale;
         ApplyColor(boundary, new Color(0.9f, 0.85f, 0.75f));
-    }
-
-    private System.Collections.IEnumerator SetupGridAsync()
-    {
-        yield return null; // one-frame defer so callers stay async-compatible
-
-        GameObject gridRoot = new("GridLines");
-        gridRoot.transform.SetParent(worldRoot, false);
-        gridLinesRoot = gridRoot.transform;
-
-        Material lineMaterial = new(ShaderRefs.Sprites)
-        {
-            color = new Color(0f, 0f, 0f, 0.18f)
-        };
-
-        BuildGridLineMesh(gridRoot.transform, lineMaterial);
-    }
-
-    private void BuildGridLineMesh(Transform parent, Material material)
-    {
-        const float halfW = 0.015f; // half of the 0.03 line width
-        int vertCount = (GridWidth + 1) * GridHeight + GridWidth * (GridHeight + 1);
-        Vector3[] verts = new Vector3[vertCount * 4];
-        int[]     tris  = new int[vertCount * 6];
-        int vi = 0, ti = 0;
-
-        // vertical segments: run along Z at each X line
-        for (int x = 0; x <= GridWidth; x++)
-        {
-            for (int y = 0; y < GridHeight; y++)
-            {
-                float h = GetVerticalEdgeHeight(x, y) + 0.025f;
-                int b = vi;
-                verts[vi++] = new Vector3(x - halfW, h, y);
-                verts[vi++] = new Vector3(x + halfW, h, y);
-                verts[vi++] = new Vector3(x - halfW, h, y + 1f);
-                verts[vi++] = new Vector3(x + halfW, h, y + 1f);
-                tris[ti++] = b; tris[ti++] = b + 2; tris[ti++] = b + 1;
-                tris[ti++] = b + 1; tris[ti++] = b + 2; tris[ti++] = b + 3;
-            }
-        }
-
-        // horizontal segments: run along X at each Y line
-        for (int y = 0; y <= GridHeight; y++)
-        {
-            for (int x = 0; x < GridWidth; x++)
-            {
-                float h = GetHorizontalEdgeHeight(x, y) + 0.025f;
-                int b = vi;
-                verts[vi++] = new Vector3(x,       h, y - halfW);
-                verts[vi++] = new Vector3(x,       h, y + halfW);
-                verts[vi++] = new Vector3(x + 1f,  h, y - halfW);
-                verts[vi++] = new Vector3(x + 1f,  h, y + halfW);
-                tris[ti++] = b; tris[ti++] = b + 1; tris[ti++] = b + 2;
-                tris[ti++] = b + 2; tris[ti++] = b + 1; tris[ti++] = b + 3;
-            }
-        }
-
-        Mesh mesh = new() { name = "GridLinesMesh" };
-        mesh.indexFormat = IndexFormat.UInt32;
-        mesh.vertices = verts;
-        mesh.triangles = tris;
-        mesh.UploadMeshData(true); // mark as non-readable for GPU memory savings
-
-        GameObject obj = new("GridLinesMesh");
-        obj.transform.SetParent(parent, false);
-        obj.AddComponent<MeshFilter>().sharedMesh = mesh;
-        MeshRenderer mr = obj.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = material;
-        mr.shadowCastingMode = ShadowCastingMode.Off;
-        mr.receiveShadows = false;
     }
 
 }

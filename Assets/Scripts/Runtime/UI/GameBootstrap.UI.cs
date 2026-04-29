@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
@@ -16,7 +16,10 @@ public partial class GameBootstrap
     private void BeginNextTruckSegment(Vector2Int nextCell)
     {
         truckSegmentStartWorld = truckObject.transform.position;
-        truckTargetWorld = GetTruckWorldPosition(nextCell) + GetRoadLaneOffset(truckCell, nextCell);
+        Vector3 baseTargetWorld = GetTruckWorldPosition(nextCell);
+        Vector3 laneOffset = GetTruckTargetLaneOffset(truckCell, nextCell, out string laneReason);
+        truckTargetWorld = baseTargetWorld + laneOffset;
+        LogTruckLaneSegment(truckCell, nextCell, laneOffset, laneReason, baseTargetWorld, truckTargetWorld);
         truckSegmentProgress = 0f;
         float distance = Vector3.Distance(truckSegmentStartWorld, truckTargetWorld);
         truckSegmentDuration = Mathf.Max(0.38f, distance / TruckCruiseSpeed);
@@ -24,18 +27,122 @@ public partial class GameBootstrap
 
     private Vector3 GetRoadLaneOffset(Vector2Int fromCell, Vector2Int toCell)
     {
-        if (IsAnchorCell(fromCell) || IsAnchorCell(toCell)) return Vector3.zero;
-        if (!roadCells.Contains(toCell)) return Vector3.zero;
-        if (IsRoadDeadEnd(toCell)) return Vector3.zero;
-        Vector2Int dir = toCell - fromCell;
-        return GetRightHandLaneOffset(dir);
+        return GetRoadLaneOffset(fromCell, toCell, out _);
+    }
+
+    private Vector3 GetRoadLaneOffset(Vector2Int fromCell, Vector2Int toCell, out string reason)
+    {
+        if (IsAnchorCell(fromCell))
+        {
+            reason = "from-anchor";
+            return Vector3.zero;
+        }
+
+        if (IsAnchorCell(toCell))
+        {
+            reason = "to-anchor";
+            return Vector3.zero;
+        }
+
+        if (!roadCells.Contains(toCell))
+        {
+            reason = "target-not-road";
+            return Vector3.zero;
+        }
+
+        if (IsRoadDeadEnd(toCell))
+        {
+            reason = "road-dead-end";
+            return Vector3.zero;
+        }
+
+        Vector2Int dir = NormalizeRoadDirection(toCell - fromCell);
+        Vector2Int physicalRightLaneOffset = TwoLaneRoadGeometry.GetRightLaneOffset(dir);
+        Vector3 offset = GetRightHandLaneOffset(dir);
+        if (IsContinuousPhysicalRightLane(fromCell, toCell, dir, physicalRightLaneOffset))
+        {
+            offset += new Vector3(physicalRightLaneOffset.x, 0f, physicalRightLaneOffset.y);
+            reason = "physical-right-lane";
+            return offset;
+        }
+
+        reason = offset.sqrMagnitude > 0.0001f ? "right-lane-in-cell" : "zero-direction";
+        return offset;
+    }
+
+    private Vector3 GetTruckTargetLaneOffset(Vector2Int fromCell, Vector2Int toCell, out string reason)
+    {
+        if (!IsAnchorCell(fromCell) &&
+            !IsAnchorCell(toCell) &&
+            !IsNearAnchorCell(fromCell) &&
+            !IsNearAnchorCell(toCell) &&
+            activePath != null &&
+            activePath.Count > 1 &&
+            activePath[0] == toCell)
+        {
+            Vector2Int incomingRawDir = toCell - fromCell;
+            Vector2Int outgoingRawDir = activePath[1] - toCell;
+            Vector2Int incomingDir = NormalizeRoadDirection(incomingRawDir);
+            Vector2Int outgoingDir = NormalizeRoadDirection(outgoingRawDir);
+            if (incomingRawDir != Vector2Int.zero && outgoingRawDir != Vector2Int.zero && incomingDir != outgoingDir)
+            {
+                Vector3 outgoingOffset = GetRoadLaneOffset(toCell, activePath[1], out string outgoingReason);
+                if (outgoingOffset.sqrMagnitude > 0.0001f)
+                {
+                    reason = $"corner-outgoing-{outgoingReason}; next=({activePath[1].x},{activePath[1].y})";
+                    return outgoingOffset;
+                }
+            }
+        }
+
+        return GetRoadLaneOffset(fromCell, toCell, out reason);
+    }
+
+    private bool IsContinuousPhysicalRightLane(Vector2Int fromCell, Vector2Int toCell, Vector2Int direction, Vector2Int rightLaneOffset)
+    {
+        if (rightLaneOffset == Vector2Int.zero)
+        {
+            return false;
+        }
+
+        Vector2Int sideCell = toCell + rightLaneOffset;
+        if (!roadCells.Contains(sideCell))
+        {
+            return false;
+        }
+
+        Vector2Int sideFrom = fromCell + rightLaneOffset;
+        Vector2Int sideForward = sideCell + direction;
+        return roadCells.Contains(sideFrom) || roadCells.Contains(sideForward);
+    }
+
+    private bool IsNearAnchorCell(Vector2Int cell)
+    {
+        foreach (Vector2Int neighbor in GridPathService.GetCardinalNeighbors(cell))
+        {
+            if (IsAnchorCell(neighbor))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void LogTruckLaneSegment(Vector2Int fromCell, Vector2Int toCell, Vector3 laneOffset, string laneReason, Vector3 baseTargetWorld, Vector3 targetWorld)
+    {
+        Vector2Int rawDir = toCell - fromCell;
+        Vector2Int dir = NormalizeRoadDirection(rawDir);
+        SessionDebugLogger.Log(
+            "TRUCK_LANE",
+            $"{GetLoadedTruckDisplayName()} from=({fromCell.x},{fromCell.y}) to=({toCell.x},{toCell.y}) rawDir=({rawDir.x},{rawDir.y}) dir=({dir.x},{dir.y}) reason={laneReason} offset=({laneOffset.x:F2},{laneOffset.z:F2}) base=({baseTargetWorld.x:F2},{baseTargetWorld.z:F2}) target=({targetWorld.x:F2},{targetWorld.z:F2}) roadTarget={roadCells.Contains(toCell)} fromAnchor={IsAnchorCell(fromCell)} toAnchor={IsAnchorCell(toCell)}.");
     }
 
     private Vector3 GetRightHandLaneOffset(Vector2Int direction)
     {
         Vector2Int dir = NormalizeRoadDirection(direction);
-        // Unity grid Z grows "up" on the map; this gives the visual right lane for travel.
-        return new Vector3(-dir.y, 0f, dir.x) * RoadLaneOffset;
+        // Match two-lane road geometry: travel +X uses the south lane, travel +Y uses the east lane.
+        return new Vector3(dir.y, 0f, -dir.x) * RoadLaneOffset;
     }
 
     private bool IsRoadDeadEnd(Vector2Int cell)
@@ -336,7 +443,7 @@ public partial class GameBootstrap
                 TruckInteractionType.LoadAtForest => "Loading at Forest...",
                 TruckInteractionType.UnloadAtSawmill => "Unloading at Sawmill...",
                 TruckInteractionType.LoadAtSawmill => "Loading at Sawmill...",
-                TruckInteractionType.UnloadAtWarehouse => "Unloading boards at Warehouse...",
+                TruckInteractionType.UnloadAtWarehouse => "Unloading cargo at Warehouse...",
                 TruckInteractionType.LoadBoardsAtWarehouse => "Loading boards at Warehouse...",
                 TruckInteractionType.LoadTextileAtWarehouse => "Loading textile at Warehouse...",
                 TruckInteractionType.UnloadBoardsAtFurnitureFactory => "Unloading boards at Furniture Factory...",
@@ -537,7 +644,6 @@ public partial class GameBootstrap
             $"Hired {hiredDriver.DriverName}. Arrival bus is on the way.",
             $"Нанят {hiredDriver.DriverName}. Автобус с новым рабочим уже в пути.",
             FeedEventType.Success);
-        isHireWorkerHighlightPersistent = false;
         isDriversPanelOpen = false;
         isDriversScreenDirty = true;
         ScheduleTutorial(TutorialTrigger.FirstDriverHired);
@@ -619,7 +725,15 @@ public partial class GameBootstrap
 
         if (GUI.Button(new Rect(panelRect.x + 12, y, panelRect.width - 24, 26), "Refuel At Gas Station"))
         {
-            StartRefuelOrderForTruck(selectedTruck);
+            if (locations.ContainsKey(LocationType.GasStation))
+            {
+                StartRefuelOrderForTruck(selectedTruck);
+            }
+            else
+            {
+                SessionDebugLogger.Log("FUEL", $"{selectedTruck.DisplayName} manual refuel ignored: Gas Station is not built.");
+            }
+
             LoadTruckState(selectedTruck);
         }
 

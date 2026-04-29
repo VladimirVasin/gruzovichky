@@ -319,8 +319,8 @@ public partial class GameBootstrap
 
             float primary = Mathf.Sin(time * sway.Speed + sway.PhaseOffset);
             float secondary = Mathf.Sin(time * (sway.Speed * 0.63f) + sway.SecondaryPhaseOffset);
-            float pitch = primary * sway.PitchAmplitude;
-            float roll = secondary * sway.RollAmplitude;
+            float pitch = primary * sway.PitchAmplitude * sway.CurrentWindMult;
+            float roll = secondary * sway.RollAmplitude * sway.CurrentWindMult;
             sway.RootTransform.localRotation = sway.BaseRotation * Quaternion.Euler(pitch, 0f, roll);
         }
     }
@@ -433,6 +433,139 @@ public partial class GameBootstrap
         upper.transform.localScale = ScaleTreeLocalScale(new Vector3(0.24f, 0.22f, 0.24f));
         ApplyColor(upper, JitterTreeLeafColor(new Color(0.12f, 0.36f, 0.2f), parent));
         ConfigureShadowVisual(upper);
+    }
+
+    private void PopulateLakeDecorations()
+    {
+        if (miscRoot == null || lakeWaterCells.Count == 0) return;
+
+        // Water lilies on lake perimeter cells (shallow edges).
+        foreach (Vector2Int cell in lakeWaterCells)
+        {
+            // Only cells adjacent to at least one non-lake cell (edge of lake).
+            bool isEdge = !lakeWaterCells.Contains(cell + Vector2Int.right)
+                       || !lakeWaterCells.Contains(cell + Vector2Int.left)
+                       || !lakeWaterCells.Contains(cell + Vector2Int.up)
+                       || !lakeWaterCells.Contains(cell + Vector2Int.down);
+            if (!isEdge) continue;
+
+            // Sparse: deterministic skip based on cell hash.
+            if ((cell.x * 7 + cell.y * 13) % 4 != 0) continue;
+
+            CreateWaterLily(cell);
+        }
+
+        // Reeds on beach cells — very sparse (1 in 7).
+        int reedIndex = 0;
+        foreach (Vector2Int cell in naturalBeachCells)
+        {
+            reedIndex++;
+            if (reedIndex % 7 != 0) continue;
+            if (miscOccupiedCells.Contains(cell)) continue;
+            CreateReedCluster(cell);
+        }
+    }
+
+    private void CreateWaterLily(Vector2Int cell)
+    {
+        if (miscRoot == null) return;
+
+        float waterY = GetCurrentVisualWaterHeight(cell);
+        float x = cell.x + Random.Range(0.15f, 0.85f);
+        float z = cell.y + Random.Range(0.15f, 0.85f);
+
+        GameObject lilyRoot = new($"WaterLily_{cell.x}_{cell.y}");
+        lilyRoot.transform.SetParent(miscRoot, false);
+        lilyRoot.transform.position = new Vector3(x, waterY + 0.01f, z);
+        lilyRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+
+        // Pad (leaf) — flat disk
+        float padSize = Random.Range(0.22f, 0.32f);
+        GameObject pad = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        pad.transform.SetParent(lilyRoot.transform, false);
+        pad.transform.localPosition = Vector3.zero;
+        pad.transform.localScale = new Vector3(padSize, 0.012f, padSize);
+        ApplyColor(pad, new Color(0.22f, 0.50f, 0.24f));
+        ConfigureStaticVisual(pad);
+        if (pad.TryGetComponent(out Collider pc)) pc.enabled = false;
+
+        // Flower — only on ~60% of lilies
+        if (Random.value < 0.6f)
+        {
+            Color flowerColor = Random.value < 0.5f
+                ? new Color(0.97f, 0.94f, 0.90f)   // white
+                : new Color(0.96f, 0.68f, 0.78f);   // pink
+
+            GameObject flower = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            flower.transform.SetParent(lilyRoot.transform, false);
+            flower.transform.localPosition = new Vector3(0f, 0.025f, 0f);
+            flower.transform.localScale = new Vector3(0.09f, 0.055f, 0.09f);
+            ApplyColor(flower, flowerColor);
+            ConfigureStaticVisual(flower);
+            if (flower.TryGetComponent(out Collider fc)) fc.enabled = false;
+
+            // Yellow center
+            GameObject center = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            center.transform.SetParent(lilyRoot.transform, false);
+            center.transform.localPosition = new Vector3(0f, 0.042f, 0f);
+            center.transform.localScale = new Vector3(0.038f, 0.028f, 0.038f);
+            ApplyColor(center, new Color(0.98f, 0.88f, 0.22f));
+            ConfigureStaticVisual(center);
+            if (center.TryGetComponent(out Collider cc)) cc.enabled = false;
+        }
+    }
+
+    private void CreateReedCluster(Vector2Int cell)
+    {
+        if (miscRoot == null) return;
+
+        float groundY = SampleTerrainHeight(cell.x + 0.5f, cell.y + 0.5f);
+        int stemCount = Random.Range(2, 5);
+
+        GameObject clusterRoot = new($"Reed_{cell.x}_{cell.y}");
+        clusterRoot.transform.SetParent(miscRoot, false);
+        clusterRoot.transform.position = new Vector3(cell.x + 0.5f, groundY, cell.y + 0.5f);
+
+        for (int i = 0; i < stemCount; i++)
+        {
+            float ox = Random.Range(-0.22f, 0.22f);
+            float oz = Random.Range(-0.22f, 0.22f);
+            float height = Random.Range(0.5f, 0.85f);
+            float lean = Random.Range(-6f, 6f);
+
+            // Stem
+            GameObject stem = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stem.transform.SetParent(clusterRoot.transform, false);
+            stem.transform.localPosition = new Vector3(ox, height * 0.5f, oz);
+            stem.transform.localRotation = Quaternion.Euler(lean, Random.Range(0f, 360f), 0f);
+            stem.transform.localScale = new Vector3(0.022f, height * 0.5f, 0.022f);
+            ApplyColor(stem, new Color(0.30f, 0.52f, 0.26f));
+            ConfigureStaticVisual(stem);
+            if (stem.TryGetComponent(out Collider sc)) sc.enabled = false;
+
+            // Cattail head — dark brown oval
+            GameObject head = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            head.transform.SetParent(clusterRoot.transform, false);
+            head.transform.localPosition = new Vector3(ox, height + 0.05f, oz);
+            head.transform.localRotation = stem.transform.localRotation;
+            head.transform.localScale = new Vector3(0.042f, 0.065f, 0.042f);
+            ApplyColor(head, new Color(0.32f, 0.18f, 0.08f));
+            ConfigureStaticVisual(head);
+            if (head.TryGetComponent(out Collider hc)) hc.enabled = false;
+        }
+
+        // Register for gentle wind sway (reuses tree sway system).
+        miscTreeSways.Add(new MiscTreeSway
+        {
+            Cell                  = cell,
+            RootTransform         = clusterRoot.transform,
+            BaseRotation          = clusterRoot.transform.localRotation,
+            PhaseOffset           = cell.x * 0.83f + cell.y * 1.29f,
+            SecondaryPhaseOffset  = cell.x * 1.47f + cell.y * 0.61f,
+            Speed                 = 0.65f + (cell.x % 5) * 0.05f,
+            PitchAmplitude        = 1.4f,
+            RollAmplitude         = 0.9f,
+        });
     }
 
     private static Color JitterTreeLeafColor(Color baseColor, Transform parent)

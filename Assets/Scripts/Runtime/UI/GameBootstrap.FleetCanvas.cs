@@ -1185,14 +1185,15 @@ public partial class GameBootstrap
         go.AddComponent<LayoutElement>().ignoreLayout = true;
 
         Image img = go.AddComponent<Image>();
-        img.color = new Color(0.62f, 0.14f, 0.10f, 0.94f);
+        img.color = new Color(0.18f, 0.12f, 0.12f, 0.92f);
 
         Button btn = go.AddComponent<Button>();
         ColorBlock cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(1.0f, 0.36f, 0.28f, 1f);
+        cb.normalColor = new Color(0.18f, 0.12f, 0.12f, 0.92f);
+        cb.highlightedColor = new Color(0.74f, 0.18f, 0.14f, 1f);
         cb.pressedColor = new Color(0.5f, 0.10f, 0.08f, 1f);
-        cb.selectedColor = Color.white;
+        cb.selectedColor = new Color(0.18f, 0.12f, 0.12f, 0.92f);
+        cb.disabledColor = new Color(0.12f, 0.10f, 0.10f, 0.68f);
         btn.colors = cb;
         btn.targetGraphic = img;
         btn.onClick.AddListener(CloseAllMenus);

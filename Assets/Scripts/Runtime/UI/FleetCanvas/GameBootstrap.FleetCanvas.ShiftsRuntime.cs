@@ -607,6 +607,23 @@ public partial class GameBootstrap
         SetDriverDutyMode(driver, DriverDutyMode.Logistics);
         driver.AssignedBuildingType = slot.BuildingType;
         driver.ShiftStartHour = -1;
+        if (slot.BuildingType == LocationType.Forest)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.AssignLumberjackWorker);
+            if (selectedGameStartMode == GameStartMode.User &&
+                !isTutorialSkipped &&
+                isTutorialGoalsActive &&
+                tutorialGoalsMode == TutorialGoalsMode.LumberjackCamp)
+            {
+                isShiftsPanelOpen = false;
+                if (shiftsScreenUi?.CanvasRoot != null)
+                {
+                    shiftsScreenUi.CanvasRoot.SetActive(false);
+                }
+                SessionDebugLogger.Log("TUTORIAL", "Closed Vacancies after Lumberjack Camp worker assignment.");
+            }
+        }
+
         LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {slot.BuildingType} ({GetProductionWorkRangeLabel()})");
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType} production work ({GetProductionWorkRangeLabel()}).");
         PushFeedEvent(

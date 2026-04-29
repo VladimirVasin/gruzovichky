@@ -103,9 +103,9 @@ public partial class GameBootstrap : MonoBehaviour
             for (int j = 0; j < waterSurfaceTiles.Count; j++)
             {
                 WaterSurfaceTileData tile = waterSurfaceTiles[j];
-                if (tile.Cell.x == cellX && tile.Transform != null && tile.Transform.position.y > bestY)
+                if (tile.Cell.x == cellX && tile.Transform != null && tile.CurrentTopY > bestY)
                 {
-                    bestY = tile.Transform.position.y;
+                    bestY = tile.CurrentTopY;
                     waterY = bestY;
                 }
             }

@@ -121,6 +121,17 @@ public partial class GameBootstrap
             gsRefuel.FuelStored = GasStationMaxFuelStorage;
         }
 
+        if (!locations.TryGetValue(LocationType.GasStation, out LocationData gasStation) ||
+            !locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            SessionDebugLogger.Log(
+                "FUEL",
+                $"{GetLoadedTruckDisplayName()} cancelled refuel order: required location missing " +
+                $"(GasStation={locations.ContainsKey(LocationType.GasStation)}, Parking={locations.ContainsKey(LocationType.Parking)}).");
+            currentRefuelPhase = RefuelPhase.None;
+            return;
+        }
+
         bool queuedInteractionResumed = false;
         if (currentRefuelPhase == RefuelPhase.Refueling && !isTruckInteracting)
         {
@@ -130,8 +141,8 @@ public partial class GameBootstrap
         TruckRefuelRuntimeAction action = TruckRefuelRuntimeService.Evaluate(
             currentRefuelPhase,
             truckCell,
-            locations[LocationType.GasStation].Anchor,
-            locations[LocationType.Parking].Anchor,
+            gasStation.Anchor,
+            parking.Anchor,
             isTruckInteracting,
             queuedInteractionResumed);
 
@@ -243,4 +254,3 @@ public partial class GameBootstrap
         }
     }
 }
-

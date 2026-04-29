@@ -118,6 +118,17 @@ public partial class GameBootstrap
             Outline rowOutline = rowObj.AddComponent<Outline>();
             rowOutline.effectColor = new Color(0f, 0f, 0f, 0.2f);
             rowOutline.effectDistance = new Vector2(1f, -1f);
+            GameObject selectedBorderObj = CreateUiObject($"VacancySelectedBorder{i + 1}", rowObj.transform);
+            row.SelectedBorder = selectedBorderObj.AddComponent<Image>();
+            row.SelectedBorder.color = FleetAccentColor;
+            row.SelectedBorder.raycastTarget = false;
+            RectTransform selectedBorderRt = selectedBorderObj.GetComponent<RectTransform>();
+            selectedBorderRt.anchorMin = new Vector2(0f, 0f);
+            selectedBorderRt.anchorMax = new Vector2(0f, 1f);
+            selectedBorderRt.pivot = new Vector2(0f, 0.5f);
+            selectedBorderRt.anchoredPosition = Vector2.zero;
+            selectedBorderRt.sizeDelta = new Vector2(4f, 0f);
+            selectedBorderObj.AddComponent<LayoutElement>().ignoreLayout = true;
             VerticalLayoutGroup rowLayout = rowObj.AddComponent<VerticalLayoutGroup>();
             rowLayout.padding = new RectOffset(12, 12, 10, 10);
             rowLayout.spacing = 4;
@@ -129,18 +140,22 @@ public partial class GameBootstrap
             RectTransform workerHeaderRow = CreateLayoutRow($"ShiftDriverHeaderRow{i + 1}", row.Root, 24f, 8f);
             row.NameText = CreateHeaderText($"ShiftDriverName{i + 1}", workerHeaderRow, font, string.Empty, 14, TextAnchor.MiddleLeft, Color.white);
             row.NameText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-            row.ProfessionText = CreateBodyText($"ShiftDriverProfession{i + 1}", workerHeaderRow, font, string.Empty, 12, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
-            LayoutElement professionLayout = row.ProfessionText.gameObject.AddComponent<LayoutElement>();
-            professionLayout.preferredWidth = 170f;
+            RectTransform badgeRoot = CreateStyledPanel($"ShiftDriverBadge{i + 1}", workerHeaderRow, new Color(0.12f, 0.18f, 0.14f, 0.95f));
+            row.BadgeBackground = badgeRoot.GetComponent<Image>();
+            LayoutElement professionLayout = badgeRoot.gameObject.AddComponent<LayoutElement>();
+            professionLayout.preferredWidth = 92f;
+            professionLayout.preferredHeight = 20f;
             professionLayout.flexibleWidth = 0f;
+            row.ProfessionText = CreateBodyText($"ShiftDriverProfession{i + 1}", badgeRoot, font, string.Empty, 11, TextAnchor.MiddleCenter, Color.white);
+            StretchRect(row.ProfessionText.GetComponent<RectTransform>(), 6f, 2f, 6f, 2f);
             row.StatusText = CreateBodyText($"ShiftDriverStatus{i + 1}", rowObj.transform, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
 
             row.SelectButton = rowObj.AddComponent<Button>();
             ColorBlock rowColors = row.SelectButton.colors;
             rowColors.normalColor = Color.white;
-            rowColors.highlightedColor = new Color(1f, 1f, 1f, 0.96f);
-            rowColors.pressedColor = new Color(0.94f, 0.94f, 0.94f, 1f);
-            rowColors.selectedColor = Color.white;
+            rowColors.highlightedColor = new Color(1.16f, 1.13f, 1.05f, 1f);
+            rowColors.pressedColor = new Color(0.88f, 0.82f, 0.68f, 1f);
+            rowColors.selectedColor = new Color(1.08f, 1.02f, 0.86f, 1f);
             rowColors.fadeDuration = 0.08f;
             row.SelectButton.colors = rowColors;
 
@@ -156,6 +171,8 @@ public partial class GameBootstrap
                 selectedVacancyIndex = isSelected ? -1 : rowIndex;
                 selectedVacancyShiftIndex = -1;
                 selectedVacancyTruckNumber = 0;
+                vacancySuccessMessage = string.Empty;
+                vacancySuccessTimer = 0f;
                 string vacancyTitle = vacancyViewModels[rowIndex].Title;
                 LogUiInput($"Vacancies Canvas: {(isSelected ? $"deselected {vacancyTitle}" : $"selected {vacancyTitle}")}");
                 PlayUiSound(uiSelectClip, 0.8f);
@@ -190,7 +207,7 @@ public partial class GameBootstrap
         shiftsScreenUi.SelectionTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
 
         RectTransform selectionInfoPanel = CreateStyledPanel("AssignmentsSelectionInfoPanel", selectionBody, FleetCardMutedColor);
-        selectionInfoPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 78f;
+        selectionInfoPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 98f;
         VerticalLayoutGroup selectionInfoLayout = selectionInfoPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         selectionInfoLayout.padding = new RectOffset(12, 12, 10, 10);
         selectionInfoLayout.spacing = 4;
@@ -198,17 +215,19 @@ public partial class GameBootstrap
         selectionInfoLayout.childControlHeight = true;
         selectionInfoLayout.childForceExpandWidth = true;
         selectionInfoLayout.childForceExpandHeight = false;
-        shiftsScreenUi.SelectionNameText = CreateHeaderText("AssignmentsSelectionName", selectionInfoPanel, font, string.Empty, 15, TextAnchor.MiddleLeft, FleetAccentColor);
-        shiftsScreenUi.SelectionNameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        shiftsScreenUi.SelectionNameText = CreateHeaderText("AssignmentsSelectionName", selectionInfoPanel, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        shiftsScreenUi.SelectionNameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
         shiftsScreenUi.SelectionNameText.verticalOverflow = VerticalWrapMode.Overflow;
         shiftsScreenUi.SelectionProfessionText = CreateBodyText("AssignmentsSelectionProfession", selectionInfoPanel, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        shiftsScreenUi.SelectionProfessionText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        shiftsScreenUi.SelectionProfessionText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
         shiftsScreenUi.SelectionProfessionText.verticalOverflow = VerticalWrapMode.Truncate;
         shiftsScreenUi.SelectionStatusText = CreateBodyText("AssignmentsSelectionStatus", selectionInfoPanel, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         shiftsScreenUi.SelectionStatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
         shiftsScreenUi.SelectionStatusText.verticalOverflow = VerticalWrapMode.Truncate;
         shiftsScreenUi.SelectionHintText = CreateBodyText("AssignmentsSelectionHint", selectionBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
         shiftsScreenUi.SelectionHintText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        shiftsScreenUi.VacancySuccessText = CreateBodyText("AssignmentsSuccessText", selectionBody, font, string.Empty, 12, TextAnchor.MiddleLeft, new Color(0.65f, 0.95f, 0.66f, 1f));
+        shiftsScreenUi.VacancySuccessText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
         // ── Tab toggle row ───────────────────────────────────────────────────
         RectTransform tabRow = CreateTabRow("ShiftsTabRow", rightPanel, ShiftsTabRowHeight, 8f);
@@ -259,10 +278,53 @@ public partial class GameBootstrap
         vacancyFlowLayout.childForceExpandWidth = true;
         vacancyFlowLayout.childForceExpandHeight = false;
 
+        RectTransform stepRow = CreateLayoutRow("VacancyStepProgressRow", vacancyFlowPanel, 34f, 6f);
+        string[] stepLabels = { "Vacancy", "Shift", "Truck", "Worker" };
+        for (int i = 0; i < stepLabels.Length; i++)
+        {
+            RectTransform stepRoot = CreateStyledPanel($"VacancyStep{i + 1}", stepRow, new Color(0.08f, 0.10f, 0.14f, 0.94f));
+            LayoutElement stepLayout = stepRoot.gameObject.AddComponent<LayoutElement>();
+            stepLayout.flexibleWidth = 1f;
+            stepLayout.preferredHeight = 28f;
+            Text stepText = CreateBodyText($"VacancyStepText{i + 1}", stepRoot, font, stepLabels[i], 11, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
+            StretchRect(stepText.GetComponent<RectTransform>(), 4f, 2f, 4f, 2f);
+            shiftsScreenUi.VacancyStepBackgrounds.Add(stepRoot.GetComponent<Image>());
+            shiftsScreenUi.VacancyStepTexts.Add(stepText);
+        }
+
         shiftsScreenUi.VacancyFlowTitleText = CreateHeaderText("VacancyFlowTitle", vacancyFlowPanel, font, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
         shiftsScreenUi.VacancyFlowTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         shiftsScreenUi.VacancyFlowHintText = CreateBodyText("VacancyFlowHint", vacancyFlowPanel, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
         shiftsScreenUi.VacancyFlowHintText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
+
+        RectTransform transportParkCard = CreateStyledPanel("VacancyTransportParkCard", vacancyFlowPanel, FleetCardMutedColor);
+        shiftsScreenUi.VacancyTransportParkCard = transportParkCard;
+        transportParkCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 112f;
+        VerticalLayoutGroup transportParkLayout = transportParkCard.gameObject.AddComponent<VerticalLayoutGroup>();
+        transportParkLayout.padding = new RectOffset(12, 12, 8, 8);
+        transportParkLayout.spacing = 5f;
+        transportParkLayout.childControlWidth = true;
+        transportParkLayout.childControlHeight = true;
+        transportParkLayout.childForceExpandWidth = true;
+        transportParkLayout.childForceExpandHeight = false;
+
+        RectTransform transportParkHeader = CreateLayoutRow("VacancyTransportParkHeader", transportParkCard, 22f, 8f);
+        shiftsScreenUi.VacancyTransportParkTitleText = CreateHeaderText("VacancyTransportParkTitle", transportParkHeader, font, "Transport Park", 14, TextAnchor.MiddleLeft, Color.white);
+        shiftsScreenUi.VacancyTransportParkTitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        shiftsScreenUi.VacancyTransportParkCountText = CreateBodyText("VacancyTransportParkCount", transportParkHeader, font, string.Empty, 12, TextAnchor.MiddleRight, FleetSecondaryTextColor);
+        shiftsScreenUi.VacancyTransportParkCountText.gameObject.AddComponent<LayoutElement>().preferredWidth = 112f;
+        shiftsScreenUi.VacancyTransportParkSummaryText = CreateBodyText("VacancyTransportParkSummary", transportParkCard, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        shiftsScreenUi.VacancyTransportParkSummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+        shiftsScreenUi.VacancyBuyTruckButton = CreateButton("VacancyTransportParkBuyTruck", transportParkCard, font, out shiftsScreenUi.VacancyBuyTruckButtonText, "Buy New Truck", 12, FleetPrimaryButtonColor, Color.white);
+        shiftsScreenUi.VacancyBuyTruckButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+        shiftsScreenUi.VacancyBuyTruckButton.onClick.AddListener(() =>
+        {
+            HireNewTruck();
+            isShiftsScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.85f);
+        });
+        shiftsScreenUi.VacancyBuyTruckStatusText = CreateBodyText("VacancyTransportParkStatus", transportParkCard, font, string.Empty, 11, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
+        shiftsScreenUi.VacancyBuyTruckStatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
 
         for (int i = 0; i < MaxVacancyOptionRows; i++)
         {
@@ -280,17 +342,30 @@ public partial class GameBootstrap
             optionLayout.childForceExpandWidth = true;
             optionLayout.childForceExpandHeight = false;
 
-            Text optionTitle = CreateHeaderText($"VacancyOptionTitle{i + 1}", optionRoot, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
-            optionTitle.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+            RectTransform optionHeader = CreateLayoutRow($"VacancyOptionHeader{i + 1}", optionRoot, 20f, 8f);
+            SetGraphicRaycast(optionHeader.gameObject, false);
+            Text optionTitle = CreateHeaderText($"VacancyOptionTitle{i + 1}", optionHeader, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
+            optionTitle.raycastTarget = false;
+            optionTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            RectTransform optionBadge = CreateStyledPanel($"VacancyOptionBadge{i + 1}", optionHeader, new Color(0.12f, 0.18f, 0.14f, 0.95f));
+            optionBadge.GetComponent<Image>().raycastTarget = false;
+            LayoutElement optionBadgeLayout = optionBadge.gameObject.AddComponent<LayoutElement>();
+            optionBadgeLayout.preferredWidth = 86f;
+            optionBadgeLayout.preferredHeight = 18f;
+            Text optionBadgeText = CreateBodyText($"VacancyOptionBadgeText{i + 1}", optionBadge, font, string.Empty, 10, TextAnchor.MiddleCenter, Color.white);
+            optionBadgeText.raycastTarget = false;
+            StretchRect(optionBadgeText.GetComponent<RectTransform>(), 5f, 1f, 5f, 1f);
             Text optionSubtitle = CreateBodyText($"VacancyOptionSubtitle{i + 1}", optionRoot, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            optionSubtitle.raycastTarget = false;
             optionSubtitle.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
 
             Button optionButton = optionObj.AddComponent<Button>();
+            optionButton.targetGraphic = optionBg;
             ColorBlock optionColors = optionButton.colors;
             optionColors.normalColor = Color.white;
-            optionColors.highlightedColor = new Color(1f, 1f, 1f, 0.96f);
-            optionColors.pressedColor = new Color(0.94f, 0.94f, 0.94f, 1f);
-            optionColors.selectedColor = Color.white;
+            optionColors.highlightedColor = new Color(1.12f, 1.12f, 1.08f, 1f);
+            optionColors.pressedColor = new Color(0.86f, 0.86f, 0.82f, 1f);
+            optionColors.selectedColor = new Color(1.06f, 1.02f, 0.88f, 1f);
             optionColors.fadeDuration = 0.08f;
             optionButton.colors = optionColors;
             int optionIndex = i;
@@ -302,6 +377,8 @@ public partial class GameBootstrap
                 Background = optionBg,
                 TitleText = optionTitle,
                 SubtitleText = optionSubtitle,
+                BadgeBackground = optionBadge.GetComponent<Image>(),
+                BadgeText = optionBadgeText,
                 Button = optionButton
             });
         }

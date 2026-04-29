@@ -1,15 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap : MonoBehaviour
 {
     private void SetupDistantClouds()
     {
         distantClouds.Clear();
-
         // High sky layer. Rows start off-map and cover the full enlarged grid as they drift.
         float startX = -48f;
         float[] zRows =
@@ -17,7 +13,6 @@ public partial class GameBootstrap : MonoBehaviour
             -30f, -12f, 6f, 24f, 42f,
             60f, 78f, 96f, 114f, 132f, 150f
         };
-
         for (int i = 0; i < zRows.Length; i++)
         {
             float height = 36f + (i % 4) * 4.5f + (i % 3) * 1.2f;
@@ -27,7 +22,6 @@ public partial class GameBootstrap : MonoBehaviour
             float phase = i * 0.73f;
             float scale = 2.15f + (i % 5) * 0.22f;
             float initialOffset = (i * 31f) % CloudTravelLength;
-
             CreateDistantCloud(
                 new Vector3(startX, height, zRows[i]),
                 speed,
@@ -51,7 +45,6 @@ public partial class GameBootstrap : MonoBehaviour
         CreateCloudLump(cloudRoot.transform, new Vector3(0f, 0.18f, 0f), new Vector3(1.9f, 1f, 1f));
         CreateCloudLump(cloudRoot.transform, new Vector3(1.02f, 0.02f, 0.08f), new Vector3(1.4f, 0.74f, 0.86f));
         CreateCloudLump(cloudRoot.transform, new Vector3(0.18f, -0.12f, 0.18f), new Vector3(1.7f, 0.54f, 0.86f));
-
         cloudRoot.SetActive(true);
         distantClouds.Add(new DistantCloudData
         {
@@ -72,15 +65,12 @@ public partial class GameBootstrap : MonoBehaviour
         {
             Destroy(ambientAirRoot.gameObject);
         }
-
         if (worldRoot == null)
         {
             return;
         }
-
         ambientAirRoot = new GameObject("AmbientAirParticles").transform;
         ambientAirRoot.SetParent(worldRoot, false);
-
         Vector3 globalCenter = new(GridWidth * 0.5f, 0f, GridHeight * 0.54f);
         for (int i = 0; i < AmbientAirGlobalParticleCount; i++)
         {
@@ -101,7 +91,6 @@ public partial class GameBootstrap : MonoBehaviour
                 isForestLocal: false,
                 isHighwayDust: false);
         }
-
         Vector3 highwayCenter = new(GridWidth * 0.5f, 0f, 1.05f);
         for (int i = 0; i < AmbientAirHighwayDustParticleCount; i++)
         {
@@ -122,7 +111,6 @@ public partial class GameBootstrap : MonoBehaviour
                 isForestLocal: false,
                 isHighwayDust: true);
         }
-
         if (locations.TryGetValue(LocationType.Forest, out LocationData forest))
         {
             Vector3 forestCenter = GetLocationCenter(LocationType.Forest);
@@ -171,7 +159,6 @@ public partial class GameBootstrap : MonoBehaviour
         {
             return;
         }
-
         GameObject particle = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         particle.name = name;
         particle.transform.SetParent(ambientAirRoot, false);
@@ -181,11 +168,9 @@ public partial class GameBootstrap : MonoBehaviour
         {
             collider.enabled = false;
         }
-
         Color color = Color.Lerp(baseColor * 0.92f, Color.white, Random.Range(0.08f, 0.22f));
         ApplyUnlitColor(particle, color);
         ConfigureStaticVisual(particle);
-
         Renderer particleRenderer = particle.GetComponent<Renderer>();
         AmbientAirParticleData data = new()
         {
@@ -205,7 +190,6 @@ public partial class GameBootstrap : MonoBehaviour
             IsForestLocal = isForestLocal,
             IsHighwayDust = isHighwayDust
         };
-
         ResetAmbientAirParticle(data, randomizeAlongPath: true);
         ambientAirParticles.Add(data);
     }
@@ -216,7 +200,6 @@ public partial class GameBootstrap : MonoBehaviour
         {
             return;
         }
-
         particle.TravelOffset = randomizeAlongPath
             ? Random.Range(-particle.HalfTravelRange, particle.HalfTravelRange)
             : -particle.HalfTravelRange;
@@ -231,7 +214,6 @@ public partial class GameBootstrap : MonoBehaviour
         {
             return;
         }
-
         Vector3 windDirection = CloudTravelDir;
         Vector3 windRight = new(-windDirection.z, 0f, windDirection.x);
         float dt = Time.deltaTime * gameSpeedMultiplier;
@@ -322,11 +304,11 @@ public partial class GameBootstrap : MonoBehaviour
         int birdCount = Mathf.Min(MiscBirdCount, miscTreePerchPoints.Count);
         for (int i = 0; i < birdCount; i++)
         {
-            CreateMiscBird(i);
+            CreateMiscBird(i, birdCount);
         }
     }
 
-    private void CreateMiscBird(int birdIndex)
+    private void CreateMiscBird(int birdIndex, int totalCount)
     {
         if (miscBirdRoot == null || miscTreePerchPoints.Count == 0)
         {
@@ -380,7 +362,8 @@ public partial class GameBootstrap : MonoBehaviour
             beakCollider.enabled = false;
         }
 
-        int perchIndex = Mathf.Abs(birdIndex * 3) % miscTreePerchPoints.Count;
+        int step = Mathf.Max(1, miscTreePerchPoints.Count / totalCount);
+        int perchIndex = birdIndex * step % miscTreePerchPoints.Count;
         Vector3 perchPosition = miscTreePerchPoints[perchIndex];
         birdRoot.transform.position = perchPosition;
         float perchYaw = Random.Range(0f, 360f);
@@ -1098,6 +1081,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         ambientSquirrels.Clear();
         ambientSquirrelRoamPoints.Clear();
+        ambientSquirrelPerchHeights.Clear();
         if (ambientSquirrelRoot != null)
         {
             Destroy(ambientSquirrelRoot.gameObject);
@@ -1115,16 +1099,17 @@ public partial class GameBootstrap : MonoBehaviour
         {
             float groundY = SampleTerrainHeight(perch.x, perch.z);
             ambientSquirrelRoamPoints.Add(new Vector3(perch.x, groundY, perch.z));
+            ambientSquirrelPerchHeights.Add(perch.y);
         }
 
         int count = Mathf.Min(AmbientSquirrelCount, ambientSquirrelRoamPoints.Count);
         for (int i = 0; i < count; i++)
         {
-            CreateAmbientSquirrel(i);
+            CreateAmbientSquirrel(i, count);
         }
     }
 
-    private void CreateAmbientSquirrel(int squirrelIndex)
+    private void CreateAmbientSquirrel(int squirrelIndex, int totalCount)
     {
         if (ambientSquirrelRoot == null || ambientSquirrelRoamPoints.Count == 0)
         {
@@ -1183,7 +1168,8 @@ public partial class GameBootstrap : MonoBehaviour
         ConfigureStaticVisual(tail);
         if (tail.TryGetComponent(out Collider tailCol)) tailCol.enabled = false;
 
-        int pointIndex = Mathf.Abs(squirrelIndex * 5) % ambientSquirrelRoamPoints.Count;
+        int step = Mathf.Max(1, ambientSquirrelRoamPoints.Count / totalCount);
+        int pointIndex = squirrelIndex * step % ambientSquirrelRoamPoints.Count;
         Vector3 position = ambientSquirrelRoamPoints[pointIndex];
         float yaw = Random.Range(0f, 360f);
         sqRoot.transform.position = position;
@@ -1204,7 +1190,8 @@ public partial class GameBootstrap : MonoBehaviour
             AnimationPhase   = Random.Range(0f, 10f),
             TailPhase        = Random.Range(0f, 10f),
             Yaw              = yaw,
-            State            = AmbientSquirrelState.Idle
+            State            = AmbientSquirrelState.Idle,
+            ClimbCooldown    = Random.Range(6f, 18f),
         });
     }
 
@@ -1232,6 +1219,7 @@ public partial class GameBootstrap : MonoBehaviour
             {
                 case AmbientSquirrelState.Idle:
                     sq.StateTimer -= dt;
+                    sq.ClimbCooldown -= dt;
 
                     float idleBob = Mathf.Sin(time * 2.4f + sq.AnimationPhase) * 0.012f;
                     sq.RootTransform.position = sq.CurrentPosition + new Vector3(0f, idleBob, 0f);
@@ -1260,16 +1248,47 @@ public partial class GameBootstrap : MonoBehaviour
                     {
                         if (!active)
                         {
-                            sq.StateTimer = Random.Range(2f, 5f);
+                            // At night force squirrels down from trees
+                            if (sq.IsAtTreeTop) StartSquirrelClimbDown(sq);
+                            else sq.StateTimer = Random.Range(2f, 5f);
                             break;
                         }
 
+                        // At tree top: forage briefly or climb back down
+                        if (sq.IsAtTreeTop)
+                        {
+                            if (Random.value < 0.35f)
+                            {
+                                sq.State      = AmbientSquirrelState.Foraging;
+                                sq.StateTimer = Random.Range(1f, 2.5f);
+                            }
+                            else
+                            {
+                                StartSquirrelClimbDown(sq);
+                            }
+                            break;
+                        }
+
+                        // On ground: maybe climb up if cooldown expired
+                        if (sq.ClimbCooldown <= 0f &&
+                            sq.CurrentPointIndex >= 0 &&
+                            sq.CurrentPointIndex < ambientSquirrelPerchHeights.Count)
+                        {
+                            float perchY = ambientSquirrelPerchHeights[sq.CurrentPointIndex];
+                            if (perchY > sq.CurrentPosition.y + 0.5f)
+                            {
+                                StartSquirrelClimbUp(sq, perchY);
+                                break;
+                            }
+                        }
+
+                        // Normal roaming on ground
                         int next = FindNextSquirrelRoamPoint(sq);
                         if (next >= 0 && next != sq.CurrentPointIndex)
                         {
                             if (Random.value < 0.3f)
                             {
-                                sq.State     = AmbientSquirrelState.Foraging;
+                                sq.State      = AmbientSquirrelState.Foraging;
                                 sq.StateTimer = Random.Range(1.5f, 3f);
                             }
                             else
@@ -1354,46 +1373,118 @@ public partial class GameBootstrap : MonoBehaviour
                         {
                             sq.BodyTransform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
                         }
-                        sq.State     = AmbientSquirrelState.Idle;
+                        sq.State      = AmbientSquirrelState.Idle;
                         sq.StateTimer = Random.Range(1.5f, 3.5f);
+                    }
+                    break;
+
+                case AmbientSquirrelState.ClimbingUp:
+                    sq.ClimbProgress += dt / Mathf.Max(0.001f, sq.ClimbDuration);
+                    float climbUpT = Mathf.Clamp01(sq.ClimbProgress);
+
+                    sq.CurrentPosition = Vector3.Lerp(sq.StartPosition, sq.TargetPosition, climbUpT);
+                    sq.RootTransform.position = sq.CurrentPosition;
+                    sq.RootTransform.rotation = Quaternion.Slerp(
+                        sq.RootTransform.rotation,
+                        Quaternion.Euler(-72f, sq.Yaw, 0f),
+                        10f * Time.deltaTime);
+
+                    if (sq.BodyTransform != null)
+                        sq.BodyTransform.localScale = new Vector3(0.14f, 0.09f, 0.20f);
+
+                    if (sq.TailTransform != null)
+                        sq.TailTransform.localRotation = Quaternion.Euler(
+                            -10f + Mathf.Sin(time * 9f + sq.TailPhase) * 14f,
+                            Mathf.Sin(time * 6f + sq.TailPhase) * 10f, 0f);
+
+                    if (climbUpT >= 1f)
+                    {
+                        sq.IsAtTreeTop    = true;
+                        sq.CurrentPosition = sq.TargetPosition;
+                        if (sq.BodyTransform != null)
+                            sq.BodyTransform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
+                        sq.RootTransform.rotation = Quaternion.Euler(0f, sq.Yaw, 0f);
+                        sq.State      = AmbientSquirrelState.Idle;
+                        sq.StateTimer = Random.Range(2.5f, 6f);
+                    }
+                    break;
+
+                case AmbientSquirrelState.ClimbingDown:
+                    sq.ClimbProgress += dt / Mathf.Max(0.001f, sq.ClimbDuration);
+                    float climbDownT = Mathf.Clamp01(sq.ClimbProgress);
+
+                    sq.CurrentPosition = Vector3.Lerp(sq.StartPosition, sq.TargetPosition, climbDownT);
+                    sq.RootTransform.position = sq.CurrentPosition;
+                    sq.RootTransform.rotation = Quaternion.Slerp(
+                        sq.RootTransform.rotation,
+                        Quaternion.Euler(72f, sq.Yaw, 0f),
+                        10f * Time.deltaTime);
+
+                    if (sq.BodyTransform != null)
+                        sq.BodyTransform.localScale = new Vector3(0.14f, 0.09f, 0.20f);
+
+                    if (sq.TailTransform != null)
+                        sq.TailTransform.localRotation = Quaternion.Euler(
+                            -10f + Mathf.Sin(time * 9f + sq.TailPhase) * 14f,
+                            Mathf.Sin(time * 6f + sq.TailPhase) * 10f, 0f);
+
+                    if (climbDownT >= 1f)
+                    {
+                        sq.IsAtTreeTop     = false;
+                        sq.CurrentPosition = sq.TargetPosition;
+                        if (sq.BodyTransform != null)
+                            sq.BodyTransform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
+                        sq.RootTransform.rotation = Quaternion.Euler(0f, sq.Yaw, 0f);
+                        sq.ClimbCooldown  = Random.Range(12f, 28f);
+                        sq.State          = AmbientSquirrelState.Idle;
+                        sq.StateTimer     = Random.Range(1.5f, 3f);
                     }
                     break;
             }
         }
     }
 
+    private void StartSquirrelClimbUp(AmbientSquirrelData sq, float perchY)
+    {
+        sq.StartPosition  = sq.CurrentPosition;
+        sq.TargetPosition = new Vector3(sq.CurrentPosition.x, perchY, sq.CurrentPosition.z);
+        sq.ClimbDuration  = Mathf.Clamp((perchY - sq.CurrentPosition.y) / 2.8f, 0.4f, 2f);
+        sq.ClimbProgress  = 0f;
+        sq.ClimbCooldown  = Random.Range(14f, 30f);
+        sq.State          = AmbientSquirrelState.ClimbingUp;
+    }
+
+    private void StartSquirrelClimbDown(AmbientSquirrelData sq)
+    {
+        if (sq == null || ambientSquirrelRoamPoints.Count == 0)
+        {
+            return;
+        }
+
+        if (sq.CurrentPointIndex < 0 || sq.CurrentPointIndex >= ambientSquirrelRoamPoints.Count)
+        {
+            sq.CurrentPointIndex = FindNearestSquirrelRoamPoint(sq.CurrentPosition);
+            if (sq.CurrentPointIndex < 0)
+            {
+                sq.IsAtTreeTop = false;
+                sq.State = AmbientSquirrelState.Idle;
+                sq.StateTimer = Random.Range(2f, 5f);
+                return;
+            }
+        }
+
+        float groundY     = ambientSquirrelRoamPoints[sq.CurrentPointIndex].y;
+        sq.StartPosition  = sq.CurrentPosition;
+        sq.TargetPosition = new Vector3(sq.CurrentPosition.x, groundY, sq.CurrentPosition.z);
+        sq.ClimbDuration  = Mathf.Clamp((sq.CurrentPosition.y - groundY) / 2.8f, 0.4f, 2f);
+        sq.ClimbProgress  = 0f;
+        sq.State          = AmbientSquirrelState.ClimbingDown;
+    }
+
     private bool AreAmbientSquirrelsActive()
     {
         int hour = GetCurrentHour();
         return hour >= 6 && hour < 18;
-    }
-
-    private int FindNextSquirrelRoamPoint(AmbientSquirrelData sq)
-    {
-        int current = sq?.CurrentPointIndex ?? -1;
-        if (ambientSquirrelRoamPoints.Count < 2 || current < 0 || current >= ambientSquirrelRoamPoints.Count)
-        {
-            return -1;
-        }
-
-        List<int> candidates = new();
-        Vector3 currentPos = ambientSquirrelRoamPoints[current];
-        for (int i = 0; i < ambientSquirrelRoamPoints.Count; i++)
-        {
-            if (i == current) continue;
-            float dist = Vector3.Distance(currentPos, ambientSquirrelRoamPoints[i]);
-            if (dist >= 1.5f && dist <= 8f)
-            {
-                candidates.Add(i);
-            }
-        }
-
-        if (candidates.Count == 0)
-        {
-            return (current + 1) % ambientSquirrelRoamPoints.Count;
-        }
-
-        return candidates[Random.Range(0, candidates.Count)];
     }
 
 }

@@ -22,7 +22,7 @@ public partial class GameBootstrap
             Workers = 0,
             ServiceFee = type switch
             {
-                LocationType.Motel   => 20,
+                LocationType.Motel   => 10,
                 LocationType.Bar     => 10,
                 LocationType.Canteen => 10,
                 _                    => 0
@@ -394,6 +394,7 @@ public partial class GameBootstrap
 
         CreateForestStoredLogsVisuals(parent, depotPos + new Vector3(0f, 0.08f, 0.58f));
         RefreshForestStoredLogsVisual();
+        TryCreateSquirrelMemorialSign(parent, center + new Vector3(-1.05f, 0.06f, -1.26f), Quaternion.identity);
 
         SessionDebugLogger.Log("WORLD", "Built Lumberyard decoration with depot yard and storage stack.");
     }

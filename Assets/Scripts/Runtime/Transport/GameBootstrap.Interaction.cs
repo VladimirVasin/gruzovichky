@@ -160,7 +160,14 @@ public partial class GameBootstrap
                 break;
 
             case TruckInteractionType.UnloadAtWarehouse:
-                locations[LocationType.Warehouse].BoardsStored += truckCargoAmount;
+                if (truckCargoType == CargoType.Logs)
+                {
+                    locations[LocationType.Warehouse].LogsStored += truckCargoAmount;
+                }
+                else
+                {
+                    locations[LocationType.Warehouse].BoardsStored += truckCargoAmount;
+                }
                 truckCargoAmount = 0;
                 truckCargoType = CargoType.None;
                 break;

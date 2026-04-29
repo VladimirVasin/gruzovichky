@@ -20,12 +20,6 @@ public partial class GameBootstrap
             {
                 CreateUnifiedRoadDash(cell, isHorizontal);
             }
-
-            if (TryGetTwoLaneRoadOutsideSide(cell, out bool outsideIsHorizontal, out Vector2Int sideOffset) &&
-                outsideIsHorizontal == isHorizontal)
-            {
-                CreateUnifiedRoadSideStripe(cell, isHorizontal, sideOffset);
-            }
         }
     }
     private void CreateUnifiedRoadDash(Vector2Int cell, bool isHorizontal)

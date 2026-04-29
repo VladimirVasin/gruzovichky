@@ -101,16 +101,9 @@ public partial class GameBootstrap
                     cameraFocusPoint = workerPos;
                     cameraOffset = mainCamera.transform.position - cameraFocusPoint;
                     cameraTargetOffset = cameraOffset;
-                    UpdateTutorialOrbitHud(dt);
                 }
 
-                // Stay in closeup until the orbit HUD's OK button is pressed (or driver disappears)
-                bool orbitHudVisible = tutorialOrbitHudRoot != null && tutorialOrbitHudRoot.activeSelf;
-                if (tutorialCinematicDriver?.DriverObject == null || !orbitHudVisible)
-                {
-                    HideTutorialOrbitHud();
-                    tutorialCinematicPhase = TutorialCinematicPhase.Returning;
-                }
+                tutorialCinematicPhase = TutorialCinematicPhase.Returning;
 
                 return;
             }
@@ -229,56 +222,47 @@ public partial class GameBootstrap
 
     private bool IsBuildMenuTutorialHighlightActive()
     {
-        return (isTutorialOpen && (activeTutorialTrigger == TutorialTrigger.BuildMotelPrompt
-                                || activeTutorialTrigger == TutorialTrigger.NeedSawmill))
-               || isBuildHighlightPersistent;
+        return false;
     }
 
     private bool IsWorkersTutorialHighlightActive()
     {
-        return (isTutorialOpen && (activeTutorialTrigger == TutorialTrigger.FirstMotelBuilt
-                                || activeTutorialTrigger == TutorialTrigger.WorkersPanelOpened))
-               || isWorkersHighlightPersistent;
+        return false;
     }
 
     private bool IsHireWorkerTutorialHighlightActive()
     {
-        return (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.WorkersPanelOpened)
-               || isHireWorkerHighlightPersistent;
+        return false;
     }
 
     private bool IsFleetTutorialHighlightActive()
     {
-        // Fleet is now embedded under Roles > Logistics, so the old top-level Fleet outline is intentionally disabled.
-        bool legacyWouldHighlight = (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetIntroduction)
-                                    || isFleetHighlightPersistent;
-        return legacyWouldHighlight && false;
+        return false;
     }
 
     private bool IsShiftsTutorialHighlightActive()
     {
-        return (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.ForestIntroduction)
-               || isShiftsHighlightPersistent;
+        return false;
     }
 
     private bool IsFirstWorkerTutorialHighlightActive()
     {
-        return isTutorialOpen && activeTutorialTrigger == TutorialTrigger.SelectProductionWorker;
+        return false;
     }
 
     private bool IsForestAssignTutorialHighlightActive()
     {
-        return isTutorialOpen && activeTutorialTrigger == TutorialTrigger.AssignForestProductionWorker;
+        return false;
     }
 
     private bool IsFleetTruckTutorialHighlightActive()
     {
-        return isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetSelectTruck;
+        return false;
     }
 
     private bool IsFleetAssignDriverTutorialHighlightActive()
     {
-        return isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FleetAssignDriver;
+        return false;
     }
 
     private bool IsFleetDriverPickerTutorialHighlightActive()
@@ -290,11 +274,6 @@ public partial class GameBootstrap
     {
         float dt = Time.unscaledDeltaTime;
         UpdateTutorialCameraFocus(dt);
-        if (tutorialOrbitHudDetached && tutorialOrbitHudRoot != null && tutorialOrbitHudRoot.activeSelf)
-        {
-            UpdateTutorialOrbitHud(dt);
-        }
-
         if (pendingTutorialTrigger.HasValue)
         {
             pendingTutorialDelay -= dt;
@@ -319,23 +298,13 @@ public partial class GameBootstrap
         {
             tutorialWindowTypeTime += dt;
             int visibleChars = Mathf.Clamp(
-                Mathf.FloorToInt(tutorialWindowTypeTime * TutorialOrbitHudDefaultTypeSpeed),
+                Mathf.FloorToInt(tutorialWindowTypeTime * TutorialWindowTypeSpeed),
                 0,
                 tutorialWindowFullText.Length);
             tutorialHud.BodyText.text = tutorialWindowFullText.Substring(0, visibleChars);
         }
 
-        bool anyHighlight = IsBuildMenuTutorialHighlightActive()
-                         || IsWorkersTutorialHighlightActive()
-                         || IsHireWorkerTutorialHighlightActive()
-                         || IsShiftsTutorialHighlightActive()
-                         || IsFleetTutorialHighlightActive()
-                         || IsFirstWorkerTutorialHighlightActive()
-                         || IsForestAssignTutorialHighlightActive()
-                         || IsFleetTruckTutorialHighlightActive()
-                         || IsFleetAssignDriverTutorialHighlightActive()
-                         || IsFleetDriverPickerTutorialHighlightActive();
-        bool canvasNeeded = isTutorialOpen || anyHighlight;
+        bool canvasNeeded = isTutorialOpen;
         if (tutorialHud.CanvasRoot.activeSelf != canvasNeeded)
             tutorialHud.CanvasRoot.SetActive(canvasNeeded);
 
@@ -394,6 +363,10 @@ public partial class GameBootstrap
 
     private void UpdateTutorialElementOutlines()
     {
+        HideAllTutorialOutlines();
+        return;
+
+#pragma warning disable CS0162
         UpdateTutorialOutlineFromTarget(
             tutorialHud.FirstWorkerOutlineRoot,
             IsFirstWorkerTutorialHighlightActive() && shiftsScreenUi != null && shiftsScreenUi.DriverRows.Count > 0
@@ -444,6 +417,26 @@ public partial class GameBootstrap
         }
 
         UpdateTutorialOutlineFromTarget(tutorialHud.FleetDriverPickerOutlineRoot, fleetPickerTarget, 5f);
+#pragma warning restore CS0162
+    }
+
+    private void HideAllTutorialOutlines()
+    {
+        if (tutorialHud == null)
+        {
+            return;
+        }
+
+        tutorialHud.BuildMenuOutlineRoot?.SetActive(false);
+        tutorialHud.WorkersMenuOutlineRoot?.SetActive(false);
+        tutorialHud.HireWorkerOutlineRoot?.SetActive(false);
+        tutorialHud.ShiftsMenuOutlineRoot?.SetActive(false);
+        tutorialHud.FleetMenuOutlineRoot?.SetActive(false);
+        tutorialHud.FirstWorkerOutlineRoot?.SetActive(false);
+        tutorialHud.ForestAssignOutlineRoot?.SetActive(false);
+        tutorialHud.FleetTruckOutlineRoot?.SetActive(false);
+        tutorialHud.FleetAssignDriverOutlineRoot?.SetActive(false);
+        tutorialHud.FleetDriverPickerOutlineRoot?.SetActive(false);
     }
 
     private DriverAgent GetFirstAssignableProductionWorker()
@@ -578,7 +571,6 @@ public partial class GameBootstrap
         isTruckCameraFocused                   = false;
         isCameraReturningToDiorama              = false;
         isCameraRotatingToTarget                = false;
-        tutorialOrbitHudTypeSpeed               = 40f;
         string commuteMessage = IsRussianLanguage()
             ? "Я иду к Лесозаготовке.\n\nКогда рабочий входит в производственное здание в рабочее время 08:00-18:00, производство запускается автоматически."
             : "I am walking to the Forest.\n\nWhen a worker enters a production building during 08:00-18:00, production starts automatically.";

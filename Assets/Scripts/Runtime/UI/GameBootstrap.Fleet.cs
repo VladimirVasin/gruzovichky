@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -65,7 +65,6 @@ public partial class GameBootstrap
         // Clear persistent tutorial highlights when the highlighted button is clicked
         if (panelName == "Building")
         {
-            isBuildHighlightPersistent = false;
             // If tutorial 2 is open, dismiss it; user found the button themselves.
             if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.BuildMotelPrompt)
             {
@@ -75,7 +74,7 @@ public partial class GameBootstrap
         }
         if (panelName == "Workers")
         {
-            isWorkersHighlightPersistent = false;
+            MarkTutorialGoalComplete(TutorialGoalKind.OpenWorkersCard);
             if (isTutorialOpen && activeTutorialTrigger == TutorialTrigger.FirstMotelBuilt)
             {
                 isTutorialOpen     = false;
@@ -85,7 +84,6 @@ public partial class GameBootstrap
         }
         if (panelName == "Shifts")
         {
-            isShiftsHighlightPersistent = false;
             selectedLocation = null;
             selectedLocalStopIndex = -1;
             selectedPersonalHouseIndex = -1;   // close building microhud (Forest was selected by tutorial 6)
@@ -98,7 +96,6 @@ public partial class GameBootstrap
         }
         if (panelName == "Fleet")
         {
-            isFleetHighlightPersistent = false;
         }
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
@@ -542,6 +539,7 @@ public partial class GameBootstrap
         List<TripOption> trips = new();
 
         bool hasSawmill = locations.TryGetValue(LocationType.Sawmill, out LocationData sawmill);
+        bool hasWarehouse = locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse);
         bool canReachForestTrip = hasSawmill &&
             HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Forest].Anchor) &&
             HasPath(locations[LocationType.Forest].Anchor, sawmill.Anchor);
@@ -557,9 +555,24 @@ public partial class GameBootstrap
             });
         }
 
-        bool canReachWarehouseTrip = hasSawmill &&
+        bool canReachForestWarehouseFallback = hasWarehouse &&
+            HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Forest].Anchor) &&
+            HasPath(locations[LocationType.Forest].Anchor, warehouse.Anchor);
+        if (!canReachForestTrip && hasWarehouse && locations[LocationType.Forest].LogsStored > 0 && canReachForestWarehouseFallback)
+        {
+            trips.Add(new TripOption
+            {
+                Type = TripType.ForestToWarehouse,
+                Title = "Deliver Logs: Forest -> Warehouse",
+                Description = "No sawmill route is available, so store logs at the Warehouse.",
+                Reward = GetTripReward(TripType.ForestToWarehouse),
+                Priority = 0
+            });
+        }
+
+        bool canReachWarehouseTrip = hasSawmill && hasWarehouse &&
             HasPath(locations[LocationType.Parking].Anchor, sawmill.Anchor) &&
-            HasPath(sawmill.Anchor, locations[LocationType.Warehouse].Anchor);
+            HasPath(sawmill.Anchor, warehouse.Anchor);
         if (hasSawmill && sawmill.BoardsStored > 0 && canReachWarehouseTrip)
         {
             trips.Add(new TripOption
@@ -575,11 +588,13 @@ public partial class GameBootstrap
         if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
         {
             bool canReachFactoryFromWarehouse =
+                hasWarehouse &&
                 HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Warehouse].Anchor) &&
                 HasPath(locations[LocationType.Warehouse].Anchor, furnitureFactory.Anchor);
             bool canReachWarehouseFromFactory =
+                hasWarehouse &&
                 HasPath(locations[LocationType.Parking].Anchor, furnitureFactory.Anchor) &&
-                HasPath(furnitureFactory.Anchor, locations[LocationType.Warehouse].Anchor);
+                HasPath(furnitureFactory.Anchor, warehouse.Anchor);
 
             if (locations[LocationType.Warehouse].BoardsStored > 0 &&
                 furnitureFactory.BoardsStored < FurnitureFactoryMaxBoardsStorage &&
@@ -645,6 +660,12 @@ public partial class GameBootstrap
             return;
         }
 
+        if (!locations.ContainsKey(LocationType.GasStation))
+        {
+            SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} cannot start refuel order: Gas Station is not built.");
+            return;
+        }
+
         currentRefuelPhase = RefuelPhase.ToGasStation;
         PlayUiSound(routeAssignRefuelClip, 0.94f);
     }
@@ -654,6 +675,7 @@ public partial class GameBootstrap
         return L(tripType switch
         {
             TripType.ForestToSawmill => "Forest -> Sawmill",
+            TripType.ForestToWarehouse => "Forest -> Warehouse",
             TripType.SawmillToWarehouse => "Sawmill -> Warehouse",
             TripType.WarehouseToFurnitureFactoryBoards => "Warehouse -> Furniture Factory (Boards)",
             TripType.WarehouseToFurnitureFactoryTextile => "Warehouse -> Furniture Factory (Textile)",
@@ -674,6 +696,7 @@ public partial class GameBootstrap
         if (GetMoneyHudRect().Contains(guiPosition) ||
             GetTimeHudRect().Contains(guiPosition) ||
             GetSpeedHudRect().Contains(guiPosition) ||
+            GetWeatherHudRect().Contains(guiPosition) ||
             GetMenuBarRect().Contains(guiPosition))
         {
             return true;
@@ -726,6 +749,11 @@ public partial class GameBootstrap
         return new Rect(Screen.width - 12f - 150f - 4f - 140f - 4f - 90f, TopBarY, 90f, TopBarH);
     }
 
+    private Rect GetWeatherHudRect()
+    {
+        return new Rect(Screen.width - 12f - 150f - 4f - 140f - 4f - 90f - 4f - 120f, TopBarY, 120f, TopBarH);
+    }
+
     private Rect GetSelectedBuildingHudRect()
     {
         return new Rect(Screen.width - 290, RightColY, 278, 96);
@@ -767,6 +795,7 @@ public partial class GameBootstrap
         AudioClip clip = tripType switch
         {
             TripType.ForestToSawmill => routeAssignForestSawmillClip,
+            TripType.ForestToWarehouse => routeAssignSawmillWarehouseClip,
             TripType.SawmillToWarehouse => routeAssignSawmillWarehouseClip,
             _ => null
         };

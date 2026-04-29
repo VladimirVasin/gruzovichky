@@ -34,6 +34,8 @@ public partial class GameBootstrap
     private int selectedVacancyIndex = -1;
     private int selectedVacancyShiftIndex = -1;
     private int selectedVacancyTruckNumber = 0;
+    private string vacancySuccessMessage = string.Empty;
+    private float vacancySuccessTimer;
     private Button shiftsLogisticsTabBtn;
     private Button shiftsTransportTabBtn;
     private Text shiftsLogisticsTabText;
@@ -100,6 +102,10 @@ public partial class GameBootstrap
         public Text  DetailHomeText;
         public Text  DetailCarLabel;
         public Text  DetailCarText;
+        public Text  DetailEducationLabel;
+        public Text  DetailEducationText;
+        public Text  DetailAgeLabel;
+        public Text  DetailAgeText;
         public Text  DetailWorkTitleText;
         public Text  DetailSalaryLabel;
         public Text  DetailSalaryText;
@@ -145,6 +151,16 @@ public partial class GameBootstrap
         public Text SelectionHintText;
         public RectTransform TabRowRoot;
         public RectTransform VacancyFlowPanel;
+        public readonly List<Image> VacancyStepBackgrounds = new();
+        public readonly List<Text> VacancyStepTexts = new();
+        public Text VacancySuccessText;
+        public RectTransform VacancyTransportParkCard;
+        public Text VacancyTransportParkTitleText;
+        public Text VacancyTransportParkCountText;
+        public Text VacancyTransportParkSummaryText;
+        public Button VacancyBuyTruckButton;
+        public Text VacancyBuyTruckButtonText;
+        public Text VacancyBuyTruckStatusText;
         public Text VacancyFlowTitleText;
         public Text VacancyFlowHintText;
         public readonly List<VacancyOptionRowUi> VacancyOptionRows = new();
@@ -172,6 +188,8 @@ public partial class GameBootstrap
         public int DriverId;
         public RectTransform Root;
         public Image Background;
+        public Image SelectedBorder;
+        public Image BadgeBackground;
         public Text NameText;
         public Text ProfessionText;
         public Text StatusText;
@@ -222,6 +240,7 @@ public partial class GameBootstrap
         public int SlotIndex;
         public int ShiftIndex = -1;
         public int TruckNumber;
+        public WorkerEducation RequiredEducation;
     }
 
     private sealed class VacancyFlowOption
@@ -240,6 +259,8 @@ public partial class GameBootstrap
         public Image Background;
         public Text TitleText;
         public Text SubtitleText;
+        public Image BadgeBackground;
+        public Text BadgeText;
         public Button Button;
     }
 
