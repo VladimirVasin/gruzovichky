@@ -16,18 +16,41 @@ Status: current documented prototype version.
 ### New Since v.0.0.1
 
 - WOMEN ADDED!!!
-- Forest was reworked into an early Lumberyard gameplay loop. Forest workers can now leave the building, go to real misc trees in the dense forest zone, chop them down, spawn world logs, carry those logs back to storage, and replant saplings.
-- Dense-forest trees now support day-based regrowth from sapling to mature tree, creating the start of a renewable forestry loop instead of one static decorative forest patch.
-- Worker simulation expanded significantly: portraits, base skills, timed needs, timed effects, perks, and the separate `States` reference HUD are now all part of the current playable build.
-- Workers now also have randomized perk loadouts, more distinct female portraits, and a deeper `Alcoholism` perk tied to `Drunk` / `Hangover` behavior.
-- Main management HUDs were redesigned and enlarged, especially Workers, Fleet, and Assignments / Roles, to better support the denser worker information model.
-- The town now has a real local bus loop: buildable local stops, a dedicated bus-driver role, worker passenger trips, and bus-assisted Warehouse deliveries.
-- Local buses charge a `$1` fare, keep their own onboard bank, and transfer that revenue into `Parking` at shift end.
-- A right-side Event Feed HUD was added for important gameplay notifications.
-- Economy was expanded with a separate `Taxes / Trade` tabbed window and a daily `10%` tax transfer from all building banks into global Treasury.
-- `Bar`, `Canteen`, and `Gambling Hall` were visually separated with stronger silhouettes, larger distinct footprints, and different night-light identities.
-- `F9` debug tooling was expanded so both service resources and production/storage resources can be manipulated directly during testing.
-- World bootstrap was rebalanced for the larger map: the game now starts with three workers, uses a dedicated dense forest hotspot, and scales misc props/trees more aggressively for the bigger town.
+
+### Workers
+
+- Workers now have portraits, gender, skills, needs, effects, and perks.
+- Food, sleep, and leisure are now part of the worker life cycle.
+- The Alcoholism perk now has distinct Drunk and Hangover behavior.
+
+### Production
+
+- Lumberyard is now an active production chain: workers chop trees, carry logs, and plant new saplings.
+- Trees in forest zones grow over days, creating a renewable wood source.
+
+### Transport
+
+- Added a local bus system with stops, bus drivers, routes, and worker passenger trips.
+- Buses charge fares, store route revenue, and transfer it into Parking.
+- Trucks move resources between buildings and can run intercity trade routes.
+
+### Economy And Trade
+
+- Economy is split into Taxes and Trade tabs.
+- Daily taxes now collect money from building banks into the town Treasury.
+- Trade orders let the town buy and sell resources through intercity runs.
+
+### Town Services
+
+- Bar, Canteen, Gambling Hall, Gas Station, and City Park now have clearer roles in worker and vehicle life.
+- Service buildings are more visually distinct, especially at night.
+- Added an Event Feed for important town events.
+
+### World And Atmosphere
+
+- The map is larger and denser, with more trees, bushes, forest zones, water, hills, and ambient life.
+- Lighting, fog, water, roads, lanterns, clouds, and ambient details were improved.
+- Added a rebuilt User tutorial flow and the free New Game Clear mode.
 
 ### Main Menu And Patch Notes
 

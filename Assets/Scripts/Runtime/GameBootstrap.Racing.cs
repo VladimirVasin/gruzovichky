@@ -386,6 +386,7 @@ public partial class GameBootstrap : MonoBehaviour
         try
         {
             isRacingActive = true;
+            NotifyTutorialRaceStarted();
 
             // Pause main game. Keep fixedDeltaTime valid so standalone builds do not enter a fragile physics state.
             lastActiveGameSpeedMultiplier = gameSpeedMultiplier > 0 ? gameSpeedMultiplier : 1;
@@ -479,6 +480,7 @@ public partial class GameBootstrap : MonoBehaviour
             isRacingActive = false;
             racingFinishSequenceActive = false;
             CleanupRacingScene();
+            NotifyTutorialRaceFinished();
         }
     }
 

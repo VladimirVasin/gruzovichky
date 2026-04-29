@@ -109,7 +109,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float ExhaustEmitInterval = 0.28f;
     private const float TruckDirtDustEmitInterval = 0.13f;
     private const float BuildingSmokeEmitInterval = 0.38f;
-    private const int StartingTreasury = 350;
+    private const int StartingTreasury = 1000;
     private const int DefaultDailyBuildingTaxPercent = 10;
     private const int MinDailyBuildingTaxPercent = 0;
     private const int MaxDailyBuildingTaxPercent = 50;

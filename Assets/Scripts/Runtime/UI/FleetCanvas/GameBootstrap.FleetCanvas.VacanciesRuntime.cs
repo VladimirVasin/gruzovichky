@@ -1061,6 +1061,7 @@ public partial class GameBootstrap
         if (assigned)
         {
             SessionDebugLogger.Log("SHIFT", $"{worker.DriverName} assigned to Intercity with {truck.DisplayName}.");
+            NotifyTutorialIntercityDriverAssigned();
         }
         return assigned;
     }

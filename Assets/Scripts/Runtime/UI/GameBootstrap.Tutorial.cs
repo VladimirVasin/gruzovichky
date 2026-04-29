@@ -52,6 +52,10 @@ public partial class GameBootstrap
         UserWarehouseLoadersInfo,
         UserLocalTransportInfo,
         UserLocalBusRoutesInfo,
+        UserEconomyTaxesInfo,
+        UserTradeIntroInfo,
+        UserTradeRaceInfo,
+        UserDemoCompleteInfo,
         BeeEasterEgg
     }
 
@@ -102,7 +106,7 @@ public partial class GameBootstrap
     private TutorialHudRefs tutorialHud;
     private TutorialTrigger activeTutorialTrigger;
     private const int TutorialStepCount = 17;
-    private const int NewUserTutorialStepCount = 24;
+    private const int NewUserTutorialStepCount = 28;
     private static readonly Vector3 UserWelcomeCameraOffset = new(-13f, 14f, -13f);
 
     private static bool IsNewUserTutorialTrigger(TutorialTrigger trigger)
@@ -132,7 +136,11 @@ public partial class GameBootstrap
             or TutorialTrigger.UserWorkerHiringBusInfo
             or TutorialTrigger.UserWarehouseLoadersInfo
             or TutorialTrigger.UserLocalTransportInfo
-            or TutorialTrigger.UserLocalBusRoutesInfo;
+            or TutorialTrigger.UserLocalBusRoutesInfo
+            or TutorialTrigger.UserEconomyTaxesInfo
+            or TutorialTrigger.UserTradeIntroInfo
+            or TutorialTrigger.UserTradeRaceInfo
+            or TutorialTrigger.UserDemoCompleteInfo;
     }
 
     private int GetNextUserCoreBuildingInfoTutorialStep()
@@ -175,7 +183,11 @@ public partial class GameBootstrap
             or TutorialTrigger.UserWorkerHiringBusInfo
             or TutorialTrigger.UserWarehouseLoadersInfo
             or TutorialTrigger.UserLocalTransportInfo
-            or TutorialTrigger.UserLocalBusRoutesInfo;
+            or TutorialTrigger.UserLocalBusRoutesInfo
+            or TutorialTrigger.UserEconomyTaxesInfo
+            or TutorialTrigger.UserTradeIntroInfo
+            or TutorialTrigger.UserTradeRaceInfo
+            or TutorialTrigger.UserDemoCompleteInfo;
     }
 
     private void ScheduleTutorial(TutorialTrigger trigger, float delay = 0.12f)
@@ -221,6 +233,10 @@ public partial class GameBootstrap
         hasShownUserWarehouseLoadersTutorial = false;
         hasShownUserLocalTransportTutorial = false;
         hasShownUserLocalBusRoutesTutorial = false;
+        hasShownUserEconomyTaxesTutorial = false;
+        hasShownUserTradeIntroTutorial = false;
+        hasShownUserTradeRaceTutorial = false;
+        hasShownUserDemoCompleteTutorial = false;
         nextUserServiceBuildingInfoTutorialStep = 15;
         hasShownFleetSelectTruckTutorial = false;
         hasShownFleetAssignDriverTutorial = false;
@@ -600,6 +616,18 @@ public partial class GameBootstrap
             case TutorialTrigger.UserLocalBusRoutesInfo:
                 ShowUserLocalBusRoutesTutorial();
                 break;
+            case TutorialTrigger.UserEconomyTaxesInfo:
+                ShowUserEconomyTaxesTutorial();
+                break;
+            case TutorialTrigger.UserTradeIntroInfo:
+                ShowUserTradeIntroTutorial();
+                break;
+            case TutorialTrigger.UserTradeRaceInfo:
+                ShowUserTradeRaceTutorial();
+                break;
+            case TutorialTrigger.UserDemoCompleteInfo:
+                ShowUserDemoCompleteTutorial();
+                break;
             case TutorialTrigger.BuildMotelPrompt:
                 ShowTutorialWindow(
                     TutorialTrigger.BuildMotelPrompt,
@@ -847,7 +875,9 @@ public partial class GameBootstrap
             or TutorialTrigger.UserCityParkBuiltInfo
             or TutorialTrigger.UserWorkersOverviewInfo
             or TutorialTrigger.UserLocalTransportInfo
-            or TutorialTrigger.UserLocalBusRoutesInfo)
+            or TutorialTrigger.UserLocalBusRoutesInfo
+            or TutorialTrigger.UserEconomyTaxesInfo
+            or TutorialTrigger.UserDemoCompleteInfo)
         {
             tutorialHud.WindowRect.sizeDelta        = new Vector2(520f, 330f);
             tutorialHud.WindowRect.anchoredPosition = activeTutorialTrigger == TutorialTrigger.UserWorkerHiringBusInfo
@@ -1265,6 +1295,26 @@ public partial class GameBootstrap
             BeginLocalTransportTutorialGoals();
         }
 
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserLocalBusRoutesInfo)
+        {
+            ScheduleTutorial(TutorialTrigger.UserEconomyTaxesInfo, 0.35f);
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserEconomyTaxesInfo)
+        {
+            BeginEconomyTaxesTutorialGoals();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserTradeIntroInfo)
+        {
+            BeginTradeSetupTutorialGoals();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserTradeRaceInfo)
+        {
+            BeginJoinRaceTutorialGoals();
+        }
+
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserTruckAssignedFreightInfo)
         {
             tutorialCameraFollowTruck = null;
@@ -1440,39 +1490,6 @@ public partial class GameBootstrap
         MarkTutorialGoalComplete(goal);
         TryShowTutorial(trigger);
         SessionDebugLogger.Log("TUTORIAL", $"Service building tutorial notified: {type}.");
-    }
-
-    private void FocusCameraOnAssignedTutorialTruck()
-    {
-        TruckAgent truck = null;
-        foreach (TruckAgent candidate in truckAgents)
-        {
-            if (candidate != null && candidate.AssignedDrivers.Count > 0 && candidate.TruckObject != null)
-            {
-                truck = candidate;
-                break;
-            }
-        }
-
-        if (truck == null)
-        {
-            return;
-        }
-
-        selectedTruckNumber = truck.TruckNumber;
-        selectedLocation = null;
-        selectedLocalStopIndex = -1;
-        selectedPersonalHouseIndex = -1;
-        isTruckDetailsOpen = false;
-        isTruckCameraFocused = false;
-        isCameraReturningToDiorama = false;
-        isCameraRotatingToTarget = false;
-        tutorialCameraFollowTruck = truck;
-        tutorialCameraFocusTarget = new Vector3(truck.TruckObject.transform.position.x, 0f, truck.TruckObject.transform.position.z);
-        tutorialCameraFocusOffset = new Vector3(-13f, 18f, -13f);
-        isTutorialCameraFocusActive = true;
-        RefreshSelectionVisuals();
-        SessionDebugLogger.Log("TUTORIAL", $"Freight tutorial camera focus started for {truck.DisplayName}.");
     }
 
 }

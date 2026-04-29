@@ -119,6 +119,7 @@ public partial class GameBootstrap
         {
             dailyBuildingTaxPercent = Mathf.Max(MinDailyBuildingTaxPercent, dailyBuildingTaxPercent - 1);
             isEconomyScreenDirty = true;
+            CheckTutorialTaxRateGoal();
             PlayUiSound(uiSelectClip, 0.75f);
         });
         economyScreenUi.TaxesRateValueText = CreateHeaderText("TaxesRateValue", rateControlsRow, font, string.Empty, 18, TextAnchor.MiddleCenter, FleetAccentColor);
@@ -134,6 +135,7 @@ public partial class GameBootstrap
         {
             dailyBuildingTaxPercent = Mathf.Min(MaxDailyBuildingTaxPercent, dailyBuildingTaxPercent + 1);
             isEconomyScreenDirty = true;
+            CheckTutorialTaxRateGoal();
             PlayUiSound(uiSelectClip, 0.75f);
         });
         CreateSpacer("TaxesRateRightSpacer", rateControlsRow, flexibleWidth: 1f);
@@ -598,6 +600,7 @@ public partial class GameBootstrap
             selectedTradeOrderType,
             selectedTradeOrderAmount);
         activeTradeHudOrders.Add(order);
+        NotifyTutorialTradeOrderCreated(order);
         isTradeResourceDropdownOpen = false;
         isTradeActionDropdownOpen = false;
         SessionDebugLogger.Log(
