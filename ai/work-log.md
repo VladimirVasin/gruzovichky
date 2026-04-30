@@ -6,6 +6,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Detailed Work
 
+- 2026-04-30: Bumped the manual main-menu version label to `Lo-fi Delivery Co. v.0.0.3`. Added a new `v.0.0.3` in-development section to `ai/release-notes.md` that explicitly treats `v.0.0.2` as the previous public baseline, so future Patch Notes updates can compare recent work-log/code changes against that release and record only player-facing changes.
+
 - 2026-04-29: Removed the superseded legacy tutorial mode after the rebuilt User tutorial replaced it. The tutorial trigger enum now keeps only the active User-mode sequence plus the bee easter egg; Debug mode no longer schedules the old startup tutorial, legacy Fleet/Forest/Sawmill tutorial chains were removed, old red-outline hooks were disconnected, and the unused ProductionOrbit tutorial partial was deleted. Verified `dotnet build .\Assembly-CSharp.csproj -nologo`, line-count check, `git diff --check`, legacy tutorial symbol scan, and touched-file mojibake scan.
 
 - 2026-04-29: Rewrote the in-game `v.0.0.2` Patch Notes and `ai/release-notes.md` baseline to focus on player-facing mechanics only. The changelog now groups the release around Workers, Production, Transport, Economy/Trade, Town Services, and World/Atmosphere, while removing tutorial/debug/internal implementation details from the visible notes.

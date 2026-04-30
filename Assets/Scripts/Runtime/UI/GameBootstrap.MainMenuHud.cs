@@ -65,7 +65,7 @@ public partial class GameBootstrap
     private Text loadingStatusText;
     private static readonly bool IsUserModeTemporarilyDisabled = false;
     private const string UserModeWorkInProgressLabel = "Work in progress";
-    private const string MainMenuVersionLabel = "Lo-fi Delivery Co. v.0.0.2";
+    private const string MainMenuVersionLabel = "Lo-fi Delivery Co. v.0.0.3";
     private const string PatchNotesButtonLabel = "Patch Notes";
     private bool isGameStarted;
     private GameStartMode selectedGameStartMode = GameStartMode.Debug;

@@ -922,6 +922,7 @@ public partial class GameBootstrap : MonoBehaviour
         weatherRainIntensity = Mathf.MoveTowards(weatherRainIntensity, targetRain, dt * 0.35f);
 
         UpdateRainParticles(dt);
+        UpdateLightning(dt);
 
         float targetWind = activeWeatherParams.WindMult;
         for (int i = 0; i < miscTreeSways.Count; i++)
@@ -934,6 +935,11 @@ public partial class GameBootstrap : MonoBehaviour
         bool rainVisible = weatherRainIntensity > 0.005f;
         Vector3 camPos = mainCamera.transform.position;
         Color dropColor = new(0.62f, 0.72f, 0.82f, weatherRainIntensity * 0.68f);
+
+        float windExcess = Mathf.Max(0f, activeWeatherParams.WindMult - 1f);
+        float windDrift  = windExcess * 2.8f * dt;
+        float tiltAngle  = windExcess * 14f;
+        Quaternion dropRot = tiltAngle > 0.5f ? Quaternion.Euler(tiltAngle, 0f, 0f) : Quaternion.identity;
 
         for (int i = 0; i < rainDrops.Count; i++)
         {
@@ -948,6 +954,8 @@ public partial class GameBootstrap : MonoBehaviour
 
             if (!d.Renderer.enabled) d.Renderer.enabled = true;
             d.Y -= d.Speed * dt;
+            d.XOff += windDrift;
+            if (d.XOff > 22f) d.XOff -= 44f;
             if (d.Y < camPos.y - 9f)
             {
                 d.Y    = camPos.y + 13f;
@@ -955,6 +963,7 @@ public partial class GameBootstrap : MonoBehaviour
                 d.ZOff = Random.Range(-22f, 22f);
             }
             d.T.position = new Vector3(camPos.x + d.XOff, d.Y, camPos.z + d.ZOff);
+            d.T.rotation = dropRot;
             d.Material.color = dropColor;
         }
     }
@@ -968,6 +977,37 @@ public partial class GameBootstrap : MonoBehaviour
         dioramaColorAdjustments.saturation.Override(dioramaColorAdjustments.saturation.value + activeWeatherParams.SatOffset);
         dioramaColorAdjustments.postExposure.Override(dioramaColorAdjustments.postExposure.value + activeWeatherParams.ExposureOffset + foggyNightExpBoost);
         dioramaBloom.scatter.Override(Mathf.Min(0.95f, dioramaBloom.scatter.value + activeWeatherParams.BloomScatterAdd));
+
+        if (lightningFlashActive > 0f)
+        {
+            float flashT = lightningFlashActive / lightningFlashDuration;
+            dioramaColorAdjustments.postExposure.Override(dioramaColorAdjustments.postExposure.value + flashT * 3.2f);
+            dioramaBloom.intensity.Override(dioramaBloom.intensity.value + flashT * 2.8f);
+            dioramaBloom.scatter.Override(Mathf.Min(0.95f, dioramaBloom.scatter.value + flashT * 0.18f));
+        }
+    }
+
+    private void UpdateLightning(float dt)
+    {
+        if (weatherRainIntensity < 0.5f)
+        {
+            lightningFlashActive = 0f;
+            return;
+        }
+
+        if (lightningFlashActive > 0f)
+        {
+            lightningFlashActive -= dt;
+            return;
+        }
+
+        lightningFlashTimer -= dt;
+        if (lightningFlashTimer <= 0f)
+        {
+            lightningFlashDuration = Random.Range(0.12f, 0.26f);
+            lightningFlashActive   = lightningFlashDuration;
+            lightningFlashTimer    = Random.Range(18f, 45f);
+        }
     }
 
     private static WeatherParams LerpWeatherParams(WeatherParams a, WeatherParams b, float t)

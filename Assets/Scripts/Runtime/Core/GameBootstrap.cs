@@ -608,6 +608,9 @@ public partial class GameBootstrap : MonoBehaviour
     private float weatherTransitionDuration;
     private bool  isWeatherTransitioning;
     private float weatherRainIntensity;
+    private float lightningFlashTimer    = 18f;
+    private float lightningFlashActive   = 0f;
+    private float lightningFlashDuration = 0.2f;
     private Transform rainRoot;
     private readonly List<RainDropData> rainDrops = new();
     private float truckEngineAudioPhaseOffset;

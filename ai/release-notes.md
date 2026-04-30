@@ -9,9 +9,23 @@ Rules:
 - When preparing a new version, compare this baseline against current code and recent `ai/work-log.md`.
 - Update the in-game Patch Notes text in `Assets/Scripts/Runtime/UI/GameBootstrap.MainMenuHud.cs`.
 
+## Lo-fi Delivery Co. v.0.0.3
+
+Status: in development. Main Menu version label has been bumped to `Lo-fi Delivery Co. v.0.0.3`.
+
+### Release Tracking
+
+- Use `v.0.0.2` as the previous public baseline.
+- When the user asks to update Patch Notes for `v.0.0.3`, compare current code and recent `ai/work-log.md` entries against the `v.0.0.2` section below.
+- Record only player-facing mechanics, content, UX, and visual changes here. Do not include internal refactors, line-count work, temporary failed attempts, or debug-only implementation details unless they matter to players.
+
+### New Since v.0.0.2
+
+- Pending. Add completed player-facing `v.0.0.3` changes here as they land.
+
 ## Lo-fi Delivery Co. v.0.0.2
 
-Status: current documented prototype version.
+Status: previous documented prototype version.
 
 ### New Since v.0.0.1
 
