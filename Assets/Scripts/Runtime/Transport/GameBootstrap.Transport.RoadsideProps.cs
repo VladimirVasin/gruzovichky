@@ -518,7 +518,7 @@ public partial class GameBootstrap
                 Vector3 center   = GetCellCenter(cell);
                 Vector3 sideDir  = new Vector3(offset.x, 0f, offset.y);
                 worldPosition    = center + sideDir * 0.52f;
-                worldPosition.y  = SampleTerrainHeight(worldPosition.x, worldPosition.z) + RoadHeight;
+                worldPosition.y  = SampleRoadSurfaceHeight(worldPosition.x, worldPosition.z) + RoadHeight;
                 worldRotation    = Quaternion.LookRotation(-sideDir, Vector3.up);
                 sideCell         = candidate;
                 isTrafficLight   = false;
@@ -564,7 +564,7 @@ public partial class GameBootstrap
             Vector3 center  = GetCellCenter(cell);
             Vector3 sideDir = new Vector3(offset.x, 0f, offset.y);
             worldPosition   = center + sideDir * 0.50f;
-            worldPosition.y = SampleTerrainHeight(worldPosition.x, worldPosition.z) + RoadHeight;
+            worldPosition.y = SampleRoadSurfaceHeight(worldPosition.x, worldPosition.z) + RoadHeight;
             worldRotation   = Quaternion.LookRotation(-sideDir, Vector3.up);
             sideCell        = candidate;
             isTrafficLight  = true;

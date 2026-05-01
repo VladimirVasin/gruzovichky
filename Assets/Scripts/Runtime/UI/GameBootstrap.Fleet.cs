@@ -151,7 +151,7 @@ public partial class GameBootstrap
         if (!hasLoggedLegacyShiftsHudDraw)
         {
             hasLoggedLegacyShiftsHudDraw = true;
-            SessionDebugLogger.Log("SHIFTS_HUD", "Legacy OnGUI DrawShiftsPanel was called. This should be inactive while ShiftsScreenCanvas owns the HUD.");
+            SessionDebugLogger.LogVerbose("SHIFTS_HUD", "Legacy OnGUI DrawShiftsPanel was called. This should be inactive while ShiftsScreenCanvas owns the HUD.");
         }
 
         const float leftW = 210f, rightW = 476f, pad = 8f, gap = 8f;

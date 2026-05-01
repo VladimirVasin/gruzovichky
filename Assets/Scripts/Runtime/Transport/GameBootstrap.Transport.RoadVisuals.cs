@@ -3,6 +3,11 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private const float UnifiedRoadSurfaceLift = RoadHeight + 0.32f;
+    private const float UnifiedRoadMaskLift = UnifiedRoadSurfaceLift + 0.022f;
+    private const float UnifiedRoadShoulderArcLift = UnifiedRoadSurfaceLift + 0.032f;
+    private const float RoadTileSurfaceLift = RoadHeight + 0.34f;
+
     private void RebuildUnifiedRoadVisuals()
     {
         if (roadsRoot == null)
@@ -95,6 +100,7 @@ public partial class GameBootstrap
 
         AddUnifiedRoadCornerMasks();
         AddUnifiedRoadMarkings();
+        SetRoadTileFallbackVisibility(visible: true);
     }
     private bool IsHorizontalUnifiedRoadCell(Vector2Int cell)
     {
@@ -135,14 +141,14 @@ public partial class GameBootstrap
         float x1 = cell.x + 1.01f;
         float z0 = cell.y - 0.01f;
         float z1 = cell.y + 1.01f;
-        float lift = RoadHeight + 0.106f;
+        const float lift = UnifiedRoadSurfaceLift;
 
         mesh.vertices = new[]
         {
-            new Vector3(x0, SampleTerrainHeight(x0, z0) + lift, z0),
-            new Vector3(x1, SampleTerrainHeight(x1, z0) + lift, z0),
-            new Vector3(x0, SampleTerrainHeight(x0, z1) + lift, z1),
-            new Vector3(x1, SampleTerrainHeight(x1, z1) + lift, z1),
+            new Vector3(x0, SampleRoadSurfaceHeight(x0, z0) + lift, z0),
+            new Vector3(x1, SampleRoadSurfaceHeight(x1, z0) + lift, z0),
+            new Vector3(x0, SampleRoadSurfaceHeight(x0, z1) + lift, z1),
+            new Vector3(x1, SampleRoadSurfaceHeight(x1, z1) + lift, z1),
         };
         mesh.triangles = new[] { 0, 2, 1, 1, 2, 3 };
         mesh.uv = new[]
@@ -171,37 +177,40 @@ public partial class GameBootstrap
         mesh.name = $"{name}_Mesh";
 
         const float halfWidth = 0.49f;
-        float lift = RoadHeight + 0.106f;
-        int vertexCount = (length + 1) * 2;
+        const int subdivisionsPerCell = 4;
+        const float lift = UnifiedRoadSurfaceLift;
+        int segmentCount = Mathf.Max(1, length * subdivisionsPerCell);
+        int vertexCount = (segmentCount + 1) * 2;
         Vector3[] vertices = new Vector3[vertexCount];
         Vector2[] uvs = new Vector2[vertexCount];
-        int[] triangles = new int[length * 6];
+        int[] triangles = new int[segmentCount * 6];
 
-        for (int i = 0; i <= length; i++)
+        for (int i = 0; i <= segmentCount; i++)
         {
-            float u = length <= 0 ? 0f : i / (float)length;
+            float u = i / (float)segmentCount;
+            float distance = u * length;
             if (horizontal)
             {
-                float x = startCell.x + i;
+                float x = startCell.x + distance;
                 float zA = startCell.y + 0.5f - halfWidth;
                 float zB = startCell.y + 0.5f + halfWidth;
-                vertices[i * 2] = new Vector3(x, SampleTerrainHeight(x, zA) + lift, zA);
-                vertices[i * 2 + 1] = new Vector3(x, SampleTerrainHeight(x, zB) + lift, zB);
+                vertices[i * 2] = new Vector3(x, SampleRoadSurfaceHeight(x, zA) + lift, zA);
+                vertices[i * 2 + 1] = new Vector3(x, SampleRoadSurfaceHeight(x, zB) + lift, zB);
             }
             else
             {
-                float z = startCell.y + i;
+                float z = startCell.y + distance;
                 float xA = startCell.x + 0.5f - halfWidth;
                 float xB = startCell.x + 0.5f + halfWidth;
-                vertices[i * 2] = new Vector3(xA, SampleTerrainHeight(xA, z) + lift, z);
-                vertices[i * 2 + 1] = new Vector3(xB, SampleTerrainHeight(xB, z) + lift, z);
+                vertices[i * 2] = new Vector3(xA, SampleRoadSurfaceHeight(xA, z) + lift, z);
+                vertices[i * 2 + 1] = new Vector3(xB, SampleRoadSurfaceHeight(xB, z) + lift, z);
             }
 
             uvs[i * 2] = new Vector2(u, 0f);
             uvs[i * 2 + 1] = new Vector2(u, 1f);
         }
 
-        for (int i = 0; i < length; i++)
+        for (int i = 0; i < segmentCount; i++)
         {
             int v = i * 2;
             int t = i * 6;
@@ -255,7 +264,7 @@ public partial class GameBootstrap
 
         const int segments = 10;
         const float radius = 0.62f;
-        const float lift = RoadHeight + 0.132f;
+        const float lift = UnifiedRoadMaskLift;
 
         Vector3 corner = new(
             cell.x + (horizontalSign > 0 ? 1f : 0f),
@@ -312,7 +321,7 @@ public partial class GameBootstrap
         const int segments = 12;
         const float innerRadius = 0.60f;
         const float outerRadius = 0.68f;
-        const float lift = RoadHeight + 0.137f;
+        const float lift = UnifiedRoadShoulderArcLift;
 
         Vector3 corner = new(
             cell.x + (horizontalSign > 0 ? 1f : 0f),
@@ -381,7 +390,7 @@ public partial class GameBootstrap
 
     private Vector3 WithSampledRoadMaskHeight(Vector3 point, float lift)
     {
-        point.y = SampleTerrainHeight(point.x, point.z) + lift;
+        point.y = SampleRoadSurfaceHeight(point.x, point.z) + lift;
         return point;
     }
 
@@ -397,19 +406,7 @@ public partial class GameBootstrap
         bool hasRoadAxis = !isCorner && TryGetRoadVisualAxis(cell, out horizontal);
         bool vertical = hasRoadAxis && !horizontal;
 
-        Vector3 scale = road.transform.localScale;
-        scale.x = (horizontal || isCorner) ? 1.12f : 0.82f;
-        scale.z = (vertical || isCorner) ? 1.12f : 0.82f;
-        road.transform.localScale = scale;
-
-        if (road.transform.childCount > 0)
-        {
-            Transform roadTop = road.transform.GetChild(0);
-            Vector3 topScale = roadTop.localScale;
-            topScale.x = (horizontal || isCorner) ? 0.92f : 0.62f;
-            topScale.z = (vertical || isCorner) ? 0.92f : 0.62f;
-            roadTop.localScale = topScale;
-        }
+        UpdateRoadTileFallbackMesh(road, cell, horizontal, vertical, isCorner);
 
         for (int i = road.transform.childCount - 1; i >= 0; i--)
         {
@@ -420,15 +417,105 @@ public partial class GameBootstrap
             }
         }
 
-        if (isCorner)
+        // Per-cell road fallback is a sloped mesh, not a cube. It keeps isolated/corner
+        // cells visible while sharing the same smoothed height model as the unified ribbon.
+    }
+
+    private void UpdateRoadTileFallbackMesh(GameObject road, Vector2Int cell, bool horizontal, bool vertical, bool isCorner)
+    {
+        Transform surface = road.transform.Find("RoadTileSurface");
+        GameObject surfaceObject;
+        MeshFilter filter;
+        if (surface == null)
         {
-            AddRoadCornerMarkings(road.transform, cornerHorizontalSign, cornerVerticalSign);
+            surfaceObject = new GameObject("RoadTileSurface");
+            surfaceObject.transform.SetParent(road.transform, false);
+            surfaceObject.transform.localPosition = Vector3.zero;
+            filter = surfaceObject.AddComponent<MeshFilter>();
+            surfaceObject.AddComponent<MeshRenderer>();
+            ApplyStylizedRoadMaterial(surfaceObject, cell.x, cell.y, isHighway: true, isShoulder: false);
+            ConfigureStaticVisual(surfaceObject, VisualSmoothnessAsphalt);
         }
-        else if (hasRoadAxis)
+        else
         {
-            AddRoadMarkings(cell, road.transform, road.transform.localScale, horizontal);
+            surfaceObject = surface.gameObject;
+            filter = surfaceObject.GetComponent<MeshFilter>();
+            if (filter == null)
+            {
+                filter = surfaceObject.AddComponent<MeshFilter>();
+            }
+        }
+
+        float halfX = (horizontal || isCorner) ? 0.56f : 0.41f;
+        float halfZ = (vertical || isCorner) ? 0.56f : 0.41f;
+        float centerX = cell.x + 0.5f;
+        float centerZ = cell.y + 0.5f;
+        float x0 = centerX - halfX;
+        float x1 = centerX + halfX;
+        float z0 = centerZ - halfZ;
+        float z1 = centerZ + halfZ;
+
+        Mesh mesh = filter.sharedMesh;
+        if (mesh == null)
+        {
+            mesh = new Mesh();
+            mesh.name = $"RoadTileSurface_{cell.x}_{cell.y}_Mesh";
+            filter.sharedMesh = mesh;
+        }
+
+        mesh.Clear();
+        mesh.vertices = new[]
+        {
+            new Vector3(x0, SampleRoadSurfaceHeight(x0, z0) + RoadTileSurfaceLift, z0),
+            new Vector3(x1, SampleRoadSurfaceHeight(x1, z0) + RoadTileSurfaceLift, z0),
+            new Vector3(x0, SampleRoadSurfaceHeight(x0, z1) + RoadTileSurfaceLift, z1),
+            new Vector3(x1, SampleRoadSurfaceHeight(x1, z1) + RoadTileSurfaceLift, z1),
+        };
+        mesh.triangles = new[] { 0, 2, 1, 1, 2, 3 };
+        mesh.uv = new[]
+        {
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
+        };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        Collider collider = surfaceObject.GetComponent<Collider>();
+        if (collider != null)
+        {
+            collider.enabled = false;
         }
     }
+
+    private void SetRoadTileFallbackVisibility(bool visible)
+    {
+        foreach (GameObject road in roadVisuals.Values)
+        {
+            if (road == null)
+            {
+                continue;
+            }
+
+            Transform surface = road.transform.Find("RoadTileSurface");
+            if (surface == null)
+            {
+                continue;
+            }
+
+            foreach (Renderer renderer in surface.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = visible;
+            }
+
+            foreach (Collider collider in surface.GetComponentsInChildren<Collider>(true))
+            {
+                collider.enabled = false;
+            }
+        }
+    }
+
     private bool TryGetRoadCorner(Vector2Int cell, out int horizontalSign, out int verticalSign)
     {
         bool east = ConnectsToRoadOrAnchor(cell, Vector2Int.right);

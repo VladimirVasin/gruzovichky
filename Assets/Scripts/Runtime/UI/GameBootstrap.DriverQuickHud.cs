@@ -233,6 +233,8 @@ public partial class GameBootstrap
             return L("Wandering");
         if (driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen || driver.WalkPhase == DriverRescuePhase.IdleAtCanteen)
             return L("At Canteen");
+        if (driver.WalkPhase == DriverRescuePhase.IdleWalkToTrashCan || driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan)
+            return IsRussianLanguage() ? "Ищет еду в мусорке" : "Eating from trash";
         if (driver.WalkPhase == DriverRescuePhase.IdleWalkToGamblingHall || driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall)
             return L("At Gambling Hall");
         if (driver.ShiftStartHour >= 0)

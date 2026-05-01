@@ -162,6 +162,9 @@ public partial class GameBootstrap
                 GUILayout.Label("PRODUCTION / STORAGE", headerStyle);
                 Vector2 prodScroll = debugResourceScrollPos;
                 prodScroll = GUILayout.BeginScrollView(prodScroll, GUILayout.ExpandHeight(true));
+                DrawDebugServiceResourceRow(LocationType.Warehouse,        "Warehouse  —  Fuel",        DebugServiceResourceKind.Fuel,     bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceResourceRow(LocationType.Warehouse,        "Warehouse  —  Alcohol",     DebugServiceResourceKind.Alcohol,  bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceResourceRow(LocationType.Warehouse,        "Warehouse  —  Food",        DebugServiceResourceKind.Food,     bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugProductionResourceRow(LocationType.Forest,           "Forest",                    DebugProductionResourceKind.Logs,      bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugProductionResourceRow(LocationType.Sawmill,          "Sawmill  —  Logs",          DebugProductionResourceKind.Logs,      bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugProductionResourceRow(LocationType.Sawmill,          "Sawmill  —  Boards",        DebugProductionResourceKind.Boards,    bodyStyle, valueStyle, subHeaderStyle);
@@ -203,6 +206,13 @@ public partial class GameBootstrap
             GUI.backgroundColor = new Color(0.18f, 0.34f, 0.58f);
             if (GUILayout.Button("  AUTO ASSIGN ALL  ", adjBtn, GUILayout.Height(36f), GUILayout.ExpandWidth(false)))
                 DebugAutoAssignAllAvailableWorkers();
+            GUILayout.Space(6f);
+            bool canSummonWorkers = hiringDriverArrival == null;
+            GUI.enabled = canSummonWorkers;
+            GUI.backgroundColor = canSummonWorkers ? new Color(0.22f, 0.42f, 0.64f) : new Color(0.18f, 0.18f, 0.18f);
+            if (GUILayout.Button("  SUMMON 10 WORKERS  ", adjBtn, GUILayout.Height(36f), GUILayout.ExpandWidth(false)))
+                DebugSummonWorkerWave(DebugHireWorkerWaveCount);
+            GUI.enabled = true;
             GUILayout.Space(24f);
 
             // ── Weather buttons ───────────────────────────────────────
@@ -257,7 +267,7 @@ public partial class GameBootstrap
             if (!built || location == null) return;
 
             int cur = GetDebugServiceResourceValue(location, resourceKind);
-            int max = GetDebugServiceResourceMax(resourceKind);
+            int max = GetDebugServiceResourceMax(type, resourceKind);
             GUILayout.Label($"{GetDebugServiceResourceLabel(resourceKind)}: {cur} / {max}", valueStyle);
 
             using (new GUILayout.HorizontalScope())
@@ -330,8 +340,19 @@ public partial class GameBootstrap
         };
     }
 
-    private static int GetDebugServiceResourceMax(DebugServiceResourceKind resourceKind)
+    private static int GetDebugServiceResourceMax(LocationType type, DebugServiceResourceKind resourceKind)
     {
+        if (type == LocationType.Warehouse)
+        {
+            return resourceKind switch
+            {
+                DebugServiceResourceKind.Fuel => WarehouseMaxFuelStorage,
+                DebugServiceResourceKind.Alcohol => WarehouseMaxAlcoholStorage,
+                DebugServiceResourceKind.Food => WarehouseMaxFoodStorage,
+                _ => 0
+            };
+        }
+
         return resourceKind switch
         {
             DebugServiceResourceKind.Fuel => GasStationMaxFuelStorage,
@@ -383,7 +404,7 @@ public partial class GameBootstrap
             return;
         }
 
-        int maxValue = GetDebugServiceResourceMax(resourceKind);
+        int maxValue = GetDebugServiceResourceMax(type, resourceKind);
         switch (resourceKind)
         {
             case DebugServiceResourceKind.Fuel:
@@ -905,5 +926,39 @@ public partial class GameBootstrap
         isWeatherTransitioning    = true;
         weatherHoldTimer          = GetWeatherHoldDuration(target);
         SessionDebugLogger.Log("DEBUG", $"[DBG] Weather forced → {target}.");
+    }
+
+    private void DebugSummonWorkerWave(int count)
+    {
+        if (hiringDriverArrival != null)
+        {
+            SessionDebugLogger.Log("DEBUG", "[DBG] Worker wave skipped: another hiring bus is already active.");
+            return;
+        }
+
+        int spawnCount = Mathf.Max(1, count);
+        List<DriverAgent> workers = new(spawnCount);
+        for (int i = 0; i < spawnCount; i++)
+        {
+            DriverAgent worker = CreateAndRegisterDriverAgent(spawnInMotel: false);
+            workers.Add(worker);
+            LogDriverReaction(worker, "debug-summoned and arriving by bus");
+        }
+
+        hiringDriverArrival = new HiringDriverArrivalData
+        {
+            Driver = workers[0],
+            IsTutorialWave = false,
+            Phase = HiringDriverArrivalPhase.WaitingLaneClear
+        };
+        hiringDriverArrival.Drivers.AddRange(workers);
+
+        isDriversScreenDirty = true;
+        isShiftsScreenDirty = true;
+        SessionDebugLogger.Log("DEBUG", $"[DBG] Summoned {spawnCount} workers by arrival bus; stagger={HiringBusDisembarkInterval:F2}s.");
+        PushFeedEvent(
+            $"Debug summoned {spawnCount} workers. Arrival bus is on the way.",
+            $"Debug: вызвано рабочих: {spawnCount}. Автобус уже в пути.",
+            FeedEventType.Info);
     }
 }

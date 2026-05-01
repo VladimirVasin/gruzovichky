@@ -49,9 +49,11 @@ public partial class GameBootstrap : MonoBehaviour
                 if (hiringDriverArrival.BusWorldX >= stopX)
                 {
                     hiringDriverArrival.BusWorldX = stopX;
-                    hiringDriverArrival.StopTimer = HiringBusStopDuration;
+                    int passengerCount = Mathf.Max(1, hiringDriverArrival.Drivers.Count);
+                    hiringDriverArrival.StopTimer = HiringBusStopDuration + passengerCount * HiringBusDisembarkInterval;
+                    hiringDriverArrival.DisembarkTimer = 0f;
+                    hiringDriverArrival.NextDisembarkIndex = 0;
                     hiringDriverArrival.Phase = HiringDriverArrivalPhase.StoppedForDropoff;
-                    SpawnDriversFromHiringBus();
                     SessionDebugLogger.Log("DRIVER", $"{GetHiringArrivalLabel()} arrival bus stopped at Intercity Stop.");
                 }
 
@@ -60,8 +62,9 @@ public partial class GameBootstrap : MonoBehaviour
 
             case HiringDriverArrivalPhase.StoppedForDropoff:
                 UpdateHiringBusTransform();
+                UpdateHiringBusDisembark(dt);
                 hiringDriverArrival.StopTimer -= dt;
-                if (hiringDriverArrival.StopTimer <= 0f)
+                if (hiringDriverArrival.StopTimer <= 0f && HasFinishedHiringBusDisembark())
                 {
                     hiringDriverArrival.Phase = HiringDriverArrivalPhase.Departing;
                     SessionDebugLogger.Log("DRIVER", $"{GetHiringArrivalLabel()} finished disembarking; arrival bus departing immediately.");
@@ -178,7 +181,7 @@ public partial class GameBootstrap : MonoBehaviour
         return $"{count} workers";
     }
 
-    private void SpawnDriversFromHiringBus()
+    private void UpdateHiringBusDisembark(float dt)
     {
         if (hiringDriverArrival == null)
         {
@@ -190,25 +193,58 @@ public partial class GameBootstrap : MonoBehaviour
             hiringDriverArrival.Drivers.Add(hiringDriverArrival.Driver);
         }
 
-        Vector3 baseDropoff = GetHiringBusDropoffWorld();
-        for (int i = 0; i < hiringDriverArrival.Drivers.Count; i++)
+        hiringDriverArrival.DisembarkTimer -= dt;
+        while (hiringDriverArrival.DisembarkTimer <= 0f &&
+               hiringDriverArrival.NextDisembarkIndex < hiringDriverArrival.Drivers.Count)
         {
-            DriverAgent driver = hiringDriverArrival.Drivers[i];
-            if (driver?.DriverObject == null)
-            {
-                continue;
-            }
-
-            Vector3 offset = new((i % 4 - 1.5f) * 0.34f, 0f, (i / 4) * 0.36f);
-            Vector3 dropoff = baseDropoff + offset;
-            dropoff.y = SampleTerrainHeight(dropoff.x, dropoff.z);
-            SpawnDriverFromHiringBus(driver, dropoff);
+            SpawnDriverFromHiringBus(hiringDriverArrival.NextDisembarkIndex);
+            hiringDriverArrival.NextDisembarkIndex++;
+            hiringDriverArrival.DisembarkTimer += HiringBusDisembarkInterval;
         }
 
-        if (hiringDriverArrival.IsTutorialWave)
+        if (HasFinishedHiringBusDisembark() &&
+            hiringDriverArrival.IsTutorialWave &&
+            !hiringDriverArrival.HasNotifiedDisembark)
         {
+            hiringDriverArrival.HasNotifiedDisembark = true;
             NotifyTutorialHiringWaveDisembarked();
         }
+    }
+
+    private bool HasFinishedHiringBusDisembark()
+    {
+        return hiringDriverArrival == null ||
+               hiringDriverArrival.NextDisembarkIndex >= Mathf.Max(1, hiringDriverArrival.Drivers.Count);
+    }
+
+    private void SpawnDriverFromHiringBus(int index)
+    {
+        if (hiringDriverArrival == null)
+        {
+            return;
+        }
+
+        if (hiringDriverArrival.Drivers.Count == 0 && hiringDriverArrival.Driver != null)
+        {
+            hiringDriverArrival.Drivers.Add(hiringDriverArrival.Driver);
+        }
+
+        if (index < 0 || index >= hiringDriverArrival.Drivers.Count)
+        {
+            return;
+        }
+
+        DriverAgent driver = hiringDriverArrival.Drivers[index];
+        if (driver?.DriverObject == null)
+        {
+            return;
+        }
+
+        Vector3 baseDropoff = GetHiringBusDropoffWorld();
+        Vector3 offset = new((index % 4 - 1.5f) * 0.34f, 0f, (index / 4) * 0.36f);
+        Vector3 dropoff = baseDropoff + offset;
+        dropoff.y = SampleTerrainHeight(dropoff.x, dropoff.z);
+        SpawnDriverFromHiringBus(driver, dropoff);
     }
 
     private void SpawnDriverFromHiringBus(DriverAgent driver, Vector3 dropoff)

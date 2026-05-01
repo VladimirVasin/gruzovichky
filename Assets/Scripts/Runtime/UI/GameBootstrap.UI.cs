@@ -17,6 +17,7 @@ public partial class GameBootstrap
     {
         truckSegmentStartWorld = truckObject.transform.position;
         Vector3 baseTargetWorld = GetTruckWorldPosition(nextCell);
+        baseTargetWorld.y = SampleRoadSurfaceHeight(baseTargetWorld.x, baseTargetWorld.z) + TruckSegmentStartLift;
         Vector3 laneOffset = GetTruckTargetLaneOffset(truckCell, nextCell, out string laneReason);
         truckTargetWorld = baseTargetWorld + laneOffset;
         LogTruckLaneSegment(truckCell, nextCell, laneOffset, laneReason, baseTargetWorld, truckTargetWorld);
@@ -131,9 +132,14 @@ public partial class GameBootstrap
 
     private void LogTruckLaneSegment(Vector2Int fromCell, Vector2Int toCell, Vector3 laneOffset, string laneReason, Vector3 baseTargetWorld, Vector3 targetWorld)
     {
+        if (!SessionDebugLogger.IsVerboseEnabled("TRUCK_LANE"))
+        {
+            return;
+        }
+
         Vector2Int rawDir = toCell - fromCell;
         Vector2Int dir = NormalizeRoadDirection(rawDir);
-        SessionDebugLogger.Log(
+        SessionDebugLogger.LogVerbose(
             "TRUCK_LANE",
             $"{GetLoadedTruckDisplayName()} from=({fromCell.x},{fromCell.y}) to=({toCell.x},{toCell.y}) rawDir=({rawDir.x},{rawDir.y}) dir=({dir.x},{dir.y}) reason={laneReason} offset=({laneOffset.x:F2},{laneOffset.z:F2}) base=({baseTargetWorld.x:F2},{baseTargetWorld.z:F2}) target=({targetWorld.x:F2},{targetWorld.z:F2}) roadTarget={roadCells.Contains(toCell)} fromAnchor={IsAnchorCell(fromCell)} toAnchor={IsAnchorCell(toCell)}.");
     }
@@ -256,7 +262,7 @@ public partial class GameBootstrap
             bool startInLocation = IsLocationCell(startCell);
             bool goalInLocation = IsLocationCell(goalCell);
             bool isIdleWander = driver.WalkPhase == DriverRescuePhase.IdleWander;
-            if (!isIdleWander && !startInLocation && !goalInLocation)
+            if (!isIdleWander && !startInLocation && !goalInLocation && !DoesWalkSegmentCrossWater(startWorld, targetWorld))
             {
                 driver.WalkPath.Add(targetWorld);
                 driver.WalkTargetWorld = targetWorld;
@@ -301,6 +307,11 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (waterCells.Contains(cell))
+        {
+            return cell == start;
+        }
+
         if (cell == start || cell == goal || IsAnchorCell(cell))
         {
             return true;
@@ -317,6 +328,22 @@ public partial class GameBootstrap
         }
 
         return true;
+    }
+
+    private bool DoesWalkSegmentCrossWater(Vector3 startWorld, Vector3 targetWorld)
+    {
+        Vector3 delta = targetWorld - startWorld;
+        int steps = Mathf.Max(2, Mathf.CeilToInt(delta.magnitude / 0.25f));
+        for (int i = 1; i <= steps; i++)
+        {
+            Vector3 sample = Vector3.Lerp(startWorld, targetWorld, i / (float)steps);
+            if (waterCells.Contains(WorldToCell(sample)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private Vector3 GetDriverStandPointNearTruck()

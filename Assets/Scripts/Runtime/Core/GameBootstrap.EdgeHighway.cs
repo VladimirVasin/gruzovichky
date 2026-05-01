@@ -408,11 +408,11 @@ public partial class GameBootstrap : MonoBehaviour
         {
             if (IsDriverMotelArrivalInProgress())
             {
-                SessionDebugLogger.Log("BUS_SPAWN", "CityLane spawn skipped: hiring-arrival bus is active.");
+                SessionDebugLogger.LogVerbose("BUS_SPAWN", "CityLane spawn skipped: hiring-arrival bus is active.");
             }
             else if (pauseCitySideLane)
             {
-                SessionDebugLogger.Log("BUS_SPAWN", "CityLane spawn skipped: lane paused.");
+                SessionDebugLogger.LogVerbose("BUS_SPAWN", "CityLane spawn skipped: lane paused.");
             }
             else
             {
@@ -426,7 +426,7 @@ public partial class GameBootstrap : MonoBehaviour
         {
             if (pauseOuterSideLane)
             {
-                SessionDebugLogger.Log("BUS_SPAWN", "OuterLane spawn skipped: lane paused.");
+                SessionDebugLogger.LogVerbose("BUS_SPAWN", "OuterLane spawn skipped: lane paused.");
             }
             else
             {
@@ -526,14 +526,14 @@ public partial class GameBootstrap : MonoBehaviour
 
             if (Mathf.Abs(existing.WorldX - spawnX) < EdgeHighwayBusSpawnSpacing)
             {
-                SessionDebugLogger.Log(
+                SessionDebugLogger.LogVerbose(
                     "BUS_SPAWN",
                     $"{laneLabel} spawn blocked by spacing: existingX={existing.WorldX:0.00}, spawnX={spawnX:0.00}, direction={(travelDirection > 0f ? "+" : "-")}.");
                 return;
             }
         }
 
-        SessionDebugLogger.Log(
+        SessionDebugLogger.LogVerbose(
             "BUS_SPAWN",
             $"{laneLabel} spawn ok: spawnX={spawnX:0.00}, direction={(travelDirection > 0f ? "+" : "-")}, laneZ={GetEdgeHighwayBusLaneWorldZ(isCitySideLane):0.00}.");
         CreateEdgeHighwayBus(travelDirection, isCitySideLane);

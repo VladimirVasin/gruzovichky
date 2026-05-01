@@ -19,13 +19,13 @@ public partial class GameBootstrap : MonoBehaviour
     private const int FurnitureFactoryMaxFurnitureStorage = 6;
     private const float FurnitureFactoryProcessingDuration = 5.5f;
     private const int WarehouseMaxWorkers        = 3;
-    private const int WarehouseMaxFuelStorage    = 20;
-    private const int WarehouseMaxAlcoholStorage = 20;
-    private const int WarehouseMaxFoodStorage    = 20;
-    private const int WarehouseResourceStartAmount = 5;
-    private const int GasStationMaxFuelStorage   = 5;
-    private const int BarMaxAlcoholStorage       = 5;
-    private const int CanteenMaxFoodStorage      = 5;
+    private const int WarehouseMaxFuelStorage    = 60;
+    private const int WarehouseMaxAlcoholStorage = 50;
+    private const int WarehouseMaxFoodStorage    = 80;
+    private const int WarehouseResourceStartAmount = 12;
+    private const int GasStationMaxFuelStorage   = 20;
+    private const int BarMaxAlcoholStorage       = 16;
+    private const int CanteenMaxFoodStorage      = 24;
     private const float ForestLogProgressPerChop = 0.08f;
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
@@ -122,6 +122,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const int HireBusCost = 220;
     private const int HireDriverCost = 50;
     private const int TutorialHireWorkerWaveCount = 7;
+    private const int DebugHireWorkerWaveCount = 10;
+    private const float HiringBusDisembarkInterval = 0.22f;
     private const int TutorialWarehouseLoaderGoalCount = 3;
     private const int TutorialLocalBusStopGoalCount = 2;
     private const int TutorialBusDriverGoalCount = 3;
@@ -156,6 +158,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<Color> locationNightLightOnColors = new();
     private readonly List<float> locationNightLightMaxIntensities = new();
     private readonly List<float> locationNightLightRanges = new();
+    private readonly List<Vector3> locationTrashCanMealTargets = new();
     private readonly List<RoadLanternData> roadLanterns = new();
     private readonly Dictionary<Vector2Int, (GameObject Root, RoadLanternData Data)> roadCellLanternMap = new();
     private readonly Dictionary<Vector2Int, (GameObject Root, Vector2Int SideCell)> roadCellBenchMap = new();
@@ -434,6 +437,7 @@ public partial class GameBootstrap : MonoBehaviour
     private HashSet<BuildTool> unlockedBuildTools;
     private bool areTutorialVacanciesFullyUnlocked;
     private bool isTutorialTruckDriverVacancyUnlocked;
+    private bool hasShownLocalBusStopMinimumHint;
     private readonly List<LocationData> localStops = new();
     private Vector2Int? hoveredBuildCell;
     private Vector2Int? selectedDebugCell;
@@ -545,6 +549,7 @@ public partial class GameBootstrap : MonoBehaviour
         public DriverAgent Driver;
         public readonly List<DriverAgent> Drivers = new();
         public bool IsTutorialWave;
+        public bool HasNotifiedDisembark;
         public Transform BusRootTransform;
         public Renderer HeadlightLeftRenderer;
         public Renderer HeadlightRightRenderer;
@@ -555,6 +560,8 @@ public partial class GameBootstrap : MonoBehaviour
         public float BusWorldX;
         public float BusSpeed;
         public float StopTimer;
+        public float DisembarkTimer;
+        public int NextDisembarkIndex;
         public float BobPhase;
         public HiringDriverArrivalPhase Phase;
     }
@@ -800,6 +807,8 @@ public partial class GameBootstrap : MonoBehaviour
         IdleAtBar,
         IdleWalkToCanteen,
         IdleAtCanteen,
+        IdleWalkToTrashCan,
+        IdleAtTrashCan,
         IdleWalkToGamblingHall,
         IdleAtGamblingHall,
         IdleWalkToCityPark,
@@ -916,6 +925,7 @@ public partial class GameBootstrap : MonoBehaviour
         public int AlcoholStored;
         public int FoodStored;
         public GameObject RootObject;
+        public GameObject LocalBusWarningMarker;
         public Renderer BaseRenderer;
         public readonly List<GameObject> StoredLogVisuals = new();
         public readonly List<GameObject> StoredBoardVisuals = new();

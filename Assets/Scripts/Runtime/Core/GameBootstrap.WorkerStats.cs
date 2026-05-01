@@ -23,6 +23,7 @@ public partial class GameBootstrap
     };
     private const string WorkerDrunkEffectId = "drunk";
     private const string WorkerHangoverEffectId = "hangover";
+    private const string WorkerMoneyFallbackEffectId = "money_fallback";
     private const float WorkerDrunkEffectDurationHours = 4f;
     private const float WorkerAlcoholicDrunkEffectDurationHours = 6f;
     private const int WorkerDrunkDrivingDelta = -5;
@@ -32,6 +33,7 @@ public partial class GameBootstrap
     private const int WorkerHangoverStaminaDelta = -3;
     private const int WorkerHangoverProductionDelta = -2;
     private const int WorkerHangoverLogisticsDelta = -2;
+    private const float WorkerMoneyFallbackEffectDurationHours = 8f;
     private const string WorkerFedEffectId = "fed";
     private const float WorkerFedEffectDurationHours = 6f;
     private const int WorkerFedStaminaDelta = 2;
@@ -220,6 +222,23 @@ public partial class GameBootstrap
             staminaDelta: WorkerFedStaminaDelta,
             productionDelta: WorkerFedProductionDelta,
             logisticsDelta: WorkerFedLogisticsDelta);
+    }
+
+    private void ApplyWorkerMoneyFallbackEffect(DriverAgent driver)
+    {
+        RemoveWorkerEffect(driver, WorkerFedEffectId, false);
+        RemoveWorkerEffect(driver, WorkerRestedEffectId, false);
+        AddOrRefreshWorkerEffect(
+            driver,
+            WorkerMoneyFallbackEffectId,
+            "I Have Fallen",
+            "\u042f \u043e\u043f\u0443\u0441\u0442\u0438\u043b\u0441\u044f",
+            "The worker could not afford a basic service and used a humiliating fallback.",
+            "\u0420\u0430\u0431\u043e\u0447\u0438\u0439 \u043d\u0435 \u0441\u043c\u043e\u0433 \u043e\u043f\u043b\u0430\u0442\u0438\u0442\u044c \u0431\u0430\u0437\u043e\u0432\u0443\u044e \u0443\u0441\u043b\u0443\u0433\u0443 \u0438 \u0432\u044b\u0431\u0440\u0430\u043b \u0443\u043d\u0438\u0437\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0439 \u0437\u0430\u043f\u0430\u0441\u043d\u043e\u0439 \u0432\u0430\u0440\u0438\u0430\u043d\u0442.",
+            WorkerMoneyFallbackEffectDurationHours,
+            staminaDelta: -1,
+            productionDelta: -1,
+            logisticsDelta: -1);
     }
 
     private void ApplyWorkerRestedEffect(DriverAgent driver)

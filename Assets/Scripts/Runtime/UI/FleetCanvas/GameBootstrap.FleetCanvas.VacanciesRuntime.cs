@@ -193,6 +193,11 @@ public partial class GameBootstrap
                (selectedVacancyShiftIndex >= 0 && selectedVacancyShiftIndex < ShiftPresetHours.Length);
     }
 
+    private static bool IsGroupedWarehouseVacancy(VacancyViewModel vacancy)
+    {
+        return vacancy != null && vacancy.IsGroupedWarehouse && vacancy.BuildingType == LocationType.Warehouse;
+    }
+
     private void UpdateVacancyContextCard(VacancyViewModel vacancy)
     {
         bool ru = IsRussianLanguage();
@@ -237,6 +242,15 @@ public partial class GameBootstrap
         {
             return !string.IsNullOrWhiteSpace(vacancy.Schedule) ? vacancy.Schedule : "—";
         }
+        if (IsGroupedWarehouseVacancy(vacancy) &&
+            selectedVacancyShiftIndex >= 0 &&
+            selectedVacancyShiftIndex < WarehouseMaxWorkers)
+        {
+            return IsRussianLanguage()
+                ? $"\u0421\u043a\u043b\u0430\u0434\u0441\u043a\u0430\u044f \u0441\u043c\u0435\u043d\u0430 {selectedVacancyShiftIndex + 1}"
+                : $"Warehouse shift {selectedVacancyShiftIndex + 1}";
+        }
+
         if (selectedVacancyShiftIndex >= 0 && selectedVacancyShiftIndex < ShiftPresetHours.Length)
         {
             return $"{L(ShiftNames[selectedVacancyShiftIndex])} {GetShiftRangeLabel(ShiftPresetHours[selectedVacancyShiftIndex])}";
@@ -366,10 +380,33 @@ public partial class GameBootstrap
             });
         }
 
+        if (locations.ContainsKey(LocationType.Warehouse) &&
+            IsVacancyUnlockedForCurrentTutorial(VacancyKind.Production, LocationType.Warehouse))
+        {
+            int assignedWarehouseLoaders = CountLogisticsWorkers(LocationType.Warehouse);
+            vacancyViewModels.Add(new VacancyViewModel
+            {
+                Kind = VacancyKind.Production,
+                Title = ru ? "\u0421\u043a\u043b\u0430\u0434\u0441\u043a\u043e\u0439 \u0433\u0440\u0443\u0437\u0447\u0438\u043a" : "Warehouse Loader",
+                Subtitle = ru ? "\u0441\u043a\u043b\u0430\u0434" : "warehouse",
+                Schedule = ru
+                    ? $"{assignedWarehouseLoaders}/{WarehouseMaxWorkers} \u0441\u043c\u0435\u043d"
+                    : $"{assignedWarehouseLoaders}/{WarehouseMaxWorkers} shifts",
+                IsOccupied = false,
+                BuildingType = LocationType.Warehouse,
+                SlotIndex = -1,
+                RequiredEducation = WorkerEducation.Basic,
+                IsGroupedWarehouse = true,
+                FilledSlots = assignedWarehouseLoaders,
+                MaxSlots = WarehouseMaxWorkers
+            });
+        }
+
         for (int i = 0; i < logisticsSlots.Length; i++)
         {
             LogisticsSlotUi slot = logisticsSlots[i];
             if (slot == null ||
+                slot.BuildingType == LocationType.Warehouse ||
                 !locations.ContainsKey(slot.BuildingType) ||
                 !IsVacancyUnlockedForCurrentTutorial(VacancyKind.Production, slot.BuildingType))
             {
@@ -408,6 +445,33 @@ public partial class GameBootstrap
         vacancyFlowOptions.Clear();
         if (vacancy == null)
         {
+            return;
+        }
+
+        if (IsGroupedWarehouseVacancy(vacancy))
+        {
+            for (int i = 0; i < WarehouseMaxWorkers; i++)
+            {
+                DriverAgent assigned = GetNthLogisticsWorker(LocationType.Warehouse, i);
+                vacancyFlowOptions.Add(new VacancyFlowOption
+                {
+                    Kind = VacancyFlowOptionKind.Shift,
+                    Title = ru
+                        ? $"\u0421\u043a\u043b\u0430\u0434\u0441\u043a\u0430\u044f \u0441\u043c\u0435\u043d\u0430 {i + 1}"
+                        : $"Warehouse shift {i + 1}",
+                    Subtitle = assigned != null
+                        ? assigned.DriverName
+                        : (ru ? "\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430" : "available"),
+                    ShiftIndex = i
+                });
+            }
+
+            if (HasSelectedVacancyShift(vacancy))
+            {
+                vacancyFlowOptions.Clear();
+                AddWorkerOptionsForVacancy(vacancy);
+            }
+
             return;
         }
 
@@ -495,19 +559,6 @@ public partial class GameBootstrap
             return;
         }
 
-        if (vacancy.Kind == VacancyKind.BusDriver && !HasAvailableBusForVacancy(vacancy))
-        {
-            vacancyFlowOptions.Add(new VacancyFlowOption
-            {
-                Kind = VacancyFlowOptionKind.Worker,
-                Title = ru ? "\u041d\u0435\u0442 \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u043e\u0433\u043e \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0430" : "No free bus",
-                Subtitle = ru
-                    ? "\u0414\u043b\u044f \u044d\u0442\u043e\u0439 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438 \u043d\u0443\u0436\u0435\u043d \u0430\u0432\u0442\u043e\u0431\u0443\u0441 \u0438\u0437 Parking. \u041a\u0443\u043f\u0438 \u0435\u0433\u043e \u0432 \u0431\u043b\u043e\u043a\u0435 \u0422\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442\u043d\u044b\u0439 \u043f\u0430\u0440\u043a."
-                    : "This vacancy needs a parked bus. Buy one in Transport Park."
-            });
-            return;
-        }
-
         AddWorkerOptionsForVacancy(vacancy);
     }
 
@@ -536,7 +587,7 @@ public partial class GameBootstrap
         bool hasParking = locations.ContainsKey(LocationType.Parking);
         bool canHireVehicle = hasParking && ownedVehicleCount < maxVehicleCount && money >= hireCost;
         bool hasSelectedShift = HasSelectedVacancyShift(selectedVacancy);
-        bool hasAvailableVehicle = isBusDriverVacancy ? HasAvailableBusForVacancy(selectedVacancy) : HasAvailableTruckForVacancy(selectedVacancy);
+        bool hasAvailableVehicle = isBusDriverVacancy ? GetOwnedBusCount() > 0 : HasAvailableTruckForVacancy(selectedVacancy);
 
         if (shiftsScreenUi.VacancyTransportParkTitleText != null)
         {
@@ -565,6 +616,10 @@ public partial class GameBootstrap
                 ? (ru
                     ? $"\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u044b\u0431\u0435\u0440\u0438 \u0441\u043c\u0435\u043d\u0443. {vehicleRuStart} \u0431\u0443\u0434\u0435\u0442 \u0432\u0437\u044f\u0442 \u0438\u0437 Parking \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438."
                     : $"Choose a shift first. A {vehicleEn} will be picked automatically from Parking.")
+                : isBusDriverVacancy && hasAvailableVehicle
+                    ? (ru
+                        ? "\u0412 \u043f\u0430\u0440\u043a\u0435 \u0435\u0441\u0442\u044c \u0430\u0432\u0442\u043e\u0431\u0443\u0441. \u0421\u0432\u043e\u0431\u043e\u0434\u043d\u043e\u0441\u0442\u044c \u0431\u0443\u0434\u0435\u0442 \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u0430 \u043f\u0440\u0438 \u0441\u0442\u0430\u0440\u0442\u0435 \u0441\u043c\u0435\u043d\u044b."
+                        : "A bus exists in the fleet. Availability is checked when the shift starts.")
                 : hasAvailableVehicle
                     ? (ru
                         ? $"\u0421\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439 {vehicleRu} \u0435\u0441\u0442\u044c. \u0412\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0432\u043e\u0437\u044c\u043c\u0451\u0442 \u0435\u0433\u043e \u0441\u0430\u043c \u043f\u0440\u0438 \u0441\u0442\u0430\u0440\u0442\u0435 \u0441\u043c\u0435\u043d\u044b."
@@ -795,6 +850,13 @@ public partial class GameBootstrap
             return IsAnyTruckDriverAssignedToShift(option.ShiftIndex);
         }
 
+        if (option.Kind == VacancyFlowOptionKind.Shift && IsGroupedWarehouseVacancy(vacancy))
+        {
+            return option.ShiftIndex < 0 ||
+                   option.ShiftIndex >= WarehouseMaxWorkers ||
+                   GetNthLogisticsWorker(LocationType.Warehouse, option.ShiftIndex) != null;
+        }
+
         if (option.Kind == VacancyFlowOptionKind.Truck)
         {
             TruckAgent truck = GetTruckAgent(option.TruckNumber);
@@ -888,6 +950,14 @@ public partial class GameBootstrap
 
         if (vacancy.Kind == VacancyKind.Production)
         {
+            if (IsGroupedWarehouseVacancy(vacancy) &&
+                (selectedVacancyShiftIndex < 0 ||
+                 selectedVacancyShiftIndex >= WarehouseMaxWorkers ||
+                 GetNthLogisticsWorker(LocationType.Warehouse, selectedVacancyShiftIndex) != null))
+            {
+                return false;
+            }
+
             if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType == vacancy.BuildingType)
             {
                 return false;
@@ -916,11 +986,6 @@ public partial class GameBootstrap
             }
             if (driver.AssignedTruckNumber > 0 || driver.DutyMode == DriverDutyMode.Logistics || IsDriverIntercity(driver) || IsDriverBusDriver(driver) || IsBusDriverOnActiveRoute(driver))
             {
-                return false;
-            }
-            if (!HasAvailableBusForVacancy(vacancy))
-            {
-                reason = ru ? "\u043d\u0443\u0436\u0435\u043d \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439 \u0430\u0432\u0442\u043e\u0431\u0443\u0441" : "needs a free bus";
                 return false;
             }
             return true;
@@ -986,7 +1051,8 @@ public partial class GameBootstrap
         switch (vacancy.Kind)
         {
             case VacancyKind.Production:
-                AssignWorkerToBuilding(worker, FindLogisticsSlot(vacancy.BuildingType, vacancy.SlotIndex));
+                int slotIndex = IsGroupedWarehouseVacancy(vacancy) ? selectedVacancyShiftIndex : vacancy.SlotIndex;
+                AssignWorkerToBuilding(worker, FindLogisticsSlot(vacancy.BuildingType, slotIndex));
                 break;
             case VacancyKind.Intercity:
                 assigned = AssignIntercityVacancy(worker);
@@ -1163,6 +1229,13 @@ public partial class GameBootstrap
         for (int i = 0; i < vacancyViewModels.Count; i++)
         {
             if (vacancyViewModels[i].AssignedWorker == worker)
+            {
+                return i;
+            }
+
+            if (IsGroupedWarehouseVacancy(vacancyViewModels[i]) &&
+                worker.DutyMode == DriverDutyMode.Logistics &&
+                worker.AssignedBuildingType == LocationType.Warehouse)
             {
                 return i;
             }

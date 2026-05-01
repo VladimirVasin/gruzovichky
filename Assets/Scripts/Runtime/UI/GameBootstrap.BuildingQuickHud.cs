@@ -388,7 +388,7 @@ public partial class GameBootstrap
         buildingQuickHud.StopNumberDecreaseButton.onClick.AddListener(() => ShiftSelectedStopNumber(-1));
         buildingQuickHud.StopNumberIncreaseButton.onClick.AddListener(() => ShiftSelectedStopNumber(1));
 
-        // Flash overlay вЂ” full-panel transparent image rendered on top
+        // Flash overlay - full-panel transparent image rendered on top
         RectTransform flashRt = CreateUiObject("FlashOverlay", root).GetComponent<RectTransform>();
         flashRt.anchorMin = Vector2.zero;
         flashRt.anchorMax = Vector2.one;
@@ -912,7 +912,7 @@ public partial class GameBootstrap
                 : "Finished goods storage",
             LocationType.Motel   => "Drivers rest and idle here",
             LocationType.IntercityStop => "Intercity worker arrival stop by the highway",
-            LocationType.Stop    => IsRussianLanguage() ? "Местная автобусная остановка" : "Local worker bus stop",
+            LocationType.Stop    => GetLocalBusStopNetworkStatusText(),
             LocationType.Canteen      => "Service canteen - visitors pay $10 for meals",
             LocationType.Bar          => "Social hub - idle drivers gather here",
             LocationType.GamblingHall => "Gambling Hall - free leisure for workers.",
@@ -936,9 +936,7 @@ public partial class GameBootstrap
             LocationType.IntercityStop    => IsRussianLanguage()
                 ? FormatValueLine("Статус", "Готова к приёму")
                 : FormatValueLine("Status", "Intercity arrivals ready"),
-            LocationType.Stop       => IsRussianLanguage()
-                ? FormatValueLine("Статус", "Остановка готова")
-                : FormatValueLine("Status", "Local route stop ready"),
+            LocationType.Stop       => GetLocalBusStopQuickResourceText(),
             LocationType.Motel      => GetServiceBuildingQuickResourceText(locationType),
             LocationType.Bar          => GetBarQuickResourceText(),
             LocationType.Canteen      => GetCanteenQuickResourceText(),
@@ -947,6 +945,36 @@ public partial class GameBootstrap
             LocationType.CarMarket    => FormatValueLine(IsRussianLanguage() ? "\u041a\u0430\u0441\u0441\u0430" : "Bank", $"${locations[LocationType.CarMarket].BuildingBank}"),
             _ => string.Empty
         };
+    }
+
+    private string GetLocalBusStopNetworkStatusText()
+    {
+        bool ru = IsRussianLanguage();
+        if (localStops.Count < 2)
+        {
+            return ru
+                ? $"Не работает - нужно минимум 2 остановки ({localStops.Count}/2)"
+                : $"Offline - needs at least 2 stops ({localStops.Count}/2)";
+        }
+
+        return ru
+            ? $"Остановка подключена к маршруту ({localStops.Count} остановки)"
+            : $"Local route stop online ({localStops.Count} stops)";
+    }
+
+    private string GetLocalBusStopQuickResourceText()
+    {
+        bool ru = IsRussianLanguage();
+        int stopCount = localStops.Count;
+        string status = stopCount < 2
+            ? (ru ? "Не работает" : "Offline")
+            : (ru ? "Готова к маршруту" : "Route ready");
+        string requirement = stopCount < 2
+            ? (ru ? $"{stopCount}/2 - построй ещё одну остановку" : $"{stopCount}/2 - build one more stop")
+            : (ru ? $"{stopCount} остановки в сети" : $"{stopCount} stops in network");
+
+        return $"{FormatValueLine(ru ? "Статус" : "Status", status)}\n" +
+               $"{FormatValueLine(ru ? "Сеть" : "Network", requirement)}";
     }
 
     private string GetPersonalHouseQuickResourceText()

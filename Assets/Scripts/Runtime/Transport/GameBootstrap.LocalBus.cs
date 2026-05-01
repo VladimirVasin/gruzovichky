@@ -111,7 +111,7 @@ public partial class GameBootstrap
     private Vector3 GetBusRoadWorldPosition(Vector2Int cell)
     {
         Vector3 world = GetCellCenter(cell);
-        world.y = SampleTerrainHeight(world.x, world.z) + RoadHeight + EdgeHighwayBusLift;
+        world.y = SampleRoadSurfaceHeight(world.x, world.z) + RoadHeight + EdgeHighwayBusLift;
         return world;
     }
 
@@ -506,10 +506,9 @@ public partial class GameBootstrap
             else
             {
                 localBusRoute.Phase = LocalBusPhase.ParkedAwaitingShiftStart;
-                if (GetOrderedLocalStops().Count == 1)
-                {
-                    BeginLocalBusRouteFromParking();
-                }
+                SessionDebugLogger.Log(
+                    "BUS_SHIFT",
+                    $"{driver?.DriverName ?? "Bus driver"} returned to Parking and is waiting for the next valid local-bus route start.");
             }
 
             return;
@@ -556,6 +555,14 @@ public partial class GameBootstrap
         if (orderedStops.Count == 0 || !locations.TryGetValue(LocationType.Parking, out LocationData parking))
         {
             SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} cannot start route from Parking: no local stops or Parking missing.");
+            return false;
+        }
+
+        if (orderedStops.Count < 2)
+        {
+            SessionDebugLogger.Log(
+                "BUS_SHIFT",
+                $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} cannot start local bus route: at least 2 local stops are required, currentStops={orderedStops.Count}.");
             return false;
         }
 
@@ -657,7 +664,7 @@ public partial class GameBootstrap
 
         Vector3 position = localBusRoute.RootTransform.position;
         float bob = Mathf.Sin(Time.time * 3.2f + localBusRoute.BobPhase) * 0.015f;
-        position.y = SampleTerrainHeight(position.x, position.z) + RoadHeight + EdgeHighwayBusLift + bob;
+        position.y = SampleRoadSurfaceHeight(position.x, position.z) + RoadHeight + EdgeHighwayBusLift + bob;
         localBusRoute.RootTransform.position = position;
 
         float darkness = 1f - currentStylizedDaylight;

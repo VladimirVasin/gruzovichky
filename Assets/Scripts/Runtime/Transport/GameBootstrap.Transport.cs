@@ -87,6 +87,90 @@ public partial class GameBootstrap
         return Mathf.Lerp(hx0, hx1, tz);
     }
 
+    private float SampleRoadSurfaceHeight(float worldX, float worldZ)
+    {
+        float terrainHeight = SampleTerrainHeight(worldX, worldZ);
+        Vector2Int centerCell = WorldToCell(new Vector3(worldX, 0f, worldZ));
+        if (!TryFindNearestRoadSurfaceSmoothingCell(worldX, worldZ, centerCell, out Vector2Int smoothingCell))
+        {
+            return terrainHeight;
+        }
+
+        float weightedHeight = 0f;
+        float totalWeight = 0f;
+        AddRoadSurfaceHeightSample(smoothingCell, 1f, ref weightedHeight, ref totalWeight);
+
+        foreach (Vector2Int neighbor in GridPathService.GetCardinalNeighbors(smoothingCell))
+        {
+            AddRoadSurfaceHeightSample(neighbor, 0.65f, ref weightedHeight, ref totalWeight);
+        }
+
+        AddRoadSurfaceHeightSample(smoothingCell + new Vector2Int(1, 1), 0.25f, ref weightedHeight, ref totalWeight);
+        AddRoadSurfaceHeightSample(smoothingCell + new Vector2Int(1, -1), 0.25f, ref weightedHeight, ref totalWeight);
+        AddRoadSurfaceHeightSample(smoothingCell + new Vector2Int(-1, 1), 0.25f, ref weightedHeight, ref totalWeight);
+        AddRoadSurfaceHeightSample(smoothingCell + new Vector2Int(-1, -1), 0.25f, ref weightedHeight, ref totalWeight);
+
+        if (totalWeight <= 0.001f)
+        {
+            return terrainHeight;
+        }
+
+        float smoothedRoadHeight = weightedHeight / totalWeight;
+        // Never let visual roads sink below the actual terrain surface of the sampled point.
+        // The smoothing is allowed to lift a road over a dip, but not bury it into a high tile.
+        return Mathf.Max(terrainHeight, Mathf.Lerp(terrainHeight, smoothedRoadHeight, 0.72f));
+    }
+
+    private bool TryFindNearestRoadSurfaceSmoothingCell(float worldX, float worldZ, Vector2Int centerCell, out Vector2Int smoothingCell)
+    {
+        smoothingCell = centerCell;
+        float bestDistance = float.MaxValue;
+        bool found = false;
+
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                Vector2Int candidate = centerCell + new Vector2Int(dx, dz);
+                if (!IsInsideGrid(candidate) || !IsRoadSurfaceSmoothingCell(candidate))
+                {
+                    continue;
+                }
+
+                float candidateCenterX = candidate.x + 0.5f;
+                float candidateCenterZ = candidate.y + 0.5f;
+                float distance = (candidateCenterX - worldX) * (candidateCenterX - worldX) +
+                                 (candidateCenterZ - worldZ) * (candidateCenterZ - worldZ);
+                if (distance >= bestDistance)
+                {
+                    continue;
+                }
+
+                bestDistance = distance;
+                smoothingCell = candidate;
+                found = true;
+            }
+        }
+
+        return found;
+    }
+
+    private void AddRoadSurfaceHeightSample(Vector2Int cell, float weight, ref float weightedHeight, ref float totalWeight)
+    {
+        if (!IsInsideGrid(cell) || !IsRoadSurfaceSmoothingCell(cell))
+        {
+            return;
+        }
+
+        weightedHeight += GetTerrainHeight(cell) * weight;
+        totalWeight += weight;
+    }
+
+    private bool IsRoadSurfaceSmoothingCell(Vector2Int cell)
+    {
+        return roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) || IsAnchorCell(cell);
+    }
+
     private float GetVerticalEdgeHeight(int x, int y)
     {
         if (x <= 0)

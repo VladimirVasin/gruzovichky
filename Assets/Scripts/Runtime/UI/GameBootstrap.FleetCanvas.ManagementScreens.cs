@@ -241,6 +241,9 @@ public partial class GameBootstrap
         public int ShiftIndex = -1;
         public int TruckNumber;
         public WorkerEducation RequiredEducation;
+        public bool IsGroupedWarehouse;
+        public int FilledSlots;
+        public int MaxSlots;
     }
 
     private sealed class VacancyFlowOption

@@ -26,40 +26,68 @@ public partial class GameBootstrap
     {
         Vector3 center = GetCellCenter(cell);
         Vector3 position = center + (isHorizontal ? new Vector3(0f, 0f, 0.5f) : new Vector3(0.5f, 0f, 0f));
-        position.y = SampleTerrainHeight(position.x, position.z) + RoadHeight + 0.128f;
-        GameObject dash = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        dash.name = $"UnifiedRoadDash_{cell.x}_{cell.y}";
-        dash.transform.SetParent(unifiedRoadVisualRoot, false);
-        dash.transform.position = position;
-        dash.transform.localScale = isHorizontal
-            ? new Vector3(0.68f, 0.035f, 0.08f)
-            : new Vector3(0.08f, 0.035f, 0.68f);
-        ApplyColor(dash, new Color(0.92f, 0.92f, 0.9f));
-        ConfigureStaticVisual(dash);
-        if (dash.TryGetComponent(out Collider collider))
-        {
-            collider.enabled = false;
-        }
+        CreateRoadMarkingQuad(
+            $"UnifiedRoadDash_{cell.x}_{cell.y}",
+            position,
+            isHorizontal ? 0.68f : 0.08f,
+            isHorizontal ? 0.08f : 0.68f,
+            new Color(0.92f, 0.92f, 0.9f));
     }
     private void CreateUnifiedRoadSideStripe(Vector2Int cell, bool isHorizontal, Vector2Int sideOffset)
     {
         Vector3 center = GetCellCenter(cell);
         Vector3 side = new Vector3(sideOffset.x, 0f, sideOffset.y).normalized;
         Vector3 position = center + side * 0.42f;
-        position.y = SampleTerrainHeight(position.x, position.z) + RoadHeight + 0.129f;
-        GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        stripe.name = $"UnifiedRoadSideStripe_{cell.x}_{cell.y}";
-        stripe.transform.SetParent(unifiedRoadVisualRoot, false);
-        stripe.transform.position = position;
-        stripe.transform.localScale = isHorizontal
-            ? new Vector3(0.84f, 0.035f, 0.075f)
-            : new Vector3(0.075f, 0.035f, 0.84f);
-        ApplyColor(stripe, new Color(0.88f, 0.83f, 0.68f));
-        ConfigureStaticVisual(stripe);
-        if (stripe.TryGetComponent(out Collider collider))
+        CreateRoadMarkingQuad(
+            $"UnifiedRoadSideStripe_{cell.x}_{cell.y}",
+            position,
+            isHorizontal ? 0.84f : 0.075f,
+            isHorizontal ? 0.075f : 0.84f,
+            new Color(0.88f, 0.83f, 0.68f));
+    }
+    private void CreateRoadMarkingQuad(string name, Vector3 center, float sizeX, float sizeZ, Color color)
+    {
+        if (unifiedRoadVisualRoot == null)
         {
-            collider.enabled = false;
+            return;
         }
+
+        GameObject marking = new(name);
+        marking.transform.SetParent(unifiedRoadVisualRoot, false);
+
+        float halfX = sizeX * 0.5f;
+        float halfZ = sizeZ * 0.5f;
+        float x0 = center.x - halfX;
+        float x1 = center.x + halfX;
+        float z0 = center.z - halfZ;
+        float z1 = center.z + halfZ;
+        const float lift = RoadTileSurfaceLift + 0.018f;
+
+        Mesh mesh = new();
+        mesh.name = $"{name}_Mesh";
+        mesh.vertices = new[]
+        {
+            new Vector3(x0, SampleRoadSurfaceHeight(x0, z0) + lift, z0),
+            new Vector3(x1, SampleRoadSurfaceHeight(x1, z0) + lift, z0),
+            new Vector3(x0, SampleRoadSurfaceHeight(x0, z1) + lift, z1),
+            new Vector3(x1, SampleRoadSurfaceHeight(x1, z1) + lift, z1),
+        };
+        mesh.triangles = new[] { 0, 2, 1, 1, 2, 3 };
+        mesh.uv = new[]
+        {
+            new Vector2(0f, 0f),
+            new Vector2(1f, 0f),
+            new Vector2(0f, 1f),
+            new Vector2(1f, 1f),
+        };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        MeshFilter filter = marking.AddComponent<MeshFilter>();
+        filter.sharedMesh = mesh;
+        marking.AddComponent<MeshRenderer>();
+        ApplyColor(marking, color, VisualSmoothnessAsphalt);
+        ConfigureStaticVisual(marking, VisualSmoothnessAsphalt);
     }
     private bool TryGetRoadVisualAxis(Vector2Int cell, out bool isHorizontal)
     {

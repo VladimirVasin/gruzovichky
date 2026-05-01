@@ -269,9 +269,12 @@ public partial class GameBootstrap
         if (driver.WalkPath.Count > 0 && driver.WalkWaypointIndex < driver.WalkPath.Count - 1)
         {
             driver.WalkWaypointIndex++;
-            SessionDebugLogger.Log(
-                "DRIVER",
-                $"{driver.DriverName} advanced to waypoint {driver.WalkWaypointIndex + 1}/{driver.WalkPath.Count} during {driver.WalkPhase}.");
+            if (SessionDebugLogger.IsVerboseEnabled("DRIVER_TRACE"))
+            {
+                SessionDebugLogger.LogVerbose(
+                    "DRIVER_TRACE",
+                    $"{driver.DriverName} advanced to waypoint {driver.WalkWaypointIndex + 1}/{driver.WalkPath.Count} during {driver.WalkPhase}.");
+            }
             return;
         }
 
@@ -406,7 +409,14 @@ public partial class GameBootstrap
                 else
                 {
                     driver.RestPhase = DriverRestPhase.None;
-                    SessionDebugLogger.Log("REST", $"{driver.DriverName} couldn't afford motel (${driver.Money} < ${motelData?.ServiceFee ?? 0}) - staying outside.");
+                    string reason = $"not enough money (${driver.Money} < ${motelData?.ServiceFee ?? 0})";
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} couldn't afford motel ({reason}) - looking for fallback sleep.");
+                    if (TryStartWorkerNeedFallback(driver, WorkerNeedKind.Sleep, driver.DriverObject.transform.position, reason))
+                    {
+                        return;
+                    }
+
+                    SessionDebugLogger.Log("REST", $"{driver.DriverName} couldn't start fallback sleep after Motel money check.");
                 }
                 return;
 
@@ -456,12 +466,24 @@ public partial class GameBootstrap
                 return;
 
             case DriverRescuePhase.IdleWander:
+                if (driver.LifeGoal == WorkerLifeGoal.Eat ||
+                    driver.LifeGoal == WorkerLifeGoal.Sleep ||
+                    driver.LifeGoal == WorkerLifeGoal.Leisure)
+                {
+                    driver.WalkPhase = DriverRescuePhase.IdlePhoneCall;
+                    driver.WalkPath.Clear();
+                    driver.WalkWaypointIndex = 0;
+                    driver.WalkAnimationTime = 0f;
+                    SessionDebugLogger.Log("IDLE", $"{driver.DriverName} reached free fallback point for {driver.LifeGoal}.");
+                    return;
+                }
+
                 driver.WalkPhase = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
                 driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
-                SessionDebugLogger.Log("IDLE", $"{driver.DriverName} reached motel idle point.");
+                SessionDebugLogger.Log("IDLE", $"{driver.DriverName} reached idle point.");
                 return;
 
             case DriverRescuePhase.IdleWalkToBench:
@@ -530,8 +552,8 @@ public partial class GameBootstrap
                 {
                     if (driver.LifeGoal == WorkerLifeGoal.Leisure)
                     {
-                        driver.HadLeisureToday = true;
                         driver.LifeGoal = WorkerLifeGoal.None;
+                        SetWorkerNeedRetryCooldown(driver, WorkerNeedKind.Leisure, GetWorkerServiceUnavailableReason(driver, LocationType.Bar));
                         SessionDebugLogger.Log("LIFE", $"{driver.DriverName} could not complete Bar leisure after arrival; reason={GetWorkerServiceUnavailableReason(driver, LocationType.Bar)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
                         ContinueWorkerLifeCycle(driver, currentPosition);
                         return;
@@ -548,7 +570,9 @@ public partial class GameBootstrap
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
-                if (locations.TryGetValue(LocationType.Canteen, out LocationData canteenData) && canteenData.FoodStored > 0)
+                if (locations.TryGetValue(LocationType.Canteen, out LocationData canteenData) &&
+                    canteenData.FoodStored > 0 &&
+                    driver.Money >= canteenData.ServiceFee)
                 {
                     driver.WalkPhase = DriverRescuePhase.IdleAtCanteen;
                     canteenData.FoodStored = Mathf.Max(0, canteenData.FoodStored - 1);
@@ -573,9 +597,15 @@ public partial class GameBootstrap
                 {
                     if (driver.LifeGoal == WorkerLifeGoal.Eat)
                     {
-                        driver.AteToday = true;
                         driver.LifeGoal = WorkerLifeGoal.None;
-                        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} could not complete Canteen meal after arrival; reason={GetWorkerServiceUnavailableReason(driver, LocationType.Canteen)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
+                        string canteenReason = GetWorkerServiceUnavailableReason(driver, LocationType.Canteen);
+                        if (IsCanteenBlockedByMoney(driver, canteenReason) && TryStartWorkerTrashCanMealFallback(driver, currentPosition, canteenReason))
+                        {
+                            return;
+                        }
+
+                        SetWorkerNeedRetryCooldown(driver, WorkerNeedKind.Meal, canteenReason);
+                        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} could not complete Canteen meal after arrival; reason={canteenReason}; snapshot={FormatWorkerNeedsDebug(driver)}.");
                         ContinueWorkerLifeCycle(driver, currentPosition);
                         return;
                     }
@@ -585,6 +615,15 @@ public partial class GameBootstrap
                     BuildDriverWalkPath(driver, currentPosition, driver.MotelIdlePosition);
                     SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at Canteen - no Food left, wandering back.");
                 }
+                return;
+
+            case DriverRescuePhase.IdleWalkToTrashCan:
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.WalkPhase = DriverRescuePhase.IdleAtTrashCan;
+                ApplyWorkerMoneyFallbackEffect(driver);
+                SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} started trash can meal fallback; balance=${driver.Money}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
                 return;
 
             case DriverRescuePhase.IdleWalkToGamblingHall:
@@ -620,21 +659,28 @@ public partial class GameBootstrap
                 if (driver.WarehouseDeliveryTarget.HasValue &&
                     locations.TryGetValue(driver.WarehouseDeliveryTarget.Value, out LocationData serviceBuilding))
                 {
-                    switch (driver.WarehouseDeliveryResourceType)
+                    int carriedAmount = Mathf.Max(1, driver.WarehouseDeliveryAmount);
+                    int acceptedAmount = AddServiceResource(serviceBuilding, driver.WarehouseDeliveryResourceType, carriedAmount);
+                    int overflowAmount = Mathf.Max(0, carriedAmount - acceptedAmount);
+                    if (overflowAmount > 0 &&
+                        locations.TryGetValue(LocationType.Warehouse, out LocationData warehouseOverflow))
                     {
-                        case WarehouseResourceType.Fuel:
-                            serviceBuilding.FuelStored = Mathf.Min(serviceBuilding.FuelStored + 1, GasStationMaxFuelStorage);
-                            break;
-                        case WarehouseResourceType.Alcohol:
-                            serviceBuilding.AlcoholStored = Mathf.Min(serviceBuilding.AlcoholStored + 1, BarMaxAlcoholStorage);
-                            break;
-                        case WarehouseResourceType.Food:
-                            serviceBuilding.FoodStored = Mathf.Min(serviceBuilding.FoodStored + 1, CanteenMaxFoodStorage);
-                            break;
+                        switch (driver.WarehouseDeliveryResourceType)
+                        {
+                            case WarehouseResourceType.Fuel:
+                                warehouseOverflow.FuelStored = Mathf.Min(warehouseOverflow.FuelStored + overflowAmount, WarehouseMaxFuelStorage);
+                                break;
+                            case WarehouseResourceType.Alcohol:
+                                warehouseOverflow.AlcoholStored = Mathf.Min(warehouseOverflow.AlcoholStored + overflowAmount, WarehouseMaxAlcoholStorage);
+                                break;
+                            case WarehouseResourceType.Food:
+                                warehouseOverflow.FoodStored = Mathf.Min(warehouseOverflow.FoodStored + overflowAmount, WarehouseMaxFoodStorage);
+                                break;
+                        }
                     }
                     SessionDebugLogger.Log(
                         "WAREHOUSE",
-                        $"{driver.DriverName} delivered {GetWarehouseResourceTypeLabel(driver.WarehouseDeliveryResourceType)} x{Mathf.Max(1, driver.WarehouseDeliveryAmount)} to {serviceBuilding.Label}.");
+                        $"{driver.DriverName} delivered {GetWarehouseResourceTypeLabel(driver.WarehouseDeliveryResourceType)} x{acceptedAmount}/{carriedAmount} to {serviceBuilding.Label}; overflowReturned={overflowAmount}.");
                 }
                 ClearWarehouseDeliveryCargo(driver);
                 // Return to Warehouse, using the local bus if it makes sense
@@ -909,6 +955,9 @@ public partial class GameBootstrap
             case DriverRescuePhase.IdlePhoneCall:
                 ApplyDriverPhoneCallPose(driver);
                 return;
+            case DriverRescuePhase.IdleAtTrashCan:
+                ApplyDriverTrashMealPose(driver);
+                return;
             case DriverRescuePhase.IdlePettingCat:
                 ApplyDriverPettingCatPose(driver);
                 return;
@@ -923,6 +972,26 @@ public partial class GameBootstrap
         }
 
         ApplyDriverPose(driver, swing, bob);
+    }
+
+    private void ApplyDriverTrashMealPose(DriverAgent driver)
+    {
+        float rummage = Mathf.Sin(Time.time * 8f) * 8f;
+        driver.DriverVisualRoot.localPosition = new Vector3(0f, -0.04f, 0f);
+        driver.DriverVisualRoot.localRotation = Quaternion.Euler(0f, rummage * 0.18f, 0f);
+
+        if (driver.DriverBodyTransform != null)
+            driver.DriverBodyTransform.localRotation = Quaternion.Euler(24f, 0f, 0f);
+        if (driver.DriverHeadTransform != null)
+            driver.DriverHeadTransform.localRotation = Quaternion.Euler(16f, 0f, 0f);
+        if (driver.DriverLeftArmTransform != null)
+            driver.DriverLeftArmTransform.localRotation = Quaternion.Euler(72f + rummage, -18f, -8f);
+        if (driver.DriverRightArmTransform != null)
+            driver.DriverRightArmTransform.localRotation = Quaternion.Euler(72f - rummage, 18f, 8f);
+        if (driver.DriverLeftLegTransform != null)
+            driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-5f, 0f, 0f);
+        if (driver.DriverRightLegTransform != null)
+            driver.DriverRightLegTransform.localRotation = Quaternion.Euler(5f, 0f, 0f);
     }
 
     private void ApplyDriverSittingPose(DriverAgent driver)

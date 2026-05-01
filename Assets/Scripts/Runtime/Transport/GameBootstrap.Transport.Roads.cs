@@ -147,21 +147,10 @@ public partial class GameBootstrap
 
         roadCells.Add(cell);
 
-        GameObject road = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        GameObject road = new($"Road_{cell.x}_{cell.y}");
         road.name = $"Road_{cell.x}_{cell.y}";
         road.transform.SetParent(roadsRoot, false);
-        road.transform.position = GetCellCenter(cell) + new Vector3(0f, RoadHeight, 0f);
-        road.transform.localScale = new Vector3(1.04f, 0.18f, 1.04f);
-        ApplyStylizedRoadMaterial(road, cell.x, cell.y, isHighway: true, isShoulder: false);
-        ConfigureStaticVisual(road);
-
-        GameObject roadTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        roadTop.name = "RoadTop";
-        roadTop.transform.SetParent(road.transform, false);
-        roadTop.transform.localPosition = new Vector3(0f, 0.28f, 0f);
-        roadTop.transform.localScale = new Vector3(0.84f, 0.16f, 0.84f);
-        ApplyStylizedRoadMaterial(roadTop, cell.x, cell.y, isHighway: true, isShoulder: true);
-        ConfigureStaticVisual(roadTop);
+        road.transform.localPosition = Vector3.zero;
         roadVisuals[cell] = road;
 
         RefreshRoadVisual(cell);
@@ -178,8 +167,12 @@ public partial class GameBootstrap
         {
             RebuildUnifiedRoadVisuals();
         }
-        SessionDebugLogger.Log("ROAD", $"Added road at cell ({cell.x},{cell.y}).");
+        if (SessionDebugLogger.IsVerboseEnabled("ROAD_TRACE"))
+        {
+            SessionDebugLogger.LogVerbose("ROAD_TRACE", $"Added road at cell ({cell.x},{cell.y}).");
+        }
     }
+
     private void RemoveRoad(Vector2Int cell)
     {
         if (!roadCells.Remove(cell))

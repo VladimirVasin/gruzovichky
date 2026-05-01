@@ -286,7 +286,7 @@ public partial class GameBootstrap
         }
 
         lastShiftsHudDebugState = state;
-        SessionDebugLogger.Log("SHIFTS_HUD", state);
+        SessionDebugLogger.LogVerbose("SHIFTS_HUD", state);
     }
 
     private string BuildShiftsHudDebugState(string reason)
@@ -569,6 +569,21 @@ public partial class GameBootstrap
             }
         }
         return null;
+    }
+
+    private int CountLogisticsWorkers(LocationType buildingType)
+    {
+        int count = 0;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent d = driverAgents[i];
+            if (d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == buildingType)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private void AssignWorkerToBuilding(DriverAgent driver, LogisticsSlotUi slot)

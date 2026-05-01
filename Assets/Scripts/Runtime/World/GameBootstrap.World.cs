@@ -15,6 +15,8 @@ public partial class GameBootstrap
     {
         locations.Clear();
         localStops.Clear();
+        locationTrashCanMealTargets.Clear();
+        hasShownLocalBusStopMinimumHint = false;
         personalHouses.Clear();
         personalHouseSelectionHighlights.Clear();
         selectedPersonalHouseIndex = -1;
@@ -373,6 +375,7 @@ public partial class GameBootstrap
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         RebuildRoadSigns();
+        ShowLocalBusStopMinimumHintIfNeeded();
         SessionDebugLogger.Log("BUILD", $"Placed Stop at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         NotifyTutorialLocalBusStopBuilt();
         return true;

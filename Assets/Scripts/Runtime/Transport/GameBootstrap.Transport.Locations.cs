@@ -182,6 +182,7 @@ public partial class GameBootstrap
             CreateMotelDecoration(root.transform, center, min, max, anchor);
         }
 
+        CreateLocationTrashCans(type, root.transform, center, min, max, anchor);
         CreateLocationNightLights(type, root.transform, center, size);
         CreateLocationWindowLanguage(type, root.transform, center, size);
 
@@ -224,6 +225,7 @@ public partial class GameBootstrap
                     ApplyColor,
                     ConfigureStaticVisual));
             }
+            UpdateLocalBusStopNetworkWarnings();
         }
         else if (type == LocationType.PersonalHouse)
         {
@@ -250,6 +252,101 @@ public partial class GameBootstrap
                     ApplyColor,
                     ConfigureStaticVisual);
             }
+        }
+    }
+
+    private void CreateLocationTrashCans(LocationType type, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        if (type == LocationType.Stop || type == LocationType.IntercityStop)
+        {
+            return;
+        }
+
+        int targetCount = type switch
+        {
+            LocationType.CityPark      => 4,
+            LocationType.CarMarket     => 3,
+            LocationType.Parking       => 3,
+            LocationType.Warehouse     => 2,
+            LocationType.GasStation    => 2,
+            LocationType.Sawmill       => 2,
+            LocationType.FurnitureFactory => 2,
+            _                          => 1
+        };
+
+        Vector3[] candidatePositions =
+        {
+            new(min.x - 0.28f, 0.12f, min.y + 0.38f),
+            new(max.x + 1.28f, 0.12f, min.y + 0.38f),
+            new(min.x - 0.28f, 0.12f, max.y + 0.62f),
+            new(max.x + 1.28f, 0.12f, max.y + 0.62f),
+            new(center.x, 0.12f, min.y - 0.26f),
+            new(center.x, 0.12f, max.y + 1.26f),
+            new(min.x - 0.26f, 0.12f, center.z),
+            new(max.x + 1.26f, 0.12f, center.z),
+        };
+
+        int placed = 0;
+        int startIndex = Mathf.Abs((int)type + min.x * 7 + min.y * 11 + anchor.x * 13 + anchor.y * 17) % candidatePositions.Length;
+        for (int i = 0; i < candidatePositions.Length && placed < targetCount; i++)
+        {
+            Vector3 pos = candidatePositions[(startIndex + i) % candidatePositions.Length];
+            Vector2Int cell = new(Mathf.FloorToInt(pos.x), Mathf.FloorToInt(pos.z));
+            if (!IsInsideGrid(cell) || waterCells.Contains(cell) || edgeHighwayCells.Contains(cell))
+            {
+                continue;
+            }
+
+            CreateTrashCan(parent, pos, placed);
+            RegisterTrashCanMealTarget(pos);
+            placed++;
+        }
+    }
+
+    private void RegisterTrashCanMealTarget(Vector3 localPosition)
+    {
+        Vector3 target = localPosition;
+        target.y = SampleTerrainHeight(localPosition.x, localPosition.z);
+        locationTrashCanMealTargets.Add(target);
+    }
+
+    private void CreateTrashCan(Transform parent, Vector3 localPosition, int variant)
+    {
+        GameObject root = new("TrashCan");
+        root.transform.SetParent(parent, false);
+        root.transform.localPosition = localPosition;
+        root.transform.localRotation = Quaternion.Euler(0f, variant * 37f, 0f);
+
+        Color bodyColor = variant % 2 == 0
+            ? new Color(0.18f, 0.25f, 0.22f)
+            : new Color(0.22f, 0.22f, 0.24f);
+        Color rimColor = new Color(0.08f, 0.09f, 0.09f);
+
+        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        body.transform.SetParent(root.transform, false);
+        body.transform.localPosition = new Vector3(0f, 0.16f, 0f);
+        body.transform.localScale = new Vector3(0.18f, 0.22f, 0.18f);
+        ApplyColor(body, bodyColor, VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(body, VisualSmoothnessVehicleMetal);
+        if (body.TryGetComponent(out Collider bodyCollider)) bodyCollider.enabled = false;
+
+        GameObject lid = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        lid.transform.SetParent(root.transform, false);
+        lid.transform.localPosition = new Vector3(0f, 0.39f, 0f);
+        lid.transform.localScale = new Vector3(0.21f, 0.035f, 0.21f);
+        ApplyColor(lid, rimColor, VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(lid, VisualSmoothnessVehicleMetal);
+        if (lid.TryGetComponent(out Collider lidCollider)) lidCollider.enabled = false;
+
+        for (int side = -1; side <= 1; side += 2)
+        {
+            GameObject handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            handle.transform.SetParent(root.transform, false);
+            handle.transform.localPosition = new Vector3(side * 0.12f, 0.27f, 0f);
+            handle.transform.localScale = new Vector3(0.035f, 0.10f, 0.04f);
+            ApplyColor(handle, rimColor, VisualSmoothnessVehicleMetal);
+            ConfigureStaticVisual(handle, VisualSmoothnessVehicleMetal);
+            if (handle.TryGetComponent(out Collider handleCollider)) handleCollider.enabled = false;
         }
     }
 
@@ -426,6 +523,94 @@ public partial class GameBootstrap
         {
             orderedStops[i].StopNumber = i + 1;
         }
+    }
+
+    private void ShowLocalBusStopMinimumHintIfNeeded()
+    {
+        if (hasShownLocalBusStopMinimumHint || localStops.Count != 1)
+        {
+            return;
+        }
+
+        hasShownLocalBusStopMinimumHint = true;
+        PushFeedEvent(
+            "Bus network is offline: build at least 2 local bus stops.",
+            "Автобусная сеть не работает: нужна минимум 2-я остановка.",
+            FeedEventType.Warning);
+    }
+
+    private void UpdateLocalBusStopNetworkWarnings()
+    {
+        bool shouldWarn = localStops.Count == 1;
+        for (int i = 0; i < localStops.Count; i++)
+        {
+            LocationData stop = localStops[i];
+            if (stop?.RootObject == null)
+            {
+                continue;
+            }
+
+            if (stop.LocalBusWarningMarker == null)
+            {
+                stop.LocalBusWarningMarker = CreateLocalBusStopWarningMarker(stop);
+            }
+
+            if (stop.LocalBusWarningMarker != null)
+            {
+                stop.LocalBusWarningMarker.SetActive(shouldWarn);
+            }
+        }
+    }
+
+    private GameObject CreateLocalBusStopWarningMarker(LocationData stop)
+    {
+        GameObject root = new($"LocalBusStopWarning_{stop.StopNumber}");
+        root.transform.SetParent(stop.RootObject.transform, false);
+
+        Vector3 center = new(
+            (stop.Min.x + stop.Max.x + 1) * 0.5f,
+            1.55f,
+            (stop.Min.y + stop.Max.y + 1) * 0.5f);
+        root.transform.localPosition = center;
+
+        GameObject backplate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        backplate.name = "WarningBackplate";
+        backplate.transform.SetParent(root.transform, false);
+        backplate.transform.localPosition = Vector3.zero;
+        backplate.transform.localScale = new Vector3(0.34f, 0.34f, 0.06f);
+        ApplyColor(backplate, new Color(0.95f, 0.72f, 0.16f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(backplate, VisualSmoothnessVehicleMetal);
+        if (backplate.TryGetComponent(out Collider backplateCollider))
+        {
+            backplateCollider.enabled = false;
+        }
+
+        GameObject line = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        line.name = "WarningLine";
+        line.transform.SetParent(root.transform, false);
+        line.transform.localPosition = new Vector3(0f, 0.05f, -0.04f);
+        line.transform.localScale = new Vector3(0.055f, 0.18f, 0.035f);
+        ApplyColor(line, new Color(0.12f, 0.10f, 0.08f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(line, VisualSmoothnessVehicleMetal);
+        if (line.TryGetComponent(out Collider lineCollider))
+        {
+            lineCollider.enabled = false;
+        }
+
+        GameObject dot = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        dot.name = "WarningDot";
+        dot.transform.SetParent(root.transform, false);
+        dot.transform.localPosition = new Vector3(0f, -0.11f, -0.04f);
+        dot.transform.localScale = new Vector3(0.055f, 0.055f, 0.035f);
+        ApplyColor(dot, new Color(0.12f, 0.10f, 0.08f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(dot, VisualSmoothnessVehicleMetal);
+        if (dot.TryGetComponent(out Collider dotCollider))
+        {
+            dotCollider.enabled = false;
+        }
+
+        root.SetActive(false);
+        return root;
     }
 
     private List<LocationData> GetOrderedLocalStops()
@@ -902,6 +1087,7 @@ public partial class GameBootstrap
                 new Color(1f, 0.9f, 0.72f),
                 1.15f,
                 3.2f);
+            CreateLocationPerimeterGlow(type, parent, center, size);
             return;
         }
 
@@ -919,6 +1105,7 @@ public partial class GameBootstrap
                     0.88f,
                     4.0f);
             }
+            CreateLocationPerimeterGlow(type, parent, center, size);
             return;
         }
 
@@ -929,6 +1116,7 @@ public partial class GameBootstrap
                 new Color(0.24f, 0.20f, 0.14f), new Color(1f, 0.90f, 0.68f), 0.75f, 3.0f);
             CreateLocationNightLight(parent, center + new Vector3(0.4f, 1.0f, 0f),
                 new Color(0.24f, 0.20f, 0.14f), new Color(1f, 0.90f, 0.68f), 0.75f, 3.0f);
+            CreateLocationPerimeterGlow(type, parent, center, size);
             return;
         }
 
@@ -999,6 +1187,71 @@ public partial class GameBootstrap
                 new Color(0.30f, 0.92f, 0.90f),
                 1.56f,
                 4.9f);
+        }
+
+        CreateLocationPerimeterGlow(type, parent, center, size);
+    }
+
+    private void CreateLocationPerimeterGlow(LocationType type, Transform parent, Vector3 center, Vector2Int size)
+    {
+        if (type == LocationType.Stop || type == LocationType.IntercityStop)
+        {
+            return;
+        }
+
+        float xOffset = Mathf.Max(0.62f, size.x * 0.5f - 0.12f);
+        float zOffset = Mathf.Max(0.62f, size.y * 0.5f - 0.12f);
+        float y = type == LocationType.CityPark ? 0.76f : 0.72f;
+        float intensity = type switch
+        {
+            LocationType.GamblingHall => 0.42f,
+            LocationType.Bar          => 0.38f,
+            LocationType.Canteen      => 0.32f,
+            LocationType.CityPark     => 0.30f,
+            LocationType.CarMarket    => 0.34f,
+            LocationType.Warehouse    => 0.32f,
+            _                         => 0.28f
+        };
+        float range = type switch
+        {
+            LocationType.CityPark  => 4.6f,
+            LocationType.CarMarket => 4.4f,
+            LocationType.Warehouse => 4.1f,
+            _                      => 3.6f
+        };
+
+        Color offColor = new(0.17f, 0.13f, 0.08f);
+        Color onColor = type switch
+        {
+            LocationType.GamblingHall => new Color(1f, 0.48f, 0.95f),
+            LocationType.Bar          => new Color(1f, 0.68f, 0.26f),
+            LocationType.Canteen      => new Color(1f, 0.95f, 0.82f),
+            _                         => new Color(1f, 0.86f, 0.58f)
+        };
+
+        Vector3[] positions =
+        {
+            center + new Vector3(-xOffset, y, -zOffset),
+            center + new Vector3(xOffset, y, -zOffset),
+            center + new Vector3(-xOffset, y, zOffset),
+            center + new Vector3(xOffset, y, zOffset),
+        };
+
+        foreach (Vector3 pos in positions)
+        {
+            CreateLocationNightLight(parent, pos, offColor, onColor, intensity, range);
+        }
+
+        if (size.x >= 4)
+        {
+            CreateLocationNightLight(parent, center + new Vector3(0f, y, -zOffset), offColor, onColor, intensity * 0.85f, range);
+            CreateLocationNightLight(parent, center + new Vector3(0f, y, zOffset), offColor, onColor, intensity * 0.85f, range);
+        }
+
+        if (size.y >= 4)
+        {
+            CreateLocationNightLight(parent, center + new Vector3(-xOffset, y, 0f), offColor, onColor, intensity * 0.85f, range);
+            CreateLocationNightLight(parent, center + new Vector3(xOffset, y, 0f), offColor, onColor, intensity * 0.85f, range);
         }
     }
 

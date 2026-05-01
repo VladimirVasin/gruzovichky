@@ -214,6 +214,9 @@ public partial class GameBootstrap
         public float HoursSinceMeal = 0f;
         public float HoursSinceSleep = 0f;
         public float HoursSinceLeisure = 0f;
+        public float NextMealRetryAtWorldHour;
+        public float NextSleepRetryAtWorldHour;
+        public float NextLeisureRetryAtWorldHour;
         public WorkerNeedStatus LastMealNeedStatus = WorkerNeedStatus.Ok;
         public WorkerNeedStatus LastSleepNeedStatus = WorkerNeedStatus.Ok;
         public WorkerNeedStatus LastLeisureNeedStatus = WorkerNeedStatus.Ok;
