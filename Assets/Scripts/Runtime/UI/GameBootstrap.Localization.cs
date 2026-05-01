@@ -270,6 +270,7 @@ public partial class GameBootstrap
         { "Bus Stop", "Автобусная остановка" },
         { "Service Fee", "Стоимость услуги" },
         { "Workers inside", "Рабочих внутри" },
+        { "Worker on shift", "Рабочий на смене" },
         { "Finished goods storage", "Склад готовой продукции" },
         { "Production paused at night", "Производство остановлено ночью" },
 
@@ -298,9 +299,12 @@ public partial class GameBootstrap
         { "Sell / Exports", "Продажа / экспорт" },
         { "Send on Trade Run", "Отправить в торговый рейс" },
         { "No money movements yet.", "Движений денег пока нет." },
-        { "Assign an Intercity driver to unlock trade dispatch.", "Назначьте межгородского водителя, чтобы открыть торговлю." },
+        { "Assign a Truck Driver shift to unlock trade dispatch.", "Назначьте водителя грузовика на смену, чтобы открыть торговлю." },
         { "Ready to dispatch via edge highway", "Готово к рейсу через магистраль" },
-        { "Intercity driver is busy", "Межгородский водитель занят" },
+        { "No available Truck Driver on shift", "Нет доступного водителя грузовика на смене" },
+        { "Trade driver is still arriving", "Торговый водитель ещё прибывает" },
+        { "Trade driver is busy", "Торговый водитель занят" },
+        { "Trade needs an available parked truck", "Для торговли нужен свободный грузовик на парковке" },
 
         { "Regional Map", "Карта регионов" },
         { "Open/Close: M", "Открыть/закрыть: M" },

@@ -410,8 +410,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        TruckAgent assignedTruck = GetAssignedTruckForDriver(driver);
-        if (assignedTruck == null)
+        if (!TryReserveAvailableTruckForDriver(driver, out TruckAgent assignedTruck, "freight shift activation"))
         {
             return;
         }

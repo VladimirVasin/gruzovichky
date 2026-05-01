@@ -98,38 +98,43 @@ public partial class GameBootstrap : MonoBehaviour
     {
         if (driver == null || driver.DriverObject == null) return false;
 
+        WorkerLifeGoal selectedGoalBefore = driver.LifeGoal;
         if (!driver.AteToday && ShouldWorkerSeekMeal(driver) && TryStartWorkerLifeGoal(driver, WorkerLifeGoal.Eat, startPosition))
         {
-            LogWorkerDecision(driver, "life-goal-selected", "Meal need is due", true);
+            LogWorkerDecision(driver, "life-goal-selected", "Meal need is due", true, selectedGoalBefore, driver.LifeGoal);
             return true;
         }
 
+        selectedGoalBefore = driver.LifeGoal;
         if (!driver.HadLeisureToday && ShouldWorkerSeekLeisure(driver) && TryStartWorkerLifeGoal(driver, WorkerLifeGoal.Leisure, startPosition))
         {
-            LogWorkerDecision(driver, "life-goal-selected", "Leisure need is due", true);
+            LogWorkerDecision(driver, "life-goal-selected", "Leisure need is due", true, selectedGoalBefore, driver.LifeGoal);
             return true;
         }
 
+        selectedGoalBefore = driver.LifeGoal;
         if (!driver.SleptToday && ShouldWorkerSeekSleep(driver) && TryStartWorkerLifeGoal(driver, WorkerLifeGoal.Sleep, startPosition))
         {
-            LogWorkerDecision(driver, "life-goal-selected", "Sleep need is due", true);
+            LogWorkerDecision(driver, "life-goal-selected", "Sleep need is due", true, selectedGoalBefore, driver.LifeGoal);
             return true;
         }
 
+        selectedGoalBefore = driver.LifeGoal;
         if (driver.OwnedCarModelIndex < 0 &&
             driver.Money >= CarPurchasePrice &&
             locations.ContainsKey(LocationType.CarMarket) &&
             TryStartWorkerBuyCar(driver, startPosition))
         {
-            LogWorkerDecision(driver, "life-goal-selected", "Buying car", true);
+            LogWorkerDecision(driver, "life-goal-selected", "Buying car", true, selectedGoalBefore, driver.LifeGoal);
             return true;
         }
 
+        selectedGoalBefore = driver.LifeGoal;
         if (driver.AssignedPersonalHouseIndex < 0 &&
             driver.Money >= HousePurchasePrice &&
             TryStartWorkerBuyHouse(driver, startPosition))
         {
-            LogWorkerDecision(driver, "life-goal-selected", "Buying personal house", true);
+            LogWorkerDecision(driver, "life-goal-selected", "Buying personal house", true, selectedGoalBefore, driver.LifeGoal);
             return true;
         }
 
@@ -493,11 +498,13 @@ public partial class GameBootstrap : MonoBehaviour
 
         Vector3 center = GetLocationCenter(park);
         center.y = SampleTerrainHeight(center.x, center.z);
-        Vector3 strollPoint = GetCityParkPromenadePoint(park, driver.DriverId);
+        int activityStyle = Random.Range(0, 5);
+        Vector3 strollPoint = GetCityParkPromenadePoint(park, driver.DriverId, activityStyle);
 
-        if (Random.value < 0.45f && TryGetFreeCityParkBench(out int benchIndex, out Vector3 benchPosition))
+        if (activityStyle == 1 && TryGetFreeCityParkBench(out int benchIndex, out Vector3 benchPosition))
         {
             driver.CityParkBenchIndex = benchIndex;
+            driver.CityParkActivityStyle = 1;
             driver.WalkPath.Add(center);
             driver.WalkPath.Add(benchPosition);
             driver.WalkTargetWorld = benchPosition;
@@ -507,16 +514,18 @@ public partial class GameBootstrap : MonoBehaviour
             return true;
         }
 
+        driver.CityParkActivityStyle = activityStyle;
         driver.WalkPath.Add(center);
         driver.WalkPath.Add(strollPoint);
         driver.WalkTargetWorld = strollPoint;
-        driver.IdleActivityTimer = WorkerCityParkDuration * Random.Range(0.75f, 1.15f);
-        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered City Park and started a promenade.");
-        LogWorkerDecision(driver, "city-park-promenade", "walking internal park path", true);
+        driver.IdleActivityTimer = WorkerCityParkDuration * Random.Range(0.70f, 1.20f);
+        string activityLabel = GetCityParkActivityLabel(activityStyle);
+        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered City Park and started activity={activityLabel}.");
+        LogWorkerDecision(driver, "city-park-promenade", activityLabel, true);
         return true;
     }
 
-    private Vector3 GetCityParkPromenadePoint(LocationData park, int seed)
+    private Vector3 GetCityParkPromenadePoint(LocationData park, int seed, int activityStyle)
     {
         float cx = (park.Min.x + park.Max.x + 1) * 0.5f;
         float cz = (park.Min.y + park.Max.y + 1) * 0.5f;
@@ -531,9 +540,54 @@ public partial class GameBootstrap : MonoBehaviour
         };
 
         Vector3 target = new(cx, 0f, cz);
-        target += offsets[Mathf.Abs(seed + Mathf.RoundToInt(Time.time * 10f)) % offsets.Length];
+        target += offsets[Mathf.Abs(seed + activityStyle * 17 + Mathf.RoundToInt(Time.time * 10f)) % offsets.Length];
         target.y = SampleTerrainHeight(target.x, target.z);
         return target;
+    }
+
+    private static string GetCityParkActivityLabel(int activityStyle)
+    {
+        return activityStyle switch
+        {
+            1 => "bench rest",
+            2 => "stretching",
+            3 => "watching trees",
+            4 => "quiet picnic",
+            _ => "promenade"
+        };
+    }
+
+    private bool TryStartCityParkExit(DriverAgent driver, Vector3 currentPosition)
+    {
+        if (driver == null || !locations.TryGetValue(LocationType.CityPark, out LocationData park))
+        {
+            return false;
+        }
+
+        ReleaseBench(driver);
+        driver.CityParkPromenadeStep = 2;
+        driver.WalkPhase = DriverRescuePhase.IdleExitCityPark;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        driver.WalkAnimationTime = 0f;
+        Vector3 exitPoint = GetNearestCityParkEntranceTarget(park, currentPosition);
+        driver.WalkPath.Add(exitPoint);
+        driver.WalkTargetWorld = exitPoint;
+        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} finished City Park activity and is walking out via nearest entrance.");
+        LogWorkerDecision(driver, "city-park-exit", "walking to park entrance", true);
+        return true;
+    }
+
+    private void CompleteCityParkLeisure(DriverAgent driver, Vector3 currentPosition)
+    {
+        driver.CityParkPromenadeStep = 0;
+        driver.CityParkActivityStyle = 0;
+        driver.WalkPhase = DriverRescuePhase.None;
+        ResetWorkerNeedTimer(driver, WorkerNeedKind.Leisure);
+        driver.HadLeisureToday = true;
+        driver.LifeGoal = WorkerLifeGoal.None;
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} completed City Park leisure after exiting; snapshot={FormatWorkerNeedsDebug(driver)}.");
+        ContinueWorkerLifeCycle(driver, currentPosition);
     }
 
     private bool TryGetFreeCityParkBench(out int idx, out Vector3 pos)
@@ -645,8 +699,12 @@ public partial class GameBootstrap : MonoBehaviour
                 }
                 else if (driver.WalkPhase == DriverRescuePhase.IdleAtCityPark)
                 {
+                    if (completedGoal == WorkerLifeGoal.Leisure && TryStartCityParkExit(driver, driver.DriverObject.transform.position))
+                    {
+                        return;
+                    }
+
                     ReleaseBench(driver);
-                    driver.CityParkPromenadeStep = 0;
                 }
 
                 if (completedPhase == DriverRescuePhase.IdleSmoking)
@@ -754,7 +812,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
         else if (roll < 0.75f && TryGetNearestFreeBench(startPosition, 14f, out int bIdx, out Vector3 bPos))
         {
-            if (bIdx < benchOccupied.Length) benchOccupied[bIdx] = true;
+            MarkRoadsideBenchOccupied(bIdx);
             driver.SittingBenchIndex = bIdx;
             driver.IdleActivityTimer = Random.Range(15f, 45f);
             driver.WalkTargetWorld = bPos;

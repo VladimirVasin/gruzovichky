@@ -206,8 +206,8 @@ public partial class GameBootstrap : MonoBehaviour
         hull.transform.SetParent(boatRoot.transform, false);
         hull.transform.localPosition = new Vector3(0f, -0.06f, 0f);
         hull.transform.localScale = new Vector3(0.52f, 0.14f, 1.2f);
-        ApplyColor(hull, hullColor);
-        ConfigureShadowVisual(hull);
+        ApplyColor(hull, hullColor, VisualSmoothnessWood);
+        ConfigureShadowVisual(hull, VisualSmoothnessWood);
 
         // Hull sides вЂ” raised gunwale strips along the length
         foreach (float sx in new[] { -0.24f, 0.24f })
@@ -216,8 +216,8 @@ public partial class GameBootstrap : MonoBehaviour
             gunwale.transform.SetParent(boatRoot.transform, false);
             gunwale.transform.localPosition = new Vector3(sx, 0.01f, 0f);
             gunwale.transform.localScale = new Vector3(0.06f, 0.08f, 1.18f);
-            ApplyColor(gunwale, hullColor);
-            ConfigureShadowVisual(gunwale);
+            ApplyColor(gunwale, hullColor, VisualSmoothnessWood);
+            ConfigureShadowVisual(gunwale, VisualSmoothnessWood);
         }
 
         // Bow вЂ” tapered front end (positive Z = front)
@@ -226,56 +226,56 @@ public partial class GameBootstrap : MonoBehaviour
         bow.transform.localPosition = new Vector3(0f, -0.05f, 0.62f);
         bow.transform.localScale = new Vector3(0.36f, 0.12f, 0.22f);
         bow.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
-        ApplyColor(bow, hullColor);
-        ConfigureShadowVisual(bow);
+        ApplyColor(bow, hullColor, VisualSmoothnessWood);
+        ConfigureShadowVisual(bow, VisualSmoothnessWood);
 
         // Cabin вЂ” sits toward the rear
         GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cabin.transform.SetParent(boatRoot.transform, false);
         cabin.transform.localPosition = new Vector3(0f, 0.18f, -0.14f);
         cabin.transform.localScale = new Vector3(0.42f, 0.32f, 0.48f);
-        ApplyColor(cabin, cabinColor);
-        ConfigureShadowVisual(cabin);
+        ApplyColor(cabin, cabinColor, VisualSmoothnessBuildingWall);
+        ConfigureShadowVisual(cabin, VisualSmoothnessBuildingWall);
 
         // Roof
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(boatRoot.transform, false);
         roof.transform.localPosition = new Vector3(0f, 0.36f, -0.14f);
         roof.transform.localScale = new Vector3(0.46f, 0.07f, 0.52f);
-        ApplyColor(roof, roofColor);
-        ConfigureShadowVisual(roof);
+        ApplyColor(roof, roofColor, VisualSmoothnessRoofMetal);
+        ConfigureShadowVisual(roof, VisualSmoothnessRoofMetal);
 
         // Front cabin window (faces forward = +Z)
         GameObject window = GameObject.CreatePrimitive(PrimitiveType.Cube);
         window.transform.SetParent(boatRoot.transform, false);
         window.transform.localPosition = new Vector3(0f, 0.18f, 0.1f);
         window.transform.localScale = new Vector3(0.3f, 0.18f, 0.03f);
-        ApplyColor(window, windowColor);
-        ConfigureShadowVisual(window);
+        ApplyColor(window, windowColor, VisualSmoothnessGlass);
+        ConfigureShadowVisual(window, VisualSmoothnessGlass);
 
         // Chimney / smokestack
         GameObject chimney = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         chimney.transform.SetParent(boatRoot.transform, false);
         chimney.transform.localPosition = new Vector3(0f, 0.52f, -0.22f);
         chimney.transform.localScale = new Vector3(0.07f, 0.14f, 0.07f);
-        ApplyColor(chimney, new Color(0.14f, 0.14f, 0.16f));
-        ConfigureShadowVisual(chimney);
+        ApplyColor(chimney, new Color(0.14f, 0.14f, 0.16f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(chimney, VisualSmoothnessVehicleMetal);
 
         // Mast
         GameObject mast = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         mast.transform.SetParent(boatRoot.transform, false);
         mast.transform.localPosition = new Vector3(0f, 0.62f, 0.28f);
         mast.transform.localScale = new Vector3(0.03f, 0.28f, 0.03f);
-        ApplyColor(mast, new Color(0.72f, 0.64f, 0.52f));
-        ConfigureShadowVisual(mast);
+        ApplyColor(mast, new Color(0.72f, 0.64f, 0.52f), VisualSmoothnessWood);
+        ConfigureShadowVisual(mast, VisualSmoothnessWood);
 
         // Lantern head вЂ” glowing cube on top of mast
         GameObject lanternHead = GameObject.CreatePrimitive(PrimitiveType.Cube);
         lanternHead.transform.SetParent(boatRoot.transform, false);
         lanternHead.transform.localPosition = new Vector3(0f, 0.94f, 0.28f);
         lanternHead.transform.localScale = new Vector3(0.07f, 0.07f, 0.07f);
-        ApplyColor(lanternHead, new Color(0.34f, 0.30f, 0.22f));
-        ConfigureShadowVisual(lanternHead);
+        ApplyColor(lanternHead, new Color(0.34f, 0.30f, 0.22f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(lanternHead, VisualSmoothnessVehicleMetal);
         Renderer lanternRenderer = lanternHead.GetComponent<Renderer>();
 
         // Lantern point light
@@ -341,7 +341,7 @@ public partial class GameBootstrap : MonoBehaviour
         road.transform.position = GetCellCenter(cell) + new Vector3(0f, RoadHeight - 0.015f, 0f);
         road.transform.localScale = new Vector3(horizontal ? 1.12f : 0.94f, 0.16f, vertical ? 1.12f : 0.94f);
         ApplyStylizedRoadMaterial(road, cell.x, cell.y, isHighway: true, isShoulder: false);
-        ConfigureStaticVisual(road);
+        ConfigureStaticVisual(road, VisualSmoothnessAsphalt);
 
         GameObject roadTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roadTop.name = "EdgeHighwayTop";
@@ -349,7 +349,7 @@ public partial class GameBootstrap : MonoBehaviour
         roadTop.transform.localPosition = new Vector3(0f, 0.32f, 0f);
         roadTop.transform.localScale = new Vector3(horizontal ? 0.94f : 0.74f, 0.16f, vertical ? 0.94f : 0.74f);
         ApplyStylizedRoadMaterial(roadTop, cell.x, cell.y, isHighway: true, isShoulder: true);
-        ConfigureStaticVisual(roadTop);
+        ConfigureStaticVisual(roadTop, VisualSmoothnessAsphalt);
 
         if (horizontal)
         {
@@ -372,7 +372,7 @@ public partial class GameBootstrap : MonoBehaviour
         stripe.transform.localPosition = localPosition;
         stripe.transform.localScale = localScale;
         ApplyColor(stripe, new Color(0.88f, 0.83f, 0.68f));
-        ConfigureStaticVisual(stripe);
+        ConfigureStaticVisual(stripe, VisualSmoothnessAsphalt);
     }
 
     private void CreateEdgeHighwayCenterLine(Transform parent, int lowerLaneY, int upperLaneY)
@@ -386,7 +386,7 @@ public partial class GameBootstrap : MonoBehaviour
             dash.transform.position = new Vector3(x + 0.5f, GetTerrainHeight(new Vector2Int(x, lowerLaneY)) + RoadHeight + 0.06f, centerZ);
             dash.transform.localScale = new Vector3(0.68f, 0.04f, 0.08f);
             ApplyColor(dash, new Color(0.92f, 0.92f, 0.9f));
-            ConfigureStaticVisual(dash);
+            ConfigureStaticVisual(dash, VisualSmoothnessAsphalt);
         }
     }
 
@@ -599,78 +599,78 @@ public partial class GameBootstrap : MonoBehaviour
         body.transform.SetParent(parent, false);
         body.transform.localPosition = new Vector3(0f, 0.26f, 0f);
         body.transform.localScale = new Vector3(1.24f, 0.42f, 0.44f);
-        ApplyColor(body, bodyColor);
-        ConfigureShadowVisual(body);
+        ApplyColor(body, bodyColor, VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(body, VisualSmoothnessVehicleMetal);
 
         GameObject lowerBody = GameObject.CreatePrimitive(PrimitiveType.Cube);
         lowerBody.transform.SetParent(parent, false);
         lowerBody.transform.localPosition = new Vector3(0f, 0.16f, 0f);
         lowerBody.transform.localScale = new Vector3(1.18f, 0.1f, 0.42f);
-        ApplyColor(lowerBody, bodyColor * 0.72f);
-        ConfigureShadowVisual(lowerBody);
+        ApplyColor(lowerBody, bodyColor * 0.72f, VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(lowerBody, VisualSmoothnessVehicleMetal);
 
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(parent, false);
         roof.transform.localPosition = new Vector3(-0.02f, 0.56f, 0f);
         roof.transform.localScale = new Vector3(1.02f, 0.12f, 0.4f);
-        ApplyColor(roof, roofColor);
-        ConfigureShadowVisual(roof);
+        ApplyColor(roof, roofColor, VisualSmoothnessRoofMetal);
+        ConfigureShadowVisual(roof, VisualSmoothnessRoofMetal);
 
         GameObject windowBand = GameObject.CreatePrimitive(PrimitiveType.Cube);
         windowBand.transform.SetParent(parent, false);
         windowBand.transform.localPosition = new Vector3(-0.02f, 0.38f, 0f);
         windowBand.transform.localScale = new Vector3(0.94f, 0.18f, 0.46f);
-        ApplyColor(windowBand, windowColor);
-        ConfigureShadowVisual(windowBand);
+        ApplyColor(windowBand, windowColor, VisualSmoothnessGlass);
+        ConfigureShadowVisual(windowBand, VisualSmoothnessGlass);
 
         GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
         windshield.transform.SetParent(parent, false);
         windshield.transform.localPosition = new Vector3(0.56f, 0.41f, 0f);
         windshield.transform.localScale = new Vector3(0.12f, 0.2f, 0.38f);
-        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f));
-        ConfigureShadowVisual(windshield);
+        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(windshield, VisualSmoothnessGlass);
 
         GameObject rearWindow = GameObject.CreatePrimitive(PrimitiveType.Cube);
         rearWindow.transform.SetParent(parent, false);
         rearWindow.transform.localPosition = new Vector3(-0.56f, 0.39f, 0f);
         rearWindow.transform.localScale = new Vector3(0.08f, 0.17f, 0.34f);
-        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f));
-        ConfigureShadowVisual(rearWindow);
+        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(rearWindow, VisualSmoothnessGlass);
 
         GameObject headlightLeftVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
         headlightLeftVisual.transform.SetParent(parent, false);
         headlightLeftVisual.transform.localPosition = new Vector3(0.61f, 0.26f, -0.14f);
         headlightLeftVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f));
-        ConfigureShadowVisual(headlightLeftVisual);
+        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(headlightLeftVisual, VisualSmoothnessGlass);
 
         GameObject headlightRightVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
         headlightRightVisual.transform.SetParent(parent, false);
         headlightRightVisual.transform.localPosition = new Vector3(0.61f, 0.26f, 0.14f);
         headlightRightVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f));
-        ConfigureShadowVisual(headlightRightVisual);
+        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(headlightRightVisual, VisualSmoothnessGlass);
 
         GameObject sideStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
         sideStripe.transform.SetParent(parent, false);
         sideStripe.transform.localPosition = new Vector3(0f, 0.23f, 0f);
         sideStripe.transform.localScale = new Vector3(1.08f, 0.06f, 0.47f);
-        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f));
-        ConfigureShadowVisual(sideStripe);
+        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(sideStripe, VisualSmoothnessVehicleMetal);
 
         GameObject roofStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roofStripe.transform.SetParent(parent, false);
         roofStripe.transform.localPosition = new Vector3(-0.02f, 0.64f, 0f);
         roofStripe.transform.localScale = new Vector3(1.08f, 0.03f, 0.42f);
-        ApplyColor(roofStripe, new Color(0.98f, 0.9f, 0.7f));
-        ConfigureShadowVisual(roofStripe);
+        ApplyColor(roofStripe, new Color(0.98f, 0.9f, 0.7f), VisualSmoothnessRoofMetal);
+        ConfigureShadowVisual(roofStripe, VisualSmoothnessRoofMetal);
 
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.transform.SetParent(parent, false);
         door.transform.localPosition = new Vector3(0.18f, 0.23f, -0.22f);
         door.transform.localScale = new Vector3(0.24f, 0.32f, 0.05f);
-        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f));
-        ConfigureShadowVisual(door);
+        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(door, VisualSmoothnessVehicleMetal);
 
         GameObject shadowBlob = GameObject.CreatePrimitive(PrimitiveType.Cube);
         shadowBlob.transform.SetParent(parent, false);
@@ -696,8 +696,8 @@ public partial class GameBootstrap : MonoBehaviour
                 wheel.transform.localPosition = new Vector3(wx, 0.1f, wz);
                 wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 wheel.transform.localScale = new Vector3(0.1f, 0.05f, 0.1f);
-                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f));
-                ConfigureShadowVisual(wheel);
+                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f), VisualSmoothnessRubber);
+                ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
             }
         }
 
@@ -705,8 +705,8 @@ public partial class GameBootstrap : MonoBehaviour
         routePlate.transform.SetParent(parent, false);
         routePlate.transform.localPosition = new Vector3(0.48f, 0.53f, 0f);
         routePlate.transform.localScale = new Vector3(0.18f, 0.08f, 0.3f);
-        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f));
-        ConfigureShadowVisual(routePlate);
+        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(routePlate, VisualSmoothnessVehicleMetal);
 
         GameObject leftLightObject = new(leftLightName);
         leftLightObject.transform.SetParent(parent, false);
@@ -764,64 +764,64 @@ public partial class GameBootstrap : MonoBehaviour
         body.transform.SetParent(busRoot.transform, false);
         body.transform.localPosition = new Vector3(0f, 0.26f, 0f);
         body.transform.localScale = new Vector3(1.24f, 0.42f, 0.44f);
-        ApplyColor(body, bodyColor);
-        ConfigureShadowVisual(body);
+        ApplyColor(body, bodyColor, VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(body, VisualSmoothnessVehicleMetal);
 
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(busRoot.transform, false);
         roof.transform.localPosition = new Vector3(-0.02f, 0.56f, 0f);
         roof.transform.localScale = new Vector3(1.02f, 0.12f, 0.4f);
-        ApplyColor(roof, roofColor);
-        ConfigureShadowVisual(roof);
+        ApplyColor(roof, roofColor, VisualSmoothnessRoofMetal);
+        ConfigureShadowVisual(roof, VisualSmoothnessRoofMetal);
 
         GameObject windowBand = GameObject.CreatePrimitive(PrimitiveType.Cube);
         windowBand.transform.SetParent(busRoot.transform, false);
         windowBand.transform.localPosition = new Vector3(-0.02f, 0.38f, 0f);
         windowBand.transform.localScale = new Vector3(0.94f, 0.18f, 0.46f);
-        ApplyColor(windowBand, windowColor);
-        ConfigureShadowVisual(windowBand);
+        ApplyColor(windowBand, windowColor, VisualSmoothnessGlass);
+        ConfigureShadowVisual(windowBand, VisualSmoothnessGlass);
 
         GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
         windshield.transform.SetParent(busRoot.transform, false);
         windshield.transform.localPosition = new Vector3(0.56f, 0.41f, 0f);
         windshield.transform.localScale = new Vector3(0.12f, 0.2f, 0.38f);
-        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f));
-        ConfigureShadowVisual(windshield);
+        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(windshield, VisualSmoothnessGlass);
 
         GameObject rearWindow = GameObject.CreatePrimitive(PrimitiveType.Cube);
         rearWindow.transform.SetParent(busRoot.transform, false);
         rearWindow.transform.localPosition = new Vector3(-0.56f, 0.39f, 0f);
         rearWindow.transform.localScale = new Vector3(0.08f, 0.17f, 0.34f);
-        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f));
-        ConfigureShadowVisual(rearWindow);
+        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(rearWindow, VisualSmoothnessGlass);
 
         GameObject headlightLeftVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
         headlightLeftVisual.transform.SetParent(busRoot.transform, false);
         headlightLeftVisual.transform.localPosition = new Vector3(0.61f, 0.26f, -0.14f);
         headlightLeftVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f));
-        ConfigureShadowVisual(headlightLeftVisual);
+        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(headlightLeftVisual, VisualSmoothnessGlass);
 
         GameObject headlightRightVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
         headlightRightVisual.transform.SetParent(busRoot.transform, false);
         headlightRightVisual.transform.localPosition = new Vector3(0.61f, 0.26f, 0.14f);
         headlightRightVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f));
-        ConfigureShadowVisual(headlightRightVisual);
+        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(headlightRightVisual, VisualSmoothnessGlass);
 
         GameObject sideStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
         sideStripe.transform.SetParent(busRoot.transform, false);
         sideStripe.transform.localPosition = new Vector3(0f, 0.23f, 0f);
         sideStripe.transform.localScale = new Vector3(1.08f, 0.06f, 0.47f);
-        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f));
-        ConfigureShadowVisual(sideStripe);
+        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(sideStripe, VisualSmoothnessVehicleMetal);
 
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.transform.SetParent(busRoot.transform, false);
         door.transform.localPosition = new Vector3(0.18f, 0.23f, -0.22f);
         door.transform.localScale = new Vector3(0.24f, 0.32f, 0.05f);
-        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f));
-        ConfigureShadowVisual(door);
+        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(door, VisualSmoothnessVehicleMetal);
 
         float[] wheelX = { -0.38f, 0.38f };
         float[] wheelZ = { -0.18f, 0.18f };
@@ -834,8 +834,8 @@ public partial class GameBootstrap : MonoBehaviour
                 wheel.transform.localPosition = new Vector3(wx, 0.1f, wz);
                 wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 wheel.transform.localScale = new Vector3(0.1f, 0.05f, 0.1f);
-                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f));
-                ConfigureShadowVisual(wheel);
+                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f), VisualSmoothnessRubber);
+                ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
             }
         }
 
@@ -843,8 +843,8 @@ public partial class GameBootstrap : MonoBehaviour
         routePlate.transform.SetParent(busRoot.transform, false);
         routePlate.transform.localPosition = new Vector3(0.48f, 0.53f, 0f);
         routePlate.transform.localScale = new Vector3(0.18f, 0.08f, 0.3f);
-        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f));
-        ConfigureShadowVisual(routePlate);
+        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(routePlate, VisualSmoothnessVehicleMetal);
 
         GameObject leftLightObject = new("BusHeadlightLeft");
         leftLightObject.transform.SetParent(busRoot.transform, false);
@@ -920,64 +920,64 @@ public partial class GameBootstrap : MonoBehaviour
         body.transform.SetParent(busRoot.transform, false);
         body.transform.localPosition = new Vector3(0f, 0.26f, 0f);
         body.transform.localScale = new Vector3(1.24f, 0.42f, 0.44f);
-        ApplyColor(body, bodyColor);
-        ConfigureShadowVisual(body);
+        ApplyColor(body, bodyColor, VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(body, VisualSmoothnessVehicleMetal);
 
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(busRoot.transform, false);
         roof.transform.localPosition = new Vector3(-0.02f, 0.56f, 0f);
         roof.transform.localScale = new Vector3(1.02f, 0.12f, 0.4f);
-        ApplyColor(roof, roofColor);
-        ConfigureShadowVisual(roof);
+        ApplyColor(roof, roofColor, VisualSmoothnessRoofMetal);
+        ConfigureShadowVisual(roof, VisualSmoothnessRoofMetal);
 
         GameObject windowBand = GameObject.CreatePrimitive(PrimitiveType.Cube);
         windowBand.transform.SetParent(busRoot.transform, false);
         windowBand.transform.localPosition = new Vector3(-0.02f, 0.38f, 0f);
         windowBand.transform.localScale = new Vector3(0.94f, 0.18f, 0.46f);
-        ApplyColor(windowBand, windowColor);
-        ConfigureShadowVisual(windowBand);
+        ApplyColor(windowBand, windowColor, VisualSmoothnessGlass);
+        ConfigureShadowVisual(windowBand, VisualSmoothnessGlass);
 
         GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
         windshield.transform.SetParent(busRoot.transform, false);
         windshield.transform.localPosition = new Vector3(0.56f, 0.41f, 0f);
         windshield.transform.localScale = new Vector3(0.12f, 0.2f, 0.38f);
-        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f));
-        ConfigureShadowVisual(windshield);
+        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(windshield, VisualSmoothnessGlass);
 
         GameObject rearWindow = GameObject.CreatePrimitive(PrimitiveType.Cube);
         rearWindow.transform.SetParent(busRoot.transform, false);
         rearWindow.transform.localPosition = new Vector3(-0.56f, 0.39f, 0f);
         rearWindow.transform.localScale = new Vector3(0.08f, 0.17f, 0.34f);
-        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f));
-        ConfigureShadowVisual(rearWindow);
+        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(rearWindow, VisualSmoothnessGlass);
 
         GameObject headlightLeftVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
         headlightLeftVisual.transform.SetParent(busRoot.transform, false);
         headlightLeftVisual.transform.localPosition = new Vector3(0.61f, 0.26f, -0.14f);
         headlightLeftVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f));
-        ConfigureShadowVisual(headlightLeftVisual);
+        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(headlightLeftVisual, VisualSmoothnessGlass);
 
         GameObject headlightRightVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
         headlightRightVisual.transform.SetParent(busRoot.transform, false);
         headlightRightVisual.transform.localPosition = new Vector3(0.61f, 0.26f, 0.14f);
         headlightRightVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f));
-        ConfigureShadowVisual(headlightRightVisual);
+        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(headlightRightVisual, VisualSmoothnessGlass);
 
         GameObject sideStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
         sideStripe.transform.SetParent(busRoot.transform, false);
         sideStripe.transform.localPosition = new Vector3(0f, 0.23f, 0f);
         sideStripe.transform.localScale = new Vector3(1.08f, 0.06f, 0.47f);
-        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f));
-        ConfigureShadowVisual(sideStripe);
+        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(sideStripe, VisualSmoothnessVehicleMetal);
 
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.transform.SetParent(busRoot.transform, false);
         door.transform.localPosition = new Vector3(0.18f, 0.23f, -0.22f);
         door.transform.localScale = new Vector3(0.24f, 0.32f, 0.05f);
-        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f));
-        ConfigureShadowVisual(door);
+        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(door, VisualSmoothnessVehicleMetal);
 
         float[] wheelX = { -0.38f, 0.38f };
         float[] wheelZ = { -0.18f, 0.18f };
@@ -990,8 +990,8 @@ public partial class GameBootstrap : MonoBehaviour
                 wheel.transform.localPosition = new Vector3(wx, 0.1f, wz);
                 wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 wheel.transform.localScale = new Vector3(0.1f, 0.05f, 0.1f);
-                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f));
-                ConfigureShadowVisual(wheel);
+                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f), VisualSmoothnessRubber);
+                ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
             }
         }
 
@@ -999,8 +999,8 @@ public partial class GameBootstrap : MonoBehaviour
         routePlate.transform.SetParent(busRoot.transform, false);
         routePlate.transform.localPosition = new Vector3(0.48f, 0.53f, 0f);
         routePlate.transform.localScale = new Vector3(0.18f, 0.08f, 0.3f);
-        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f));
-        ConfigureShadowVisual(routePlate);
+        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(routePlate, VisualSmoothnessVehicleMetal);
 
         GameObject leftLightObject = new("HiringBusHeadlightLeft");
         leftLightObject.transform.SetParent(busRoot.transform, false);

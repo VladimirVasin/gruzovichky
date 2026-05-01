@@ -54,7 +54,7 @@ public partial class GameBootstrap
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.17f, 0f);
             baseBlock.transform.localScale = new Vector3(size.x * 0.98f, 0.12f, size.y * 0.98f);
-            ApplyColor(baseBlock, new Color(0.42f, 0.3f, 0.18f));
+            ApplyColor(baseBlock, new Color(0.42f, 0.3f, 0.18f), VisualSmoothnessWood);
         }
         else if (type == LocationType.Motel)
         {
@@ -71,19 +71,19 @@ public partial class GameBootstrap
             float scaleX = toAnchorDir.z != 0f ? size.x * 0.95f : size.x * 0.47f;
             float scaleZ = toAnchorDir.x != 0f ? size.y * 0.95f : size.y * 0.47f;
             baseBlock.transform.localScale = new Vector3(scaleX, 0.7f, scaleZ);
-            ApplyColor(baseBlock, baseColor);
+            ApplyColor(baseBlock, baseColor, VisualSmoothnessBuildingWall);
         }
         else if (type == LocationType.IntercityStop)
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.22f, 0f);
             baseBlock.transform.localScale = new Vector3(size.x * 0.92f, 0.14f, size.y * 0.64f);
-            ApplyColor(baseBlock, new Color(0.78f, 0.74f, 0.68f));
+            ApplyColor(baseBlock, new Color(0.78f, 0.74f, 0.68f), VisualSmoothnessAsphalt);
         }
         else if (type == LocationType.Stop)
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.22f, 0f);
             baseBlock.transform.localScale = new Vector3(size.x * 0.92f, 0.14f, size.y * 0.64f);
-            ApplyColor(baseBlock, new Color(0.78f, 0.74f, 0.68f));
+            ApplyColor(baseBlock, new Color(0.78f, 0.74f, 0.68f), VisualSmoothnessAsphalt);
         }
         else if (type == LocationType.CityPark)
         {
@@ -101,16 +101,20 @@ public partial class GameBootstrap
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
             baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
-            ApplyColor(baseBlock, new Color(0.18f, 0.19f, 0.20f));
+            ApplyColor(baseBlock, new Color(0.18f, 0.19f, 0.20f), VisualSmoothnessAsphalt);
         }
         else
         {
             baseBlock.transform.position = center;
             baseBlock.transform.localScale = new Vector3(size.x * 0.95f, 0.7f, size.y * 0.95f);
-            ApplyColor(baseBlock, baseColor);
+            ApplyColor(baseBlock, baseColor, VisualSmoothnessBuildingWall);
         }
 
-        ConfigureShadowVisual(baseBlock);
+        ConfigureShadowVisual(baseBlock, type == LocationType.CarMarket || type == LocationType.IntercityStop || type == LocationType.Stop
+            ? VisualSmoothnessAsphalt
+            : type == LocationType.Forest
+                ? VisualSmoothnessWood
+                : VisualSmoothnessBuildingWall);
         data.BaseRenderer = baseBlock.GetComponent<Renderer>();
 
         if (type == LocationType.Parking)
@@ -197,8 +201,8 @@ public partial class GameBootstrap
             stripe.transform.SetParent(root.transform, false);
             stripe.transform.position   = center + new Vector3(0f, 0.38f, 0f);
             stripe.transform.localScale = new Vector3(size.x * 0.97f, 0.06f, size.y * 0.97f);
-            ApplyColor(stripe, stripeColor);
-            ConfigureStaticVisual(stripe);
+            ApplyColor(stripe, stripeColor, VisualSmoothnessVehicleMetal);
+            ConfigureStaticVisual(stripe, VisualSmoothnessVehicleMetal);
             if (stripe.TryGetComponent(out Collider sc)) sc.enabled = false;
         }
 
@@ -206,7 +210,7 @@ public partial class GameBootstrap
         anchorMarker.transform.SetParent(root.transform, false);
         anchorMarker.transform.position = GetCellCenter(anchor) + new Vector3(0f, 0.05f, 0f);
         anchorMarker.transform.localScale = new Vector3(0.22f, 0.02f, 0.22f);
-        ApplyColor(anchorMarker, new Color(1f, 0.9f, 0.35f));
+        ApplyColor(anchorMarker, new Color(1f, 0.9f, 0.35f), VisualSmoothnessVehicleMetal);
 
         if (type == LocationType.Stop)
         {
@@ -258,7 +262,7 @@ public partial class GameBootstrap
         canopy.transform.SetParent(parent, false);
         canopy.transform.position = center + ScaleOffset(new Vector3(0f, 0.6f, -0.15f));
         canopy.transform.localScale = ScaleSize(new Vector3(2.8f, 0.12f, 1.4f));
-        ApplyColor(canopy, new Color(0.18f, 0.2f, 0.24f));
+        ApplyColor(canopy, new Color(0.18f, 0.2f, 0.24f), VisualSmoothnessRoofMetal);
 
         Vector3[] postOffsets =
         {
@@ -274,7 +278,7 @@ public partial class GameBootstrap
             post.transform.SetParent(parent, false);
             post.transform.position = center + ScaleOffset(offset);
             post.transform.localScale = ScaleSize(new Vector3(0.12f, 0.56f, 0.12f));
-            ApplyColor(post, new Color(0.3f, 0.32f, 0.36f));
+            ApplyColor(post, new Color(0.3f, 0.32f, 0.36f), VisualSmoothnessVehicleMetal);
         }
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.62f);
@@ -286,8 +290,8 @@ public partial class GameBootstrap
         shelterRoof.transform.SetParent(parent, false);
         shelterRoof.transform.position = center + new Vector3(0f, 0.72f, 0.05f);
         shelterRoof.transform.localScale = new Vector3(1.55f, 0.08f, 0.52f);
-        ApplyColor(shelterRoof, new Color(0.86f, 0.22f, 0.18f));
-        ConfigureStaticVisual(shelterRoof);
+        ApplyColor(shelterRoof, new Color(0.86f, 0.22f, 0.18f), VisualSmoothnessRoofMetal);
+        ConfigureStaticVisual(shelterRoof, VisualSmoothnessRoofMetal);
 
         Vector3[] postOffsets =
         {
@@ -301,37 +305,37 @@ public partial class GameBootstrap
             post.transform.SetParent(parent, false);
             post.transform.position = center + offset;
             post.transform.localScale = new Vector3(0.08f, 0.62f, 0.08f);
-            ApplyColor(post, new Color(0.28f, 0.3f, 0.34f));
-            ConfigureStaticVisual(post);
+            ApplyColor(post, new Color(0.28f, 0.3f, 0.34f), VisualSmoothnessVehicleMetal);
+            ConfigureStaticVisual(post, VisualSmoothnessVehicleMetal);
         }
 
         GameObject backPanel = GameObject.CreatePrimitive(PrimitiveType.Cube);
         backPanel.transform.SetParent(parent, false);
         backPanel.transform.position = center + new Vector3(0f, 0.38f, 0.18f);
         backPanel.transform.localScale = new Vector3(1.4f, 0.5f, 0.06f);
-        ApplyColor(backPanel, new Color(0.9f, 0.92f, 0.95f));
-        ConfigureStaticVisual(backPanel);
+        ApplyColor(backPanel, new Color(0.9f, 0.92f, 0.95f), VisualSmoothnessBuildingWall);
+        ConfigureStaticVisual(backPanel, VisualSmoothnessBuildingWall);
 
         GameObject bench = GameObject.CreatePrimitive(PrimitiveType.Cube);
         bench.transform.SetParent(parent, false);
         bench.transform.position = center + new Vector3(0f, 0.16f, -0.05f);
         bench.transform.localScale = new Vector3(0.88f, 0.08f, 0.2f);
-        ApplyColor(bench, new Color(0.5f, 0.34f, 0.2f));
-        ConfigureStaticVisual(bench);
+        ApplyColor(bench, new Color(0.5f, 0.34f, 0.2f), VisualSmoothnessWood);
+        ConfigureStaticVisual(bench, VisualSmoothnessWood);
 
         GameObject stopPole = GameObject.CreatePrimitive(PrimitiveType.Cube);
         stopPole.transform.SetParent(parent, false);
         stopPole.transform.position = center + new Vector3(0.92f, 0.5f, 0.16f);
         stopPole.transform.localScale = new Vector3(0.06f, 1f, 0.06f);
-        ApplyColor(stopPole, new Color(0.26f, 0.28f, 0.32f));
-        ConfigureStaticVisual(stopPole);
+        ApplyColor(stopPole, new Color(0.26f, 0.28f, 0.32f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(stopPole, VisualSmoothnessVehicleMetal);
 
         GameObject stopSign = GameObject.CreatePrimitive(PrimitiveType.Cube);
         stopSign.transform.SetParent(parent, false);
         stopSign.transform.position = center + new Vector3(0.92f, 0.92f, 0.16f);
         stopSign.transform.localScale = new Vector3(0.34f, 0.28f, 0.04f);
-        ApplyColor(stopSign, new Color(0.95f, 0.84f, 0.2f));
-        ConfigureStaticVisual(stopSign);
+        ApplyColor(stopSign, new Color(0.95f, 0.84f, 0.2f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(stopSign, VisualSmoothnessVehicleMetal);
     }
 
     private void CreateForestDecoration(Transform parent, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -345,30 +349,30 @@ public partial class GameBootstrap
         yard.transform.SetParent(parent, false);
         yard.transform.position = center + new Vector3(0f, 0.03f, 0f);
         yard.transform.localScale = new Vector3((max.x - min.x + 1) * 0.92f, 0.06f, (max.y - min.y + 1) * 0.92f);
-        ApplyColor(yard, new Color(0.46f, 0.34f, 0.22f));
-        ConfigureStaticVisual(yard);
+        ApplyColor(yard, new Color(0.46f, 0.34f, 0.22f), VisualSmoothnessWood);
+        ConfigureStaticVisual(yard, VisualSmoothnessWood);
 
         Vector3 buildingCenter = center + new Vector3(0f, 0.36f, 0.22f);
         GameObject shed = GameObject.CreatePrimitive(PrimitiveType.Cube);
         shed.transform.SetParent(parent, false);
         shed.transform.position = buildingCenter;
         shed.transform.localScale = new Vector3(1.35f, 0.66f, 1.12f);
-        ApplyColor(shed, new Color(0.62f, 0.46f, 0.28f));
-        ConfigureStaticVisual(shed);
+        ApplyColor(shed, new Color(0.62f, 0.46f, 0.28f), VisualSmoothnessWood);
+        ConfigureStaticVisual(shed, VisualSmoothnessWood);
 
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(parent, false);
         roof.transform.position = buildingCenter + new Vector3(0f, 0.44f, 0f);
         roof.transform.localScale = new Vector3(1.55f, 0.12f, 1.34f);
-        ApplyColor(roof, new Color(0.72f, 0.18f, 0.12f));
-        ConfigureStaticVisual(roof);
+        ApplyColor(roof, new Color(0.72f, 0.18f, 0.12f), VisualSmoothnessRoofMetal);
+        ConfigureStaticVisual(roof, VisualSmoothnessRoofMetal);
 
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
         door.transform.SetParent(parent, false);
         door.transform.position = buildingCenter + new Vector3(0f, -0.06f, -0.57f);
         door.transform.localScale = new Vector3(0.42f, 0.54f, 0.08f);
-        ApplyColor(door, new Color(0.22f, 0.14f, 0.08f));
-        ConfigureStaticVisual(door);
+        ApplyColor(door, new Color(0.22f, 0.14f, 0.08f), VisualSmoothnessWood);
+        ConfigureStaticVisual(door, VisualSmoothnessWood);
 
         Vector3[] fencePosts =
         {
@@ -384,8 +388,8 @@ public partial class GameBootstrap
             post.transform.SetParent(parent, false);
             post.transform.position = fencePos;
             post.transform.localScale = new Vector3(0.08f, 0.42f, 0.08f);
-            ApplyColor(post, new Color(0.35f, 0.23f, 0.14f));
-            ConfigureStaticVisual(post);
+            ApplyColor(post, new Color(0.35f, 0.23f, 0.14f), VisualSmoothnessWood);
+            ConfigureStaticVisual(post, VisualSmoothnessWood);
         }
 
         Vector3 depotPos = GetCellCenter(GetForestDepotCell(min, max, anchor)) + new Vector3(0f, 0.12f, 0f);
@@ -393,8 +397,8 @@ public partial class GameBootstrap
         marker.transform.SetParent(parent, false);
         marker.transform.position = depotPos;
         marker.transform.localScale = new Vector3(0.52f, 0.16f, 0.82f);
-        ApplyColor(marker, new Color(0.47f, 0.31f, 0.18f));
-        ConfigureStaticVisual(marker);
+        ApplyColor(marker, new Color(0.47f, 0.31f, 0.18f), VisualSmoothnessWood);
+        ConfigureStaticVisual(marker, VisualSmoothnessWood);
 
         CreateForestStoredLogsVisuals(parent, depotPos + new Vector3(0f, 0.08f, 0.58f));
         RefreshForestStoredLogsVisual();
@@ -461,8 +465,8 @@ public partial class GameBootstrap
             storedLog.transform.position = basePosition + new Vector3(-0.36f + column * 0.18f, row * 0.12f, 0f);
             storedLog.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
             storedLog.transform.localScale = new Vector3(0.11f, 0.2f, 0.11f);
-            ApplyColor(storedLog, new Color(0.58f, 0.4f, 0.22f));
-            ConfigureStaticVisual(storedLog);
+            ApplyColor(storedLog, new Color(0.58f, 0.4f, 0.22f), VisualSmoothnessWood);
+            ConfigureStaticVisual(storedLog, VisualSmoothnessWood);
             forestLocation.StoredLogVisuals.Add(storedLog);
         }
     }
@@ -539,7 +543,7 @@ public partial class GameBootstrap
         roof.transform.SetParent(parent, false);
         roof.transform.position = center + ScaleOffset(new Vector3(0f, 0.72f, -0.18f));
         roof.transform.localScale = ScaleSize(new Vector3(2.15f, 0.12f, 1.08f));
-        ApplyColor(roof, new Color(0.95f, 0.3f, 0.22f));
+        ApplyColor(roof, new Color(0.95f, 0.3f, 0.22f), VisualSmoothnessRoofMetal);
 
         Vector3[] postOffsets =
         {
@@ -555,20 +559,20 @@ public partial class GameBootstrap
             post.transform.SetParent(parent, false);
             post.transform.position = center + ScaleOffset(offset);
             post.transform.localScale = ScaleSize(new Vector3(0.12f, 0.64f, 0.12f));
-            ApplyColor(post, new Color(0.96f, 0.94f, 0.88f));
+            ApplyColor(post, new Color(0.96f, 0.94f, 0.88f), VisualSmoothnessVehicleMetal);
         }
 
         GameObject kiosk = GameObject.CreatePrimitive(PrimitiveType.Cube);
         kiosk.transform.SetParent(parent, false);
         kiosk.transform.position = center + ScaleOffset(new Vector3(0f, 0.36f, 0.38f));
         kiosk.transform.localScale = ScaleSize(new Vector3(1.25f, 0.52f, 0.5f));
-        ApplyColor(kiosk, new Color(0.98f, 0.92f, 0.78f));
+        ApplyColor(kiosk, new Color(0.98f, 0.92f, 0.78f), VisualSmoothnessBuildingWall);
 
         GameObject pump = GameObject.CreatePrimitive(PrimitiveType.Cube);
         pump.transform.SetParent(parent, false);
         pump.transform.position = center + ScaleOffset(new Vector3(0f, 0.32f, -0.12f));
         pump.transform.localScale = ScaleSize(new Vector3(0.24f, 0.42f, 0.24f));
-        ApplyColor(pump, new Color(0.2f, 0.22f, 0.26f));
+        ApplyColor(pump, new Color(0.2f, 0.22f, 0.26f), VisualSmoothnessVehicleMetal);
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.58f);
     }
@@ -636,16 +640,16 @@ public partial class GameBootstrap
         driveway.transform.rotation = Quaternion.LookRotation(delta.normalized, Vector3.up);
         driveway.transform.localScale = new Vector3(width, 0.1f, length);
 
-        ApplyColor(driveway, new Color(0.2f, 0.21f, 0.23f));
-        ConfigureStaticVisual(driveway);
+        ApplyColor(driveway, new Color(0.2f, 0.21f, 0.23f), VisualSmoothnessAsphalt);
+        ConfigureStaticVisual(driveway, VisualSmoothnessAsphalt);
 
         GameObject drivewayTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
         drivewayTop.name = "DrivewayTop";
         drivewayTop.transform.SetParent(driveway.transform, false);
         drivewayTop.transform.localPosition = new Vector3(0f, 0.58f, 0f);
         drivewayTop.transform.localScale = new Vector3(0.72f, 0.18f, 0.88f);
-        ApplyColor(drivewayTop, new Color(0.76f, 0.71f, 0.58f));
-        ConfigureStaticVisual(drivewayTop);
+        ApplyColor(drivewayTop, new Color(0.76f, 0.71f, 0.58f), VisualSmoothnessAsphalt);
+        ConfigureStaticVisual(drivewayTop, VisualSmoothnessAsphalt);
     }
 
     private void CreateWarehouseDecoration(Transform parent, Vector3 center)
@@ -657,7 +661,7 @@ public partial class GameBootstrap
         roof.transform.SetParent(parent, false);
         roof.transform.position = center + ScaleOffset(new Vector3(0f, 0.47f, 0f));
         roof.transform.localScale = ScaleSize(new Vector3(2.05f, 0.12f, 2.05f));
-        ApplyColor(roof, new Color(0.88f, 0.24f, 0.2f));
+        ApplyColor(roof, new Color(0.88f, 0.24f, 0.2f), VisualSmoothnessRoofMetal);
     }
 
     private void CreateSawmillDecoration(Transform parent, Vector3 center)
@@ -671,7 +675,7 @@ public partial class GameBootstrap
             house.transform.SetParent(parent, false);
             house.transform.position = center + ScaleOffset(new Vector3(-0.3f + i * 0.6f, 0.4f, 0f));
             house.transform.localScale = ScaleSize(new Vector3(0.45f, 0.5f, 0.45f));
-            ApplyColor(house, new Color(0.92f, 0.84f, 0.66f));
+            ApplyColor(house, new Color(0.92f, 0.84f, 0.66f), VisualSmoothnessBuildingWall);
         }
     }
 
@@ -681,30 +685,30 @@ public partial class GameBootstrap
         asphalt.transform.SetParent(parent, false);
         asphalt.transform.position = center + new Vector3(0f, -0.19f, 0f);
         asphalt.transform.localScale = new Vector3(4.8f, 0.04f, 4.8f);
-        ApplyColor(asphalt, new Color(0.12f, 0.13f, 0.14f));
-        ConfigureStaticVisual(asphalt);
+        ApplyColor(asphalt, new Color(0.12f, 0.13f, 0.14f), VisualSmoothnessAsphalt);
+        ConfigureStaticVisual(asphalt, VisualSmoothnessAsphalt);
 
         Vector3 officePos = center + new Vector3(-1.35f, 0.35f, 1.35f);
         GameObject office = GameObject.CreatePrimitive(PrimitiveType.Cube);
         office.transform.SetParent(parent, false);
         office.transform.position = officePos;
         office.transform.localScale = new Vector3(1.4f, 0.9f, 1.2f);
-        ApplyColor(office, new Color(0.74f, 0.68f, 0.56f));
-        ConfigureShadowVisual(office);
+        ApplyColor(office, new Color(0.74f, 0.68f, 0.56f), VisualSmoothnessBuildingWall);
+        ConfigureShadowVisual(office, VisualSmoothnessBuildingWall);
 
         GameObject awning = GameObject.CreatePrimitive(PrimitiveType.Cube);
         awning.transform.SetParent(parent, false);
         awning.transform.position = officePos + new Vector3(0f, 0.5f, -0.66f);
         awning.transform.localScale = new Vector3(1.55f, 0.12f, 0.34f);
-        ApplyColor(awning, new Color(0.84f, 0.42f, 0.18f));
-        ConfigureShadowVisual(awning);
+        ApplyColor(awning, new Color(0.84f, 0.42f, 0.18f), VisualSmoothnessRoofMetal);
+        ConfigureShadowVisual(awning, VisualSmoothnessRoofMetal);
 
         GameObject sign = GameObject.CreatePrimitive(PrimitiveType.Cube);
         sign.transform.SetParent(parent, false);
         sign.transform.position = officePos + new Vector3(0f, 0.64f, -0.82f);
         sign.transform.localScale = new Vector3(1.05f, 0.22f, 0.04f);
-        ApplyColor(sign, new Color(0.95f, 0.78f, 0.28f));
-        ConfigureStaticVisual(sign);
+        ApplyColor(sign, new Color(0.95f, 0.78f, 0.28f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(sign, VisualSmoothnessVehicleMetal);
 
         Vector3[] standOffsets =
         {
@@ -720,15 +724,15 @@ public partial class GameBootstrap
             stand.transform.SetParent(parent, false);
             stand.transform.position = standCenter;
             stand.transform.localScale = new Vector3(1.1f, 0.06f, 0.7f);
-            ApplyColor(stand, new Color(0.22f, 0.23f, 0.24f));
-            ConfigureStaticVisual(stand);
+            ApplyColor(stand, new Color(0.22f, 0.23f, 0.24f), VisualSmoothnessAsphalt);
+            ConfigureStaticVisual(stand, VisualSmoothnessAsphalt);
 
             GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
             stripe.transform.SetParent(parent, false);
             stripe.transform.position = standCenter + new Vector3(0f, 0.04f, 0f);
             stripe.transform.localScale = new Vector3(0.08f, 0.02f, 0.64f);
-            ApplyColor(stripe, new Color(0.92f, 0.9f, 0.82f));
-            ConfigureStaticVisual(stripe);
+            ApplyColor(stripe, new Color(0.92f, 0.9f, 0.82f), VisualSmoothnessAsphalt);
+            ConfigureStaticVisual(stripe, VisualSmoothnessAsphalt);
 
             GameObject car = CreateCarModel(i, parent);
             car.transform.position = standCenter + new Vector3(0f, 0.12f, 0f);
@@ -746,29 +750,29 @@ public partial class GameBootstrap
         mainHall.transform.SetParent(parent, false);
         mainHall.transform.position = center + ScaleOffset(new Vector3(-0.18f, 0.42f, 0.02f));
         mainHall.transform.localScale = ScaleSize(new Vector3(2.1f, 0.52f, 1.2f));
-        ApplyColor(mainHall, new Color(0.86f, 0.8f, 0.68f));
-        ConfigureStaticVisual(mainHall);
+        ApplyColor(mainHall, new Color(0.86f, 0.8f, 0.68f), VisualSmoothnessBuildingWall);
+        ConfigureStaticVisual(mainHall, VisualSmoothnessBuildingWall);
 
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roof.transform.SetParent(parent, false);
         roof.transform.position = center + ScaleOffset(new Vector3(-0.18f, 0.73f, 0.02f));
         roof.transform.localScale = ScaleSize(new Vector3(2.2f, 0.09f, 1.28f));
-        ApplyColor(roof, new Color(0.72f, 0.24f, 0.18f));
-        ConfigureStaticVisual(roof);
+        ApplyColor(roof, new Color(0.72f, 0.24f, 0.18f), VisualSmoothnessRoofMetal);
+        ConfigureStaticVisual(roof, VisualSmoothnessRoofMetal);
 
         GameObject sideWing = GameObject.CreatePrimitive(PrimitiveType.Cube);
         sideWing.transform.SetParent(parent, false);
         sideWing.transform.position = center + ScaleOffset(new Vector3(0.94f, 0.28f, -0.04f));
         sideWing.transform.localScale = ScaleSize(new Vector3(0.68f, 0.32f, 0.78f));
-        ApplyColor(sideWing, new Color(0.64f, 0.56f, 0.4f));
-        ConfigureStaticVisual(sideWing);
+        ApplyColor(sideWing, new Color(0.64f, 0.56f, 0.4f), VisualSmoothnessBuildingWall);
+        ConfigureStaticVisual(sideWing, VisualSmoothnessBuildingWall);
 
         GameObject loadingAwning = GameObject.CreatePrimitive(PrimitiveType.Cube);
         loadingAwning.transform.SetParent(parent, false);
         loadingAwning.transform.position = center + ScaleOffset(new Vector3(0.92f, 0.54f, -0.44f));
         loadingAwning.transform.localScale = ScaleSize(new Vector3(0.86f, 0.06f, 0.42f));
-        ApplyColor(loadingAwning, new Color(0.24f, 0.28f, 0.33f));
-        ConfigureStaticVisual(loadingAwning);
+        ApplyColor(loadingAwning, new Color(0.24f, 0.28f, 0.33f), VisualSmoothnessRoofMetal);
+        ConfigureStaticVisual(loadingAwning, VisualSmoothnessRoofMetal);
 
         float[] postX = { 0.64f, 1.2f };
         foreach (float px in postX)
@@ -777,23 +781,23 @@ public partial class GameBootstrap
             post.transform.SetParent(parent, false);
             post.transform.position = center + ScaleOffset(new Vector3(px, 0.24f, -0.44f));
             post.transform.localScale = ScaleSize(new Vector3(0.08f, 0.42f, 0.08f));
-            ApplyColor(post, new Color(0.28f, 0.3f, 0.34f));
-            ConfigureStaticVisual(post);
+            ApplyColor(post, new Color(0.28f, 0.3f, 0.34f), VisualSmoothnessVehicleMetal);
+            ConfigureStaticVisual(post, VisualSmoothnessVehicleMetal);
         }
 
         GameObject chimney = GameObject.CreatePrimitive(PrimitiveType.Cube);
         chimney.transform.SetParent(parent, false);
         chimney.transform.position = center + ScaleOffset(new Vector3(-0.78f, 0.92f, 0.26f));
         chimney.transform.localScale = ScaleSize(new Vector3(0.18f, 0.78f, 0.18f));
-        ApplyColor(chimney, new Color(0.42f, 0.3f, 0.22f));
-        ConfigureStaticVisual(chimney);
+        ApplyColor(chimney, new Color(0.42f, 0.3f, 0.22f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(chimney, VisualSmoothnessVehicleMetal);
 
         GameObject sign = GameObject.CreatePrimitive(PrimitiveType.Cube);
         sign.transform.SetParent(parent, false);
         sign.transform.position = center + ScaleOffset(new Vector3(-0.12f, 0.58f, -0.62f));
         sign.transform.localScale = ScaleSize(new Vector3(1.02f, 0.18f, 0.06f));
-        ApplyColor(sign, new Color(0.94f, 0.82f, 0.22f));
-        ConfigureStaticVisual(sign);
+        ApplyColor(sign, new Color(0.94f, 0.82f, 0.22f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(sign, VisualSmoothnessVehicleMetal);
 
         for (int i = 0; i < 3; i++)
         {
@@ -801,8 +805,8 @@ public partial class GameBootstrap
             crate.transform.SetParent(parent, false);
             crate.transform.position = center + ScaleOffset(new Vector3(0.62f + i * 0.22f, 0.08f + (i % 2) * 0.02f, 0.38f));
             crate.transform.localScale = ScaleSize(new Vector3(0.18f, 0.16f, 0.18f));
-            ApplyColor(crate, new Color(0.68f, 0.48f, 0.22f));
-            ConfigureStaticVisual(crate);
+            ApplyColor(crate, new Color(0.68f, 0.48f, 0.22f), VisualSmoothnessWood);
+            ConfigureStaticVisual(crate, VisualSmoothnessWood);
         }
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.96f);
@@ -835,21 +839,21 @@ public partial class GameBootstrap
         mainBlock.transform.SetParent(or, false);
         mainBlock.transform.localPosition = new Vector3(0f, 0.36f, -0.4f);
         mainBlock.transform.localScale = new Vector3(1.85f, 0.52f, 0.72f);
-        ApplyColor(mainBlock, new Color(0.91f, 0.87f, 0.74f));
+        ApplyColor(mainBlock, new Color(0.91f, 0.87f, 0.74f), VisualSmoothnessBuildingWall);
 
         // Red flat roof
         GameObject roofBlock = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roofBlock.transform.SetParent(or, false);
         roofBlock.transform.localPosition = new Vector3(0f, 0.66f, -0.4f);
         roofBlock.transform.localScale = new Vector3(1.92f, 0.09f, 0.82f);
-        ApplyColor(roofBlock, new Color(0.76f, 0.22f, 0.18f));
+        ApplyColor(roofBlock, new Color(0.76f, 0.22f, 0.18f), VisualSmoothnessRoofMetal);
 
         // Facade canopy - on the front face of the building body (toward anchor side)
         GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Cube);
         canopy.transform.SetParent(or, false);
         canopy.transform.localPosition = new Vector3(0f, 0.58f, -0.06f);
         canopy.transform.localScale = new Vector3(1.85f, 0.07f, 0.32f);
-        ApplyColor(canopy, new Color(0.78f, 0.24f, 0.2f));
+        ApplyColor(canopy, new Color(0.78f, 0.24f, 0.2f), VisualSmoothnessRoofMetal);
 
         // Three support posts under the canopy
         float[] postX = { -0.68f, 0f, 0.68f };
@@ -859,7 +863,7 @@ public partial class GameBootstrap
             post.transform.SetParent(or, false);
             post.transform.localPosition = new Vector3(px, 0.38f, 0.04f);
             post.transform.localScale = new Vector3(0.07f, 0.4f, 0.07f);
-            ApplyColor(post, new Color(0.82f, 0.22f, 0.18f));
+            ApplyColor(post, new Color(0.82f, 0.22f, 0.18f), VisualSmoothnessVehicleMetal);
         }
 
         // MOTEL sign above the roofline
@@ -867,7 +871,7 @@ public partial class GameBootstrap
         sign.transform.SetParent(or, false);
         sign.transform.localPosition = new Vector3(0f, 0.82f, -0.18f);
         sign.transform.localScale = new Vector3(0.72f, 0.18f, 0.06f);
-        ApplyColor(sign, new Color(0.98f, 0.84f, 0.12f));
+        ApplyColor(sign, new Color(0.98f, 0.84f, 0.12f), VisualSmoothnessVehicleMetal);
 
         // === PARKING AREA - front half of footprint (local Z > 0 = toward anchor) ===
 
@@ -880,8 +884,8 @@ public partial class GameBootstrap
             slot.transform.SetParent(or, false);
             slot.transform.localPosition = new Vector3(sx, -0.32f, 0.5f);
             slot.transform.localScale = new Vector3(0.46f, 0.015f, 0.72f);
-            ApplyColor(slot, new Color(0.56f, 0.56f, 0.58f));
-            ConfigureStaticVisual(slot);
+            ApplyColor(slot, new Color(0.56f, 0.56f, 0.58f), VisualSmoothnessAsphalt);
+            ConfigureStaticVisual(slot, VisualSmoothnessAsphalt);
         }
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.88f);
@@ -1004,8 +1008,8 @@ public partial class GameBootstrap
         lampVisual.transform.SetParent(parent, false);
         lampVisual.transform.localPosition = localPosition;
         lampVisual.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
-        ApplyColor(lampVisual, offColor);
-        ConfigureStaticVisual(lampVisual);
+        ApplyColor(lampVisual, offColor, VisualSmoothnessGlass);
+        ConfigureStaticVisual(lampVisual, VisualSmoothnessGlass);
         Renderer lampRenderer = lampVisual.GetComponent<Renderer>();
         locationNightLightRenderers.Add(lampRenderer);
         locationNightLightMaterials.Add(lampRenderer != null ? lampRenderer.material : null);

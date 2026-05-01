@@ -71,10 +71,10 @@ public static class TradeDispatchPreconditionService
     public static TradeDispatchPreconditionResult Evaluate(TradeDispatchPreconditionInput input)
     {
         if (input.HasActiveRun) return Block("Another trade run is already active");
-        if (!input.HasDriver) return Block("Assign an Intercity driver first");
-        if (input.DriverArriving) return Block("Intercity driver is still arriving");
-        if (input.DriverBusy) return Block("Intercity driver is busy");
-        if (!input.HasTruck) return Block("Intercity driver needs an assigned truck");
+        if (!input.HasDriver) return Block("No available Truck Driver on shift");
+        if (input.DriverArriving) return Block("Trade driver is still arriving");
+        if (input.DriverBusy) return Block("Trade driver is busy");
+        if (!input.HasTruck) return Block("Trade needs an available parked truck");
         if (input.TruckBusy) return Block($"{input.TruckDisplayName} is busy");
         if (input.TruckHasOtherDriver) return Block($"{input.TruckDisplayName} is using another driver");
         if (!input.HighwayConnected) return Block("Highway access is not connected");

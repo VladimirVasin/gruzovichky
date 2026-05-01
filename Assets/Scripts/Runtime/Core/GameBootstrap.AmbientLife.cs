@@ -322,8 +322,8 @@ public partial class GameBootstrap : MonoBehaviour
         body.transform.SetParent(birdRoot.transform, false);
         body.transform.localPosition = Vector3.zero;
         body.transform.localScale = new Vector3(0.22f, 0.17f, 0.34f);
-        ApplyColor(body, new Color(0.22f, 0.2f, 0.18f));
-        ConfigureStaticVisual(body);
+        ApplyColor(body, new Color(0.22f, 0.2f, 0.18f), VisualSmoothnessFabric);
+        ConfigureStaticVisual(body, VisualSmoothnessFabric);
         if (body.TryGetComponent(out Collider bodyCollider))
         {
             bodyCollider.enabled = false;
@@ -333,8 +333,8 @@ public partial class GameBootstrap : MonoBehaviour
         leftWing.transform.SetParent(birdRoot.transform, false);
         leftWing.transform.localPosition = new Vector3(-0.12f, 0.01f, 0f);
         leftWing.transform.localScale = new Vector3(0.22f, 0.03f, 0.32f);
-        ApplyColor(leftWing, new Color(0.28f, 0.26f, 0.24f));
-        ConfigureStaticVisual(leftWing);
+        ApplyColor(leftWing, new Color(0.28f, 0.26f, 0.24f), VisualSmoothnessFabric);
+        ConfigureStaticVisual(leftWing, VisualSmoothnessFabric);
         if (leftWing.TryGetComponent(out Collider leftCollider))
         {
             leftCollider.enabled = false;
@@ -344,8 +344,8 @@ public partial class GameBootstrap : MonoBehaviour
         rightWing.transform.SetParent(birdRoot.transform, false);
         rightWing.transform.localPosition = new Vector3(0.12f, 0.01f, 0f);
         rightWing.transform.localScale = new Vector3(0.22f, 0.03f, 0.32f);
-        ApplyColor(rightWing, new Color(0.28f, 0.26f, 0.24f));
-        ConfigureStaticVisual(rightWing);
+        ApplyColor(rightWing, new Color(0.28f, 0.26f, 0.24f), VisualSmoothnessFabric);
+        ConfigureStaticVisual(rightWing, VisualSmoothnessFabric);
         if (rightWing.TryGetComponent(out Collider rightCollider))
         {
             rightCollider.enabled = false;
@@ -355,8 +355,8 @@ public partial class GameBootstrap : MonoBehaviour
         beak.transform.SetParent(birdRoot.transform, false);
         beak.transform.localPosition = new Vector3(0f, 0f, 0.20f);
         beak.transform.localScale = new Vector3(0.05f, 0.04f, 0.09f);
-        ApplyColor(beak, new Color(0.92f, 0.74f, 0.2f));
-        ConfigureStaticVisual(beak);
+        ApplyColor(beak, new Color(0.92f, 0.74f, 0.2f), VisualSmoothnessSkin);
+        ConfigureStaticVisual(beak, VisualSmoothnessSkin);
         if (beak.TryGetComponent(out Collider beakCollider))
         {
             beakCollider.enabled = false;
@@ -695,8 +695,8 @@ public partial class GameBootstrap : MonoBehaviour
         body.transform.SetParent(catRoot.transform, false);
         body.transform.localPosition = new Vector3(0f, 0.12f, 0f);
         body.transform.localScale = new Vector3(0.16f, 0.12f, 0.26f);
-        ApplyColor(body, Color.Lerp(new Color(0.24f, 0.22f, 0.2f), new Color(0.82f, 0.54f, 0.18f), (catIndex % 3) * 0.35f));
-        ConfigureStaticVisual(body);
+        ApplyColor(body, Color.Lerp(new Color(0.24f, 0.22f, 0.2f), new Color(0.82f, 0.54f, 0.18f), (catIndex % 3) * 0.35f), VisualSmoothnessFabric);
+        ConfigureStaticVisual(body, VisualSmoothnessFabric);
         if (body.TryGetComponent(out Collider bodyCollider))
         {
             bodyCollider.enabled = false;
@@ -706,8 +706,8 @@ public partial class GameBootstrap : MonoBehaviour
         head.transform.SetParent(catRoot.transform, false);
         head.transform.localPosition = new Vector3(0f, 0.18f, 0.16f);
         head.transform.localScale = new Vector3(0.14f, 0.12f, 0.13f);
-        ApplyColor(head, body.GetComponent<Renderer>().material.color * 1.02f);
-        ConfigureStaticVisual(head);
+        ApplyColor(head, body.GetComponent<Renderer>().material.color * 1.02f, VisualSmoothnessFabric);
+        ConfigureStaticVisual(head, VisualSmoothnessFabric);
         if (head.TryGetComponent(out Collider headCollider))
         {
             headCollider.enabled = false;
@@ -718,8 +718,8 @@ public partial class GameBootstrap : MonoBehaviour
         leftEar.transform.localPosition = new Vector3(-0.04f, 0.07f, 0f);
         leftEar.transform.localRotation = Quaternion.Euler(0f, 0f, 24f);
         leftEar.transform.localScale = new Vector3(0.035f, 0.06f, 0.03f);
-        ApplyColor(leftEar, head.GetComponent<Renderer>().material.color * 0.96f);
-        ConfigureStaticVisual(leftEar);
+        ApplyColor(leftEar, head.GetComponent<Renderer>().material.color * 0.96f, VisualSmoothnessFabric);
+        ConfigureStaticVisual(leftEar, VisualSmoothnessFabric);
         if (leftEar.TryGetComponent(out Collider leftEarCollider))
         {
             leftEarCollider.enabled = false;
@@ -730,8 +730,8 @@ public partial class GameBootstrap : MonoBehaviour
         rightEar.transform.localPosition = new Vector3(0.04f, 0.07f, 0f);
         rightEar.transform.localRotation = Quaternion.Euler(0f, 0f, -24f);
         rightEar.transform.localScale = new Vector3(0.035f, 0.06f, 0.03f);
-        ApplyColor(rightEar, head.GetComponent<Renderer>().material.color * 0.96f);
-        ConfigureStaticVisual(rightEar);
+        ApplyColor(rightEar, head.GetComponent<Renderer>().material.color * 0.96f, VisualSmoothnessFabric);
+        ConfigureStaticVisual(rightEar, VisualSmoothnessFabric);
         if (rightEar.TryGetComponent(out Collider rightEarCollider))
         {
             rightEarCollider.enabled = false;
@@ -742,8 +742,8 @@ public partial class GameBootstrap : MonoBehaviour
         tail.transform.localPosition = new Vector3(0f, 0.16f, -0.14f);
         tail.transform.localRotation = Quaternion.Euler(68f, 0f, 0f);
         tail.transform.localScale = new Vector3(0.028f, 0.16f, 0.028f);
-        ApplyColor(tail, body.GetComponent<Renderer>().material.color * 0.92f);
-        ConfigureStaticVisual(tail);
+        ApplyColor(tail, body.GetComponent<Renderer>().material.color * 0.92f, VisualSmoothnessFabric);
+        ConfigureStaticVisual(tail, VisualSmoothnessFabric);
         if (tail.TryGetComponent(out Collider tailCollider))
         {
             tailCollider.enabled = false;
@@ -1129,16 +1129,16 @@ public partial class GameBootstrap : MonoBehaviour
         body.transform.localPosition = new Vector3(0f, 0.10f, 0f);
         body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
         body.transform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
-        ApplyColor(body, bodyColor);
-        ConfigureStaticVisual(body);
+        ApplyColor(body, bodyColor, VisualSmoothnessFabric);
+        ConfigureStaticVisual(body, VisualSmoothnessFabric);
         if (body.TryGetComponent(out Collider bodyCol)) bodyCol.enabled = false;
 
         GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         head.transform.SetParent(sqRoot.transform, false);
         head.transform.localPosition = new Vector3(0f, 0.16f, 0.12f);
         head.transform.localScale = new Vector3(0.10f, 0.09f, 0.09f);
-        ApplyColor(head, headColor);
-        ConfigureStaticVisual(head);
+        ApplyColor(head, headColor, VisualSmoothnessFabric);
+        ConfigureStaticVisual(head, VisualSmoothnessFabric);
         if (head.TryGetComponent(out Collider headCol)) headCol.enabled = false;
 
         GameObject leftEar = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1146,8 +1146,8 @@ public partial class GameBootstrap : MonoBehaviour
         leftEar.transform.localPosition = new Vector3(-0.35f, 0.55f, 0f);
         leftEar.transform.localRotation = Quaternion.Euler(0f, 0f, 18f);
         leftEar.transform.localScale = new Vector3(0.25f, 0.50f, 0.22f);
-        ApplyColor(leftEar, earColor);
-        ConfigureStaticVisual(leftEar);
+        ApplyColor(leftEar, earColor, VisualSmoothnessFabric);
+        ConfigureStaticVisual(leftEar, VisualSmoothnessFabric);
         if (leftEar.TryGetComponent(out Collider lEarCol)) lEarCol.enabled = false;
 
         GameObject rightEar = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1155,8 +1155,8 @@ public partial class GameBootstrap : MonoBehaviour
         rightEar.transform.localPosition = new Vector3(0.35f, 0.55f, 0f);
         rightEar.transform.localRotation = Quaternion.Euler(0f, 0f, -18f);
         rightEar.transform.localScale = new Vector3(0.25f, 0.50f, 0.22f);
-        ApplyColor(rightEar, earColor);
-        ConfigureStaticVisual(rightEar);
+        ApplyColor(rightEar, earColor, VisualSmoothnessFabric);
+        ConfigureStaticVisual(rightEar, VisualSmoothnessFabric);
         if (rightEar.TryGetComponent(out Collider rEarCol)) rEarCol.enabled = false;
 
         GameObject tail = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -1164,8 +1164,8 @@ public partial class GameBootstrap : MonoBehaviour
         tail.transform.localPosition = new Vector3(0f, 0.18f, -0.12f);
         tail.transform.localRotation = Quaternion.Euler(-55f, 0f, 0f);
         tail.transform.localScale = new Vector3(0.06f, 0.16f, 0.06f);
-        ApplyColor(tail, tailColor);
-        ConfigureStaticVisual(tail);
+        ApplyColor(tail, tailColor, VisualSmoothnessFabric);
+        ConfigureStaticVisual(tail, VisualSmoothnessFabric);
         if (tail.TryGetComponent(out Collider tailCol)) tailCol.enabled = false;
 
         int step = Mathf.Max(1, ambientSquirrelRoamPoints.Count / totalCount);

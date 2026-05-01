@@ -772,7 +772,8 @@ public partial class GameBootstrap
         Vector2Int currentCell,
         Vector2Int currentDirection,
         System.Func<Vector2Int, bool> isBlockedLocationCell,
-        string source)
+        string source,
+        List<Vector2Int> debugTurnFillCells = null)
     {
         Vector2Int prevDir = NormalizeRoadDirection(previousDirection);
         Vector2Int curDir = NormalizeRoadDirection(currentDirection);
@@ -810,6 +811,7 @@ public partial class GameBootstrap
                 {
                     anyBuilt = true;
                     filledCells.Add(fillCell);
+                    debugTurnFillCells?.Add(fillCell);
                 }
             }
         }
@@ -905,28 +907,6 @@ public partial class GameBootstrap
         }
 
         return preferredOffset;
-    }
-
-    private static string FormatCellList(List<Vector2Int> cells)
-    {
-        if (cells == null || cells.Count == 0)
-        {
-            return "none";
-        }
-
-        System.Text.StringBuilder sb = new();
-        for (int i = 0; i < cells.Count; i++)
-        {
-            if (i > 0) sb.Append(", ");
-            sb.Append('(').Append(cells[i].x).Append(',').Append(cells[i].y).Append(')');
-        }
-
-        return sb.ToString();
-    }
-
-    private static string FormatCell(Vector2Int cell)
-    {
-        return $"({cell.x},{cell.y})";
     }
 
     private string GetRoadBuildBlockReason(Vector2Int cell)
@@ -1108,7 +1088,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        SessionDebugLogger.Log("BUILD_ROAD", $"path-finish requested tool={activeBuildTool} start={FormatCell(roadPathStart.Value)} end={FormatCell(cell)}.");
+        SessionDebugLogger.Log("BUILD_ROAD", $"path-finish requested tool={activeBuildTool} start={FormatCell(roadPathStart.Value)} end={FormatCell(cell)} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
         bool built = TryBuildRoadPath(roadPathStart.Value, cell);
         if (built)
         {
@@ -1125,7 +1105,7 @@ public partial class GameBootstrap
         {
             if (start == end)
             {
-                SessionDebugLogger.Log("BUILD_ROAD", $"path-build same-cell start={FormatCell(start)} tool={activeBuildTool}.");
+                SessionDebugLogger.Log("BUILD_ROAD", $"path-build same-cell start={FormatCell(start)} tool={activeBuildTool} previewCells={FormatCellList(buildPreviewFootprintCells)} lanePairId=single.");
                 return activeBuildTool == BuildTool.SingleRoad
                     ? TryPlaceSingleRoadCell(start, "player-path")
                     : TryPlaceRoadFootprint(start, GetBuildRoadDirection(), "player-path");
@@ -1138,7 +1118,10 @@ public partial class GameBootstrap
                 return false;
             }
 
-            SessionDebugLogger.Log("BUILD_ROAD", $"path-build start={FormatCell(start)} end={FormatCell(end)} cells={path.Count} tool={activeBuildTool} path={FormatCellList(path)}.");
+            HashSet<Vector2Int> roadsBeforeBuild = new(roadCells);
+            List<Vector2Int> turnFillCells = new();
+            List<string> lanePairIds = new();
+            SessionDebugLogger.Log("BUILD_ROAD", $"path-build start={FormatCell(start)} end={FormatCell(end)} cells={path.Count} tool={activeBuildTool} path={FormatCellList(path)} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
 
             bool anyBuilt = false;
             for (int i = 0; i < path.Count; i++)
@@ -1154,10 +1137,16 @@ public partial class GameBootstrap
                 {
                     if (TryResolveContinuingPathRoadFootprintOffset(path, i, direction, IsBuildRoadBlockedCell, out Vector2Int continuingOffset))
                     {
+                        AddUniqueDebugValue(lanePairIds, FormatRoadLanePairId(path[i], continuingOffset, direction));
                         anyBuilt |= TryPlaceRoadFootprintWithOffset(path[i], direction, continuingOffset, "player-path");
                     }
                     else
                     {
+                        if (TryResolveRoadFootprintOffset(path[i], direction, requireNewRoadCell: true, IsBuildRoadBlockedCell, out Vector2Int resolvedOffset))
+                        {
+                            AddUniqueDebugValue(lanePairIds, FormatRoadLanePairId(path[i], resolvedOffset, direction));
+                        }
+
                         anyBuilt |= TryPlaceRoadFootprint(path[i], direction, "player-path");
                     }
                 }
@@ -1169,7 +1158,7 @@ public partial class GameBootstrap
                 if (i > 0)
                 {
                     Vector2Int previousDirection = GetRoadPathPreviewDirection(path, i - 1);
-                    anyBuilt |= TryFillRoadTurnFootprint(path[i - 1], previousDirection, path[i], direction, IsBuildRoadBlockedCell, "player");
+                    anyBuilt |= TryFillRoadTurnFootprint(path[i - 1], previousDirection, path[i], direction, IsBuildRoadBlockedCell, "player", turnFillCells);
                 }
                 else
                 {
@@ -1177,11 +1166,24 @@ public partial class GameBootstrap
                     Vector2Int behindCell = path[0] - direction;
                     if (roadCells.Contains(behindCell))
                     {
-                        anyBuilt |= TryFillRoadTurnFootprint(behindCell, new Vector2Int(-direction.y, direction.x), path[0], direction, IsBuildRoadBlockedCell, "player-junction");
-                        anyBuilt |= TryFillRoadTurnFootprint(behindCell, new Vector2Int(direction.y, -direction.x), path[0], direction, IsBuildRoadBlockedCell, "player-junction");
+                        anyBuilt |= TryFillRoadTurnFootprint(behindCell, new Vector2Int(-direction.y, direction.x), path[0], direction, IsBuildRoadBlockedCell, "player-junction", turnFillCells);
+                        anyBuilt |= TryFillRoadTurnFootprint(behindCell, new Vector2Int(direction.y, -direction.x), path[0], direction, IsBuildRoadBlockedCell, "player-junction", turnFillCells);
                     }
                 }
             }
+
+            List<Vector2Int> committedCells = new();
+            foreach (Vector2Int roadCell in roadCells)
+            {
+                if (!roadsBeforeBuild.Contains(roadCell))
+                {
+                    committedCells.Add(roadCell);
+                }
+            }
+
+            SessionDebugLogger.Log(
+                "BUILD_ROAD",
+                $"path-build result start={FormatCell(start)} end={FormatCell(end)} built={anyBuilt} committedCells={FormatCellList(committedCells)} turnFillCells={FormatCellList(turnFillCells)} lanePairId={FormatStringList(lanePairIds)} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
             return anyBuilt;
         });
     }

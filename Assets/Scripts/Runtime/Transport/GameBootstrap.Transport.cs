@@ -119,17 +119,95 @@ public partial class GameBootstrap
         return (terrainHeights[clampedX, y - 1] + terrainHeights[clampedX, y]) * 0.5f;
     }
 
-    private static void ApplyColor(GameObject target, Color color)
+    private const float VisualSmoothnessDefault      = 0.14f;
+    private const float VisualSmoothnessRubber       = 0.10f;
+    private const float VisualSmoothnessWood         = 0.20f;
+    private const float VisualSmoothnessFabric       = 0.18f;
+    private const float VisualSmoothnessBuildingWall = 0.40f;
+    private const float VisualSmoothnessGlass        = 0.92f;
+    private const float VisualSmoothnessVehicleMetal = 0.72f;
+    private const float VisualSmoothnessRoofMetal    = 0.55f;
+    private const float VisualSmoothnessSkin         = 0.58f;
+    private const float VisualSmoothnessAsphalt      = 0.12f;
+
+    private readonly struct VisualMaterialCacheKey : System.IEquatable<VisualMaterialCacheKey>
     {
-        Renderer renderer = target.GetComponent<Renderer>();
-        if (renderer == null)
+        private readonly int shaderKind;
+        private readonly int textureId;
+        private readonly int colorR;
+        private readonly int colorG;
+        private readonly int colorB;
+        private readonly int colorA;
+        private readonly int smoothness;
+        private readonly int scaleX;
+        private readonly int scaleY;
+
+        public VisualMaterialCacheKey(int shaderKind, Texture texture, Color color, float smoothness, Vector2 scale)
         {
-            return;
+            this.shaderKind = shaderKind;
+            textureId = texture != null ? texture.GetHashCode() : 0;
+            colorR = Mathf.RoundToInt(Mathf.Clamp01(color.r) * 255f);
+            colorG = Mathf.RoundToInt(Mathf.Clamp01(color.g) * 255f);
+            colorB = Mathf.RoundToInt(Mathf.Clamp01(color.b) * 255f);
+            colorA = Mathf.RoundToInt(Mathf.Clamp01(color.a) * 255f);
+            this.smoothness = Mathf.RoundToInt(Mathf.Clamp01(smoothness) * 1000f);
+            scaleX = Mathf.RoundToInt(scale.x * 1000f);
+            scaleY = Mathf.RoundToInt(scale.y * 1000f);
         }
 
-        Shader urpLit = ShaderRefs.Lit;
-        Material material = new(urpLit);
-        material.color = color;
+        public bool Equals(VisualMaterialCacheKey other)
+        {
+            return shaderKind == other.shaderKind &&
+                   textureId == other.textureId &&
+                   colorR == other.colorR &&
+                   colorG == other.colorG &&
+                   colorB == other.colorB &&
+                   colorA == other.colorA &&
+                   smoothness == other.smoothness &&
+                   scaleX == other.scaleX &&
+                   scaleY == other.scaleY;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is VisualMaterialCacheKey other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = shaderKind;
+                hash = (hash * 397) ^ textureId;
+                hash = (hash * 397) ^ colorR;
+                hash = (hash * 397) ^ colorG;
+                hash = (hash * 397) ^ colorB;
+                hash = (hash * 397) ^ colorA;
+                hash = (hash * 397) ^ smoothness;
+                hash = (hash * 397) ^ scaleX;
+                hash = (hash * 397) ^ scaleY;
+                return hash;
+            }
+        }
+    }
+
+    private static readonly Dictionary<VisualMaterialCacheKey, Material> visualMaterialCache = new();
+
+    private static Material GetCachedLitMaterial(Texture texture, Color color, float smoothness, Vector2 textureScale)
+    {
+        VisualMaterialCacheKey key = new(0, texture, color, smoothness, textureScale);
+        if (visualMaterialCache.TryGetValue(key, out Material cached) && cached != null)
+        {
+            return cached;
+        }
+
+        Material material = new(ShaderRefs.Lit)
+        {
+            color = color,
+            mainTexture = texture,
+            mainTextureScale = textureScale
+        };
+
         if (material.HasProperty("_BaseColor"))
         {
             material.SetColor("_BaseColor", color);
@@ -137,7 +215,7 @@ public partial class GameBootstrap
 
         if (material.HasProperty("_Smoothness"))
         {
-            material.SetFloat("_Smoothness", 0.14f);
+            material.SetFloat("_Smoothness", smoothness);
         }
 
         if (material.HasProperty("_Metallic"))
@@ -145,18 +223,18 @@ public partial class GameBootstrap
             material.SetFloat("_Metallic", 0f);
         }
 
-        renderer.material = material;
+        visualMaterialCache[key] = material;
+        return material;
     }
 
-    private static void ApplyUnlitColor(GameObject target, Color color)
+    private static Material GetCachedUnlitMaterial(Color color)
     {
-        Renderer renderer = target.GetComponent<Renderer>();
-        if (renderer == null)
-        {
-            return;
-        }
-
         Shader shader = ShaderRefs.Unlit ?? ShaderRefs.Sprites;
+        VisualMaterialCacheKey key = new(1, null, color, 0f, Vector2.one);
+        if (visualMaterialCache.TryGetValue(key, out Material cached) && cached != null)
+        {
+            return cached;
+        }
 
         Material material = new(shader)
         {
@@ -173,10 +251,75 @@ public partial class GameBootstrap
             material.SetColor("_Color", color);
         }
 
-        renderer.material = material;
+        visualMaterialCache[key] = material;
+        return material;
     }
 
-    private static void ConfigureStaticVisual(GameObject target)
+    private static void ClearVisualMaterialCache()
+    {
+        foreach (Material material in visualMaterialCache.Values)
+        {
+            if (material == null)
+            {
+                continue;
+            }
+
+            if (Application.isPlaying)
+            {
+                UnityEngine.Object.Destroy(material);
+            }
+            else
+            {
+                UnityEngine.Object.DestroyImmediate(material);
+            }
+        }
+
+        visualMaterialCache.Clear();
+    }
+
+    private static void ApplyColor(GameObject target, Color color, float smoothness = -1f)
+    {
+        Renderer renderer = target.GetComponent<Renderer>();
+        if (renderer == null)
+        {
+            return;
+        }
+
+        float resolvedSmoothness = smoothness >= 0f
+            ? smoothness
+            : GuessVisualSmoothness(target.name, VisualSmoothnessDefault);
+        renderer.sharedMaterial = GetCachedLitMaterial(null, color, resolvedSmoothness, Vector2.one);
+    }
+
+    private static void ApplyColor(GameObject target, Color color)
+    {
+        ApplyColor(target, color, -1f);
+    }
+
+    private static float GuessVisualSmoothness(string objectName, float fallback)
+    {
+        string n = objectName.ToLowerInvariant();
+        if (n.Contains("wheel")) return VisualSmoothnessRubber;
+        if (n.Contains("window") || n.Contains("glass") || n.Contains("windshield")) return VisualSmoothnessGlass;
+        if (n.Contains("roof") || n.Contains("awning")) return VisualSmoothnessRoofMetal;
+        if (n.Contains("road") || n.Contains("asphalt")) return VisualSmoothnessAsphalt;
+        if (n.Contains("log") || n.Contains("board") || n.Contains("bench") || n.Contains("wood")) return VisualSmoothnessWood;
+        if (n.Contains("shirt") || n.Contains("cloth") || n.Contains("textile")) return VisualSmoothnessFabric;
+        return fallback;
+    }
+
+    private static void ApplyUnlitColor(GameObject target, Color color)
+    {
+        Renderer renderer = target.GetComponent<Renderer>();
+        if (renderer == null)
+        {
+            return;
+        }
+
+        renderer.sharedMaterial = GetCachedUnlitMaterial(color);
+    }
+
+    private static void ConfigureStaticVisual(GameObject target, float smoothness = -1f)
     {
         if (!target.TryGetComponent(out Renderer renderer))
         {
@@ -185,9 +328,15 @@ public partial class GameBootstrap
 
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         renderer.receiveShadows = true;
+        ApplyMaterialSmoothness(renderer, smoothness);
     }
 
-    private void ConfigureShadowVisual(GameObject target)
+    private static void ConfigureStaticVisual(GameObject target)
+    {
+        ConfigureStaticVisual(target, -1f);
+    }
+
+    private void ConfigureShadowVisual(GameObject target, float smoothness = -1f)
     {
         if (!target.TryGetComponent(out Renderer renderer))
         {
@@ -196,7 +345,29 @@ public partial class GameBootstrap
 
         renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
         renderer.receiveShadows = true;
+        ApplyMaterialSmoothness(renderer, smoothness);
         RegisterShadowLodRenderer(renderer);
+    }
+
+    private void ConfigureShadowVisual(GameObject target)
+    {
+        ConfigureShadowVisual(target, -1f);
+    }
+
+    private static void ApplyMaterialSmoothness(Renderer renderer, float smoothness)
+    {
+        if (smoothness < 0f || renderer.sharedMaterial == null || !renderer.sharedMaterial.HasProperty("_Smoothness"))
+        {
+            return;
+        }
+
+        Material source = renderer.sharedMaterial;
+        Color color = source.HasProperty("_BaseColor")
+            ? source.GetColor("_BaseColor")
+            : source.color;
+        Texture texture = source.mainTexture;
+        Vector2 textureScale = source.mainTextureScale;
+        renderer.sharedMaterial = GetCachedLitMaterial(texture, color, smoothness, textureScale);
     }
 
     private bool IsInsideGrid(Vector2Int cell)

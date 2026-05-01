@@ -200,8 +200,17 @@ public partial class GameBootstrap
             return;
         }
 
-        if (driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop ||
-            driver.WalkPhase == DriverRescuePhase.RidingLocalBus)
+        if (driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop)
+        {
+            if (!IsLocalBusServiceAvailableForPassengers())
+            {
+                ResumeWorkerLocalBusTripOnFoot(driver, "local bus service is not available for the current shift");
+            }
+
+            return;
+        }
+
+        if (driver.WalkPhase == DriverRescuePhase.RidingLocalBus)
         {
             return;
         }
@@ -599,6 +608,13 @@ public partial class GameBootstrap
                 SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at City Park for Leisure.");
                 return;
 
+            case DriverRescuePhase.IdleExitCityPark:
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                CompleteCityParkLeisure(driver, currentPosition);
+                return;
+
             case DriverRescuePhase.WarehouseDeliveryToService:
                 // Arrived at service building - unload the carried warehouse unit
                 if (driver.WarehouseDeliveryTarget.HasValue &&
@@ -896,6 +912,9 @@ public partial class GameBootstrap
             case DriverRescuePhase.IdlePettingCat:
                 ApplyDriverPettingCatPose(driver);
                 return;
+            case DriverRescuePhase.IdleAtCityPark:
+                ApplyDriverCityParkPose(driver);
+                return;
             case DriverRescuePhase.LumberChopping:
             case DriverRescuePhase.LumberPlanting:
                 return;
@@ -926,6 +945,73 @@ public partial class GameBootstrap
             driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-85f, 0f, 0f);
         if (driver.DriverRightLegTransform != null)
             driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-85f, 0f, 0f);
+    }
+
+    private void ApplyDriverCityParkPose(DriverAgent driver)
+    {
+        float t = Time.time + driver.DriverId * 0.37f;
+        switch (driver.CityParkActivityStyle)
+        {
+            case 1:
+                ApplyDriverSittingPose(driver);
+                return;
+
+            case 2:
+                driver.DriverVisualRoot.localPosition = new Vector3(0f, Mathf.Sin(t * 1.4f) * 0.015f, 0f);
+                driver.DriverVisualRoot.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 0.9f) * 2.2f);
+                if (driver.DriverBodyTransform != null)
+                    driver.DriverBodyTransform.localRotation = Quaternion.Euler(Mathf.Sin(t * 1.1f) * 4f, 0f, 0f);
+                if (driver.DriverHeadTransform != null)
+                    driver.DriverHeadTransform.localRotation = Quaternion.Euler(-4f + Mathf.Sin(t * 1.3f) * 3f, 0f, 0f);
+                if (driver.DriverLeftArmTransform != null)
+                    driver.DriverLeftArmTransform.localRotation = Quaternion.Euler(-118f + Mathf.Sin(t * 1.8f) * 12f, 0f, 0f);
+                if (driver.DriverRightArmTransform != null)
+                    driver.DriverRightArmTransform.localRotation = Quaternion.Euler(-112f + Mathf.Sin(t * 1.6f + 0.7f) * 12f, 0f, 0f);
+                if (driver.DriverLeftLegTransform != null)
+                    driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-4f, 0f, 0f);
+                if (driver.DriverRightLegTransform != null)
+                    driver.DriverRightLegTransform.localRotation = Quaternion.Euler(4f, 0f, 0f);
+                return;
+
+            case 3:
+                driver.DriverVisualRoot.localPosition = new Vector3(0f, 0f, 0f);
+                driver.DriverVisualRoot.localRotation = Quaternion.Euler(0f, Mathf.Sin(t * 0.35f) * 8f, 0f);
+                if (driver.DriverBodyTransform != null)
+                    driver.DriverBodyTransform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 0.45f) * 2f);
+                if (driver.DriverHeadTransform != null)
+                    driver.DriverHeadTransform.localRotation = Quaternion.Euler(-8f, Mathf.Sin(t * 0.65f) * 18f, 0f);
+                if (driver.DriverLeftArmTransform != null)
+                    driver.DriverLeftArmTransform.localRotation = Quaternion.Euler(12f, 0f, 0f);
+                if (driver.DriverRightArmTransform != null)
+                    driver.DriverRightArmTransform.localRotation = Quaternion.Euler(-18f + Mathf.Sin(t * 1.2f) * 8f, 0f, 0f);
+                if (driver.DriverLeftLegTransform != null)
+                    driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(2f, 0f, 0f);
+                if (driver.DriverRightLegTransform != null)
+                    driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-2f, 0f, 0f);
+                return;
+
+            case 4:
+                driver.DriverVisualRoot.localPosition = new Vector3(0f, -0.11f + Mathf.Sin(t * 0.7f) * 0.006f, 0f);
+                driver.DriverVisualRoot.localRotation = Quaternion.Euler(0f, Mathf.Sin(t * 0.28f) * 4f, 0f);
+                if (driver.DriverBodyTransform != null)
+                    driver.DriverBodyTransform.localRotation = Quaternion.Euler(18f, 0f, 0f);
+                if (driver.DriverHeadTransform != null)
+                    driver.DriverHeadTransform.localRotation = Quaternion.Euler(Mathf.Sin(t * 0.9f) * 4f, 0f, 0f);
+                if (driver.DriverLeftArmTransform != null)
+                    driver.DriverLeftArmTransform.localRotation = Quaternion.Euler(48f + Mathf.Sin(t * 1.4f) * 10f, 0f, 0f);
+                if (driver.DriverRightArmTransform != null)
+                    driver.DriverRightArmTransform.localRotation = Quaternion.Euler(58f + Mathf.Sin(t * 1.3f + 0.4f) * 10f, 0f, 0f);
+                if (driver.DriverLeftLegTransform != null)
+                    driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-70f, 0f, 0f);
+                if (driver.DriverRightLegTransform != null)
+                    driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-52f, 0f, 0f);
+                return;
+
+            default:
+                float sway = Mathf.Sin(t * 1.2f) * 0.45f;
+                ApplyDriverPose(driver, sway, Mathf.Sin(t * 1.6f) * 0.012f);
+                return;
+        }
     }
 
     private void ApplyDriverSmokingPose(DriverAgent driver)

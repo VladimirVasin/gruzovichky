@@ -3,6 +3,9 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
+    private int lastNeedsEconomyDebugDay = -1;
+    private int lastNeedsEconomyDebugHour = -1;
+
     private const float WorkerMealWarningHours = 8f;
     private const float WorkerMealCriticalHours = 16f;
     private const float WorkerSleepWarningHours = 16f;
@@ -48,6 +51,45 @@ public partial class GameBootstrap
         {
             UpdateWorkerNeedsUi(driver, IsRussianLanguage());
         }
+    }
+
+    private void UpdateHourlyNeedsEconomyTelemetry()
+    {
+        int hour = GetCurrentHour();
+        if (lastNeedsEconomyDebugDay == currentDay && lastNeedsEconomyDebugHour == hour)
+        {
+            return;
+        }
+
+        lastNeedsEconomyDebugDay = currentDay;
+        lastNeedsEconomyDebugHour = hour;
+
+        int hungryDue = 0;
+        int sleepyDue = 0;
+        int leisureDue = 0;
+        foreach (DriverAgent driver in driverAgents)
+        {
+            if (ShouldWorkerSeekMeal(driver)) hungryDue++;
+            if (ShouldWorkerSeekSleep(driver)) sleepyDue++;
+            if (ShouldWorkerSeekLeisure(driver)) leisureDue++;
+        }
+
+        int serviceBuildingsMissing = CountMissingNeedsServiceBuildings();
+        SessionDebugLogger.Log(
+            "NEEDS_ECON",
+            $"hourly summary day={currentDay} hour={hour:00}: hungryDue={hungryDue}, sleepyDue={sleepyDue}, leisureDue={leisureDue}, serviceBuildingsMissing={serviceBuildingsMissing}, workers={driverAgents.Count}, treasury=${money}.");
+    }
+
+    private int CountMissingNeedsServiceBuildings()
+    {
+        int missing = 0;
+        if (!locations.ContainsKey(LocationType.Canteen)) missing++;
+        if (!locations.ContainsKey(LocationType.Motel)) missing++;
+        if (!locations.ContainsKey(LocationType.Bar)) missing++;
+        if (!locations.ContainsKey(LocationType.GamblingHall)) missing++;
+        if (!locations.ContainsKey(LocationType.CityPark)) missing++;
+        if (!locations.ContainsKey(LocationType.GasStation)) missing++;
+        return missing;
     }
 
     private void ResetWorkerNeedTimer(DriverAgent driver, WorkerNeedKind need)

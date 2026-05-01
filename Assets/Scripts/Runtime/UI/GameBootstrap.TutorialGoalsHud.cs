@@ -635,7 +635,7 @@ public partial class GameBootstrap
             TutorialGoalKind.BuildLumberjackCamp => ru ? "Стройка (B) -> Лагерь лесорубов: поставь у леса" : "Build (B) -> Lumberjack Camp: place near forest",
             TutorialGoalKind.AssignLumberjackWorker => ru ? "Вакансии -> Лесозаготовка -> Смена -> Рабочий" : "Vacancies -> Logging -> Shift -> Worker",
             TutorialGoalKind.BuyFirstTruck => ru ? "Вакансии -> кнопка Купить грузовик" : "Vacancies -> Buy Truck button",
-            TutorialGoalKind.AssignTruckDriverShift => ru ? "Вакансии -> Водитель грузовика -> Смена -> Грузовик -> Рабочий" : "Vacancies -> Truck Driver -> Shift -> Truck -> Worker",
+            TutorialGoalKind.AssignTruckDriverShift => ru ? "Вакансии -> Водитель грузовика -> Смена -> Рабочий" : "Vacancies -> Truck Driver -> Shift -> Worker",
             TutorialGoalKind.BuildBar => ru ? "Стройка (B) -> Бар: выбери и поставь" : "Build (B) -> Bar: select and place",
             TutorialGoalKind.BuildGamblingHall => ru ? "Стройка (B) -> Игровые автоматы: выбери и поставь" : "Build (B) -> Gambling Hall: select and place",
             TutorialGoalKind.BuildCanteen => ru ? "Стройка (B) -> Столовая: выбери и поставь" : "Build (B) -> Canteen: select and place",
@@ -647,7 +647,7 @@ public partial class GameBootstrap
             TutorialGoalKind.BuildLocalBusStops => ru ? "Стройка (B) -> Остановка: поставь ровно 2" : "Build (B) -> Bus Stop: place exactly 2",
             TutorialGoalKind.AssignBusDrivers => ru ? "Вакансии -> Водитель автобуса -> назначь 3 смены" : "Vacancies -> Bus Driver -> assign 3 shifts",
             TutorialGoalKind.SetTaxRate15 => ru ? "Экономика -> Налоги: нажимай + до 15%" : "Economy -> Taxes: press + until 15%",
-            TutorialGoalKind.AssignIntercityDriver => ru ? "Вакансии -> Межгород -> Смена -> Грузовик -> Рабочий" : "Vacancies -> Intercity -> Shift -> Truck -> Worker",
+            TutorialGoalKind.AssignIntercityDriver => ru ? "Вакансии -> Водитель грузовика -> Смена -> Рабочий" : "Vacancies -> Truck Driver -> Shift -> Worker",
             TutorialGoalKind.CreateBuyAlcoholOrder => ru ? "Экономика -> Торговля -> Alcohol -> Купить -> Разместить заказ" : "Economy -> Trade -> Alcohol -> Buy -> Place Order",
             TutorialGoalKind.JoinRaceParticipation => ru ? "\u0414\u043e\u0436\u0434\u0438\u0441\u044c \u0432\u044b\u0435\u0437\u0434\u0430 \u0437\u0430 \u043a\u0430\u0440\u0442\u0443 \u0438 \u043d\u0430\u0436\u043c\u0438 Join the Race" : "Wait until the truck leaves the map, then press Join the Race",
             _ => string.Empty

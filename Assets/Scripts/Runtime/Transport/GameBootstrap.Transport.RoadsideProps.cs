@@ -676,12 +676,51 @@ public partial class GameBootstrap
         float best = maxDist * maxDist;
         for (int i = 0; i < roadsideBenchPositions.Count; i++)
         {
-            if (i < benchOccupied.Length && benchOccupied[i]) continue;
+            if (IsRoadsideBenchOccupied(i)) continue;
             float d = (roadsideBenchPositions[i] - fromPos).sqrMagnitude;
             if (d < best) { best = d; idx = i; pos = roadsideBenchPositions[i]; }
         }
         return idx >= 0;
     }
+
+    private bool IsRoadsideBenchOccupied(int benchIndex)
+    {
+        if (benchIndex < 0)
+        {
+            return true;
+        }
+
+        if (benchIndex < benchOccupied.Length && benchOccupied[benchIndex])
+        {
+            return true;
+        }
+
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (driver == null || driver.SittingBenchIndex != benchIndex)
+            {
+                continue;
+            }
+
+            if (driver.WalkPhase == DriverRescuePhase.IdleWalkToBench ||
+                driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void MarkRoadsideBenchOccupied(int benchIndex)
+    {
+        if (benchIndex >= 0 && benchIndex < benchOccupied.Length)
+        {
+            benchOccupied[benchIndex] = true;
+        }
+    }
+
     private void CreateRoadLantern(Vector3 worldPosition, Quaternion worldRotation)
     {
         GameObject lanternRoot = new("RoadLantern");

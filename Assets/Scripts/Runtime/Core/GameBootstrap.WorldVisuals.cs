@@ -805,6 +805,8 @@ public partial class GameBootstrap : MonoBehaviour
         vignette.rounded.Override(true);
         dioramaVignette = vignette;
 
+        SetupOptionalGraphicsPostProcessing(profile);
+
         UpdateDioramaPostProcessing(1f, 0f, 1f, mainCamera.backgroundColor);
     }
 
@@ -821,15 +823,15 @@ public partial class GameBootstrap : MonoBehaviour
         float farBloomBoost = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.32f, 1f, zoomT));
 
         dioramaColorAdjustments.postExposure.Override(Mathf.Lerp(-0.18f, 0.1f, stylizedDaylight) + dawnDuskStrength * 0.03f + farBloomBoost * 0.08f);
-        dioramaColorAdjustments.contrast.Override(Mathf.Lerp(8f, 17f, stylizedDaylight));
-        dioramaColorAdjustments.saturation.Override(Mathf.Lerp(-6f, 14f, stylizedDaylight));
+        dioramaColorAdjustments.contrast.Override(ApplyGfxContrast(Mathf.Lerp(8f, 17f, stylizedDaylight)));
+        dioramaColorAdjustments.saturation.Override(ApplyGfxSaturation(Mathf.Lerp(-6f, 14f, stylizedDaylight)));
         dioramaColorAdjustments.colorFilter.Override(Color.Lerp(
-            Color.Lerp(new Color(0.84f, 0.88f, 1f, 1f), new Color(1f, 0.88f, 0.78f, 1f), dawnDuskStrength),
-            new Color(1f, 0.985f, 0.955f, 1f),
+            ApplyGfxWarmth(Color.Lerp(new Color(0.84f, 0.88f, 1f, 1f), new Color(1f, 0.88f, 0.78f, 1f), dawnDuskStrength)),
+            ApplyGfxWarmth(new Color(1f, 0.985f, 0.955f, 1f)),
             stylizedDaylight));
 
-        dioramaBloom.threshold.Override(Mathf.Max(0.34f, Mathf.Lerp(0.72f, 0.86f, stylizedDaylight) - farBloomBoost * 0.32f));
-        dioramaBloom.intensity.Override(Mathf.Lerp(0.22f, 0.16f, stylizedDaylight) + dawnDuskStrength * 0.34f + farBloomBoost * Mathf.Lerp(0.55f, 0.82f, stylizedDaylight));
+        dioramaBloom.threshold.Override(ApplyGfxBloomThreshold(Mathf.Max(0.34f, Mathf.Lerp(0.72f, 0.86f, stylizedDaylight) - farBloomBoost * 0.32f)));
+        dioramaBloom.intensity.Override(ApplyGfxBloomIntensity(Mathf.Lerp(0.22f, 0.16f, stylizedDaylight) + dawnDuskStrength * 0.34f + farBloomBoost * Mathf.Lerp(0.55f, 0.82f, stylizedDaylight)));
         dioramaBloom.scatter.Override(Mathf.Min(0.95f, Mathf.Lerp(0.66f, 0.56f, stylizedDaylight) + farBloomBoost * 0.24f + dawnDuskStrength * 0.18f));
         dioramaBloom.tint.Override(Color.Lerp(
             new Color(0.88f, 0.92f, 1f, 1f),
@@ -838,10 +840,12 @@ public partial class GameBootstrap : MonoBehaviour
 
         dioramaDepthOfField.gaussianStart.Override(Mathf.Lerp(26f, 40f, zoomT));
         dioramaDepthOfField.gaussianEnd.Override(Mathf.Lerp(60f, 86f, zoomT));
-        dioramaDepthOfField.gaussianMaxRadius.Override(Mathf.Lerp(0.026f, 0.016f, zoomT));
+        dioramaDepthOfField.gaussianMaxRadius.Override(ApplyGfxDepthOfField(Mathf.Lerp(0.026f, 0.016f, zoomT)));
 
-        dioramaVignette.intensity.Override(Mathf.Lerp(0.07f, 0.045f, stylizedDaylight) + nightStrength * 0.01f);
+        dioramaVignette.intensity.Override(ApplyGfxVignette(Mathf.Lerp(0.07f, 0.045f, stylizedDaylight) + nightStrength * 0.01f));
         dioramaVignette.smoothness.Override(Mathf.Lerp(0.5f, 0.4f, stylizedDaylight));
+
+        UpdateOptionalGraphicsPostProcessing(stylizedDaylight, dawnDuskStrength);
     }
 
     private void SetupWeatherSystem()
@@ -1057,9 +1061,9 @@ public partial class GameBootstrap : MonoBehaviour
         grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.72f, 0.82f, 0.69f), 0.08f);
         shoreSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.76f, 0.67f, 0.55f), 0.08f);
         beachSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.92f, 0.84f, 0.70f), 0.1f);
-        roadSurfaceMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.21f, 0.22f, 0.24f), 0.16f);
+        roadSurfaceMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.21f, 0.22f, 0.24f), VisualSmoothnessAsphalt);
         roadShoulderMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.54f, 0.49f, 0.41f), 0.11f);
-        highwaySurfaceMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.16f, 0.17f, 0.19f), 0.2f);
+        highwaySurfaceMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.16f, 0.17f, 0.19f), VisualSmoothnessAsphalt);
         highwayShoulderMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.44f, 0.46f, 0.49f), 0.14f);
         waterShallowMaterial = CreateSurfaceMaterial(null, new Color(0.48f, 0.82f, 0.92f), 0.96f);
         waterDeepMaterial    = CreateSurfaceMaterial(null, new Color(0.09f, 0.31f, 0.62f), 0.99f);
@@ -1271,20 +1275,15 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         bool useGrassPatch = IsGrassGroundCell(x, y);
-        Material material = new(useGrassPatch ? grassSurfaceMaterial : groundSurfaceMaterial);
         float tintNoise = Mathf.PerlinNoise((x + 1) * 0.37f, (y + 1) * 0.41f);
         Color tint = useGrassPatch
             ? Color.Lerp(new Color(0.74f, 0.82f, 0.7f), new Color(0.84f, 0.9f, 0.78f), tintNoise)
             : Color.Lerp(new Color(0.95f, 0.91f, 0.84f), new Color(1.01f, 0.98f, 0.92f), tintNoise);
-        material.color = tint;
-        if (material.HasProperty("_BaseColor"))
-        {
-            material.SetColor("_BaseColor", tint);
-        }
-
-        material.mainTextureScale = useGrassPatch ? new Vector2(0.54f, 0.54f) : new Vector2(0.62f, 0.62f);
-        material.mainTextureOffset = new Vector2((x % 5) * 0.13f, (y % 5) * 0.11f);
-        renderer.material = material;
+        tint = QuantizeVisualTint(tint, 12f);
+        Texture texture = useGrassPatch ? grassSurfaceMaterial.mainTexture : groundSurfaceMaterial.mainTexture;
+        Vector2 textureScale = useGrassPatch ? new Vector2(0.54f, 0.54f) : new Vector2(0.62f, 0.62f);
+        float smoothness = useGrassPatch ? 0.08f : 0.1f;
+        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, smoothness, textureScale);
     }
 
     private void ApplyStylizedRoadMaterial(GameObject target, int x, int y, bool isHighway, bool isShoulder)
@@ -1312,7 +1311,6 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        Material material = new(sourceMaterial);
         float tintNoise = Mathf.PerlinNoise((x + 1) * 0.29f + (isShoulder ? 5.3f : 1.7f), (y + 1) * 0.31f + (isHighway ? 8.1f : 2.9f));
         Color darkTint;
         Color lightTint;
@@ -1329,15 +1327,19 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         Color tint = Color.Lerp(darkTint, lightTint, tintNoise);
-        material.color = tint;
-        if (material.HasProperty("_BaseColor"))
-        {
-            material.SetColor("_BaseColor", tint);
-        }
+        tint = QuantizeVisualTint(tint, 10f);
+        Vector2 textureScale = isShoulder ? new Vector2(0.52f, 0.9f) : new Vector2(0.7f, 1.15f);
+        float smoothness = isShoulder ? 0.12f : VisualSmoothnessAsphalt;
+        renderer.sharedMaterial = GetCachedLitMaterial(sourceMaterial.mainTexture, tint, smoothness, textureScale);
+    }
 
-        material.mainTextureScale = isShoulder ? new Vector2(0.52f, 0.9f) : new Vector2(0.7f, 1.15f);
-        material.mainTextureOffset = new Vector2((x % 7) * 0.09f, (y % 7) * 0.08f);
-        renderer.material = material;
+    private static Color QuantizeVisualTint(Color color, float steps)
+    {
+        return new Color(
+            Mathf.Round(color.r * steps) / steps,
+            Mathf.Round(color.g * steps) / steps,
+            Mathf.Round(color.b * steps) / steps,
+            color.a);
     }
 
     private bool IsGrassGroundCell(int x, int y)

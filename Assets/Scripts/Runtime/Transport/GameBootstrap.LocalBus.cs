@@ -75,9 +75,15 @@ public partial class GameBootstrap
             localBusRoute.Driver.WaitingForShiftAtParking = false;
         }
 
-        if (localBusRoute?.RootTransform != null)
+        if (localBusRoute?.Bus != null)
         {
-            Destroy(localBusRoute.RootTransform.gameObject);
+            localBusRoute.Bus.Driver = null;
+            localBusRoute.Bus.PassengerCount = 0;
+            if (localBusRoute.Bus.BusObject != null)
+            {
+                localBusRoute.Bus.BusObject.transform.position = GetBusParkingSlotWorldPosition(localBusRoute.Bus.ParkingSlotIndex);
+                localBusRoute.Bus.BusObject.transform.rotation = Quaternion.identity;
+            }
         }
 
         localBusRoute = null;
@@ -205,30 +211,26 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (localBusRoute.RootTransform == null)
+        if (localBusRoute.Bus == null || localBusRoute.RootTransform == null)
         {
-            GameObject busRoot = new("LocalRouteBus");
-            busRoot.transform.SetParent(worldRoot, false);
+            if (!TryReserveAvailableBusForDriver(driver, out BusAgent busAgent, "local bus shift boarding"))
+            {
+                LogBusBoardingBlockOnce($"{driver.DriverName} cannot board local bus: no available parked buses.");
+                return false;
+            }
 
-            BuildSharedBusVisual(
-                busRoot.transform,
-                new Color(0.28f, 0.58f, 0.9f),
-                "LocalBusHeadlightLeft",
-                "LocalBusHeadlightRight",
-                out Renderer headlightLeftRenderer,
-                out Renderer headlightRightRenderer,
-                out Material headlightLeftMaterial,
-                out Material headlightRightMaterial,
-                out Light headlightLeft,
-                out Light headlightRight);
-
-            localBusRoute.RootTransform = busRoot.transform;
-            localBusRoute.HeadlightLeftRenderer = headlightLeftRenderer;
-            localBusRoute.HeadlightRightRenderer = headlightRightRenderer;
-            localBusRoute.HeadlightLeftMaterial = headlightLeftMaterial;
-            localBusRoute.HeadlightRightMaterial = headlightRightMaterial;
-            localBusRoute.HeadlightLeft = headlightLeft;
-            localBusRoute.HeadlightRight = headlightRight;
+            localBusRoute.Bus = busAgent;
+            localBusRoute.RootTransform = busAgent.BusObject.transform;
+            localBusRoute.HeadlightLeftRenderer = busAgent.HeadlightLeftRenderer;
+            localBusRoute.HeadlightRightRenderer = busAgent.HeadlightRightRenderer;
+            localBusRoute.HeadlightLeftMaterial = busAgent.HeadlightLeftMaterial;
+            localBusRoute.HeadlightRightMaterial = busAgent.HeadlightRightMaterial;
+            localBusRoute.HeadlightLeft = busAgent.HeadlightLeft;
+            localBusRoute.HeadlightRight = busAgent.HeadlightRight;
+        }
+        else if (localBusRoute.Bus.Driver == null)
+        {
+            localBusRoute.Bus.Driver = driver;
         }
 
         localBusRoute.Driver = driver;
@@ -243,6 +245,7 @@ public partial class GameBootstrap
         localBusRoute.PassengerCapacity = LocalBusMaxPassengers;
         localBusRoute.Bank = 0;
         localBusRoute.Phase = LocalBusPhase.ParkedAwaitingShiftStart;
+        SyncLocalBusAgentState();
         ResetBusBoardingBlockReason();
 
         driver.WaitingForShiftAtParking = false;
@@ -257,9 +260,21 @@ public partial class GameBootstrap
         localBusRoute.RootTransform.rotation = Quaternion.identity;
         UpdateLocalBusVisual();
 
-        SessionDebugLogger.Log("BUS", $"{driver.DriverName} boarded the local route bus in Parking. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
+        SessionDebugLogger.Log("BUS", $"{driver.DriverName} boarded {localBusRoute.Bus?.DisplayName ?? "local route bus"} in Parking. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
         SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} local bus boarded and awaiting shift start window.");
         return true;
+    }
+
+    private void SyncLocalBusAgentState()
+    {
+        if (localBusRoute?.Bus == null)
+        {
+            return;
+        }
+
+        localBusRoute.Bus.PassengerCount = localBusRoute.PassengerCount;
+        localBusRoute.Bus.PassengerCapacity = localBusRoute.PassengerCapacity;
+        localBusRoute.Bus.Bank = localBusRoute.Bank;
     }
 
     private void HandleLocalBusPassengersAtStop(LocationData stop)
@@ -297,6 +312,7 @@ public partial class GameBootstrap
             passenger.WalkTargetWorld = finalTarget;
             BuildDriverWalkPath(passenger, stopWaitPoint, finalTarget);
             localBusRoute.PassengerCount = Mathf.Max(0, localBusRoute.PassengerCount - 1);
+            SyncLocalBusAgentState();
             SessionDebugLogger.Log(
                 "BUS_PASSENGER",
                 $"{passenger.DriverName} left the local bus at Stop #{stopNumber} and resumed {travelReason}. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
@@ -353,6 +369,7 @@ public partial class GameBootstrap
             {
                 passenger.Money = Mathf.Max(0, passenger.Money - boardingDecision.FareCharged);
                 localBusRoute.Bank += boardingDecision.FareCharged;
+                SyncLocalBusAgentState();
                 SpawnMoneySpendPopup(stopWaitPoint, boardingDecision.FareCharged);
             }
 
@@ -362,6 +379,7 @@ public partial class GameBootstrap
             passenger.WalkWaypointIndex = 0;
             passenger.WalkAnimationTime = 0f;
             localBusRoute.PassengerCount = Mathf.Min(localBusRoute.PassengerCapacity, localBusRoute.PassengerCount + 1);
+            SyncLocalBusAgentState();
             SessionDebugLogger.Log(
                 "BUS_PASSENGER",
                 $"{passenger.DriverName} boarded the local bus at Stop #{stopNumber} for Stop #{passenger.BusDestinationStopNumber}; fare={(fareExempt ? "service pass" : $"${LocalBusFare}")}, passengerBalance=${passenger.Money}, busBank=${localBusRoute.Bank}. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
@@ -477,6 +495,10 @@ public partial class GameBootstrap
         {
             DriverAgent driver = localBusRoute.Driver;
             localBusRoute.RootTransform.position = GetLocalBusParkingWorldPosition();
+            if (localBusRoute.Bus != null)
+            {
+                localBusRoute.Bus.BusObject.transform.position = localBusRoute.RootTransform.position;
+            }
             if (driver != null && (driver.NeedsShiftEndReturn || !driver.IsOnActiveShift))
             {
                 CompleteBusDriverShiftReturn(driver);
@@ -688,9 +710,16 @@ public partial class GameBootstrap
             SessionDebugLogger.Log("BUS_ECON", $"{driver.DriverName} delivered ${transferredBank} from the local bus bank to Parking treasury. Parking treasury=${parking.BuildingBank}.");
         }
 
-        if (localBusRoute?.RootTransform != null)
+        if (localBusRoute?.Bus != null)
         {
-            Destroy(localBusRoute.RootTransform.gameObject);
+            localBusRoute.Bus.Bank = localBusRoute?.Bank ?? 0;
+            localBusRoute.Bus.PassengerCount = 0;
+            localBusRoute.Bus.Driver = null;
+            if (localBusRoute.Bus.BusObject != null)
+            {
+                localBusRoute.Bus.BusObject.transform.position = GetBusParkingSlotWorldPosition(localBusRoute.Bus.ParkingSlotIndex);
+                localBusRoute.Bus.BusObject.transform.rotation = Quaternion.identity;
+            }
         }
 
         localBusRoute = null;

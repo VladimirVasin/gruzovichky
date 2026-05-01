@@ -587,10 +587,58 @@ public partial class GameBootstrap
         return remaining - consumed;
     }
 
+    private DriverAgent GetTradeDispatchDriverCandidate()
+    {
+        DriverAgent legacyIntercityFallback = null;
+        int hour = GetCurrentHour();
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent candidate = driverAgents[i];
+            if (candidate == null ||
+                candidate.IsArrivingByBus ||
+                candidate.RestPhase != DriverRestPhase.None ||
+                IsDriverBusyWalkPhase(candidate) ||
+                IsDriverIdleConversing(candidate) ||
+                IsDriverOnActiveTradeRun(candidate) ||
+                IsDriverBusDriver(candidate) ||
+                IsBusDriverOnActiveRoute(candidate) ||
+                candidate.DutyMode == DriverDutyMode.Logistics)
+            {
+                continue;
+            }
+
+            TruckAgent assignedTruck = GetAssignedTruckForDriver(candidate);
+            if (assignedTruck != null &&
+                (assignedTruck.CurrentAssignedTrip != TripType.None ||
+                 assignedTruck.CurrentRefuelPhase != RefuelPhase.None ||
+                 assignedTruck.IsTruckMoving ||
+                 assignedTruck.IsTruckInteracting ||
+                 assignedTruck.IsDriverRescueActive))
+            {
+                continue;
+            }
+
+            if (IsDriverIntercity(candidate))
+            {
+                legacyIntercityFallback ??= candidate;
+                continue;
+            }
+
+            if (candidate.DutyMode == DriverDutyMode.Local &&
+                candidate.ShiftStartHour >= 0 &&
+                IsHourInShiftWindow(hour, candidate.ShiftStartHour))
+            {
+                return candidate;
+            }
+        }
+
+        return legacyIntercityFallback;
+    }
+
     private bool TryGetTradeDispatchContext(out DriverAgent driver, out TruckAgent truckAgent, out string blockReason)
     {
         EnsureTradeSelectionMatchesCurrentZone();
-        driver = GetIntercityAssignedDriver();
+        driver = GetTradeDispatchDriverCandidate();
         truckAgent = null;
 
         int quantity = GetTradeRunQuantity(selectedTradeResourceType);
@@ -599,7 +647,10 @@ public partial class GameBootstrap
         bool hasDriver = driver != null;
         bool driverArriving = driver != null && driver.IsArrivingByBus;
         bool driverBusy = driver != null && (driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || IsDriverIdleConversing(driver));
-        truckAgent = driver != null ? GetAssignedTruckForDriver(driver) : null;
+        if (hasDriver && !driverArriving && !driverBusy)
+        {
+            TryReserveAvailableTruckForDriver(driver, out truckAgent, "trade dispatch");
+        }
         bool hasTruck = truckAgent != null;
         bool truckBusy = truckAgent != null &&
                          (truckAgent.CurrentAssignedTrip != TripType.None ||

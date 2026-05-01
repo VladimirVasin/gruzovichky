@@ -268,7 +268,7 @@ public partial class GameBootstrap
         BuildDriverWalkPath(driver, driver.DriverObject.transform.position, target);
 
         string reason = shouldPlant ? "planting" : carryLogId > 0 ? "log pickup" : "tree cutting";
-        SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} left Lumberyard for {reason} at tree ({targetTree.Cell.x},{targetTree.Cell.y}).");
+        SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} left Lumberyard for {reason}; {FormatLumberTaskDebug(task, targetTree)}.");
     }
 
     private void SpawnForestWorkerOutside(DriverAgent driver)
@@ -445,7 +445,7 @@ public partial class GameBootstrap
                 task.PendingPlanting = true;
                 driver.WalkPhase = DriverRescuePhase.LumberPlanting;
                 tree.ChopTimer = 0f;
-                SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} started planting at ({tree.Cell.x},{tree.Cell.y}).");
+                SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} started planting; {FormatLumberTaskDebug(task, tree)}.");
             }
             else
             {
@@ -470,7 +470,7 @@ public partial class GameBootstrap
             tree.RootTransform.localRotation = tree.UprightRotation * Quaternion.Euler(0f, 0f, Random.Range(-5f, 5f));
         }
 
-        SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} chopped tree ({tree.Cell.x},{tree.Cell.y}) hit {tree.ChopHitsCompleted}/{LumberTreeChopsRequired}.");
+        SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} chopped tree; {FormatLumberTaskDebug(task, tree)}.");
 
         if (tree.ChopHitsCompleted < LumberTreeChopsRequired)
         {
@@ -481,7 +481,21 @@ public partial class GameBootstrap
         tree.FallTimer = 0f;
         tree.ChopHitsCompleted = 0;
         tree.ChopTimer = 0f;
-        SessionDebugLogger.Log("LUMBER", $"Tree ({tree.Cell.x},{tree.Cell.y}) started falling.");
+        SessionDebugLogger.Log("LUMBER", $"Tree started falling; {FormatLumberTaskDebug(task, tree)}.");
+    }
+
+    private string FormatLumberTaskDebug(LumberWorkerTaskData task, LumberTreeRuntimeData tree)
+    {
+        Vector2Int targetCell = tree != null
+            ? tree.Cell
+            : task != null
+                ? task.TreeCell
+                : new Vector2Int(-1, -1);
+        string treeState = tree != null ? tree.State.ToString() : "missing";
+        int hitCounter = tree != null ? tree.ChopHitsCompleted : -1;
+        int carryLogId = task != null ? task.CarryLogId : -1;
+        bool pendingPlanting = task != null && task.PendingPlanting;
+        return $"treeState={treeState}, currentTargetTree=({targetCell.x},{targetCell.y}), hitCounter={hitCounter}/{LumberTreeChopsRequired}, carryLogId={carryLogId}, pendingPlanting={pendingPlanting}";
     }
 
     private void UpdateActiveLumberPlanting(DriverAgent driver, LumberWorkerTaskData task)

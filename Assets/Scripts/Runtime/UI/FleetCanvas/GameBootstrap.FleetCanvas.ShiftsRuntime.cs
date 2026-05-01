@@ -756,11 +756,6 @@ public partial class GameBootstrap
     {
         if (driver == null) return;
         if (driver.IsArrivingByBus || driver.DutyMode == DriverDutyMode.Intercity) return;
-        if (driver.AssignedTruckNumber <= 0)
-        {
-            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} intercity assignment rejected: no truck assigned.");
-            return;
-        }
 
         if (HasActiveTradeRun())
         {

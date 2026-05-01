@@ -45,8 +45,8 @@ public partial class GameBootstrap
 
         if (truck == null)
         {
-            DriverAgent intercityDriver = GetIntercityAssignedDriver();
-            truck = GetAssignedTruckForDriver(intercityDriver);
+            DriverAgent tradeDriver = GetTradeDispatchDriverCandidate();
+            truck = GetAssignedTruckForDriver(tradeDriver);
         }
 
         if (truck?.TruckObject == null)

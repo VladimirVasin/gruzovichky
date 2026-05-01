@@ -928,9 +928,9 @@ public partial class GameBootstrap
         return locationType switch
         {
             LocationType.Parking => $"{FormatValueLine("Parked Trucks", $"{GetParkingTruckCount()} / {MaxTruckCount}")}\n{FormatValueLine(IsRussianLanguage() ? "Казна парковки" : "Parking Treasury", $"${locations[LocationType.Parking].BuildingBank}")}",
-            LocationType.Forest => $"{FormatValueLine("Workers", $"{locations[LocationType.Forest].Workers} / 1")}\n{FormatValueLine("Logs", $"{locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}")}",
-            LocationType.Sawmill => $"{FormatValueLine("Workers", $"{locations[LocationType.Sawmill].Workers} / 1")}\n{FormatValueLine("Logs", locations[LocationType.Sawmill].LogsStored.ToString())}\n{FormatValueLine("Boards", locations[LocationType.Sawmill].BoardsStored.ToString())}",
-            LocationType.FurnitureFactory => $"{FormatValueLine("Workers", $"{locations[LocationType.FurnitureFactory].Workers} / 1")}\n{FormatValueLine("Boards", $"{locations[LocationType.FurnitureFactory].BoardsStored} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{locations[LocationType.FurnitureFactory].TextileStored} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{locations[LocationType.FurnitureFactory].FurnitureStored} / {FurnitureFactoryMaxFurnitureStorage}")}",
+            LocationType.Forest => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Forest)} / 1")}\n{FormatValueLine("Logs", $"{locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}")}",
+            LocationType.Sawmill => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Sawmill)} / 1")}\n{FormatValueLine("Logs", locations[LocationType.Sawmill].LogsStored.ToString())}\n{FormatValueLine("Boards", locations[LocationType.Sawmill].BoardsStored.ToString())}",
+            LocationType.FurnitureFactory => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.FurnitureFactory)} / 1")}\n{FormatValueLine("Boards", $"{locations[LocationType.FurnitureFactory].BoardsStored} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{locations[LocationType.FurnitureFactory].TextileStored} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{locations[LocationType.FurnitureFactory].FurnitureStored} / {FurnitureFactoryMaxFurnitureStorage}")}",
             LocationType.Warehouse => GetWarehouseQuickResourceText(),
             LocationType.GasStation => GetGasStationQuickResourceText(),
             LocationType.IntercityStop    => IsRussianLanguage()
@@ -969,54 +969,37 @@ public partial class GameBootstrap
         buildingQuickHud.PersonalHouseSectionHeader.text = ru ? "Жильцы" : "Residents";
 
         List<DriverAgent> assigned  = new();
-        List<DriverAgent> available = new();
         foreach (DriverAgent d in driverAgents)
         {
             if (d.AssignedPersonalHouseIndex == selectedPersonalHouseIndex)
+            {
                 assigned.Add(d);
-            else
-                available.Add(d);
+            }
         }
-
-        List<DriverAgent> ordered = new(assigned.Count + available.Count);
-        ordered.AddRange(assigned);
-        ordered.AddRange(available);
 
         for (int i = 0; i < buildingQuickHud.ResidentRows.Length; i++)
         {
             PersonalHouseResidentRowUi row = buildingQuickHud.ResidentRows[i];
-            if (i >= ordered.Count)
+            if (i >= assigned.Count)
             {
                 row.Root.gameObject.SetActive(false);
                 row.CurrentDriverId = -1;
                 continue;
             }
 
-            DriverAgent d = ordered[i];
+            DriverAgent d = assigned[i];
             row.CurrentDriverId = d.DriverId;
             row.Root.gameObject.SetActive(true);
             row.NameText.text = d.DriverName;
-
-            bool isResident = d.AssignedPersonalHouseIndex == selectedPersonalHouseIndex;
-            row.ActionButtonText.text = isResident ? (ru ? "Убрать" : "Remove") : (ru ? "Назначить" : "Assign");
-            Color btnColor = isResident ? new Color(0.45f, 0.20f, 0.18f, 1f) : new Color(0.20f, 0.38f, 0.22f, 1f);
-            if (row.ActionButtonImage != null) row.ActionButtonImage.color = btnColor;
-            row.NameText.color = isResident ? Color.white : FleetMutedTextColor;
+            row.NameText.color = Color.white;
+            row.ActionButton.gameObject.SetActive(false);
         }
     }
 
     private void OnResidentRowButtonClick(int rowIndex)
     {
-        if (buildingQuickHud?.ResidentRows == null) return;
-        if (rowIndex < 0 || rowIndex >= buildingQuickHud.ResidentRows.Length) return;
-        int driverId = buildingQuickHud.ResidentRows[rowIndex].CurrentDriverId;
-        if (driverId <= 0) return;
-        DriverAgent d = driverAgents.Find(x => x.DriverId == driverId);
-        if (d == null) return;
-
-        d.AssignedPersonalHouseIndex = d.AssignedPersonalHouseIndex == selectedPersonalHouseIndex ? -1 : selectedPersonalHouseIndex;
-        isDriversScreenDirty = true;
-        PlayUiSound(uiSelectClip, 0.85f);
+        // Personal homes are assigned by worker life-cycle purchases now.
+        // The quick HUD is intentionally read-only to avoid manual housing exploits.
     }
 
     private string GetServiceBuildingQuickResourceText(LocationType locationType)
@@ -1081,9 +1064,33 @@ public partial class GameBootstrap
 
     private string GetWarehouseQuickResourceText()
     {
-        locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse);
-        int workers = warehouse != null ? warehouse.Workers : 0;
-        return FormatValueLine("Workers", $"{workers} / {WarehouseMaxWorkers}");
+        return FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Warehouse)} / {WarehouseMaxWorkers}");
+    }
+
+    private int CountWorkersOnShiftAt(LocationType locationType)
+    {
+        if (!IsProductionWorkHour(GetCurrentHour()))
+        {
+            return 0;
+        }
+
+        int count = 0;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (driver == null ||
+                driver.DutyMode != DriverDutyMode.Logistics ||
+                driver.AssignedBuildingType != locationType ||
+                driver.RestPhase != DriverRestPhase.None ||
+                driver.IsArrivingByBus)
+            {
+                continue;
+            }
+
+            count++;
+        }
+
+        return count;
     }
 
     private static bool HasBuildingContextAction(LocationType locationType)

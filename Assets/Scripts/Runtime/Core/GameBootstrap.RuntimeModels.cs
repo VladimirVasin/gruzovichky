@@ -66,6 +66,28 @@ public partial class GameBootstrap
         public float PurchaseArrivalSpeed = 4.6f;
     }
 
+    private sealed class BusAgent
+    {
+        public int BusNumber;
+        public string DisplayName;
+        public GameObject BusObject;
+        public Renderer HeadlightLeftRenderer;
+        public Renderer HeadlightRightRenderer;
+        public Material HeadlightLeftMaterial;
+        public Material HeadlightRightMaterial;
+        public Light HeadlightLeft;
+        public Light HeadlightRight;
+        public DriverAgent Driver;
+        public int ParkingSlotIndex;
+        public int PassengerCount;
+        public int PassengerCapacity = LocalBusMaxPassengers;
+        public int Bank;
+        public bool IsPurchaseArrivalActive;
+        public readonly List<Vector3> PurchaseArrivalWaypoints = new();
+        public int PurchaseArrivalWaypointIndex;
+        public float PurchaseArrivalSpeed = 4.3f;
+    }
+
     private sealed class WorkerEffectState
     {
         public string EffectId;
@@ -168,6 +190,7 @@ public partial class GameBootstrap
         public int SittingBenchIndex = -1;
         public int CityParkBenchIndex = -1;
         public int CityParkPromenadeStep;
+        public int CityParkActivityStyle;
         public float IdleActivityTimer;
         public Transform[] SmokingParticles;
         public Material[] SmokingParticleMaterials;
@@ -214,5 +237,7 @@ public partial class GameBootstrap
         public int WarehouseDeliveryAmount;
         public bool IsCarryingWarehouseDelivery;
         public string LastWorkerDecisionDebugKey;
+        public string LastThrottledWorkerDecisionDebugKey;
+        public float LastThrottledWorkerDecisionDebugTime = -999f;
     }
 }

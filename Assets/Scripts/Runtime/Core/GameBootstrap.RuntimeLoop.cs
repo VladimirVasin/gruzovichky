@@ -84,12 +84,13 @@ public partial class GameBootstrap
 
     private void OnDestroy()
     {
+        ClearVisualMaterialCache();
         SessionDebugLogger.EndSession("Play mode object destroyed");
     }
 
     private void Update()
     {
-        bool shouldUpdateWaterEffects = ConsumeThrottledUpdate(ref waterEffectsUpdateTimer, WaterEffectsUpdateInterval);
+        bool shouldUpdateWaterEffects = ConsumeThrottledUpdate(ref waterEffectsUpdateTimer, GetWaterEffectsUpdateInterval());
         UpdateMainMenuHud();
         if (isLoadingWorld || isMainMenuOpen)
         {
@@ -135,23 +136,31 @@ public partial class GameBootstrap
         UpdateDayNightCycle();
         UpdateNightSky();
         UpdateSelectedLocationLabel();
-        UpdateForestTreeWobbles();
-        UpdateMiscTreeSways();
-        UpdateMiscBirds();
-        UpdateAmbientCats();
-        UpdateAmbientSquirrels();
-        UpdateAmbientBees();
-        UpdateAmbientLanternMoths();
-        UpdateAmbientFallingLeaves();
-        UpdateAmbientFireflies();
-        UpdateAmbientFrogs();
-        UpdateRiverFish();
-        UpdateLakeFish();
+        if (!isFarZoomVisualLodActive)
+        {
+            UpdateForestTreeWobbles();
+            UpdateMiscTreeSways();
+            UpdateMiscBirds();
+            UpdateAmbientCats();
+            UpdateAmbientSquirrels();
+            UpdateAmbientBees();
+            UpdateAmbientLanternMoths();
+            UpdateAmbientFallingLeaves();
+            UpdateAmbientFireflies();
+            UpdateAmbientFrogs();
+            UpdateRiverFish();
+            UpdateLakeFish();
+        }
         if (shouldUpdateWaterEffects)
         {
             UpdateWaterEffects();
         }
         UpdateHiringDriverArrival();
+        for (int i = 0; i < busAgents.Count; i++)
+        {
+            UpdatePurchasedBusArrival(busAgents[i], Time.deltaTime);
+        }
+
         UpdateLocalBusRoute();
         UpdateEdgeHighwayBuses();
         UpdateRiverBoats();
@@ -170,6 +179,7 @@ public partial class GameBootstrap
             UpdateWorkerNeedsClock(driver);
             UpdateWorkerEffectsClock(driver);
         }
+        UpdateHourlyNeedsEconomyTelemetry();
 
         for (int i = 0; i < truckAgents.Count; i++)
         {
@@ -282,6 +292,13 @@ public partial class GameBootstrap
         ApplyWaterVisualLod(targetLod);
     }
 
+    private float GetWaterEffectsUpdateInterval()
+    {
+        return waterVisualLodLevel >= 2 || isFarZoomVisualLodActive
+            ? WaterEffectsFarUpdateInterval
+            : WaterEffectsUpdateInterval;
+    }
+
     private int GetWaterVisualLodLevel()
     {
         float cameraHeight = truckObject != null && isTruckCameraFocused
@@ -330,6 +347,15 @@ public partial class GameBootstrap
         SetRootActive(gridLinesRoot, !active);
         SetRootActive(ambientAirRoot, !active);
         SetRootActive(ambientFallingLeafRoot, !active);
+        SetRootActive(miscBirdRoot, !active);
+        SetRootActive(ambientCatRoot, !active);
+        SetRootActive(ambientSquirrelRoot, !active);
+        SetRootActive(ambientBeeRoot, !active);
+        SetRootActive(ambientLanternMothRoot, !active);
+        SetRootActive(ambientFireflyRoot, !active);
+        SetRootActive(ambientFrogRoot, !active);
+        SetRootActive(riverFishRoot, !active);
+        SetRootActive(lakeFishRoot, !active);
         SetRootActive(exhaustSmokeRoot, !active);
         SetRootActive(truckDirtDustRoot, !active);
 

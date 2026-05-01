@@ -502,10 +502,8 @@ public partial class GameBootstrap
         int shiftAssignments = 0;
         int productionAssignments = 0;
         int busAssignments = 0;
-        int intercityAssignments = 0;
 
         DebugNormalizeTruckRosterShiftAssignments(assignments, ref shiftAssignments);
-        intercityAssignments += DebugAutoAssignIntercitySlot(assignments);
 
         if (truckAgents != null)
         {
@@ -558,7 +556,7 @@ public partial class GameBootstrap
         int freeWorkersLeft = DebugCountAutoAssignableWorkers();
         string summary =
             $"Auto assign finished: trucks={truckAssignments}, truckShifts={shiftAssignments}, production={productionAssignments}, " +
-            $"bus={busAssignments}, intercity={intercityAssignments}, freeWorkersLeft={freeWorkersLeft}.";
+            $"bus={busAssignments}, freeWorkersLeft={freeWorkersLeft}.";
         SessionDebugLogger.Log("DEBUG_ASSIGN", summary);
         for (int i = 0; i < assignments.Count; i++)
         {

@@ -2,23 +2,47 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private void LogWorkerDecision(DriverAgent driver, string decision, string reason, bool force = false)
+    private const float WorkerDecisionRepeatThrottleSeconds = 4f;
+
+    private void LogWorkerDecision(
+        DriverAgent driver,
+        string decision,
+        string reason,
+        bool force = false,
+        WorkerLifeGoal? selectedGoalBefore = null,
+        WorkerLifeGoal? selectedGoalAfter = null)
     {
         if (driver == null)
         {
             return;
         }
 
-        string key = $"{decision}|{reason}|{driver.WalkPhase}|{driver.RestPhase}|{driver.LifeGoal}|{driver.DutyMode}|{driver.ShiftStartHour}|{driver.AssignedBuildingType}|{driver.AssignedTruckNumber}|{driver.IsOnActiveShift}|{driver.IsInsideBuilding}";
-        if (!force && driver.LastWorkerDecisionDebugKey == key)
+        WorkerLifeGoal goalBefore = selectedGoalBefore ?? driver.LifeGoal;
+        WorkerLifeGoal goalAfter = selectedGoalAfter ?? driver.LifeGoal;
+        string key = $"{decision}|{reason}|before={goalBefore}|after={goalAfter}|{driver.WalkPhase}|{driver.RestPhase}|{driver.LifeGoal}|{driver.DutyMode}|{driver.ShiftStartHour}|{driver.AssignedBuildingType}|{driver.AssignedTruckNumber}|{driver.IsOnActiveShift}|{driver.IsInsideBuilding}";
+        bool shouldThrottleRepeats = decision == "idle-blocked" || decision == "life-goal-selected";
+        if (shouldThrottleRepeats &&
+            driver.LastThrottledWorkerDecisionDebugKey == key &&
+            Time.unscaledTime - driver.LastThrottledWorkerDecisionDebugTime < WorkerDecisionRepeatThrottleSeconds)
+        {
+            return;
+        }
+
+        if (!shouldThrottleRepeats && !force && driver.LastWorkerDecisionDebugKey == key)
         {
             return;
         }
 
         driver.LastWorkerDecisionDebugKey = key;
+        if (shouldThrottleRepeats)
+        {
+            driver.LastThrottledWorkerDecisionDebugKey = key;
+            driver.LastThrottledWorkerDecisionDebugTime = Time.unscaledTime;
+        }
+
         SessionDebugLogger.Log(
             "WORKER_DECISION",
-            $"{driver.DriverName}: {decision}; reason={reason}; {FormatWorkerDecisionSnapshot(driver)}.");
+            $"{driver.DriverName}: {decision}; reason={reason}; selectedGoalBefore={goalBefore}; selectedGoalAfter={goalAfter}; {FormatWorkerDecisionSnapshot(driver)}.");
     }
 
     private string FormatWorkerDecisionSnapshot(DriverAgent driver)

@@ -58,6 +58,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float TruckFuelPerCell = 0.5f;
     internal const float TruckAutoRefuelThreshold = 50f;
     private const float WaterEffectsUpdateInterval = 1f / 24f;
+    private const float WaterEffectsFarUpdateInterval = 1f / 10f;
     private const float WaterLodMediumCameraHeight = 18f;
     private const float WaterLodFarCameraHeight = 28f;
     private const float FarZoomVisualLodEnterHeight = 46f;
@@ -117,6 +118,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const int AudioSampleRate = 22050;
     private const int MaxTruckCount = 5;
     private const int HireTruckCost = 300;
+    private const int MaxBusCount = 3;
+    private const int HireBusCost = 220;
     private const int HireDriverCost = 50;
     private const int TutorialHireWorkerWaveCount = 7;
     private const int TutorialWarehouseLoaderGoalCount = 3;
@@ -160,6 +163,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly Dictionary<Vector2Int, (GameObject Root, Vector2Int SideCell)> roadCellSignMap = new();
     private readonly HashSet<Vector2Int> signSideCells = new();
     private readonly List<TruckAgent> truckAgents = new();
+    private readonly List<BusAgent> busAgents = new();
     private readonly List<DriverAgent> driverAgents = new();
     private readonly List<ForestWorkerAmbient> forestWorkers = new();
     private readonly List<Vector3> forestWorkPoints = new();
@@ -289,6 +293,22 @@ public partial class GameBootstrap : MonoBehaviour
     private Bloom dioramaBloom;
     private DepthOfField dioramaDepthOfField;
     private Vignette dioramaVignette;
+    private FilmGrain                   dioramaFilmGrain;
+    private ShadowsMidtonesHighlights   dioramaSMH;
+    private ChromaticAberration         dioramaChromaticAberration;
+    private bool  gfxFilmGrainEnabled    = true;
+    private bool  gfxSmhEnabled          = true;
+    private bool  gfxChromAberrEnabled   = true;
+    private bool  gfxDepthOfFieldEnabled = true;
+    private float gfxBloomIntensity      = 0.55f;
+    private float gfxBloomReach          = 0.55f;
+    private float gfxSaturation          = 0.55f;
+    private float gfxContrast            = 0.60f;
+    private float gfxWarmth              = 0.55f;
+    private float gfxVignette            = 0.45f;
+    private float gfxDepthOfFieldAmount  = 0.55f;
+    private float gfxFilmGrainIntensity  = 0.35f;
+    private float gfxChromAberrIntensity = 0.35f;
     private GameObject selectedLocationLabelRoot;
     private TextMesh selectedLocationLabelText;
     private readonly List<TextMesh> selectedLocationLabelOutlines = new();
@@ -395,7 +415,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private readonly List<TradeHudOrder> activeTradeHudOrders = new();
 
-    private string tradeDispatchStatusText = "Assign an Intercity driver to unlock trade dispatch.";
+    private string tradeDispatchStatusText = "Assign a Truck Driver shift to unlock trade dispatch.";
     private bool isResourcesPanelOpen;
     private bool isEconomyPanelOpen;
     private bool isEconomyTaxesTabActive = true;
@@ -407,6 +427,7 @@ public partial class GameBootstrap : MonoBehaviour
     private int gameSpeedMultiplier = 1;
     private int lastActiveGameSpeedMultiplier = 1;
     private int nextHireTruckNumber = 2;
+    private int nextHireBusNumber = 1;
     private int nextDriverId = 1;
     private TripType currentAssignedTrip = TripType.None;
     private BuildTool activeBuildTool = BuildTool.None;
@@ -487,6 +508,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private sealed class LocalBusRouteData
     {
+        public BusAgent Bus;
         public Transform RootTransform;
         public Renderer HeadlightLeftRenderer;
         public Renderer HeadlightRightRenderer;
@@ -782,6 +804,7 @@ public partial class GameBootstrap : MonoBehaviour
         IdleAtGamblingHall,
         IdleWalkToCityPark,
         IdleAtCityPark,
+        IdleExitCityPark,
         IdleSmoking,
         IdlePhoneCall,
         IdleWalkToCat,

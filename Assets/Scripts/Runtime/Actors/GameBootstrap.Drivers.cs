@@ -47,6 +47,45 @@ public partial class GameBootstrap : MonoBehaviour
         return GetBusDriverShiftSlotIndex(driver) >= 0;
     }
 
+    private int GetCurrentShiftPresetIndex()
+    {
+        int hour = GetCurrentHour();
+        for (int i = 0; i < ShiftPresetHours.Length; i++)
+        {
+            if (IsHourInShiftWindow(hour, ShiftPresetHours[i]))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private bool IsLocalBusServiceAvailableForPassengers()
+    {
+        if (localBusRoute != null &&
+            localBusRoute.Driver != null &&
+            localBusRoute.RootTransform != null &&
+            localBusRoute.Phase != LocalBusPhase.None &&
+            localBusRoute.Phase != LocalBusPhase.ReturningToParking)
+        {
+            return true;
+        }
+
+        int shiftIndex = GetCurrentShiftPresetIndex();
+        if (shiftIndex < 0 ||
+            shiftIndex >= busDriverShiftIds.Length ||
+            busDriverShiftIds[shiftIndex] <= 0)
+        {
+            return false;
+        }
+
+        DriverAgent busDriver = GetDriverAgentById(busDriverShiftIds[shiftIndex]);
+        return busDriver != null &&
+               IsDriverBusDriver(busDriver) &&
+               (HasAvailableBusInParking() || IsBusDriverOnActiveRoute(busDriver));
+    }
+
     private void ResetWorkerLocalBusTripState(DriverAgent driver)
     {
         if (driver == null)
@@ -60,6 +99,38 @@ public partial class GameBootstrap : MonoBehaviour
         driver.BusFinalTargetWorld = Vector3.zero;
         driver.BusTravelReason = string.Empty;
         driver.BusRideFareExempt = false;
+    }
+
+    private bool ResumeWorkerLocalBusTripOnFoot(DriverAgent driver, string blockReason)
+    {
+        if (driver == null ||
+            driver.DriverObject == null ||
+            driver.WalkPhase != DriverRescuePhase.WaitingAtLocalBusStop)
+        {
+            return false;
+        }
+
+        DriverRescuePhase finalWalkPhase = driver.BusFinalWalkPhase;
+        Vector3 finalTarget = driver.BusFinalTargetWorld;
+        string travelReason = driver.BusTravelReason;
+        if (finalWalkPhase == DriverRescuePhase.None)
+        {
+            ResetWorkerLocalBusTripState(driver);
+            driver.WalkPhase = DriverRescuePhase.None;
+            return false;
+        }
+
+        Vector3 startPosition = driver.DriverObject.transform.position;
+        ResetWorkerLocalBusTripState(driver);
+        driver.DriverObject.SetActive(true);
+        driver.WalkPhase = finalWalkPhase;
+        driver.WalkTargetWorld = finalTarget;
+        driver.WalkAnimationTime = 0f;
+        BuildDriverWalkPath(driver, startPosition, finalTarget);
+        SessionDebugLogger.Log(
+            "BUS_PASSENGER",
+            $"{driver.DriverName} stopped waiting for local bus and continued on foot: {blockReason}. Trip={travelReason}, finalPhase={finalWalkPhase}.");
+        return true;
     }
 
     private static int EstimateGridDistance(Vector2Int a, Vector2Int b)
@@ -141,6 +212,14 @@ public partial class GameBootstrap : MonoBehaviour
     {
         if (driver == null || driver.DriverObject == null)
         {
+            return false;
+        }
+
+        if (!IsLocalBusServiceAvailableForPassengers())
+        {
+            SessionDebugLogger.Log(
+                "BUS_PASSENGER",
+                $"{driver.DriverName} skipped local bus for {reason}: no bus driver assigned to the current shift or no bus available.");
             return false;
         }
 
@@ -318,6 +397,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
         driver.CityParkBenchIndex = -1;
         driver.CityParkPromenadeStep = 0;
+        driver.CityParkActivityStyle = 0;
     }
 
     private static bool IsDriverInIdleActivity(DriverAgent driver)
@@ -333,6 +413,7 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToCityPark ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCityPark ||
+               driver.WalkPhase == DriverRescuePhase.IdleExitCityPark ||
                driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
                driver.WalkPhase == DriverRescuePhase.IdlePhoneCall ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToCat ||
@@ -341,7 +422,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private bool ShouldDriverHeadToShift(DriverAgent driver)
     {
-        if (driver == null || IsDriverIntercity(driver) || driver.DutyMode == DriverDutyMode.Logistics || driver.ShiftStartHour < 0 || driver.AssignedTruckNumber <= 0)
+        if (driver == null || IsDriverIntercity(driver) || driver.DutyMode == DriverDutyMode.Logistics || driver.ShiftStartHour < 0)
         {
             return false;
         }
@@ -352,8 +433,12 @@ public partial class GameBootstrap : MonoBehaviour
 
     private bool TryBoardDriverToAssignedTruck(DriverAgent driver)
     {
-        TruckAgent assignedTruck = GetAssignedTruckForDriver(driver);
-        if (driver == null || assignedTruck == null)
+        if (driver == null || IsDriverBusDriver(driver))
+        {
+            return false;
+        }
+
+        if (driver == null || !TryReserveAvailableTruckForDriver(driver, out TruckAgent assignedTruck, "boarding freight shift"))
         {
             return false;
         }
@@ -395,8 +480,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void StartDriverShiftCommute(DriverAgent driver)
     {
-        TruckAgent assignedTruck = GetAssignedTruckForDriver(driver);
-        if (driver == null || assignedTruck == null || driver.DriverObject == null)
+        if (driver == null || IsDriverBusDriver(driver) || driver.DriverObject == null || !TryReserveAvailableTruckForDriver(driver, out TruckAgent assignedTruck, "freight shift commute"))
         {
             return;
         }
@@ -502,7 +586,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        if (driver == null || IsDriverIntercity(driver) || driver.DutyMode == DriverDutyMode.Logistics || driver.IsArrivingByBus || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || driver.AssignedTruckNumber <= 0)
+        if (driver == null || IsDriverIntercity(driver) || driver.DutyMode == DriverDutyMode.Logistics || driver.IsArrivingByBus || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver))
         {
             return;
         }
@@ -519,8 +603,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        TruckAgent assignedTruck = GetAssignedTruckForDriver(driver);
-        if (assignedTruck == null)
+        if (!TryReserveAvailableTruckForDriver(driver, out _, "freight shift start"))
         {
             return;
         }
@@ -619,6 +702,7 @@ public partial class GameBootstrap : MonoBehaviour
             if (wasRidingLocalBus && localBusRoute != null)
             {
                 localBusRoute.PassengerCount = Mathf.Max(0, localBusRoute.PassengerCount - 1);
+                SyncLocalBusAgentState();
             }
 
             if (!driver.DriverObject.activeSelf)

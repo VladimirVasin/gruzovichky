@@ -714,7 +714,7 @@ public partial class GameBootstrap
             return blockReason;
         }
 
-        if (tradeDispatchStatusText == "Assign an Intercity driver to unlock trade dispatch.")
+        if (tradeDispatchStatusText == "Assign a Truck Driver shift to unlock trade dispatch.")
         {
             return "Ready to dispatch via edge highway";
         }

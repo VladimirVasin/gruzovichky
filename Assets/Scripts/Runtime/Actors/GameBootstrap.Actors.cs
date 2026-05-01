@@ -125,41 +125,41 @@ public partial class GameBootstrap
     private void BuildSedanCar(Transform parent, Color bodyColor)
     {
         CreateCarCube(parent, "SedanBody", new Vector3(0f, 0.14f, 0f), new Vector3(0.92f, 0.22f, 0.44f), bodyColor);
-        CreateCarCube(parent, "SedanRoof", new Vector3(-0.08f, 0.30f, 0f), new Vector3(0.50f, 0.16f, 0.40f), Color.Lerp(bodyColor, Color.white, 0.12f));
-        CreateCarCube(parent, "SedanWindshield", new Vector3(0.20f, 0.31f, 0f), new Vector3(0.06f, 0.12f, 0.36f), new Color(0.65f, 0.84f, 0.92f));
-        CreateCarCube(parent, "SedanRearGlass", new Vector3(-0.36f, 0.30f, 0f), new Vector3(0.05f, 0.12f, 0.34f), new Color(0.58f, 0.78f, 0.88f));
+        CreateCarCube(parent, "SedanRoof", new Vector3(-0.08f, 0.30f, 0f), new Vector3(0.50f, 0.16f, 0.40f), Color.Lerp(bodyColor, Color.white, 0.12f), VisualSmoothnessRoofMetal);
+        CreateCarCube(parent, "SedanWindshield", new Vector3(0.20f, 0.31f, 0f), new Vector3(0.06f, 0.12f, 0.36f), new Color(0.65f, 0.84f, 0.92f), VisualSmoothnessGlass);
+        CreateCarCube(parent, "SedanRearGlass", new Vector3(-0.36f, 0.30f, 0f), new Vector3(0.05f, 0.12f, 0.34f), new Color(0.58f, 0.78f, 0.88f), VisualSmoothnessGlass);
         CreateCarWheels(parent, 0.34f, 0.25f, 0.095f, 0.08f);
     }
 
     private void BuildPickupCar(Transform parent, Color bodyColor)
     {
         CreateCarCube(parent, "PickupBody", new Vector3(0f, 0.17f, 0f), new Vector3(0.88f, 0.30f, 0.48f), bodyColor);
-        CreateCarCube(parent, "PickupCab", new Vector3(0.22f, 0.40f, 0f), new Vector3(0.42f, 0.24f, 0.44f), Color.Lerp(bodyColor, Color.white, 0.10f));
+        CreateCarCube(parent, "PickupCab", new Vector3(0.22f, 0.40f, 0f), new Vector3(0.42f, 0.24f, 0.44f), Color.Lerp(bodyColor, Color.white, 0.10f), VisualSmoothnessVehicleMetal);
         CreateCarCube(parent, "PickupBedLeft", new Vector3(-0.24f, 0.38f, -0.24f), new Vector3(0.46f, 0.12f, 0.05f), Color.Lerp(bodyColor, Color.black, 0.12f));
         CreateCarCube(parent, "PickupBedRight", new Vector3(-0.24f, 0.38f, 0.24f), new Vector3(0.46f, 0.12f, 0.05f), Color.Lerp(bodyColor, Color.black, 0.12f));
         CreateCarCube(parent, "PickupBedGate", new Vector3(-0.48f, 0.38f, 0f), new Vector3(0.05f, 0.12f, 0.46f), Color.Lerp(bodyColor, Color.black, 0.12f));
-        CreateCarCube(parent, "PickupWindshield", new Vector3(0.45f, 0.41f, 0f), new Vector3(0.05f, 0.13f, 0.34f), new Color(0.65f, 0.84f, 0.92f));
+        CreateCarCube(parent, "PickupWindshield", new Vector3(0.45f, 0.41f, 0f), new Vector3(0.05f, 0.13f, 0.34f), new Color(0.65f, 0.84f, 0.92f), VisualSmoothnessGlass);
         CreateCarWheels(parent, 0.35f, 0.28f, 0.115f, 0.10f);
     }
 
     private void BuildHatchbackCar(Transform parent, Color bodyColor)
     {
         CreateCarCube(parent, "HatchBody", new Vector3(0f, 0.15f, 0f), new Vector3(0.74f, 0.26f, 0.42f), bodyColor);
-        CreateCarCube(parent, "HatchRoof", new Vector3(0.02f, 0.28f, 0f), new Vector3(0.68f, 0.18f, 0.40f), Color.Lerp(bodyColor, Color.white, 0.10f));
-        CreateCarCube(parent, "HatchWindshield", new Vector3(0.38f, 0.28f, 0f), new Vector3(0.05f, 0.12f, 0.34f), new Color(0.65f, 0.84f, 0.92f));
-        CreateCarCube(parent, "HatchRearGlass", new Vector3(-0.34f, 0.27f, 0f), new Vector3(0.05f, 0.13f, 0.34f), new Color(0.58f, 0.78f, 0.88f));
+        CreateCarCube(parent, "HatchRoof", new Vector3(0.02f, 0.28f, 0f), new Vector3(0.68f, 0.18f, 0.40f), Color.Lerp(bodyColor, Color.white, 0.10f), VisualSmoothnessRoofMetal);
+        CreateCarCube(parent, "HatchWindshield", new Vector3(0.38f, 0.28f, 0f), new Vector3(0.05f, 0.12f, 0.34f), new Color(0.65f, 0.84f, 0.92f), VisualSmoothnessGlass);
+        CreateCarCube(parent, "HatchRearGlass", new Vector3(-0.34f, 0.27f, 0f), new Vector3(0.05f, 0.13f, 0.34f), new Color(0.58f, 0.78f, 0.88f), VisualSmoothnessGlass);
         CreateCarWheels(parent, 0.28f, 0.24f, 0.09f, 0.07f);
     }
 
-    private GameObject CreateCarCube(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Color color)
+    private GameObject CreateCarCube(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Color color, float smoothness = VisualSmoothnessVehicleMetal)
     {
         GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
         part.name = name;
         part.transform.SetParent(parent, false);
         part.transform.localPosition = localPosition;
         part.transform.localScale = localScale;
-        ApplyColor(part, color);
-        ConfigureShadowVisual(part);
+        ApplyColor(part, color, smoothness);
+        ConfigureShadowVisual(part, smoothness);
         DisableCarCollider(part);
         return part;
     }
@@ -172,8 +172,8 @@ public partial class GameBootstrap
         wheel.transform.localPosition = localPosition;
         wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
         wheel.transform.localScale = new Vector3(radius, width * 0.5f, radius);
-        ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f));
-        ConfigureShadowVisual(wheel);
+        ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f), VisualSmoothnessRubber);
+        ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
         DisableCarCollider(wheel);
         return wheel;
     }
@@ -291,31 +291,31 @@ public partial class GameBootstrap
         body.transform.SetParent(truckVisualRoot, false);
         body.transform.localPosition = new Vector3(0f, 0.25f, 0f);
         body.transform.localScale = new Vector3(0.7f, 0.35f, 1f);
-        ApplyColor(body, new Color(0.85f, 0.2f, 0.18f));
-        ConfigureShadowVisual(body);
+        ApplyColor(body, new Color(0.85f, 0.2f, 0.18f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(body, VisualSmoothnessVehicleMetal);
         truckBodyTransform = body.transform;
 
         GameObject bodyStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
         bodyStripe.transform.SetParent(truckVisualRoot, false);
         bodyStripe.transform.localPosition = new Vector3(0f, 0.28f, 0f);
         bodyStripe.transform.localScale = new Vector3(0.74f, 0.05f, 1.02f);
-        ApplyColor(bodyStripe, new Color(0.96f, 0.9f, 0.72f));
-        ConfigureShadowVisual(bodyStripe);
+        ApplyColor(bodyStripe, new Color(0.96f, 0.9f, 0.72f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(bodyStripe, VisualSmoothnessVehicleMetal);
 
         GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cabin.transform.SetParent(truckVisualRoot, false);
         cabin.transform.localPosition = new Vector3(0f, 0.4f, 0.2f);
         cabin.transform.localScale = new Vector3(0.55f, 0.4f, 0.45f);
-        ApplyColor(cabin, new Color(0.95f, 0.82f, 0.28f));
-        ConfigureShadowVisual(cabin);
+        ApplyColor(cabin, new Color(0.95f, 0.82f, 0.28f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(cabin, VisualSmoothnessVehicleMetal);
         truckCabinTransform = cabin.transform;
 
         GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
         windshield.transform.SetParent(truckVisualRoot, false);
         windshield.transform.localPosition = new Vector3(0f, 0.43f, 0.42f);
         windshield.transform.localScale = new Vector3(0.42f, 0.18f, 0.04f);
-        ApplyColor(windshield, new Color(0.68f, 0.86f, 0.94f));
-        ConfigureShadowVisual(windshield);
+        ApplyColor(windshield, new Color(0.68f, 0.86f, 0.94f), VisualSmoothnessGlass);
+        ConfigureShadowVisual(windshield, VisualSmoothnessGlass);
 
         GameObject truckShadowBlob = GameObject.CreatePrimitive(PrimitiveType.Cube);
         truckShadowBlob.transform.SetParent(truckVisualRoot, false);
@@ -355,8 +355,8 @@ public partial class GameBootstrap
             wheel.transform.localPosition = wheelOffsets[i];
             wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             wheel.transform.localScale = new Vector3(0.12f, 0.05f, 0.12f);
-            ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f));
-            ConfigureShadowVisual(wheel);
+            ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f), VisualSmoothnessRubber);
+            ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
             truckWheels.Add(wheel.transform);
             if (i < 2)
             {
@@ -434,7 +434,7 @@ public partial class GameBootstrap
                 BuildTruckBlockCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.54f, 0.45f, 0.78f), new Vector3(0.25f, 0.12f, 0.24f), 0.055f);
                 break;
             case CargoType.Furniture:
-                BuildTruckBlockCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.58f, 0.36f, 0.18f), new Vector3(0.22f, 0.22f, 0.22f), 0.09f);
+                BuildTruckBlockCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.58f, 0.36f, 0.18f), new Vector3(0.22f, 0.22f, 0.22f), 0.09f, VisualSmoothnessWood);
                 break;
             case CargoType.Fuel:
                 BuildTruckBarrelCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.86f, 0.68f, 0.16f));
@@ -458,8 +458,8 @@ public partial class GameBootstrap
             log.transform.localPosition = new Vector3(Mathf.Lerp(-0.22f, 0.22f, count == 1 ? 0.5f : i / (float)(count - 1)), 0.02f + (i % 2) * 0.045f, 0f);
             log.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             log.transform.localScale = new Vector3(0.055f, 0.34f, 0.055f);
-            ApplyColor(log, new Color(0.42f, 0.24f, 0.12f));
-            ConfigureShadowVisual(log);
+            ApplyColor(log, new Color(0.42f, 0.24f, 0.12f), VisualSmoothnessWood);
+            ConfigureShadowVisual(log, VisualSmoothnessWood);
         }
     }
 
@@ -472,12 +472,12 @@ public partial class GameBootstrap
             board.transform.SetParent(parent, false);
             board.transform.localPosition = new Vector3(0f, 0.018f + i * 0.028f, Mathf.Lerp(-0.22f, 0.22f, count == 1 ? 0.5f : i / (float)(count - 1)));
             board.transform.localScale = new Vector3(0.46f, 0.025f, 0.12f);
-            ApplyColor(board, new Color(0.78f, 0.58f, 0.32f));
-            ConfigureShadowVisual(board);
+            ApplyColor(board, new Color(0.78f, 0.58f, 0.32f), VisualSmoothnessWood);
+            ConfigureShadowVisual(board, VisualSmoothnessWood);
         }
     }
 
-    private void BuildTruckBlockCargo(Transform parent, int visibleUnits, Color color, Vector3 scale, float stackStep)
+    private void BuildTruckBlockCargo(Transform parent, int visibleUnits, Color color, Vector3 scale, float stackStep, float smoothness = VisualSmoothnessFabric)
     {
         for (int i = 0; i < visibleUnits; i++)
         {
@@ -487,8 +487,8 @@ public partial class GameBootstrap
             float z = -0.16f + (i / 2) * 0.16f;
             block.transform.localPosition = new Vector3(x, 0.035f + (i / 2) * stackStep, z);
             block.transform.localScale = scale;
-            ApplyColor(block, color * Random.Range(0.92f, 1.06f));
-            ConfigureShadowVisual(block);
+            ApplyColor(block, color * Random.Range(0.92f, 1.06f), smoothness);
+            ConfigureShadowVisual(block, smoothness);
         }
     }
 
@@ -504,8 +504,8 @@ public partial class GameBootstrap
             barrel.transform.localPosition = new Vector3(x, 0.045f, z);
             barrel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
             barrel.transform.localScale = new Vector3(0.09f, 0.11f, 0.09f);
-            ApplyColor(barrel, color);
-            ConfigureShadowVisual(barrel);
+            ApplyColor(barrel, color, VisualSmoothnessVehicleMetal);
+            ConfigureShadowVisual(barrel, VisualSmoothnessVehicleMetal);
         }
     }
 
@@ -794,16 +794,16 @@ public partial class GameBootstrap
         body.transform.SetParent(driver.DriverVisualRoot, false);
         body.transform.localPosition = new Vector3(0f, 0.38f, 0f);
         body.transform.localScale = isFemale ? new Vector3(0.20f, 0.34f, 0.20f) : new Vector3(0.22f, 0.34f, 0.22f);
-        ApplyColor(body, shirtColor);
-        ConfigureShadowVisual(body);
+        ApplyColor(body, shirtColor, VisualSmoothnessFabric);
+        ConfigureShadowVisual(body, VisualSmoothnessFabric);
         driver.DriverBodyTransform = body.transform;
 
         GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         head.transform.SetParent(driver.DriverVisualRoot, false);
         head.transform.localPosition = new Vector3(0f, 0.88f, 0f);
         head.transform.localScale = new Vector3(0.24f, 0.24f, 0.24f);
-        ApplyColor(head, new Color(0.96f, 0.82f, 0.68f));
-        ConfigureShadowVisual(head);
+        ApplyColor(head, new Color(0.96f, 0.82f, 0.68f), VisualSmoothnessSkin);
+        ConfigureShadowVisual(head, VisualSmoothnessSkin);
         driver.DriverHeadTransform = head.transform;
 
         if (isFemale)
@@ -813,8 +813,8 @@ public partial class GameBootstrap
             bun.transform.SetParent(driver.DriverVisualRoot, false);
             bun.transform.localPosition = new Vector3(0f, 1.02f, -0.04f);
             bun.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
-            ApplyColor(bun, new Color(0.31f, 0.18f, 0.09f));
-            ConfigureShadowVisual(bun);
+            ApplyColor(bun, new Color(0.31f, 0.18f, 0.09f), VisualSmoothnessFabric);
+            ConfigureShadowVisual(bun, VisualSmoothnessFabric);
             driver.DriverCapTransform = bun.transform;
         }
         else
@@ -824,8 +824,8 @@ public partial class GameBootstrap
             cap.transform.SetParent(driver.DriverVisualRoot, false);
             cap.transform.localPosition = new Vector3(0f, 1.02f, 0f);
             cap.transform.localScale = new Vector3(0.26f, 0.08f, 0.26f);
-            ApplyColor(cap, new Color(0.84f, 0.22f, 0.18f));
-            ConfigureShadowVisual(cap);
+            ApplyColor(cap, new Color(0.84f, 0.22f, 0.18f), VisualSmoothnessFabric);
+            ConfigureShadowVisual(cap, VisualSmoothnessFabric);
             driver.DriverCapTransform = cap.transform;
         }
 
@@ -838,8 +838,8 @@ public partial class GameBootstrap
         fuelCan.transform.SetParent(driver.DriverVisualRoot, false);
         fuelCan.transform.localPosition = new Vector3(0.18f, 0.42f, 0f);
         fuelCan.transform.localScale = new Vector3(0.14f, 0.2f, 0.1f);
-        ApplyColor(fuelCan, new Color(0.9f, 0.76f, 0.18f));
-        ConfigureShadowVisual(fuelCan);
+        ApplyColor(fuelCan, new Color(0.9f, 0.76f, 0.18f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(fuelCan, VisualSmoothnessVehicleMetal);
         driver.DriverFuelCanTransform = fuelCan.transform;
         driver.DriverFuelCanTransform.gameObject.SetActive(false);
 
@@ -848,8 +848,8 @@ public partial class GameBootstrap
         flashlight.transform.localPosition = new Vector3(0.24f, 0.57f, 0.1f);
         flashlight.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
         flashlight.transform.localScale = new Vector3(0.06f, 0.06f, 0.18f);
-        ApplyColor(flashlight, new Color(0.24f, 0.24f, 0.26f));
-        ConfigureShadowVisual(flashlight);
+        ApplyColor(flashlight, new Color(0.24f, 0.24f, 0.26f), VisualSmoothnessVehicleMetal);
+        ConfigureShadowVisual(flashlight, VisualSmoothnessVehicleMetal);
         driver.DriverFlashlightTransform = flashlight.transform;
         driver.DriverFlashlightRenderer = flashlight.GetComponent<Renderer>();
         driver.DriverFlashlightMaterial = driver.DriverFlashlightRenderer != null ? driver.DriverFlashlightRenderer.material : null;
@@ -884,7 +884,7 @@ public partial class GameBootstrap
         limb.transform.SetParent(parent, false);
         limb.transform.localPosition = localPosition;
         limb.transform.localScale = localScale;
-        ApplyColor(limb, color);
+        ApplyColor(limb, color, VisualSmoothnessFabric);
         return limb.transform;
     }
 

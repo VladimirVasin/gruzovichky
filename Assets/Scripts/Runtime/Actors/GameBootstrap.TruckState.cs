@@ -339,6 +339,110 @@ public partial class GameBootstrap
         return GetTruckAgent(driver.AssignedTruckNumber);
     }
 
+    private bool TryReserveAvailableTruckForDriver(DriverAgent driver, out TruckAgent truckAgent, string reason)
+    {
+        truckAgent = null;
+        if (driver == null)
+        {
+            return false;
+        }
+
+        TruckAgent current = GetAssignedTruckForDriver(driver);
+        if (IsTruckAvailableForDriver(current, driver))
+        {
+            truckAgent = current;
+            EnsureDriverInTruckRoster(truckAgent, driver);
+            return true;
+        }
+
+        if (current != null && current.Driver != driver && !driver.IsOnActiveShift && !IsDriverOnActiveTradeRun(driver))
+        {
+            RemoveDriverFromTruckRoster(current, driver);
+        }
+
+        for (int i = 0; i < truckAgents.Count; i++)
+        {
+            TruckAgent candidate = truckAgents[i];
+            if (!IsTruckAvailableForDriver(candidate, driver))
+            {
+                continue;
+            }
+
+            EnsureDriverInTruckRoster(candidate, driver);
+            truckAgent = candidate;
+            SessionDebugLogger.Log("TRUCK_POOL", $"{driver.DriverName} reserved {candidate.DisplayName} automatically for {reason}.");
+            return true;
+        }
+
+        SessionDebugLogger.Log("TRUCK_POOL", $"{driver.DriverName} could not reserve a truck for {reason}: no available parked trucks.");
+        return false;
+    }
+
+    private bool HasAvailableTruckInParking()
+    {
+        for (int i = 0; i < truckAgents.Count; i++)
+        {
+            TruckAgent truckAgent = truckAgents[i];
+            if (IsTruckOperationallyAvailable(truckAgent) && truckAgent.Driver == null)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsTruckAvailableForDriver(TruckAgent truckAgent, DriverAgent driver)
+    {
+        if (truckAgent == null || driver == null || truckAgent.TruckObject == null)
+        {
+            return false;
+        }
+
+        if (truckAgent.Driver != null && truckAgent.Driver != driver)
+        {
+            return false;
+        }
+
+        return IsTruckOperationallyAvailable(truckAgent);
+    }
+
+    private bool IsTruckOperationallyAvailable(TruckAgent truckAgent)
+    {
+        if (truckAgent == null || truckAgent.TruckObject == null)
+        {
+            return false;
+        }
+
+        if (truckAgent.IsPurchaseArrivalActive ||
+            truckAgent.IsTruckMoving ||
+            truckAgent.IsTruckInteracting ||
+            truckAgent.IsDriverRescueActive ||
+            truckAgent.CurrentAssignedTrip != TripType.None ||
+            truckAgent.CurrentRefuelPhase != RefuelPhase.None ||
+            IsTruckOnActiveTradeRun(truckAgent))
+        {
+            return false;
+        }
+
+        return IsTruckInsideParking(truckAgent);
+    }
+
+    private static void EnsureDriverInTruckRoster(TruckAgent truckAgent, DriverAgent driver)
+    {
+        if (truckAgent == null || driver == null)
+        {
+            return;
+        }
+
+        if (!truckAgent.AssignedDrivers.Contains(driver))
+        {
+            truckAgent.AssignedDrivers.Add(driver);
+        }
+
+        driver.AssignedTruckNumber = truckAgent.TruckNumber;
+    }
+
     private TruckAgent GetCurrentTruckForDriver(DriverAgent driver)
     {
         foreach (TruckAgent truckAgent in truckAgents)

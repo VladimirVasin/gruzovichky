@@ -319,7 +319,7 @@ public partial class GameBootstrap
         shiftsScreenUi.VacancyBuyTruckButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
         shiftsScreenUi.VacancyBuyTruckButton.onClick.AddListener(() =>
         {
-            HireNewTruck();
+            HireTransportForSelectedVacancy();
             isShiftsScreenDirty = true;
             PlayUiSound(uiSelectClip, 0.85f);
         });
