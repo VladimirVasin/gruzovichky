@@ -21,7 +21,39 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 
 ### New Since v.0.0.2
 
-- Pending. Add completed player-facing `v.0.0.3` changes here as they land.
+#### Build And Roads
+
+- Two-way road building now uses a click-start/click-finish segment flow, with Shift constraining segments to one dominant axis.
+- Build-mode previews are clearer at night thanks to a warm cursor light and ground glow; blocked placement is tinted red.
+- New buildings automatically create valid driveway/access road cells when possible, reducing manual cleanup around entrances.
+- Road visuals and markings now follow uneven terrain more smoothly instead of appearing buried, floating, or stair-stepped.
+
+#### Workers And Needs
+
+- New workers start with a random personal balance, making early need/service behavior less uniform.
+- Workers resolve Food, Sleep, and Leisure by urgency and can handle due needs during free/off-shift time instead of waiting for evening.
+- Workers who cannot afford Canteen food or Motel sleep can use fallback activities such as trash meals or bench sleep and receive the temporary `I Have Fallen` effect.
+- Idle workers choose a wider range of city interest points, so the town feels less clustered around one building.
+
+#### Transport And Services
+
+- Trade dispatch now uses the regular Truck Driver shift pool and automatically reserves an available parked truck from Parking.
+- Local bus service now requires at least two local stops before it becomes active; one-stop networks show clearer warnings and no longer trap passengers in dead-wait loops.
+- Bought city buses now arrive from the edge highway and drive into Parking before becoming operational.
+- Warehouse/service logistics were rebalanced with larger buffers and smarter delivery target selection for Fuel, Food, and Alcohol.
+
+#### Regional Map
+
+- The Regional Map is now a fullscreen parchment-style map that pauses simulation while open.
+- Known regions use schematic mini-map previews, settlement-style markers, route lines, and a hidden detail panel that appears after selecting a city.
+- Regional labels/descriptions use localized display strings where available.
+
+#### User Experience And Presentation
+
+- Main Menu graphics settings now expose live `0..100` controls, effect toggles, and a reset-to-defaults action for post-processing.
+- The rebuilt User tutorial has been tightened around freight, services, buses, taxes, trade, racing, and a final Demo Complete step.
+- Service/town visuals received more atmosphere: smoother roads, stronger building/perimeter night glow, warmer lights, richer regional map presentation, and small city-life details.
+- Debug/User tooling is less intrusive for players: noisy debug traces are verbose-only, while important F9 tools remain available for testing.
 
 ## Lo-fi Delivery Co. v.0.0.2
 

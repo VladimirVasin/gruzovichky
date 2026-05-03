@@ -1,94 +1,85 @@
 # Project Overview
 
-Last updated: 2026-04-06
+Last updated: 2026-05-03
 
 ## Purpose
 
-Stable high-level map of the current playable slice.
+Stable high-level map of the current playable prototype. Code remains the source of truth; use this file only to orient before reading `ai/systems-map.md` and the relevant code.
 
 ## Project Shape
 
-- Unity 3D (Core) prototype
-- Current active slice is a simple grid-based transport sandbox:
-  - visible placement grid
-  - three fixed logistics locations
-  - player-built roads
-  - one truck moving on connected road cells
-  - one resource (`wood`) transferred automatically
+- Unity 3D prototype for a low-poly logistics/town simulation.
+- Runtime is still scene-local and generated from `Assets/Scenes/SampleScene.unity`.
+- The main playable slice now combines:
+  - buildable roads, service buildings, production buildings, and local bus stops
+  - workers with portraits, skills, needs, perks, money, jobs, shifts, and life routines
+  - trucks, local buses, warehouse delivery, service-resource logistics, and intercity trade
+  - taxes, building banks, event feed, regional map, tutorial/onboarding, and racing mode
+  - procedural terrain, natural zones, water, ambient life, weather/lighting, and low-poly visuals
 
-## Main Gameplay Locations
+## Main Project Areas
 
 ```text
 Assets/
-  Scenes/
-  Scripts/
-  Settings/
+  Editor/Tests/        Unity editor smoke tests
+  Resources/           Localization resources and runtime-loaded assets
+  Scenes/              SampleScene entry point
+  Scripts/Runtime/     Game runtime partials and extracted services
+  Settings/            Unity project settings/assets
+tools/                 Project sanity and line-count checks
+ai/                    Shared AI memory
 ```
 
-## Script Layout
+## Runtime Layout
 
 - `Assets/Scripts/Runtime/Core/GameBootstrap.cs`
-  Main runtime bootstrap/orchestrator for the playable scene.
-- `Assets/Scripts/Runtime/World/GameBootstrap.World.cs`
-  Thin world adapter between scene state and generation services.
-- `Assets/Scripts/Runtime/World/WorldLayoutGenerator.cs`
-  Random placement generator for `Parking`, `Gas Station`, `Forest`, `Warehouse`, and `Town`.
-- `Assets/Scripts/Runtime/World/TerrainHeightGenerator.cs`
-  Standalone terrain heightmap generation with flat pads under buildings.
-- `Assets/Scripts/Runtime/World/MiscTreePlanner.cs`
-  Standalone planner for misc tree spawn cells on free tiles.
-- `Assets/Scripts/Runtime/Actors/GameBootstrap.Actors.cs`
-  Truck, driver, lights, and actor visuals/setup.
-- `Assets/Scripts/Runtime/Actors/GameBootstrap.TruckState.cs`
-  Truck state sync, fleet lookup helpers, and parking-slot helpers.
-- `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.cs`
-  Hotkeys, camera controls, road placement/removal, and selection input.
-- `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs`
-  Pathfinding, road/lantern rebuilding, movement simulation, and transport helpers.
-- `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
-  Active trip/refuel runtime state machine.
-- `Assets/Scripts/Runtime/Transport/Services/GridPathService.cs`
-  Shared BFS/grid path service for trucks, road building, and driver rescue walking.
-- `Assets/Scripts/Runtime/Transport/Services/RoadLanternPlanner.cs`
-  Pure planner for deciding where road lanterns can spawn.
-- `Assets/Scripts/Runtime/UI/GameBootstrap.UI.cs`
-  Primary HUD rendering.
-- `Assets/Scripts/Runtime/UI/GameBootstrap.Selection.cs`
-  Building selection flow and selected-location visual state.
-- `Assets/Scripts/Runtime/UI/GameBootstrap.Fleet.cs`
-  Fleet HUD rendering and truck detail presentation.
-- `Assets/Scripts/Runtime/UI/GameBootstrap.Orders.cs`
-  Truck auto-mode, order assignment, and trip reward wiring.
-- `Assets/Scripts/Runtime/UI/SelectionVisualService.cs`
-  Low-level creation/update helpers for selection highlights and world labels.
-- `Assets/Scripts/Runtime/Audio/GameBootstrap.Audio.cs`
-  Runtime audio update and procedural clip generation.
-- `Assets/Scripts/Runtime/Transport/GameBootstrap.Interaction.cs`
-  Truck cargo/refuel interaction runtime and completion flow.
-- `Assets/Scripts/Runtime/Transport/Services/ServiceSlotCoordinator.cs`
-  Shared single-slot service-bay coordinator for loading/unloading/refuel points.
-- `Assets/Scripts/Runtime/Transport/Services/TruckAutoPlanner.cs`
-  Small pure decision helper for auto-mode behavior.
-- `Assets/Scripts/Runtime/Transport/Services/TripRewardCalculator.cs`
-  Pure reward calculation helper for route payouts.
+  Central scene bootstrap and shared runtime state owner.
+- `Assets/Scripts/Runtime/Core/GameBootstrap.*.cs`
+  Runtime loop, trade/economy, worker needs/stats, ambient life, world visuals, water, and telemetry partials.
+- `Assets/Scripts/Runtime/World/`
+  World generation, terrain height, natural zones, build placement, service decorations, misc decorations, and layout validation.
+- `Assets/Scripts/Runtime/Transport/`
+  Road input/building, road visuals, pathing, trucks, route/refuel runtime, local bus, racing entry hooks, and transport interactions.
+- `Assets/Scripts/Runtime/Transport/Services/`
+  Testable transport helpers for grid pathing, two-lane road geometry, road placement, markings, bus routing/passengers, truck runtime phases, and rewards.
+- `Assets/Scripts/Runtime/Actors/`
+  Trucks, buses, worker/driver visuals, worker life cycle, hiring, shifts, and truck-state synchronization.
+- `Assets/Scripts/Runtime/UI/`
+  HUDs, quick HUDs, main menu, localization, tutorial, fleet/management screens, map, debug service panel, event feed, and money popups.
+- `Assets/Scripts/Runtime/UI/FleetCanvas/`
+  Main management screens for Build, Workers, Vacancies/Roles/Shifts, Resources, Economy/Trade, Regional Map, and tutorial helpers.
+- `Assets/Scripts/Runtime/Racing/`
+  Separate racing-mode controls, track/world setup, vehicle behavior, HUD, and atmosphere.
+- `Assets/Editor/Tests/`
+  Smoke tests for world generation, road build, transport/trade, vacancies, tutorial goals, and related service seams.
 
 ## Main Runtime Flow
 
-- `SampleScene` hosts a bootstrap object.
-- On startup `GameBootstrap` creates the ground, visible grid, directional light, low-poly locations, and truck.
+- `SampleScene` hosts `GameBootstrap`.
+- Startup creates the generated world, terrain, roads/highway, buildings, lighting, ambience, UI, and initial mode-specific state.
+- Debug starts with fuller starter systems for testing.
+- User starts are build-first and tutorial-guided, with core systems unlocked as onboarding progresses.
 - During play:
-  - player clicks grid cells to place roads
-  - forest produces wood automatically
-  - truck checks for connected paths
-  - truck transfers wood from `Forest -> Warehouse -> Town`
+  - the player builds roads/buildings/stops and manages workers through HUD panels
+  - workers resolve shifts and needs through services, production, transit, walking, and fallback activities
+  - trucks and buses use grid roads while intercity trade uses the edge highway/off-map flow
+  - production, warehouse delivery, taxes, service banks, event feed, and regional trade evolve over time
+  - racing can be launched from eligible trade-truck flow
 
-## Large Areas To Treat Carefully
+## High-Impact Areas
 
 - `Assets/Scripts/Runtime/Core/GameBootstrap.cs`
-- `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs`
+- `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport*.cs`
+- `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.BuildRoad.cs`
+- `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
+- `Assets/Scripts/Runtime/Actors/GameBootstrap.Drivers*.cs`
+- `Assets/Scripts/Runtime/UI/FleetCanvas/`
+- `Assets/Scripts/Runtime/UI/GameBootstrap.Tutorial*.cs`
+- `Assets/Scripts/Runtime/World/GameBootstrap.World*.cs`
 - `Assets/Scenes/SampleScene.unity`
 
-## Important Reality Check
+## Reality Check
 
-- The prototype is intentionally compact and scene-local.
-- Core gameplay still lives in one partial `GameBootstrap` class, but it is now split by runtime concern across several scripts.
+- The project is beyond the original small transport sandbox, but it is still prototype-shaped.
+- One partial `GameBootstrap` remains the runtime owner; many systems are split by concern and supported by small pure services.
+- Use `ai/systems-map.md` -> `System Owner Map` as the first navigation pass before broad code searches.

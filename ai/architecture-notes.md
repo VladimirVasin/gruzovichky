@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-04-26
+Last updated: 2026-05-03
 
 Purpose: describe the real implemented architecture and current hotspots.
 
@@ -13,14 +13,17 @@ Purpose: describe the real implemented architecture and current hotspots.
   - grid and road state
   - input handling
   - pathfinding
-  - truck simulation
-  - UI and audio
+  - truck, bus, worker, and trade simulation
+  - worker needs/life-cycle logic
+  - tutorial, HUD, main menu, regional map, racing, UI, and audio
 
 ## Practical Consequences
 
 - This is still fast for prototype iteration.
 - It still couples presentation and simulation, but the runtime is now split into concern-based partial scripts under `Assets/Scripts/Runtime/`.
 - Large prototype files are kept below roughly 1500 lines by splitting feature clusters into focused partials such as `Runtime/Racing/`, `Runtime/UI/FleetCanvas/`, `GameBootstrap.RuntimeLoop.cs`, `GameBootstrap.AmbientLife.Particles.cs`, and `GameBootstrap.Drivers.*.cs`.
+- Navigation now starts from `ai/systems-map.md` -> `System Owner Map`; owner cards are maintained when paths, ownership, or responsibilities change.
+- `tools/check-all.ps1` is the preferred project sanity runner, with `-SkipSmokeTests` for fast checks while Unity is already open.
 - Small changes are easy; larger feature growth will increase risk quickly.
 
 ## Current Hotspots
@@ -37,8 +40,14 @@ Purpose: describe the real implemented architecture and current hotspots.
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.BuildRoad.cs`
 
 - Owns build-mode road preview, footprint placement, turn filling, and post-placement road-building flow.
+- Two-way roads now use a click-start/click-finish segment workflow, with `GameBootstrap.Input.RoadSegments.cs` holding segment-specific state helpers.
 - Keep two-lane road invariants here when changing road build tools.
 - Footprint offset and structural placement checks now delegate to `RoadBuildPlacementService`; the partial still owns preview visuals, actual `AddRoad()` calls, turn-fill logging, and input state.
+
+### `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.BuildCursorAssist.cs`
+
+- Owns night-only build cursor lighting/glow for building and road previews.
+- Keep this visual assist separate from placement rules; blocked/valid state should be driven by existing build validation results.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.Road*.cs`
 
@@ -128,6 +137,11 @@ Purpose: describe the real implemented architecture and current hotspots.
 - Pure build-mode road placement helper for resolving the second lane offset, blocking buildings/highway/misc cells, and detecting third parallel lane attempts.
 - Used by `GameBootstrap.Input.BuildRoad.cs` and covered by editor smoke tests.
 
+### `Assets/Scripts/Runtime/Transport/Services/RoadSegmentBuildService.cs`
+
+- Pure helper for Cities-like road segment shape decisions.
+- Keeps click-start/click-finish road segment generation testable while runtime input owns cursor state, previews, and actual road mutation.
+
 ### `Assets/Scripts/Runtime/Transport/Services/BusStopOrderingService.cs`
 
 - Pure helper for deterministic local bus-stop ordering by stop number and anchor coordinates.
@@ -190,6 +204,11 @@ Purpose: describe the real implemented architecture and current hotspots.
 - First extracted UI factory service for FleetCanvas primitive UI creation.
 - `GameBootstrap.FleetCanvas.cs` still exposes compatibility wrappers, but low-level object/text/button/section-card/tab-row/scroll-panel/scrollbar/spacer creation now has a real service seam.
 
+### `Assets/Scripts/Runtime/UI/FleetCanvas/VacancyFlowRulesService.cs`
+
+- Small decision seam for vacancy/tutorial assignment flow invariants.
+- Used by the vacancy HUD step logic and covered by focused smoke tests so future UI reshaping does not silently break assignment progression.
+
 ### `Assets/Scripts/Runtime/UI/Localization/LocalizedStringTable.cs`
 
 - First table-style localization seam.
@@ -226,13 +245,18 @@ Purpose: describe the real implemented architecture and current hotspots.
 - `WorldSetup`
   camera, light, ground, grid, and low-poly locations
 - `RoadGrid`
-  occupancy, placement rules, and road visuals
+  occupancy, placement rules, road segment building, and road visuals
 - `TransportSimulation`
-  production, task selection, pathfinding, and truck movement
+  production, task selection, pathfinding, truck movement, local bus routing, and intercity trade
+- `WorkerSimulation`
+  needs, shifts, service visits, fallback activities, and life-cycle decisions
+- `ManagementUI`
+  FleetCanvas screens, vacancies, tutorial goals, localization, and regional map
 
 ## Cleanup Reality
 
 - The project is now in an intermediate refactor state: one runtime owner, several partial scripts.
 - The next healthy seam after this is moving trucks, world generation, and HUD into fully separate classes/services rather than only partial-class slices.
-- `tools/check-line-count.ps1` and `.github/workflows/project-sanity.yml` guard the approximate 1500-line file ceiling.
+- `tools/check-all.ps1`, `tools/check-line-count.ps1`, and `.github/workflows/project-sanity.yml` guard builds, line count, whitespace, mojibake, and smoke-test coverage.
 - `Assets/Editor/Tests/WorldGenerationSmokeTests.cs` covers world layout placement validity, two-lane geometry, and required road-access chain feasibility for Debug/User starts.
+- `Assets/Editor/Tests/RoadBuildSmokeTests.cs`, `TransportTradeSmokeTests.cs`, and `VacancyTutorialSmokeTests.cs` cover newer road segment, transport/trade, vacancy, and tutorial-goal seams.
