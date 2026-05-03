@@ -6,6 +6,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-03: Started separating data/text from large UI C# files. Added `Assets/Scripts/Runtime/Data/` JSON loaders plus `Assets/Resources/GameData/patch-notes.json` and `build-catalog.json`; Main Menu Patch Notes and Build menu categories/titles/descriptions now load these catalogs first, while old C# content remains as fallback. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `dotnet build Assembly-CSharp-Editor.csproj -v:minimal`, JSON parsing, line-count, `git diff --check`, and `./tools/check-all.ps1 -SkipSmokeTests`.
+
 - 2026-05-03: Compacted and refreshed AI memory after reviewing `ai/`. Updated `project-overview.md` from the old one-truck/wood-loop slice to the current town-sim prototype, filled `release-notes.md` with a concise `v.0.0.3` player-facing baseline, refreshed `architecture-notes.md` for the road-segment/build-cursor/test reality, and reduced this work log back to active memory plus summaries.
 
 - 2026-05-03: Added focused smoke-test coverage for road build, transport/trade, vacancies, and tutorial goals. New editor tests cover road segment shape/blocked placement/path blockers, local bus route/passenger/trade queue decisions, and vacancy/tutorial flow invariants. Added `VacancyFlowRulesService` as a small testable seam used by vacancy HUD step logic. Fixed `tools/check-all.ps1` mojibake scanning for untracked UTF-8 files so new C# test files are not falsely flagged. Verified `./tools/check-all.ps1 -SkipSmokeTests`; full Unity smoke-test mode was blocked by an already-open Unity project instance.

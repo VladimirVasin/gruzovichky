@@ -455,6 +455,11 @@ public partial class GameBootstrap
 
         Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         bool ru = IsRussianLanguage();
+        if (TryRebuildMainMenuPatchNotesContentFromCatalog(uiFont, ru))
+        {
+            return;
+        }
+
         AddPatchNotesParagraph(uiFont, MainMenuVersionLabel, 15, Color.white, FontStyle.Bold);
         AddPatchNotesParagraph(
             uiFont,
@@ -496,6 +501,64 @@ public partial class GameBootstrap
             ? "- Процедурный мир включает дороги, здания, реку, магистраль, автобусы и декоративную жизнь.\n- На карте есть лавочки, цветы, пчёлы, коты, птицы, рыбы, частицы, фонари и ночные мошки.\n- Региональная карта показывает текущий город и соседние регионы-заглушки."
             : "- The procedural world includes roads, buildings, river, highway traffic, buses, and visual ambience.\n- Benches, flowers, bees, cats, birds, fish, particles, lanterns, and night moths bring the map to life.\n- Regional Map shows the current town and placeholder neighboring regions.");
     }
+    private bool TryRebuildMainMenuPatchNotesContentFromCatalog(Font uiFont, bool ru)
+    {
+        PatchNotesCatalogData catalog = PatchNotesCatalog.Load();
+        if (catalog?.versions == null || catalog.versions.Length == 0)
+        {
+            return false;
+        }
+
+        AddPatchNotesParagraph(uiFont, MainMenuVersionLabel, 15, Color.white, FontStyle.Bold);
+
+        string intro = catalog.intro?.Get(ru);
+        if (!string.IsNullOrWhiteSpace(intro))
+        {
+            AddPatchNotesParagraph(uiFont, intro, 13, FleetSecondaryTextColor, FontStyle.Normal);
+        }
+
+        foreach (PatchNotesVersionData version in catalog.versions)
+        {
+            if (version == null)
+            {
+                continue;
+            }
+
+            string versionTitle = version.GetTitle(ru);
+            if (!string.IsNullOrWhiteSpace(versionTitle))
+            {
+                AddPatchNotesSection(uiFont, versionTitle);
+            }
+
+            if (version.sections == null)
+            {
+                continue;
+            }
+
+            foreach (PatchNotesSectionData section in version.sections)
+            {
+                if (section == null)
+                {
+                    continue;
+                }
+
+                string sectionTitle = section.GetTitle(ru);
+                if (!string.IsNullOrWhiteSpace(sectionTitle))
+                {
+                    AddPatchNotesSection(uiFont, sectionTitle);
+                }
+
+                string body = section.GetBody(ru);
+                if (!string.IsNullOrWhiteSpace(body))
+                {
+                    AddPatchNotesParagraph(uiFont, body);
+                }
+            }
+        }
+
+        return true;
+    }
+
     private void AddPatchNotesSection(Font uiFont, string text)
     {
         AddPatchNotesParagraph(uiFont, text, 15, FleetAccentColor, FontStyle.Bold, 22f);

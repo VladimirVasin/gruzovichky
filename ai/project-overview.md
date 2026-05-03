@@ -22,7 +22,7 @@ Stable high-level map of the current playable prototype. Code remains the source
 ```text
 Assets/
   Editor/Tests/        Unity editor smoke tests
-  Resources/           Localization resources and runtime-loaded assets
+  Resources/           Localization, game-data JSON, and runtime-loaded assets
   Scenes/              SampleScene entry point
   Scripts/Runtime/     Game runtime partials and extracted services
   Settings/            Unity project settings/assets
@@ -36,6 +36,8 @@ ai/                    Shared AI memory
   Central scene bootstrap and shared runtime state owner.
 - `Assets/Scripts/Runtime/Core/GameBootstrap.*.cs`
   Runtime loop, trade/economy, worker needs/stats, ambient life, world visuals, water, and telemetry partials.
+- `Assets/Scripts/Runtime/Data/`
+  Small JSON-backed content/config loaders for data that is being separated from large C# UI files.
 - `Assets/Scripts/Runtime/World/`
   World generation, terrain height, natural zones, build placement, service decorations, misc decorations, and layout validation.
 - `Assets/Scripts/Runtime/Transport/`
@@ -48,6 +50,8 @@ ai/                    Shared AI memory
   HUDs, quick HUDs, main menu, localization, tutorial, fleet/management screens, map, debug service panel, event feed, and money popups.
 - `Assets/Scripts/Runtime/UI/FleetCanvas/`
   Main management screens for Build, Workers, Vacancies/Roles/Shifts, Resources, Economy/Trade, Regional Map, and tutorial helpers.
+- `Assets/Resources/GameData/`
+  Runtime-loaded JSON catalogs such as Patch Notes and Build menu definitions.
 - `Assets/Scripts/Runtime/Racing/`
   Separate racing-mode controls, track/world setup, vehicle behavior, HUD, and atmosphere.
 - `Assets/Editor/Tests/`

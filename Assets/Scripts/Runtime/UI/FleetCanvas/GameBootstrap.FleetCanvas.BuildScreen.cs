@@ -6,6 +6,9 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
+    private BuildCatalogData cachedBuildCatalogData;
+    private Dictionary<BuildTool, BuildCatalogItemData> cachedBuildCatalogItems;
+
     private void InitUnlockedBuildTools()
     {
         unlockedBuildTools = new HashSet<BuildTool>();
@@ -126,7 +129,7 @@ public partial class GameBootstrap
         buildContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         buildScroll.content = cardList;
 
-        buildScreenUi.Categories = new BuildCategoryUi[]
+        buildScreenUi.Categories = CreateBuildCategoriesFromCatalog(cardList, font) ?? new BuildCategoryUi[]
         {
             CreateBuildCategory(cardList, font, "Infrastructure", "Инфраструктура", false,
                 (BuildTool.Parking,          "PK", "Parking",           new Color(0.28f, 0.30f, 0.38f)),
@@ -629,6 +632,139 @@ public partial class GameBootstrap
         }
     }
 
+    private BuildCategoryUi[] CreateBuildCategoriesFromCatalog(RectTransform parent, Font font)
+    {
+        BuildCatalogData catalog = GetBuildCatalogData();
+        if (catalog?.categories == null || catalog.categories.Length == 0)
+        {
+            return null;
+        }
+
+        List<BuildCategoryUi> categories = new();
+        foreach (BuildCatalogCategoryData categoryData in catalog.categories)
+        {
+            if (categoryData?.items == null || categoryData.items.Length == 0)
+            {
+                continue;
+            }
+
+            List<(BuildTool tool, string abbrev, string title, Color color)> toolDefs = new();
+            foreach (BuildCatalogItemData itemData in categoryData.items)
+            {
+                if (!TryParseBuildCatalogTool(itemData, out BuildTool tool))
+                {
+                    continue;
+                }
+
+                toolDefs.Add((
+                    tool,
+                    itemData.GetAbbrev(),
+                    itemData.GetTitle(false),
+                    itemData.GetColor(new Color(0.30f, 0.36f, 0.44f))));
+            }
+
+            if (toolDefs.Count == 0)
+            {
+                continue;
+            }
+
+            categories.Add(CreateBuildCategory(
+                parent,
+                font,
+                categoryData.GetLabel(false),
+                categoryData.GetLabel(true),
+                categoryData.expanded,
+                toolDefs.ToArray()));
+        }
+
+        return categories.Count > 0 ? categories.ToArray() : null;
+    }
+
+    private BuildCatalogData GetBuildCatalogData()
+    {
+        if (cachedBuildCatalogData != null)
+        {
+            return cachedBuildCatalogData;
+        }
+
+        cachedBuildCatalogData = BuildCatalog.Load();
+        cachedBuildCatalogItems = new Dictionary<BuildTool, BuildCatalogItemData>();
+        if (cachedBuildCatalogData?.categories == null)
+        {
+            return cachedBuildCatalogData;
+        }
+
+        foreach (BuildCatalogCategoryData category in cachedBuildCatalogData.categories)
+        {
+            if (category?.items == null)
+            {
+                continue;
+            }
+
+            foreach (BuildCatalogItemData item in category.items)
+            {
+                if (TryParseBuildCatalogTool(item, out BuildTool tool))
+                {
+                    cachedBuildCatalogItems[tool] = item;
+                }
+            }
+        }
+
+        return cachedBuildCatalogData;
+    }
+
+    private static bool TryParseBuildCatalogTool(BuildCatalogItemData item, out BuildTool tool)
+    {
+        tool = BuildTool.None;
+        return item != null
+               && !string.IsNullOrWhiteSpace(item.tool)
+               && System.Enum.TryParse(item.tool, out tool)
+               && tool != BuildTool.None;
+    }
+
+    private bool TryGetBuildCatalogItem(BuildTool tool, out BuildCatalogItemData item)
+    {
+        GetBuildCatalogData();
+        item = null;
+        return cachedBuildCatalogItems != null && cachedBuildCatalogItems.TryGetValue(tool, out item);
+    }
+
+    private string GetBuildCatalogTitle(BuildTool tool, bool ru, string fallback)
+    {
+        return TryGetBuildCatalogItem(tool, out BuildCatalogItemData item)
+            ? item.GetTitle(ru)
+            : fallback;
+    }
+
+    private bool TryGetBuildCatalogDescription(BuildTool tool, bool isActive, out string description)
+    {
+        description = string.Empty;
+        if (!TryGetBuildCatalogItem(tool, out BuildCatalogItemData item))
+        {
+            return false;
+        }
+
+        bool ru = IsRussianLanguage();
+        string text = isActive
+            ? item.GetActiveDescription(ru)
+            : GetBuildToolAlreadyBuilt(tool)
+                ? item.GetAlreadyBuiltDescription(ru)
+                : item.GetDescription(ru);
+
+        if (string.IsNullOrWhiteSpace(text) && !isActive && GetBuildToolAlreadyBuilt(tool))
+        {
+            text = ru ? "Уже построено на этой карте." : "Already built on this map.";
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        description = text.Replace("{rot}", GetBuildRotationLabel());
+        return true;
+    }
+
     private BuildCategoryUi CreateBuildCategory(RectTransform parent, Font font, string labelEn, string labelRu, bool expanded,
         params (BuildTool tool, string abbrev, string title, Color color)[] toolDefs)
     {
@@ -728,6 +864,7 @@ public partial class GameBootstrap
 
                 item.CardBg.color   = isActive ? new Color(0.20f, 0.27f, 0.37f, 1f) : new Color(0.16f, 0.21f, 0.28f, 1f);
                 item.AccentBg.color = isActive ? FleetAccentColor : item.DefaultAccentColor;
+                item.TitleText.text = GetBuildCatalogTitle(item.Tool, ru, item.TitleText.text);
                 item.DescText.text  = GetBuildDescription(item.Tool, isActive);
 
                 if (isActive)
@@ -779,6 +916,11 @@ public partial class GameBootstrap
 
     private string GetBuildDescription(BuildTool tool, bool isActive)
     {
+        if (TryGetBuildCatalogDescription(tool, isActive, out string catalogDescription))
+        {
+            return catalogDescription;
+        }
+
         bool ru = IsRussianLanguage();
         string rot = GetBuildRotationLabel();
 

@@ -204,6 +204,13 @@ Purpose: describe the real implemented architecture and current hotspots.
 - First extracted UI factory service for FleetCanvas primitive UI creation.
 - `GameBootstrap.FleetCanvas.cs` still exposes compatibility wrappers, but low-level object/text/button/section-card/tab-row/scroll-panel/scrollbar/spacer creation now has a real service seam.
 
+### `Assets/Scripts/Runtime/Data/`
+
+- First JSON-backed content/config loader layer.
+- `PatchNotesCatalog.cs` loads `Assets/Resources/GameData/patch-notes.json` for Main Menu Patch Notes, with the old C# content path kept as fallback.
+- `BuildCatalog.cs` loads `Assets/Resources/GameData/build-catalog.json` for Build menu categories, titles, colors, and descriptions, with existing build placement/validation logic still in C#.
+- `LocalizedContentData.cs` is the shared EN/RU text wrapper for these content catalogs.
+
 ### `Assets/Scripts/Runtime/UI/FleetCanvas/VacancyFlowRulesService.cs`
 
 - Small decision seam for vacancy/tutorial assignment flow invariants.

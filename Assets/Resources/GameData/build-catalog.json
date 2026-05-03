@@ -1,0 +1,267 @@
+{
+  "categories": [
+    {
+      "label": {
+        "en": "Infrastructure",
+        "ru": "Инфраструктура"
+      },
+      "expanded": false,
+      "items": [
+        {
+          "tool": "Parking",
+          "abbrev": "PK",
+          "title": { "en": "Parking", "ru": "Парковка" },
+          "color": "#474D61",
+          "activeDescription": {
+            "en": "Mode active: place the truck yard manually when you are ready to run a fleet.",
+            "ru": "Режим активен: поставь парковку вручную, когда будешь готов к автопарку."
+          },
+          "description": {
+            "en": "Truck yard: the fleet base. User mode starts with no trucks until this exists.",
+            "ru": "Парковка: база для грузовиков. В User-режиме стартовых грузовиков нет, пока парковка не построена."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
+          "tool": "Warehouse",
+          "abbrev": "WH",
+          "title": { "en": "Warehouse", "ru": "Склад" },
+          "color": "#B3854D",
+          "activeDescription": {
+            "en": "Mode active: place one 2x2 warehouse from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь склад 2x2 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "2x2 warehouse: central resource storage for production chains.",
+            "ru": "Склад 2x2: центральное хранение ресурсов и точка для производственных цепочек."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
+          "tool": "SingleRoad",
+          "abbrev": "1R",
+          "title": { "en": "One-Lane Road", "ru": "Однополосная дорога" },
+          "color": "#385775",
+          "activeDescription": {
+            "en": "Mode active: left click builds a 1-cell road. Hold Shift to drag a path.",
+            "ru": "Режим активен: левая кнопка строит дорогу шириной 1 клетку. Shift - протянуть путь."
+          },
+          "description": {
+            "en": "Build a regular 1-cell road for driveways, narrow links, and manual fixes.",
+            "ru": "Обычная дорога занимает 1 клетку. Удобна для подъездов, узких участков и ручной достройки."
+          }
+        },
+        {
+          "tool": "Road",
+          "abbrev": "2W",
+          "title": { "en": "Two-Way Road", "ru": "Двухполосная дорога" },
+          "color": "#456B99",
+          "activeDescription": {
+            "en": "Mode active: left click selects a segment start, second left click builds the two-way road. Shift constrains to one axis. R rotates ({rot}).",
+            "ru": "Режим активен: ЛКМ выбирает начало участка, второй ЛКМ строит двухполосную дорогу. Shift - строго по одной оси. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "Build two-way road segments: choose a start, then an end. It occupies 2 cells of width with center markings and lane movement.",
+            "ru": "Двухполосная дорога строится участками: выбери начало, затем конец. Она занимает 2 клетки шириной, с центральной разметкой и движением по полосам."
+          }
+        },
+        {
+          "tool": "Stop",
+          "abbrev": "ST",
+          "title": { "en": "Bus Stop", "ru": "Автобусная остановка" },
+          "color": "#B8473D",
+          "activeDescription": {
+            "en": "Mode active: place one 2x1 bus stop from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь автобусную остановку 2x1 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "Place a 2x1 local bus stop for future worker public transport routes.",
+            "ru": "Автобусная остановка 2x1: локальная городская остановка для транспорта рабочих."
+          }
+        },
+        {
+          "tool": "Motel",
+          "abbrev": "MT",
+          "title": { "en": "Motel", "ru": "Мотель" },
+          "color": "#3D7A5C",
+          "activeDescription": {
+            "en": "Mode active: place one 2x2 motel from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь мотель 2x2 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "Place a 2x2 driver hub. Drivers can idle and be hired after it exists.",
+            "ru": "Мотель 2x2: водители нанимаются и ждут здесь."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        }
+      ]
+    },
+    {
+      "label": {
+        "en": "Production",
+        "ru": "Производство"
+      },
+      "expanded": false,
+      "items": [
+        {
+          "tool": "Forest",
+          "abbrev": "LC",
+          "title": { "en": "Lumberjack Camp", "ru": "Лагерь лесорубов" },
+          "color": "#47732E",
+          "activeDescription": {
+            "en": "Mode active: place one 3x3 lumberjack camp from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь лагерь лесорубов 3x3 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "3x3 lumberjack camp: workers chop trees, carry logs, and replant saplings.",
+            "ru": "Лагерь лесорубов 3x3: рабочие рубят деревья, таскают брёвна и высаживают саженцы."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
+          "tool": "Sawmill",
+          "abbrev": "SW",
+          "title": { "en": "Sawmill", "ru": "Лесопилка" },
+          "color": "#945C29",
+          "activeDescription": {
+            "en": "Mode active: place one 2x2 sawmill from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь лесопилку 2x2 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "Place a 2x2 production building that turns logs into boards.",
+            "ru": "Здание 2x2: превращает брёвна в доски."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
+          "tool": "FurnitureFactory",
+          "abbrev": "FF",
+          "title": { "en": "Furniture Factory", "ru": "Мебельная фабрика" },
+          "color": "#754285",
+          "activeDescription": {
+            "en": "Mode active: place one 3x2 furniture factory from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь фабрику 3x2 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "Place a 3x2 factory that turns 1 Board + 1 Textile into 1 Furniture.",
+            "ru": "Фабрика 3x2: 1 Доска + 1 Ткань = 1 Мебель."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        }
+      ]
+    },
+    {
+      "label": {
+        "en": "Services",
+        "ru": "Сервисы"
+      },
+      "expanded": false,
+      "items": [
+        {
+          "tool": "Bar",
+          "abbrev": "BR",
+          "title": { "en": "Bar", "ru": "Бар" },
+          "color": "#853333",
+          "activeDescription": {
+            "en": "Mode active: place bar from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь бар от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "Social hub: idle drivers gather here to rest.",
+            "ru": "Соцточка: водители собираются здесь отдыхать."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
+          "tool": "Canteen",
+          "abbrev": "CT",
+          "title": { "en": "Canteen", "ru": "Столовая" },
+          "color": "#336B80",
+          "activeDescription": {
+            "en": "Mode active: place one 3x2 canteen from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь столовую 3x2 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "Service building: visiting drivers/workers pay $10 for a quick meal.",
+            "ru": "Столовая: водители и рабочие платят $10 за обед."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
+          "tool": "GasStation",
+          "abbrev": "GS",
+          "title": { "en": "Gas Station", "ru": "Заправка" },
+          "color": "#D6AD42",
+          "activeDescription": {
+            "en": "Mode active: place one 2x2 gas station from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь заправку 2x2 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "2x2 fuel service: trucks refuel here when routes get too long.",
+            "ru": "Заправка 2x2: грузовики едут сюда за топливом, когда рейсы становятся слишком длинными."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
+          "tool": "GamblingHall",
+          "abbrev": "GH",
+          "title": { "en": "Gambling Hall", "ru": "Игровой зал" },
+          "color": "#856114",
+          "activeDescription": {
+            "en": "Mode active: place one 3x3 gambling hall from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь игровой зал 3x3 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "Leisure: free entry; workers unwind here.",
+            "ru": "Досуг: бесплатный вход; рабочие расслабляются здесь."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
+          "tool": "CityPark",
+          "abbrev": "CP",
+          "title": { "en": "City Park", "ru": "Городской парк" },
+          "color": "#387A38",
+          "activeDescription": {
+            "en": "Mode active: place one 8x8 city park from its entrance cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь городской парк 8x8 от входной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "8x8 park: workers stroll and sit on benches. Free entry, boosts leisure need.",
+            "ru": "Парк 8x8: рабочие гуляют и сидят на лавочках. Бесплатно, повышает досуг."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
+          "tool": "PersonalHouse",
+          "abbrev": "PH",
+          "title": { "en": "Personal House", "ru": "Жилой дом" },
+          "color": "#8C6B4D",
+          "activeDescription": {
+            "en": "Mode active: 5x6 personal house, entrance faces the road. R rotates ({rot}).",
+            "ru": "Режим активен: жилой дом 5x6, вход со стороны дороги. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "5x6 suburban house: one of 5 random American home styles. Decorative for now.",
+            "ru": "Жилой дом 5x6: один из 5 случайных пригородных вариантов. Пока декоративный."
+          }
+        },
+        {
+          "tool": "CarMarket",
+          "abbrev": "CM",
+          "title": { "en": "Car Market", "ru": "Авторынок" },
+          "color": "#A38561",
+          "activeDescription": {
+            "en": "Mode active: place one 5x5 car market from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь авторынок 5x5 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "5x5 car market: workers with $100 can buy personal cars here.",
+            "ru": "Авторынок 5x5: рабочие с $100 могут покупать здесь личные машины."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        }
+      ]
+    }
+  ]
+}
