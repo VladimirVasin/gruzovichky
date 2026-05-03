@@ -12,6 +12,13 @@ public static class FleetCanvasUiFactory
         public RectTransform Content;
     }
 
+    public sealed class BadgeRefs
+    {
+        public RectTransform Root;
+        public Image Background;
+        public Text Label;
+    }
+
     public static GameObject CreateUiObject(string name, Transform parent)
     {
         GameObject go = new(name, typeof(RectTransform));
@@ -59,6 +66,75 @@ public static class FleetCanvasUiFactory
         element.flexibleWidth = flexibleWidth;
         element.flexibleHeight = flexibleHeight;
         return spacer;
+    }
+
+    public static RectTransform CreateVerticalStack(
+        string name,
+        Transform parent,
+        RectOffset padding,
+        float spacing,
+        float preferredWidth = -1f,
+        float preferredHeight = -1f,
+        float flexibleWidth = -1f,
+        float flexibleHeight = -1f,
+        bool addContentSizeFitter = false)
+    {
+        RectTransform root = CreateUiObject(name, parent).GetComponent<RectTransform>();
+        ApplyLayoutElement(root.gameObject, preferredWidth, preferredHeight, flexibleWidth, flexibleHeight);
+
+        VerticalLayoutGroup layout = root.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = padding ?? new RectOffset();
+        layout.spacing = spacing;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        if (addContentSizeFitter)
+        {
+            root.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        }
+
+        return root;
+    }
+
+    public static RectTransform CreateHorizontalLayoutPanel(
+        string name,
+        Transform parent,
+        Color color,
+        RectOffset padding,
+        float spacing,
+        float preferredWidth = -1f,
+        float preferredHeight = -1f,
+        float flexibleWidth = -1f,
+        float flexibleHeight = -1f,
+        TextAnchor childAlignment = TextAnchor.UpperLeft,
+        bool childForceExpandWidth = false,
+        bool childForceExpandHeight = false,
+        bool addOutline = true)
+    {
+        RectTransform panel;
+        if (addOutline)
+        {
+            panel = CreateStyledPanel(name, parent, color);
+        }
+        else
+        {
+            panel = CreateUiObject(name, parent).GetComponent<RectTransform>();
+            panel.gameObject.AddComponent<Image>().color = color;
+        }
+
+        ApplyLayoutElement(panel.gameObject, preferredWidth, preferredHeight, flexibleWidth, flexibleHeight);
+
+        HorizontalLayoutGroup layout = panel.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = padding ?? new RectOffset();
+        layout.spacing = spacing;
+        layout.childAlignment = childAlignment;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = childForceExpandWidth;
+        layout.childForceExpandHeight = childForceExpandHeight;
+        return panel;
     }
 
     public static RectTransform CreateTabRow(string name, Transform parent, float preferredHeight, float spacing)
@@ -122,6 +198,50 @@ public static class FleetCanvasUiFactory
             Root = root,
             ScrollRect = scrollRect,
             Viewport = viewport,
+            Content = content
+        };
+    }
+
+    public static ScrollPanelRefs CreateVerticalScrollList(
+        string name,
+        Transform parent,
+        string contentName,
+        float spacing,
+        float scrollSensitivity = 30f,
+        float preferredHeight = -1f,
+        float flexibleHeight = -1f)
+    {
+        GameObject rootObj = CreateUiObject(name, parent);
+        RectTransform root = rootObj.GetComponent<RectTransform>();
+        StretchRect(root, 0f, 0f, 0f, 0f);
+        ApplyLayoutElement(rootObj, preferredHeight: preferredHeight, flexibleHeight: flexibleHeight);
+
+        ScrollRect scrollRect = rootObj.AddComponent<ScrollRect>();
+        rootObj.AddComponent<RectMask2D>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.scrollSensitivity = scrollSensitivity;
+        scrollRect.inertia = false;
+
+        RectTransform content = CreateVerticalStack(
+            contentName,
+            rootObj.transform,
+            new RectOffset(),
+            spacing,
+            addContentSizeFitter: true);
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.anchoredPosition = Vector2.zero;
+        content.sizeDelta = Vector2.zero;
+
+        scrollRect.content = content;
+        return new ScrollPanelRefs
+        {
+            Root = root,
+            ScrollRect = scrollRect,
+            Viewport = root,
             Content = content
         };
     }
@@ -223,6 +343,34 @@ public static class FleetCanvasUiFactory
         return button;
     }
 
+    public static BadgeRefs CreateBadge(
+        string name,
+        Transform parent,
+        Font font,
+        string value,
+        int fontSize,
+        Color backgroundColor,
+        Color textColor,
+        float preferredWidth,
+        float preferredHeight,
+        Func<string, string> localize)
+    {
+        RectTransform root = CreateUiObject(name, parent).GetComponent<RectTransform>();
+        Image background = root.gameObject.AddComponent<Image>();
+        background.color = backgroundColor;
+        ApplyLayoutElement(root.gameObject, preferredWidth: preferredWidth, preferredHeight: preferredHeight);
+
+        Text label = CreateBodyText("Label", root, font, value, fontSize, TextAnchor.MiddleCenter, textColor, localize);
+        StretchRect(label.rectTransform, 0f, 0f, 0f, 0f);
+
+        return new BadgeRefs
+        {
+            Root = root,
+            Background = background,
+            Label = label
+        };
+    }
+
     public static Scrollbar CreateVerticalScrollbar(
         string name,
         Transform parent,
@@ -257,5 +405,27 @@ public static class FleetCanvasUiFactory
         rect.anchorMax = new Vector2(1f, 1f);
         rect.offsetMin = new Vector2(left, bottom);
         rect.offsetMax = new Vector2(-right, -top);
+    }
+
+    private static void ApplyLayoutElement(
+        GameObject go,
+        float preferredWidth = -1f,
+        float preferredHeight = -1f,
+        float flexibleWidth = -1f,
+        float flexibleHeight = -1f)
+    {
+        if (preferredWidth < 0f &&
+            preferredHeight < 0f &&
+            flexibleWidth < 0f &&
+            flexibleHeight < 0f)
+        {
+            return;
+        }
+
+        LayoutElement element = go.AddComponent<LayoutElement>();
+        if (preferredWidth >= 0f) element.preferredWidth = preferredWidth;
+        if (preferredHeight >= 0f) element.preferredHeight = preferredHeight;
+        if (flexibleWidth >= 0f) element.flexibleWidth = flexibleWidth;
+        if (flexibleHeight >= 0f) element.flexibleHeight = flexibleHeight;
     }
 }

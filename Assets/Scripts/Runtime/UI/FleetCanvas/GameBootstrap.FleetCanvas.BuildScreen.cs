@@ -107,27 +107,13 @@ public partial class GameBootstrap
         Text buildTitle = CreateHeaderText("BuildTitle", headerRow, font, "Build", 22, TextAnchor.MiddleLeft, Color.white);
         buildTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        GameObject buildScrollGo = CreateUiObject("BuildScrollView", windowRoot.transform);
-        buildScrollGo.AddComponent<LayoutElement>().flexibleHeight = 1f;
-        ScrollRect buildScroll = buildScrollGo.AddComponent<ScrollRect>();
-        buildScrollGo.AddComponent<RectMask2D>();
-        buildScroll.horizontal = false; buildScroll.vertical = true;
-        buildScroll.movementType = ScrollRect.MovementType.Clamped;
-        buildScroll.scrollSensitivity = 30f; buildScroll.inertia = false;
-
-        GameObject buildContentGo = CreateUiObject("BuildCardList", buildScrollGo.transform);
-        RectTransform cardList = buildContentGo.GetComponent<RectTransform>();
-        cardList.anchorMin = new Vector2(0f, 1f); cardList.anchorMax = new Vector2(1f, 1f);
-        cardList.pivot = new Vector2(0.5f, 1f);
-        cardList.anchoredPosition = Vector2.zero; cardList.sizeDelta = Vector2.zero;
-        VerticalLayoutGroup cardListLayout = buildContentGo.AddComponent<VerticalLayoutGroup>();
-        cardListLayout.spacing = 10f;
-        cardListLayout.childControlWidth = true;
-        cardListLayout.childControlHeight = true;
-        cardListLayout.childForceExpandWidth = true;
-        cardListLayout.childForceExpandHeight = false;
-        buildContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        buildScroll.content = cardList;
+        FleetCanvasUiFactory.ScrollPanelRefs buildScroll = CreateVerticalScrollList(
+            "BuildScrollView",
+            windowRoot.transform,
+            "BuildCardList",
+            10f,
+            flexibleHeight: 1f);
+        RectTransform cardList = buildScroll.Content;
 
         buildScreenUi.Categories = CreateBuildCategoriesFromCatalog(cardList, font) ?? new BuildCategoryUi[]
         {
@@ -161,20 +147,19 @@ public partial class GameBootstrap
     {
         BuildItemUi item = new BuildItemUi { Tool = tool, DefaultAccentColor = accentColor };
 
-        RectTransform cardRoot = CreateUiObject("BuildCard_" + tool, parent).GetComponent<RectTransform>();
-        LayoutElement cardLE = cardRoot.gameObject.AddComponent<LayoutElement>();
-        cardLE.preferredHeight = 72f;
-        cardLE.flexibleHeight  = 0f;
-        Image cardBg = cardRoot.gameObject.AddComponent<Image>();
-        cardBg.color = new Color(0.16f, 0.21f, 0.28f, 1f);
+        RectTransform cardRoot = CreateHorizontalLayoutPanel(
+            "BuildCard_" + tool,
+            parent,
+            new Color(0.16f, 0.21f, 0.28f, 1f),
+            new RectOffset(),
+            0f,
+            preferredHeight: 72f,
+            flexibleHeight: 0f,
+            childForceExpandHeight: true,
+            addOutline: false);
+        Image cardBg = cardRoot.GetComponent<Image>();
         item.Root   = cardRoot;
         item.CardBg = cardBg;
-
-        HorizontalLayoutGroup cardLayout = cardRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
-        cardLayout.childControlWidth  = true;
-        cardLayout.childControlHeight = true;
-        cardLayout.childForceExpandWidth  = false;
-        cardLayout.childForceExpandHeight = true;
 
         // Colored accent strip (left)
         RectTransform accentStrip = CreateUiObject("Accent", cardRoot).GetComponent<RectTransform>();
@@ -186,15 +171,12 @@ public partial class GameBootstrap
         CreateBuildAccentVisual(accentStrip, font, tool, abbrev);
 
         // Card body (right)
-        RectTransform body = CreateUiObject("Body", cardRoot).GetComponent<RectTransform>();
-        body.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        VerticalLayoutGroup bodyLayout = body.gameObject.AddComponent<VerticalLayoutGroup>();
-        bodyLayout.padding = new RectOffset(14, 10, 10, 8);
-        bodyLayout.spacing = 4;
-        bodyLayout.childControlWidth  = true;
-        bodyLayout.childControlHeight = true;
-        bodyLayout.childForceExpandWidth  = true;
-        bodyLayout.childForceExpandHeight = false;
+        RectTransform body = CreateVerticalStack(
+            "Body",
+            cardRoot,
+            new RectOffset(14, 10, 10, 8),
+            4,
+            flexibleWidth: 1f);
 
         // Title row: name + status badge
         RectTransform titleRow = CreateLayoutRow("TitleRow", body, 22f, 0f);
@@ -203,21 +185,18 @@ public partial class GameBootstrap
         titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         item.TitleText = titleText;
 
-        RectTransform statusBadgeRoot = CreateUiObject("StatusBadge", titleRow).GetComponent<RectTransform>();
-        Image statusBg = statusBadgeRoot.gameObject.AddComponent<Image>();
-        statusBg.color = new Color(0.22f, 0.28f, 0.38f, 0.8f);
-        LayoutElement statusLayout = statusBadgeRoot.gameObject.AddComponent<LayoutElement>();
-        statusLayout.preferredWidth  = 72f;
-        statusLayout.preferredHeight = 20f;
-        item.StatusBg = statusBg;
-
-        Text statusText = CreateBodyText("StatusText", statusBadgeRoot, font, "Available", 11, TextAnchor.MiddleCenter, Color.white);
-        RectTransform statusTextRect = statusText.GetComponent<RectTransform>();
-        statusTextRect.anchorMin = Vector2.zero;
-        statusTextRect.anchorMax = Vector2.one;
-        statusTextRect.sizeDelta  = Vector2.zero;
-        statusTextRect.anchoredPosition = Vector2.zero;
-        item.StatusText = statusText;
+        FleetCanvasUiFactory.BadgeRefs statusBadge = CreateBadge(
+            "StatusBadge",
+            titleRow,
+            font,
+            "Available",
+            11,
+            new Color(0.22f, 0.28f, 0.38f, 0.8f),
+            Color.white,
+            72f,
+            20f);
+        item.StatusBg = statusBadge.Background;
+        item.StatusText = statusBadge.Label;
 
         // Description
         Text descText = CreateBodyText("Desc", body, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
@@ -770,21 +749,18 @@ public partial class GameBootstrap
     {
         BuildCategoryUi cat = new BuildCategoryUi { LabelEn = labelEn, LabelRu = labelRu, IsExpanded = expanded };
 
-        RectTransform headerRoot = CreateUiObject("CatHeader_" + labelEn, parent).GetComponent<RectTransform>();
-        LayoutElement hLE = headerRoot.gameObject.AddComponent<LayoutElement>();
-        hLE.preferredHeight = 30f;
-        hLE.flexibleHeight  = 0f;
-        Image headerBg = headerRoot.gameObject.AddComponent<Image>();
-        headerBg.color = new Color(0.13f, 0.17f, 0.23f, 1f);
+        RectTransform headerRoot = CreateHorizontalLayoutPanel(
+            "CatHeader_" + labelEn,
+            parent,
+            new Color(0.13f, 0.17f, 0.23f, 1f),
+            new RectOffset(10, 10, 0, 0),
+            6f,
+            preferredHeight: 30f,
+            flexibleHeight: 0f,
+            childForceExpandHeight: true,
+            addOutline: false);
+        Image headerBg = headerRoot.GetComponent<Image>();
         cat.HeaderRoot = headerRoot;
-
-        HorizontalLayoutGroup hLG = headerRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
-        hLG.padding = new RectOffset(10, 10, 0, 0);
-        hLG.spacing = 6f;
-        hLG.childControlWidth  = true;
-        hLG.childControlHeight = true;
-        hLG.childForceExpandWidth  = false;
-        hLG.childForceExpandHeight = true;
 
         Text arrowText = CreateBodyText("Arrow", headerRoot, font, expanded ? "v" : ">", 13, TextAnchor.MiddleLeft, new Color(0.65f, 0.72f, 0.82f));
         arrowText.gameObject.AddComponent<LayoutElement>().preferredWidth = 14f;

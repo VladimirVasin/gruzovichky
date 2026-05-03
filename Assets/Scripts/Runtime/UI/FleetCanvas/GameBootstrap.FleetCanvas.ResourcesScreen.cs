@@ -78,35 +78,12 @@ public partial class GameBootstrap
         warehousePanelLE.minHeight       = ResPanelHeight;
         warehousePanelLE.flexibleHeight  = 0f;
 
-        GameObject wScrollGo = CreateUiObject("WResourcesScrollView", warehousePanel.transform);
-        RectTransform wScrollRect = wScrollGo.GetComponent<RectTransform>();
-        wScrollRect.anchorMin = Vector2.zero;
-        wScrollRect.anchorMax = Vector2.one;
-        wScrollRect.sizeDelta = Vector2.zero;
-        wScrollRect.anchoredPosition = Vector2.zero;
-        ScrollRect wScroll = wScrollGo.AddComponent<ScrollRect>();
-        wScrollGo.AddComponent<RectMask2D>();
-        wScroll.horizontal = false;
-        wScroll.vertical = true;
-        wScroll.movementType = ScrollRect.MovementType.Clamped;
-        wScroll.scrollSensitivity = 30f;
-        wScroll.inertia = false;
-
-        GameObject wContentGo = CreateUiObject("WResourcesContentRoot", wScrollGo.transform);
-        RectTransform wContentRoot = wContentGo.GetComponent<RectTransform>();
-        wContentRoot.anchorMin = new Vector2(0f, 1f);
-        wContentRoot.anchorMax = new Vector2(1f, 1f);
-        wContentRoot.pivot = new Vector2(0.5f, 1f);
-        wContentRoot.anchoredPosition = Vector2.zero;
-        wContentRoot.sizeDelta = Vector2.zero;
-        VerticalLayoutGroup wContentGroup = wContentGo.AddComponent<VerticalLayoutGroup>();
-        wContentGroup.spacing = 6;
-        wContentGroup.childControlWidth = true;
-        wContentGroup.childControlHeight = true;
-        wContentGroup.childForceExpandWidth = true;
-        wContentGroup.childForceExpandHeight = false;
-        wContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        wScroll.content = wContentRoot;
+        FleetCanvasUiFactory.ScrollPanelRefs warehouseScroll = CreateVerticalScrollList(
+            "WResourcesScrollView",
+            warehousePanel.transform,
+            "WResourcesContentRoot",
+            6f);
+        RectTransform wContentRoot = warehouseScroll.Content;
 
         CreateResourceSummaryRow(wContentRoot, font, "Logs",      ResourceVisualKind.Logs,      TradeResourceType.Logs,      resourcesScreenUi.WarehouseRows);
         CreateResourceSummaryRow(wContentRoot, font, "Boards",    ResourceVisualKind.Boards,    TradeResourceType.Boards,    resourcesScreenUi.WarehouseRows);
@@ -125,35 +102,12 @@ public partial class GameBootstrap
         productionPanelLE.minHeight       = ResPanelHeight;
         productionPanelLE.flexibleHeight  = 0f;
 
-        GameObject pScrollGo = CreateUiObject("PResourcesScrollView", productionPanel.transform);
-        RectTransform pScrollRect = pScrollGo.GetComponent<RectTransform>();
-        pScrollRect.anchorMin = Vector2.zero;
-        pScrollRect.anchorMax = Vector2.one;
-        pScrollRect.sizeDelta = Vector2.zero;
-        pScrollRect.anchoredPosition = Vector2.zero;
-        ScrollRect pScroll = pScrollGo.AddComponent<ScrollRect>();
-        pScrollGo.AddComponent<RectMask2D>();
-        pScroll.horizontal = false;
-        pScroll.vertical = true;
-        pScroll.movementType = ScrollRect.MovementType.Clamped;
-        pScroll.scrollSensitivity = 30f;
-        pScroll.inertia = false;
-
-        GameObject pContentGo = CreateUiObject("PResourcesContentRoot", pScrollGo.transform);
-        RectTransform pContentRoot = pContentGo.GetComponent<RectTransform>();
-        pContentRoot.anchorMin = new Vector2(0f, 1f);
-        pContentRoot.anchorMax = new Vector2(1f, 1f);
-        pContentRoot.pivot = new Vector2(0.5f, 1f);
-        pContentRoot.anchoredPosition = Vector2.zero;
-        pContentRoot.sizeDelta = Vector2.zero;
-        VerticalLayoutGroup pContentGroup = pContentGo.AddComponent<VerticalLayoutGroup>();
-        pContentGroup.spacing = 10;
-        pContentGroup.childControlWidth = true;
-        pContentGroup.childControlHeight = true;
-        pContentGroup.childForceExpandWidth = true;
-        pContentGroup.childForceExpandHeight = false;
-        pContentGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        pScroll.content = pContentRoot;
+        FleetCanvasUiFactory.ScrollPanelRefs productionScroll = CreateVerticalScrollList(
+            "PResourcesScrollView",
+            productionPanel.transform,
+            "PResourcesContentRoot",
+            10f);
+        RectTransform pContentRoot = productionScroll.Content;
 
         // Production sections: Forest, Sawmill, FurnitureFactory, GasStation
         resourcesScreenUi.ProductionSections.Add(CreateProductionSection(pContentRoot, font, LocationType.Forest,           "Forest",            new[] { (ResourceVisualKind.Logs,      TradeResourceType.Logs,      "Logs")      }));
@@ -175,28 +129,31 @@ public partial class GameBootstrap
     {
         ProductionBuildingSectionUi section = new ProductionBuildingSectionUi { BuildingType = buildingType };
 
-        GameObject sectionGo = CreateUiObject($"ProdSection_{buildingType}", parent);
-        section.Root = sectionGo;
-        VerticalLayoutGroup sectionVlg = sectionGo.AddComponent<VerticalLayoutGroup>();
-        sectionVlg.spacing = 4f;
-        sectionVlg.childControlWidth = true;
-        sectionVlg.childControlHeight = true;
-        sectionVlg.childForceExpandWidth = true;
-        sectionVlg.childForceExpandHeight = false;
-        sectionGo.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        RectTransform sectionRoot = CreateVerticalStack(
+            $"ProdSection_{buildingType}",
+            parent,
+            new RectOffset(),
+            4f,
+            addContentSizeFitter: true);
+        section.Root = sectionRoot.gameObject;
 
         // Section header
-        GameObject headerGo = CreateUiObject($"ProdSectionHeader_{buildingType}", sectionGo.GetComponent<RectTransform>());
-        headerGo.AddComponent<Image>().color = new Color(0.20f, 0.26f, 0.34f, 1f);
-        headerGo.AddComponent<LayoutElement>().preferredHeight = 26f;
-        section.SectionHeaderText = CreateBodyText($"ProdSectionTitle_{buildingType}", headerGo.GetComponent<RectTransform>(), font, buildingName, 12, TextAnchor.MiddleLeft, new Color(0.82f, 0.86f, 0.92f, 1f));
+        RectTransform headerRoot = CreateHorizontalLayoutPanel(
+            $"ProdSectionHeader_{buildingType}",
+            sectionRoot,
+            new Color(0.20f, 0.26f, 0.34f, 1f),
+            new RectOffset(),
+            0f,
+            preferredHeight: 26f,
+            addOutline: false);
+        section.SectionHeaderText = CreateBodyText($"ProdSectionTitle_{buildingType}", headerRoot, font, buildingName, 12, TextAnchor.MiddleLeft, new Color(0.82f, 0.86f, 0.92f, 1f));
         section.SectionHeaderText.fontStyle = FontStyle.Bold;
         section.SectionHeaderText.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
 
         // Resource rows
         foreach (var (kind, resType, label) in resources)
         {
-            CreateResourceSummaryRow(sectionGo.GetComponent<RectTransform>(), font, label, kind, resType, section.Rows);
+            CreateResourceSummaryRow(sectionRoot, font, label, kind, resType, section.Rows);
         }
 
         return section;
@@ -221,17 +178,14 @@ public partial class GameBootstrap
 
     private void CreateResourceSummaryRow(RectTransform parent, Font font, string title, ResourceVisualKind iconKind, TradeResourceType resourceType, List<ResourceSummaryRowUi> rows)
     {
-        RectTransform card = CreateStyledPanel($"{title}RowCard", parent, FleetInsetColor);
-        card.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
-
-        HorizontalLayoutGroup layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.padding = new RectOffset(10, 10, 5, 5);
-        layout.spacing = 10;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = false;
-        layout.childAlignment = TextAnchor.MiddleLeft;
+        RectTransform card = CreateHorizontalLayoutPanel(
+            $"{title}RowCard",
+            parent,
+            FleetInsetColor,
+            new RectOffset(10, 10, 5, 5),
+            10,
+            preferredHeight: 42f,
+            childAlignment: TextAnchor.MiddleLeft);
 
         RectTransform iconRoot = CreateUiObject($"{title}IconRoot", card).GetComponent<RectTransform>();
         LayoutElement iconLayout = iconRoot.gameObject.AddComponent<LayoutElement>();
@@ -241,15 +195,12 @@ public partial class GameBootstrap
         iconBackground.color = new Color(1f, 1f, 1f, 0.06f);
         DrawResourceIcon(iconRoot, iconKind);
 
-        RectTransform textRoot = CreateUiObject($"{title}TextRoot", card).GetComponent<RectTransform>();
-        LayoutElement textLayout = textRoot.gameObject.AddComponent<LayoutElement>();
-        textLayout.flexibleWidth = 1f;
-        VerticalLayoutGroup textGroup = textRoot.gameObject.AddComponent<VerticalLayoutGroup>();
-        textGroup.spacing = 1f;
-        textGroup.childControlWidth = true;
-        textGroup.childControlHeight = true;
-        textGroup.childForceExpandWidth = true;
-        textGroup.childForceExpandHeight = false;
+        RectTransform textRoot = CreateVerticalStack(
+            $"{title}TextRoot",
+            card,
+            new RectOffset(),
+            1f,
+            flexibleWidth: 1f);
 
         Text nameText = CreateBodyText($"{title}Name", textRoot, font, title, 12, TextAnchor.MiddleLeft, Color.white);
         nameText.fontStyle = FontStyle.Bold;

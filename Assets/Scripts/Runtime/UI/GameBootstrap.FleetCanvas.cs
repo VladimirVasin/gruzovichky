@@ -949,41 +949,14 @@ public partial class GameBootstrap
 
     private void SetupFleetScrollView(RectTransform parent)
     {
-        GameObject scrollObject = CreateUiObject("TruckListScrollView", parent);
-        RectTransform scrollRect = scrollObject.GetComponent<RectTransform>();
-        StretchRect(scrollRect, 0f, 0f, 0f, 0f);
-        Image scrollImage = scrollObject.AddComponent<Image>();
-        scrollImage.color = new Color(0f, 0f, 0f, 0f);
-        ScrollRect scroll = scrollObject.AddComponent<ScrollRect>();
-        scroll.horizontal = false;
-        scroll.scrollSensitivity = 28f;
-        fleetScreenUi.TruckListScrollRect = scroll;
-
-        GameObject viewportObject = CreateUiObject("Viewport", scrollObject.transform);
-        RectTransform viewportRect = viewportObject.GetComponent<RectTransform>();
-        StretchRect(viewportRect, 8f, 8f, 8f, 8f);
-        Image viewportImage = viewportObject.AddComponent<Image>();
-        viewportImage.color = new Color(0f, 0f, 0f, 0.04f);
-        viewportImage.raycastTarget = true;
-        viewportObject.AddComponent<Mask>().showMaskGraphic = false;
-
-        GameObject contentObject = CreateUiObject("Content", viewportObject.transform);
-        RectTransform contentRect = contentObject.GetComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0f, 1f);
-        contentRect.anchorMax = new Vector2(1f, 1f);
-        contentRect.pivot = new Vector2(0.5f, 1f);
-        contentRect.anchoredPosition = Vector2.zero;
-        contentRect.sizeDelta = new Vector2(0f, 0f);
-        VerticalLayoutGroup layout = contentObject.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(0, 0, 0, 0);
-        layout.spacing = 10f;
-        layout.childForceExpandHeight = false;
-        layout.childForceExpandWidth = true;
-        contentObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        scroll.viewport = viewportRect;
-        scroll.content = contentRect;
-        fleetScreenUi.TruckListContent = contentRect;
+        FleetCanvasUiFactory.ScrollPanelRefs scroll = CreateVerticalScrollPanel(
+            "TruckListScrollView",
+            parent,
+            new Color(0f, 0f, 0f, 0.04f),
+            8f,
+            10f);
+        fleetScreenUi.TruckListScrollRect = scroll.ScrollRect;
+        fleetScreenUi.TruckListContent = scroll.Content;
     }
 
     private FleetTruckRowUi CreateFleetTruckRow(RectTransform parent, int index)
@@ -1087,6 +1060,63 @@ public partial class GameBootstrap
         return FleetCanvasUiFactory.CreateVerticalScrollPanel(name, parent, viewportTint, inset, spacing, scrollSensitivity);
     }
 
+    private static FleetCanvasUiFactory.ScrollPanelRefs CreateVerticalScrollList(
+        string name,
+        Transform parent,
+        string contentName,
+        float spacing,
+        float scrollSensitivity = 30f,
+        float preferredHeight = -1f,
+        float flexibleHeight = -1f)
+    {
+        return FleetCanvasUiFactory.CreateVerticalScrollList(name, parent, contentName, spacing, scrollSensitivity, preferredHeight, flexibleHeight);
+    }
+
+    private static RectTransform CreateVerticalStack(
+        string name,
+        Transform parent,
+        RectOffset padding,
+        float spacing,
+        float preferredWidth = -1f,
+        float preferredHeight = -1f,
+        float flexibleWidth = -1f,
+        float flexibleHeight = -1f,
+        bool addContentSizeFitter = false)
+    {
+        return FleetCanvasUiFactory.CreateVerticalStack(name, parent, padding, spacing, preferredWidth, preferredHeight, flexibleWidth, flexibleHeight, addContentSizeFitter);
+    }
+
+    private static RectTransform CreateHorizontalLayoutPanel(
+        string name,
+        Transform parent,
+        Color color,
+        RectOffset padding,
+        float spacing,
+        float preferredWidth = -1f,
+        float preferredHeight = -1f,
+        float flexibleWidth = -1f,
+        float flexibleHeight = -1f,
+        TextAnchor childAlignment = TextAnchor.UpperLeft,
+        bool childForceExpandWidth = false,
+        bool childForceExpandHeight = false,
+        bool addOutline = true)
+    {
+        return FleetCanvasUiFactory.CreateHorizontalLayoutPanel(
+            name,
+            parent,
+            color,
+            padding,
+            spacing,
+            preferredWidth,
+            preferredHeight,
+            flexibleWidth,
+            flexibleHeight,
+            childAlignment,
+            childForceExpandWidth,
+            childForceExpandHeight,
+            addOutline);
+    }
+
     private static RectTransform CreateSectionCard(Transform parent, Font font, string title, out RectTransform body, bool addTitle = true)
     {
         return FleetCanvasUiFactory.CreateSectionCard($"{title}Card", parent, font, title, FleetInsetColor, Color.white, L, out body, addTitle);
@@ -1114,6 +1144,20 @@ public partial class GameBootstrap
     private static Button CreateButton(string name, Transform parent, Font font, out Text label, string buttonText, int fontSize, Color normalColor, Color textColor)
     {
         return FleetCanvasUiFactory.CreateButton(name, parent, font, out label, buttonText, fontSize, normalColor, textColor, L);
+    }
+
+    private static FleetCanvasUiFactory.BadgeRefs CreateBadge(
+        string name,
+        Transform parent,
+        Font font,
+        string value,
+        int fontSize,
+        Color backgroundColor,
+        Color textColor,
+        float preferredWidth,
+        float preferredHeight)
+    {
+        return FleetCanvasUiFactory.CreateBadge(name, parent, font, value, fontSize, backgroundColor, textColor, preferredWidth, preferredHeight, L);
     }
 
     private static string FormatValueLine(string label, string value)

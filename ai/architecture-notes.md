@@ -202,7 +202,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 ### `Assets/Scripts/Runtime/UI/FleetCanvas/FleetCanvasUiFactory.cs`
 
 - First extracted UI factory service for FleetCanvas primitive UI creation.
-- `GameBootstrap.FleetCanvas.cs` still exposes compatibility wrappers, but low-level object/text/button/section-card/tab-row/scroll-panel/scrollbar/spacer creation now has a real service seam.
+- `GameBootstrap.FleetCanvas.cs` still exposes compatibility wrappers, but low-level object/text/button/section-card/tab-row/layout-panel/badge/scroll-panel/scroll-list/scrollbar/spacer creation now has a real service seam.
 
 ### `Assets/Scripts/Runtime/Data/`
 

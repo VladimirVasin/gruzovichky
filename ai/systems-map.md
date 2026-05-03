@@ -82,7 +82,7 @@ Use this before broad code search. Owner cards are navigation starting points, n
   - building info cards
   - money / time / speed panels
   - route assignment and command feedback
-  - shared FleetCanvas primitive/section-card/tab-row/scroll-panel factory seam
+  - shared FleetCanvas primitive/section-card/tab-row/layout-panel/badge/scroll-list factory seam
   - table-style localization lookup with JSON override seed for MainMenu/PatchNotes/Economy/Trade/Workers/Roles labels
   - JSON-backed Patch Notes and Build menu catalog data
 

@@ -6,6 +6,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-03: Expanded `FleetCanvasUiFactory` to reduce hand-built UI layout code. Added shared vertical stack, horizontal layout panel, simple vertical scroll-list, and badge helpers; Build, Resources, and Fleet list setup now use these helpers for card rows, category headers, status badges, and scroll content. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
 - 2026-05-03: Started separating data/text from large UI C# files. Added `Assets/Scripts/Runtime/Data/` JSON loaders plus `Assets/Resources/GameData/patch-notes.json` and `build-catalog.json`; Main Menu Patch Notes and Build menu categories/titles/descriptions now load these catalogs first, while old C# content remains as fallback. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `dotnet build Assembly-CSharp-Editor.csproj -v:minimal`, JSON parsing, line-count, `git diff --check`, and `./tools/check-all.ps1 -SkipSmokeTests`.
 
 - 2026-05-03: Compacted and refreshed AI memory after reviewing `ai/`. Updated `project-overview.md` from the old one-truck/wood-loop slice to the current town-sim prototype, filled `release-notes.md` with a concise `v.0.0.3` player-facing baseline, refreshed `architecture-notes.md` for the road-segment/build-cursor/test reality, and reduced this work log back to active memory plus summaries.
