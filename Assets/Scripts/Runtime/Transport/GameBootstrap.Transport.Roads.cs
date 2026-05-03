@@ -145,7 +145,40 @@ public partial class GameBootstrap
             return;
         }
 
-        roadCells.Add(cell);
+        AddRoadCellUnchecked(cell);
+    }
+
+    private void EnsureLocationRoadAccessRoadCell(LocationData location, string source)
+    {
+        Vector2Int cell = location.RoadAccess;
+        if (roadCells.Contains(cell))
+        {
+            return;
+        }
+
+        if (!IsInsideGrid(cell) || edgeHighwayCells.Contains(cell) || IsWaterOrBeachCell(cell))
+        {
+            SessionDebugLogger.Log("BUILD_ROAD", $"{source} driveway road skipped at ({cell.x},{cell.y}): blocked.");
+            return;
+        }
+
+        if (location.Contains(cell))
+        {
+            SessionDebugLogger.Log("BUILD_ROAD", $"{source} driveway road skipped at ({cell.x},{cell.y}): inside building footprint.");
+            return;
+        }
+
+        RemoveMiscObjectAtCell(cell);
+        AddRoadCellUnchecked(cell);
+        SessionDebugLogger.Log("BUILD_ROAD", $"{source} driveway road added at ({cell.x},{cell.y}).");
+    }
+
+    private void AddRoadCellUnchecked(Vector2Int cell)
+    {
+        if (!roadCells.Add(cell))
+        {
+            return;
+        }
 
         GameObject road = new($"Road_{cell.x}_{cell.y}");
         road.name = $"Road_{cell.x}_{cell.y}";

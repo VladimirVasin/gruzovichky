@@ -1,10 +1,12 @@
 # Work Log
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20 to keep agent startup light. Use git history for exact old implementation details.
 
 ## Recent Detailed Work
+
+- 2026-05-02: Started the road-builder shift toward a Cities-like segment workflow. Two-way roads now use a click-start/click-finish segment flow instead of immediate single-cell placement, with Shift constraining the segment to one dominant axis; the existing `roadCells` backend remains intact for pathfinding. Added `RoadSegmentBuildService` plus a small `GameBootstrap.Input.RoadSegments.cs` partial to keep `GameBootstrap.Input.BuildRoad.cs` under the line-count limit, and updated the Build menu description for the new interaction. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `dotnet build Assembly-CSharp-Editor.csproj -v:minimal`, and `tools/check-line-count.ps1 -MaxLines 1500`.
 
 - 2026-05-01: Added an F9 debug worker-wave tool. The debug panel now has a `SUMMON 10 WORKERS` button that creates ten free workers and sends them through the existing intercity arrival-bus flow. Arrival buses now release passengers one by one with a short stagger instead of dumping multi-worker waves all at once, while preserving tutorial and normal hiring behavior. Verified `dotnet build Assembly-CSharp.csproj -nologo`, line-count check, and `git diff --check`.
 
@@ -643,6 +645,18 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 - 2026-05-01: Added a Canteen money fallback for worker meals. If a worker needs food, the Canteen has stock, but the worker cannot afford the service fee, they now path to the nearest registered building trash can, perform a short trash-meal idle activity, satisfy the meal need, and receive the temporary negative effect `I Have Fallen` / `Ya opustilsya`. Canteen arrival also rechecks money before charging so workers no longer get free paid meals after starting the walk. Verified `dotnet build Assembly-CSharp.csproj -nologo`, line-count check, `git diff --check`, and touched-file mojibake scan.
 
 - 2026-05-02: Generalized the no-money worker fallback debuff. The former trash-meal-only effect is now a shared `money_fallback` effect shown as `I Have Fallen` / `Ya opustilsya`; workers receive it when eating from trash cans or when they cannot afford Motel sleep and use a bench sleep fallback. Motel arrival now also retries bench fallback if the worker loses enough money before check-in. Verified `dotnet build Assembly-CSharp.csproj -nologo`, line-count check, `git diff --check`, and touched-file mojibake scan.
+
+- 2026-05-02: Tuned worker needs balance after the multi-day `debug.log` review. New workers now spawn with a random `$50-$100` personal balance, active need-resolution fallbacks (`Eat`/`Sleep`/`Leisure`) are no longer interruptible as low-priority idle activities, critical needs clear their daily helper flag so they cannot be treated as suppressed, and Warehouse service delivery target scoring now explicitly prefers filling service buildings toward full capacity when stock space exists. Verified `dotnet build Assembly-CSharp.csproj -nologo`, line-count check, and `git diff --check`.
+
+- 2026-05-02: Improved the Regional Map HUD from text-heavy placeholders into schematic known-region previews. Known neighbors (`River Port`, `Cotton & Textile Belt`, `Dry South`) now render distinct mini-map layouts in both the 3x3 grid and detail panel, dynamic map labels/descriptions use Russian display strings when selected, unknown regions show a localized survey placeholder, and duplicate regional trade UI logging with special symbols was removed. Verified `dotnet build Assembly-CSharp.csproj -nologo`, line-count check, `git diff --check`, and touched-file mojibake scan.
+
+- 2026-05-02: Reworked the Regional Map toward a Pharaoh-like fullscreen parchment map. The map now uses a generated parchment/sea/river/forest/mountain texture, compact settlement-style city markers, warmer selected/current region styling, route lines from the current town, and the Map HUD opens fullscreen while pausing simulation until closed. Verified `dotnet build Assembly-CSharp.csproj -nologo`, line-count check, and `git diff --check`.
+
+- 2026-05-02: Adjusted the Regional Map interaction model so opening Map shows only the large map by default. No region is selected on open, the right-side region/trade panel stays hidden until the player clicks a city marker, and regional trade route controls now live inside that right panel instead of as a separate bottom console. Verified `dotnet build Assembly-CSharp.csproj -nologo`, line-count check, and `git diff --check`.
+
+- 2026-05-03: Made building driveway/access cells become real road cells automatically when a location is created. `CreateLocation()` now ensures each `RoadAccess` cell is added through the normal road visual/connectivity refresh path while still refusing water, beach, highway, or footprint-overlap cells; misc props on the driveway are removed first. Verified runtime/editor `dotnet build`, line-count check, and `git diff --check`.
+
+- 2026-05-03: Added night build-mode cursor assistance. Build previews now spawn a warm point light plus a soft ground glow around the current building/road footprint only when the scene is dark, using red tint for blocked placement; the helper lives in `GameBootstrap.Input.BuildCursorAssist.cs` so `GameBootstrap.Input.BuildRoad.cs` stays under the line-count limit. Verified runtime/editor `dotnet build`, line-count check, and `git diff --check`.
 
 - Keep `ai/work-log.md` short. If it grows beyond roughly 120-160 lines, collapse older completed items into this summary format again.
 

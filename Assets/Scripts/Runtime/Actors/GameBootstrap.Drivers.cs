@@ -910,8 +910,9 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         float fillRatio = stored / (float)serviceCapacity;
+        float missingRatio = freeSpace / (float)serviceCapacity;
         float demandBoost = GetWarehouseServiceDemandBoost(serviceType, stored, serviceCapacity);
-        float score = fillRatio - demandBoost;
+        float score = -(missingRatio + demandBoost);
         if (found && score >= bestScore)
         {
             return;
@@ -927,7 +928,7 @@ public partial class GameBootstrap : MonoBehaviour
         deliveryTarget = serviceType;
         deliveryAmount = carryAmount;
         bestScore = score;
-        reason = $"{service.Label} fill={stored}/{serviceCapacity} ({fillRatio:P0}), demandBoost={demandBoost:0.00}, warehouseStock={warehouseStock}, carry={carryAmount}";
+        reason = $"{service.Label} fill-to-full={stored}/{serviceCapacity} ({fillRatio:P0}), missing={freeSpace}, demandBoost={demandBoost:0.00}, warehouseStock={warehouseStock}, carry={carryAmount}";
     }
 
     private float GetWarehouseServiceDemandBoost(LocationType serviceType, int stored, int serviceCapacity)

@@ -44,6 +44,9 @@ public partial class GameBootstrap
         driver.LastMealNeedStatus = GetWorkerNeedStatus(WorkerNeedKind.Meal, driver.HoursSinceMeal);
         driver.LastSleepNeedStatus = GetWorkerNeedStatus(WorkerNeedKind.Sleep, driver.HoursSinceSleep);
         driver.LastLeisureNeedStatus = GetWorkerNeedStatus(WorkerNeedKind.Leisure, driver.HoursSinceLeisure);
+        ClearDailyNeedFlagIfCritical(driver, WorkerNeedKind.Meal, driver.LastMealNeedStatus);
+        ClearDailyNeedFlagIfCritical(driver, WorkerNeedKind.Sleep, driver.LastSleepNeedStatus);
+        ClearDailyNeedFlagIfCritical(driver, WorkerNeedKind.Leisure, driver.LastLeisureNeedStatus);
 
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Meal, oldMeal, driver.LastMealNeedStatus, driver.HoursSinceMeal);
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Sleep, oldSleep, driver.LastSleepNeedStatus, driver.HoursSinceSleep);
@@ -162,9 +165,30 @@ public partial class GameBootstrap
             return false;
         }
 
-        return driver.AteToday && ShouldWorkerSeekMeal(driver) ||
-               driver.SleptToday && ShouldWorkerSeekSleep(driver) ||
-               driver.HadLeisureToday && ShouldWorkerSeekLeisure(driver);
+        return driver.AteToday && ShouldWorkerSeekMeal(driver) && driver.LastMealNeedStatus != WorkerNeedStatus.Critical ||
+               driver.SleptToday && ShouldWorkerSeekSleep(driver) && driver.LastSleepNeedStatus != WorkerNeedStatus.Critical ||
+               driver.HadLeisureToday && ShouldWorkerSeekLeisure(driver) && driver.LastLeisureNeedStatus != WorkerNeedStatus.Critical;
+    }
+
+    private static void ClearDailyNeedFlagIfCritical(DriverAgent driver, WorkerNeedKind need, WorkerNeedStatus status)
+    {
+        if (driver == null || status != WorkerNeedStatus.Critical)
+        {
+            return;
+        }
+
+        switch (need)
+        {
+            case WorkerNeedKind.Meal:
+                driver.AteToday = false;
+                break;
+            case WorkerNeedKind.Sleep:
+                driver.SleptToday = false;
+                break;
+            case WorkerNeedKind.Leisure:
+                driver.HadLeisureToday = false;
+                break;
+        }
     }
 
     private bool IsWorkerDueButBlockedByMoney(DriverAgent driver)

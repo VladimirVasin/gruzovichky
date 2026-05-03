@@ -213,6 +213,8 @@ public partial class GameBootstrap
         ConfigureStaticVisual(buildHoverDrivewayHighlight);
         buildHoverDrivewayHighlight.SetActive(false);
 
+        SetupBuildCursorAssist();
+
         roadPathStartHighlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
         roadPathStartHighlight.name = "RoadPathStartHighlight";
         roadPathStartHighlight.transform.SetParent(worldRoot, false);
@@ -232,41 +234,6 @@ public partial class GameBootstrap
         ConfigureStaticVisual(roadPathStartSideHighlight);
         DecorateRoadPreviewTile(roadPathStartSideHighlight);
         roadPathStartSideHighlight.SetActive(false);
-    }
-
-    private void DecorateRoadPreviewTile(GameObject root)
-    {
-        if (root == null)
-        {
-            return;
-        }
-
-        GameObject centerDash = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        centerDash.name = "RoadPreviewCenterDash";
-        centerDash.transform.SetParent(root.transform, false);
-        centerDash.transform.localPosition = new Vector3(0f, 0.7f, 0f);
-        centerDash.transform.localScale = new Vector3(0.14f, 0.22f, 0.82f);
-        centerDash.GetComponent<Collider>().enabled = false;
-        ApplyColor(centerDash, new Color(0.95f, 0.82f, 0.32f));
-        ConfigureStaticVisual(centerDash);
-
-        GameObject leftEdge = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        leftEdge.name = "RoadPreviewLeftEdge";
-        leftEdge.transform.SetParent(root.transform, false);
-        leftEdge.transform.localPosition = new Vector3(-0.34f, 0.7f, 0f);
-        leftEdge.transform.localScale = new Vector3(0.06f, 0.22f, 0.84f);
-        leftEdge.GetComponent<Collider>().enabled = false;
-        ApplyColor(leftEdge, new Color(0.95f, 0.93f, 0.82f));
-        ConfigureStaticVisual(leftEdge);
-
-        GameObject rightEdge = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rightEdge.name = "RoadPreviewRightEdge";
-        rightEdge.transform.SetParent(root.transform, false);
-        rightEdge.transform.localPosition = new Vector3(0.34f, 0.7f, 0f);
-        rightEdge.transform.localScale = new Vector3(0.06f, 0.22f, 0.84f);
-        rightEdge.GetComponent<Collider>().enabled = false;
-        ApplyColor(rightEdge, new Color(0.95f, 0.93f, 0.82f));
-        ConfigureStaticVisual(rightEdge);
     }
 
     private void SetRoadPreviewTileVisual(GameObject root, bool canBuild, bool startMarker = false)
@@ -465,8 +432,9 @@ public partial class GameBootstrap
             return;
         }
 
-        // Cancel road path mode immediately when Shift is released (runs before any early return)
-        if (roadPathStart.HasValue && (Keyboard.current == null || !Keyboard.current.shiftKey.isPressed))
+        if (roadPathStart.HasValue &&
+            activeBuildTool == BuildTool.SingleRoad &&
+            (Keyboard.current == null || !Keyboard.current.shiftKey.isPressed))
         {
             CancelRoadPathMode();
         }
@@ -510,6 +478,12 @@ public partial class GameBootstrap
 
         bool shiftHeld = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
 
+        if (activeBuildTool == BuildTool.Road && roadPathStart.HasValue)
+        {
+            UpdateRoadPathPreview(cell, roadPathStart.Value);
+            return;
+        }
+
         if (IsRoadBuildTool(activeBuildTool) && shiftHeld)
         {
             if (roadPathStart.HasValue)
@@ -540,6 +514,8 @@ public partial class GameBootstrap
                 ? new Color(0.22f, 0.9f, 0.32f)
                 : new Color(0.92f, 0.28f, 0.22f);
         }
+
+        UpdateBuildCursorAssist(previewPosition, Mathf.Max(previewScale.x, previewScale.z) + 1.2f, canBuild);
     }
 
     private void HideBuildHoverHighlights()
@@ -558,6 +534,8 @@ public partial class GameBootstrap
         {
             buildHoverDrivewayHighlight.SetActive(false);
         }
+
+        HideBuildCursorAssist();
 
         for (int i = 0; i < buildHoverCellHighlights.Count; i++)
         {
@@ -625,6 +603,8 @@ public partial class GameBootstrap
                 }
             }
         }
+
+        UpdateBuildCursorAssistFromPreview(canBuild);
 
         if (buildHoverDrivewayHighlight != null)
         {
@@ -1054,6 +1034,11 @@ public partial class GameBootstrap
     private bool TryHandleRoadPlacement(Vector2Int cell)
     {
         bool shiftHeld = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
+        if (activeBuildTool == BuildTool.Road)
+        {
+            return TryHandleTwoLaneRoadSegmentPlacement(cell);
+        }
+
         if (!shiftHeld)
         {
             CancelRoadPathMode();
@@ -1111,10 +1096,16 @@ public partial class GameBootstrap
                     : TryPlaceRoadFootprint(start, GetBuildRoadDirection(), "player-path");
             }
 
-            List<Vector2Int> path = FindRoadBuildPath(start, end, IsBuildRoadBlockedCell);
+            List<Vector2Int> path = GetRoadBuildToolPath(start, end);
             if (path == null || path.Count < 2)
             {
                 SessionDebugLogger.Log("BUILD_ROAD", $"path-build rejected start={FormatCell(start)} end={FormatCell(end)} reason=no-path.");
+                return false;
+            }
+
+            if (activeBuildTool == BuildTool.Road && !CanCommitTwoLaneRoadSegmentPath(path, out string blockedReason))
+            {
+                SessionDebugLogger.Log("BUILD_ROAD", $"segment-build rejected start={FormatCell(start)} end={FormatCell(end)} reason={blockedReason} path={FormatCellList(path)} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
                 return false;
             }
 
@@ -1162,7 +1153,6 @@ public partial class GameBootstrap
                 }
                 else
                 {
-                    // Fill corner where this path starts adjacent to an existing perpendicular road
                     Vector2Int behindCell = path[0] - direction;
                     if (roadCells.Contains(behindCell))
                     {
@@ -1190,7 +1180,7 @@ public partial class GameBootstrap
 
     private void UpdateRoadPathPreview(Vector2Int hoverCell, Vector2Int startCell)
     {
-        List<Vector2Int> path = FindRoadBuildPath(startCell, hoverCell, IsBuildRoadBlockedCell);
+        List<Vector2Int> path = GetRoadBuildToolPath(startCell, hoverCell);
         bool hasPath = path != null && path.Count > 1;
         bool pathBuildable = hasPath;
 
@@ -1239,7 +1229,6 @@ public partial class GameBootstrap
                 }
                 else if (activeBuildTool != BuildTool.SingleRoad)
                 {
-                    // Preview corner fill where path starts adjacent to an existing perpendicular road
                     Vector2Int behindCell = path[0] - direction;
                     if (roadCells.Contains(behindCell))
                     {
@@ -1278,8 +1267,8 @@ public partial class GameBootstrap
 
         buildHoverHighlight.SetActive(false);
         buildHoverDrivewayHighlight.SetActive(false);
+        UpdateBuildCursorAssistFromPreview(pathBuildable);
 
-        // Keep start marker positioned and visible
         Vector2Int startDirection = hasPath && path.Count > 1 ? path[1] - path[0] : GetAdjacentRoadPreviewDirection(startCell);
         SetRoadPathStartHighlights(startCell, startDirection, pathBuildable);
     }

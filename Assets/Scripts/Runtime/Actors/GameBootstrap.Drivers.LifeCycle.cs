@@ -1245,6 +1245,13 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
+        if (driver.LifeGoal == WorkerLifeGoal.Eat ||
+            driver.LifeGoal == WorkerLifeGoal.Sleep ||
+            driver.LifeGoal == WorkerLifeGoal.Leisure)
+        {
+            return false;
+        }
+
         return driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench ||
                driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
                driver.WalkPhase == DriverRescuePhase.IdlePhoneCall ||

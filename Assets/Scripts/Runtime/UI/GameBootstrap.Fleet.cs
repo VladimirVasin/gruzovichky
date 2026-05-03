@@ -52,14 +52,24 @@ public partial class GameBootstrap
 
     private void ToggleMenuPanel(string panelName, ref bool target)
     {
+        if (panelName == "Map")
+        {
+            ToggleWorldMapPanel();
+            return;
+        }
+
         bool wasOpen = target;
+        if (isWorldMapPanelOpen)
+        {
+            CloseWorldMapPanel();
+        }
+
         isFleetPanelOpen = false;
         isShiftsPanelOpen = false;
         isDriversPanelOpen = false;
         isResourcesPanelOpen = false;
         isEconomyPanelOpen = false;
         isBuildPanelOpen = false;
-        isWorldMapPanelOpen = false;
         isStatesPanelOpen = false;
         target = !wasOpen;
         if (panelName == "Workers")

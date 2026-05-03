@@ -121,6 +121,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const int MaxBusCount = 3;
     private const int HireBusCost = 220;
     private const int HireDriverCost = 50;
+    private const int WorkerStartingMoneyMin = 50;
+    private const int WorkerStartingMoneyMax = 100;
     private const int TutorialHireWorkerWaveCount = 7;
     private const int DebugHireWorkerWaveCount = 10;
     private const float HiringBusDisembarkInterval = 0.22f;
@@ -318,6 +320,10 @@ public partial class GameBootstrap : MonoBehaviour
     private GameObject cargoTransferCrate;
     private GameObject buildHoverHighlight;
     private GameObject buildHoverDrivewayHighlight;
+    private GameObject buildCursorAssistRoot;
+    private Light buildCursorAssistLight;
+    private Renderer buildCursorAssistGlowRenderer;
+    private Material buildCursorAssistGlowMaterial;
     private readonly List<GameObject> buildHoverCellHighlights = new();
     private readonly List<Vector2Int> buildPreviewFootprintCells = new();
     private readonly List<Vector2Int> buildPreviewRoadDirections = new();
@@ -424,8 +430,10 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isEconomyTaxesTabActive = true;
     private bool isBuildPanelOpen;
     private bool isWorldMapPanelOpen;
+    private bool isWorldMapSimulationPauseActive;
+    private int worldMapPauseRestoreSpeed = 1;
     private bool isStatesPanelOpen;
-    private int selectedWorldMapRegionIndex = 4;
+    private int selectedWorldMapRegionIndex = -1;
     private int moneyPopupAmount;
     private int gameSpeedMultiplier = 1;
     private int lastActiveGameSpeedMultiplier = 1;

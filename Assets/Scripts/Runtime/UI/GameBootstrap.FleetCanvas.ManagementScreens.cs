@@ -439,11 +439,16 @@ public partial class GameBootstrap
         public Text TitleText;
         public Text SubtitleText;
         public Text SelectionHintText;
+        public RectTransform MapRoot;
+        public readonly List<Image> RegionRouteLines = new();
         public readonly List<WorldMapCellUi> Cells = new();
+        public GameObject DetailsPanelRoot;
         public WorldMapDetailPreviewUi DetailPreview;
         public Text DetailsNameText;
         public Text DetailsStatusText;
+        public Text DetailsSellsLabelText;
         public Text DetailsResourcesText;
+        public Text DetailsBuysLabelText;
         public Text DetailsImportsText;
         public Text DetailsDescriptionText;
         // trade route bottom panel

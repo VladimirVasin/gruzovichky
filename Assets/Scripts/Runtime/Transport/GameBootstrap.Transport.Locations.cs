@@ -253,6 +253,8 @@ public partial class GameBootstrap
                     ConfigureStaticVisual);
             }
         }
+
+        EnsureLocationRoadAccessRoadCell(data, type.ToString());
     }
 
     private void CreateLocationTrashCans(LocationType type, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)

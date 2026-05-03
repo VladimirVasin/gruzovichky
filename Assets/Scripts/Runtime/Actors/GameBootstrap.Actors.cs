@@ -727,7 +727,8 @@ public partial class GameBootstrap
             Gender   = gender,
             DriverName = GenerateWorkerName(gender),
             ShiftStartHour = -1,
-            IsOnActiveShift = false
+            IsOnActiveShift = false,
+            Money = Random.Range(WorkerStartingMoneyMin, WorkerStartingMoneyMax + 1)
         };
         driver.Age = Random.Range(18, 51);
         AssignWorkerPortrait(driver);

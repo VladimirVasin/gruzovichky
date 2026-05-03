@@ -78,6 +78,11 @@ public partial class GameBootstrap
 
         if (Keyboard.current.bKey.wasPressedThisFrame)
         {
+            if (isWorldMapPanelOpen)
+            {
+                CloseWorldMapPanel();
+            }
+
             isBuildPanelOpen = !isBuildPanelOpen;
             if (isBuildPanelOpen)
             {
@@ -103,19 +108,7 @@ public partial class GameBootstrap
 
         if (Keyboard.current.mKey.wasPressedThisFrame)
         {
-            isWorldMapPanelOpen = !isWorldMapPanelOpen;
-            if (isWorldMapPanelOpen)
-            {
-                isFleetPanelOpen = false;
-                isShiftsPanelOpen = false;
-                isDriversPanelOpen = false;
-                isResourcesPanelOpen = false;
-                isEconomyPanelOpen = false;
-                isBuildPanelOpen = false;
-            }
-
-            isWorldMapScreenDirty = true;
-            PlayUiSound(isWorldMapPanelOpen ? uiPanelOpenClip : uiPanelCloseClip, 0.85f);
+            ToggleWorldMapPanel();
             return;
         }
 
@@ -138,6 +131,14 @@ public partial class GameBootstrap
 
     private void SetGameSpeed(int multiplier)
     {
+        if (isWorldMapPanelOpen)
+        {
+            worldMapPauseRestoreSpeed = Mathf.Clamp(multiplier, 1, 3);
+            lastActiveGameSpeedMultiplier = worldMapPauseRestoreSpeed;
+            PlayUiSound(uiSelectClip, 0.8f);
+            return;
+        }
+
         gameSpeedMultiplier = Mathf.Clamp(multiplier, 1, 3);
         lastActiveGameSpeedMultiplier = gameSpeedMultiplier;
         Time.timeScale = gameSpeedMultiplier;
@@ -147,6 +148,12 @@ public partial class GameBootstrap
 
     private void TogglePauseSpeed()
     {
+        if (isWorldMapPanelOpen)
+        {
+            PlayUiSound(uiSelectClip, 0.8f);
+            return;
+        }
+
         if (gameSpeedMultiplier == 0)
         {
             int resumedSpeed = Mathf.Clamp(lastActiveGameSpeedMultiplier, 1, 3);
@@ -163,6 +170,83 @@ public partial class GameBootstrap
         }
 
         PlayUiSound(uiSelectClip, 0.8f);
+    }
+
+    private void ToggleWorldMapPanel()
+    {
+        if (isWorldMapPanelOpen)
+        {
+            CloseWorldMapPanel();
+            PlayUiSound(uiPanelCloseClip, 0.85f);
+        }
+        else
+        {
+            OpenWorldMapPanel();
+            PlayUiSound(uiPanelOpenClip, 0.85f);
+        }
+    }
+
+    private void OpenWorldMapPanel()
+    {
+        if (isWorldMapPanelOpen)
+        {
+            return;
+        }
+
+        isFleetPanelOpen = false;
+        isShiftsPanelOpen = false;
+        isDriversPanelOpen = false;
+        isResourcesPanelOpen = false;
+        isEconomyPanelOpen = false;
+        isBuildPanelOpen = false;
+        isStatesPanelOpen = false;
+        isTruckDetailsOpen = false;
+        isLocalBusDetailsOpen = false;
+        isDriverDetailsOpen = false;
+        activeBuildTool = BuildTool.None;
+        hoveredBuildCell = null;
+        selectedLocation = null;
+        selectedLocalStopIndex = -1;
+        selectedPersonalHouseIndex = -1;
+        CancelRoadPathMode();
+        DisableTruckCameraFocus();
+        RefreshSelectionVisuals();
+
+        selectedWorldMapRegionIndex = -1;
+        worldMapPauseRestoreSpeed = gameSpeedMultiplier > 0
+            ? Mathf.Clamp(gameSpeedMultiplier, 1, 3)
+            : Mathf.Clamp(lastActiveGameSpeedMultiplier, 1, 3);
+        isWorldMapSimulationPauseActive = gameSpeedMultiplier > 0;
+        gameSpeedMultiplier = 0;
+        Time.timeScale = 0f;
+        Time.fixedDeltaTime = 0f;
+
+        isWorldMapPanelOpen = true;
+        isWorldMapScreenDirty = true;
+        isFleetScreenDirty = true;
+        isBuildScreenDirty = true;
+    }
+
+    private void CloseWorldMapPanel()
+    {
+        if (!isWorldMapPanelOpen)
+        {
+            return;
+        }
+
+        isWorldMapPanelOpen = false;
+        isWorldMapScreenDirty = true;
+
+        if (isWorldMapSimulationPauseActive)
+        {
+            int restoredSpeed = Mathf.Clamp(worldMapPauseRestoreSpeed, 1, 3);
+            gameSpeedMultiplier = restoredSpeed;
+            lastActiveGameSpeedMultiplier = restoredSpeed;
+            Time.timeScale = restoredSpeed;
+            Time.fixedDeltaTime = 0.02f * Time.timeScale;
+        }
+
+        isWorldMapSimulationPauseActive = false;
     }
 
     private bool WasTruckHotkeyPressed(int truckNumber)
@@ -267,7 +351,7 @@ public partial class GameBootstrap
         isDriversPanelOpen = false;
         isResourcesPanelOpen = false;
         isEconomyPanelOpen = false;
-        isWorldMapPanelOpen = false;
+        CloseWorldMapPanel();
         isBuildPanelOpen = false;
         isStatesPanelOpen = false;
         isTruckDetailsOpen = false;
