@@ -21,9 +21,10 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 - This is still fast for prototype iteration.
 - It still couples presentation and simulation, but the runtime is now split into concern-based partial scripts under `Assets/Scripts/Runtime/`.
-- Large prototype files are kept below roughly 1500 lines by splitting feature clusters into focused partials such as `Runtime/Racing/`, `Runtime/UI/FleetCanvas/`, `GameBootstrap.RuntimeLoop.cs`, `GameBootstrap.AmbientLife.Particles.cs`, and `GameBootstrap.Drivers.*.cs`.
+- Runtime C# files are kept under the 900-line cleanup target by splitting feature clusters into focused partials such as `Runtime/Racing/`, `Runtime/UI/FleetCanvas/`, `GameBootstrap.Types*.cs`, `GameBootstrap.WorldVisuals.*.cs`, `GameBootstrap.MainMenuHud*.cs`, and `GameBootstrap.Drivers.*.cs`.
 - Navigation now starts from `ai/systems-map.md` -> `System Owner Map`; owner cards are maintained when paths, ownership, or responsibilities change.
 - `tools/check-all.ps1` is the preferred project sanity runner, with `-SkipSmokeTests` for fast checks while Unity is already open.
+- `tools/check-line-count.ps1` and CI default to the 900-line limit.
 - Small changes are easy; larger feature growth will increase risk quickly.
 
 ## Current Hotspots
@@ -31,6 +32,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 ### `Assets/Scripts/Runtime/Core/GameBootstrap.cs`
 
 - Central runtime entrypoint and owner of shared state.
+- Nested runtime data/state types are split into `GameBootstrap.Types.cs` and `GameBootstrap.Types.AmbientWater.cs`.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs`
 
@@ -39,10 +41,10 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.BuildRoad.cs`
 
-- Owns build-mode road preview, footprint placement, turn filling, and post-placement road-building flow.
+- Coordinates build-mode road workflow; preview visuals live in `GameBootstrap.Input.BuildRoad.Preview.cs`, and footprint/place-road flow lives in `GameBootstrap.Input.BuildRoad.Placement.cs`.
 - Two-way roads now use a click-start/click-finish segment workflow, with `GameBootstrap.Input.RoadSegments.cs` holding segment-specific state helpers.
 - Keep two-lane road invariants here when changing road build tools.
-- Footprint offset and structural placement checks now delegate to `RoadBuildPlacementService`; the partial still owns preview visuals, actual `AddRoad()` calls, turn-fill logging, and input state.
+- Footprint offset and structural placement checks now delegate to `RoadBuildPlacementService`; the build-road partial family still owns preview visuals, actual `AddRoad()` calls, turn-fill logging, and input state.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.BuildCursorAssist.cs`
 
@@ -60,17 +62,32 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 ### `Assets/Scripts/Runtime/Racing/`
 
-- Racing mode is split by concern: controls, track generation, vehicle state, HUD, world setup, and atmosphere.
+- Racing mode is split by concern: runtime loop, controls, track generation, vehicle state, HUD, world setup, and atmosphere.
 - `GameBootstrap.Racing.cs` remains the race-mode coordinator and shared state owner.
 
 ### `Assets/Scripts/Runtime/UI/FleetCanvas/`
 
-- Large management screens are split by panel: Workers, Shifts setup/runtime, Build, Resources, Economy, World Map, and tutorial helpers.
+- Large management screens are split by panel: Workers, Shifts setup/runtime, Build, Resources, Economy, World Map, and tutorial helpers, with large runtime/catalog/assignment blocks moved into focused companion partials.
 - Shared UI refs and helper types remain in `GameBootstrap.FleetCanvas.ManagementScreens.cs`.
+
+### `Assets/Scripts/Runtime/UI/GameBootstrap.MainMenuHud*.cs`
+
+- Main Menu HUD is now split into focused partials for the core menu, loading/world-build progress, and graphics options.
+- Patch Notes content still lives behind the JSON-backed catalog path first, with the old hardcoded fallback kept in the core main-menu partial.
+
+### `Assets/Scripts/Runtime/Core/GameBootstrap.WorldVisuals*.cs`
+
+- World visual setup is split into focused partials for material/texture helpers, ground/diorama meshes, water cells/effects/fish, atmosphere/weather/post-processing, and graphics-option application.
+- Road meshes and road-side visuals still live under the transport road partials.
+
+### `Assets/Scripts/Runtime/Core/GameBootstrap.AmbientLife*.cs`
+
+- Ambient life is split by family: clouds/air/birds in the core partial, cats in `GameBootstrap.AmbientLife.Cats.cs`, squirrels in `GameBootstrap.AmbientLife.Squirrels.cs`, bees in `GameBootstrap.AmbientLife.Bees.cs`, frogs in `GameBootstrap.AmbientLife.Frogs.cs`, moths/leaves in `GameBootstrap.AmbientLife.MothsLeaves.cs`, and particle activity schedules in `GameBootstrap.AmbientLife.ParticleSchedules.cs`.
+- `GameBootstrap.AmbientLife.Particles.cs` keeps shared particle setup plus smaller firefly/exhaust clusters.
 
 ### `Assets/Scripts/Runtime/Actors/GameBootstrap.Drivers.*.cs`
 
-- Driver/worker behavior is split into general movement/logistics, life cycle and needs, and hiring/shift orchestration.
+- Driver/worker behavior is split into general movement/logistics, warehouse delivery, life cycle and needs, idle wander, and hiring/shift orchestration.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
 

@@ -1,5 +1,5 @@
 param(
-    [int]$MaxLines = 1500,
+    [int]$MaxLines = 900,
     [string]$Root = "Assets/Scripts",
     [string[]]$Include = @("*.cs")
 )

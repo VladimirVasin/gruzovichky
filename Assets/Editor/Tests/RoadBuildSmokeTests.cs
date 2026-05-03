@@ -114,6 +114,43 @@ public sealed class RoadBuildSmokeTests
     }
 
     [Test]
+    public void RoadBuildPlacementService_JunctionTurnDirectionsUseOnlyConnectedPerpendicularRoads()
+    {
+        HashSet<Vector2Int> roads = new()
+        {
+            new Vector2Int(62, 18),
+            new Vector2Int(61, 18),
+            new Vector2Int(62, 17),
+            new Vector2Int(61, 17)
+        };
+
+        List<Vector2Int> directions = RoadBuildPlacementService.GetConnectedPerpendicularDirections(
+            new Vector2Int(62, 18),
+            Vector2Int.up,
+            roads);
+
+        Assert.That(directions, Is.EqualTo(new[] { Vector2Int.left }));
+    }
+
+    [Test]
+    public void RoadBuildPlacementService_JunctionTurnDirectionsKeepRealTJunctions()
+    {
+        HashSet<Vector2Int> roads = new()
+        {
+            new Vector2Int(62, 18),
+            new Vector2Int(61, 18),
+            new Vector2Int(63, 18)
+        };
+
+        List<Vector2Int> directions = RoadBuildPlacementService.GetConnectedPerpendicularDirections(
+            new Vector2Int(62, 18),
+            Vector2Int.up,
+            roads);
+
+        Assert.That(directions, Is.EqualTo(new[] { Vector2Int.left, Vector2Int.right }));
+    }
+
+    [Test]
     public void GridPathService_DoesNotRouteThroughBlockedWaterCells()
     {
         HashSet<Vector2Int> water = new()

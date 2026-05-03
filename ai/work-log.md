@@ -1,10 +1,20 @@
 # Work Log
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20 and again on 2026-05-03 to keep agent startup light. Use git history for exact old implementation details.
 
 ## Recent Work
+
+- 2026-05-04: Tightened road-build diagnostics and junction handling after reviewing `debug.log`. Road segment logs now distinguish `requestedEnd` from `resolvedEnd` and report axis-lock state, turn-fill no-op messages moved to verbose logging, and player road junction turn-fill/preview now only uses perpendicular directions that are actually connected to existing road cells. Added smoke coverage for connected perpendicular junction direction selection. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-03: Completed the broad 900-line runtime partial cleanup. Split the remaining oversized `GameBootstrap` partials into focused files for core nested types, world/service decorations, transport location decorations, build-road preview/placement, driver idle/walk/warehouse delivery, trade runtime, ambient bees/frogs/moths/leaves/river boats, racing runtime, HUD/status helpers, FleetCanvas map/build/workers/shifts/vacancies helpers, tutorial window UI, and debug auto-assign flow. Updated owner map and architecture notes for the new paths, and set project line-count tooling/CI to the 900-line default. Verified `./tools/check-all.ps1 -SkipSmokeTests`, `git diff --check`, and an explicit scan confirming no `Assets/Scripts` C# files exceed 900 lines.
+
+- 2026-05-03: Continued the gradual 900-line partial-file cleanup. Split ambient cats into `GameBootstrap.AmbientLife.Cats.cs`, moved squirrel setup/runtime into `GameBootstrap.AmbientLife.Squirrels.cs`, and moved bee/moth active-hour helpers into `GameBootstrap.AmbientLife.ParticleSchedules.cs`; the original `GameBootstrap.AmbientLife.cs` is now below 900 lines. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-03: Continued the gradual 900-line partial-file cleanup. Split `GameBootstrap.WorldVisuals.cs` into `GameBootstrap.WorldVisuals.Ground.cs`, `GameBootstrap.WorldVisuals.Water.cs`, and `GameBootstrap.WorldVisuals.Atmosphere.cs`; the original partial now keeps material/texture and visual tint helpers. All `WorldVisuals` partials are now below 900 lines. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-03: Started the gradual 900-line partial-file cleanup. Split `GameBootstrap.MainMenuHud.cs` into `GameBootstrap.MainMenuHud.Loading.cs` and `GameBootstrap.MainMenuHud.GraphicsOptions.cs`; the original Main Menu HUD partial is now under 900 lines while loading/world-build flow and graphics options behavior remain in the same `GameBootstrap` partial class. Verified runtime/editor builds, line-count, diff whitespace, and mojibake scan with `./tools/check-all.ps1 -SkipSmokeTests`.
 
 - 2026-05-03: Expanded `FleetCanvasUiFactory` to reduce hand-built UI layout code. Added shared vertical stack, horizontal layout panel, simple vertical scroll-list, and badge helpers; Build, Resources, and Fleet list setup now use these helpers for card rows, category headers, status badges, and scroll content. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
 

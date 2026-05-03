@@ -16,6 +16,18 @@ public readonly struct RoadFootprintResolveResult
 
 public static class RoadBuildPlacementService
 {
+    public static List<Vector2Int> GetConnectedPerpendicularDirections(
+        Vector2Int cell,
+        Vector2Int outgoingDirection,
+        ISet<Vector2Int> roadCells)
+    {
+        List<Vector2Int> directions = new();
+        Vector2Int dir = TwoLaneRoadGeometry.NormalizeDirection(outgoingDirection);
+        AddConnectedPerpendicularDirection(directions, cell, new Vector2Int(-dir.y, dir.x), roadCells);
+        AddConnectedPerpendicularDirection(directions, cell, new Vector2Int(dir.y, -dir.x), roadCells);
+        return directions;
+    }
+
     public static RoadFootprintResolveResult ResolveFootprintOffset(
         Vector2Int cell,
         Vector2Int roadDirection,
@@ -130,5 +142,18 @@ public static class RoadBuildPlacementService
     private static bool Contains(ISet<Vector2Int> cells, Vector2Int cell)
     {
         return cells != null && cells.Contains(cell);
+    }
+
+    private static void AddConnectedPerpendicularDirection(
+        List<Vector2Int> directions,
+        Vector2Int cell,
+        Vector2Int direction,
+        ISet<Vector2Int> roadCells)
+    {
+        Vector2Int normalized = TwoLaneRoadGeometry.NormalizeDirection(direction);
+        if (Contains(roadCells, cell + normalized))
+        {
+            directions.Add(normalized);
+        }
     }
 }

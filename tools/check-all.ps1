@@ -1,5 +1,5 @@
 param(
-    [int]$MaxLines = 1500,
+    [int]$MaxLines = 900,
     [string]$RuntimeProject = "Assembly-CSharp.csproj",
     [string]$EditorProject = "Assembly-CSharp-Editor.csproj",
     [string]$UnityPath = "",

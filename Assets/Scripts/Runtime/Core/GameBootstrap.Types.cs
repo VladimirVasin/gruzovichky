@@ -1,0 +1,569 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+
+public partial class GameBootstrap : MonoBehaviour
+{
+    private sealed class RoadLanternData
+    {
+        public Light Light;
+        public Renderer GlowRenderer;
+        public Material GlowMaterial;
+        public float ActivationOffset;
+        public float FlickerSeed;
+        public float FlickerSpeed;
+        public float FlickerStrength;
+        public float FlickerThreshold;
+    }
+
+    private sealed class ShadowLodRendererData
+    {
+        public Renderer Renderer;
+        public ShadowCastingMode OriginalShadowMode;
+    }
+
+    private sealed class MoneyLedgerEntry
+    {
+        public string TimeLabel;
+        public int TreasuryDelta;
+        public string FromLabel;
+        public string ToLabel;
+        public string Reason;
+        public int? TreasuryAfter;
+        public int? RecipientBalanceAfter;
+    }
+
+    private sealed class RiverBoatData
+    {
+        public Transform RootTransform;
+        public float WorldX;
+        public float TravelDirection;
+        public float Speed;
+        public float BobPhase;
+        public float RockPhase;
+        public bool HasEnteredRiver;
+        public Renderer LanternRenderer;
+        public Light LanternLight;
+        public AudioSource BoatAudioSource;
+    }
+
+    private sealed class EdgeHighwayBusData
+    {
+        public Transform RootTransform;
+        public float WorldX;
+        public float TravelDirection;
+        public bool IsCitySideLane;
+        public float Speed;
+        public float BobPhase;
+        public Color BodyColor;
+        public bool HasPlayedPassbyAudio;
+        public bool HasEnteredRoadStrip;
+        public Renderer HeadlightLeftRenderer;
+        public Renderer HeadlightRightRenderer;
+        public Material HeadlightLeftMaterial;
+        public Material HeadlightRightMaterial;
+        public Light HeadlightLeft;
+        public Light HeadlightRight;
+    }
+
+    private sealed class LocalBusRouteData
+    {
+        public BusAgent Bus;
+        public Transform RootTransform;
+        public Renderer HeadlightLeftRenderer;
+        public Renderer HeadlightRightRenderer;
+        public Material HeadlightLeftMaterial;
+        public Material HeadlightRightMaterial;
+        public Light HeadlightLeft;
+        public Light HeadlightRight;
+        public DriverAgent Driver;
+        public readonly List<Vector3> Waypoints = new();
+        public int WaypointIndex;
+        public int CurrentStopIndex = -1;
+        public int TravelDirection = 1;
+        public float DwellTimer;
+        public float BobPhase;
+        public float Speed;
+        public int PassengerCount;
+        public int PassengerCapacity = LocalBusMaxPassengers;
+        public int Bank;
+        public string LastBoardingBlockReason;
+        public LocalBusPhase Phase = LocalBusPhase.None;
+    }
+
+    private enum LocalBusPhase
+    {
+        None,
+        ParkedAwaitingShiftStart,
+        DrivingRoute,
+        WaitingAtStop,
+        ReturningToParking
+    }
+
+    private sealed class HiringDriverArrivalData
+    {
+        public DriverAgent Driver;
+        public readonly List<DriverAgent> Drivers = new();
+        public bool IsTutorialWave;
+        public bool HasNotifiedDisembark;
+        public Transform BusRootTransform;
+        public Renderer HeadlightLeftRenderer;
+        public Renderer HeadlightRightRenderer;
+        public Material HeadlightLeftMaterial;
+        public Material HeadlightRightMaterial;
+        public Light HeadlightLeft;
+        public Light HeadlightRight;
+        public float BusWorldX;
+        public float BusSpeed;
+        public float StopTimer;
+        public float DisembarkTimer;
+        public int NextDisembarkIndex;
+        public float BobPhase;
+        public HiringDriverArrivalPhase Phase;
+    }
+
+    private enum HiringDriverArrivalPhase
+    {
+        WaitingLaneClear,
+        ApproachingStop,
+        StoppedForDropoff,
+        DriverWalkingToMotel,
+        Departing
+    }
+    private TripPhase currentTripPhase = TripPhase.None;
+    private RefuelPhase currentRefuelPhase = RefuelPhase.None;
+    private TruckInteractionType activeTruckInteraction = TruckInteractionType.None;
+    private TruckInteractionType queuedTruckInteraction = TruckInteractionType.None;
+    private Quaternion truckInteractionTargetRotation;
+    private Vector3 truckInteractionBuildingPoint;
+    private LocationType? activeServiceLocation;
+    private LocationType? queuedServiceLocation;
+    private AudioClip uiSelectClip;
+    private AudioClip menuHoverClip;
+    private AudioClip uiPanelOpenClip;
+    private AudioClip uiPanelCloseClip;
+    private AudioClip ambientWindClip;
+    private AudioClip dayBirdsClip;
+    private AudioClip forestRustleClip;
+    private AudioClip forestChopClip;
+    private AudioClip nightWindClip;
+    private AudioClip nightCricketsClip;
+    private AudioClip gasStationHumClip;
+    private AudioClip sawmillHumClip;
+    private AudioClip warehouseCreakClip;
+    private AudioClip owlClip;
+    private AudioClip lanternBuzzClip;
+    private AudioClip truckIdleClip;
+    private AudioClip truckRollClip;
+    private AudioClip cargoPickupClip;
+    private AudioClip cargoDropClip;
+    private AudioClip routeAssignForestSawmillClip;
+    private AudioClip routeAssignSawmillWarehouseClip;
+    private AudioClip routeAssignRefuelClip;
+    private AudioClip forestLoadCueClip;
+    private AudioClip sawmillUnloadCueClip;
+    private AudioClip sawmillLoadCueClip;
+    private AudioClip warehouseUnloadBoardsCueClip;
+    private AudioClip gasStationRefuelCueClip;
+    private AudioClip parkingReturnCueClip;
+    private AudioClip moneyRewardClip;
+    private AudioClip moneySpendClip;
+    private AudioClip slotReelTickClip;
+    private AudioClip slotWinClip;
+    private AudioClip slotLoseClip;
+
+    // HUD flash/shake for gambling result
+    private float  hudFlashTimer;
+    private float  hudFlashDuration;
+    private Color  hudFlashColor;
+    private float  hudShakeTimer;
+    private float  hudShakeDuration;
+    private AudioClip edgeHighwayBusPassbyClip;
+    private AudioClip riverAmbientClip;
+    private AudioClip riverSplashClip;
+    private AudioClip boatMotorClip;
+    private bool wereAmbientLanternMothsActiveLastFrame;
+    private bool wereAmbientFirefliesActiveLastFrame;
+    private float riverFishSpawnTimer;
+    private WeatherState currentWeatherState = WeatherState.Clear;
+    private WeatherState nextWeatherState    = WeatherState.Clear;
+    private WeatherParams activeWeatherParams;
+    private float weatherHoldTimer = 180f;
+    private float weatherTransitionTimer;
+    private float weatherTransitionDuration;
+    private bool  isWeatherTransitioning;
+    private float weatherRainIntensity;
+    private float lightningFlashTimer    = 18f;
+    private float lightningFlashActive   = 0f;
+    private float lightningFlashDuration = 0.2f;
+    private Transform rainRoot;
+    private readonly List<RainDropData> rainDrops = new();
+    private float truckEngineAudioPhaseOffset;
+    private float truckEngineAudioWobbleSpeed = 1f;
+    private float truckEngineAudioPitchBias = 1f;
+    private float truckEngineAudioVolumeBias = 1f;
+    private float waterEffectsUpdateTimer;
+    private int waterVisualLodLevel = -1;
+
+    private enum LocationType
+    {
+        Parking,
+        GasStation,
+        Forest,
+        Warehouse,
+        Sawmill,
+        FurnitureFactory,
+        Motel,
+        IntercityStop,
+        Stop,
+        Bar,
+        Canteen,
+        GamblingHall,
+        CityPark,
+        PersonalHouse,
+        CarMarket
+    }
+
+    /// <summary>
+    /// Production locations generate or process cargo.
+    /// Service locations support the truck route (fuel, rest, loading/unloading).
+    /// </summary>
+    private static bool IsProductionLocation(LocationType type) => type switch
+    {
+        LocationType.Forest           => true,
+        LocationType.Sawmill          => true,
+        LocationType.FurnitureFactory => true,
+        LocationType.Warehouse        => true,
+        _                             => false
+    };
+
+    private static bool IsServiceLocation(LocationType type) => !IsProductionLocation(type);
+
+    private bool IsLocationOperational(LocationType type) =>
+        !IsProductionLocation(type) ||
+        (locations.TryGetValue(type, out LocationData d) && d.Workers > 0);
+
+    private enum CargoType
+    {
+        None,
+        Logs,
+        Boards,
+        Cotton,
+        Textile,
+        Furniture,
+        Fuel,
+        Alcohol,
+        Food
+    }
+
+    private enum TransportTask
+    {
+        None,
+        ReturnToParking,
+        PickUpAtForest,
+        DeliverToSawmill,
+        PickUpAtSawmill,
+        DeliverToWarehouse,
+        PickUpBoardsAtWarehouse,
+        DeliverBoardsToFurnitureFactory,
+        PickUpTextileAtWarehouse,
+        DeliverTextileToFurnitureFactory,
+        PickUpAtFurnitureFactory,
+        DeliverFurnitureToWarehouse
+    }
+
+    private enum TruckInteractionType
+    {
+        None,
+        LoadAtForest,
+        UnloadAtSawmill,
+        LoadAtSawmill,
+        UnloadAtWarehouse,
+        LoadBoardsAtWarehouse,
+        LoadTextileAtWarehouse,
+        UnloadBoardsAtFurnitureFactory,
+        UnloadTextileAtFurnitureFactory,
+        LoadAtFurnitureFactory,
+        UnloadFurnitureAtWarehouse,
+        TradeUnloadAtWarehouse,
+        TradeLoadAtWarehouse,
+        RefuelAtGasStation
+    }
+
+    private enum TripType
+    {
+        None,
+        ForestToSawmill,
+        ForestToWarehouse,
+        SawmillToWarehouse,
+        WarehouseToFurnitureFactoryBoards,
+        WarehouseToFurnitureFactoryTextile,
+        FurnitureFactoryToWarehouse
+    }
+
+    private enum BuildTool
+    {
+        None,
+        Parking,
+        Warehouse,
+        SingleRoad,
+        Road,
+        Stop,
+        Forest,
+        FurnitureFactory,
+        Sawmill,
+        Motel,
+        Bar,
+        Canteen,
+        GasStation,
+        GamblingHall,
+        CityPark,
+        PersonalHouse,
+        CarMarket
+    }
+
+    private enum GameStartMode
+    {
+        Debug,
+        User,
+        Clear
+    }
+
+    public enum TripPhase
+    {
+        None,
+        ToPickup,
+        Loading,
+        ToDropoff,
+        Unloading,
+        ReturnToParking
+    }
+
+    public enum RefuelPhase
+    {
+        None,
+        ToGasStation,
+        Refueling,
+        ReturnToParking
+    }
+
+    private enum DriverRescuePhase
+    {
+        None,
+        IdleWander,
+        ToMotelFromBusStop,
+        ToGasStation,
+        ToTruck,
+        ToMotelEntrance,
+        ToTruckAtMotel,
+        ToParkingForShift,
+        IdleWalkToBench,
+        IdleSittingOnBench,
+        IdleWalkToBar,
+        IdleAtBar,
+        IdleWalkToCanteen,
+        IdleAtCanteen,
+        IdleWalkToTrashCan,
+        IdleAtTrashCan,
+        IdleWalkToGamblingHall,
+        IdleAtGamblingHall,
+        IdleWalkToCityPark,
+        IdleAtCityPark,
+        IdleExitCityPark,
+        IdleSmoking,
+        IdlePhoneCall,
+        IdleWalkToCat,
+        IdlePettingCat,
+        WalkToLocalBusStop,
+        WaitingAtLocalBusStop,
+        RidingLocalBus,
+        ToBuildingForShift,        // walking motel -> production building (logistics pre-shift)
+        ToMotelFromBuilding,       // walking building -> motel (logistics post-shift)
+        WarehouseDeliveryToService, // walking Warehouse -> service building (carrying resource)
+        WarehouseDeliveryReturn,    // walking service building -> Warehouse (empty-handed)
+        LumberToTree,
+        LumberChopping,
+        LumberCarryLogToBuilding,
+        LumberReturnToTreeForPlanting,
+        LumberPlanting,
+        LumberReturnToBuilding,
+        ToPersonalHouseForPurchase,
+        ToPersonalHouseEntrance,
+        ToCarMarketForPurchase
+    }
+
+    private enum DriverRestPhase
+    {
+        None,
+        ToMotel,
+        ParkAtMotel,
+        DriverWalkToMotel,
+        Sleeping,
+        SleepingAtHome,
+        DriverWalkToTruck,
+        ReturnToParking
+    }
+
+    private enum WorkerLifeGoal
+    {
+        None,
+        Work,
+        Eat,
+        Leisure,
+        Sleep,
+        BuyHouse,
+        BuyCar,
+        Idle
+    }
+
+    private enum WorkerNeedKind
+    {
+        Meal,
+        Sleep,
+        Leisure
+    }
+
+    private enum WorkerNeedStatus
+    {
+        Ok,
+        Warning,
+        Critical
+    }
+
+    private enum DriverDutyMode
+    {
+        Local,
+        Intercity,
+        Logistics   // assigned to a production building
+    }
+
+    public enum TradeResourceType
+    {
+        Logs,
+        Boards,
+        Cotton,
+        Textile,
+        Furniture,
+        Fuel,
+        Alcohol,
+        Food
+    }
+
+    public enum TradeOrderType
+    {
+        Buy,
+        Sell
+    }
+
+    private enum WarehouseResourceType
+    {
+        Fuel,
+        Alcohol,
+        Food
+    }
+
+
+    private sealed class LocationData
+    {
+        public string Label;
+        public Vector2Int Min;
+        public Vector2Int Max;
+        public Vector2Int Anchor;
+        public Vector2Int RoadAccess;
+        public Color BaseColor;
+        public int StopNumber;
+        public int LogsStored;
+        public int BoardsStored;
+        public int TextileStored;
+        public int FurnitureStored;
+        // Warehouse consumable resources
+        public int FuelStored;
+        public int AlcoholStored;
+        public int FoodStored;
+        public GameObject RootObject;
+        public GameObject LocalBusWarningMarker;
+        public Renderer BaseRenderer;
+        public readonly List<GameObject> StoredLogVisuals = new();
+        public readonly List<GameObject> StoredBoardVisuals = new();
+
+        public int Workers;      // production buildings only: >0 = operational, 0 = offline
+        public int ServiceFee;   // Service buildings deduct from driver.Money on entry.
+        public int BuildingBank; // Internal revenue: service fees in, gambling payouts out.
+
+        public bool Contains(Vector2Int cell)
+        {
+            return cell.x >= Min.x && cell.x <= Max.x && cell.y >= Min.y && cell.y <= Max.y;
+        }
+    }
+
+    private sealed class TripOption
+    {
+        public TripType Type;
+        public string Title;
+        public string Description;
+        public int Reward;
+        public int Priority; // 0=Low, 1=Medium, 2=High
+    }
+
+    private enum ForestWorkerState
+    {
+        Walking,
+        Chopping,
+        Pausing
+    }
+
+    private sealed class ForestWorkerAmbient
+    {
+        public string Name;
+        public GameObject RootObject;
+        public Transform VisualRoot;
+        public Transform BodyTransform;
+        public Transform HeadTransform;
+        public Transform CapTransform;
+        public Transform LeftArmTransform;
+        public Transform RightArmTransform;
+        public Transform LeftLegTransform;
+        public Transform RightLegTransform;
+        public Transform AxeTransform;
+        public Transform FlashlightTransform;
+        public Light FlashlightLight;
+        public Renderer FlashlightRenderer;
+        public Material FlashlightMaterial;
+        public Vector3 TargetWorldPosition;
+        public ForestWorkerState State;
+        public float MoveSpeed;
+        public float StateTimer;
+        public float AnimationTime;
+        public float ChopSoundCooldown;
+        public float PauseYaw;
+        public int WorkPointIndex;
+    }
+
+    private sealed class ForestTreeWobble
+    {
+        public Transform TreeTransform;
+        public Quaternion BaseRotation;
+        public Vector3 Axis;
+        public float Timer;
+        public float Duration;
+        public float Amplitude;
+    }
+
+    private sealed class MiscTreeSway
+    {
+        public Vector2Int Cell;
+        public Transform RootTransform;
+        public Quaternion BaseRotation;
+        public float PhaseOffset;
+        public float SecondaryPhaseOffset;
+        public float Speed;
+        public float PitchAmplitude;
+        public float RollAmplitude;
+        public float CurrentWindMult = 1f;
+    }
+
+
+}

@@ -28,7 +28,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        SessionDebugLogger.Log("BUILD_ROAD", $"segment-finish requested tool={activeBuildTool} start={FormatCell(roadPathStart.Value)} end={FormatCell(cell)} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
+        SessionDebugLogger.Log("BUILD_ROAD", $"segment-finish requested tool={activeBuildTool} start={FormatCell(roadPathStart.Value)} requestedEnd={FormatCell(cell)} axisLocked={IsActiveRoadSegmentAxisLocked()} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
         bool built = TryBuildRoadPath(roadPathStart.Value, cell);
         if (built)
         {
@@ -45,11 +45,20 @@ public partial class GameBootstrap
     {
         if (activeBuildTool == BuildTool.Road)
         {
-            bool constrainToDominantAxis = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
-            return RoadSegmentBuildService.BuildManhattanSegment(start, end, constrainToDominantAxis);
+            return RoadSegmentBuildService.BuildManhattanSegment(start, end, IsRoadSegmentAxisLocked());
         }
 
         return FindRoadBuildPath(start, end, IsBuildRoadBlockedCell);
+    }
+
+    private static bool IsRoadSegmentAxisLocked()
+    {
+        return Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
+    }
+
+    private bool IsActiveRoadSegmentAxisLocked()
+    {
+        return activeBuildTool == BuildTool.Road && IsRoadSegmentAxisLocked();
     }
 
     private bool CanCommitTwoLaneRoadSegmentPath(List<Vector2Int> path, out string blockedReason)
