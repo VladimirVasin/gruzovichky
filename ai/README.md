@@ -40,7 +40,7 @@ Rule:
 
 1. Read this file.
 2. Read `project-overview.md`.
-3. Read `systems-map.md`.
+3. Read `systems-map.md`, especially `System Owner Map`, before broad code search.
 4. Read `architecture-notes.md`.
 5. Read `work-log.md`.
 6. Read `release-notes.md` when the task involves version labels, changelogs, release contents, or Patch Notes.
@@ -54,6 +54,7 @@ Rule:
 - Treat memory as a guide, not as authority over code.
 - If memory and code disagree, trust code and update memory after finishing.
 - Identify the affected systems before editing.
+- Use `ai/systems-map.md` -> `System Owner Map` to pick the first files to inspect.
 - Write a short plan before changing code.
 - Do not start editing before the plan is stated.
 
@@ -84,8 +85,9 @@ Rule:
 
 - Update `work-log.md` first.
 - Update `project-overview.md` only if visible project structure or key responsibilities changed.
-- Update `systems-map.md` only if system ownership or file involvement changed.
+- Update `systems-map.md` if system ownership, file involvement, owner-map paths, or owner-map responsibilities changed.
 - Update `architecture-notes.md` only if the real architecture changed or a new hotspot/refactor seam appeared.
+- Prefer `./tools/check-all.ps1` before commits or after risky code edits. Use `-SkipSmokeTests` for a fast local pass when Unity is already open or unavailable; otherwise the script runs runtime/editor builds, line-count, diff whitespace, mojibake scan, and Unity EditMode smoke tests.
 
 ## Writing Rules
 

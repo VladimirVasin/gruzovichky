@@ -64,11 +64,20 @@ the agent must:
 - Read only the AI memory files relevant to the task.
 - Treat code as source of truth if memory and code disagree.
 - Identify affected systems before editing.
+- Before broad code searches, consult the System Owner Map in `ai/systems-map.md`.
 - Scan only the necessary code.
 - State a short plan before making code changes.
 - Avoid unrelated refactors.
 - Update `ai/work-log.md` after implementation.
 - Update other AI memory files only if they truly need changes.
+
+## Owner Map Rules
+
+- Use `ai/systems-map.md` -> `System Owner Map` as the first navigation pass for implementation, bugfix, refactor, and investigation tasks.
+- Owner cards are starting points, not hard boundaries. If a task crosses systems, inspect every relevant owner card before editing.
+- If the owner map disagrees with code, trust code and update the owner map after the work is complete.
+- When changing or extending files listed in an owner card, update `ai/systems-map.md` if paths, ownership, or responsibilities changed.
+- If files are split, moved, or ownership changes, update `ai/systems-map.md` and add a short note to `ai/work-log.md`.
 
 ## Memory Rules
 

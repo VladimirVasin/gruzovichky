@@ -153,9 +153,12 @@ public partial class GameBootstrap
     private int GetVacancyCurrentStep(VacancyViewModel vacancy)
     {
         if (vacancy == null) return 0;
-        if (vacancy.IsOccupied) return 4;
-        if (VacancyRequiresShiftStep(vacancy) && !HasSelectedVacancyShift(vacancy)) return 1;
-        return 3;
+        return VacancyFlowRulesService.GetCurrentStep(
+            vacancy.IsOccupied,
+            VacancyRequiresShiftStep(vacancy),
+            HasSelectedVacancyShift(vacancy),
+            VacancyRequiresTruckStep(vacancy),
+            selectedVacancyTruckNumber > 0 || vacancy.TruckNumber > 0);
     }
 
     private static bool IsVacancyStepApplicable(VacancyViewModel vacancy, int step)
@@ -169,12 +172,23 @@ public partial class GameBootstrap
 
     private static bool VacancyRequiresTruckStep(VacancyViewModel vacancy)
     {
-        return false;
+        return vacancy != null && VacancyFlowRulesService.RequiresTruckStep(ToVacancyFlowKind(vacancy.Kind));
     }
 
     private static bool VacancyRequiresShiftStep(VacancyViewModel vacancy)
     {
-        return vacancy != null;
+        return vacancy != null && VacancyFlowRulesService.RequiresShiftStep(ToVacancyFlowKind(vacancy.Kind));
+    }
+
+    private static VacancyFlowKind ToVacancyFlowKind(VacancyKind kind)
+    {
+        return kind switch
+        {
+            VacancyKind.TruckDriver => VacancyFlowKind.TruckDriver,
+            VacancyKind.Intercity => VacancyFlowKind.Intercity,
+            VacancyKind.BusDriver => VacancyFlowKind.BusDriver,
+            _ => VacancyFlowKind.Production
+        };
     }
 
     private bool HasSelectedVacancyShift(VacancyViewModel vacancy)

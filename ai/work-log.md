@@ -658,6 +658,14 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 - 2026-05-03: Added night build-mode cursor assistance. Build previews now spawn a warm point light plus a soft ground glow around the current building/road footprint only when the scene is dark, using red tint for blocked placement; the helper lives in `GameBootstrap.Input.BuildCursorAssist.cs` so `GameBootstrap.Input.BuildRoad.cs` stays under the line-count limit. Verified runtime/editor `dotnet build`, line-count check, and `git diff --check`.
 
+- 2026-05-03: Restored `tools/check-all.ps1` as the one-command project sanity runner. It runs runtime/editor `dotnet build`, line-count, staged/unstaged `git diff --check`, added-line/untracked-file mojibake scanning, and Unity EditMode smoke tests when Unity is available; use `-SkipSmokeTests` for fast local checks while the project is open in Unity. Added the usage rule to `ai/README.md`. Verified `./tools/check-all.ps1 -SkipSmokeTests`; full smoke-test mode correctly fails when another Unity instance has the project open.
+
+- 2026-05-03: Added a System Owner Map to `ai/systems-map.md` so agents can quickly find the likely owner files for Tutorial, Road Build, Vacancies, Workers, Trucks/Trade, Local Bus, Economy, World, Regional Map, Ambient, Racing, Localization, Debug, and tests. Added explicit owner-map usage rules to `AGENTS.md` and `ai/README.md`. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-03: Tightened owner-map maintenance rules. Agents must now update `ai/systems-map.md` when work in listed owner paths changes file paths, ownership, or responsibilities, with `AGENTS.md`, `ai/README.md`, and the owner-map intro all carrying the rule.
+
+- 2026-05-03: Added focused smoke-test coverage for road build, transport/trade, vacancies, and tutorial goals. New editor tests cover road segment shape/blocked placement/path blockers, local bus route/passenger/trade queue decisions, and vacancy/tutorial flow invariants. Added `VacancyFlowRulesService` as a small testable seam used by the vacancy HUD step logic. Fixed `tools/check-all.ps1` mojibake scanning for untracked UTF-8 files so new C# test files are not falsely flagged. Verified `./tools/check-all.ps1 -SkipSmokeTests`; full Unity smoke-test mode was blocked by an already-open Unity project instance.
+
 - Keep `ai/work-log.md` short. If it grows beyond roughly 120-160 lines, collapse older completed items into this summary format again.
 
 - Code remains source of truth. The project has many partial `GameBootstrap.*.cs` files; memory is only a navigation aid.
