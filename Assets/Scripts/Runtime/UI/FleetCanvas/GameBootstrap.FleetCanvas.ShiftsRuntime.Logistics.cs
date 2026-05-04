@@ -206,6 +206,7 @@ public partial class GameBootstrap
         if (assigned == null) return;
         LogUiInput($"Shifts Canvas: removed {assigned.DriverName} from {slot.BuildingType}");
         SetDriverDutyMode(assigned, DriverDutyMode.Local);
+        ClearWorkerContract(assigned, $"removed from {slot.BuildingType}");
         isShiftsScreenDirty = true;
         isDriversScreenDirty = true;
     }

@@ -343,18 +343,7 @@ public partial class GameBootstrap
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 44f, cardRect.width - 120f, 18f), $"Status: {status}", labelMid);
 
             // Salary row
-            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 82f, 90f, 18f), $"Salary: ${d.Salary}", labelMid);
-            if (GUI.Button(new Rect(cardRect.x + 100f, cardRect.y + 80f, 22f, 20f), "-", btnSmall))
-            {
-                d.Salary = Mathf.Max(0, d.Salary - 25);
-                LogUiInput($"Drivers: {d.DriverName} salary decreased to ${d.Salary}");
-            }
-            if (GUI.Button(new Rect(cardRect.x + 124f, cardRect.y + 80f, 22f, 20f), "+", btnSmall))
-            {
-                d.Salary += 25;
-                LogUiInput($"Drivers: {d.DriverName} salary increased to ${d.Salary}");
-            }
-            GUI.Label(new Rect(cardRect.x + 152f, cardRect.y + 82f, 80f, 18f), "/shift", labelMid);
+            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 82f, 220f, 18f), $"Salary: {FormatWorkerSalaryContract(d, false)}", labelMid);
 
             GUIStyle balanceStyle = new GUIStyle(GUI.skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
             GUI.Label(new Rect(cardRect.x + cardRect.width - 120f, cardRect.y + 82f, 112f, 18f), $"Balance: ${d.Money}", balanceStyle);

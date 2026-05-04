@@ -258,20 +258,30 @@ public partial class GameBootstrap
         }
 
         bool assigned = true;
+        int contractSlotIndex = vacancy.SlotIndex;
+        int contractShiftIndex = selectedVacancyShiftIndex;
+        LocationType contractBuildingType = vacancy.BuildingType;
         switch (vacancy.Kind)
         {
             case VacancyKind.Production:
             case VacancyKind.Service:
                 int slotIndex = IsGroupedWarehouseVacancy(vacancy) ? selectedVacancyShiftIndex : vacancy.SlotIndex;
+                contractSlotIndex = slotIndex;
                 AssignWorkerToBuilding(worker, FindLogisticsSlot(vacancy.BuildingType, slotIndex));
+                assigned = worker.DutyMode == DriverDutyMode.Logistics &&
+                           worker.AssignedBuildingType == vacancy.BuildingType;
                 break;
             case VacancyKind.Intercity:
+                contractBuildingType = LocationType.Parking;
                 assigned = AssignIntercityVacancy(worker);
                 break;
             case VacancyKind.BusDriver:
+                contractBuildingType = LocationType.Parking;
                 AssignDriverToBusSlot(worker, selectedVacancyShiftIndex);
+                assigned = GetBusAssignedDriver(selectedVacancyShiftIndex) == worker;
                 break;
             case VacancyKind.TruckDriver:
+                contractBuildingType = LocationType.Parking;
                 assigned = AssignTruckDriverVacancy(worker);
                 break;
         }
@@ -281,6 +291,8 @@ public partial class GameBootstrap
             return;
         }
 
+        VacancyOffer offer = CalculateVacancyOffer(vacancy.Kind, contractBuildingType, contractSlotIndex, contractShiftIndex);
+        ApplyWorkerContract(worker, vacancy.Kind, contractBuildingType, contractSlotIndex, contractShiftIndex, offer.Salary, offer.ContractWorkDays, "Vacancies UI assignment");
         bool ru = IsRussianLanguage();
         vacancySuccessMessage = ru
             ? $"✓ Назначено: {worker.DriverName}"
@@ -421,6 +433,7 @@ public partial class GameBootstrap
         worker.IsOnActiveShift = false;
         worker.WaitingForShiftAtParking = false;
         worker.NeedsShiftEndReturn = false;
+        ClearWorkerContract(worker, "truck vacancy removed");
         SessionDebugLogger.Log("SHIFT", $"{worker.DriverName} removed from truck vacancy.");
         LogDriverReaction(worker, "truck vacancy removed");
     }

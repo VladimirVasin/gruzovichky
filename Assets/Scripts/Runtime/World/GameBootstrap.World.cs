@@ -445,14 +445,13 @@ public partial class GameBootstrap
             return false;
         }
 
-        // Anchor equals min (park has no road driveway)
-        CreateLocation(LocationType.CityPark, "City Park", min, max, min, new Color(0.30f, 0.52f, 0.22f));
+        CreateLocation(LocationType.CityPark, "City Park", min, max, anchorCell, new Color(0.30f, 0.52f, 0.22f), anchorCell);
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         RebuildRoadSigns();
-        SessionDebugLogger.Log("BUILD", $"Placed City Park at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        SessionDebugLogger.Log("BUILD", $"Placed City Park at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell, RoadAccess = anchorCell })}.");
         NotifyTutorialServiceBuildingBuilt(LocationType.CityPark);
         return true;
     }
@@ -583,12 +582,13 @@ public partial class GameBootstrap
 
     private bool TryGetCityParkPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
-        // Park uses the clicked cell as its SW corner (rotation-independent, symmetric 8x8).
-        // No road adjacency required — the park can be placed anywhere on open ground.
-        min = anchorCell;
-        max = new Vector2Int(anchorCell.x + 7, anchorCell.y + 7);
+        // Park uses the clicked cell as its external entrance/driveway, matching other buildable services.
+        GetRotatedBuildingFootprint(anchorCell, 8, 8, out min, out max);
 
         if (locations.ContainsKey(LocationType.CityPark))
+            return false;
+
+        if (!IsInsideGrid(anchorCell) || IsBuildingPlacementBlockedCell(anchorCell))
             return false;
 
         for (int x = min.x; x <= max.x; x++)
@@ -608,13 +608,8 @@ public partial class GameBootstrap
     {
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
-        Vector2Int min = anchorCell;
-        Vector2Int max = new Vector2Int(anchorCell.x + 7, anchorCell.y + 7);
-        buildPreviewFootprintCells.Clear();
-        buildPreviewDrivewayCell = null;
-        for (int x = min.x; x <= max.x; x++)
-            for (int y = min.y; y <= max.y; y++)
-                buildPreviewFootprintCells.Add(new Vector2Int(x, y));
+        GetRotatedBuildingFootprint(anchorCell, 8, 8, out Vector2Int min, out Vector2Int max);
+        SetBuildFootprintPreviewCells(min, max, anchorCell);
         bool canPlace = TryGetCityParkPlacement(anchorCell, out _, out _);
         float cx = (min.x + max.x + 1) * 0.5f;
         float cz = (min.y + max.y + 1) * 0.5f;

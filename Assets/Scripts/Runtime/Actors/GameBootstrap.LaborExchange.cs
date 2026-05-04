@@ -42,6 +42,7 @@ public partial class GameBootstrap
             return;
         }
 
+        UpdateLaborExchangePostingOffers();
         laborExchangePostingTimer -= Time.deltaTime * Mathf.Max(0f, gameSpeedMultiplier);
         if (laborExchangePostings.Count == 0 || laborExchangePostingTimer <= 0f)
         {
@@ -195,6 +196,7 @@ public partial class GameBootstrap
 
         candidates.Sort((a, b) => a.Priority.CompareTo(b.Priority));
         LaborExchangeCandidate candidate = candidates[0];
+        VacancyOffer offer = CalculateVacancyOffer(candidate.Kind, candidate.BuildingType, candidate.SlotIndex, candidate.ShiftIndex);
         LaborExchangePosting posting = new()
         {
             Id = nextLaborExchangePostingId++,
@@ -203,17 +205,54 @@ public partial class GameBootstrap
             SlotIndex = candidate.SlotIndex,
             ShiftIndex = candidate.ShiftIndex,
             TruckNumber = candidate.TruckNumber,
-            CreatedAtWorldHour = GetCurrentWorldHour()
+            CreatedAtWorldHour = GetCurrentWorldHour(),
+            OfferedSalary = offer.Salary,
+            ContractWorkDays = offer.ContractWorkDays,
+            MarketPressure = offer.MarketPressure,
+            LastSalaryRevisionWorldHour = GetCurrentWorldHour()
         };
 
         laborExchangePostings.Add(posting);
-        SessionDebugLogger.Log("LABOR_EXCHANGE", $"Posted vacancy #{posting.Id}: {GetLaborExchangePostingLabel(posting)}; active={laborExchangePostings.Count}/{LaborExchangeMaxActivePostings}.");
+        SessionDebugLogger.Log("LABOR_EXCHANGE", $"Posted vacancy #{posting.Id}: {GetLaborExchangePostingLabel(posting)}; salary=${posting.OfferedSalary}, contract={posting.ContractWorkDays} workdays, pressure={posting.MarketPressure}; active={laborExchangePostings.Count}/{LaborExchangeMaxActivePostings}.");
         PushFeedEvent(
-            $"Labor Exchange posted: {GetLaborExchangePostingLabel(posting)}.",
+            $"Labor Exchange posted: {GetLaborExchangePostingLabel(posting)} (${posting.OfferedSalary}, {posting.ContractWorkDays} workdays).",
             $"\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u043d\u043e\u0432\u0430\u044f \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u044f {GetLaborExchangePostingLabel(posting)}.",
             FeedEventType.Info);
         isShiftsScreenDirty = true;
         return true;
+    }
+
+    private void UpdateLaborExchangePostingOffers()
+    {
+        float currentWorldHour = GetCurrentWorldHour();
+        for (int i = 0; i < laborExchangePostings.Count; i++)
+        {
+            LaborExchangePosting posting = laborExchangePostings[i];
+            if (posting == null || posting.ReservedWorkerId > 0 || IsLaborExchangePostingFilled(posting))
+            {
+                continue;
+            }
+
+            if (currentWorldHour - posting.LastSalaryRevisionWorldHour < 1.5f)
+            {
+                continue;
+            }
+
+            float ageHours = Mathf.Max(0f, currentWorldHour - posting.CreatedAtWorldHour);
+            VacancyOffer offer = CalculateVacancyOffer(posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, ageHours);
+            if (offer.Salary != posting.OfferedSalary || offer.ContractWorkDays != posting.ContractWorkDays)
+            {
+                SessionDebugLogger.Log(
+                    "LABOR_EXCHANGE",
+                    $"Repriced posting #{posting.Id}: {GetLaborExchangePostingLabel(posting)} salary ${posting.OfferedSalary}->{offer.Salary}, contract {posting.ContractWorkDays}->{offer.ContractWorkDays}, pressure={offer.MarketPressure}.");
+                posting.OfferedSalary = offer.Salary;
+                posting.ContractWorkDays = offer.ContractWorkDays;
+                posting.MarketPressure = offer.MarketPressure;
+                isShiftsScreenDirty = true;
+            }
+
+            posting.LastSalaryRevisionWorldHour = currentWorldHour;
+        }
     }
 
     private void AddLaborExchangeShiftCandidates(List<LaborExchangeCandidate> candidates)
@@ -386,6 +425,7 @@ public partial class GameBootstrap
     {
         posting = null;
         reason = "no suitable labor exchange postings";
+        int bestScore = int.MinValue;
         for (int i = 0; i < laborExchangePostings.Count; i++)
         {
             LaborExchangePosting candidate = laborExchangePostings[i];
@@ -399,13 +439,22 @@ public partial class GameBootstrap
                 continue;
             }
 
-            candidate.ReservedWorkerId = driver.DriverId;
-            driver.ReservedLaborExchangePostingId = candidate.Id;
-            posting = candidate;
-            return true;
+            int score = candidate.OfferedSalary * 3 - candidate.ContractWorkDays + candidate.MarketPressure;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                posting = candidate;
+            }
         }
 
-        return false;
+        if (posting == null)
+        {
+            return false;
+        }
+
+        posting.ReservedWorkerId = driver.DriverId;
+        driver.ReservedLaborExchangePostingId = posting.Id;
+        return true;
     }
 
     private bool CanWorkerFillLaborExchangePosting(LaborExchangePosting posting, DriverAgent driver, out string reason)
@@ -584,15 +633,30 @@ public partial class GameBootstrap
                 case VacancyKind.Production:
                 case VacancyKind.Service:
                     AssignWorkerToBuilding(worker, FindLogisticsSlot(posting.BuildingType, posting.SlotIndex));
-                    return worker.DutyMode == DriverDutyMode.Logistics &&
-                           worker.AssignedBuildingType == posting.BuildingType;
+                    bool buildingAssigned = worker.DutyMode == DriverDutyMode.Logistics &&
+                                            worker.AssignedBuildingType == posting.BuildingType;
+                    if (buildingAssigned)
+                    {
+                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, $"Labor Exchange posting #{posting.Id}");
+                    }
+                    return buildingAssigned;
                 case VacancyKind.TruckDriver:
                     selectedVacancyShiftIndex = posting.ShiftIndex;
                     selectedVacancyTruckNumber = posting.TruckNumber;
-                    return AssignTruckDriverVacancy(worker);
+                    bool truckAssigned = AssignTruckDriverVacancy(worker);
+                    if (truckAssigned)
+                    {
+                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, $"Labor Exchange posting #{posting.Id}");
+                    }
+                    return truckAssigned;
                 case VacancyKind.BusDriver:
                     AssignDriverToBusSlot(worker, posting.ShiftIndex);
-                    return GetBusAssignedDriver(posting.ShiftIndex) == worker;
+                    bool busAssigned = GetBusAssignedDriver(posting.ShiftIndex) == worker;
+                    if (busAssigned)
+                    {
+                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, $"Labor Exchange posting #{posting.Id}");
+                    }
+                    return busAssigned;
                 default:
                     return false;
             }
@@ -645,7 +709,7 @@ public partial class GameBootstrap
                 continue;
             }
 
-            text += (text.Length > 0 ? "\n" : string.Empty) + FormatValueLine($"{emitted + 1}.", GetLaborExchangePostingDisplayLabel(posting, ru));
+            text += (text.Length > 0 ? "\n" : string.Empty) + FormatValueLine($"{emitted + 1}.", $"{GetLaborExchangePostingDisplayLabel(posting, ru)} ({FormatVacancyOffer(new VacancyOffer(posting.OfferedSalary, posting.ContractWorkDays, posting.MarketPressure), ru)})");
             emitted++;
         }
 

@@ -203,6 +203,7 @@ public partial class GameBootstrap
 
     private enum VacancyKind
     {
+        None,
         TruckDriver,
         Intercity,
         BusDriver,
@@ -234,6 +235,9 @@ public partial class GameBootstrap
         public bool IsGroupedWarehouse;
         public int FilledSlots;
         public int MaxSlots;
+        public int OfferSalary;
+        public int ContractWorkDays;
+        public int MarketPressure;
     }
 
     private sealed class VacancyFlowOption

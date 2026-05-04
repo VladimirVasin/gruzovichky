@@ -150,7 +150,7 @@ public partial class GameBootstrap
             if (driversScreenUi.DetailWorkTitleText != null)
                 driversScreenUi.DetailWorkTitleText.text = ru ? "Работа" : "Work";
             if (driversScreenUi.DetailSalaryLabel != null)
-                driversScreenUi.DetailSalaryLabel.text = ru ? "Зарплата" : "Salary";
+                driversScreenUi.DetailSalaryLabel.text = ru ? "\u041a\u043e\u043d\u0442\u0440\u0430\u043a\u0442" : "Contract";
             if (driversScreenUi.DetailBalanceLabel != null)
                 driversScreenUi.DetailBalanceLabel.text = ru ? "Баланс" : "Balance";
             if (driversScreenUi.DetailContractTitleText != null)
@@ -189,7 +189,7 @@ public partial class GameBootstrap
             string dutyState = GetWorkerDutySummaryLabel(sel, ru);
             driversScreenUi.DetailDutyStateText.text = dutyState;
 
-            driversScreenUi.DetailSalaryText.text  = $"${sel.Salary}";
+            driversScreenUi.DetailSalaryText.text  = FormatWorkerSalaryContract(sel, ru);
             driversScreenUi.DetailBalanceText.text = $"${sel.Money}";
 
             bool canFocus = sel.DriverObject != null && sel.DriverObject.activeSelf;

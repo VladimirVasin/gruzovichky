@@ -573,6 +573,7 @@ public partial class GameBootstrap : MonoBehaviour
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         SessionDebugLogger.Log("PAY", $"{driver.DriverName} paid ${driver.Salary}. Personal balance: ${driver.Money}. Treasury: ${money}.");
+        AdvanceWorkerContractAfterPaidShift(driver);
     }
 
     private void EnsurePendingShiftSalaryPaid(DriverAgent driver)

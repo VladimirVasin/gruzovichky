@@ -306,27 +306,17 @@ public partial class GameBootstrap
         minusLE.preferredWidth = 28f; minusLE.preferredHeight = 24f;
         RectTransform salaryValPanel = CreateStyledPanel("SalaryValPanel", salaryRow, new Color(0.09f, 0.13f, 0.19f, 1f));
         LayoutElement salaryValLE = salaryValPanel.gameObject.AddComponent<LayoutElement>();
-        salaryValLE.preferredWidth = 80f; salaryValLE.preferredHeight = 24f;
+        salaryValLE.preferredWidth = 230f; salaryValLE.preferredHeight = 24f;
         driversScreenUi.DetailSalaryText = CreateHeaderText("SalaryVal", salaryValPanel, font, string.Empty, 13, TextAnchor.MiddleCenter, Color.white);
         driversScreenUi.DetailSalaryPlusBtn = CreateButton("SalaryPlus", salaryRow, font, out Text plusTxt, "+", 14, new Color(0.24f, 0.38f, 0.24f, 1f), Color.white);
         plusTxt.fontStyle = FontStyle.Bold;
         LayoutElement plusLE = driversScreenUi.DetailSalaryPlusBtn.gameObject.AddComponent<LayoutElement>();
         plusLE.preferredWidth = 28f; plusLE.preferredHeight = 24f;
-        CreateBodyText("PerShift", salaryRow, font, "/ shift", 12, TextAnchor.MiddleLeft, FleetMutedTextColor).gameObject.AddComponent<LayoutElement>().preferredWidth = 44f;
-        driversScreenUi.DetailSalaryMinusBtn.onClick.AddListener(() =>
-        {
-            DriverAgent d = driverAgents.Find(x => x.DriverId == selectedWorkerPanelDriverId);
-            if (d == null) return;
-            d.Salary = Mathf.Max(0, d.Salary - 25);
-            isDriversScreenDirty = true;
-        });
-        driversScreenUi.DetailSalaryPlusBtn.onClick.AddListener(() =>
-        {
-            DriverAgent d = driverAgents.Find(x => x.DriverId == selectedWorkerPanelDriverId);
-            if (d == null) return;
-            d.Salary += 25;
-            isDriversScreenDirty = true;
-        });
+        CreateBodyText("PerShift", salaryRow, font, "/ contract", 12, TextAnchor.MiddleLeft, FleetMutedTextColor).gameObject.AddComponent<LayoutElement>().preferredWidth = 70f;
+        driversScreenUi.DetailSalaryMinusBtn.onClick.RemoveAllListeners();
+        driversScreenUi.DetailSalaryPlusBtn.onClick.RemoveAllListeners();
+        driversScreenUi.DetailSalaryMinusBtn.gameObject.SetActive(false);
+        driversScreenUi.DetailSalaryPlusBtn.gameObject.SetActive(false);
 
         RectTransform balanceRow = CreateLayoutRow("BalanceRow", statsBody, 20f, 12f);
         driversScreenUi.DetailBalanceLabel = CreateBodyText("BL", balanceRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
@@ -487,37 +477,25 @@ public partial class GameBootstrap
             .gameObject.AddComponent<LayoutElement>().preferredWidth = 56f;
 
         card.SalaryText = CreateHeaderText("SalaryValue", salaryRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
-        card.SalaryText.gameObject.AddComponent<LayoutElement>().preferredWidth = 46f;
+        card.SalaryText.gameObject.AddComponent<LayoutElement>().preferredWidth = 130f;
 
-        int ci = cardIndex;
         Button minusBtn = CreateButton($"SalaryMinus{cardIndex}", salaryRow, font, out Text minusTxt, "−", 14, new Color(0.32f, 0.26f, 0.18f, 1f), Color.white);
         minusTxt.fontStyle = FontStyle.Bold;
         LayoutElement minusLayout = minusBtn.gameObject.AddComponent<LayoutElement>();
         minusLayout.preferredWidth = 26f;
         minusLayout.preferredHeight = 26f;
-        minusBtn.onClick.AddListener(() =>
-        {
-            if (ci >= driverAgents.Count) return;
-            driverAgents[ci].Salary = Mathf.Max(0, driverAgents[ci].Salary - 25);
-            LogUiInput($"Drivers Canvas: {driverAgents[ci].DriverName} salary decreased to ${driverAgents[ci].Salary}");
-            isDriversScreenDirty = true;
-        });
-
         Button plusBtn = CreateButton($"SalaryPlus{cardIndex}", salaryRow, font, out Text plusTxt, "+", 14, new Color(0.24f, 0.38f, 0.24f, 1f), Color.white);
         plusTxt.fontStyle = FontStyle.Bold;
         LayoutElement plusLayout = plusBtn.gameObject.AddComponent<LayoutElement>();
         plusLayout.preferredWidth = 26f;
         plusLayout.preferredHeight = 26f;
-        plusBtn.onClick.AddListener(() =>
-        {
-            if (ci >= driverAgents.Count) return;
-            driverAgents[ci].Salary += 25;
-            LogUiInput($"Drivers Canvas: {driverAgents[ci].DriverName} salary increased to ${driverAgents[ci].Salary}");
-            isDriversScreenDirty = true;
-        });
+        minusBtn.onClick.RemoveAllListeners();
+        plusBtn.onClick.RemoveAllListeners();
+        minusBtn.gameObject.SetActive(false);
+        plusBtn.gameObject.SetActive(false);
 
-        CreateBodyText("PerShift", salaryRow, font, "/shift", 12, TextAnchor.MiddleLeft, FleetMutedTextColor)
-            .gameObject.AddComponent<LayoutElement>().preferredWidth = 42f;
+        CreateBodyText("PerShift", salaryRow, font, "contract", 12, TextAnchor.MiddleLeft, FleetMutedTextColor)
+            .gameObject.AddComponent<LayoutElement>().preferredWidth = 62f;
 
         // Spacer
         GameObject spacer = CreateUiObject($"SalarySpacer{cardIndex}", salaryRow);
@@ -622,8 +600,6 @@ public partial class GameBootstrap
             .gameObject.AddComponent<LayoutElement>().preferredHeight = 14f;
 
         RectTransform salaryRow = CreateLayoutRow($"DriverSalaryRow{cardIndex}", salaryPanel, 28f, 8f);
-        int ci = cardIndex;
-
         Button minusBtn = CreateButton($"DriverSalaryMinus{cardIndex}", salaryRow, font, out Text minusTxt, "-", 13, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
         minusTxt.fontStyle = FontStyle.Bold;
         LayoutElement minusLayout = minusBtn.gameObject.AddComponent<LayoutElement>();
@@ -636,26 +612,15 @@ public partial class GameBootstrap
         salaryValueLayout.preferredHeight = 26f;
         card.SalaryText = CreateHeaderText("SalaryValue", salaryValuePanel, font, string.Empty, 12, TextAnchor.MiddleCenter, Color.white);
 
-        minusBtn.onClick.AddListener(() =>
-        {
-            if (ci >= driverAgents.Count) return;
-            driverAgents[ci].Salary = Mathf.Max(0, driverAgents[ci].Salary - 25);
-            LogUiInput($"Drivers Canvas: {driverAgents[ci].DriverName} salary decreased to ${driverAgents[ci].Salary}");
-            isDriversScreenDirty = true;
-        });
-
         Button plusBtn = CreateButton($"DriverSalaryPlus{cardIndex}", salaryRow, font, out Text plusTxt, "+", 13, new Color(0.24f, 0.38f, 0.24f, 1f), Color.white);
         plusTxt.fontStyle = FontStyle.Bold;
         LayoutElement plusLayout = plusBtn.gameObject.AddComponent<LayoutElement>();
         plusLayout.preferredWidth = 30f;
         plusLayout.preferredHeight = 26f;
-        plusBtn.onClick.AddListener(() =>
-        {
-            if (ci >= driverAgents.Count) return;
-            driverAgents[ci].Salary += 25;
-            LogUiInput($"Drivers Canvas: {driverAgents[ci].DriverName} salary increased to ${driverAgents[ci].Salary}");
-            isDriversScreenDirty = true;
-        });
+        minusBtn.onClick.RemoveAllListeners();
+        plusBtn.onClick.RemoveAllListeners();
+        minusBtn.gameObject.SetActive(false);
+        plusBtn.gameObject.SetActive(false);
 
         RectTransform balancePanel = CreateStyledPanel($"DriverBalancePanel{cardIndex}", footerRow, FleetCardMutedColor);
         LayoutElement balanceLayout = balancePanel.gameObject.AddComponent<LayoutElement>();

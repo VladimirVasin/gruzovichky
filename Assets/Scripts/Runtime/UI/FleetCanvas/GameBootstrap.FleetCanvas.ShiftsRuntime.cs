@@ -693,6 +693,7 @@ public partial class GameBootstrap
         }
 
         SetDriverDutyMode(intercityDriver, DriverDutyMode.Local);
+        ClearWorkerContract(intercityDriver, "removed from Intercity slot");
         TruckAgent assignedTruck = GetAssignedTruckForDriver(intercityDriver);
         if (assignedTruck != null)
         {
@@ -719,6 +720,7 @@ public partial class GameBootstrap
         busDriver.IsOnActiveShift = false;
         busDriver.WaitingForShiftAtParking = false;
         busDriver.NeedsShiftEndReturn = false;
+        ClearWorkerContract(busDriver, $"removed from Bus Driver slot {ShiftNames[slotIndex]}");
         SessionDebugLogger.Log("SHIFT", $"{busDriver.DriverName} removed from Bus Driver slot {ShiftNames[slotIndex]}.");
         LogDriverReaction(busDriver, $"removed from bus duty {ShiftNames[slotIndex]}");
         isShiftsScreenDirty = true;

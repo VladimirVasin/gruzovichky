@@ -82,6 +82,7 @@ public partial class GameBootstrap
             row.StatusText.text = string.IsNullOrWhiteSpace(vacancy.Schedule)
                 ? $"{vacancy.Subtitle} · {workerPart}"
                 : $"{vacancy.Subtitle} · {vacancy.Schedule} · {workerPart}";
+            row.StatusText.text += $" | {FormatVacancyOffer(new VacancyOffer(vacancy.OfferSalary, vacancy.ContractWorkDays, vacancy.MarketPressure), ru)}";
             row.StatusText.color = selected ? Color.white : vacancy.IsOccupied ? FleetAccentColor : FleetSecondaryTextColor;
         }
 
@@ -218,6 +219,7 @@ public partial class GameBootstrap
         string shiftValue = GetSelectedVacancyShiftLabel(vacancy, empty);
         string truckValue = GetSelectedVacancyTruckLabel(vacancy, empty);
         string workerValue = vacancy?.AssignedWorker?.DriverName ?? empty;
+        VacancyOffer offer = GetCurrentVacancyOffer(vacancy);
 
         if (shiftsScreenUi.SelectionNameText != null)
         {
@@ -236,6 +238,7 @@ public partial class GameBootstrap
         if (shiftsScreenUi.SelectionHintText != null)
         {
             shiftsScreenUi.SelectionHintText.text = $"{(ru ? "Рабочий" : "Worker")}: {workerValue}";
+            shiftsScreenUi.SelectionHintText.text += $" | {FormatVacancyOffer(offer, ru)}";
             shiftsScreenUi.SelectionHintText.color = vacancy?.AssignedWorker != null ? FleetAccentColor : FleetMutedTextColor;
         }
         if (shiftsScreenUi.VacancySuccessText != null)
@@ -447,6 +450,11 @@ public partial class GameBootstrap
                 BuildingType = slot.BuildingType,
                 SlotIndex = slot.SlotIndex,
             });
+        }
+
+        for (int i = 0; i < vacancyViewModels.Count; i++)
+        {
+            ApplyVacancyOfferToViewModel(vacancyViewModels[i]);
         }
 
         vacancyViewModels.Sort((a, b) =>

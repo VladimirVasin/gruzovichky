@@ -483,6 +483,8 @@ public partial class GameBootstrap
         if (locations.ContainsKey(LocationType.CityPark)) score += 5;
         if (locations.ContainsKey(LocationType.Bar) || locations.ContainsKey(LocationType.GamblingHall)) score += 5;
         if (locations.ContainsKey(LocationType.LaborExchange) && IsLaborExchangeReadyForApplicants(out _)) score += 12;
+        int averageSalary = EstimateAverageOpenVacancySalary();
+        if (averageSalary > 30) score += Mathf.Clamp((averageSalary - 30) / 3, 0, 12);
         return Mathf.Clamp(score, 0, 100);
     }
 

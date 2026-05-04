@@ -372,6 +372,11 @@ public partial class GameBootstrap
             return true;
         }
 
+        if (IsCityParkWalkCell(cell, start, goal, walkPhase))
+        {
+            return true;
+        }
+
         if (IsLocationCell(cell))
         {
             return false;
@@ -383,6 +388,21 @@ public partial class GameBootstrap
         }
 
         return true;
+    }
+
+    private bool IsCityParkWalkCell(Vector2Int cell, Vector2Int start, Vector2Int goal, DriverRescuePhase walkPhase)
+    {
+        if (!locations.TryGetValue(LocationType.CityPark, out LocationData park) || !park.Contains(cell))
+        {
+            return false;
+        }
+
+        bool startsInPark = park.Contains(start);
+        bool goalsInPark = park.Contains(goal);
+        return startsInPark ||
+               goalsInPark ||
+               walkPhase == DriverRescuePhase.IdleWalkToCityPark ||
+               walkPhase == DriverRescuePhase.IdleExitCityPark;
     }
 
     private bool DoesWalkSegmentCrossWater(Vector3 startWorld, Vector3 targetWorld)

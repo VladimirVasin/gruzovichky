@@ -154,6 +154,14 @@ public partial class GameBootstrap
         public Vector3 MotelIdlePosition;
         public int AssignedTruckNumber;
         public int Salary = 25;
+        public int ContractSalary;
+        public int ContractTotalWorkDays;
+        public int ContractWorkedDays;
+        public int ContractStartedDay;
+        public VacancyKind ContractVacancyKind = VacancyKind.None;
+        public LocationType? ContractBuildingType;
+        public int ContractSlotIndex = -1;
+        public int ContractShiftIndex = -1;
         public int Money = 30;
         public bool WaitingForShiftAtParking;
         public bool NeedsShiftEndReturn;
@@ -249,6 +257,10 @@ public partial class GameBootstrap
         public int TruckNumber;
         public int ReservedWorkerId;
         public float CreatedAtWorldHour;
+        public int OfferedSalary;
+        public int ContractWorkDays;
+        public int MarketPressure;
+        public float LastSalaryRevisionWorldHour;
     }
 
     private readonly struct LaborExchangeCandidate
