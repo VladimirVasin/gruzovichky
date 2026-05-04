@@ -478,7 +478,11 @@ public partial class GameBootstrap
 
         DriverAgent intercityDriver = GetIntercityAssignedDriver();
         bool selectedIsIntercity = IsDriverIntercity(selectedDriver);
-        bool selectedIsIdleForIntercity = selectedDriver != null && !selectedDriver.IsArrivingByBus && !selectedIsIntercity;
+        bool selectedIsIdleForIntercity = selectedDriver != null &&
+                                          !selectedDriver.IsArrivingByBus &&
+                                          !selectedDriver.IsLeavingTown &&
+                                          !selectedDriver.HasDepartedTown &&
+                                          !selectedIsIntercity;
         bool ru = IsRussianLanguage();
         if (shiftsScreenUi.IntercitySlot.HeaderText != null)
         {
@@ -525,6 +529,8 @@ public partial class GameBootstrap
 
         bool selectedIsAvailable = selectedDriver != null &&
                                    !selectedDriver.IsArrivingByBus &&
+                                   !selectedDriver.IsLeavingTown &&
+                                   !selectedDriver.HasDepartedTown &&
                                    !IsDriverIntercity(selectedDriver) &&
                                    selectedDriver.DutyMode == DriverDutyMode.Local &&
                                    selectedDriver.AssignedTruckNumber <= 0 &&
@@ -575,7 +581,7 @@ public partial class GameBootstrap
     private void AssignDriverToIntercitySlot(DriverAgent driver)
     {
         if (driver == null) return;
-        if (driver.IsArrivingByBus || driver.DutyMode == DriverDutyMode.Intercity) return;
+        if (driver.IsArrivingByBus || driver.IsLeavingTown || driver.HasDepartedTown || driver.DutyMode == DriverDutyMode.Intercity) return;
 
         if (HasActiveTradeRun())
         {
@@ -610,7 +616,7 @@ public partial class GameBootstrap
 
     private void AssignDriverToBusSlot(DriverAgent driver, int slotIndex)
     {
-        if (driver == null || driver.IsArrivingByBus)
+        if (driver == null || driver.IsArrivingByBus || driver.IsLeavingTown || driver.HasDepartedTown)
         {
             return;
         }

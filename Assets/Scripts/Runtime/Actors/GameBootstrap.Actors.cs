@@ -82,7 +82,7 @@ public partial class GameBootstrap
         "Faroul",
         "Clauber",
         "Trant",
-        "BrГєk",
+        "Bruk",
         "Odors",
         // Armenian
         "Petrosyan",

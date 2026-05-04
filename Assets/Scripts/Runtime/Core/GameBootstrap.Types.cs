@@ -424,6 +424,7 @@ public partial class GameBootstrap : MonoBehaviour
         ToPersonalHouseEntrance,
         ToCarMarketForPurchase,
         ToLaborExchangeForJob,
+        ToIntercityStopForDeparture,
         AtLaborExchange
     }
 

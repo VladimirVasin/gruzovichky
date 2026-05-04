@@ -99,80 +99,14 @@ public partial class GameBootstrap
 
     private void HireNewDriver()
     {
-        LogUiInput("Drivers: clicked Hire New Driver");
-        LogCommand($"HireNewDriver(cost=${HireDriverCost})");
-        if (money < HireDriverCost)
-        {
-            SessionDebugLogger.Log("DRIVER_REACTION", $"Hire new driver rejected: need ${HireDriverCost}.");
-            return;
-        }
-
-        if (!locations.ContainsKey(LocationType.Motel))
-        {
-            SessionDebugLogger.Log("DRIVER_REACTION", "Hire new driver rejected: build a Motel first.");
-            return;
-        }
-
-        if (hiringDriverArrival != null)
-        {
-            SessionDebugLogger.Log("DRIVER_REACTION", "Hire new driver rejected: another driver is already arriving by bus.");
-            return;
-        }
-
-        bool tutorialWaveHire = ShouldStartTutorialWorkerHireWave();
-        int hireCount = tutorialWaveHire ? TutorialHireWorkerWaveCount : 1;
-        DriverAgent hiredDriver = null;
-        List<DriverAgent> hiredDrivers = new(hireCount);
-        for (int i = 0; i < hireCount; i++)
-        {
-            DriverAgent driver = CreateAndRegisterDriverAgent(spawnInMotel: false);
-            hiredDrivers.Add(driver);
-            hiredDriver ??= driver;
-        }
-
-        money -= HireDriverCost;
-        RecordMoneyMovement(
-            -HireDriverCost,
-            "Treasury",
-            "Hiring",
-            tutorialWaveHire ? $"Tutorial hiring wave x{hireCount}" : $"Hire {hiredDriver.DriverName}",
-            money);
-        hiringDriverArrival = new HiringDriverArrivalData
-        {
-            Driver = hiredDriver,
-            IsTutorialWave = tutorialWaveHire,
-            Phase = HiringDriverArrivalPhase.WaitingLaneClear
-        };
-        hiringDriverArrival.Drivers.AddRange(hiredDrivers);
-
-        SessionDebugLogger.Log("DRIVER", tutorialWaveHire
-            ? $"Tutorial hired {hireCount} workers for ${HireDriverCost}. Money now ${money}."
-            : $"Hired {hiredDriver.DriverName} for ${HireDriverCost}. Money now ${money}.");
-        for (int i = 0; i < hiredDrivers.Count; i++)
-        {
-            LogDriverReaction(
-                hiredDrivers[i],
-                tutorialWaveHire
-                    ? $"hired in tutorial worker wave for ${HireDriverCost} and arriving by bus"
-                    : $"hired for ${HireDriverCost} and arriving by bus");
-        }
-
+        LogUiInput("Drivers: clicked removed direct worker hire action");
+        LogCommand("HireNewDriver(disabled)");
+        SessionDebugLogger.Log("DRIVER_REACTION", "Direct worker purchase is disabled; workers now arrive through city migration.");
         PushFeedEvent(
-            tutorialWaveHire ? $"Hired {hireCount} workers. Arrival bus is on the way." : $"Hired {hiredDriver.DriverName}. Arrival bus is on the way.",
-            tutorialWaveHire ? $"Нанято рабочих: {hireCount}. Автобус уже в пути." : $"Нанят {hiredDriver.DriverName}. Автобус с новым рабочим уже в пути.",
-            FeedEventType.Success);
-        if (tutorialWaveHire)
-        {
-            isDriversPanelOpen = false;
-        }
-        isDriversScreenDirty = true;
-        NotifyTutorialWorkerHiredByPlayer();
-        isFleetScreenDirty = true;
-        isDriversScreenDirty = true;
-        isEconomyScreenDirty = true;
-        PlayUiSound(uiSelectClip, 0.96f);
+            "Direct worker hiring is disabled. Keep vacancies open and workers will arrive by bus.",
+            "\u041f\u0440\u044f\u043c\u043e\u0439 \u043d\u0430\u0439\u043c \u0440\u0430\u0431\u043e\u0447\u0438\u0445 \u043e\u0442\u043a\u043b\u044e\u0447\u0435\u043d. \u041e\u0441\u0442\u0430\u0432\u044c \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438, \u0438 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0435\u0434\u0443\u0442 \u043d\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435.",
+            FeedEventType.Info);
     }
-
     private bool ShouldStartTutorialWorkerHireWave()
     {
         return selectedGameStartMode == GameStartMode.User &&

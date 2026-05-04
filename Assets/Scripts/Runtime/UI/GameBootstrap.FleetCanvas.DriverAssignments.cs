@@ -152,7 +152,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (driver.IsArrivingByBus || IsDriverOnActiveTradeRun(driver))
+        if (driver.IsArrivingByBus || driver.IsLeavingTown || driver.HasDepartedTown || IsDriverOnActiveTradeRun(driver))
         {
             return false;
         }

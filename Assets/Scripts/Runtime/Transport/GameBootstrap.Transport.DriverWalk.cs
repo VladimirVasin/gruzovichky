@@ -79,6 +79,18 @@ public partial class GameBootstrap
             return;
         }
 
+        if (driver.WalkPath.Count == 0 && RequiresDriverWalkPathForArrival(driver.WalkPhase))
+        {
+            DriverRescuePhase blockedPhase = driver.WalkPhase;
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.WalkWaypointIndex = 0;
+            driver.WalkAnimationTime = 0f;
+            SessionDebugLogger.Log(
+                "DRIVER",
+                $"{driver.DriverName} halted {blockedPhase}: no valid walk path was available, so the phase will not auto-complete at the start position.");
+            return;
+        }
+
         if (driver.WalkPath.Count > 0 && driver.WalkWaypointIndex < driver.WalkPath.Count - 1)
         {
             driver.WalkWaypointIndex++;
@@ -472,6 +484,10 @@ public partial class GameBootstrap
                 StartLaborExchangeInterview(driver);
                 return;
 
+            case DriverRescuePhase.ToIntercityStopForDeparture:
+                CompleteWorkerDeparture(driver, "reached Intercity Stop");
+                return;
+
             case DriverRescuePhase.ToBuildingForShift:
                 driver.WalkPhase        = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
@@ -551,6 +567,41 @@ public partial class GameBootstrap
                 }
                 return;
         }
+    }
+
+    private static bool RequiresDriverWalkPathForArrival(DriverRescuePhase phase)
+    {
+        return phase switch
+        {
+            DriverRescuePhase.ToGasStation or
+            DriverRescuePhase.ToTruck or
+            DriverRescuePhase.ToPersonalHouseForPurchase or
+            DriverRescuePhase.ToCarMarketForPurchase or
+            DriverRescuePhase.ToPersonalHouseEntrance or
+            DriverRescuePhase.ToMotelEntrance or
+            DriverRescuePhase.ToTruckAtMotel or
+            DriverRescuePhase.ToParkingForShift or
+            DriverRescuePhase.WalkToLocalBusStop or
+            DriverRescuePhase.ToMotelFromBusStop or
+            DriverRescuePhase.IdleWander or
+            DriverRescuePhase.IdleWalkToBench or
+            DriverRescuePhase.IdleWalkToCat or
+            DriverRescuePhase.IdleWalkToBar or
+            DriverRescuePhase.IdleWalkToCanteen or
+            DriverRescuePhase.IdleWalkToTrashCan or
+            DriverRescuePhase.IdleWalkToGamblingHall or
+            DriverRescuePhase.IdleWalkToCityPark or
+            DriverRescuePhase.IdleExitCityPark or
+            DriverRescuePhase.ToLaborExchangeForJob or
+            DriverRescuePhase.ToIntercityStopForDeparture or
+            DriverRescuePhase.ToBuildingForShift or
+            DriverRescuePhase.LumberToTree or
+            DriverRescuePhase.LumberCarryLogToBuilding or
+            DriverRescuePhase.LumberReturnToTreeForPlanting or
+            DriverRescuePhase.LumberReturnToBuilding or
+            DriverRescuePhase.ToMotelFromBuilding => true,
+            _ => false
+        };
     }
 
 

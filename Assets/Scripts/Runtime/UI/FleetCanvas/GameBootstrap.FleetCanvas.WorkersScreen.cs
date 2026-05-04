@@ -99,12 +99,11 @@ public partial class GameBootstrap
         hireLayout.childControlHeight = true;
         hireLayout.childForceExpandWidth = true;
         hireLayout.childForceExpandHeight = false;
-        driversScreenUi.HireButton = CreateButton("HireDriverButton", hireSection, font, out driversScreenUi.HireButtonText, "Hire New Worker", 16, FleetPrimaryButtonColor, Color.white);
+        driversScreenUi.HireButton = CreateButton("HireDriverButton", hireSection, font, out driversScreenUi.HireButtonText, "Workers arrive automatically", 16, FleetPrimaryButtonColor, Color.white);
         driversScreenUi.HireButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
         driversScreenUi.HireButton.onClick.AddListener(() =>
         {
-            LogUiInput("Drivers Canvas: clicked Hire New Driver");
-            HireNewDriver();
+            LogUiInput("Drivers Canvas: clicked disabled direct worker hire info");
             isDriversScreenDirty = true;
         });
         driversScreenUi.HireStatusText = CreateBodyText("HireStatus", hireSection, font, string.Empty, 12, TextAnchor.MiddleCenter, FleetSecondaryTextColor);

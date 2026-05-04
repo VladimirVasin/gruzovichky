@@ -236,6 +236,8 @@ public partial class GameBootstrap
         }
 
         return !driver.IsArrivingByBus &&
+               !driver.IsLeavingTown &&
+               !driver.HasDepartedTown &&
                !IsDriverBusyWalkPhase(driver) &&
                driver.RestPhase == DriverRestPhase.None &&
                driver.DutyMode == DriverDutyMode.Local &&

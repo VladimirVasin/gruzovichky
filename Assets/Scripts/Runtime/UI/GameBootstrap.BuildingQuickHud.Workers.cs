@@ -36,6 +36,14 @@ public partial class GameBootstrap
         if (buildingQuickHud.WorkerSlotsScroll != null)
         {
             buildingQuickHud.WorkerSlotsScroll.vertical = entries.Count > 3;
+            buildingQuickHud.WorkerSlotsScroll.gameObject.SetActive(entries.Count > 0);
+            LayoutElement scrollLayout = buildingQuickHud.WorkerSlotsScroll.GetComponent<LayoutElement>();
+            if (scrollLayout != null)
+            {
+                scrollLayout.preferredHeight = entries.Count <= 0
+                    ? 0f
+                    : Mathf.Clamp(entries.Count * 60f + 4f, 64f, 190f);
+            }
         }
 
         for (int i = 0; i < buildingQuickHud.WorkerSlots.Length; i++)

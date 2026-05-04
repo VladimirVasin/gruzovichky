@@ -100,6 +100,11 @@ public partial class GameBootstrap
             LaborExchangePosting posting = laborExchangePostings[i];
             if (IsLaborExchangePostingFilled(posting))
             {
+                if (IsLaborExchangeReservationActive(posting))
+                {
+                    continue;
+                }
+
                 ReleaseLaborExchangePostingReservation(posting);
                 laborExchangePostings.RemoveAt(i);
                 SessionDebugLogger.Log("LABOR_EXCHANGE", $"Posting #{posting.Id} removed because target is already filled: {GetLaborExchangePostingLabel(posting)}.");
@@ -122,6 +127,20 @@ public partial class GameBootstrap
                 ReleaseLaborExchangePostingReservation(posting);
             }
         }
+    }
+
+    private bool IsLaborExchangeReservationActive(LaborExchangePosting posting)
+    {
+        if (posting == null || posting.ReservedWorkerId <= 0)
+        {
+            return false;
+        }
+
+        DriverAgent worker = GetDriverAgentById(posting.ReservedWorkerId);
+        return worker != null &&
+               worker.ReservedLaborExchangePostingId == posting.Id &&
+               worker.LifeGoal == WorkerLifeGoal.FindJob &&
+               IsWorkerTravellingToLaborExchange(worker);
     }
 
     private static bool IsWorkerTravellingToLaborExchange(DriverAgent worker)
@@ -331,7 +350,19 @@ public partial class GameBootstrap
         driver.WalkPhase = DriverRescuePhase.ToLaborExchangeForJob;
         driver.WalkTargetWorld = target;
         driver.WalkAnimationTime = 0f;
-        BuildDriverWalkPath(driver, startPosition, target);
+        if (!BuildDriverWalkPath(driver, startPosition, target))
+        {
+            ReleaseLaborExchangePostingReservation(posting);
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.WalkTargetWorld = startPosition;
+            driver.LifeGoal = WorkerLifeGoal.Idle;
+            SessionDebugLogger.Log(
+                "LABOR_EXCHANGE",
+                $"{driver.DriverName} released posting #{posting.Id}: no safe walk path to Labor Exchange access cell.");
+            LogWorkerDecision(driver, "labor-exchange-path-blocked", $"posting #{posting.Id}: no safe walk path to Labor Exchange", true);
+            return false;
+        }
+
         SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} reserved posting #{posting.Id} and walks to Labor Exchange: {GetLaborExchangePostingLabel(posting)}.");
         LogWorkerDecision(driver, "labor-exchange-apply", $"posting #{posting.Id}: {GetLaborExchangePostingLabel(posting)}", true);
         return true;
@@ -477,10 +508,6 @@ public partial class GameBootstrap
         {
             resultReason = $"posting #{postingId} no longer exists";
         }
-        else if (!IsLaborExchangeReadyForApplicants(out resultReason))
-        {
-            posting.ReservedWorkerId = 0;
-        }
         else if (!CanWorkerFillLaborExchangePosting(posting, driver, out resultReason))
         {
             posting.ReservedWorkerId = 0;
@@ -494,7 +521,7 @@ public partial class GameBootstrap
         if (assigned)
         {
             laborExchangePostings.Remove(posting);
-            driver.LifeGoal = WorkerLifeGoal.Work;
+            driver.LifeGoal = WorkerLifeGoal.None;
             SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} hired via Labor Exchange posting #{posting.Id}: {GetLaborExchangePostingLabel(posting)}.");
             PushFeedEvent(
                 $"{driver.DriverName} found work: {GetLaborExchangePostingLabel(posting)}.",

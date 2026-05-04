@@ -544,12 +544,12 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IsOnActiveShift = false;
         driver.NeedsShiftEndReturn = true;
         driver.IsShiftSalaryPending = true;
-        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} bus shift ended. Finishing the current route cycle before returning the local bus to Parking.");
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} bus shift ended. Finishing the current stop before returning the local bus to Parking.");
         if (localBusRoute != null && localBusRoute.Driver == driver)
         {
             SessionDebugLogger.Log(
                 "BUS_SHIFT",
-                $"{driver.DriverName} marked for finish-cycle return: phase={localBusRoute.Phase}, currentStopIndex={localBusRoute.CurrentStopIndex}, direction={(localBusRoute.TravelDirection > 0 ? "ascending" : "descending")}.");
+                $"{driver.DriverName} marked for shift-end return: phase={localBusRoute.Phase}, currentStopIndex={localBusRoute.CurrentStopIndex}, direction={(localBusRoute.TravelDirection > 0 ? "ascending" : "descending")}.");
         }
     }
 

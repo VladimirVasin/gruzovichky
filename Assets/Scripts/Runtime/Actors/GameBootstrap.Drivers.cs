@@ -131,7 +131,12 @@ public partial class GameBootstrap : MonoBehaviour
         driver.WalkPhase = finalWalkPhase;
         driver.WalkTargetWorld = finalTarget;
         driver.WalkAnimationTime = 0f;
-        BuildDriverWalkPath(driver, startPosition, finalTarget);
+        if (!BuildDriverWalkPath(driver, startPosition, finalTarget))
+        {
+            HandleFailedLocalBusFinalWalk(driver, finalWalkPhase, travelReason);
+            return false;
+        }
+
         SessionDebugLogger.Log(
             "BUS_PASSENGER",
             $"{driver.DriverName} stopped waiting for local bus and continued on foot: {blockReason}. Trip={travelReason}, finalPhase={finalWalkPhase}.");
@@ -585,7 +590,7 @@ public partial class GameBootstrap : MonoBehaviour
         ReleaseBench(driver);
         ApplyDriverPose(driver, 0f, 0f);
 
-        Vector3 target = GetCellCenter(building.Anchor);
+        Vector3 target = GetDriverStandPointNearLocation(driver.AssignedBuildingType.Value);
         target.y += 0.05f;
         ResetWorkerLocalBusTripState(driver);
         if (TryStartWorkerLocalBusTrip(driver, driver.DriverObject.transform.position, target, DriverRescuePhase.ToBuildingForShift, $"{building.Label} shift"))
@@ -595,7 +600,14 @@ public partial class GameBootstrap : MonoBehaviour
 
         driver.WalkPhase = DriverRescuePhase.ToBuildingForShift;
         driver.WalkTargetWorld = target;
-        BuildDriverWalkPath(driver, driver.DriverObject.transform.position, target);
+        if (!BuildDriverWalkPath(driver, driver.DriverObject.transform.position, target))
+        {
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.WalkTargetWorld = driver.DriverObject.transform.position;
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} could not start commute to {building.Label}; no safe walk path to the building access cell.");
+            return;
+        }
+
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} started commute to {building.Label}.");
     }
 

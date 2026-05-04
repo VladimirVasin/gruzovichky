@@ -1,8 +1,9 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private void NotifyTutorialWorkerHiredByPlayer()
+    private void NotifyTutorialWorkersPanelOpened()
     {
         if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
         {
@@ -11,6 +12,32 @@ public partial class GameBootstrap
 
         if (!isTutorialGoalsActive || tutorialGoalsMode != TutorialGoalsMode.WorkerCard)
         {
+            return;
+        }
+
+        if (!activeTutorialGoals.Contains(TutorialGoalKind.HireNewWorker) ||
+            completedTutorialGoals.Contains(TutorialGoalKind.HireNewWorker))
+        {
+            return;
+        }
+
+        if (!locations.ContainsKey(LocationType.Motel) ||
+            !locations.ContainsKey(LocationType.IntercityStop) ||
+            hiringDriverArrival != null)
+        {
+            SessionDebugLogger.Log("TUTORIAL", "Tutorial worker migration wave is waiting for Motel, Intercity Stop, and a free arrival bus.");
+            return;
+        }
+
+        List<DriverAgent> tutorialWorkers = new(TutorialHireWorkerWaveCount);
+        for (int i = 0; i < TutorialHireWorkerWaveCount; i++)
+        {
+            tutorialWorkers.Add(CreateAndRegisterDriverAgent(spawnInMotel: false));
+        }
+
+        if (!TryStartWorkerArrivalBus(tutorialWorkers, true, "tutorial automatic migration wave"))
+        {
+            SessionDebugLogger.Log("TUTORIAL", "Tutorial worker migration wave could not start because another arrival is active.");
             return;
         }
 
@@ -23,7 +50,7 @@ public partial class GameBootstrap
 
         isDriversScreenDirty = true;
         ScheduleTutorial(TutorialTrigger.UserWorkerHiringBusInfo, 0.25f);
-        SessionDebugLogger.Log("TUTORIAL", "Worker hire goal completed; scheduled hiring bus explanation.");
+        SessionDebugLogger.Log("TUTORIAL", "Worker migration goal completed; scheduled arrival bus explanation.");
     }
 
     private void NotifyTutorialHiringWaveDisembarked()

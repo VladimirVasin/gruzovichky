@@ -18,6 +18,7 @@ public partial class GameBootstrap
     private const float WorkerLeisureSeekHours = 10f;
     private const float WorkerNeedRetryCooldownHours = 1.25f;
     private const float WorkerNeedMoneyRetryCooldownHours = 3.5f;
+    private const float WorkerShiftNeedGrowthMultiplier = 0.25f;
 
     private static bool IsWorkerActivelySleeping(DriverAgent driver)
     {
@@ -34,6 +35,11 @@ public partial class GameBootstrap
         }
 
         float hourDelta = Time.deltaTime * gameSpeedMultiplier / (DayNightCycleDuration / 24f);
+        if (driver.IsOnActiveShift || driver.NeedsShiftEndReturn)
+        {
+            hourDelta *= WorkerShiftNeedGrowthMultiplier;
+        }
+
         if (hourDelta <= 0f)
         {
             return;

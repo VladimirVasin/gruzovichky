@@ -88,18 +88,20 @@ public partial class GameBootstrap
             driversScreenUi.DetailContentRoot.SetActive(hasSel);
 
         bool hasMotel = locations.ContainsKey(LocationType.Motel);
-        bool canHire  = hasMotel && money >= HireDriverCost && hiringDriverArrival == null;
-        driversScreenUi.HireButton.interactable = canHire;
-        driversScreenUi.HireButtonText.text = $"{L("Hire New Worker")} — ${HireDriverCost}";
+        bool canAutoArrive = hasMotel && locations.ContainsKey(LocationType.IntercityStop);
+        bool ruHire = IsRussianLanguage();
+        driversScreenUi.HireButton.interactable = false;
+        driversScreenUi.HireButtonText.text = ruHire
+            ? "\u0420\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0435\u0437\u0436\u0430\u044e\u0442 \u0441\u0430\u043c\u0438"
+            : "Workers arrive automatically";
         driversScreenUi.HireStatusText.text = hiringDriverArrival != null
-            ? L("Another worker is currently arriving by bus.")
+            ? (ruHire ? "\u041d\u043e\u0432\u044b\u0439 \u0440\u0430\u0431\u043e\u0447\u0438\u0439 \u0443\u0436\u0435 \u0435\u0434\u0435\u0442 \u043d\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435." : "A new worker is already arriving by bus.")
             : !hasMotel
-                ? L("Build a Motel first so new workers have somewhere to check in.")
-            : canHire
-                ? L("New hires arrive at the bus stop before checking in at the motel.")
-                : $"{L("Need")} ${HireDriverCost} {L("to hire a new worker.")}";
-        driversScreenUi.HireStatusText.color = canHire ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
-
+                ? (ruHire ? "\u041d\u0443\u0436\u0435\u043d Motel, \u0447\u0442\u043e\u0431\u044b \u043d\u043e\u0432\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043c\u043e\u0433\u043b\u0438 \u0437\u0430\u0441\u0435\u043b\u0438\u0442\u044c\u0441\u044f." : "Build a Motel so new workers can check in.")
+            : !canAutoArrive
+                ? (ruHire ? "\u041d\u0443\u0436\u043d\u0430 \u043c\u0435\u0436\u0433\u043e\u0440\u043e\u0434\u043d\u044f\u044f \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430." : "Build an Intercity Stop for arrivals.")
+                : (ruHire ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044b\u0435 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438 \u043f\u043e\u0432\u044b\u0448\u0430\u044e\u0442 \u0448\u0430\u043d\u0441 \u043f\u0440\u0438\u0435\u0437\u0434\u0430." : "Open vacancies increase the chance of new arrivals.");
+        driversScreenUi.HireStatusText.color = canAutoArrive ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WorkerListContent);
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WindowRoot);
 

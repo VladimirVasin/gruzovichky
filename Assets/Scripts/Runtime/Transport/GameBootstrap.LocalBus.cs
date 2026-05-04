@@ -40,6 +40,22 @@ public partial class GameBootstrap
         return LocalBusMaxPassengers;
     }
 
+    private int CountActualLocalBusPassengers()
+    {
+        int count = 0;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            if (driverAgents[i]?.WalkPhase == DriverRescuePhase.RidingLocalBus)
+            {
+                count++;
+            }
+        }
+
+        return localBusRoute == null
+            ? count
+            : Mathf.Clamp(count, 0, localBusRoute.PassengerCapacity);
+    }
+
     private void LogBusBoardingBlockOnce(string reason)
     {
         if (localBusRoute == null)
@@ -308,12 +324,24 @@ public partial class GameBootstrap
 
             passenger.WalkPhase = finalWalkPhase;
             passenger.WalkTargetWorld = finalTarget;
-            BuildDriverWalkPath(passenger, stopWaitPoint, finalTarget);
-            localBusRoute.PassengerCount = Mathf.Max(0, localBusRoute.PassengerCount - 1);
+            if (!BuildDriverWalkPath(passenger, stopWaitPoint, finalTarget))
+            {
+                HandleFailedLocalBusFinalWalk(passenger, finalWalkPhase, travelReason);
+            }
+
+            localBusRoute.PassengerCount = CountActualLocalBusPassengers();
             SyncLocalBusAgentState();
             SessionDebugLogger.Log(
                 "BUS_PASSENGER",
                 $"{passenger.DriverName} left the local bus at Stop #{stopNumber} and resumed {travelReason}. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
+        }
+
+        localBusRoute.PassengerCount = CountActualLocalBusPassengers();
+        SyncLocalBusAgentState();
+        if (localBusRoute.Driver != null && localBusRoute.Driver.NeedsShiftEndReturn)
+        {
+            SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute.Driver.DriverName} is ending the bus shift; boarding is closed at Stop #{stopNumber}.");
+            return;
         }
 
         for (int i = 0; i < driverAgents.Count; i++)
@@ -356,7 +384,11 @@ public partial class GameBootstrap
                 passenger.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
                 passenger.WalkAnimationTime = 0f;
                 ApplyDriverPose(passenger, 0f, 0f);
-                BuildDriverWalkPath(passenger, stopWaitPoint, finalTarget);
+                if (!BuildDriverWalkPath(passenger, stopWaitPoint, finalTarget))
+                {
+                    HandleFailedLocalBusFinalWalk(passenger, finalWalkPhase, travelReason);
+                }
+
                 SessionDebugLogger.Log(
                     "BUS_PASSENGER",
                     $"{passenger.DriverName} could not pay the ${LocalBusFare} fare at Stop #{stopNumber}; resumed {travelReason} on foot. Balance=${passenger.Money}.");
@@ -376,12 +408,93 @@ public partial class GameBootstrap
             passenger.WalkPath.Clear();
             passenger.WalkWaypointIndex = 0;
             passenger.WalkAnimationTime = 0f;
-            localBusRoute.PassengerCount = Mathf.Min(localBusRoute.PassengerCapacity, localBusRoute.PassengerCount + 1);
+            localBusRoute.PassengerCount = CountActualLocalBusPassengers();
             SyncLocalBusAgentState();
             SessionDebugLogger.Log(
                 "BUS_PASSENGER",
                 $"{passenger.DriverName} boarded the local bus at Stop #{stopNumber} for Stop #{passenger.BusDestinationStopNumber}; fare={(fareExempt ? "service pass" : $"${LocalBusFare}")}, passengerBalance=${passenger.Money}, busBank=${localBusRoute.Bank}. Passengers={localBusRoute.PassengerCount}/{localBusRoute.PassengerCapacity}.");
         }
+    }
+
+    private void ReleaseLocalBusPassengersAtCurrentStop(LocationData stop, string reason)
+    {
+        if (localBusRoute == null || stop == null)
+        {
+            return;
+        }
+
+        int released = 0;
+        int stopNumber = stop.StopNumber;
+        Vector3 stopWaitPoint = GetLocalStopPassengerWaitPoint(stop);
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent passenger = driverAgents[i];
+            if (passenger == null || passenger.WalkPhase != DriverRescuePhase.RidingLocalBus)
+            {
+                continue;
+            }
+
+            passenger.DriverObject.SetActive(true);
+            passenger.DriverObject.transform.position = stopWaitPoint;
+            passenger.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            passenger.WalkAnimationTime = 0f;
+            ApplyDriverPose(passenger, 0f, 0f);
+
+            DriverRescuePhase finalWalkPhase = passenger.BusFinalWalkPhase;
+            Vector3 finalTarget = passenger.BusFinalTargetWorld;
+            string travelReason = passenger.BusTravelReason;
+            ResetWorkerLocalBusTripState(passenger);
+
+            passenger.WalkPhase = finalWalkPhase;
+            passenger.WalkTargetWorld = finalTarget;
+            if (!BuildDriverWalkPath(passenger, stopWaitPoint, finalTarget))
+            {
+                HandleFailedLocalBusFinalWalk(passenger, finalWalkPhase, travelReason);
+            }
+
+            released++;
+            SessionDebugLogger.Log(
+                "BUS_PASSENGER",
+                $"{passenger.DriverName} left the local bus early at Stop #{stopNumber}: {reason}; resumed {travelReason} on foot.");
+        }
+
+        localBusRoute.PassengerCount = CountActualLocalBusPassengers();
+        SyncLocalBusAgentState();
+        if (released > 0)
+        {
+            SessionDebugLogger.Log(
+                "BUS_SHIFT",
+                $"{localBusRoute.Driver?.DriverName ?? "Bus driver"} released {released} passenger(s) at Stop #{stopNumber} before returning to Parking.");
+        }
+    }
+
+    private void HandleFailedLocalBusFinalWalk(DriverAgent passenger, DriverRescuePhase finalWalkPhase, string travelReason)
+    {
+        if (passenger == null)
+        {
+            return;
+        }
+
+        passenger.WalkPhase = DriverRescuePhase.None;
+        passenger.WalkTargetWorld = passenger.DriverObject != null
+            ? passenger.DriverObject.transform.position
+            : Vector3.zero;
+
+        if (finalWalkPhase == DriverRescuePhase.ToLaborExchangeForJob &&
+            passenger.ReservedLaborExchangePostingId > 0)
+        {
+            LaborExchangePosting posting = FindLaborExchangePosting(passenger.ReservedLaborExchangePostingId);
+            if (posting != null)
+            {
+                ReleaseLaborExchangePostingReservation(posting);
+            }
+
+            passenger.LifeGoal = WorkerLifeGoal.Idle;
+        }
+
+        SessionDebugLogger.Log(
+            "BUS_PASSENGER",
+            $"{passenger.DriverName} could not resume {travelReason} after leaving the local bus: no safe final walk path for {finalWalkPhase}.");
     }
 
     private void UpdateLocalBusRoute()
@@ -413,20 +526,21 @@ public partial class GameBootstrap
                 {
                     if (driver.NeedsShiftEndReturn)
                     {
-                        bool shouldReturnToParking = ShouldLocalBusReturnToParkingAfterCurrentStop();
                         List<LocationData> orderedStops = GetOrderedLocalStops();
                         int currentIndex = Mathf.Clamp(localBusRoute.CurrentStopIndex, 0, Mathf.Max(orderedStops.Count - 1, 0));
                         int stopNumber = orderedStops.Count > 0 ? orderedStops[currentIndex].StopNumber : -1;
                         SessionDebugLogger.Log(
                             "BUS_SHIFT",
-                            $"{driver.DriverName} finish-cycle check at Stop #{stopNumber}: currentIndex={currentIndex}, direction={(localBusRoute.TravelDirection > 0 ? "ascending" : "descending")}, stopCount={orderedStops.Count}, returnToParking={(shouldReturnToParking ? "yes" : "no")}.");
+                            $"{driver.DriverName} shift-end stop reached at Stop #{stopNumber}: currentIndex={currentIndex}, direction={(localBusRoute.TravelDirection > 0 ? "ascending" : "descending")}, stopCount={orderedStops.Count}, returnToParking=yes.");
 
-                        if (shouldReturnToParking)
+                        if (orderedStops.Count > 0)
                         {
-                            SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} completed the route cycle and is now returning the local bus to Parking.");
-                            BeginLocalBusReturnToParking();
-                            break;
+                            ReleaseLocalBusPassengersAtCurrentStop(orderedStops[currentIndex], "bus shift ended");
                         }
+
+                        SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} finished the current stop and is now returning the local bus to Parking.");
+                        BeginLocalBusReturnToParking();
+                        break;
                     }
 
                     if (!TryBeginNextLocalBusStopSegment())

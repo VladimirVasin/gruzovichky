@@ -76,7 +76,7 @@ public partial class GameBootstrap
             ? $"bus={driver.WalkPhase} Stop#{driver.BusOriginStopNumber}->Stop#{driver.BusDestinationStopNumber} ({driver.BusTravelReason})"
             : "bus=none";
 
-        return $"cell=({cell.x},{cell.y}), duty={driver.DutyMode}, assignment={assignment}, shift={driver.ShiftStartHour}, onShift={driver.IsOnActiveShift}, inside={driver.IsInsideBuilding}, walk={driver.WalkPhase}, rest={driver.RestPhase}, goal={driver.LifeGoal}, money=${driver.Money}, needs=[{FormatWorkerNeedsDebug(driver)}], {bus}";
+        return $"cell=({cell.x},{cell.y}), duty={driver.DutyMode}, assignment={assignment}, shift={driver.ShiftStartHour}, onShift={driver.IsOnActiveShift}, inside={driver.IsInsideBuilding}, walk={driver.WalkPhase}, rest={driver.RestPhase}, goal={driver.LifeGoal}, money=${driver.Money}, satisfaction={driver.Satisfaction}, unhappyDays={driver.UnhappyDays}, leaving={driver.IsLeavingTown}, needs=[{FormatWorkerNeedsDebug(driver)}], {bus}";
     }
 
     private Vector2Int GetWorkerDebugCell(DriverAgent driver)

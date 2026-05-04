@@ -233,7 +233,7 @@ public partial class GameBootstrap
         PlayUiSound(uiSelectClip, 0.9f);
     }
 
-    private void BuildDriverWalkPath(DriverAgent driver, Vector3 startWorld, Vector3 targetWorld)
+    private bool BuildDriverWalkPath(DriverAgent driver, Vector3 startWorld, Vector3 targetWorld)
     {
         driver.WalkPath.Clear();
         driver.WalkWaypointIndex = 0;
@@ -250,7 +250,7 @@ public partial class GameBootstrap
                 SessionDebugLogger.Log(
                     "DRIVER",
                     $"{driver.DriverName} built a same-cell walk target for {driver.WalkPhase} at ({goalCell.x},{goalCell.y}).");
-                return;
+                return true;
             }
 
             bool startInLocation = IsLocationCell(startCell);
@@ -263,7 +263,7 @@ public partial class GameBootstrap
                 SessionDebugLogger.Log(
                     "DRIVER",
                     $"{driver.DriverName} could not build a grid walk path from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}); using direct open-ground target.");
-                return;
+                return true;
             }
 
             if (!isIdleWander &&
@@ -278,14 +278,14 @@ public partial class GameBootstrap
                 SessionDebugLogger.Log(
                     "DRIVER",
                     $"{driver.DriverName} rerouted blocked walk target for {driver.WalkPhase} from ({goalCell.x},{goalCell.y}) to nearest safe cell ({fallbackCell.x},{fallbackCell.y}); steps={fallbackPath.Count - 1}.");
-                return;
+                return true;
             }
 
             driver.WalkTargetWorld = startWorld;
             SessionDebugLogger.Log(
                 "DRIVER",
                 $"{driver.DriverName} could not build a safe walk path from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}); blocking direct fallback through buildings.");
-            return;
+            return false;
         }
 
         for (int i = 1; i < cellPath.Count; i++)
@@ -298,6 +298,7 @@ public partial class GameBootstrap
         SessionDebugLogger.Log(
             "DRIVER",
             $"{driver.DriverName} built walk path for {driver.WalkPhase}: {cellPath.Count - 1} cell steps, {driver.WalkPath.Count} world waypoints, from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}).");
+        return true;
     }
 
     private List<Vector2Int> FindDriverWalkPath(Vector2Int start, Vector2Int goal, DriverRescuePhase walkPhase)

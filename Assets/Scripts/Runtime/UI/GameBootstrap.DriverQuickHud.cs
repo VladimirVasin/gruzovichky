@@ -199,7 +199,10 @@ public partial class GameBootstrap
         driverQuickHud.ProfileText.text = $"{GetWorkerGenderLabel(driver, ru)} | {GetWorkerEducationDisplayName(driver.Education, ru)} | {GetWorkerQuickHudAgeLabel(driver, ru)}";
         driverQuickHud.PlaceText.text = FormatValueLine(ru ? "\u0421\u0435\u0439\u0447\u0430\u0441" : "Now", GetWorkerQuickHudPlaceLabel(driver, ru));
 
-        driverQuickHud.StatusText.text = GetDriverQuickHudStatusLabel(driver);
+        string migrationLabel = GetWorkerMigrationStatusLabel(driver, ru);
+        driverQuickHud.StatusText.text = string.IsNullOrEmpty(migrationLabel)
+            ? GetDriverQuickHudStatusLabel(driver)
+            : $"{GetDriverQuickHudStatusLabel(driver)} | {migrationLabel} {driver.Satisfaction}";
 
         bool hasTruck = truck != null;
         driverQuickHud.TruckRow.SetActive(hasTruck);
@@ -236,6 +239,8 @@ public partial class GameBootstrap
     {
         if (IsDriverOnActiveTradeRun(driver))
             return L("On Trade Run");
+        if (driver.IsLeavingTown || driver.WalkPhase == DriverRescuePhase.ToIntercityStopForDeparture)
+            return IsRussianLanguage() ? "\u0423\u0435\u0437\u0436\u0430\u0435\u0442" : "Leaving town";
         if (driver.IsArrivingByBus)
             return L("Arriving by Bus");
         if (driver.RestPhase == DriverRestPhase.Sleeping || driver.RestPhase == DriverRestPhase.SleepingAtHome)

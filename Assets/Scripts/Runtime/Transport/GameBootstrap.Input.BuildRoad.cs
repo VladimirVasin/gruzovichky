@@ -346,6 +346,15 @@ public partial class GameBootstrap
                 }
             }
 
+            if (anyBuilt)
+            {
+                List<Vector2Int> refreshCells = new(path);
+                refreshCells.AddRange(buildPreviewFootprintCells);
+                refreshCells.AddRange(newRoadCells);
+                refreshCells.AddRange(turnFillCells);
+                RefreshRoadConnectivityAround(refreshCells);
+            }
+
             SessionDebugLogger.Log(
                 "BUILD_ROAD",
                 $"path-build result start={FormatCell(start)} requestedEnd={FormatCell(end)} resolvedEnd={FormatCell(path[^1])} axisLocked={IsActiveRoadSegmentAxisLocked()} built={anyBuilt} newRoadCells={FormatCellList(newRoadCells)} turnFillCells={FormatCellList(turnFillCells)} lanePairId={FormatStringList(lanePairIds)} previewFootprintCells={FormatCellList(buildPreviewFootprintCells)}.");

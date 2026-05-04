@@ -254,4 +254,40 @@ public partial class GameBootstrap
             pendingRoadsideRefreshCells.Add(neighbor);
         }
     }
+
+    private void RefreshRoadConnectivityAround(IEnumerable<Vector2Int> cells)
+    {
+        if (cells == null)
+        {
+            return;
+        }
+
+        HashSet<Vector2Int> affectedCells = new();
+        foreach (Vector2Int cell in cells)
+        {
+            if (!IsInsideGrid(cell))
+            {
+                continue;
+            }
+
+            affectedCells.Add(cell);
+            foreach (Vector2Int neighbor in GridPathService.GetCardinalNeighbors(cell))
+            {
+                if (IsInsideGrid(neighbor))
+                {
+                    affectedCells.Add(neighbor);
+                }
+            }
+        }
+
+        foreach (Vector2Int cell in affectedCells)
+        {
+            if (roadVisuals.ContainsKey(cell))
+            {
+                RefreshRoadVisual(cell);
+            }
+
+            QueueRoadsideRefreshAround(cell);
+        }
+    }
 }

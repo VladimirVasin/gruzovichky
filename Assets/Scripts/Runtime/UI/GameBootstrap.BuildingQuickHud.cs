@@ -56,9 +56,12 @@ public partial class GameBootstrap
         public GameObject CanvasRoot;
         public RectTransform Root;
         public Text HeaderText;
+        public LayoutElement SummaryCardLayout;
         public Text TypeText;
         public Text StatusText;
+        public LayoutElement StatusTextLayout;
         public Text ResourceText;
+        public LayoutElement ResourceTextLayout;
         public Button ContextButton;
         public Text ContextButtonText;
         public RectTransform StopNumberRow;
@@ -209,14 +212,17 @@ public partial class GameBootstrap
         });
 
         RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
-        summaryCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 120f;
+        buildingQuickHud.SummaryCardLayout = summaryCard.gameObject.AddComponent<LayoutElement>();
+        buildingQuickHud.SummaryCardLayout.preferredHeight = 170f;
         buildingQuickHud.TypeText = CreateBodyText("TypeText", summaryBody, uiFont, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
         buildingQuickHud.TypeText.fontStyle = FontStyle.Bold;
         buildingQuickHud.TypeText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         buildingQuickHud.StatusText = CreateBodyText("StatusText", summaryBody, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        buildingQuickHud.StatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+        buildingQuickHud.StatusTextLayout = buildingQuickHud.StatusText.gameObject.AddComponent<LayoutElement>();
+        buildingQuickHud.StatusTextLayout.preferredHeight = 28f;
         buildingQuickHud.ResourceText = CreateBodyText("ResourceText", summaryBody, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
-        buildingQuickHud.ResourceText.gameObject.AddComponent<LayoutElement>().preferredHeight = 78f;
+        buildingQuickHud.ResourceTextLayout = buildingQuickHud.ResourceText.gameObject.AddComponent<LayoutElement>();
+        buildingQuickHud.ResourceTextLayout.preferredHeight = 82f;
 
         // в”Ђв”Ђ Worker slots section в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         RectTransform workerSection = CreateUiObject("WorkerSlotsSection", root).GetComponent<RectTransform>();
@@ -452,10 +458,13 @@ public partial class GameBootstrap
             : selectedBuildingType == LocationType.PersonalHouse ? "  [Housing]"
             : "  [Service]";
         buildingQuickHud.TypeText.text = GetSelectedLocationDisplayName(selectedBuildingType) + categoryTag;
-        buildingQuickHud.StatusText.text = GetBuildingQuickStatusText(selectedBuildingType);
-        buildingQuickHud.ResourceText.text = selectedBuildingType == LocationType.PersonalHouse
+        string quickStatus = GetBuildingQuickStatusText(selectedBuildingType);
+        string quickResource = selectedBuildingType == LocationType.PersonalHouse
             ? GetPersonalHouseQuickResourceText()
             : GetBuildingQuickResourceText(selectedBuildingType);
+        buildingQuickHud.StatusText.text = quickStatus;
+        buildingQuickHud.ResourceText.text = quickResource;
+        ConfigureBuildingQuickHudSummaryLayout(quickStatus, quickResource);
         bool showContextBtn = HasBuildingContextAction(selectedBuildingType);
         buildingQuickHud.ContextButton.gameObject.SetActive(showContextBtn);
         if (showContextBtn)
@@ -486,6 +495,57 @@ public partial class GameBootstrap
 
         LocalizeCanvas(buildingQuickHud.CanvasRoot);
         LayoutRebuilder.ForceRebuildLayoutImmediate(buildingQuickHud.Root);
+    }
+
+    private void ConfigureBuildingQuickHudSummaryLayout(string statusText, string resourceText)
+    {
+        if (buildingQuickHud == null)
+        {
+            return;
+        }
+
+        int statusLines = Mathf.Clamp(CountHudTextLines(statusText), 1, 3);
+        int resourceLines = Mathf.Clamp(CountHudTextLines(resourceText), 1, 8);
+        float statusHeight = statusLines * 17f + 6f;
+        float resourceHeight = resourceLines * 17f + 6f;
+
+        if (buildingQuickHud.StatusTextLayout != null)
+        {
+            buildingQuickHud.StatusTextLayout.preferredHeight = statusHeight;
+        }
+
+        if (buildingQuickHud.ResourceTextLayout != null)
+        {
+            buildingQuickHud.ResourceTextLayout.preferredHeight = resourceHeight;
+        }
+
+        if (buildingQuickHud.SummaryCardLayout != null)
+        {
+            const float cardVerticalPadding = 30f;
+            const float bodySpacing = 16f;
+            const float typeHeight = 24f;
+            buildingQuickHud.SummaryCardLayout.preferredHeight =
+                cardVerticalPadding + typeHeight + bodySpacing + statusHeight + resourceHeight;
+        }
+    }
+
+    private static int CountHudTextLines(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return 1;
+        }
+
+        int lines = 1;
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '\n')
+            {
+                lines++;
+            }
+        }
+
+        return lines;
     }
 
     private void OpenContextPanelFromBuildingQuickHud()

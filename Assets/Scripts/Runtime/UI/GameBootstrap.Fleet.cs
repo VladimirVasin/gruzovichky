@@ -75,6 +75,7 @@ public partial class GameBootstrap
         if (panelName == "Workers")
         {
             MarkTutorialGoalComplete(TutorialGoalKind.OpenWorkersCard);
+            NotifyTutorialWorkersPanelOpened();
         }
         if (panelName == "Shifts")
         {
@@ -376,12 +377,8 @@ public partial class GameBootstrap
             y += 114f;
         }
 
-        bool canHireDriver = money >= HireDriverCost;
-        GUI.enabled = canHireDriver;
-        if (GUI.Button(new Rect(panelRect.x + 8f, panelRect.y + panelRect.height - 42f, panelRect.width - 16f, 30f), $"Hire New Driver  ${HireDriverCost}", btnStyle))
-        {
-            HireNewDriver();
-        }
+        GUI.enabled = false;
+        GUI.Button(new Rect(panelRect.x + 8f, panelRect.y + panelRect.height - 42f, panelRect.width - 16f, 30f), "Workers arrive automatically", btnStyle);
         GUI.enabled = true;
     }
 

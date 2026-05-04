@@ -218,6 +218,12 @@ public partial class GameBootstrap
         public int ReservedLaborExchangePostingId;
         public float LaborExchangeInterviewTimer;
         public bool IsInsideBuilding;
+        public int Satisfaction = 70;
+        public int UnhappyDays;
+        public bool DepartureIntent;
+        public bool IsLeavingTown;
+        public bool HasDepartedTown;
+        public string DepartureReason = string.Empty;
         public string LastWorkerDecisionDebugKey;
         public string LastThrottledWorkerDecisionDebugKey;
         public float LastThrottledWorkerDecisionDebugTime = -999f;

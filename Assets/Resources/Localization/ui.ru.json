@@ -1,4 +1,4 @@
-﻿{
+{
   "Continue": "Продолжить",
   "New Game Debug": "Новая игра: Debug",
   "New Game User": "Новая игра",
@@ -68,8 +68,8 @@
   "Intercity": "Межгород",
   "Trade Run": "Торговый рейс",
   "Select a worker from the list to view details.": "Выбери рабочего из списка, чтобы увидеть детали.",
-  "Hire New Worker": "Нанять рабочего",
-  "New hires arrive at the bus stop before checking in at the motel.": "Новые рабочие приезжают на автобусную остановку перед регистрацией в мотеле.",
+  "Hire New Worker": "Приезд рабочих",
+  "New hires arrive at the bus stop before checking in at the motel.": "Рабочие приезжают на автобусную остановку перед регистрацией в мотеле.",
   "Available assignments appear after selecting a worker": "Доступные назначения появятся после выбора рабочего",
   "Production": "Производство",
   "Routes": "Маршруты",

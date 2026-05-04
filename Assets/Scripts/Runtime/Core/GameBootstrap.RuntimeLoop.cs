@@ -180,6 +180,7 @@ public partial class GameBootstrap
             UpdateWorkerNeedsClock(driver);
         }
         UpdateHourlyNeedsEconomyTelemetry();
+        UpdateWorkerMigrationRuntime();
 
         for (int i = 0; i < truckAgents.Count; i++)
         {
