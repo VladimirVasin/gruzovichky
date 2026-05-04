@@ -17,6 +17,11 @@ public partial class GameBootstrap : MonoBehaviour
     private const int FurnitureFactoryMaxBoardsStorage = 6;
     private const int FurnitureFactoryMaxTextileStorage = 6;
     private const int FurnitureFactoryMaxFurnitureStorage = 6;
+    private const int DocksResourceCapacity = 8;
+    private const int DocksShipTradeBatch = 3;
+    private const float DocksShipIntervalMin = DayNightCycleDuration / 24f * 8f;
+    private const float DocksShipIntervalMax = DayNightCycleDuration / 24f * 14f;
+    private const float DocksShipDwellDuration = DayNightCycleDuration / 24f * 1.5f;
     private const float FurnitureFactoryProcessingDuration = 5.5f;
     private const int ProductionMaxWorkersPerBuilding = 2;
     private const int WarehouseMaxWorkers        = 2;

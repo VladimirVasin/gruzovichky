@@ -28,6 +28,7 @@ public partial class GameBootstrap
                 _                    => 0
             },
             BuildingBank  = type == LocationType.GamblingHall ? 50 : 0,
+            DocksShipTimer = type == LocationType.Docks ? Random.Range(DocksShipIntervalMin, DocksShipIntervalMax) : 0f,
         };
 
         GameObject root = new(label);
@@ -91,6 +92,12 @@ public partial class GameBootstrap
             baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
             baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
             ApplyColor(baseBlock, new Color(0.18f, 0.19f, 0.20f), VisualSmoothnessAsphalt);
+        }
+        else if (type == LocationType.Docks)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.23f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.10f, size.y * 0.99f);
+            ApplyColor(baseBlock, new Color(0.40f, 0.28f, 0.16f), VisualSmoothnessWood);
         }
         else
         {
@@ -169,6 +176,10 @@ public partial class GameBootstrap
         else if (type == LocationType.LaborExchange)
         {
             CreateLaborExchangeDecoration(root.transform, center, min, max, anchor);
+        }
+        else if (type == LocationType.Docks)
+        {
+            CreateDocksDecoration(root.transform, center, min, max, anchor);
         }
         else
         {

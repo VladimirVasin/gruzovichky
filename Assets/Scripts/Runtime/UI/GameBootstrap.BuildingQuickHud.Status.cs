@@ -25,6 +25,7 @@ public partial class GameBootstrap
             LocationType.Forest           => "Lumberyard operations",
             LocationType.Sawmill          => "Processing logs into boards",
             LocationType.FurnitureFactory => "Crafting furniture from boards and textile",
+            LocationType.Docks            => GetDocksQuickStatusText(),
             LocationType.Warehouse        => IsLocationOperational(LocationType.Warehouse)
                 ? HasActiveTradeRun() &&
                   activeTradeRun.OrderType == TradeOrderType.Buy &&
@@ -55,6 +56,7 @@ public partial class GameBootstrap
             LocationType.Sawmill => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Sawmill)} / {GetMaxBuildingWorkerSlots(LocationType.Sawmill)}")}\n{FormatValueLine("Logs", locations[LocationType.Sawmill].LogsStored.ToString())}\n{FormatValueLine("Boards", locations[LocationType.Sawmill].BoardsStored.ToString())}",
             LocationType.FurnitureFactory => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.FurnitureFactory)} / {GetMaxBuildingWorkerSlots(LocationType.FurnitureFactory)}")}\n{FormatValueLine("Boards", $"{locations[LocationType.FurnitureFactory].BoardsStored} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{locations[LocationType.FurnitureFactory].TextileStored} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{locations[LocationType.FurnitureFactory].FurnitureStored} / {FurnitureFactoryMaxFurnitureStorage}")}",
             LocationType.Warehouse => GetWarehouseQuickResourceText(),
+            LocationType.Docks => GetDocksQuickResourceText(),
             LocationType.GasStation => GetGasStationQuickResourceText(),
             LocationType.IntercityStop    => IsRussianLanguage()
                 ? FormatValueLine("Статус", "Готова к приёму")
@@ -266,6 +268,7 @@ public partial class GameBootstrap
             LocationType.Parking => "Open Fleet",
             LocationType.Motel => "Open Drivers",
             LocationType.LaborExchange => "Open Vacancies",
+            LocationType.Docks => "Cycle Dock Orders",
             _ => "Open Resources"
         };
     }

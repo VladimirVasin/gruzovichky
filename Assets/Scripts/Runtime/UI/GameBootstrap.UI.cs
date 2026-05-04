@@ -651,7 +651,10 @@ public partial class GameBootstrap
             activeTruckInteraction == TruckInteractionType.LoadAtSawmill ||
             activeTruckInteraction == TruckInteractionType.LoadBoardsAtWarehouse ||
             activeTruckInteraction == TruckInteractionType.LoadTextileAtWarehouse ||
-            activeTruckInteraction == TruckInteractionType.LoadAtFurnitureFactory;
+            activeTruckInteraction == TruckInteractionType.LoadAtFurnitureFactory ||
+            activeTruckInteraction == TruckInteractionType.LoadLogsAtWarehouse ||
+            activeTruckInteraction == TruckInteractionType.LoadFurnitureAtWarehouse ||
+            activeTruckInteraction == TruckInteractionType.LoadAtDocks;
         Vector3 from = loadingIntoTruck ? truckInteractionBuildingPoint : truckRearPoint;
         Vector3 to = loadingIntoTruck ? truckRearPoint : truckInteractionBuildingPoint;
 
@@ -683,10 +686,15 @@ public partial class GameBootstrap
                 TruckInteractionType.UnloadAtWarehouse => "Unloading cargo at Warehouse...",
                 TruckInteractionType.LoadBoardsAtWarehouse => "Loading boards at Warehouse...",
                 TruckInteractionType.LoadTextileAtWarehouse => "Loading textile at Warehouse...",
+                TruckInteractionType.LoadLogsAtWarehouse => "Loading logs at Warehouse...",
+                TruckInteractionType.LoadFurnitureAtWarehouse => "Loading furniture at Warehouse...",
                 TruckInteractionType.UnloadBoardsAtFurnitureFactory => "Unloading boards at Furniture Factory...",
                 TruckInteractionType.UnloadTextileAtFurnitureFactory => "Unloading textile at Furniture Factory...",
                 TruckInteractionType.LoadAtFurnitureFactory => "Loading furniture at Furniture Factory...",
                 TruckInteractionType.UnloadFurnitureAtWarehouse => "Unloading furniture at Warehouse...",
+                TruckInteractionType.UnloadAtDocks => "Unloading cargo at Docks...",
+                TruckInteractionType.LoadAtDocks => "Loading cargo at Docks...",
+                TruckInteractionType.UnloadDocksImportAtWarehouse => "Unloading dock cargo at Warehouse...",
                 TruckInteractionType.TradeUnloadAtWarehouse => "Unloading trade goods at Warehouse...",
                 TruckInteractionType.RefuelAtGasStation => "Refueling at Gas Station...",
                 _ => "Truck servicing cargo..."

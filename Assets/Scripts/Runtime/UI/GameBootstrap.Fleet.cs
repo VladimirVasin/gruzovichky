@@ -611,7 +611,67 @@ public partial class GameBootstrap
             }
         }
 
+        if (hasWarehouse && locations.TryGetValue(LocationType.Docks, out LocationData docks))
+        {
+            bool canReachDocksFromWarehouse =
+                HasPath(locations[LocationType.Parking].Anchor, warehouse.Anchor) &&
+                HasPath(warehouse.Anchor, docks.Anchor);
+            bool canReachWarehouseFromDocks =
+                HasPath(locations[LocationType.Parking].Anchor, docks.Anchor) &&
+                HasPath(docks.Anchor, warehouse.Anchor);
+
+            if (canReachDocksFromWarehouse)
+            {
+                AddDocksExportTripIfAvailable(trips, docks, TradeResourceType.Logs, TripType.WarehouseToDocksLogs, "Logs");
+                AddDocksExportTripIfAvailable(trips, docks, TradeResourceType.Boards, TripType.WarehouseToDocksBoards, "Boards");
+                AddDocksExportTripIfAvailable(trips, docks, TradeResourceType.Furniture, TripType.WarehouseToDocksFurniture, "Furniture");
+            }
+
+            if (canReachWarehouseFromDocks)
+            {
+                AddDocksImportTripIfAvailable(trips, docks, TradeResourceType.Cotton, TripType.DocksToWarehouseCotton, "Cotton");
+                AddDocksImportTripIfAvailable(trips, docks, TradeResourceType.Textile, TripType.DocksToWarehouseTextile, "Textile");
+                AddDocksImportTripIfAvailable(trips, docks, TradeResourceType.Furniture, TripType.DocksToWarehouseFurniture, "Furniture");
+            }
+        }
+
         return trips;
+    }
+
+    private void AddDocksExportTripIfAvailable(List<TripOption> trips, LocationData docks, TradeResourceType resource, TripType tripType, string label)
+    {
+        if (docks.DocksExportResource != resource ||
+            GetWarehouseExportResourceAmount(resource) <= 0 ||
+            GetDocksStoredResource(docks, resource) >= DocksResourceCapacity)
+        {
+            return;
+        }
+
+        trips.Add(new TripOption
+        {
+            Type = tripType,
+            Title = $"Export {label}: Warehouse -> Docks",
+            Description = $"Move assigned export {label} to the Docks before the next ship.",
+            Reward = GetTripReward(tripType),
+            Priority = 2
+        });
+    }
+
+    private void AddDocksImportTripIfAvailable(List<TripOption> trips, LocationData docks, TradeResourceType resource, TripType tripType, string label)
+    {
+        if (docks.DocksImportResource != resource || GetDocksStoredResource(docks, resource) <= 0)
+        {
+            return;
+        }
+
+        trips.Add(new TripOption
+        {
+            Type = tripType,
+            Title = $"Import {label}: Docks -> Warehouse",
+            Description = $"Move imported {label} from the Docks to town storage.",
+            Reward = GetTripReward(tripType),
+            Priority = 2
+        });
     }
 
     private void AssignTrip(TripOption trip)
@@ -654,6 +714,12 @@ public partial class GameBootstrap
             TripType.WarehouseToFurnitureFactoryBoards => "Warehouse -> Furniture Factory (Boards)",
             TripType.WarehouseToFurnitureFactoryTextile => "Warehouse -> Furniture Factory (Textile)",
             TripType.FurnitureFactoryToWarehouse => "Furniture Factory -> Warehouse",
+            TripType.WarehouseToDocksLogs => "Warehouse -> Docks (Logs)",
+            TripType.WarehouseToDocksBoards => "Warehouse -> Docks (Boards)",
+            TripType.WarehouseToDocksFurniture => "Warehouse -> Docks (Furniture)",
+            TripType.DocksToWarehouseCotton => "Docks -> Warehouse (Cotton)",
+            TripType.DocksToWarehouseTextile => "Docks -> Warehouse (Textile)",
+            TripType.DocksToWarehouseFurniture => "Docks -> Warehouse (Furniture)",
             _ => "None"
         });
     }

@@ -582,6 +582,10 @@ public partial class GameBootstrap
                 isResourcesPanelOpen = false;
                 isBuildPanelOpen = false;
                 break;
+            case LocationType.Docks:
+                LogUiInput("Quick HUD: cycled Dock orders");
+                CycleDocksOrders(locations[LocationType.Docks]);
+                break;
             default:
                 LogUiInput($"Quick HUD: opened Resources from {locations[locationType].Label}");
                 isResourcesPanelOpen = true;

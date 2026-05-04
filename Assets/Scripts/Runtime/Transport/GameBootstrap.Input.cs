@@ -288,7 +288,8 @@ public partial class GameBootstrap
                tool == BuildTool.CityPark ||
                tool == BuildTool.PersonalHouse ||
                tool == BuildTool.CarMarket ||
-               tool == BuildTool.LaborExchange;
+               tool == BuildTool.LaborExchange ||
+               tool == BuildTool.Docks;
     }
 
     private static bool IsRoadBuildTool(BuildTool tool)

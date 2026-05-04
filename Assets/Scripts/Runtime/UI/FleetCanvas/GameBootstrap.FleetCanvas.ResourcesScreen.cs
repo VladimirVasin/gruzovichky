@@ -110,6 +110,7 @@ public partial class GameBootstrap
         resourcesScreenUi.ProductionSections.Add(CreateProductionSection(pContentRoot, font, LocationType.Forest,           "Forest",            new[] { (ResourceVisualKind.Logs,      TradeResourceType.Logs,      "Logs")      }));
         resourcesScreenUi.ProductionSections.Add(CreateProductionSection(pContentRoot, font, LocationType.Sawmill,          "Sawmill",           new[] { (ResourceVisualKind.Logs,      TradeResourceType.Logs,      "Logs"),      (ResourceVisualKind.Boards,   TradeResourceType.Boards,   "Boards")    }));
         resourcesScreenUi.ProductionSections.Add(CreateProductionSection(pContentRoot, font, LocationType.FurnitureFactory,  "Furniture Factory", new[] { (ResourceVisualKind.Boards,    TradeResourceType.Boards,    "Boards"),    (ResourceVisualKind.Textile,  TradeResourceType.Textile,  "Textile"),   (ResourceVisualKind.Furniture, TradeResourceType.Furniture, "Furniture") }));
+        resourcesScreenUi.ProductionSections.Add(CreateProductionSection(pContentRoot, font, LocationType.Docks,             "Docks",             new[] { (ResourceVisualKind.Logs,      TradeResourceType.Logs,      "Logs"),      (ResourceVisualKind.Boards,   TradeResourceType.Boards,   "Boards"),    (ResourceVisualKind.Cotton,    TradeResourceType.Cotton,    "Cotton"),    (ResourceVisualKind.Textile,   TradeResourceType.Textile,   "Textile"),   (ResourceVisualKind.Furniture, TradeResourceType.Furniture, "Furniture") }));
 
         // Treasury footer
         RectTransform footerCard = CreateSectionCard(windowRoot.transform, font, "Treasury", out RectTransform footerBody);
@@ -396,6 +397,7 @@ public partial class GameBootstrap
         {
             TradeResourceType.Logs      => bData.LogsStored.ToString(),
             TradeResourceType.Boards    => bData.BoardsStored.ToString(),
+            TradeResourceType.Cotton    => bData.CottonStored.ToString(),
             TradeResourceType.Textile   => bData.TextileStored.ToString(),
             TradeResourceType.Furniture => bData.FurnitureStored.ToString(),
             _ => "0"
@@ -411,6 +413,8 @@ public partial class GameBootstrap
             total += sawmill.LogsStored;
         if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse))
             total += warehouse.LogsStored;
+        if (locations.TryGetValue(LocationType.Docks, out LocationData docks))
+            total += docks.LogsStored;
         foreach (TruckAgent truck in truckAgents)
         {
             if (truck.TruckCargoType == CargoType.Logs && !IsTruckOnActiveTradeSellRun(truck))
@@ -428,6 +432,8 @@ public partial class GameBootstrap
             total += warehouse.BoardsStored;
         if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
             total += furnitureFactory.BoardsStored;
+        if (locations.TryGetValue(LocationType.Docks, out LocationData docks))
+            total += docks.BoardsStored;
         foreach (TruckAgent truck in truckAgents)
         {
             if (truck.TruckCargoType == CargoType.Boards && !IsTruckOnActiveTradeSellRun(truck))
@@ -448,6 +454,8 @@ public partial class GameBootstrap
         int total = textileStored;
         if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
             total += furnitureFactory.TextileStored;
+        if (locations.TryGetValue(LocationType.Docks, out LocationData docks))
+            total += docks.TextileStored;
         foreach (TruckAgent truck in truckAgents)
         {
             if (truck.TruckCargoType == CargoType.Textile && !IsTruckOnActiveTradeSellRun(truck))
@@ -461,6 +469,8 @@ public partial class GameBootstrap
         int total = furnitureStored;
         if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
             total += furnitureFactory.FurnitureStored;
+        if (locations.TryGetValue(LocationType.Docks, out LocationData docks))
+            total += docks.FurnitureStored;
         foreach (TruckAgent truck in truckAgents)
         {
             if (truck.TruckCargoType == CargoType.Furniture && !IsTruckOnActiveTradeSellRun(truck))

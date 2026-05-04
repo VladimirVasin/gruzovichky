@@ -217,6 +217,12 @@ public partial class GameBootstrap
             TripType.WarehouseToFurnitureFactoryBoards => 10,
             TripType.WarehouseToFurnitureFactoryTextile => 10,
             TripType.FurnitureFactoryToWarehouse => 11,
+            TripType.WarehouseToDocksLogs => 12,
+            TripType.WarehouseToDocksBoards => 13,
+            TripType.WarehouseToDocksFurniture => 15,
+            TripType.DocksToWarehouseCotton => 12,
+            TripType.DocksToWarehouseTextile => 13,
+            TripType.DocksToWarehouseFurniture => 15,
             _ => 6
         };
         return TripRewardCalculator.Calculate(totalSteps, handlingBonus, locationBonus);
@@ -238,6 +244,12 @@ public partial class GameBootstrap
             TripType.WarehouseToFurnitureFactoryBoards => LocationType.Warehouse,
             TripType.WarehouseToFurnitureFactoryTextile => LocationType.Warehouse,
             TripType.FurnitureFactoryToWarehouse => LocationType.FurnitureFactory,
+            TripType.WarehouseToDocksLogs => LocationType.Warehouse,
+            TripType.WarehouseToDocksBoards => LocationType.Warehouse,
+            TripType.WarehouseToDocksFurniture => LocationType.Warehouse,
+            TripType.DocksToWarehouseCotton => LocationType.Docks,
+            TripType.DocksToWarehouseTextile => LocationType.Docks,
+            TripType.DocksToWarehouseFurniture => LocationType.Docks,
             _ => LocationType.Parking
         };
     }
@@ -252,6 +264,12 @@ public partial class GameBootstrap
             TripType.WarehouseToFurnitureFactoryBoards => LocationType.FurnitureFactory,
             TripType.WarehouseToFurnitureFactoryTextile => LocationType.FurnitureFactory,
             TripType.FurnitureFactoryToWarehouse => LocationType.Warehouse,
+            TripType.WarehouseToDocksLogs => LocationType.Docks,
+            TripType.WarehouseToDocksBoards => LocationType.Docks,
+            TripType.WarehouseToDocksFurniture => LocationType.Docks,
+            TripType.DocksToWarehouseCotton => LocationType.Warehouse,
+            TripType.DocksToWarehouseTextile => LocationType.Warehouse,
+            TripType.DocksToWarehouseFurniture => LocationType.Warehouse,
             _ => LocationType.Parking
         };
     }
@@ -266,6 +284,12 @@ public partial class GameBootstrap
             TripType.WarehouseToFurnitureFactoryBoards => TruckInteractionType.LoadBoardsAtWarehouse,
             TripType.WarehouseToFurnitureFactoryTextile => TruckInteractionType.LoadTextileAtWarehouse,
             TripType.FurnitureFactoryToWarehouse => TruckInteractionType.LoadAtFurnitureFactory,
+            TripType.WarehouseToDocksLogs => TruckInteractionType.LoadLogsAtWarehouse,
+            TripType.WarehouseToDocksBoards => TruckInteractionType.LoadBoardsAtWarehouse,
+            TripType.WarehouseToDocksFurniture => TruckInteractionType.LoadFurnitureAtWarehouse,
+            TripType.DocksToWarehouseCotton => TruckInteractionType.LoadAtDocks,
+            TripType.DocksToWarehouseTextile => TruckInteractionType.LoadAtDocks,
+            TripType.DocksToWarehouseFurniture => TruckInteractionType.LoadAtDocks,
             _ => TruckInteractionType.None
         };
     }
@@ -280,6 +304,12 @@ public partial class GameBootstrap
             TripType.WarehouseToFurnitureFactoryBoards => TruckInteractionType.UnloadBoardsAtFurnitureFactory,
             TripType.WarehouseToFurnitureFactoryTextile => TruckInteractionType.UnloadTextileAtFurnitureFactory,
             TripType.FurnitureFactoryToWarehouse => TruckInteractionType.UnloadFurnitureAtWarehouse,
+            TripType.WarehouseToDocksLogs => TruckInteractionType.UnloadAtDocks,
+            TripType.WarehouseToDocksBoards => TruckInteractionType.UnloadAtDocks,
+            TripType.WarehouseToDocksFurniture => TruckInteractionType.UnloadAtDocks,
+            TripType.DocksToWarehouseCotton => TruckInteractionType.UnloadDocksImportAtWarehouse,
+            TripType.DocksToWarehouseTextile => TruckInteractionType.UnloadDocksImportAtWarehouse,
+            TripType.DocksToWarehouseFurniture => TruckInteractionType.UnloadDocksImportAtWarehouse,
             _ => TruckInteractionType.None
         };
     }

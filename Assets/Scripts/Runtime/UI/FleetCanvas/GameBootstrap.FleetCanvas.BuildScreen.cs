@@ -29,10 +29,16 @@ public partial class GameBootstrap
     {
         unlockedBuildTools?.Add(BuildTool.SingleRoad);
         unlockedBuildTools?.Add(BuildTool.Road);
+        unlockedBuildTools?.Add(BuildTool.Docks);
     }
 
     private bool IsBuildToolUnlocked(BuildTool tool)
     {
+        if (tool == BuildTool.Docks)
+        {
+            return true;
+        }
+
         return unlockedBuildTools != null
             ? unlockedBuildTools.Contains(tool)
             : tool == BuildTool.SingleRoad || tool == BuildTool.Road;
@@ -120,6 +126,7 @@ public partial class GameBootstrap
             CreateBuildCategory(cardList, font, "Infrastructure", "Инфраструктура", false,
                 (BuildTool.Parking,          "PK", "Parking",           new Color(0.28f, 0.30f, 0.38f)),
                 (BuildTool.Warehouse,        "WH", "Warehouse",         new Color(0.70f, 0.52f, 0.30f)),
+                (BuildTool.Docks,            "DK", "Docks",             new Color(0.24f, 0.44f, 0.54f)),
                 (BuildTool.SingleRoad,       "1R", "One-Lane Road",     new Color(0.22f, 0.34f, 0.46f)),
                 (BuildTool.Road,             "2W", "Two-Way Road",      new Color(0.27f, 0.42f, 0.60f)),
                 (BuildTool.Stop,             "ST", "Bus Stop",          new Color(0.72f, 0.28f, 0.24f)),

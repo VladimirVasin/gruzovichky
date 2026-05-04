@@ -229,6 +229,7 @@ public partial class GameBootstrap
         {
             BuildTool.Parking          => locations.ContainsKey(LocationType.Parking),
             BuildTool.Warehouse        => locations.ContainsKey(LocationType.Warehouse),
+            BuildTool.Docks            => locations.ContainsKey(LocationType.Docks),
             BuildTool.SingleRoad       => false,
             BuildTool.Road             => false,
             BuildTool.Stop             => false,

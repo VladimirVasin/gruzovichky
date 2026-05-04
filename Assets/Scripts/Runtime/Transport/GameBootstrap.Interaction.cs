@@ -116,7 +116,10 @@ public partial class GameBootstrap
             interactionType == TruckInteractionType.LoadBoardsAtWarehouse ||
             interactionType == TruckInteractionType.LoadTextileAtWarehouse ||
             interactionType == TruckInteractionType.LoadAtFurnitureFactory ||
-            interactionType == TruckInteractionType.TradeLoadAtWarehouse;
+            interactionType == TruckInteractionType.TradeLoadAtWarehouse ||
+            interactionType == TruckInteractionType.LoadLogsAtWarehouse ||
+            interactionType == TruckInteractionType.LoadFurnitureAtWarehouse ||
+            interactionType == TruckInteractionType.LoadAtDocks;
         if (isCargoTransfer)
         {
             PlayTruckFx(loading ? cargoPickupClip : cargoDropClip, 0.8f);
@@ -136,7 +139,10 @@ public partial class GameBootstrap
             activeTruckInteraction == TruckInteractionType.LoadBoardsAtWarehouse ||
             activeTruckInteraction == TruckInteractionType.LoadTextileAtWarehouse ||
             activeTruckInteraction == TruckInteractionType.LoadAtFurnitureFactory ||
-            activeTruckInteraction == TruckInteractionType.TradeLoadAtWarehouse;
+            activeTruckInteraction == TruckInteractionType.TradeLoadAtWarehouse ||
+            activeTruckInteraction == TruckInteractionType.LoadLogsAtWarehouse ||
+            activeTruckInteraction == TruckInteractionType.LoadFurnitureAtWarehouse ||
+            activeTruckInteraction == TruckInteractionType.LoadAtDocks;
 
         switch (activeTruckInteraction)
         {
@@ -184,6 +190,18 @@ public partial class GameBootstrap
                 truckCargoType = CargoType.Textile;
                 break;
 
+            case TruckInteractionType.LoadLogsAtWarehouse:
+                locations[LocationType.Warehouse].LogsStored = Mathf.Max(0, locations[LocationType.Warehouse].LogsStored - 1);
+                truckCargoAmount = 1;
+                truckCargoType = CargoType.Logs;
+                break;
+
+            case TruckInteractionType.LoadFurnitureAtWarehouse:
+                furnitureStored = Mathf.Max(0, furnitureStored - 1);
+                truckCargoAmount = 1;
+                truckCargoType = CargoType.Furniture;
+                break;
+
             case TruckInteractionType.UnloadBoardsAtFurnitureFactory:
                 locations[LocationType.FurnitureFactory].BoardsStored += truckCargoAmount;
                 truckCargoAmount = 0;
@@ -220,6 +238,33 @@ public partial class GameBootstrap
                     truckCargoAmount = activeTradeRun.Quantity;
                     truckCargoType   = TradeResourceTypeToCargoType(activeTradeRun.ResourceType);
                 }
+                break;
+
+            case TruckInteractionType.UnloadAtDocks:
+                if (locations.TryGetValue(LocationType.Docks, out LocationData docksUnload))
+                {
+                    AddDocksStoredResource(docksUnload, CargoTypeToTradeResourceType(truckCargoType), truckCargoAmount);
+                }
+                truckCargoAmount = 0;
+                truckCargoType = CargoType.None;
+                break;
+
+            case TruckInteractionType.LoadAtDocks:
+                if (locations.TryGetValue(LocationType.Docks, out LocationData docksLoad))
+                {
+                    TradeResourceType resource = GetDocksLoadResourceForTrip(currentAssignedTrip);
+                    if (TryConsumeDocksStoredResource(docksLoad, resource, 1))
+                    {
+                        truckCargoAmount = 1;
+                        truckCargoType = TradeResourceTypeToCargoType(resource);
+                    }
+                }
+                break;
+
+            case TruckInteractionType.UnloadDocksImportAtWarehouse:
+                AddStoredTradeResource(CargoTypeToTradeResourceType(truckCargoType), truckCargoAmount);
+                truckCargoAmount = 0;
+                truckCargoType = CargoType.None;
                 break;
 
             case TruckInteractionType.RefuelAtGasStation:
@@ -267,7 +312,10 @@ public partial class GameBootstrap
                     break;
                 case TruckInteractionType.LoadBoardsAtWarehouse:
                 case TruckInteractionType.LoadTextileAtWarehouse:
+                case TruckInteractionType.LoadLogsAtWarehouse:
+                case TruckInteractionType.LoadFurnitureAtWarehouse:
                 case TruckInteractionType.LoadAtFurnitureFactory:
+                case TruckInteractionType.LoadAtDocks:
                     PlayTruckFx(sawmillLoadCueClip, 0.68f);
                     break;
                 case TruckInteractionType.UnloadBoardsAtFurnitureFactory:
@@ -275,6 +323,8 @@ public partial class GameBootstrap
                     PlayTruckFx(sawmillUnloadCueClip, 0.72f);
                     break;
                 case TruckInteractionType.UnloadFurnitureAtWarehouse:
+                case TruckInteractionType.UnloadAtDocks:
+                case TruckInteractionType.UnloadDocksImportAtWarehouse:
                     PlayTruckFx(warehouseUnloadBoardsCueClip, 0.78f);
                     break;
                 case TruckInteractionType.TradeUnloadAtWarehouse:

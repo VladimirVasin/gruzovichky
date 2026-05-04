@@ -225,7 +225,8 @@ public partial class GameBootstrap : MonoBehaviour
         CityPark,
         PersonalHouse,
         CarMarket,
-        LaborExchange
+        LaborExchange,
+        Docks
     }
 
     /// <summary>
@@ -238,6 +239,7 @@ public partial class GameBootstrap : MonoBehaviour
         LocationType.Sawmill          => true,
         LocationType.FurnitureFactory => true,
         LocationType.Warehouse        => true,
+        LocationType.Docks            => true,
         _                             => false
     };
 
@@ -277,6 +279,7 @@ public partial class GameBootstrap : MonoBehaviour
     };
 
     private bool IsLocationOperational(LocationType type) =>
+        type == LocationType.Docks ||
         !IsProductionLocation(type) ||
         (locations.TryGetValue(type, out LocationData d) && d.Workers > 0);
 
@@ -303,7 +306,15 @@ public partial class GameBootstrap : MonoBehaviour
         PickUpTextileAtWarehouse,
         DeliverTextileToFurnitureFactory,
         PickUpAtFurnitureFactory,
-        DeliverFurnitureToWarehouse
+        DeliverFurnitureToWarehouse,
+        PickUpLogsAtWarehouseForDocks,
+        PickUpBoardsAtWarehouseForDocks,
+        PickUpFurnitureAtWarehouseForDocks,
+        DeliverCargoToDocks,
+        PickUpCottonAtDocks,
+        PickUpTextileAtDocks,
+        PickUpFurnitureAtDocks,
+        DeliverDocksCargoToWarehouse
     }
 
     private enum TruckInteractionType
@@ -321,6 +332,11 @@ public partial class GameBootstrap : MonoBehaviour
         UnloadFurnitureAtWarehouse,
         TradeUnloadAtWarehouse,
         TradeLoadAtWarehouse,
+        LoadLogsAtWarehouse,
+        LoadFurnitureAtWarehouse,
+        UnloadAtDocks,
+        LoadAtDocks,
+        UnloadDocksImportAtWarehouse,
         RefuelAtGasStation
     }
 
@@ -332,7 +348,13 @@ public partial class GameBootstrap : MonoBehaviour
         SawmillToWarehouse,
         WarehouseToFurnitureFactoryBoards,
         WarehouseToFurnitureFactoryTextile,
-        FurnitureFactoryToWarehouse
+        FurnitureFactoryToWarehouse,
+        WarehouseToDocksLogs,
+        WarehouseToDocksBoards,
+        WarehouseToDocksFurniture,
+        DocksToWarehouseCotton,
+        DocksToWarehouseTextile,
+        DocksToWarehouseFurniture
     }
 
     private enum BuildTool
@@ -354,7 +376,8 @@ public partial class GameBootstrap : MonoBehaviour
         CityPark,
         PersonalHouse,
         CarMarket,
-        LaborExchange
+        LaborExchange,
+        Docks
     }
 
     private enum GameStartMode
@@ -503,6 +526,7 @@ public partial class GameBootstrap : MonoBehaviour
         public int StopNumber;
         public int LogsStored;
         public int BoardsStored;
+        public int CottonStored;
         public int TextileStored;
         public int FurnitureStored;
         public GameObject RootObject;
@@ -514,6 +538,12 @@ public partial class GameBootstrap : MonoBehaviour
         public int Workers;      // active assigned staff currently inside the building
         public int ServiceFee;   // Service buildings deduct from driver.Money on entry.
         public int BuildingBank; // Internal revenue: service fees in, gambling payouts out.
+        public TradeResourceType DocksExportResource = TradeResourceType.Boards;
+        public TradeResourceType DocksImportResource = TradeResourceType.Cotton;
+        public float DocksShipTimer;
+        public float DocksShipDockedTimer;
+        public bool DocksShipDocked;
+        public GameObject DocksShipObject;
 
         public bool Contains(Vector2Int cell)
         {
