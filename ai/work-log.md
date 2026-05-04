@@ -6,6 +6,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-04: Fixed the restored `Stats`/`Справка` top-menu screen not opening when its canvas refs were not initialized yet. The States screen now lazily initializes itself when opened from the menu, updates immediately on the click frame, and uses a higher overlay sorting order so the reference window is not hidden behind other management canvases. Verified runtime/editor builds, line-count, diff whitespace, and mojibake scan with `./tools/check-all.ps1 -SkipSmokeTests`.
+
 - 2026-05-04: Fixed worker unsafe-cell walk trapping found in `debug.log` with Nina Larnac stuck in a lake cell. Worker walking now remembers the last safe active ground position, rescues visible workers found in water/edge/invalid cells before idle/life/path decisions, emits clearer path-fail diagnostics with water/location flags, and refuses to start service/need/idle/local-bus walk phases when `BuildDriverWalkPath` fails. Idle wander targets are now path-validated and capped to local-length walks, and service/leisure visit helpers were split into `GameBootstrap.Drivers.LifeCycle.Services.cs` to keep files under the 900-line limit. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, and `git diff --check`.
 
 - 2026-05-04: Restored the separate top-menu `Stats` reference screen after numeric worker stats were removed. The menu bar opens a Canvas-based Stats/Справка screen listing all current worker perks with descriptions, the three professionalism levels/tracks and Quick Learner thresholds, plus core need/status explanations. The screen is initialized during world UI setup and no longer auto-closes itself.

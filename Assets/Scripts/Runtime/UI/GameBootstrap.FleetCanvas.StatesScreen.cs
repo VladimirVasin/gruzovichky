@@ -29,7 +29,7 @@ public partial class GameBootstrap
         GameObject canvasObject = new("StatesScreenCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 5;
+        canvas.sortingOrder = 30;
 
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -77,10 +77,22 @@ public partial class GameBootstrap
         UpdateStatesScreenUi();
     }
 
+    private void EnsureStatesScreenUiReady()
+    {
+        if (statesScreenUi == null)
+        {
+            SetupStatesScreenUi();
+        }
+    }
+
     private void UpdateStatesScreenUi()
     {
         if (statesScreenUi == null)
         {
+            if (isStatesPanelOpen)
+            {
+                EnsureStatesScreenUiReady();
+            }
             return;
         }
 

@@ -90,6 +90,11 @@ public partial class GameBootstrap
         isBuildScreenDirty = true;
         isWorldMapScreenDirty = true;
         isStatesScreenDirty = true;
+        if (panelName == "Stats")
+        {
+            EnsureStatesScreenUiReady();
+            UpdateStatesScreenUi();
+        }
         LogUiInput($"MenuBar: {(target ? "opened" : "closed")} {panelName}");
         PlayUiSound(target ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
     }
