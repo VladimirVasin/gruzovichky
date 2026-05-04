@@ -188,6 +188,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         selectedGoalBefore = driver.LifeGoal;
         if (driver.OwnedCarModelIndex < 0 &&
+            driver.AssignedPersonalHouseIndex >= 0 &&
             driver.Money >= CarPurchasePrice &&
             locations.ContainsKey(LocationType.CarMarket) &&
             TryStartWorkerBuyCar(driver, startPosition))
@@ -202,35 +203,26 @@ public partial class GameBootstrap : MonoBehaviour
         return false;
     }
 
-    private bool TryStartWorkerBuyCar(DriverAgent driver, Vector3 startPosition)
-    {
-        if (!locations.ContainsKey(LocationType.CarMarket))
-        {
-            return false;
-        }
-
-        driver.LifeGoal = WorkerLifeGoal.BuyCar;
-        Vector3 target = GetDriverStandPointNearLocation(LocationType.CarMarket);
-        ResetWorkerLocalBusTripState(driver);
-        if (TryStartWorkerLocalBusTrip(driver, startPosition, target, DriverRescuePhase.ToCarMarketForPurchase, "Car purchase"))
-        {
-            LogWorkerDecision(driver, "buy-car-via-bus", $"Car Market, fee=${CarPurchasePrice}", true);
-            return true;
-        }
-
-        driver.WalkTargetWorld = target;
-        driver.WalkPhase = DriverRescuePhase.ToCarMarketForPurchase;
-        driver.WalkAnimationTime = 0f;
-        BuildDriverWalkPath(driver, startPosition, target);
-        LogWorkerDecision(driver, "buy-car-walk", $"Car Market, fee=${CarPurchasePrice}", true);
-        return true;
-    }
-
     private bool TryStartWorkerLifeGoal(DriverAgent driver, WorkerLifeGoal goal, Vector3 startPosition)
     {
         switch (goal)
         {
             case WorkerLifeGoal.Eat:
+                if (TryStartWorkerMealAtHome(driver, startPosition))
+                {
+                    return true;
+                }
+
+                if (driver.AssignedPersonalHouseIndex >= 0 && driver.AssignedPersonalHouseIndex < personalHouses.Count)
+                {
+                    string homeMealUnavailableReason = "personal house meal path unavailable";
+                    SessionDebugLogger.Log("LIFE", $"{driver.DriverName} skipped Canteen because they own PersonalHouse #{driver.AssignedPersonalHouseIndex}; home meal unavailable; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
+                    LogWorkerDecision(driver, "skip-canteen-home-owner", homeMealUnavailableReason, true);
+                    driver.LifeGoal = WorkerLifeGoal.None;
+                    SetWorkerNeedRetryCooldown(driver, WorkerNeedKind.Meal, homeMealUnavailableReason);
+                    return ContinueWorkerLifeCycle(driver, startPosition);
+                }
+
                 if (TryStartWorkerServiceVisit(driver, LocationType.Canteen, WorkerLifeGoal.Eat, DriverRescuePhase.IdleWalkToCanteen, WorkerCanteenDuration, startPosition))
                 {
                     return true;
@@ -615,6 +607,17 @@ public partial class GameBootstrap : MonoBehaviour
         driver.LifeGoal = goal;
         driver.IdleActivityTimer = duration;
         ResetWorkerLocalBusTripState(driver);
+        if (TryStartWorkerPersonalCarTrip(driver, startPosition, target, walkPhase, $"{type} visit"))
+        {
+            LogWorkerDecision(driver, "service-visit-by-car", $"{type} for {goal}; fee=${service.ServiceFee}; duration={duration:0.0}s", true);
+            return true;
+        }
+        if (CanWorkerUsePersonalCar(driver))
+        {
+            LogWorkerDecision(driver, "service-visit-car-blocked", $"{type} for {goal}: no personal car route", true);
+            return false;
+        }
+
         if (TryStartWorkerLocalBusTrip(driver, startPosition, target, walkPhase, $"{type} visit"))
         {
             LogWorkerDecision(driver, "service-visit-via-bus", $"{type} for {goal}; fee=${service.ServiceFee}; duration={duration:0.0}s", true);
@@ -706,6 +709,17 @@ public partial class GameBootstrap : MonoBehaviour
         driver.RestPhase = DriverRestPhase.DriverWalkToMotel;
         Vector3 target = GetDriverStandPointNearPersonalHouse(driver.AssignedPersonalHouseIndex);
         ResetWorkerLocalBusTripState(driver);
+        if (TryStartWorkerPersonalCarTrip(driver, startPosition, target, DriverRescuePhase.ToPersonalHouseEntrance, "Home sleep"))
+        {
+            LogWorkerDecision(driver, "sleep-home-by-car", $"House #{driver.AssignedPersonalHouseIndex}", true);
+            return true;
+        }
+        if (CanWorkerUsePersonalCar(driver))
+        {
+            LogWorkerDecision(driver, "sleep-home-car-blocked", $"House #{driver.AssignedPersonalHouseIndex}: no personal car route", true);
+            return false;
+        }
+
         if (TryStartWorkerLocalBusTrip(driver, startPosition, target, DriverRescuePhase.ToPersonalHouseEntrance, "Home sleep"))
         {
             LogWorkerDecision(driver, "sleep-home-via-bus", $"House #{driver.AssignedPersonalHouseIndex}", true);

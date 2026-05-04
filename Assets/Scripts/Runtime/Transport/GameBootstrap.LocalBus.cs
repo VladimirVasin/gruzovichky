@@ -192,6 +192,17 @@ public partial class GameBootstrap
         ApplyDriverPose(driver, 0f, 0f);
         driver.WalkPhase = DriverRescuePhase.ToParkingForShift;
         driver.WalkTargetWorld = GetDriverStandPointNearLocation(LocationType.Parking);
+        if (TryStartWorkerPersonalCarTrip(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld, DriverRescuePhase.ToParkingForShift, "local bus shift"))
+        {
+            SessionDebugLogger.Log("BUS", $"{driver.DriverName} started personal car commute to Parking for bus shift.");
+            return;
+        }
+        if (CanWorkerUsePersonalCar(driver))
+        {
+            SessionDebugLogger.Log("BUS", $"{driver.DriverName} could not start personal car commute to Parking for bus shift; no car route.");
+            return;
+        }
+
         BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
         SessionDebugLogger.Log("BUS", $"{driver.DriverName} started commute to Parking for bus shift.");
     }
@@ -490,6 +501,11 @@ public partial class GameBootstrap
             }
 
             passenger.LifeGoal = WorkerLifeGoal.Idle;
+        }
+        else if (finalWalkPhase == DriverRescuePhase.ToPersonalHouseMeal)
+        {
+            passenger.LifeGoal = WorkerLifeGoal.None;
+            SetWorkerNeedRetryCooldown(passenger, WorkerNeedKind.Meal, "no safe final walk path after local bus");
         }
 
         SessionDebugLogger.Log(

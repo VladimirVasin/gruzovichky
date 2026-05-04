@@ -224,6 +224,28 @@ public partial class GameBootstrap
         driver.WalkAnimationTime = 0f;
         ResetWorkerLocalBusTripState(driver);
 
+        if (TryStartWorkerPersonalCarTrip(driver, start, target, DriverRescuePhase.ToIntercityStopForDeparture, "departure"))
+        {
+            SessionDebugLogger.Log(
+                "MIGRATION",
+                $"{driver.DriverName} decided to leave town by personal car: satisfaction={driver.Satisfaction}, unhappyDays={driver.UnhappyDays}, reason={reason}.");
+            PushFeedEvent(
+                $"{driver.DriverName} is leaving town: {reason}.",
+                $"{driver.DriverName} \u0443\u0435\u0437\u0436\u0430\u0435\u0442 \u0438\u0437 \u0433\u043e\u0440\u043e\u0434\u0430: {reason}.",
+                FeedEventType.Warning);
+            isDriversScreenDirty = true;
+            isShiftsScreenDirty = true;
+            isFleetScreenDirty = true;
+            return true;
+        }
+        if (CanWorkerUsePersonalCar(driver))
+        {
+            SessionDebugLogger.Log(
+                "MIGRATION",
+                $"{driver.DriverName} wants to leave town by personal car but no car route to Intercity Stop exists; departure delayed.");
+            return false;
+        }
+
         if (!BuildDriverWalkPath(driver, start, target))
         {
             CompleteWorkerDeparture(driver, "no safe path to Intercity Stop");

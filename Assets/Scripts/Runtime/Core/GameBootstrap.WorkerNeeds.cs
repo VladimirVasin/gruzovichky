@@ -241,12 +241,14 @@ public partial class GameBootstrap
 
         return driver.RestPhase != DriverRestPhase.None ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
+               driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal ||
                driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan ||
                driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
                driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCityPark ||
                driver.WalkPhase == DriverRescuePhase.ToMotelEntrance ||
-               driver.WalkPhase == DriverRescuePhase.ToPersonalHouseEntrance;
+               driver.WalkPhase == DriverRescuePhase.ToPersonalHouseEntrance ||
+               driver.WalkPhase == DriverRescuePhase.ToPersonalHouseMeal;
     }
 
     private int CountMissingNeedsServiceBuildings()

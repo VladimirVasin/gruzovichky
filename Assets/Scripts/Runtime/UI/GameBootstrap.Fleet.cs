@@ -481,23 +481,21 @@ public partial class GameBootstrap
 
         GUI.Label(new Rect(panelRect.x + 12f, panelRect.y + 32f, panelRect.width - 24f, 20f), "Select a building tool.", labelStyle);
 
-        bool roadModeActive = activeBuildTool == BuildTool.Road;
         Color previousColor = GUI.color;
-        GUI.color = roadModeActive ? new Color(1f, 0.9f, 0.35f) : Color.white;
+        bool previousEnabled = GUI.enabled;
+        GUI.color = new Color(0.55f, 0.58f, 0.62f, 0.8f);
+        GUI.enabled = false;
 
         if (GUI.Button(new Rect(panelRect.x + 12f, panelRect.y + 58f, 72f, 56f), "2-WAY"))
         {
-            activeBuildTool = roadModeActive ? BuildTool.None : BuildTool.Road;
-                    LogUiInput($"Build: switched tool to {activeBuildTool}");
-            PlayUiSound(uiSelectClip, 0.85f);
-            SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
         }
 
+        GUI.enabled = previousEnabled;
         GUI.color = previousColor;
         GUI.Label(new Rect(panelRect.x + 96f, panelRect.y + 66f, panelRect.width - 108f, 20f), "Two-Way Road", labelStyle);
         GUI.Label(
             new Rect(panelRect.x + 96f, panelRect.y + 88f, panelRect.width - 108f, 34f),
-            roadModeActive ? "Mode active: left click builds, right click removes." : "Click to enter road building mode.",
+            "Temporarily under rework. Use 1-cell roads for now.",
             smallStyle);
     }
 

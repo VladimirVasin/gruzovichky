@@ -69,6 +69,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const int   HousePurchasePrice         = 300;
     private const int   MaxPersonalHouseResidents  = 2;
     private const int   CarPurchasePrice           = 100;
+    private const float PersonalCarSpeed           = 3.45f;
     private const int   WorkerGamblingMinBet       = 5;
     private const int   WorkerGamblingMaxBet       = 10;
     private const float WorkerFreeIdleMinDuration = DayNightCycleDuration / 24f * 1f;

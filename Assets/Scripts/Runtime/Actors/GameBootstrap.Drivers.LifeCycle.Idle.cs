@@ -80,6 +80,7 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench ||
             driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
             driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
+            driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal ||
             driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan ||
             driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
             driver.WalkPhase == DriverRescuePhase.IdleAtCityPark ||
@@ -239,6 +240,22 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         LocationType? locationType = GetDriverServiceLocation(completedPhase);
+        if (completedPhase == DriverRescuePhase.IdleAtPersonalHouseMeal)
+        {
+            int houseIndex = driver.AssignedPersonalHouseIndex;
+            Vector3 homeMealExitPosition = houseIndex >= 0 && houseIndex < personalHouses.Count
+                ? GetDriverStandPointNearPersonalHouse(houseIndex)
+                : driver.DriverObject.transform.position;
+            driver.IsInsideBuilding = false;
+            driver.DriverObject.transform.position = homeMealExitPosition;
+            driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            driver.DriverObject.SetActive(true);
+            driver.WalkAnimationTime = 0f;
+            ApplyDriverPose(driver, 0f, 0f);
+            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} exited PersonalHouse meal interior.");
+            return homeMealExitPosition;
+        }
+
         if (locationType != LocationType.Bar &&
             locationType != LocationType.Canteen &&
             locationType != LocationType.GamblingHall &&

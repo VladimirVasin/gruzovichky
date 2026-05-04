@@ -323,6 +323,7 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase != DriverRescuePhase.IdleSittingOnBench &&
                driver.WalkPhase != DriverRescuePhase.IdleAtBar &&
                driver.WalkPhase != DriverRescuePhase.IdleAtCanteen &&
+               driver.WalkPhase != DriverRescuePhase.IdleAtPersonalHouseMeal &&
                driver.WalkPhase != DriverRescuePhase.IdleAtTrashCan &&
                driver.WalkPhase != DriverRescuePhase.IdleAtGamblingHall &&
                driver.WalkPhase != DriverRescuePhase.IdleAtCityPark &&
@@ -358,6 +359,8 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
+               driver.WalkPhase == DriverRescuePhase.ToPersonalHouseMeal ||
+               driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToTrashCan ||
                driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToGamblingHall ||
@@ -454,6 +457,17 @@ public partial class GameBootstrap : MonoBehaviour
         ApplyDriverPose(driver, 0f, 0f);
         driver.WalkPhase = DriverRescuePhase.ToParkingForShift;
         driver.WalkTargetWorld = GetDriverParkingWaitPosition(assignedTruck);
+        if (TryStartWorkerPersonalCarTrip(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld, DriverRescuePhase.ToParkingForShift, $"{assignedTruck.DisplayName} shift"))
+        {
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} started personal car commute to Parking for {assignedTruck.DisplayName}.");
+            return;
+        }
+        if (CanWorkerUsePersonalCar(driver))
+        {
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} could not start personal car commute to Parking for {assignedTruck.DisplayName}; no car route.");
+            return;
+        }
+
         BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} started commute to Parking for {assignedTruck.DisplayName}.");
     }
@@ -593,6 +607,16 @@ public partial class GameBootstrap : MonoBehaviour
         Vector3 target = GetDriverStandPointNearLocation(driver.AssignedBuildingType.Value);
         target.y += 0.05f;
         ResetWorkerLocalBusTripState(driver);
+        if (TryStartWorkerPersonalCarTrip(driver, driver.DriverObject.transform.position, target, DriverRescuePhase.ToBuildingForShift, $"{building.Label} shift"))
+        {
+            return;
+        }
+        if (CanWorkerUsePersonalCar(driver))
+        {
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} could not start personal car commute to {building.Label}; no car route.");
+            return;
+        }
+
         if (TryStartWorkerLocalBusTrip(driver, driver.DriverObject.transform.position, target, DriverRescuePhase.ToBuildingForShift, $"{building.Label} shift"))
         {
             return;

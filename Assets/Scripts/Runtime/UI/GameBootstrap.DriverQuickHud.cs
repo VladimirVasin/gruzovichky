@@ -269,6 +269,8 @@ public partial class GameBootstrap
             return L("Walking from Bus Stop");
         if (driver.WalkPhase == DriverRescuePhase.IdleWander)
             return L("Wandering");
+        if (driver.WalkPhase == DriverRescuePhase.ToPersonalHouseMeal || driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal)
+            return IsRussianLanguage() ? "Ест дома" : "Eating at home";
         if (driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen || driver.WalkPhase == DriverRescuePhase.IdleAtCanteen)
             return L("At Canteen");
         if (driver.WalkPhase == DriverRescuePhase.IdleWalkToTrashCan || driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan)

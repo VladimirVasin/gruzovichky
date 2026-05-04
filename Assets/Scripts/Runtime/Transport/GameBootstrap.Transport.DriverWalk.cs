@@ -8,6 +8,11 @@ public partial class GameBootstrap
 {
     private void UpdateDriverWalk(DriverAgent driver)
     {
+        if (driver != null && driver.IsDrivingPersonalCar)
+        {
+            return;
+        }
+
         if (driver == null || driver.WalkPhase == DriverRescuePhase.None || driver.DriverObject == null)
         {
             return;
@@ -79,7 +84,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (driver.WalkPath.Count == 0 && RequiresDriverWalkPathForArrival(driver.WalkPhase))
+        if (driver.WalkPath.Count == 0 && RequiresDriverWalkPathForArrival(driver.WalkPhase) && !driver.CompletedPersonalCarTrip)
         {
             DriverRescuePhase blockedPhase = driver.WalkPhase;
             driver.WalkPhase = DriverRescuePhase.None;
@@ -90,6 +95,8 @@ public partial class GameBootstrap
                 $"{driver.DriverName} halted {blockedPhase}: no valid walk path was available, so the phase will not auto-complete at the start position.");
             return;
         }
+
+        driver.CompletedPersonalCarTrip = false;
 
         if (driver.WalkPath.Count > 0 && driver.WalkWaypointIndex < driver.WalkPath.Count - 1)
         {
@@ -189,10 +196,19 @@ public partial class GameBootstrap
                     driver.OwnedCarModelIndex = Random.Range(0, CarModelNames.Length);
                     driver.Money -= CarPurchasePrice;
                     market.BuildingBank += CarPurchasePrice;
-                    SpawnWorkerCarAtParking(driver);
+                    ParkNewlyPurchasedWorkerCarAtMarket(driver);
                     SpawnMoneySpendPopup(driver.DriverObject.transform.position, CarPurchasePrice);
                     LogBuildingBankTransaction(market, driver, CarPurchasePrice, "Car purchase", moneyBefore, bankBefore);
                     SessionDebugLogger.Log("LIFE", $"{driver.DriverName} bought {CarModelNames[driver.OwnedCarModelIndex]} for ${CarPurchasePrice} (balance: ${driver.Money}).");
+                    if (driver.AssignedPersonalHouseIndex >= 0 && driver.AssignedPersonalHouseIndex < personalHouses.Count)
+                    {
+                        Vector3 homeTarget = GetDriverStandPointNearPersonalHouse(driver.AssignedPersonalHouseIndex);
+                        if (TryStartWorkerPersonalCarTrip(driver, currentPosition, homeTarget, DriverRescuePhase.ToPersonalHouseParking, "drive new car home"))
+                        {
+                            isDriversScreenDirty = true;
+                            return;
+                        }
+                    }
                 }
                 else
                 {
@@ -213,6 +229,29 @@ public partial class GameBootstrap
                 driver.SleepTimer = DriverSleepDuration;
                 driver.RestPhase = DriverRestPhase.SleepingAtHome;
                 SessionDebugLogger.Log("REST", $"{driver.DriverName} sleeping at home (house #{driver.AssignedPersonalHouseIndex}).");
+                return;
+
+            case DriverRescuePhase.ToPersonalHouseMeal:
+                isDriverRescueActive = false;
+                driver.WalkPhase = DriverRescuePhase.IdleAtPersonalHouseMeal;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.DriverObject.SetActive(false);
+                driver.IsInsideBuilding = true;
+                driver.IdleActivityTimer = Mathf.Max(1f, driver.IdleActivityTimer);
+                SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} started home meal at PersonalHouse #{driver.AssignedPersonalHouseIndex}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
+                return;
+
+            case DriverRescuePhase.ToPersonalHouseParking:
+                isDriverRescueActive = false;
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.LifeGoal = WorkerLifeGoal.Idle;
+                SessionDebugLogger.Log("PERSONAL_CAR", $"{driver.DriverName} parked new personal car at home (house #{driver.AssignedPersonalHouseIndex}).");
+                ContinueWorkerLifeCycle(driver, currentPosition);
                 return;
 
             case DriverRescuePhase.ToMotelEntrance:
@@ -578,6 +617,8 @@ public partial class GameBootstrap
             DriverRescuePhase.ToPersonalHouseForPurchase or
             DriverRescuePhase.ToCarMarketForPurchase or
             DriverRescuePhase.ToPersonalHouseEntrance or
+            DriverRescuePhase.ToPersonalHouseMeal or
+            DriverRescuePhase.ToPersonalHouseParking or
             DriverRescuePhase.ToMotelEntrance or
             DriverRescuePhase.ToTruckAtMotel or
             DriverRescuePhase.ToParkingForShift or

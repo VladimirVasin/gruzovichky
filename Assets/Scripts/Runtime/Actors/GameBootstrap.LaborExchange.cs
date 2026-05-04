@@ -341,6 +341,20 @@ public partial class GameBootstrap
         ReleaseCatInteraction(driver);
         ResetWorkerLocalBusTripState(driver);
 
+        if (TryStartWorkerPersonalCarTrip(driver, startPosition, target, DriverRescuePhase.ToLaborExchangeForJob, "Labor Exchange job search"))
+        {
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} reserved posting #{posting.Id} and drives to Labor Exchange: {GetLaborExchangePostingLabel(posting)}.");
+            return true;
+        }
+        if (CanWorkerUsePersonalCar(driver))
+        {
+            ReleaseLaborExchangePostingReservation(posting);
+            driver.LifeGoal = WorkerLifeGoal.Idle;
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} released posting #{posting.Id}: no personal car route to Labor Exchange.");
+            LogWorkerDecision(driver, "labor-exchange-car-path-blocked", $"posting #{posting.Id}: no personal car route to Labor Exchange", true);
+            return false;
+        }
+
         if (TryStartWorkerLocalBusTrip(driver, startPosition, target, DriverRescuePhase.ToLaborExchangeForJob, "Labor Exchange job search"))
         {
             SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} reserved posting #{posting.Id} and travels by bus: {GetLaborExchangePostingLabel(posting)}.");

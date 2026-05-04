@@ -530,7 +530,7 @@ public partial class GameBootstrap
             return;
         }
 
-        activeBuildTool = BuildTool.Road;
+        activeBuildTool = BuildTool.SingleRoad;
         hoveredBuildCell = null;
         isBuildPanelOpen = true;
         isBuildScreenDirty = true;

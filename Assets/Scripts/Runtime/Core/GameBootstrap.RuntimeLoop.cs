@@ -205,6 +205,7 @@ public partial class GameBootstrap
             UpdateDriverShiftEnd(ta, da);
             UpdateDriverShiftActivation(da);
             UpdateIdleRecall(da);
+            UpdateDriverPersonalCarTrip(da);
             UpdateDriverWalk(da);
             UpdateDriverRest(da);
             UpdateDriverVisualAnimation(da);
@@ -243,6 +244,7 @@ public partial class GameBootstrap
             UpdateWarehouseDelivery(driver);
             UpdateDriverRest(driver);
             UpdateDriverIdleWander(driver);
+            UpdateDriverPersonalCarTrip(driver);
             UpdateDriverWalk(driver);
             UpdateDriverVisualAnimation(driver);
             UpdateDriverFlashlight(driver, currentStylizedDaylight);

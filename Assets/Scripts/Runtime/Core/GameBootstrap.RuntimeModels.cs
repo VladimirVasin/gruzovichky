@@ -214,6 +214,16 @@ public partial class GameBootstrap
         public int DaysOnMap;
         public int OwnedCarModelIndex = -1;
         public GameObject OwnedCarObject;
+        public bool HasOwnedCarParking;
+        public Vector3 OwnedCarParkedWorld;
+        public Vector2Int OwnedCarParkedDriveCell;
+        public bool IsDrivingPersonalCar;
+        public bool CompletedPersonalCarTrip;
+        public DriverRescuePhase PersonalCarFinalPhase = DriverRescuePhase.None;
+        public Vector3 PersonalCarFinalTargetWorld;
+        public string PersonalCarTravelReason = string.Empty;
+        public readonly List<Vector3> PersonalCarPath = new();
+        public int PersonalCarWaypointIndex;
         public LocationType? AssignedBuildingType;
         public int ReservedLaborExchangePostingId;
         public float LaborExchangeInterviewTimer;

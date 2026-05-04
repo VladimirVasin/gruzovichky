@@ -236,11 +236,13 @@ public partial class GameBootstrap
                 driver.IdleConversationTimer = 0f;
                 driver.IdleConversationPartnerId = -1;
                 ResetWorkerNeedTimer(driver, WorkerNeedKind.Sleep);
+                ResetWorkerNeedTimer(driver, WorkerNeedKind.Meal);
                 driver.SleptToday = true;
+                driver.AteToday = true;
                 driver.LifeGoal = WorkerLifeGoal.Idle;
                 ApplyDriverPose(driver, 0f, 0f);
                 driver.RestPhase = DriverRestPhase.None;
-                SessionDebugLogger.Log("REST", $"{driver.DriverName} woke up at home; needs={FormatWorkerNeedsDebug(driver)}.");
+                SessionDebugLogger.Log("REST", $"{driver.DriverName} woke up at home after sleep and breakfast; needs={FormatWorkerNeedsDebug(driver)}.");
                 return;
         }
     }

@@ -22,6 +22,25 @@ public partial class GameBootstrap
         return cachedBuildCatalogItems != null && cachedBuildCatalogItems.TryGetValue(tool, out item);
     }
 
+    private static bool IsBuildToolTemporarilyUnavailable(BuildTool tool)
+    {
+        return tool == BuildTool.Road;
+    }
+
+    private string GetBuildToolUnavailableStatus(bool ru)
+    {
+        return ru ? "\u041d\u0430 \u0440\u0435\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0438\u0438" : "Rework";
+    }
+
+    private string GetBuildToolUnavailableDescription(BuildTool tool, bool ru)
+    {
+        return tool == BuildTool.Road
+            ? ru
+                ? "\u0412\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043d\u0430 \u0440\u0435\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0438\u0438. \u041f\u043e\u043a\u0430 \u0441\u0442\u0440\u043e\u0439 \u043e\u0431\u044b\u0447\u043d\u044b\u0435 \u0434\u043e\u0440\u043e\u0433\u0438 1 \u043a\u043b\u0435\u0442\u043a\u0443 \u0448\u0438\u0440\u0438\u043d\u043e\u0439."
+                : "Temporarily under rework. Use regular 1-cell roads for now."
+            : string.Empty;
+    }
+
     private string GetBuildCatalogTitle(BuildTool tool, bool ru, string fallback)
     {
         return TryGetBuildCatalogItem(tool, out BuildCatalogItemData item)
@@ -151,13 +170,37 @@ public partial class GameBootstrap
 
                 bool isActive = activeBuildTool == item.Tool;
                 bool isBuilt  = GetBuildToolAlreadyBuilt(item.Tool);
+                bool isUnavailable = IsBuildToolTemporarilyUnavailable(item.Tool);
+                if (isUnavailable && isActive)
+                {
+                    activeBuildTool = BuildTool.None;
+                    isActive = false;
+                }
 
-                item.CardBg.color   = isActive ? new Color(0.20f, 0.27f, 0.37f, 1f) : new Color(0.16f, 0.21f, 0.28f, 1f);
-                item.AccentBg.color = isActive ? FleetAccentColor : item.DefaultAccentColor;
+                item.Button.interactable = !isUnavailable;
+                item.CardBg.color = isUnavailable
+                    ? new Color(0.11f, 0.13f, 0.16f, 0.82f)
+                    : isActive
+                        ? new Color(0.20f, 0.27f, 0.37f, 1f)
+                        : new Color(0.16f, 0.21f, 0.28f, 1f);
+                item.AccentBg.color = isUnavailable
+                    ? new Color(0.20f, 0.22f, 0.25f, 0.88f)
+                    : isActive
+                        ? FleetAccentColor
+                        : item.DefaultAccentColor;
+                item.TitleText.color = isUnavailable ? new Color(0.62f, 0.66f, 0.72f, 1f) : Color.white;
                 item.TitleText.text = GetBuildCatalogTitle(item.Tool, ru, item.TitleText.text);
-                item.DescText.text  = GetBuildDescription(item.Tool, isActive);
+                item.DescText.color = isUnavailable ? new Color(0.52f, 0.56f, 0.62f, 1f) : FleetSecondaryTextColor;
+                item.DescText.text  = isUnavailable
+                    ? GetBuildToolUnavailableDescription(item.Tool, ru)
+                    : GetBuildDescription(item.Tool, isActive);
 
-                if (isActive)
+                if (isUnavailable)
+                {
+                    item.StatusBg.color  = new Color(0.24f, 0.24f, 0.26f, 0.85f);
+                    item.StatusText.text = GetBuildToolUnavailableStatus(ru);
+                }
+                else if (isActive)
                 {
                     item.StatusBg.color  = new Color(0.60f, 0.36f, 0.10f, 0.85f);
                     item.StatusText.text = "Active";

@@ -373,6 +373,17 @@ public partial class GameBootstrap
         ApplyDriverPose(driver, 0f, 0f);
         driver.WalkPhase = DriverRescuePhase.ToParkingForShift;
         driver.WalkTargetWorld = GetDriverParkingWaitPosition(assignedTruck);
+        if (TryStartWorkerPersonalCarTrip(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld, DriverRescuePhase.ToParkingForShift, "Intercity trade"))
+        {
+            SessionDebugLogger.Log("TRADE", $"{driver.DriverName} started personal car commute to Parking for Intercity trade.");
+            return;
+        }
+        if (CanWorkerUsePersonalCar(driver))
+        {
+            SessionDebugLogger.Log("TRADE", $"{driver.DriverName} could not start personal car commute to Parking for Intercity trade; no car route.");
+            return;
+        }
+
         BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
         SessionDebugLogger.Log("TRADE", $"{driver.DriverName} started walking from Motel to Parking for Intercity trade.");
     }

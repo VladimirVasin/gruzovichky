@@ -218,7 +218,7 @@ public partial class GameBootstrap
         BuildTool capturedTool = tool;
         btn.onClick.AddListener(() =>
         {
-            if (!IsBuildToolUnlocked(capturedTool)) return;
+            if (!IsBuildToolUnlocked(capturedTool) || IsBuildToolTemporarilyUnavailable(capturedTool)) return;
             activeBuildTool = activeBuildTool == capturedTool ? BuildTool.None : capturedTool;
             isBuildPanelOpen = false;
             LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
