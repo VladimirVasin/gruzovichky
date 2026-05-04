@@ -5,16 +5,18 @@ public partial class GameBootstrap
 {
     private readonly struct VacancyOffer
     {
-        public VacancyOffer(int salary, int contractWorkDays, int marketPressure)
+        public VacancyOffer(int salary, int contractWorkDays, int marketPressure, int requiredProfessionalLevel = 1)
         {
             Salary = salary;
             ContractWorkDays = contractWorkDays;
             MarketPressure = marketPressure;
+            RequiredProfessionalLevel = requiredProfessionalLevel;
         }
 
         public readonly int Salary;
         public readonly int ContractWorkDays;
         public readonly int MarketPressure;
+        public readonly int RequiredProfessionalLevel;
     }
 
     private bool IsWorkingDay() => !IsWeekend();
@@ -28,7 +30,9 @@ public partial class GameBootstrap
         int ageBonus = Mathf.Clamp(Mathf.FloorToInt(vacancyAgeWorldHours / 2f) * 2, 0, 18);
         int shortageBonus = Mathf.Max(0, marketPressure / 4);
         int abundancePenalty = marketPressure < 0 ? Mathf.Abs(marketPressure) / 5 : 0;
-        int salary = RoundToNearestFive(Mathf.Clamp(baseSalary + ageBonus + shortageBonus - abundancePenalty, 15, 90));
+        int baseOfferSalary = RoundToNearestFive(Mathf.Clamp(baseSalary + ageBonus + shortageBonus - abundancePenalty, 15, 90));
+        int requiredProfessionalLevel = DetermineVacancyProfessionalLevelRequirement(kind, buildingType, slotIndex, shiftIndex, marketPressure, vacancyAgeWorldHours);
+        int salary = ApplyVacancyProfessionalSalaryPremium(baseOfferSalary, requiredProfessionalLevel);
 
         int baseDays = kind switch
         {
@@ -41,7 +45,7 @@ public partial class GameBootstrap
         int stableJitter = StableVacancyJitter(kind, buildingType, slotIndex, shiftIndex);
         int pressureShortening = Mathf.Max(0, marketPressure / 25);
         int contractDays = Mathf.Clamp(baseDays + stableJitter - pressureShortening, 3, 10);
-        return new VacancyOffer(salary, contractDays, marketPressure);
+        return new VacancyOffer(salary, contractDays, marketPressure, requiredProfessionalLevel);
     }
 
     private int GetBaseVacancySalary(VacancyKind kind, LocationType buildingType, int shiftIndex)
@@ -96,6 +100,7 @@ public partial class GameBootstrap
                 ? Mathf.Max(0, vacancy.AssignedWorker.ContractTotalWorkDays - vacancy.AssignedWorker.ContractWorkedDays)
                 : 0;
             vacancy.MarketPressure = 0;
+            vacancy.RequiredProfessionalLevel = vacancy.AssignedWorker.ContractRequiredProfessionalLevel;
             return;
         }
 
@@ -104,6 +109,7 @@ public partial class GameBootstrap
         vacancy.OfferSalary = offer.Salary;
         vacancy.ContractWorkDays = offer.ContractWorkDays;
         vacancy.MarketPressure = offer.MarketPressure;
+        vacancy.RequiredProfessionalLevel = offer.RequiredProfessionalLevel;
     }
 
     private VacancyOffer GetCurrentVacancyOffer(VacancyViewModel vacancy)
@@ -131,8 +137,8 @@ public partial class GameBootstrap
         }
 
         return ru
-            ? $"${offer.Salary}/\u0434\u0435\u043d\u044c, {offer.ContractWorkDays} \u0440\u0430\u0431. \u0434\u043d."
-            : $"${offer.Salary}/day, {offer.ContractWorkDays} workdays";
+            ? $"${offer.Salary}/\u0434\u0435\u043d\u044c, {offer.ContractWorkDays} \u0440\u0430\u0431. \u0434\u043d., \u0443\u0440. {Mathf.Max(1, offer.RequiredProfessionalLevel)}+"
+            : $"${offer.Salary}/day, {offer.ContractWorkDays} workdays, lvl {Mathf.Max(1, offer.RequiredProfessionalLevel)}+";
     }
 
     private int EstimateAverageOpenVacancySalary()
@@ -178,12 +184,17 @@ public partial class GameBootstrap
         }
 
         int remaining = Mathf.Max(0, driver.ContractTotalWorkDays - driver.ContractWorkedDays);
+        string requirement = FormatVacancyProfessionalRequirement(
+            driver.ContractVacancyKind,
+            driver.ContractBuildingType ?? LocationType.Parking,
+            driver.ContractRequiredProfessionalLevel,
+            ru);
         return ru
-            ? $"${driver.Salary}/\u0434\u0435\u043d\u044c, {remaining}/{driver.ContractTotalWorkDays} \u0440\u0430\u0431. \u0434\u043d."
-            : $"${driver.Salary}/day, {remaining}/{driver.ContractTotalWorkDays} workdays";
+            ? $"${driver.Salary}/\u0434\u0435\u043d\u044c, {remaining}/{driver.ContractTotalWorkDays} \u0440\u0430\u0431. \u0434\u043d., {requirement}"
+            : $"${driver.Salary}/day, {remaining}/{driver.ContractTotalWorkDays} workdays, {requirement}";
     }
 
-    private void ApplyWorkerContract(DriverAgent worker, VacancyKind kind, LocationType buildingType, int slotIndex, int shiftIndex, int salary, int contractWorkDays, string source)
+    private void ApplyWorkerContract(DriverAgent worker, VacancyKind kind, LocationType buildingType, int slotIndex, int shiftIndex, int salary, int contractWorkDays, int requiredProfessionalLevel, string source)
     {
         if (worker == null || kind == VacancyKind.None)
         {
@@ -199,7 +210,10 @@ public partial class GameBootstrap
         worker.ContractBuildingType = buildingType;
         worker.ContractSlotIndex = slotIndex;
         worker.ContractShiftIndex = shiftIndex;
-        SessionDebugLogger.Log("CONTRACT", $"{worker.DriverName} signed {kind} contract from {source}: salary=${worker.Salary}, days={worker.ContractTotalWorkDays}, building={buildingType}, slot={slotIndex}, shift={shiftIndex}.");
+        worker.ContractProfessionalTrack = GetVacancyProfessionalTrack(kind, buildingType);
+        worker.ContractRequiredProfessionalLevel = Mathf.Clamp(requiredProfessionalLevel, 1, WorkerProfessionalMaxLevel);
+        int workerLevel = GetWorkerProfessionalLevel(worker, worker.ContractProfessionalTrack);
+        SessionDebugLogger.Log("CONTRACT", $"{worker.DriverName} signed {kind} contract from {source}: salary=${worker.Salary}, days={worker.ContractTotalWorkDays}, building={buildingType}, slot={slotIndex}, shift={shiftIndex}, track={worker.ContractProfessionalTrack}, requiredLevel={worker.ContractRequiredProfessionalLevel}, workerLevel={workerLevel}.");
     }
 
     private void ClearWorkerContract(DriverAgent worker, string reason)
@@ -222,6 +236,8 @@ public partial class GameBootstrap
         worker.ContractBuildingType = null;
         worker.ContractSlotIndex = -1;
         worker.ContractShiftIndex = -1;
+        worker.ContractProfessionalTrack = WorkerProfessionalTrack.None;
+        worker.ContractRequiredProfessionalLevel = 1;
     }
 
     private void AdvanceWorkerContractAfterPaidShift(DriverAgent worker)
@@ -233,6 +249,7 @@ public partial class GameBootstrap
 
         worker.ContractWorkedDays = Mathf.Clamp(worker.ContractWorkedDays + 1, 0, worker.ContractTotalWorkDays);
         SessionDebugLogger.Log("CONTRACT", $"{worker.DriverName} completed contract workday {worker.ContractWorkedDays}/{worker.ContractTotalWorkDays}.");
+        RecordWorkerProfessionalDay(worker);
         if (worker.ContractWorkedDays < worker.ContractTotalWorkDays)
         {
             return;

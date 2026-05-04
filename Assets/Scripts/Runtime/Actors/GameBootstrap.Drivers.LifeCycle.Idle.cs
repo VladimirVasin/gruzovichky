@@ -14,6 +14,10 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         UpdateWorkerLifeCycleDailyState(driver);
+        if (TryRescueDriverFromUnsafeWalkCell(driver, "idle life update"))
+        {
+            return;
+        }
 
         if (driver.IsArrivingByBus ||
             driver.RestPhase != DriverRestPhase.None ||
@@ -290,18 +294,32 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPhase = DriverRescuePhase.IdleWander;
             driver.IdleWanderPointIndex++;
             driver.WalkAnimationTime = 0f;
-            BuildDriverWalkPath(driver, startPosition, wanderTarget);
+            if (!BuildDriverWalkPath(driver, startPosition, wanderTarget))
+            {
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+                LogWorkerDecision(driver, "idle-activity-blocked", $"wander path unavailable, roll={roll:0.00}", true);
+                return;
+            }
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started idle walk.");
             LogWorkerDecision(driver, "idle-activity", $"wander roll={roll:0.00}", true);
         }
         else if (roll < 0.75f && TryGetNearestFreeBench(startPosition, 14f, out int bIdx, out Vector3 bPos))
         {
-            MarkRoadsideBenchOccupied(bIdx);
-            driver.SittingBenchIndex = bIdx;
             driver.IdleActivityTimer = Random.Range(15f, 45f);
             driver.WalkTargetWorld = bPos;
-            BuildDriverWalkPath(driver, startPosition, bPos);
             driver.WalkPhase = DriverRescuePhase.IdleWalkToBench;
+            if (!BuildDriverWalkPath(driver, startPosition, bPos))
+            {
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.IdleActivityTimer = 0f;
+                driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+                LogWorkerDecision(driver, "idle-activity-blocked", $"bench={bIdx} path unavailable, roll={roll:0.00}", true);
+                return;
+            }
+
+            MarkRoadsideBenchOccupied(bIdx);
+            driver.SittingBenchIndex = bIdx;
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading to bench {bIdx}.");
             LogWorkerDecision(driver, "idle-activity", $"bench={bIdx}, roll={roll:0.00}", true);
         }
@@ -358,7 +376,15 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IdleActivityTimer = Random.Range(4f, 8f);
         driver.WalkAnimationTime = 0f;
         driver.WalkPhase = DriverRescuePhase.IdleWalkToCat;
-        BuildDriverWalkPath(driver, startPosition, catPos);
+        if (!BuildDriverWalkPath(driver, startPosition, catPos))
+        {
+            driver.IdleCatPetTargetIndex = -1;
+            driver.IdleActivityTimer = 0f;
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+            LogWorkerDecision(driver, "idle-activity-blocked", "cat path unavailable", true);
+            return false;
+        }
         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} heading toward a cat to pet it.");
         return true;
     }
@@ -384,8 +410,10 @@ public partial class GameBootstrap : MonoBehaviour
 
     private Vector3 FindDriverIdleWanderTarget(DriverAgent driver, Vector3 startPosition)
     {
+        const int maxIdleWanderCellSteps = 18;
         int nextPointIndex = driver.IdleWanderPointIndex + 1;
         float personalSpaceSqr = DriverIdlePersonalSpace * DriverIdlePersonalSpace;
+        Vector2Int startCell = WorldToCell(startPosition);
         for (int attempt = 0; attempt < 16; attempt++)
         {
             int candidateIndex = nextPointIndex + attempt;
@@ -396,6 +424,13 @@ public partial class GameBootstrap : MonoBehaviour
             Vector3 flatDelta = candidate - startPosition;
             flatDelta.y = 0f;
             if (flatDelta.sqrMagnitude < 0.04f)
+            {
+                continue;
+            }
+
+            Vector2Int candidateCell = WorldToCell(candidate);
+            List<Vector2Int> path = FindDriverWalkPath(startCell, candidateCell, DriverRescuePhase.IdleWander);
+            if (path == null || path.Count == 0 || path.Count - 1 > maxIdleWanderCellSteps)
             {
                 continue;
             }

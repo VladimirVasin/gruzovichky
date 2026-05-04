@@ -238,8 +238,16 @@ public partial class GameBootstrap
         driver.WalkPath.Clear();
         driver.WalkWaypointIndex = 0;
 
+        DriverRescuePhase requestedPhase = driver.WalkPhase;
+        if (TryRescueDriverFromUnsafeWalkCell(driver, "walk path start was unsafe"))
+        {
+            startWorld = driver.DriverObject.transform.position;
+            driver.WalkPhase = requestedPhase;
+        }
+
         Vector2Int startCell = WorldToCell(startWorld);
         Vector2Int goalCell = WorldToCell(targetWorld);
+        UpdateDriverLastSafeWalkPosition(driver, startWorld);
         List<Vector2Int> cellPath = FindDriverWalkPath(startCell, goalCell, driver.WalkPhase);
         if (cellPath == null || cellPath.Count == 0)
         {
@@ -282,9 +290,13 @@ public partial class GameBootstrap
             }
 
             driver.WalkTargetWorld = startWorld;
+            bool startWater = waterCells.Contains(startCell);
+            bool goalWater = waterCells.Contains(goalCell);
+            bool startLocation = IsLocationCell(startCell);
+            bool goalLocation = IsLocationCell(goalCell);
             SessionDebugLogger.Log(
                 "DRIVER",
-                $"{driver.DriverName} could not build a safe walk path from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}); blocking direct fallback through buildings.");
+                $"{driver.DriverName} could not build a safe walk path for {driver.WalkPhase} from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}); direct fallback blocked. startWater={startWater}, goalWater={goalWater}, startLocation={startLocation}, goalLocation={goalLocation}.");
             return false;
         }
 
@@ -299,6 +311,145 @@ public partial class GameBootstrap
             "DRIVER",
             $"{driver.DriverName} built walk path for {driver.WalkPhase}: {cellPath.Count - 1} cell steps, {driver.WalkPath.Count} world waypoints, from ({startCell.x},{startCell.y}) to ({goalCell.x},{goalCell.y}).");
         return true;
+    }
+
+    private void UpdateDriverLastSafeWalkPosition(DriverAgent driver, Vector3 position)
+    {
+        if (driver == null || driver.DriverObject == null || driver.IsInsideBuilding || !driver.DriverObject.activeSelf)
+        {
+            return;
+        }
+
+        Vector2Int cell = WorldToCell(position);
+        if (!IsDriverSafeWalkCell(cell))
+        {
+            return;
+        }
+
+        position.y = SampleTerrainHeight(position.x, position.z);
+        driver.LastSafeWalkPosition = position;
+        driver.HasLastSafeWalkPosition = true;
+    }
+
+    private bool TryRescueDriverFromUnsafeWalkCell(DriverAgent driver, string reason)
+    {
+        if (driver == null ||
+            driver.DriverObject == null ||
+            driver.IsInsideBuilding ||
+            !driver.DriverObject.activeSelf ||
+            driver.IsDrivingPersonalCar ||
+            driver.WalkPhase == DriverRescuePhase.RidingLocalBus ||
+            driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop)
+        {
+            return false;
+        }
+
+        Vector3 current = driver.DriverObject.transform.position;
+        Vector2Int currentCell = WorldToCell(current);
+        if (IsDriverSafeWalkCell(currentCell))
+        {
+            UpdateDriverLastSafeWalkPosition(driver, current);
+            return false;
+        }
+
+        Vector3 rescuePosition;
+        if (driver.HasLastSafeWalkPosition && IsDriverSafeWalkCell(WorldToCell(driver.LastSafeWalkPosition)))
+        {
+            rescuePosition = driver.LastSafeWalkPosition;
+        }
+        else if (TryFindNearestDriverSafeWalkCell(currentCell, out Vector2Int rescueCell))
+        {
+            rescuePosition = GetCellCenter(rescueCell);
+        }
+        else
+        {
+            rescuePosition = GetFallbackDriverSafeStandPoint();
+        }
+
+        rescuePosition.y = SampleTerrainHeight(rescuePosition.x, rescuePosition.z);
+        DriverRescuePhase oldPhase = driver.WalkPhase;
+        ReleaseBench(driver);
+        ReleaseCatInteraction(driver);
+        if (oldPhase == DriverRescuePhase.IdleSmoking)
+        {
+            StopDriverSmokingParticles(driver);
+        }
+
+        driver.DriverObject.transform.position = rescuePosition;
+        driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        driver.WalkPhase = DriverRescuePhase.None;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        driver.WalkAnimationTime = 0f;
+        driver.IdleActivityTimer = 0f;
+        driver.IdleWanderPauseTimer = Random.Range(1.5f, 3.5f);
+        driver.LastSafeWalkPosition = rescuePosition;
+        driver.HasLastSafeWalkPosition = true;
+        ApplyDriverPose(driver, 0f, 0f);
+        SessionDebugLogger.Log(
+            "DRIVER",
+            $"{driver.DriverName} rescued from unsafe walk cell ({currentCell.x},{currentCell.y}) to ({WorldToCell(rescuePosition).x},{WorldToCell(rescuePosition).y}); oldPhase={oldPhase}; reason={reason}.");
+        return true;
+    }
+
+    private bool IsDriverSafeWalkCell(Vector2Int cell)
+    {
+        return IsInsideGrid(cell) &&
+               !waterCells.Contains(cell) &&
+               !edgeHighwayCells.Contains(cell);
+    }
+
+    private bool TryFindNearestDriverSafeWalkCell(Vector2Int origin, out Vector2Int safeCell)
+    {
+        const int maxRadius = 16;
+        for (int radius = 1; radius <= maxRadius; radius++)
+        {
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                for (int dy = -radius; dy <= radius; dy++)
+                {
+                    if (Mathf.Abs(dx) + Mathf.Abs(dy) != radius)
+                    {
+                        continue;
+                    }
+
+                    Vector2Int candidate = origin + new Vector2Int(dx, dy);
+                    if (IsDriverWalkFallbackCell(candidate))
+                    {
+                        safeCell = candidate;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        safeCell = default;
+        return false;
+    }
+
+    private Vector3 GetFallbackDriverSafeStandPoint()
+    {
+        LocationType[] fallbacks =
+        {
+            LocationType.Motel,
+            LocationType.IntercityStop,
+            LocationType.Parking,
+            LocationType.Canteen
+        };
+
+        for (int i = 0; i < fallbacks.Length; i++)
+        {
+            if (locations.ContainsKey(fallbacks[i]))
+            {
+                Vector3 standPoint = GetDriverStandPointNearLocation(fallbacks[i]);
+                if (standPoint != Vector3.zero && IsDriverSafeWalkCell(WorldToCell(standPoint)))
+                {
+                    return standPoint;
+                }
+            }
+        }
+
+        return GetCellCenter(new Vector2Int(GridWidth / 2, GridHeight / 2));
     }
 
     private List<Vector2Int> FindDriverWalkPath(Vector2Int start, Vector2Int goal, DriverRescuePhase walkPhase)

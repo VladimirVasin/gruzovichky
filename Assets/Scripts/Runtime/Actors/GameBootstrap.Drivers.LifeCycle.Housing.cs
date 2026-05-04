@@ -35,7 +35,14 @@ public partial class GameBootstrap : MonoBehaviour
         driver.WalkTargetWorld = target;
         driver.WalkPhase = DriverRescuePhase.ToPersonalHouseForPurchase;
         driver.WalkAnimationTime = 0f;
-        BuildDriverWalkPath(driver, startPosition, target);
+        if (!BuildDriverWalkPath(driver, startPosition, target))
+        {
+            driver.AssignedPersonalHouseIndex = -1;
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.LifeGoal = WorkerLifeGoal.None;
+            LogWorkerDecision(driver, "buy-house-path-blocked", $"House #{targetIndex}: no safe path", true);
+            return false;
+        }
         LogWorkerDecision(driver, "buy-house-walk", $"House #{targetIndex}, fee=${HousePurchasePrice}", true);
         return true;
     }

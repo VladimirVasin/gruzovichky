@@ -82,7 +82,7 @@ public partial class GameBootstrap
             row.StatusText.text = string.IsNullOrWhiteSpace(vacancy.Schedule)
                 ? $"{vacancy.Subtitle} · {workerPart}"
                 : $"{vacancy.Subtitle} · {vacancy.Schedule} · {workerPart}";
-            row.StatusText.text += $" | {FormatVacancyOffer(new VacancyOffer(vacancy.OfferSalary, vacancy.ContractWorkDays, vacancy.MarketPressure), ru)}";
+            row.StatusText.text += $" | {FormatVacancyOffer(new VacancyOffer(vacancy.OfferSalary, vacancy.ContractWorkDays, vacancy.MarketPressure, vacancy.RequiredProfessionalLevel), ru)}";
             row.StatusText.color = selected ? Color.white : vacancy.IsOccupied ? FleetAccentColor : FleetSecondaryTextColor;
         }
 

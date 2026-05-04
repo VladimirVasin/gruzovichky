@@ -238,6 +238,7 @@ public partial class GameBootstrap
         public int OfferSalary;
         public int ContractWorkDays;
         public int MarketPressure;
+        public int RequiredProfessionalLevel = 1;
     }
 
     private sealed class VacancyFlowOption

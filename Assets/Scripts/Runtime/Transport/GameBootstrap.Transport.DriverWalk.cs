@@ -33,7 +33,13 @@ public partial class GameBootstrap
             return;
         }
 
+        if (TryRescueDriverFromUnsafeWalkCell(driver, "walk update"))
+        {
+            return;
+        }
+
         Vector3 currentPosition = driver.DriverObject.transform.position;
+        UpdateDriverLastSafeWalkPosition(driver, currentPosition);
         Vector3 targetPosition = driver.WalkTargetWorld;
         if (driver.WalkPath.Count > 0)
         {
@@ -71,6 +77,7 @@ public partial class GameBootstrap
             }
 
             driver.DriverObject.transform.position = currentPosition;
+            UpdateDriverLastSafeWalkPosition(driver, currentPosition);
             driver.DriverObject.transform.rotation = Quaternion.Slerp(
                 driver.DriverObject.transform.rotation,
                 Quaternion.LookRotation(flatDirection.normalized, Vector3.up),

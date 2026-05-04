@@ -23,7 +23,13 @@ public partial class GameBootstrap : MonoBehaviour
         driver.WalkTargetWorld = target;
         driver.WalkPhase = DriverRescuePhase.ToCarMarketForPurchase;
         driver.WalkAnimationTime = 0f;
-        BuildDriverWalkPath(driver, startPosition, target);
+        if (!BuildDriverWalkPath(driver, startPosition, target))
+        {
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.LifeGoal = WorkerLifeGoal.None;
+            LogWorkerDecision(driver, "buy-car-path-blocked", "Car Market: no safe path", true);
+            return false;
+        }
         LogWorkerDecision(driver, "buy-car-walk", $"Car Market, fee=${CarPurchasePrice}", true);
         return true;
     }

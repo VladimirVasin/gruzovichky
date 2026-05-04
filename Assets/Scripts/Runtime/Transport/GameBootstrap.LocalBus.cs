@@ -203,7 +203,13 @@ public partial class GameBootstrap
             return;
         }
 
-        BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
+        if (!BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld))
+        {
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.WalkTargetWorld = driver.DriverObject.transform.position;
+            SessionDebugLogger.Log("BUS", $"{driver.DriverName} could not start commute to Parking for bus shift; no safe walk path.");
+            return;
+        }
         SessionDebugLogger.Log("BUS", $"{driver.DriverName} started commute to Parking for bus shift.");
     }
 

@@ -119,7 +119,7 @@ public partial class GameBootstrap
             if (driversScreenUi.DetailProfileTitleText != null)
                 driversScreenUi.DetailProfileTitleText.text = ru ? "Профиль" : "Profile";
             if (driversScreenUi.DetailRoleText != null)
-                driversScreenUi.DetailRoleText.text = $"{L(GetWorkerOccupationLabel(sel))} • {GetWorkerGenderLabel(sel, ru)} • {GetWorkerEducationDisplayName(sel.Education, ru)}";
+                driversScreenUi.DetailRoleText.text = $"{L(GetWorkerOccupationLabel(sel))} | {GetWorkerGenderLabel(sel, ru)} | {GetWorkerEducationDisplayName(sel.Education, ru)} | {FormatWorkerProfessionalSummary(sel, ru)}";
             UpdateWorkerPortraitUi(sel);
             UpdateWorkerNeedsUi(sel, ru);
 

@@ -248,7 +248,13 @@ public partial class GameBootstrap : MonoBehaviour
         driver.WalkPhase = DriverRescuePhase.WalkToLocalBusStop;
         driver.WalkTargetWorld = waitPoint;
         driver.WalkAnimationTime = 0f;
-        BuildDriverWalkPath(driver, startPosition, waitPoint);
+        if (!BuildDriverWalkPath(driver, startPosition, waitPoint))
+        {
+            ResetWorkerLocalBusTripState(driver);
+            driver.WalkPhase = DriverRescuePhase.None;
+            SessionDebugLogger.Log("BUS_PASSENGER", $"{driver.DriverName} skipped local bus for {reason}: no safe walk path to Stop #{originStop.StopNumber}.");
+            return false;
+        }
         SessionDebugLogger.Log(
             "BUS_PASSENGER",
             $"{driver.DriverName} chose local bus for {driver.BusTravelReason}: Stop #{originStop.StopNumber} -> Stop #{destinationStop.StopNumber}, finalPhase={finalWalkPhase}, finalCell=({WorldToCell(finalTargetWorld).x},{WorldToCell(finalTargetWorld).y}), fareExempt={(fareExempt ? "yes" : "no")}.");
@@ -468,7 +474,13 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
+        if (!BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld))
+        {
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.WalkTargetWorld = driver.DriverObject.transform.position;
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} could not start commute to Parking for {assignedTruck.DisplayName}; no safe walk path.");
+            return;
+        }
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} started commute to Parking for {assignedTruck.DisplayName}.");
     }
 

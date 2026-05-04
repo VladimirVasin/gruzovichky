@@ -112,6 +112,7 @@ public partial class GameBootstrap
         { "Resources", "Ресурсы" },
         { "Economy", "Экономика" },
         { "Trade", "Торговля" },
+        { "Stats", "Справка" },
         { "Taxes", "Налоги" },
         { "Tax rate", "Налоговая ставка" },
         { "Current taxable bank", "Налогооблагаемые кассы" },

@@ -209,11 +209,12 @@ public partial class GameBootstrap
             OfferedSalary = offer.Salary,
             ContractWorkDays = offer.ContractWorkDays,
             MarketPressure = offer.MarketPressure,
+            RequiredProfessionalLevel = offer.RequiredProfessionalLevel,
             LastSalaryRevisionWorldHour = GetCurrentWorldHour()
         };
 
         laborExchangePostings.Add(posting);
-        SessionDebugLogger.Log("LABOR_EXCHANGE", $"Posted vacancy #{posting.Id}: {GetLaborExchangePostingLabel(posting)}; salary=${posting.OfferedSalary}, contract={posting.ContractWorkDays} workdays, pressure={posting.MarketPressure}; active={laborExchangePostings.Count}/{LaborExchangeMaxActivePostings}.");
+        SessionDebugLogger.Log("LABOR_EXCHANGE", $"Posted vacancy #{posting.Id}: {GetLaborExchangePostingLabel(posting)}; salary=${posting.OfferedSalary}, contract={posting.ContractWorkDays} workdays, pressure={posting.MarketPressure}, requiredLevel={posting.RequiredProfessionalLevel}; active={laborExchangePostings.Count}/{LaborExchangeMaxActivePostings}.");
         PushFeedEvent(
             $"Labor Exchange posted: {GetLaborExchangePostingLabel(posting)} (${posting.OfferedSalary}, {posting.ContractWorkDays} workdays).",
             $"\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u043d\u043e\u0432\u0430\u044f \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u044f {GetLaborExchangePostingLabel(posting)}.",
@@ -240,14 +241,17 @@ public partial class GameBootstrap
 
             float ageHours = Mathf.Max(0f, currentWorldHour - posting.CreatedAtWorldHour);
             VacancyOffer offer = CalculateVacancyOffer(posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, ageHours);
-            if (offer.Salary != posting.OfferedSalary || offer.ContractWorkDays != posting.ContractWorkDays)
+            if (offer.Salary != posting.OfferedSalary ||
+                offer.ContractWorkDays != posting.ContractWorkDays ||
+                offer.RequiredProfessionalLevel != posting.RequiredProfessionalLevel)
             {
                 SessionDebugLogger.Log(
                     "LABOR_EXCHANGE",
-                    $"Repriced posting #{posting.Id}: {GetLaborExchangePostingLabel(posting)} salary ${posting.OfferedSalary}->{offer.Salary}, contract {posting.ContractWorkDays}->{offer.ContractWorkDays}, pressure={offer.MarketPressure}.");
+                    $"Repriced posting #{posting.Id}: {GetLaborExchangePostingLabel(posting)} salary ${posting.OfferedSalary}->{offer.Salary}, contract {posting.ContractWorkDays}->{offer.ContractWorkDays}, requiredLevel {posting.RequiredProfessionalLevel}->{offer.RequiredProfessionalLevel}, pressure={offer.MarketPressure}.");
                 posting.OfferedSalary = offer.Salary;
                 posting.ContractWorkDays = offer.ContractWorkDays;
                 posting.MarketPressure = offer.MarketPressure;
+                posting.RequiredProfessionalLevel = offer.RequiredProfessionalLevel;
                 isShiftsScreenDirty = true;
             }
 
@@ -484,6 +488,11 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (!CanWorkerMeetProfessionalRequirement(driver, posting.Kind, posting.BuildingType, posting.RequiredProfessionalLevel, out reason))
+        {
+            return false;
+        }
+
         return posting.Kind switch
         {
             VacancyKind.Production or VacancyKind.Service =>
@@ -598,8 +607,12 @@ public partial class GameBootstrap
             SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} left Labor Exchange without assignment: {resultReason}.");
             if (exitPosition != Vector3.zero)
             {
-                BuildDriverWalkPath(driver, exitPosition, FindDriverIdleWanderTarget(driver, exitPosition));
                 driver.WalkPhase = DriverRescuePhase.IdleWander;
+                if (!BuildDriverWalkPath(driver, exitPosition, FindDriverIdleWanderTarget(driver, exitPosition)))
+                {
+                    driver.WalkPhase = DriverRescuePhase.None;
+                    driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+                }
             }
         }
 
@@ -637,7 +650,7 @@ public partial class GameBootstrap
                                             worker.AssignedBuildingType == posting.BuildingType;
                     if (buildingAssigned)
                     {
-                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, $"Labor Exchange posting #{posting.Id}");
+                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, posting.RequiredProfessionalLevel, $"Labor Exchange posting #{posting.Id}");
                     }
                     return buildingAssigned;
                 case VacancyKind.TruckDriver:
@@ -646,7 +659,7 @@ public partial class GameBootstrap
                     bool truckAssigned = AssignTruckDriverVacancy(worker);
                     if (truckAssigned)
                     {
-                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, $"Labor Exchange posting #{posting.Id}");
+                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, posting.RequiredProfessionalLevel, $"Labor Exchange posting #{posting.Id}");
                     }
                     return truckAssigned;
                 case VacancyKind.BusDriver:
@@ -654,7 +667,7 @@ public partial class GameBootstrap
                     bool busAssigned = GetBusAssignedDriver(posting.ShiftIndex) == worker;
                     if (busAssigned)
                     {
-                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, $"Labor Exchange posting #{posting.Id}");
+                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, posting.RequiredProfessionalLevel, $"Labor Exchange posting #{posting.Id}");
                     }
                     return busAssigned;
                 default:
@@ -709,7 +722,7 @@ public partial class GameBootstrap
                 continue;
             }
 
-            text += (text.Length > 0 ? "\n" : string.Empty) + FormatValueLine($"{emitted + 1}.", $"{GetLaborExchangePostingDisplayLabel(posting, ru)} ({FormatVacancyOffer(new VacancyOffer(posting.OfferedSalary, posting.ContractWorkDays, posting.MarketPressure), ru)})");
+            text += (text.Length > 0 ? "\n" : string.Empty) + FormatValueLine($"{emitted + 1}.", $"{GetLaborExchangePostingDisplayLabel(posting, ru)} ({FormatVacancyOffer(new VacancyOffer(posting.OfferedSalary, posting.ContractWorkDays, posting.MarketPressure, posting.RequiredProfessionalLevel), ru)})");
             emitted++;
         }
 

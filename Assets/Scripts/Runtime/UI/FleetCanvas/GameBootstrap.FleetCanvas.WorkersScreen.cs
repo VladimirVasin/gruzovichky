@@ -186,7 +186,7 @@ public partial class GameBootstrap
         driversScreenUi.DetailRoleText = CreateHeaderText("WorkerRole", profileInfoColumn, font, string.Empty, 16, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailRoleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
-        RectTransform conditionRow = CreateLayoutRow("WorkerConditionRow", detailRoot.transform, 112f, 14f);
+        RectTransform conditionRow = CreateLayoutRow("WorkerConditionRow", detailRoot.transform, 142f, 14f);
 
         RectTransform needsCard = CreateStyledPanel("WorkerNeedsCard", conditionRow, FleetInsetColor);
         needsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -240,7 +240,7 @@ public partial class GameBootstrap
         for (int i = 0; i < WorkerPerkHudRowCount; i++)
         {
             Text perkText = CreateBodyText($"WorkerPerkRow{i + 1}", perksColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-            perkText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+            perkText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
             perkText.gameObject.SetActive(false);
             driversScreenUi.DetailPerkTexts.Add(perkText);
         }

@@ -135,6 +135,7 @@ public partial class GameBootstrap
             MenuBtn("Vacancies", "Vacancies", ref isShiftsPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Trade", "Economy", ref isEconomyPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Stats", "Stats", ref isStatesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Building", "Building", ref isBuildPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Map", "Map", ref isWorldMapPanelOpen, x); x += MenuBtnW + MenuBtnGap;
         }

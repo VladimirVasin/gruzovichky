@@ -217,7 +217,9 @@ public partial class GameBootstrap
         bool hasCar = driver.OwnedCarModelIndex >= 0 && driver.OwnedCarModelIndex < CarModelNames.Length;
         driverQuickHud.CarText.text = FormatValueLine(ru ? "\u0410\u0432\u0442\u043e" : "Car", hasCar ? CarModelNames[driver.OwnedCarModelIndex] : "—");
         driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
-        driverQuickHud.PerksText.text = FormatValueLine(ru ? "\u041f\u0435\u0440\u043a\u0438" : "Perks", FormatWorkerPerksInline(driver, ru, 4));
+        driverQuickHud.PerksText.text =
+            $"{FormatValueLine(ru ? "\u041f\u0440\u043e\u0444." : "Prof.", FormatWorkerProfessionalSummary(driver, ru))}\n" +
+            $"{FormatValueLine(ru ? "\u041f\u0435\u0440\u043a\u0438" : "Perks", FormatWorkerPerksInline(driver, ru, 4))}";
         driverQuickHud.NeedsText.text = GetWorkerQuickHudNeedsLine(driver, ru);
 
         if (driverQuickHud.NeedsMealBarFill != null)

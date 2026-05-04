@@ -117,6 +117,14 @@ public partial class GameBootstrap
         Higher
     }
 
+    private enum WorkerProfessionalTrack
+    {
+        None,
+        Logistics,
+        Production,
+        Service
+    }
+
     private sealed class DriverAgent
     {
         public int DriverId;
@@ -162,6 +170,8 @@ public partial class GameBootstrap
         public LocationType? ContractBuildingType;
         public int ContractSlotIndex = -1;
         public int ContractShiftIndex = -1;
+        public WorkerProfessionalTrack ContractProfessionalTrack = WorkerProfessionalTrack.None;
+        public int ContractRequiredProfessionalLevel = 1;
         public int Money = 30;
         public bool WaitingForShiftAtParking;
         public bool NeedsShiftEndReturn;
@@ -171,6 +181,8 @@ public partial class GameBootstrap
         public readonly List<Vector3> WalkPath = new();
         public int WalkWaypointIndex;
         public float WalkAnimationTime;
+        public bool HasLastSafeWalkPosition;
+        public Vector3 LastSafeWalkPosition;
         public int IdleWanderPointIndex = -1;
         public float IdleWanderPauseTimer;
         public float IdleConversationTimer;
@@ -233,6 +245,9 @@ public partial class GameBootstrap
         public readonly List<Vector3> PersonalCarPath = new();
         public int PersonalCarWaypointIndex;
         public LocationType? AssignedBuildingType;
+        public int LogisticsExperienceDays;
+        public int ProductionExperienceDays;
+        public int ServiceExperienceDays;
         public int ReservedLaborExchangePostingId;
         public float LaborExchangeInterviewTimer;
         public bool IsInsideBuilding;
@@ -260,6 +275,7 @@ public partial class GameBootstrap
         public int OfferedSalary;
         public int ContractWorkDays;
         public int MarketPressure;
+        public int RequiredProfessionalLevel = 1;
         public float LastSalaryRevisionWorldHour;
     }
 

@@ -19,7 +19,7 @@ public partial class GameBootstrap
                 Kind = VacancyFlowOptionKind.Worker,
                 Title = driver.DriverName,
                 Subtitle = string.IsNullOrWhiteSpace(reason)
-                    ? L(GetWorkerOccupationLabel(driver))
+                    ? $"{L(GetWorkerOccupationLabel(driver))} | {FormatWorkerProfessionalSummary(driver, ru)}"
                     : reason,
                 Worker = driver
             });
@@ -177,12 +177,23 @@ public partial class GameBootstrap
             {
                 return false;
             }
+            int slotIndex = IsGroupedWarehouseVacancy(vacancy) ? selectedVacancyShiftIndex : vacancy.SlotIndex;
+            VacancyOffer offer = CalculateVacancyOffer(vacancy.Kind, vacancy.BuildingType, slotIndex, -1);
+            if (!CanWorkerMeetProfessionalRequirement(driver, vacancy.Kind, vacancy.BuildingType, offer.RequiredProfessionalLevel, out reason))
+            {
+                return false;
+            }
             return true;
         }
 
         if (vacancy.Kind == VacancyKind.Intercity)
         {
             if (driver.DutyMode == DriverDutyMode.Logistics || IsDriverBusDriver(driver) || IsDriverOnActiveTradeRun(driver))
+            {
+                return false;
+            }
+            VacancyOffer offer = CalculateVacancyOffer(vacancy.Kind, LocationType.Parking, vacancy.SlotIndex, -1);
+            if (!CanWorkerMeetProfessionalRequirement(driver, vacancy.Kind, LocationType.Parking, offer.RequiredProfessionalLevel, out reason))
             {
                 return false;
             }
@@ -204,6 +215,11 @@ public partial class GameBootstrap
             {
                 return false;
             }
+            VacancyOffer offer = CalculateVacancyOffer(vacancy.Kind, LocationType.Parking, vacancy.SlotIndex, selectedVacancyShiftIndex);
+            if (!CanWorkerMeetProfessionalRequirement(driver, vacancy.Kind, LocationType.Parking, offer.RequiredProfessionalLevel, out reason))
+            {
+                return false;
+            }
             return true;
         }
 
@@ -219,6 +235,11 @@ public partial class GameBootstrap
                 return false;
             }
             if (driver.DutyMode == DriverDutyMode.Logistics || IsDriverBusDriver(driver) || IsDriverOnActiveTradeRun(driver))
+            {
+                return false;
+            }
+            VacancyOffer offer = CalculateVacancyOffer(vacancy.Kind, LocationType.Parking, vacancy.SlotIndex, selectedVacancyShiftIndex);
+            if (!CanWorkerMeetProfessionalRequirement(driver, vacancy.Kind, LocationType.Parking, offer.RequiredProfessionalLevel, out reason))
             {
                 return false;
             }
@@ -292,7 +313,7 @@ public partial class GameBootstrap
         }
 
         VacancyOffer offer = CalculateVacancyOffer(vacancy.Kind, contractBuildingType, contractSlotIndex, contractShiftIndex);
-        ApplyWorkerContract(worker, vacancy.Kind, contractBuildingType, contractSlotIndex, contractShiftIndex, offer.Salary, offer.ContractWorkDays, "Vacancies UI assignment");
+        ApplyWorkerContract(worker, vacancy.Kind, contractBuildingType, contractSlotIndex, contractShiftIndex, offer.Salary, offer.ContractWorkDays, offer.RequiredProfessionalLevel, "Vacancies UI assignment");
         bool ru = IsRussianLanguage();
         vacancySuccessMessage = ru
             ? $"✓ Назначено: {worker.DriverName}"
