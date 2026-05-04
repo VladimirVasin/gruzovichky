@@ -41,7 +41,7 @@ public partial class GameBootstrap
 
     private Vector3 GetBusArrivalWorldPoint(float x, float z)
     {
-        return new Vector3(x, SampleTerrainHeight(x, z) + RoadHeight + EdgeHighwayBusLift, z);
+        return GetRoadVehicleWorldPosition(x, z, LocalBusRoadSurfaceLift);
     }
 
     private bool UpdatePurchasedBusArrival(BusAgent busAgent, float dt)
@@ -70,7 +70,9 @@ public partial class GameBootstrap
         }
 
         float speed = busAgent.PurchaseArrivalSpeed * Mathf.Max(gameSpeedMultiplier, 0.1f);
-        busAgent.BusObject.transform.position = Vector3.MoveTowards(current, target, speed * dt);
+        Vector3 nextPosition = Vector3.MoveTowards(current, target, speed * dt);
+        nextPosition = WithRoadVehicleHeight(nextPosition, LocalBusRoadSurfaceLift);
+        busAgent.BusObject.transform.position = nextPosition;
 
         if ((busAgent.BusObject.transform.position - target).sqrMagnitude > 0.035f)
         {

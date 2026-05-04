@@ -174,10 +174,10 @@ public partial class GameBootstrap
         UpdateForestWorkers();
         UpdateActiveTradeRun();
         UpdateTradeAutoDispatch();
+        UpdateLaborExchangeRuntime();
         foreach (DriverAgent driver in driverAgents)
         {
             UpdateWorkerNeedsClock(driver);
-            UpdateWorkerEffectsClock(driver);
         }
         UpdateHourlyNeedsEconomyTelemetry();
 

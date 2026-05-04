@@ -151,6 +151,25 @@ public sealed class RoadBuildSmokeTests
     }
 
     [Test]
+    public void RoadBuildPlacementService_TurnFillBoundsUseCapturedLaneOffsets()
+    {
+        RoadBuildPlacementService.GetTurnFillBoundsFromOffsets(
+            new Vector2Int(31, 25),
+            Vector2Int.up,
+            new Vector2Int(31, 24),
+            Vector2Int.left,
+            out int minX,
+            out int maxX,
+            out int minY,
+            out int maxY);
+
+        Assert.That(minX, Is.EqualTo(30));
+        Assert.That(maxX, Is.EqualTo(31));
+        Assert.That(minY, Is.EqualTo(24));
+        Assert.That(maxY, Is.EqualTo(26));
+    }
+
+    [Test]
     public void GridPathService_DoesNotRouteThroughBlockedWaterCells()
     {
         HashSet<Vector2Int> water = new()

@@ -35,7 +35,7 @@ public partial class GameBootstrap
     private ActiveTradeRunData activeTradeRun;
     private float tradeAutoDispatchRetryTimer;
     private const float TradeAutoDispatchRetryInterval = 2f;
-    private static readonly TradeResourceType[] TradeImportCatalog = { TradeResourceType.Cotton, TradeResourceType.Textile, TradeResourceType.Furniture, TradeResourceType.Fuel, TradeResourceType.Alcohol, TradeResourceType.Food };
+    private static readonly TradeResourceType[] TradeImportCatalog = { TradeResourceType.Cotton, TradeResourceType.Textile, TradeResourceType.Furniture };
     private static readonly TradeResourceType[] TradeExportCatalog = { TradeResourceType.Logs, TradeResourceType.Boards, TradeResourceType.Furniture };
 
     private bool HasActiveTradeRun()
@@ -248,7 +248,6 @@ public partial class GameBootstrap
         if (truckAgent.TruckCell != pathStartCell)
         {
             Vector3 normalizedStartWorld = GetTruckWorldPosition(pathStartCell);
-            normalizedStartWorld.y = SampleTerrainHeight(normalizedStartWorld.x, normalizedStartWorld.z) + RoadHeight + 0.12f;
             truckCell = pathStartCell;
             truckTargetWorld = normalizedStartWorld;
             truckSegmentStartWorld = normalizedStartWorld;
@@ -421,9 +420,6 @@ public partial class GameBootstrap
             TradeResourceType.Cotton    => CargoType.Cotton,
             TradeResourceType.Textile   => CargoType.Textile,
             TradeResourceType.Furniture => CargoType.Furniture,
-            TradeResourceType.Fuel      => CargoType.Fuel,
-            TradeResourceType.Alcohol   => CargoType.Alcohol,
-            TradeResourceType.Food      => CargoType.Food,
             _                           => CargoType.None
         };
     }
@@ -448,7 +444,6 @@ public partial class GameBootstrap
 
     private int GetStoredTradeResourceAmount(TradeResourceType resourceType)
     {
-        locations.TryGetValue(LocationType.Warehouse, out LocationData wh);
         return resourceType switch
         {
             TradeResourceType.Logs      => GetTotalLogsResourceAmount(),
@@ -456,9 +451,6 @@ public partial class GameBootstrap
             TradeResourceType.Cotton    => cottonStored,
             TradeResourceType.Textile   => textileStored,
             TradeResourceType.Furniture => furnitureStored,
-            TradeResourceType.Fuel      => wh?.FuelStored ?? 0,
-            TradeResourceType.Alcohol   => wh?.AlcoholStored ?? 0,
-            TradeResourceType.Food      => wh?.FoodStored ?? 0,
             _ => 0
         };
     }
@@ -492,18 +484,6 @@ public partial class GameBootstrap
                 break;
             case TradeResourceType.Furniture:
                 furnitureStored += amount;
-                break;
-            case TradeResourceType.Fuel:
-                if (locations.TryGetValue(LocationType.Warehouse, out LocationData whFuel))
-                    whFuel.FuelStored = Mathf.Min(whFuel.FuelStored + amount, WarehouseMaxFuelStorage);
-                break;
-            case TradeResourceType.Alcohol:
-                if (locations.TryGetValue(LocationType.Warehouse, out LocationData whAlcohol))
-                    whAlcohol.AlcoholStored = Mathf.Min(whAlcohol.AlcoholStored + amount, WarehouseMaxAlcoholStorage);
-                break;
-            case TradeResourceType.Food:
-                if (locations.TryGetValue(LocationType.Warehouse, out LocationData whFood))
-                    whFood.FoodStored = Mathf.Min(whFood.FoodStored + amount, WarehouseMaxFoodStorage);
                 break;
         }
     }

@@ -224,8 +224,6 @@ public partial class GameBootstrap
 
             case TruckInteractionType.RefuelAtGasStation:
                 truckFuel = TruckFuelCapacity;
-                if (locations.TryGetValue(LocationType.GasStation, out LocationData gsData))
-                    gsData.FuelStored = GasStationMaxFuelStorage;
                 break;
         }
 

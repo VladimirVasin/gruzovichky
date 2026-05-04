@@ -4,19 +4,31 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
+    private sealed class LocalBusPassengerRowUi
+    {
+        public RectTransform Root;
+        public Button Button;
+        public Text LabelText;
+        public int CurrentDriverId = -1;
+    }
+
     private sealed class LocalBusQuickHudRefs
     {
         public GameObject CanvasRoot;
         public RectTransform Root;
         public Text HeaderText;
         public Text StatusText;
-        public Text DriverText;
+        public Button DriverButton;
+        public Text DriverButtonText;
         public Text PassengersText;
         public Text BankText;
         public Text StopText;
         public Text NextStopText;
         public Text RouteText;
         public Text ManifestText;
+        public ScrollRect PassengerScroll;
+        public RectTransform PassengerContent;
+        public LocalBusPassengerRowUi[] PassengerRows;
         public Button CloseButton;
         public Text CloseButtonText;
     }
@@ -87,8 +99,18 @@ public partial class GameBootstrap
         statsLayout.childForceExpandHeight = false;
         statsGrid.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-        localBusQuickHud.DriverText = CreateBodyText("DriverText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        localBusQuickHud.DriverText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        localBusQuickHud.DriverButton = CreateButton("DriverButton", statsGrid, uiFont, out localBusQuickHud.DriverButtonText, string.Empty, 12, new Color(0.23f, 0.29f, 0.36f, 1f), Color.white);
+        localBusQuickHud.DriverButtonText.alignment = TextAnchor.MiddleLeft;
+        localBusQuickHud.DriverButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        localBusQuickHud.DriverButton.onClick.AddListener(() =>
+        {
+            if (localBusRoute?.Driver == null)
+            {
+                return;
+            }
+
+            FocusWorkerFromQuickHud(localBusRoute.Driver.DriverId, "local bus HUD");
+        });
         localBusQuickHud.PassengersText = CreateBodyText("PassengersText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
         localBusQuickHud.PassengersText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         localBusQuickHud.BankText = CreateBodyText("BankText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
@@ -101,7 +123,12 @@ public partial class GameBootstrap
         localBusQuickHud.RouteText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         localBusQuickHud.ManifestText = CreateBodyText("ManifestText", statsGrid, uiFont, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
         LayoutElement manifestLayout = localBusQuickHud.ManifestText.gameObject.AddComponent<LayoutElement>();
-        manifestLayout.preferredHeight = 56f;
+        manifestLayout.preferredHeight = 24f;
+
+        FleetCanvasUiFactory.ScrollPanelRefs passengerScroll = CreateVerticalScrollList("BusPassengerScroll", statsGrid, "BusPassengerContent", 4f, preferredHeight: 104f);
+        localBusQuickHud.PassengerScroll = passengerScroll.ScrollRect;
+        localBusQuickHud.PassengerContent = passengerScroll.Content;
+        localBusQuickHud.PassengerRows = new LocalBusPassengerRowUi[0];
 
         localBusQuickHud.CanvasRoot.SetActive(false);
         UpdateLocalBusQuickHud();
@@ -145,13 +172,15 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         localBusQuickHud.HeaderText.text = ru ? "Городской автобус" : "Local Bus";
         localBusQuickHud.StatusText.text = GetLocalBusQuickHudStatusLabel();
-        localBusQuickHud.DriverText.text = FormatValueLine(ru ? "Водитель" : "Driver", localBusRoute.Driver != null ? localBusRoute.Driver.DriverName : "-");
+        localBusQuickHud.DriverButtonText.text = FormatValueLine(ru ? "Водитель" : "Driver", localBusRoute.Driver != null ? localBusRoute.Driver.DriverName : "-");
+        localBusQuickHud.DriverButton.interactable = localBusRoute.Driver != null;
         localBusQuickHud.PassengersText.text = FormatValueLine(ru ? "Пассажиры" : "Passengers", $"{localBusRoute.PassengerCount} / {localBusRoute.PassengerCapacity}");
         localBusQuickHud.BankText.text = FormatValueLine(ru ? "Касса автобуса" : "Bus Bank", $"${localBusRoute.Bank}");
         localBusQuickHud.StopText.text = FormatValueLine(ru ? "Остановка" : "Stop", GetLocalBusQuickHudStopLabel());
         localBusQuickHud.NextStopText.text = FormatValueLine(ru ? "Следующая" : "Next Stop", GetLocalBusQuickHudNextStopLabel());
         localBusQuickHud.RouteText.text = FormatValueLine(ru ? "Маршрут" : "Route", GetLocalBusQuickHudRouteLabel());
         localBusQuickHud.ManifestText.text = FormatValueLine(ru ? "В салоне" : "On Board", GetLocalBusQuickHudManifestLabel());
+        UpdateLocalBusPassengerRows(ru);
     }
 
     private string GetLocalBusQuickHudStatusLabel()
@@ -287,7 +316,20 @@ public partial class GameBootstrap
             return IsRussianLanguage() ? "никого" : "nobody";
         }
 
-        List<string> names = new();
+        int visiblePassengers = GetLocalBusPassengerDrivers().Count;
+        if (visiblePassengers == 0)
+        {
+            return IsRussianLanguage() ? "пассажиры скрыты" : "passengers hidden";
+        }
+
+        return IsRussianLanguage()
+            ? $"{visiblePassengers} \u0447\u0435\u043b."
+            : $"{visiblePassengers} worker(s)";
+    }
+
+    private List<DriverAgent> GetLocalBusPassengerDrivers()
+    {
+        List<DriverAgent> passengers = new();
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent driver = driverAgents[i];
@@ -296,29 +338,84 @@ public partial class GameBootstrap
                 continue;
             }
 
-            string destinationLabel = driver.BusDestinationStopNumber > 0
-                ? $"#{driver.BusDestinationStopNumber}"
-                : "-";
-            names.Add($"{driver.DriverName} -> {destinationLabel}");
+            passengers.Add(driver);
         }
 
-        if (names.Count == 0)
+        return passengers;
+    }
+
+    private void UpdateLocalBusPassengerRows(bool ru)
+    {
+        if (localBusQuickHud?.PassengerRows == null)
         {
-            return IsRussianLanguage() ? "пассажиры скрыты" : "passengers hidden";
+            return;
         }
 
-        const int maxVisiblePassengers = 3;
-        if (names.Count <= maxVisiblePassengers)
+        List<DriverAgent> passengers = GetLocalBusPassengerDrivers();
+        EnsureLocalBusPassengerRowCount(passengers.Count);
+        if (localBusQuickHud.PassengerScroll != null)
         {
-            return string.Join("\n", names);
+            localBusQuickHud.PassengerScroll.vertical = passengers.Count > 3;
         }
 
-        List<string> trimmed = names.GetRange(0, maxVisiblePassengers);
-        string moreLabel = IsRussianLanguage()
-            ? $"+ ещё {names.Count - maxVisiblePassengers}"
-            : $"+ {names.Count - maxVisiblePassengers} more";
-        trimmed.Add(moreLabel);
-        return string.Join("\n", trimmed);
+        for (int i = 0; i < localBusQuickHud.PassengerRows.Length; i++)
+        {
+            LocalBusPassengerRowUi row = localBusQuickHud.PassengerRows[i];
+            if (i >= passengers.Count)
+            {
+                row.Root.gameObject.SetActive(false);
+                row.CurrentDriverId = -1;
+                continue;
+            }
+
+            DriverAgent driver = passengers[i];
+            row.Root.gameObject.SetActive(true);
+            row.CurrentDriverId = driver.DriverId;
+            string destinationLabel = driver.BusDestinationStopNumber > 0 ? $"#{driver.BusDestinationStopNumber}" : "-";
+            row.LabelText.text = ru
+                ? $"{driver.DriverName} -> \u043e\u0441\u0442. {destinationLabel}"
+                : $"{driver.DriverName} -> stop {destinationLabel}";
+        }
+    }
+
+    private void EnsureLocalBusPassengerRowCount(int requiredCount)
+    {
+        if (requiredCount <= localBusQuickHud.PassengerRows.Length)
+        {
+            return;
+        }
+
+        int oldCount = localBusQuickHud.PassengerRows.Length;
+        System.Array.Resize(ref localBusQuickHud.PassengerRows, requiredCount);
+        Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        for (int i = oldCount; i < requiredCount; i++)
+        {
+            localBusQuickHud.PassengerRows[i] = CreateLocalBusPassengerRow(i, uiFont);
+        }
+    }
+
+    private LocalBusPassengerRowUi CreateLocalBusPassengerRow(int index, Font uiFont)
+    {
+        LocalBusPassengerRowUi row = new();
+        row.Button = CreateButton($"BusPassenger{index}", localBusQuickHud.PassengerContent, uiFont, out row.LabelText, string.Empty, 11, new Color(0.14f, 0.18f, 0.25f, 1f), Color.white);
+        row.LabelText.alignment = TextAnchor.MiddleLeft;
+        row.Root = row.Button.GetComponent<RectTransform>();
+        row.Root.gameObject.AddComponent<LayoutElement>().preferredHeight = 26f;
+        int capturedIndex = index;
+        row.Button.onClick.AddListener(() => OnLocalBusPassengerRowClick(capturedIndex));
+        return row;
+    }
+
+    private void OnLocalBusPassengerRowClick(int rowIndex)
+    {
+        if (localBusQuickHud?.PassengerRows == null ||
+            rowIndex < 0 ||
+            rowIndex >= localBusQuickHud.PassengerRows.Length)
+        {
+            return;
+        }
+
+        FocusWorkerFromQuickHud(localBusQuickHud.PassengerRows[rowIndex].CurrentDriverId, "local bus passenger list");
     }
 
     private void FocusLocalBus()

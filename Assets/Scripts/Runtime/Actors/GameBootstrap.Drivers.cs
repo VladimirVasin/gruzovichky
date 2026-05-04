@@ -250,69 +250,6 @@ public partial class GameBootstrap : MonoBehaviour
         return true;
     }
 
-    private static WarehouseResourceType GetWarehouseResourceTypeForLocation(LocationType locationType)
-    {
-        return locationType switch
-        {
-            LocationType.GasStation => WarehouseResourceType.Fuel,
-            LocationType.Bar => WarehouseResourceType.Alcohol,
-            LocationType.Canteen => WarehouseResourceType.Food,
-            _ => WarehouseResourceType.Food
-        };
-    }
-
-    private static string GetWarehouseResourceTypeLabel(WarehouseResourceType resourceType)
-    {
-        return resourceType switch
-        {
-            WarehouseResourceType.Fuel => "Fuel",
-            WarehouseResourceType.Alcohol => "Alcohol",
-            WarehouseResourceType.Food => "Food",
-            _ => "Resource"
-        };
-    }
-
-    private void ClearWarehouseDeliveryCargo(DriverAgent driver)
-    {
-        if (driver == null)
-        {
-            return;
-        }
-
-        driver.WarehouseDeliveryResourceType = default;
-        driver.WarehouseDeliveryAmount = 0;
-        driver.IsCarryingWarehouseDelivery = false;
-    }
-
-    private void RefundWarehouseDeliveryCargoToWarehouse(DriverAgent driver)
-    {
-        if (driver == null ||
-            !driver.IsCarryingWarehouseDelivery ||
-            driver.WarehouseDeliveryAmount <= 0 ||
-            !locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse))
-        {
-            return;
-        }
-
-        switch (driver.WarehouseDeliveryResourceType)
-        {
-            case WarehouseResourceType.Fuel:
-                warehouse.FuelStored = Mathf.Min(warehouse.FuelStored + driver.WarehouseDeliveryAmount, WarehouseMaxFuelStorage);
-                break;
-            case WarehouseResourceType.Alcohol:
-                warehouse.AlcoholStored = Mathf.Min(warehouse.AlcoholStored + driver.WarehouseDeliveryAmount, WarehouseMaxAlcoholStorage);
-                break;
-            case WarehouseResourceType.Food:
-                warehouse.FoodStored = Mathf.Min(warehouse.FoodStored + driver.WarehouseDeliveryAmount, WarehouseMaxFoodStorage);
-                break;
-        }
-
-        SessionDebugLogger.Log(
-            "WAREHOUSE",
-            $"{driver.DriverName} returned {GetWarehouseResourceTypeLabel(driver.WarehouseDeliveryResourceType)} x{driver.WarehouseDeliveryAmount} to Warehouse after delivery interruption.");
-        ClearWarehouseDeliveryCargo(driver);
-    }
-
     private void SetDriverDutyMode(DriverAgent driver, DriverDutyMode dutyMode)
     {
         if (driver == null || driver.DutyMode == dutyMode)
@@ -320,7 +257,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        // Leaving Logistics: release building slot
+        // Leaving a direct building assignment: release its active inside count.
         if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
         {
             if (driver.AssignedBuildingType == LocationType.Forest)
@@ -384,6 +321,7 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase != DriverRescuePhase.IdleAtTrashCan &&
                driver.WalkPhase != DriverRescuePhase.IdleAtGamblingHall &&
                driver.WalkPhase != DriverRescuePhase.IdleAtCityPark &&
+               driver.WalkPhase != DriverRescuePhase.AtLaborExchange &&
                driver.WalkPhase != DriverRescuePhase.IdleSmoking &&
                driver.WalkPhase != DriverRescuePhase.IdlePhoneCall &&
                driver.WalkPhase != DriverRescuePhase.IdlePettingCat;
@@ -422,6 +360,7 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase == DriverRescuePhase.IdleWalkToCityPark ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCityPark ||
                driver.WalkPhase == DriverRescuePhase.IdleExitCityPark ||
+               driver.WalkPhase == DriverRescuePhase.AtLaborExchange ||
                driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
                driver.WalkPhase == DriverRescuePhase.IdlePhoneCall ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToCat ||
@@ -673,14 +612,6 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        bool onDeliveryWalk = driver.WalkPhase == DriverRescuePhase.WarehouseDeliveryToService ||
-                              driver.WalkPhase == DriverRescuePhase.WarehouseDeliveryReturn;
-        bool onWarehouseDeliveryBusTrip =
-            driver.WarehouseDeliveryTarget.HasValue &&
-            (driver.WalkPhase == DriverRescuePhase.WalkToLocalBusStop ||
-             driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop ||
-             driver.WalkPhase == DriverRescuePhase.RidingLocalBus);
-
         if (driver.IsInsideBuilding && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData building))
         {
             // Normal exit: worker is invisible inside the building
@@ -699,43 +630,6 @@ public partial class GameBootstrap : MonoBehaviour
             ApplyDriverPose(driver, 0f, 0f);
 
             StartWorkerLifeCycleAfterWork(driver, exitPos, building.Label);
-        }
-        else if (onDeliveryWalk || onWarehouseDeliveryBusTrip)
-        {
-            // Shift ended mid-delivery: cancel delivery, restore cargo to Warehouse if still carried, then go to after-work flow
-            if (locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData deliveryBuilding))
-                deliveryBuilding.Workers = Mathf.Max(0, deliveryBuilding.Workers - 1);
-
-            bool wasRidingLocalBus = driver.WalkPhase == DriverRescuePhase.RidingLocalBus;
-            if (wasRidingLocalBus && localBusRoute != null)
-            {
-                localBusRoute.PassengerCount = Mathf.Max(0, localBusRoute.PassengerCount - 1);
-                SyncLocalBusAgentState();
-            }
-
-            if (!driver.DriverObject.activeSelf)
-            {
-                driver.DriverObject.SetActive(true);
-                if (wasRidingLocalBus && localBusRoute?.RootTransform != null)
-                {
-                    driver.DriverObject.transform.position = localBusRoute.RootTransform.position;
-                }
-            }
-
-            driver.WalkPhase = DriverRescuePhase.None;
-            driver.WalkPath.Clear();
-            driver.WalkWaypointIndex = 0;
-            driver.WalkAnimationTime = 0f;
-            ApplyDriverPose(driver, 0f, 0f);
-            driver.IsInsideBuilding = false;
-            driver.IsOnActiveShift = false;
-            driver.IsShiftSalaryPending = true;
-            RefundWarehouseDeliveryCargoToWarehouse(driver);
-            ResetWorkerLocalBusTripState(driver);
-            driver.WarehouseDeliveryTarget = null;
-            PayDriverSalary(driver);
-
-            StartWorkerLifeCycleAfterWork(driver, driver.DriverObject.transform.position, "interrupted delivery");
         }
         else
         {

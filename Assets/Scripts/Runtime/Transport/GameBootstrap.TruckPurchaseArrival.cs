@@ -70,7 +70,7 @@ public partial class GameBootstrap
 
     private Vector3 GetTruckArrivalWorldPoint(float x, float z)
     {
-        return new Vector3(x, SampleTerrainHeight(x, z) + RoadHeight + 0.2f, z);
+        return GetRoadVehicleWorldPosition(x, z, TruckSegmentStartLift);
     }
 
     private bool UpdatePurchasedTruckArrival(TruckAgent truckAgent, float dt)
@@ -99,7 +99,9 @@ public partial class GameBootstrap
         }
 
         float speed = truckAgent.PurchaseArrivalSpeed * Mathf.Max(gameSpeedMultiplier, 0.1f);
-        truckAgent.TruckObject.transform.position = Vector3.MoveTowards(current, target, speed * dt);
+        Vector3 nextPosition = Vector3.MoveTowards(current, target, speed * dt);
+        nextPosition = WithRoadVehicleHeight(nextPosition, TruckSegmentStartLift);
+        truckAgent.TruckObject.transform.position = nextPosition;
         SpinTruckArrivalWheels(truckAgent, speed * dt);
 
         if ((truckAgent.TruckObject.transform.position - target).sqrMagnitude > 0.035f)

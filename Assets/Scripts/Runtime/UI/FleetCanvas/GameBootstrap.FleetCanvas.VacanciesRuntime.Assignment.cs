@@ -19,7 +19,7 @@ public partial class GameBootstrap
                 Kind = VacancyFlowOptionKind.Worker,
                 Title = driver.DriverName,
                 Subtitle = string.IsNullOrWhiteSpace(reason)
-                    ? $"{L(GetWorkerOccupationLabel(driver))} · {GetWorkerEducationLabel(driver.Education)}"
+                    ? L(GetWorkerOccupationLabel(driver))
                     : reason,
                 Worker = driver
             });
@@ -88,7 +88,7 @@ public partial class GameBootstrap
 
         if (option.Kind == VacancyFlowOptionKind.BuyTruck)
         {
-            return !locations.ContainsKey(LocationType.Parking) || GetOwnedTruckCount() >= MaxTruckCount || money < HireTruckCost;
+            return !CanProvisionTruckFromParkingCapacity();
         }
 
         return false;
@@ -149,19 +149,13 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (!CanWorkerMeetEducationRequirement(driver, vacancy.RequiredEducation))
-        {
-            reason = ru ? "недостаточно образования" : "education too low";
-            return false;
-        }
-
         if (!IsWorkerVacantForVacancyAssignment(driver))
         {
             reason = ru ? "\u0437\u0430\u043d\u044f\u0442" : "already assigned";
             return false;
         }
 
-        if (vacancy.Kind == VacancyKind.Production)
+        if (vacancy.Kind == VacancyKind.Production || vacancy.Kind == VacancyKind.Service)
         {
             if (IsGroupedWarehouseVacancy(vacancy) &&
                 (selectedVacancyShiftIndex < 0 ||
@@ -176,6 +170,10 @@ public partial class GameBootstrap
                 return false;
             }
             if (IsDriverOnActiveTradeRun(driver) || IsBusDriverOnActiveRoute(driver))
+            {
+                return false;
+            }
+            if (!CanWorkerMeetBuildingEducationRequirement(driver, vacancy.BuildingType, out reason))
             {
                 return false;
             }
@@ -197,6 +195,11 @@ public partial class GameBootstrap
             {
                 return false;
             }
+            if (!HasAvailableBusInParking())
+            {
+                reason = ru ? "\u043d\u0435\u0442 \u0441\u043b\u043e\u0442\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0430" : "no bus slot";
+                return false;
+            }
             if (driver.AssignedTruckNumber > 0 || driver.DutyMode == DriverDutyMode.Logistics || IsDriverIntercity(driver) || IsDriverBusDriver(driver) || IsBusDriverOnActiveRoute(driver))
             {
                 return false;
@@ -208,6 +211,11 @@ public partial class GameBootstrap
         {
             if (selectedVacancyShiftIndex < 0)
             {
+                return false;
+            }
+            if (!HasAvailableTruckInParking())
+            {
+                reason = ru ? "\u043d\u0435\u0442 \u0441\u043b\u043e\u0442\u0430 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0430" : "no truck slot";
                 return false;
             }
             if (driver.DutyMode == DriverDutyMode.Logistics || IsDriverBusDriver(driver) || IsDriverOnActiveTradeRun(driver))
@@ -240,19 +248,6 @@ public partial class GameBootstrap
                !IsBusDriverOnActiveRoute(driver);
     }
 
-    private static bool CanWorkerMeetEducationRequirement(DriverAgent driver, WorkerEducation requiredEducation)
-    {
-        return driver != null && driver.Education >= requiredEducation;
-    }
-
-    private string GetWorkerEducationLabel(WorkerEducation education)
-    {
-        bool ru = IsRussianLanguage();
-        return education == WorkerEducation.Skilled
-            ? (ru ? "Квалифицированный" : "Skilled")
-            : (ru ? "Базовое" : "Basic");
-    }
-
     private void AssignVacancyToWorker(VacancyViewModel vacancy, DriverAgent worker)
     {
         if (vacancy == null || worker == null)
@@ -264,6 +259,7 @@ public partial class GameBootstrap
         switch (vacancy.Kind)
         {
             case VacancyKind.Production:
+            case VacancyKind.Service:
                 int slotIndex = IsGroupedWarehouseVacancy(vacancy) ? selectedVacancyShiftIndex : vacancy.SlotIndex;
                 AssignWorkerToBuilding(worker, FindLogisticsSlot(vacancy.BuildingType, slotIndex));
                 break;
@@ -309,12 +305,19 @@ public partial class GameBootstrap
             SetDriverDutyMode(worker, DriverDutyMode.Local);
         }
 
+        if (!TryReserveAvailableTruckForDriver(worker, out TruckAgent assignedTruck, "freight vacancy assignment"))
+        {
+            SessionDebugLogger.Log("SHIFT", $"{worker.DriverName} freight assignment blocked: no Parking truck slot available.");
+            LogDriverReaction(worker, "cannot start freight work: no Parking truck slot available");
+            return false;
+        }
+
         worker.ShiftStartHour = ShiftPresetHours[selectedVacancyShiftIndex];
         worker.IsOnActiveShift = false;
         worker.WaitingForShiftAtParking = false;
         worker.NeedsShiftEndReturn = false;
-        SessionDebugLogger.Log("SHIFT", $"{worker.DriverName} assigned to freight shift {ShiftNames[selectedVacancyShiftIndex]} ({GetShiftRangeLabel(worker.ShiftStartHour)}); truck will be auto-picked from Parking.");
-        LogDriverReaction(worker, $"assigned to {ShiftNames[selectedVacancyShiftIndex]} freight shift");
+        SessionDebugLogger.Log("SHIFT", $"{worker.DriverName} assigned to freight shift {ShiftNames[selectedVacancyShiftIndex]} ({GetShiftRangeLabel(worker.ShiftStartHour)}) with {assignedTruck.DisplayName}.");
+        LogDriverReaction(worker, $"assigned to {ShiftNames[selectedVacancyShiftIndex]} freight shift with {assignedTruck.DisplayName}");
         PushFeedEvent(
             $"{worker.DriverName} assigned to freight shift {ShiftNames[selectedVacancyShiftIndex]}.",
             $"{worker.DriverName} назначен на грузоперевозки: {L(ShiftNames[selectedVacancyShiftIndex])}.",
@@ -377,6 +380,7 @@ public partial class GameBootstrap
         switch (vacancy.Kind)
         {
             case VacancyKind.Production:
+            case VacancyKind.Service:
                 RemoveWorkerFromBuilding(FindLogisticsSlot(vacancy.BuildingType, vacancy.SlotIndex));
                 break;
             case VacancyKind.Intercity:

@@ -37,8 +37,8 @@
             "ru": "Транспорт и сервисы"
           },
           "body": {
-            "en": "- Trade dispatch now uses the regular Truck Driver shift pool and automatically reserves an available parked truck from Parking.\n- Local bus service requires at least two local stops before it becomes active, with clearer one-stop warnings.\n- Bought city buses now arrive from the edge highway and drive into Parking before becoming operational.\n- Warehouse/service logistics were rebalanced with larger buffers and smarter Fuel/Food/Alcohol delivery targeting.",
-            "ru": "- Междугородняя торговля теперь использует обычных водителей грузовиков на смене и автоматически резервирует свободный грузовик на парковке.\n- Городской автобус запускается только при двух локальных остановках, а сеть с одной остановкой понятнее предупреждает игрока.\n- Купленные городские автобусы приезжают с магистрали и заезжают на парковку перед началом работы.\n- Логистика склада и сервисов перебалансирована: буферы больше, а доставка топлива, еды и алкоголя выбирает цели умнее."
+            "en": "- Trade dispatch now uses the regular Truck Driver shift pool and automatically reserves a truck from Parking infrastructure.\n- Local bus service requires at least two local stops before it becomes active, with clearer one-stop warnings.\n- Parking now provides truck and bus slots automatically; separate vehicle purchases are no longer required.\n- Fuel, Food, and Alcohol were removed as trade/storage resources; services now operate directly through worker needs, fees, and truck refuel orders.",
+            "ru": "- Междугородняя торговля теперь использует обычных водителей грузовиков на смене и автоматически резервирует грузовик из инфраструктуры Parking.\n- Городской автобус запускается только при двух локальных остановках, а сеть с одной остановкой понятнее предупреждает игрока.\n- Parking теперь автоматически даёт слоты грузовиков и автобусов; отдельная покупка транспорта больше не нужна.\n- Логистика склада и сервисов перебалансирована: буферы больше, а доставка топлива, еды и алкоголя выбирает цели умнее."
           }
         },
         {
@@ -76,8 +76,8 @@
             "ru": "Рабочие"
           },
           "body": {
-            "en": "- WOMEN ADDED!!!\n- Workers now have portraits, gender, skills, needs, effects, and perks.\n- Food, sleep, and leisure are now part of the worker life cycle.\n- The Alcoholism perk now has distinct Drunk and Hangover behavior.",
-            "ru": "- ДОБАВЛЕНЫ ЖЕНЩИНЫ!!!\n- У рабочих появились портреты, пол, навыки, потребности, эффекты и перки.\n- Еда, сон и досуг стали частью жизненного цикла рабочих.\n- Перк Алкоголизм получил отдельное поведение через опьянение и похмелье."
+            "en": "- WOMEN ADDED!!!\n- Workers now have portraits, gender, needs, money, jobs, and perks.\n- Food, sleep, and leisure are now part of the worker life cycle.\n- The Alcoholism and Gambler perks steer leisure behavior without temporary modifiers.",
+            "ru": "- ДОБАВЛЕНЫ ЖЕНЩИНЫ!!!\n- У рабочих появились портреты, пол, потребности, деньги, работа и перки.\n- Еда, сон и досуг стали частью жизненного цикла рабочих.\n- Перки Алкоголизм и Игроман направляют досуг без временных модификаторов."
           }
         },
         {
@@ -145,8 +145,8 @@
             "ru": "Рабочие и ресурсы"
           },
           "body": {
-            "en": "- Hire workers from the Workers menu. New hires arrive by bus before checking in.\n- Workers have generated portraits, base skills, and need timers.\n- Forest, Sawmill, Furniture Factory, Warehouse, Canteen, Bar, and Motel support the first resource and life-cycle loops.",
-            "ru": "- Нанимай рабочих в меню Рабочие. Новые сотрудники приезжают на автобусе.\n- У рабочих есть процедурные портреты, базовые навыки и таймеры потребностей.\n- Forest, Sawmill, Furniture Factory, Warehouse, Canteen, Bar и Motel поддерживают первые ресурсные и жизненные циклы."
+            "en": "- Hire workers from the Workers menu. New hires arrive by bus before checking in.\n- Workers have generated portraits, perks, and need timers.\n- Forest, Sawmill, Furniture Factory, Warehouse, Canteen, Bar, and Motel support the first resource and life-cycle loops.",
+            "ru": "- Нанимай рабочих в меню Рабочие. Новые сотрудники приезжают на автобусе.\n- У рабочих есть процедурные портреты, перки и таймеры потребностей.\n- Forest, Sawmill, Furniture Factory, Warehouse, Canteen, Bar и Motel поддерживают первые ресурсные и жизненные циклы."
           }
         },
         {

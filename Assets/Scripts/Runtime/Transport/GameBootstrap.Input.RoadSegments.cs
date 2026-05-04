@@ -28,7 +28,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        SessionDebugLogger.Log("BUILD_ROAD", $"segment-finish requested tool={activeBuildTool} start={FormatCell(roadPathStart.Value)} requestedEnd={FormatCell(cell)} axisLocked={IsActiveRoadSegmentAxisLocked()} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
+        SessionDebugLogger.Log("BUILD_ROAD", $"segment-finish requested tool={activeBuildTool} start={FormatCell(roadPathStart.Value)} requestedEnd={FormatCell(cell)} axisLocked={IsActiveRoadSegmentAxisLocked()} previewFootprintCells={FormatCellList(buildPreviewFootprintCells)}.");
         bool built = TryBuildRoadPath(roadPathStart.Value, cell);
         if (built)
         {

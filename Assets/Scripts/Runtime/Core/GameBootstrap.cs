@@ -18,14 +18,10 @@ public partial class GameBootstrap : MonoBehaviour
     private const int FurnitureFactoryMaxTextileStorage = 6;
     private const int FurnitureFactoryMaxFurnitureStorage = 6;
     private const float FurnitureFactoryProcessingDuration = 5.5f;
-    private const int WarehouseMaxWorkers        = 3;
-    private const int WarehouseMaxFuelStorage    = 60;
-    private const int WarehouseMaxAlcoholStorage = 50;
-    private const int WarehouseMaxFoodStorage    = 80;
-    private const int WarehouseResourceStartAmount = 12;
-    private const int GasStationMaxFuelStorage   = 20;
-    private const int BarMaxAlcoholStorage       = 16;
-    private const int CanteenMaxFoodStorage      = 24;
+    private const int ProductionMaxWorkersPerBuilding = 2;
+    private const int WarehouseMaxWorkers        = 2;
+    private const int ServiceMaxWorkersPerBuilding = 1;
+    private const int AssignableBuildingWorkerSlotCapacity = 15;
     private const float ForestLogProgressPerChop = 0.08f;
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
@@ -50,7 +46,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const float TruckFollowDistance = 4.4f;
     private const float TruckFollowHeight = 2.05f;
     private const float TruckFollowLookHeight = 1.05f;
-    private const float TruckSegmentStartLift = 0.24f;
+    private const float TruckSegmentStartLift = RoadHeight + 0.32f;
+    private const float LocalBusRoadSurfaceLift = RoadHeight + 0.30f;
     private const float TruckSuspensionBobAmount = 0.045f;
     private const float TruckWheelRadius = 0.12f;
     private const float TruckCargoInteractionDuration = 3f;
@@ -76,6 +73,9 @@ public partial class GameBootstrap : MonoBehaviour
     private const int   WorkerGamblingMaxBet       = 10;
     private const float WorkerFreeIdleMinDuration = DayNightCycleDuration / 24f * 1f;
     private const float WorkerFreeIdleMaxDuration = DayNightCycleDuration / 24f * 3f;
+    private const float LaborExchangePostingInterval = DayNightCycleDuration / 24f * 1.5f;
+    private const float LaborExchangeInterviewDuration = DayNightCycleDuration / 24f * 0.35f;
+    private const int LaborExchangeMaxActivePostings = 6;
     private const float DriverWalkSpeed = 2.2f;
     private const float DriverIdleWanderSpeed = 1.35f;
     private const float DriverIdleWanderPauseMin = 2.2f;
@@ -117,9 +117,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float MoneyPopupDuration = 1.4f;
     private const int AudioSampleRate = 22050;
     private const int MaxTruckCount = 5;
-    private const int HireTruckCost = 300;
     private const int MaxBusCount = 3;
-    private const int HireBusCost = 220;
     private const int HireDriverCost = 50;
     private const int WorkerStartingMoneyMin = 50;
     private const int WorkerStartingMoneyMax = 100;
@@ -170,6 +168,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<TruckAgent> truckAgents = new();
     private readonly List<BusAgent> busAgents = new();
     private readonly List<DriverAgent> driverAgents = new();
+    private readonly List<LaborExchangePosting> laborExchangePostings = new();
     private readonly List<ForestWorkerAmbient> forestWorkers = new();
     private readonly List<Vector3> forestWorkPoints = new();
     private readonly List<Transform> forestWorkTargetTrees = new();
@@ -214,6 +213,12 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<NaturalZoneData> forestZones = new();
     private readonly List<NaturalZoneData> hillZones = new();
     private readonly List<NaturalZoneData> lakeZones = new();
+    private int nextLaborExchangePostingId = 1;
+    private float laborExchangePostingTimer;
+    private int laborExchangeApplicantsToday;
+    private int laborExchangeApplicantDay = -1;
+    private bool wasLaborExchangeBuiltLastTick;
+    private bool wasLaborExchangeStaffedLastTick;
 
     private Camera mainCamera;
     private GameObject truckObject;
@@ -322,8 +327,6 @@ public partial class GameBootstrap : MonoBehaviour
     private GameObject buildHoverDrivewayHighlight;
     private GameObject buildCursorAssistRoot;
     private Light buildCursorAssistLight;
-    private Renderer buildCursorAssistGlowRenderer;
-    private Material buildCursorAssistGlowMaterial;
     private readonly List<GameObject> buildHoverCellHighlights = new();
     private readonly List<Vector2Int> buildPreviewFootprintCells = new();
     private readonly List<Vector2Int> buildPreviewRoadDirections = new();
@@ -402,7 +405,7 @@ public partial class GameBootstrap : MonoBehaviour
     private int selectedShiftDriverId; // DriverId, 0 = none
     private int intercityDriverId;
     private readonly int[] busDriverShiftIds = new int[3];
-    private TradeResourceType selectedTradeResourceType = TradeResourceType.Logs;
+    private TradeResourceType selectedTradeResourceType = TradeResourceType.Cotton;
     private TradeOrderType selectedTradeOrderType = TradeOrderType.Buy;
     private int selectedTradeOrderAmount = 5;
     private bool isTradeResourceDropdownOpen;
@@ -418,7 +421,7 @@ public partial class GameBootstrap : MonoBehaviour
         public int TargetRegionIndex = -1; // -1 = generic (Trade panel), 0-8 = specific region
     }
 
-    private TradeResourceType worldMapRouteResource  = TradeResourceType.Alcohol;
+    private TradeResourceType worldMapRouteResource  = TradeResourceType.Cotton;
     private int               worldMapRouteAmount    = 1;
     private TradeOrderType    worldMapRouteOrderType = TradeOrderType.Buy;
 
@@ -437,8 +440,6 @@ public partial class GameBootstrap : MonoBehaviour
     private int moneyPopupAmount;
     private int gameSpeedMultiplier = 1;
     private int lastActiveGameSpeedMultiplier = 1;
-    private int nextHireTruckNumber = 2;
-    private int nextHireBusNumber = 1;
     private int nextDriverId = 1;
     private TripType currentAssignedTrip = TripType.None;
     private BuildTool activeBuildTool = BuildTool.None;

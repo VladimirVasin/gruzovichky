@@ -41,6 +41,7 @@ public partial class GameBootstrap
             LocationType.CityPark     => IsRussianLanguage() ? "Городской парк — рабочие гуляют и сидят на лавочках." : "City Park — workers stroll and sit on benches.",
             LocationType.PersonalHouse => IsRussianLanguage() ? "Жилой дом — пригородный коттедж." : "Personal House — suburban residential home.",
             LocationType.CarMarket     => IsRussianLanguage() ? "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 \u043b\u0438\u0447\u043d\u044b\u0435 \u0430\u0432\u0442\u043e." : "Car Market - workers buy personal cars here.",
+            LocationType.LaborExchange => IsRussianLanguage() ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u043a\u043b\u0435\u0440\u043a \u043f\u0443\u0431\u043b\u0438\u043a\u0443\u0435\u0442 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438, \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0445\u043e\u0434\u044f\u0442 \u0437\u0430 \u0440\u0430\u0431\u043e\u0442\u043e\u0439." : "Labor Exchange - a clerk posts vacancies and workers apply here.",
             _                         => string.Empty
         };
     }
@@ -49,10 +50,10 @@ public partial class GameBootstrap
     {
         return locationType switch
         {
-            LocationType.Parking => $"{FormatValueLine("Parked Trucks", $"{GetParkingTruckCount()} / {MaxTruckCount}")}\n{FormatValueLine(IsRussianLanguage() ? "Казна парковки" : "Parking Treasury", $"${locations[LocationType.Parking].BuildingBank}")}",
-            LocationType.Forest => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Forest)} / 1")}\n{FormatValueLine("Logs", $"{locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}")}",
-            LocationType.Sawmill => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Sawmill)} / 1")}\n{FormatValueLine("Logs", locations[LocationType.Sawmill].LogsStored.ToString())}\n{FormatValueLine("Boards", locations[LocationType.Sawmill].BoardsStored.ToString())}",
-            LocationType.FurnitureFactory => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.FurnitureFactory)} / 1")}\n{FormatValueLine("Boards", $"{locations[LocationType.FurnitureFactory].BoardsStored} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{locations[LocationType.FurnitureFactory].TextileStored} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{locations[LocationType.FurnitureFactory].FurnitureStored} / {FurnitureFactoryMaxFurnitureStorage}")}",
+            LocationType.Parking => $"{FormatValueLine("Truck Slots", $"{GetOwnedTruckCount()} / {GetTruckParkingCapacity()}")}\n{FormatValueLine("Bus Slots", $"{GetOwnedBusCount()} / {GetBusParkingCapacity()}")}\n{FormatValueLine(IsRussianLanguage() ? "Казна парковки" : "Parking Treasury", $"${locations[LocationType.Parking].BuildingBank}")}",
+            LocationType.Forest => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Forest)} / {GetMaxBuildingWorkerSlots(LocationType.Forest)}")}\n{FormatValueLine("Logs", $"{locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}")}",
+            LocationType.Sawmill => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Sawmill)} / {GetMaxBuildingWorkerSlots(LocationType.Sawmill)}")}\n{FormatValueLine("Logs", locations[LocationType.Sawmill].LogsStored.ToString())}\n{FormatValueLine("Boards", locations[LocationType.Sawmill].BoardsStored.ToString())}",
+            LocationType.FurnitureFactory => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.FurnitureFactory)} / {GetMaxBuildingWorkerSlots(LocationType.FurnitureFactory)}")}\n{FormatValueLine("Boards", $"{locations[LocationType.FurnitureFactory].BoardsStored} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{locations[LocationType.FurnitureFactory].TextileStored} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{locations[LocationType.FurnitureFactory].FurnitureStored} / {FurnitureFactoryMaxFurnitureStorage}")}",
             LocationType.Warehouse => GetWarehouseQuickResourceText(),
             LocationType.GasStation => GetGasStationQuickResourceText(),
             LocationType.IntercityStop    => IsRussianLanguage()
@@ -64,7 +65,8 @@ public partial class GameBootstrap
             LocationType.Canteen      => GetCanteenQuickResourceText(),
             LocationType.GamblingHall => GetGamblingHallQuickResourceText(),
             LocationType.CityPark     => GetServiceBuildingQuickResourceText(locationType),
-            LocationType.CarMarket    => FormatValueLine(IsRussianLanguage() ? "\u041a\u0430\u0441\u0441\u0430" : "Bank", $"${locations[LocationType.CarMarket].BuildingBank}"),
+            LocationType.CarMarket    => GetServiceBuildingQuickResourceText(locationType),
+            LocationType.LaborExchange => GetLaborExchangeQuickResourceText(),
             _ => string.Empty
         };
     }
@@ -142,14 +144,21 @@ public partial class GameBootstrap
             row.Root.gameObject.SetActive(true);
             row.NameText.text = d.DriverName;
             row.NameText.color = Color.white;
-            row.ActionButton.gameObject.SetActive(false);
+            row.ActionButton.gameObject.SetActive(true);
+            row.ActionButtonText.text = IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c" : "View";
         }
     }
 
     private void OnResidentRowButtonClick(int rowIndex)
     {
-        // Personal homes are assigned by worker life-cycle purchases now.
-        // The quick HUD is intentionally read-only to avoid manual housing exploits.
+        if (buildingQuickHud?.ResidentRows == null ||
+            rowIndex < 0 ||
+            rowIndex >= buildingQuickHud.ResidentRows.Length)
+        {
+            return;
+        }
+
+        FocusWorkerFromQuickHud(buildingQuickHud.ResidentRows[rowIndex].CurrentDriverId, "personal house HUD");
     }
 
     private string GetServiceBuildingQuickResourceText(LocationType locationType)
@@ -162,6 +171,11 @@ public partial class GameBootstrap
         string text = location.ServiceFee > 0
             ? FormatValueLine("Service Fee", $"${location.ServiceFee}")
             : FormatValueLine("Service Fee", "Free");
+        int maxStaff = GetMaxBuildingWorkerSlots(locationType);
+        if (maxStaff > 0)
+        {
+            text += "\n" + FormatValueLine("Staff on shift", $"{CountWorkersOnShiftAt(locationType)} / {maxStaff}");
+        }
         text += "\n" + FormatValueLine("Workers inside", location.Workers.ToString());
         text += "\n" + FormatValueLine("Building Bank", $"${location.BuildingBank}");
         return text;
@@ -169,46 +183,39 @@ public partial class GameBootstrap
 
     private string GetGasStationQuickResourceText()
     {
-        locations.TryGetValue(LocationType.GasStation, out LocationData gs);
-        if (gs != null)
-        {
-            gs.FuelStored = GasStationMaxFuelStorage;
-        }
-
-        return $"{FormatValueLine("Fuel", $"{GasStationMaxFuelStorage} / {GasStationMaxFuelStorage}")}\n" +
-               $"{FormatValueLine("Truck Fuel Service", "Ready")}";
+        return $"{FormatValueLine("Truck Fuel Service", "Ready")}\n" +
+               GetServiceBuildingQuickResourceText(LocationType.GasStation);
     }
 
     private string GetBarQuickResourceText()
     {
-        locations.TryGetValue(LocationType.Bar, out LocationData bar);
-        int alcohol = bar != null ? bar.AlcoholStored : 0;
-        string text = FormatValueLine("Alcohol", $"{alcohol} / {BarMaxAlcoholStorage}");
-        if (bar != null && bar.ServiceFee > 0)
-            text += "\n" + FormatValueLine("Service Fee", $"${bar.ServiceFee}");
-        text += "\n" + FormatValueLine("Workers inside", bar != null ? bar.Workers.ToString() : "0");
-        text += "\n" + FormatValueLine("Building Bank", $"${(bar != null ? bar.BuildingBank : 0)}");
-        return text;
+        return GetServiceBuildingQuickResourceText(LocationType.Bar);
     }
 
     private string GetCanteenQuickResourceText()
     {
-        locations.TryGetValue(LocationType.Canteen, out LocationData canteen);
-        int food = canteen != null ? canteen.FoodStored : 0;
-        string text = FormatValueLine("Food", $"{food} / {CanteenMaxFoodStorage}");
-        if (canteen != null && canteen.ServiceFee > 0)
-            text += "\n" + FormatValueLine("Service Fee", $"${canteen.ServiceFee}");
-        text += "\n" + FormatValueLine("Workers inside", canteen != null ? canteen.Workers.ToString() : "0");
-        text += "\n" + FormatValueLine("Building Bank", $"${(canteen != null ? canteen.BuildingBank : 0)}");
-        return text;
+        return GetServiceBuildingQuickResourceText(LocationType.Canteen);
     }
 
     private string GetGamblingHallQuickResourceText()
     {
         locations.TryGetValue(LocationType.GamblingHall, out LocationData gh);
         string text = FormatValueLine("Entry", "Free");
+        text += "\n" + FormatValueLine("Staff on shift", $"{CountWorkersOnShiftAt(LocationType.GamblingHall)} / {GetMaxBuildingWorkerSlots(LocationType.GamblingHall)}");
         text += "\n" + FormatValueLine("Workers inside", gh != null ? gh.Workers.ToString() : "0");
         text += "\n" + FormatValueLine("Building Bank", $"${(gh != null ? gh.BuildingBank : 0)}");
+        return text;
+    }
+
+    private string GetLaborExchangeQuickResourceText()
+    {
+        bool ru = IsRussianLanguage();
+        string text = FormatValueLine(ru ? "\u041a\u043b\u0435\u0440\u043a" : "Clerk on shift", $"{CountWorkersOnShiftAt(LocationType.LaborExchange)} / {GetMaxBuildingWorkerSlots(LocationType.LaborExchange)}");
+        text += "\n" + FormatValueLine(ru ? "\u0422\u0440\u0435\u0431\u043e\u0432\u0430\u043d\u0438\u0435" : "Requirement", ru ? "\u0432\u044b\u0441\u0448\u0435\u0435 \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435" : "higher education");
+        text += "\n" + FormatValueLine(ru ? "\u0414\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0435 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438" : "Available vacancies", CountAvailableLaborExchangePostings().ToString());
+        text += "\n" + FormatValueLine(ru ? "\u0412 \u043f\u0443\u0442\u0438" : "Reserved", CountReservedLaborExchangePostings().ToString());
+        text += "\n" + FormatLaborExchangePostingLines(3, ru);
+        text += "\n" + FormatValueLine(ru ? "\u0421\u0435\u0433\u043e\u0434\u043d\u044f \u043f\u0440\u0438\u0448\u043b\u0438" : "Applicants today", laborExchangeApplicantsToday.ToString());
         return text;
     }
 
@@ -258,6 +265,7 @@ public partial class GameBootstrap
         {
             LocationType.Parking => "Open Fleet",
             LocationType.Motel => "Open Drivers",
+            LocationType.LaborExchange => "Open Vacancies",
             _ => "Open Resources"
         };
     }

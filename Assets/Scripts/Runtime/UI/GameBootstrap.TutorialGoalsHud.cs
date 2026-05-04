@@ -31,7 +31,7 @@ public partial class GameBootstrap
         AssignBusDrivers,
         SetTaxRate15,
         AssignIntercityDriver,
-        CreateBuyAlcoholOrder,
+        CreateBuyTextileOrder,
         JoinRaceParticipation
     }
 
@@ -208,7 +208,6 @@ public partial class GameBootstrap
         completedTutorialGoals.Clear();
         activeTutorialGoals.Clear();
         ClearTutorialGoalContinuationFlags();
-        activeTutorialGoals.Add(TutorialGoalKind.BuyFirstTruck);
         activeTutorialGoals.Add(TutorialGoalKind.AssignTruckDriverShift);
         isTutorialGoalsActive = true;
         isTutorialGoalsComplete = false;
@@ -329,7 +328,7 @@ public partial class GameBootstrap
         activeTutorialGoals.Clear();
         ClearTutorialGoalContinuationFlags();
         activeTutorialGoals.Add(TutorialGoalKind.AssignIntercityDriver);
-        activeTutorialGoals.Add(TutorialGoalKind.CreateBuyAlcoholOrder);
+        activeTutorialGoals.Add(TutorialGoalKind.CreateBuyTextileOrder);
         isTutorialGoalsActive = true;
         isTutorialGoalsComplete = false;
         tutorialGoalsSuccessTimer = 0f;
@@ -493,7 +492,7 @@ public partial class GameBootstrap
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignBusDrivers);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.SetTaxRate15);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignIntercityDriver);
-        CreateTutorialGoalRow(panel, font, TutorialGoalKind.CreateBuyAlcoholOrder);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.CreateBuyTextileOrder);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.JoinRaceParticipation);
 
         RectTransform flash = FleetCanvasUiFactory.CreateUiObject("SuccessFlash", panel).GetComponent<RectTransform>();
@@ -570,7 +569,7 @@ public partial class GameBootstrap
             TutorialGoalsMode.RoadBuilding => ru ? "Построй дорогу двумя способами." : "Build roads in two ways.",
             TutorialGoalsMode.CoreBuildings => ru ? "Построй базовые здания города." : "Build the town core buildings.",
             TutorialGoalsMode.LumberjackCamp => ru ? "Запусти первую добычу дерева." : "Start your first logging production.",
-            TutorialGoalsMode.BuyTruck => ru ? "Купи первый грузовик." : "Buy the first truck.",
+            TutorialGoalsMode.BuyTruck => ru ? "Назначь первого водителя грузовика." : "Assign the first truck driver.",
             _ => ru ? "Освой камеру перед строительством." : "Learn the camera before building."
         };
 
@@ -580,7 +579,7 @@ public partial class GameBootstrap
             TutorialGoalsMode.RoadBuilding => ru ? "Открой Стройку (B), выбери дорогу и поставь её двумя способами." : "Open Build (B), choose a road, and place it in two ways.",
             TutorialGoalsMode.CoreBuildings => ru ? "Открой Стройку (B) и поставь три базовых здания." : "Open Build (B) and place the three core buildings.",
             TutorialGoalsMode.LumberjackCamp => ru ? "Открой Стройку (B), поставь лагерь, затем открой Вакансии." : "Open Build (B), place the camp, then open Vacancies.",
-            TutorialGoalsMode.BuyTruck => ru ? "Открой Вакансии: купи грузовик и назначь ему водителя." : "Open Vacancies: buy a truck and assign a driver.",
+            TutorialGoalsMode.BuyTruck => ru ? "Открой Вакансии: выбери смену водителя. Parking выдаст грузовик автоматически." : "Open Vacancies: choose a driver shift. Parking will provide the truck automatically.",
             TutorialGoalsMode.ServiceBuildings => ru ? "Открой Стройку (B) и поставь сервисные здания." : "Open Build (B) and place the service buildings.",
             TutorialGoalsMode.WorkerCard => ru ? "Открой Рабочие, посмотри карточку и нажми найм." : "Open Workers, inspect a card, and press hire.",
             TutorialGoalsMode.WarehouseLoaders => ru ? "Открой Вакансии и заполни три складских слота." : "Open Vacancies and fill three Warehouse slots.",
@@ -613,7 +612,7 @@ public partial class GameBootstrap
             TutorialGoalKind.BuildParking => ru ? "Построй Парковку" : "Build Parking",
             TutorialGoalKind.BuildLumberjackCamp => ru ? "Построй Лагерь лесорубов" : "Build Lumberjack Camp",
             TutorialGoalKind.AssignLumberjackWorker => ru ? "Назначь рабочего в Лагерь лесорубов" : "Assign a worker to Lumberjack Camp",
-            TutorialGoalKind.BuyFirstTruck => ru ? "Купи первый грузовик" : "Buy the first truck",
+            TutorialGoalKind.BuyFirstTruck => ru ? "Parking выдаст грузовик автоматически" : "Parking provides the truck automatically",
             TutorialGoalKind.AssignTruckDriverShift => ru ? "Назначь водителя грузовика на смену" : "Assign a truck driver to a shift",
             _ => string.Empty
         };
@@ -634,7 +633,7 @@ public partial class GameBootstrap
             TutorialGoalKind.BuildParking => ru ? "Стройка (B) -> Парковка: выбери и поставь" : "Build (B) -> Parking: select and place",
             TutorialGoalKind.BuildLumberjackCamp => ru ? "Стройка (B) -> Лагерь лесорубов: поставь у леса" : "Build (B) -> Lumberjack Camp: place near forest",
             TutorialGoalKind.AssignLumberjackWorker => ru ? "Вакансии -> Лесозаготовка -> Смена -> Рабочий" : "Vacancies -> Logging -> Shift -> Worker",
-            TutorialGoalKind.BuyFirstTruck => ru ? "Вакансии -> кнопка Купить грузовик" : "Vacancies -> Buy Truck button",
+            TutorialGoalKind.BuyFirstTruck => ru ? "Parking -> свободный слот автопарка" : "Parking -> free fleet slot",
             TutorialGoalKind.AssignTruckDriverShift => ru ? "Вакансии -> Водитель грузовика -> Смена -> Рабочий" : "Vacancies -> Truck Driver -> Shift -> Worker",
             TutorialGoalKind.BuildBar => ru ? "Стройка (B) -> Бар: выбери и поставь" : "Build (B) -> Bar: select and place",
             TutorialGoalKind.BuildGamblingHall => ru ? "Стройка (B) -> Игровые автоматы: выбери и поставь" : "Build (B) -> Gambling Hall: select and place",
@@ -648,7 +647,7 @@ public partial class GameBootstrap
             TutorialGoalKind.AssignBusDrivers => ru ? "Вакансии -> Водитель автобуса -> назначь 3 смены" : "Vacancies -> Bus Driver -> assign 3 shifts",
             TutorialGoalKind.SetTaxRate15 => ru ? "Экономика -> Налоги: нажимай + до 15%" : "Economy -> Taxes: press + until 15%",
             TutorialGoalKind.AssignIntercityDriver => ru ? "Вакансии -> Водитель грузовика -> Смена -> Рабочий" : "Vacancies -> Truck Driver -> Shift -> Worker",
-            TutorialGoalKind.CreateBuyAlcoholOrder => ru ? "Экономика -> Торговля -> Alcohol -> Купить -> Разместить заказ" : "Economy -> Trade -> Alcohol -> Buy -> Place Order",
+            TutorialGoalKind.CreateBuyTextileOrder => ru ? "\u042d\u043a\u043e\u043d\u043e\u043c\u0438\u043a\u0430 -> \u0422\u043e\u0440\u0433\u043e\u0432\u043b\u044f -> Textile -> \u041a\u0443\u043f\u0438\u0442\u044c -> \u0420\u0430\u0437\u043c\u0435\u0441\u0442\u0438\u0442\u044c \u0437\u0430\u043a\u0430\u0437" : "Economy -> Trade -> Textile -> Buy -> Place Order",
             TutorialGoalKind.JoinRaceParticipation => ru ? "\u0414\u043e\u0436\u0434\u0438\u0441\u044c \u0432\u044b\u0435\u0437\u0434\u0430 \u0437\u0430 \u043a\u0430\u0440\u0442\u0443 \u0438 \u043d\u0430\u0436\u043c\u0438 Join the Race" : "Wait until the truck leaves the map, then press Join the Race",
             _ => string.Empty
         };
@@ -675,13 +674,13 @@ public partial class GameBootstrap
             TutorialGoalsMode.RoadBuilding => kind is TutorialGoalKind.RoadSingleCell or TutorialGoalKind.RoadShiftPath,
             TutorialGoalsMode.CoreBuildings => kind is TutorialGoalKind.BuildWarehouse or TutorialGoalKind.BuildMotel or TutorialGoalKind.BuildParking,
             TutorialGoalsMode.LumberjackCamp => kind is TutorialGoalKind.BuildLumberjackCamp or TutorialGoalKind.AssignLumberjackWorker,
-            TutorialGoalsMode.BuyTruck => kind is TutorialGoalKind.BuyFirstTruck or TutorialGoalKind.AssignTruckDriverShift,
+            TutorialGoalsMode.BuyTruck => kind is TutorialGoalKind.AssignTruckDriverShift,
             TutorialGoalsMode.ServiceBuildings => kind is TutorialGoalKind.BuildBar or TutorialGoalKind.BuildGamblingHall or TutorialGoalKind.BuildCanteen or TutorialGoalKind.BuildGasStation or TutorialGoalKind.BuildCityPark,
             TutorialGoalsMode.WorkerCard => kind is TutorialGoalKind.OpenWorkersCard or TutorialGoalKind.HireNewWorker,
             TutorialGoalsMode.WarehouseLoaders => kind is TutorialGoalKind.AssignWarehouseLoaders,
             TutorialGoalsMode.LocalTransport => kind is TutorialGoalKind.BuildLocalBusStops or TutorialGoalKind.AssignBusDrivers,
             TutorialGoalsMode.EconomyTaxes => kind is TutorialGoalKind.SetTaxRate15,
-            TutorialGoalsMode.TradeSetup => kind is TutorialGoalKind.AssignIntercityDriver or TutorialGoalKind.CreateBuyAlcoholOrder,
+            TutorialGoalsMode.TradeSetup => kind is TutorialGoalKind.AssignIntercityDriver or TutorialGoalKind.CreateBuyTextileOrder,
             TutorialGoalsMode.JoinRace => kind is TutorialGoalKind.JoinRaceParticipation,
             _ => kind is TutorialGoalKind.CameraZoomIn or TutorialGoalKind.CameraZoomOut or TutorialGoalKind.CameraPan or TutorialGoalKind.CameraRotate
         };

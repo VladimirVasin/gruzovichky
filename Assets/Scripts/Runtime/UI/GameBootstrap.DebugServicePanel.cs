@@ -4,13 +4,6 @@ using System.Collections.Generic;
 
 public partial class GameBootstrap
 {
-    private enum DebugServiceResourceKind
-    {
-        Fuel,
-        Alcohol,
-        Food
-    }
-
     private enum DebugProductionResourceKind
     {
         Logs,
@@ -148,9 +141,13 @@ public partial class GameBootstrap
             {
                 GUILayout.Label("SERVICE BUILDINGS", headerStyle);
                 debugResourceScrollPos = GUILayout.BeginScrollView(debugResourceScrollPos, GUILayout.ExpandHeight(true));
-                DrawDebugServiceResourceRow(LocationType.GasStation, "Gas Station",  DebugServiceResourceKind.Fuel,     bodyStyle, valueStyle, subHeaderStyle);
-                DrawDebugServiceResourceRow(LocationType.Bar,        "Bar",          DebugServiceResourceKind.Alcohol,  bodyStyle, valueStyle, subHeaderStyle);
-                DrawDebugServiceResourceRow(LocationType.Canteen,    "Canteen",      DebugServiceResourceKind.Food,     bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceBuildingStatusRow(LocationType.GasStation,   "Gas Station",    bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceBuildingStatusRow(LocationType.Bar,          "Bar",            bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceBuildingStatusRow(LocationType.Canteen,      "Canteen",        bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceBuildingStatusRow(LocationType.GamblingHall, "Gambling Hall",  bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceBuildingStatusRow(LocationType.LaborExchange,"Labor Exchange", bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceBuildingStatusRow(LocationType.CityPark,     "City Park",      bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceBuildingStatusRow(LocationType.Motel,        "Motel (Sleep)",  bodyStyle, valueStyle, subHeaderStyle);
                 GUILayout.EndScrollView();
             }
 
@@ -162,9 +159,6 @@ public partial class GameBootstrap
                 GUILayout.Label("PRODUCTION / STORAGE", headerStyle);
                 Vector2 prodScroll = debugResourceScrollPos;
                 prodScroll = GUILayout.BeginScrollView(prodScroll, GUILayout.ExpandHeight(true));
-                DrawDebugServiceResourceRow(LocationType.Warehouse,        "Warehouse  —  Fuel",        DebugServiceResourceKind.Fuel,     bodyStyle, valueStyle, subHeaderStyle);
-                DrawDebugServiceResourceRow(LocationType.Warehouse,        "Warehouse  —  Alcohol",     DebugServiceResourceKind.Alcohol,  bodyStyle, valueStyle, subHeaderStyle);
-                DrawDebugServiceResourceRow(LocationType.Warehouse,        "Warehouse  —  Food",        DebugServiceResourceKind.Food,     bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugProductionResourceRow(LocationType.Forest,           "Forest",                    DebugProductionResourceKind.Logs,      bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugProductionResourceRow(LocationType.Sawmill,          "Sawmill  —  Logs",          DebugProductionResourceKind.Logs,      bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugProductionResourceRow(LocationType.Sawmill,          "Sawmill  —  Boards",        DebugProductionResourceKind.Boards,    bodyStyle, valueStyle, subHeaderStyle);
@@ -253,7 +247,7 @@ public partial class GameBootstrap
         }
     }
 
-    private void DrawDebugServiceResourceRow(LocationType type, string label, DebugServiceResourceKind resourceKind,
+    private void DrawDebugServiceBuildingStatusRow(LocationType type, string label,
         GUIStyle bodyStyle, GUIStyle valueStyle, GUIStyle subHeaderStyle)
     {
         LocationData location = null;
@@ -266,34 +260,17 @@ public partial class GameBootstrap
             GUILayout.Label(built ? label : $"{label}  [not built]", subHeaderStyle);
             if (!built || location == null) return;
 
-            int cur = GetDebugServiceResourceValue(location, resourceKind);
-            int max = GetDebugServiceResourceMax(type, resourceKind);
-            GUILayout.Label($"{GetDebugServiceResourceLabel(resourceKind)}: {cur} / {max}", valueStyle);
-
-            using (new GUILayout.HorizontalScope())
+            if (type == LocationType.GasStation)
             {
-                GUI.backgroundColor = new Color(0.5f, 0.12f, 0.12f);
-                if (GUILayout.Button("-1", GUILayout.Width(60f), GUILayout.Height(28f)))
-                    AdjustDebugServiceResource(type, resourceKind, -1);
-                GUILayout.Space(4f);
-                GUI.backgroundColor = new Color(0.12f, 0.42f, 0.12f);
-                if (GUILayout.Button("+1", GUILayout.Width(60f), GUILayout.Height(28f)))
-                    AdjustDebugServiceResource(type, resourceKind, 1);
-                GUI.backgroundColor = prevBg;
+                GUILayout.Label("Truck fuel service: Ready", valueStyle);
             }
+
+            string feeText = location.ServiceFee > 0 ? $"${location.ServiceFee}" : "Free";
+            GUILayout.Label($"Service fee: {feeText}", bodyStyle);
+            GUILayout.Label($"Workers inside: {location.Workers}", bodyStyle);
+            GUILayout.Label($"Building bank: ${location.BuildingBank}", bodyStyle);
         }
         GUILayout.Space(4f);
-    }
-
-    private static string GetDebugServiceResourceLabel(DebugServiceResourceKind resourceKind)
-    {
-        return resourceKind switch
-        {
-            DebugServiceResourceKind.Fuel => "Fuel",
-            DebugServiceResourceKind.Alcohol => "Alcohol",
-            DebugServiceResourceKind.Food => "Food",
-            _ => "Resource"
-        };
     }
 
     private void DrawDebugProductionResourceRow(LocationType type, string label, DebugProductionResourceKind resourceKind,
@@ -340,28 +317,6 @@ public partial class GameBootstrap
         };
     }
 
-    private static int GetDebugServiceResourceMax(LocationType type, DebugServiceResourceKind resourceKind)
-    {
-        if (type == LocationType.Warehouse)
-        {
-            return resourceKind switch
-            {
-                DebugServiceResourceKind.Fuel => WarehouseMaxFuelStorage,
-                DebugServiceResourceKind.Alcohol => WarehouseMaxAlcoholStorage,
-                DebugServiceResourceKind.Food => WarehouseMaxFoodStorage,
-                _ => 0
-            };
-        }
-
-        return resourceKind switch
-        {
-            DebugServiceResourceKind.Fuel => GasStationMaxFuelStorage,
-            DebugServiceResourceKind.Alcohol => BarMaxAlcoholStorage,
-            DebugServiceResourceKind.Food => CanteenMaxFoodStorage,
-            _ => 0
-        };
-    }
-
     private static int GetDebugProductionResourceMax(LocationType type, DebugProductionResourceKind resourceKind)
     {
         return (type, resourceKind) switch
@@ -371,17 +326,6 @@ public partial class GameBootstrap
             (LocationType.FurnitureFactory, DebugProductionResourceKind.Textile) => FurnitureFactoryMaxTextileStorage,
             (LocationType.FurnitureFactory, DebugProductionResourceKind.Furniture) => FurnitureFactoryMaxFurnitureStorage,
             _ => DebugLooseStorageMax
-        };
-    }
-
-    private static int GetDebugServiceResourceValue(LocationData location, DebugServiceResourceKind resourceKind)
-    {
-        return resourceKind switch
-        {
-            DebugServiceResourceKind.Fuel => location.FuelStored,
-            DebugServiceResourceKind.Alcohol => location.AlcoholStored,
-            DebugServiceResourceKind.Food => location.FoodStored,
-            _ => 0
         };
     }
 
@@ -395,30 +339,6 @@ public partial class GameBootstrap
             DebugProductionResourceKind.Furniture => location.FurnitureStored,
             _ => 0
         };
-    }
-
-    private void AdjustDebugServiceResource(LocationType type, DebugServiceResourceKind resourceKind, int delta)
-    {
-        if (!locations.TryGetValue(type, out LocationData location))
-        {
-            return;
-        }
-
-        int maxValue = GetDebugServiceResourceMax(type, resourceKind);
-        switch (resourceKind)
-        {
-            case DebugServiceResourceKind.Fuel:
-                location.FuelStored = Mathf.Clamp(location.FuelStored + delta, 0, maxValue);
-                break;
-            case DebugServiceResourceKind.Alcohol:
-                location.AlcoholStored = Mathf.Clamp(location.AlcoholStored + delta, 0, maxValue);
-                break;
-            case DebugServiceResourceKind.Food:
-                location.FoodStored = Mathf.Clamp(location.FoodStored + delta, 0, maxValue);
-                break;
-        }
-
-        SessionDebugLogger.Log("DEBUG", $"[DBG] {type} {GetDebugServiceResourceLabel(resourceKind)} adjusted by {delta}; now {GetDebugServiceResourceValue(location, resourceKind)}/{maxValue}.");
     }
 
     private void AdjustDebugProductionResource(LocationType type, DebugProductionResourceKind resourceKind, int delta)

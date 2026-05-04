@@ -123,19 +123,13 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (!TryGetTwoLaneRoadOutsideSide(cell, out bool isHorizontal, out Vector2Int sideOffset))
+        if (!TryGetRoadsidePropSide(cell, null, out bool isHorizontal, out Vector2Int sideOffset))
         {
             return false;
         }
 
         int cadence = isHorizontal ? cell.x : cell.y;
         if (cadence % 2 != 0)
-        {
-            return false;
-        }
-
-        Vector2Int sideCell = cell + sideOffset;
-        if (!CanPlaceRoadsidePropInCell(sideCell, null))
         {
             return false;
         }
@@ -147,6 +141,40 @@ public partial class GameBootstrap
             ? (sideOffset.y > 0 ? Quaternion.Euler(0f, 180f, 0f) : Quaternion.identity)
             : (sideOffset.x > 0 ? Quaternion.Euler(0f, -90f, 0f) : Quaternion.Euler(0f, 90f, 0f));
         return true;
+    }
+    private bool TryGetRoadsidePropSide(
+        Vector2Int cell,
+        HashSet<Vector2Int> reservedSideCells,
+        out bool isHorizontal,
+        out Vector2Int sideOffset)
+    {
+        if (!TryGetRoadOutsideSide(cell, out isHorizontal, out sideOffset))
+        {
+            return false;
+        }
+
+        if (CanPlaceRoadsidePropInCell(cell + sideOffset, reservedSideCells))
+        {
+            return true;
+        }
+
+        Vector2Int alternateOffset = -sideOffset;
+        if (CanPlaceRoadsidePropInCell(cell + alternateOffset, reservedSideCells))
+        {
+            sideOffset = alternateOffset;
+            return true;
+        }
+
+        return false;
+    }
+    private bool TryGetRoadOutsideSide(Vector2Int cell, out bool isHorizontal, out Vector2Int sideOffset)
+    {
+        if (TryGetTwoLaneRoadOutsideSide(cell, out isHorizontal, out sideOffset))
+        {
+            return true;
+        }
+
+        return TryGetSingleLaneRoadOutsideSide(cell, out isHorizontal, out sideOffset);
     }
     private bool TryGetTwoLaneRoadOutsideSide(Vector2Int cell, out bool isHorizontal, out Vector2Int sideOffset)
     {
@@ -179,6 +207,28 @@ public partial class GameBootstrap
 
         isHorizontal = false;
         sideOffset = eastLane ? Vector2Int.left : Vector2Int.right;
+        return true;
+    }
+    private bool TryGetSingleLaneRoadOutsideSide(Vector2Int cell, out bool isHorizontal, out Vector2Int sideOffset)
+    {
+        bool east = ConnectsToRoadOrAnchor(cell, Vector2Int.right);
+        bool west = ConnectsToRoadOrAnchor(cell, Vector2Int.left);
+        bool north = ConnectsToRoadOrAnchor(cell, Vector2Int.up);
+        bool south = ConnectsToRoadOrAnchor(cell, Vector2Int.down);
+
+        bool horizontalCandidate = (east || west) && !north && !south;
+        bool verticalCandidate = (north || south) && !east && !west;
+        if (horizontalCandidate == verticalCandidate)
+        {
+            isHorizontal = true;
+            sideOffset = Vector2Int.zero;
+            return false;
+        }
+
+        isHorizontal = horizontalCandidate;
+        sideOffset = isHorizontal
+            ? (((cell.x / 2) & 1) == 0 ? Vector2Int.up : Vector2Int.down)
+            : (((cell.y / 2) & 1) == 0 ? Vector2Int.right : Vector2Int.left);
         return true;
     }
     private void RebuildEdgeHighwayLanterns()
@@ -324,7 +374,7 @@ public partial class GameBootstrap
         worldRotation = Quaternion.identity;
         sideCell = default;
 
-        if (!TryGetTwoLaneRoadOutsideSide(roadCell, out _, out Vector2Int sideOffset))
+        if (!TryGetRoadsidePropSide(roadCell, reservedSideCells, out _, out Vector2Int sideOffset))
         {
             return false;
         }
@@ -336,10 +386,6 @@ public partial class GameBootstrap
         }
 
         Vector2Int candidateSideCell = roadCell + sideOffset;
-        if (!CanPlaceRoadsidePropInCell(candidateSideCell, reservedSideCells))
-        {
-            return false;
-        }
 
         Vector3 center = GetCellCenter(roadCell);
         Vector3 sideDirection = new Vector3(sideOffset.x, 0f, sideOffset.y).normalized;
@@ -497,7 +543,7 @@ public partial class GameBootstrap
             edgeHighwayCells.Contains(cell + Vector2Int.left)  ||
             edgeHighwayCells.Contains(cell + Vector2Int.right)) return false;
 
-        bool isStraight = TryGetTwoLaneRoadOutsideSide(cell, out _, out _);
+        bool isStraight = TryGetRoadOutsideSide(cell, out _, out _);
         bool isCorner   = TryGetRoadCorner(cell, out int hSign, out int vSign);
 
         if (isStraight) return false; // straight road — lanterns/benches handle it

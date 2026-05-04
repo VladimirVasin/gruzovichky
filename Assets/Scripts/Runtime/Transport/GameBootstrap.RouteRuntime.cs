@@ -73,7 +73,6 @@ public partial class GameBootstrap
 
             case TruckTripRuntimeActionKind.Complete:
                 PlayTruckFx(parkingReturnCueClip, 0.64f);
-                ApplyWorkerRoadFocusEffect(driver);
                 SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} completed trip {GetTripTitle(currentAssignedTrip)}.");
                 PushFeedEvent(
                     $"{GetLoadedTruckDisplayName()} completed {GetTripTitle(currentAssignedTrip)}.",
@@ -113,12 +112,6 @@ public partial class GameBootstrap
                 isTruckInteracting))
         {
             return;
-        }
-
-        if (currentRefuelPhase == RefuelPhase.ToGasStation &&
-            locations.TryGetValue(LocationType.GasStation, out LocationData gsRefuel))
-        {
-            gsRefuel.FuelStored = GasStationMaxFuelStorage;
         }
 
         if (!locations.TryGetValue(LocationType.GasStation, out LocationData gasStation) ||
@@ -218,7 +211,6 @@ public partial class GameBootstrap
                 driver.IdleConversationTimer = 0f;
                 driver.IdleConversationPartnerId = -1;
                 ResetWorkerNeedTimer(driver, WorkerNeedKind.Sleep);
-                ApplyWorkerRestedEffect(driver);
                 driver.SleptToday = true;
                 driver.LifeGoal = WorkerLifeGoal.Idle;
                 ApplyDriverPose(driver, 0f, 0f);
@@ -244,7 +236,6 @@ public partial class GameBootstrap
                 driver.IdleConversationTimer = 0f;
                 driver.IdleConversationPartnerId = -1;
                 ResetWorkerNeedTimer(driver, WorkerNeedKind.Sleep);
-                ApplyWorkerRestedEffect(driver);
                 driver.SleptToday = true;
                 driver.LifeGoal = WorkerLifeGoal.Idle;
                 ApplyDriverPose(driver, 0f, 0f);

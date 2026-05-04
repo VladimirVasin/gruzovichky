@@ -39,7 +39,7 @@ public partial class GameBootstrap
 
             if (slot.BuildingNameText != null)
             {
-                slot.BuildingNameText.text = L(GetSelectedLocationDisplayName(slot.BuildingType));
+                slot.BuildingNameText.text = L(GetBuildingWorkerSlotTitle(slot.BuildingType, slot.SlotIndex));
             }
 
             if (slot.WorkHoursText != null)
@@ -59,13 +59,7 @@ public partial class GameBootstrap
             }
             else
             {
-                string professionLabel = slot.BuildingType switch
-                {
-                    LocationType.Forest           => L("Lumberjack"),
-                    LocationType.Sawmill          => L("Sawmill Worker"),
-                    LocationType.FurnitureFactory => L("Carpenter"),
-                    _                             => L("Worker"),
-                };
+                string professionLabel = L(GetBuildingWorkerRoleLabel(slot.BuildingType));
                 string workerLabel = assigned != null
                     ? (ru ? $"Назначен: {assigned.DriverName}" : $"Assigned: {assigned.DriverName}")
                     : ru ? $"{professionLabel} не назначен" : $"{professionLabel} not assigned";
@@ -73,11 +67,14 @@ public partial class GameBootstrap
                 slot.AssignedWorkerText.color = assigned != null ? FleetAccentColor : FleetSecondaryTextColor;
             }
 
-            bool selectedIsIdle = selectedDriver != null && !selectedDriver.IsArrivingByBus;
+            bool selectedIsIdle = IsWorkerVacantForVacancyAssignment(selectedDriver);
             bool selectedAlreadyHere = selectedDriver != null &&
                 selectedDriver.DutyMode == DriverDutyMode.Logistics &&
                 selectedDriver.AssignedBuildingType == slot.BuildingType;
-            bool canAssign = selectedIsIdle && assigned == null && !selectedAlreadyHere;
+            string educationReason = string.Empty;
+            bool meetsEducation = selectedDriver == null ||
+                                  CanWorkerMeetBuildingEducationRequirement(selectedDriver, slot.BuildingType, out educationReason);
+            bool canAssign = selectedIsIdle && assigned == null && !selectedAlreadyHere && meetsEducation;
             slot.AssignButton.interactable = canAssign;
             slot.AssignButtonText.text = selectedDriver == null
                 ? (isWarehouse ? (ru ? "Выбери рабочего" : "Select worker") : L("Select a worker"))
@@ -88,6 +85,11 @@ public partial class GameBootstrap
                         : !selectedIsIdle
                             ? (isWarehouse ? (ru ? "Не свободен" : "Not idle") : (ru ? $"{selectedDriver.DriverName} не свободен" : $"{selectedDriver.DriverName} is not idle"))
                             : isWarehouse ? (ru ? "Назначить" : "Assign") : (ru ? $"Назначить: {selectedDriver.DriverName}" : $"Assign: {selectedDriver.DriverName}");
+
+            if (selectedDriver != null && selectedIsIdle && assigned == null && !selectedAlreadyHere && !meetsEducation)
+            {
+                slot.AssignButtonText.text = educationReason;
+            }
 
             slot.RemoveButton.interactable = assigned != null;
         }
@@ -127,6 +129,12 @@ public partial class GameBootstrap
     {
         if (driver == null || slot == null) return;
         if (driver.IsArrivingByBus) return;
+        if (!CanWorkerMeetBuildingEducationRequirement(driver, slot.BuildingType, out string educationReason))
+        {
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} building assignment to {slot.BuildingType} blocked: {educationReason}.");
+            LogDriverReaction(driver, $"cannot start work at {slot.BuildingType}: {educationReason}");
+            return;
+        }
 
         if (IsDriverBusDriver(driver))
         {
@@ -142,12 +150,12 @@ public partial class GameBootstrap
         {
             if (!UnassignDriverFromTruck(assignedTruck, driver))
             {
-                SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} production assignment to {slot.BuildingType} blocked: could not unassign from {assignedTruck.DisplayName}.");
-                LogDriverReaction(driver, $"cannot start production at {slot.BuildingType}: still assigned to {assignedTruck.DisplayName}");
+                SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} building assignment to {slot.BuildingType} blocked: could not unassign from {assignedTruck.DisplayName}.");
+                LogDriverReaction(driver, $"cannot start work at {slot.BuildingType}: still assigned to {assignedTruck.DisplayName}");
                 return;
             }
 
-            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} auto-unassigned from {assignedTruck.DisplayName} before production assignment to {slot.BuildingType}.");
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} auto-unassigned from {assignedTruck.DisplayName} before building assignment to {slot.BuildingType}.");
         }
 
         // Remove from any existing building assignment first
@@ -180,8 +188,9 @@ public partial class GameBootstrap
             NotifyTutorialWarehouseLoaderAssigned();
         }
 
+        string workKind = IsProductionLocation(slot.BuildingType) ? "production" : "service";
         LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {slot.BuildingType} ({GetProductionWorkRangeLabel()})");
-        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType} production work ({GetProductionWorkRangeLabel()}).");
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType} {workKind} work ({GetProductionWorkRangeLabel()}).");
         PushFeedEvent(
             $"{driver.DriverName} assigned to {GetSelectedLocationDisplayName(slot.BuildingType)}.",
             $"{driver.DriverName} назначен в {GetSelectedLocationDisplayName(slot.BuildingType)}.",

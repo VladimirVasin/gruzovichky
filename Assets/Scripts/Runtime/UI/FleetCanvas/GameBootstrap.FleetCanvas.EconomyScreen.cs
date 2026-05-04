@@ -672,9 +672,6 @@ public partial class GameBootstrap
             TradeResourceType.Cotton => "Low",
             TradeResourceType.Textile => "Medium",
             TradeResourceType.Furniture => "High",
-            TradeResourceType.Fuel => "Critical",
-            TradeResourceType.Alcohol => "Medium",
-            TradeResourceType.Food => "High",
             _ => "Unknown"
         };
     }
@@ -688,9 +685,6 @@ public partial class GameBootstrap
             TradeResourceType.Cotton    => "Cotton",
             TradeResourceType.Textile   => "Textile",
             TradeResourceType.Furniture => "Furniture",
-            TradeResourceType.Fuel      => "Fuel",
-            TradeResourceType.Alcohol   => "Alcohol",
-            TradeResourceType.Food      => "Food",
             _ => resourceType.ToString()
         };
         string priority = GetResourcePriority(resourceType);

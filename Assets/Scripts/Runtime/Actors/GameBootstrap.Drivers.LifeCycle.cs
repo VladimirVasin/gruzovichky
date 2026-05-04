@@ -158,7 +158,6 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IdleConversationPartnerId = -1;
         ReleaseBench(driver);
 
-        ApplyWorkerAfterWorkEffects(driver, driver.AssignedBuildingType);
         SessionDebugLogger.Log("LIFE", $"{driver.DriverName} completed WORK ({sourceLabel}); evaluating needs: {FormatWorkerNeedsDebug(driver)}.");
         LogWorkerDecision(driver, "completed-work", sourceLabel, true);
         if (!ContinueWorkerLifeCycle(driver, startPosition))
@@ -180,6 +179,14 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         selectedGoalBefore = driver.LifeGoal;
+        if (driver.AssignedPersonalHouseIndex < 0 &&
+            TryStartWorkerBuyHouse(driver, startPosition))
+        {
+            LogWorkerDecision(driver, "life-goal-selected", "Buying personal house", true, selectedGoalBefore, driver.LifeGoal);
+            return true;
+        }
+
+        selectedGoalBefore = driver.LifeGoal;
         if (driver.OwnedCarModelIndex < 0 &&
             driver.Money >= CarPurchasePrice &&
             locations.ContainsKey(LocationType.CarMarket) &&
@@ -189,48 +196,10 @@ public partial class GameBootstrap : MonoBehaviour
             return true;
         }
 
-        selectedGoalBefore = driver.LifeGoal;
-        if (driver.AssignedPersonalHouseIndex < 0 &&
-            driver.Money >= HousePurchasePrice &&
-            TryStartWorkerBuyHouse(driver, startPosition))
-        {
-            LogWorkerDecision(driver, "life-goal-selected", "Buying personal house", true, selectedGoalBefore, driver.LifeGoal);
-            return true;
-        }
-
         driver.LifeGoal = WorkerLifeGoal.Idle;
         SessionDebugLogger.Log("LIFE", $"{driver.DriverName} has no due life goals; entering Idle. helperFlags work={driver.WorkedToday}, eat={driver.AteToday}, leisure={driver.HadLeisureToday}, sleep={driver.SleptToday}; needs={FormatWorkerNeedsDebug(driver)}.");
         LogWorkerDecision(driver, "enter-idle", "no due life goals after evaluation", true);
         return false;
-    }
-
-    private bool TryStartWorkerBuyHouse(DriverAgent driver, Vector3 startPosition)
-    {
-        int targetIndex = -1;
-        for (int i = 0; i < personalHouses.Count; i++)
-        {
-            int residents = 0;
-            foreach (DriverAgent d in driverAgents)
-                if (d.AssignedPersonalHouseIndex == i) residents++;
-            if (residents < MaxPersonalHouseResidents) { targetIndex = i; break; }
-        }
-        if (targetIndex < 0) return false;
-
-        driver.AssignedPersonalHouseIndex = targetIndex;
-        driver.LifeGoal = WorkerLifeGoal.BuyHouse;
-        Vector3 target = GetDriverStandPointNearPersonalHouse(targetIndex);
-        ResetWorkerLocalBusTripState(driver);
-        if (TryStartWorkerLocalBusTrip(driver, startPosition, target, DriverRescuePhase.ToPersonalHouseForPurchase, "House purchase"))
-        {
-            LogWorkerDecision(driver, "buy-house-via-bus", $"House #{targetIndex}, fee=${HousePurchasePrice}", true);
-            return true;
-        }
-        driver.WalkTargetWorld = target;
-        driver.WalkPhase = DriverRescuePhase.ToPersonalHouseForPurchase;
-        driver.WalkAnimationTime = 0f;
-        BuildDriverWalkPath(driver, startPosition, target);
-        LogWorkerDecision(driver, "buy-house-walk", $"House #{targetIndex}, fee=${HousePurchasePrice}", true);
-        return true;
     }
 
     private bool TryStartWorkerBuyCar(DriverAgent driver, Vector3 startPosition)
@@ -313,9 +282,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         return driver != null &&
                !string.IsNullOrEmpty(reason) &&
-               IsWorkerServiceBlockedByMoney(reason) &&
-               locations.TryGetValue(LocationType.Canteen, out LocationData canteen) &&
-               canteen.FoodStored > 0;
+               IsWorkerServiceBlockedByMoney(reason);
     }
 
     private static bool IsWorkerServiceBlockedByMoney(string reason)
@@ -345,7 +312,7 @@ public partial class GameBootstrap : MonoBehaviour
         ResetWorkerLocalBusTripState(driver);
         BuildDriverWalkPath(driver, startPosition, target);
         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} cannot afford Canteen and is heading to a trash can meal; reason={reason}; target=({target.x:0.0},{target.z:0.0}); need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}.");
-        LogWorkerDecision(driver, "trash-meal-fallback", $"reason={reason}; target=({target.x:0.0},{target.z:0.0})", true);
+        LogWorkerDecision(driver, "trash-meal-fallback", $"{reason}; target=({target.x:0.0},{target.z:0.0})", true);
         return true;
     }
 
@@ -491,7 +458,6 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPhase = DriverRescuePhase.IdleWalkToBench;
             if (IsWorkerServiceBlockedByMoney(reason))
             {
-                ApplyWorkerMoneyFallbackEffect(driver);
                 SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} cannot afford Motel and is heading to bench sleep fallback; reason={reason}; bench={benchIndex}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Sleep)}.");
             }
             LogWorkerDecision(driver, "need-fallback", $"{need}: emergency bench rest; reason={reason}", true);
@@ -501,13 +467,23 @@ public partial class GameBootstrap : MonoBehaviour
         if (TryGetCityIdleWanderTarget(driver, startPosition, driver.IdleWanderPointIndex + 3, out Vector3 fallbackTarget))
         {
             driver.WalkTargetWorld = fallbackTarget;
+            if (need == WorkerNeedKind.Sleep)
+            {
+                driver.WalkPhase = DriverRescuePhase.IdleWalkToBench;
+                BuildDriverWalkPath(driver, startPosition, fallbackTarget);
+                LogWorkerDecision(driver, "need-fallback", $"{need}: walking to free ground rest; reason={reason}", true);
+                return true;
+            }
+
             BuildDriverWalkPath(driver, startPosition, fallbackTarget);
             driver.WalkPhase = DriverRescuePhase.IdleWander;
             LogWorkerDecision(driver, "need-fallback-walk", $"{need}: walking to free city fallback; reason={reason}", true);
             return true;
         }
 
-        driver.WalkPhase = DriverRescuePhase.IdlePhoneCall;
+        driver.WalkPhase = need == WorkerNeedKind.Sleep
+            ? DriverRescuePhase.IdleSittingOnBench
+            : DriverRescuePhase.IdlePhoneCall;
         LogWorkerDecision(driver, "need-fallback", $"{need}: immediate free fallback; reason={reason}", true);
         return true;
     }
@@ -592,11 +568,6 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
-        if (type == LocationType.Bar && service.AlcoholStored <= 0)
-        {
-            return false;
-        }
-
         if (type == LocationType.GamblingHall && !HasWorkerPerk(driver, WorkerPerkKind.Gambler) && driver.Money < WorkerGamblingMinBalance)
         {
             return false;
@@ -624,13 +595,7 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
-        bool hasResource = type switch
-        {
-            LocationType.Canteen => service.FoodStored > 0,
-            LocationType.Bar     => service.AlcoholStored > 0,
-            _                    => true
-        };
-        if (!hasResource || driver.Money < service.ServiceFee)
+        if (driver.Money < service.ServiceFee)
         {
             LogWorkerDecision(driver, "service-unavailable", $"{type}: {GetWorkerServiceUnavailableReason(driver, type)}", true);
             return false;
@@ -701,10 +666,16 @@ public partial class GameBootstrap : MonoBehaviour
 
     private bool TryStartWorkerSleep(DriverAgent driver, Vector3 startPosition)
     {
+        if (driver == null)
+            return false;
+
         if (driver.AssignedPersonalHouseIndex >= 0 && driver.AssignedPersonalHouseIndex < personalHouses.Count)
             return TryStartWorkerSleepAtHome(driver, startPosition);
 
-        if (driver == null || !locations.TryGetValue(LocationType.Motel, out LocationData motel) || driver.Money < motel.ServiceFee)
+        if (TryStartWorkerBuyHouseBeforeMotelSleep(driver, startPosition))
+            return true;
+
+        if (!locations.TryGetValue(LocationType.Motel, out LocationData motel) || driver.Money < motel.ServiceFee)
         {
             LogWorkerDecision(driver, "sleep-unavailable", GetWorkerServiceUnavailableReason(driver, LocationType.Motel), true);
             return false;

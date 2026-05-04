@@ -3,7 +3,8 @@ public enum VacancyFlowKind
     TruckDriver,
     Intercity,
     BusDriver,
-    Production
+    Production,
+    Service
 }
 
 public static class VacancyFlowRulesService

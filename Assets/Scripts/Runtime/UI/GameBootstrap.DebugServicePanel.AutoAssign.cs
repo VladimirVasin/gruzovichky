@@ -15,7 +15,7 @@ public partial class GameBootstrap
         List<string> assignments = new();
         int truckAssignments = 0;
         int shiftAssignments = 0;
-        int productionAssignments = 0;
+        int buildingAssignments = 0;
         int busAssignments = 0;
 
         DebugNormalizeTruckRosterShiftAssignments(assignments, ref shiftAssignments);
@@ -61,7 +61,7 @@ public partial class GameBootstrap
             }
         }
 
-        productionAssignments += DebugAutoAssignProductionSlots(assignments);
+        buildingAssignments += DebugAutoAssignBuildingSlots(assignments);
         busAssignments += DebugAutoAssignBusDriverSlots(assignments);
 
         isFleetScreenDirty = true;
@@ -70,7 +70,7 @@ public partial class GameBootstrap
 
         int freeWorkersLeft = DebugCountAutoAssignableWorkers();
         string summary =
-            $"Auto assign finished: trucks={truckAssignments}, truckShifts={shiftAssignments}, production={productionAssignments}, " +
+            $"Auto assign finished: trucks={truckAssignments}, truckShifts={shiftAssignments}, buildings={buildingAssignments}, " +
             $"bus={busAssignments}, freeWorkersLeft={freeWorkersLeft}.";
         SessionDebugLogger.Log("DEBUG_ASSIGN", summary);
         for (int i = 0; i < assignments.Count; i++)
@@ -125,36 +125,40 @@ public partial class GameBootstrap
         }
     }
 
-    private int DebugAutoAssignProductionSlots(List<string> assignments)
+    private int DebugAutoAssignBuildingSlots(List<string> assignments)
     {
         int count = 0;
-        LocationType[] singleWorkerBuildings =
+        LocationType[] buildings =
         {
             LocationType.Forest,
             LocationType.Sawmill,
-            LocationType.FurnitureFactory
+            LocationType.FurnitureFactory,
+            LocationType.Warehouse,
+            LocationType.Motel,
+            LocationType.Bar,
+            LocationType.Canteen,
+            LocationType.GasStation,
+            LocationType.GamblingHall,
+            LocationType.CarMarket,
+            LocationType.LaborExchange
         };
 
-        for (int i = 0; i < singleWorkerBuildings.Length; i++)
+        for (int i = 0; i < buildings.Length; i++)
         {
-            if (DebugTryAssignProductionSlot(singleWorkerBuildings[i], 0, assignments))
+            int maxSlots = GetMaxBuildingWorkerSlots(buildings[i]);
+            for (int slotIndex = 0; slotIndex < maxSlots; slotIndex++)
             {
-                count++;
-            }
-        }
-
-        for (int slotIndex = 0; slotIndex < WarehouseMaxWorkers; slotIndex++)
-        {
-            if (DebugTryAssignProductionSlot(LocationType.Warehouse, slotIndex, assignments))
-            {
-                count++;
+                if (DebugTryAssignBuildingSlot(buildings[i], slotIndex, assignments))
+                {
+                    count++;
+                }
             }
         }
 
         return count;
     }
 
-    private bool DebugTryAssignProductionSlot(LocationType buildingType, int slotIndex, List<string> assignments)
+    private bool DebugTryAssignBuildingSlot(LocationType buildingType, int slotIndex, List<string> assignments)
     {
         if (locations == null || !locations.ContainsKey(buildingType))
         {
@@ -166,7 +170,9 @@ public partial class GameBootstrap
             return false;
         }
 
-        DriverAgent worker = DebugFindNextAutoAssignableWorker();
+        DriverAgent worker = buildingType == LocationType.LaborExchange
+            ? DebugFindNextAutoAssignableWorker(d => HasHigherEducation(d))
+            : DebugFindNextAutoAssignableWorker();
         if (worker == null)
         {
             assignments.Add($"{buildingType} slot {slotIndex + 1}: no available worker.");
@@ -180,7 +186,8 @@ public partial class GameBootstrap
         };
 
         AssignWorkerToBuilding(worker, slot);
-        assignments.Add($"{worker.DriverName}: assigned to {buildingType} production slot {slotIndex + 1}.");
+        string workKind = IsProductionLocation(buildingType) ? "production" : "service";
+        assignments.Add($"{worker.DriverName}: assigned to {buildingType} {workKind} slot {slotIndex + 1}.");
         return true;
     }
 

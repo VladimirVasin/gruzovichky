@@ -135,7 +135,8 @@ public partial class GameBootstrap
                 (BuildTool.GamblingHall, "GH", "Gambling Hall",  new Color(0.52f, 0.38f, 0.08f)),
                 (BuildTool.CityPark,     "CP", "City Park",      new Color(0.22f, 0.48f, 0.22f)),
                 (BuildTool.PersonalHouse,"PH", "Personal House", new Color(0.55f, 0.42f, 0.30f)),
-                (BuildTool.CarMarket,    "CM", "Car Market",     new Color(0.64f, 0.52f, 0.38f))),
+                (BuildTool.CarMarket,    "CM", "Car Market",     new Color(0.64f, 0.52f, 0.38f)),
+                (BuildTool.LaborExchange,"LE", "Labor Exchange", new Color(0.34f, 0.47f, 0.56f))),
         };
 
         AddOverlayCloseButton(windowRect, font);
@@ -548,6 +549,24 @@ public partial class GameBootstrap
             }
 
             // ── Gas Station ───────────────────────────────────────────────────
+            case BuildTool.LaborExchange:
+            {
+                Color wall = new(0.34f, 0.47f, 0.56f);
+                Color roof = new(0.18f, 0.24f, 0.28f);
+                Color paper = new(0.92f, 0.88f, 0.74f);
+                Color dark = new(0.16f, 0.18f, 0.18f);
+                P(0.10f, 0.18f, 0.90f, 0.58f, wall);
+                P(0.06f, 0.56f, 0.94f, 0.68f, roof);
+                P(0.38f, 0.18f, 0.62f, 0.48f, dark);
+                P(0.16f, 0.38f, 0.34f, 0.52f, new Color(0.58f, 0.82f, 0.92f));
+                P(0.66f, 0.38f, 0.84f, 0.52f, new Color(0.58f, 0.82f, 0.92f));
+                P(0.22f, 0.70f, 0.78f, 0.84f, dark);
+                P(0.30f, 0.74f, 0.46f, 0.78f, paper);
+                P(0.54f, 0.74f, 0.70f, 0.78f, paper);
+                P(0.08f, 0.08f, 0.92f, 0.14f, new Color(0.74f, 0.70f, 0.58f));
+                break;
+            }
+
             case BuildTool.GasStation:
             {
                 Color canopy = new(0.84f, 0.68f, 0.26f); // yellow canopy

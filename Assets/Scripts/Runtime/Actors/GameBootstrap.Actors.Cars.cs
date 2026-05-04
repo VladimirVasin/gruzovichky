@@ -127,7 +127,7 @@ public partial class GameBootstrap
             center.x + ((slotIndex % 4) - 1.5f) * 1.3f,
             0f,
             center.z - 3f - (slotIndex / 4) * 1.6f);
-        pos.y = SampleTerrainHeight(pos.x, pos.z) + RoadHeight + 0.15f;
+        pos = WithRoadVehicleHeight(pos, LocalBusRoadSurfaceLift);
 
         GameObject car = CreateCarModel(driver.OwnedCarModelIndex, worldRoot);
         car.transform.position = pos;

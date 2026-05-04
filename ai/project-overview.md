@@ -1,6 +1,6 @@
 # Project Overview
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 ## Purpose
 
@@ -12,8 +12,8 @@ Stable high-level map of the current playable prototype. Code remains the source
 - Runtime is still scene-local and generated from `Assets/Scenes/SampleScene.unity`.
 - The main playable slice now combines:
   - buildable roads, service buildings, production buildings, and local bus stops
-  - workers with portraits, skills, needs, perks, money, jobs, shifts, and life routines
-  - trucks, local buses, warehouse delivery, service-resource logistics, and intercity trade
+  - workers with portraits, education, needs, perks, money, jobs, shifts, and life routines
+  - trucks, local buses, warehouse storage/logistics, and intercity trade
   - taxes, building banks, event feed, regional map, tutorial/onboarding, and racing mode
   - procedural terrain, natural zones, water, ambient life, weather/lighting, and low-poly visuals
 
@@ -35,7 +35,7 @@ ai/                    Shared AI memory
 - `Assets/Scripts/Runtime/Core/GameBootstrap.cs`
   Central scene bootstrap and shared runtime state owner.
 - `Assets/Scripts/Runtime/Core/GameBootstrap.*.cs`
-  Runtime loop, trade/economy, worker needs/stats, ambient life, world visuals, water, and telemetry partials.
+  Runtime loop, trade/economy, worker needs/perks, ambient life, world visuals, water, and telemetry partials.
 - `Assets/Scripts/Runtime/Data/`
   Small JSON-backed content/config loaders for data that is being separated from large C# UI files.
 - `Assets/Scripts/Runtime/World/`

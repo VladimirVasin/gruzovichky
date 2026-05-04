@@ -110,9 +110,7 @@ public partial class GameBootstrap
 
     private Vector3 GetBusRoadWorldPosition(Vector2Int cell)
     {
-        Vector3 world = GetCellCenter(cell);
-        world.y = SampleRoadSurfaceHeight(world.x, world.z) + RoadHeight + EdgeHighwayBusLift;
-        return world;
+        return GetRoadVehicleWorldPosition(cell.x + 0.5f, cell.y + 0.5f, LocalBusRoadSurfaceLift);
     }
 
     private Vector3 GetBusRoadWorldPosition(Vector2Int fromCell, Vector2Int toCell)
@@ -461,8 +459,8 @@ public partial class GameBootstrap
             target,
             localBusRoute.Speed,
             dt,
-            SampleTerrainHeight,
-            RoadHeight + EdgeHighwayBusLift);
+            SampleRoadSurfaceHeight,
+            LocalBusRoadSurfaceLift);
         localBusRoute.RootTransform.position = movement.Position;
         if (movement.HasFacingDirection)
         {
@@ -552,6 +550,11 @@ public partial class GameBootstrap
     {
         NormalizeLocalStopNumbers();
         List<LocationData> orderedStops = GetOrderedLocalStops();
+        if (orderedStops.Count < 2)
+        {
+            ShowLocalBusStopMinimumHintIfNeeded();
+        }
+
         if (orderedStops.Count == 0 || !locations.TryGetValue(LocationType.Parking, out LocationData parking))
         {
             SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} cannot start route from Parking: no local stops or Parking missing.");
@@ -664,7 +667,7 @@ public partial class GameBootstrap
 
         Vector3 position = localBusRoute.RootTransform.position;
         float bob = Mathf.Sin(Time.time * 3.2f + localBusRoute.BobPhase) * 0.015f;
-        position.y = SampleRoadSurfaceHeight(position.x, position.z) + RoadHeight + EdgeHighwayBusLift + bob;
+        position.y = SampleRoadSurfaceHeight(position.x, position.z) + LocalBusRoadSurfaceLift + bob;
         localBusRoute.RootTransform.position = position;
 
         float darkness = 1f - currentStylizedDaylight;

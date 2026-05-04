@@ -212,7 +212,6 @@ public partial class GameBootstrap
         Vector2Int highwayReturnCell = GetTradeHighwayReturnCell();
         activeTradeRun.EdgeTravelDirection = -1f;
         Vector3 spawnPosition = GetTruckWorldPosition(highwayReturnCell);
-        spawnPosition.y = SampleTerrainHeight(spawnPosition.x, spawnPosition.z) + RoadHeight + 0.12f;
         truckAgent.TruckCell = highwayReturnCell;
         truckAgent.TruckTargetWorld = spawnPosition;
         truckAgent.TruckSegmentStartWorld = spawnPosition;
@@ -352,7 +351,6 @@ public partial class GameBootstrap
         {
             money += racingBonusEarned;
             RecordMoneyMovement(racingBonusEarned, "Racing Bonus", "Treasury", "Intercity racing bonus", money);
-            ApplyWorkerRaceRushEffect(driver);
             racingBonusEarned = 0;
         }
 
@@ -369,7 +367,6 @@ public partial class GameBootstrap
 
         string completionVerb = activeTradeRun.OrderType == TradeOrderType.Buy ? "Bought" : "Sold";
         tradeDispatchStatusText = $"{completionVerb} {resourceLabel} x{activeTradeRun.Quantity}";
-        ApplyWorkerRoadFatigueEffect(driver);
         SessionDebugLogger.Log("TRADE", $"{driver.DriverName} completed trade run with {truckAgent.DisplayName}.");
         PushFeedEvent(
             activeTradeRun.OrderType == TradeOrderType.Buy

@@ -27,17 +27,6 @@ public partial class GameBootstrap
                 LocationType.Canteen => 10,
                 _                    => 0
             },
-            FuelStored    = type == LocationType.Warehouse
-                ? WarehouseResourceStartAmount
-                : type == LocationType.GasStation
-                    ? GasStationMaxFuelStorage
-                    : 0,
-            AlcoholStored = type == LocationType.Warehouse ? WarehouseResourceStartAmount
-                          : type == LocationType.Bar      ? BarMaxAlcoholStorage
-                          : 0,
-            FoodStored    = type == LocationType.Warehouse ? WarehouseResourceStartAmount
-                          : type == LocationType.Canteen  ? CanteenMaxFoodStorage
-                          : 0,
             BuildingBank  = type == LocationType.GamblingHall ? 50 : 0,
         };
 
@@ -131,7 +120,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Warehouse)
         {
-            CreateWarehouseDecoration(root.transform, center);
+            CreateWarehouseDecoration(root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.Motel)
         {
@@ -139,7 +128,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Sawmill)
         {
-            CreateSawmillDecoration(root.transform, center);
+            CreateSawmillDecoration(root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.FurnitureFactory)
         {
@@ -176,6 +165,10 @@ public partial class GameBootstrap
         else if (type == LocationType.CarMarket)
         {
             CreateCarMarketDecoration(root.transform, center, min, max, anchor);
+        }
+        else if (type == LocationType.LaborExchange)
+        {
+            CreateLaborExchangeDecoration(root.transform, center, min, max, anchor);
         }
         else
         {
@@ -381,6 +374,7 @@ public partial class GameBootstrap
         }
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.62f);
+        EnhanceParkingModel(parent, center, min, max, anchor);
     }
 
     private void CreateBusStopDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -435,6 +429,8 @@ public partial class GameBootstrap
         stopSign.transform.localScale = new Vector3(0.34f, 0.28f, 0.04f);
         ApplyColor(stopSign, new Color(0.95f, 0.84f, 0.2f), VisualSmoothnessVehicleMetal);
         ConfigureStaticVisual(stopSign, VisualSmoothnessVehicleMetal);
+
+        EnhanceBusStopModel(parent, center, min, max, anchor);
     }
 
     private void CreateForestDecoration(Transform parent, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -502,6 +498,7 @@ public partial class GameBootstrap
         CreateForestStoredLogsVisuals(parent, depotPos + new Vector3(0f, 0.08f, 0.58f));
         RefreshForestStoredLogsVisual();
         TryCreateSquirrelMemorialSign(parent, center + new Vector3(-1.05f, 0.06f, -1.26f), Quaternion.identity);
+        EnhanceForestCampModel(parent, center, min, max, anchor);
 
         SessionDebugLogger.Log("WORLD", "Built Lumberyard decoration with depot yard and storage stack.");
     }
@@ -529,7 +526,7 @@ public partial class GameBootstrap
 
     private void ShowLocalBusStopMinimumHintIfNeeded()
     {
-        if (hasShownLocalBusStopMinimumHint || localStops.Count != 1)
+        if (hasShownLocalBusStopMinimumHint || localStops.Count >= 2)
         {
             return;
         }
@@ -537,7 +534,7 @@ public partial class GameBootstrap
         hasShownLocalBusStopMinimumHint = true;
         PushFeedEvent(
             "Bus network is offline: build at least 2 local bus stops.",
-            "Автобусная сеть не работает: нужна минимум 2-я остановка.",
+            "\u0410\u0432\u0442\u043e\u0431\u0443\u0441\u043d\u0430\u044f \u0441\u0435\u0442\u044c \u043d\u0435 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442: \u043d\u0443\u0436\u043d\u044b \u043c\u0438\u043d\u0438\u043c\u0443\u043c 2 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438.",
             FeedEventType.Warning);
     }
 

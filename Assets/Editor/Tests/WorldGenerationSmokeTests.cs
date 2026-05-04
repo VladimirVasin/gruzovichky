@@ -540,46 +540,6 @@ public sealed class WorldGenerationSmokeTests
     }
 
     [Test]
-    public void WarehouseBusDeliveryService_UsesBusOnlyWhenItActuallyHelps()
-    {
-        WarehouseBusDeliveryDecision useBus = WarehouseBusDeliveryService.Evaluate(
-            workerCanDeliver: true,
-            hasCargo: true,
-            orderedStopCount: 3,
-            directDistance: 28,
-            accessWalkDistance: 3,
-            exitWalkDistance: 4,
-            directWalkThreshold: 10,
-            maxAccessWalkDistance: 8,
-            minimumSavings: 5);
-        Assert.That(useBus.Kind, Is.EqualTo(WarehouseBusDeliveryDecisionKind.UseBus));
-
-        WarehouseBusDeliveryDecision shortWalk = WarehouseBusDeliveryService.Evaluate(
-            workerCanDeliver: true,
-            hasCargo: true,
-            orderedStopCount: 3,
-            directDistance: 8,
-            accessWalkDistance: 2,
-            exitWalkDistance: 2,
-            directWalkThreshold: 10,
-            maxAccessWalkDistance: 8,
-            minimumSavings: 5);
-        Assert.That(shortWalk.Kind, Is.EqualTo(WarehouseBusDeliveryDecisionKind.Walk));
-
-        WarehouseBusDeliveryDecision noCargo = WarehouseBusDeliveryService.Evaluate(
-            workerCanDeliver: true,
-            hasCargo: false,
-            orderedStopCount: 3,
-            directDistance: 30,
-            accessWalkDistance: 2,
-            exitWalkDistance: 2,
-            directWalkThreshold: 10,
-            maxAccessWalkDistance: 8,
-            minimumSavings: 5);
-        Assert.That(noCargo.Kind, Is.EqualTo(WarehouseBusDeliveryDecisionKind.CannotDeliver));
-    }
-
-    [Test]
     public void ServiceDecorationStyleService_GivesDistinctNightIdentity()
     {
         ServiceDecorationLightStyle bar = ServiceDecorationStyleService.GetLightStyle(ServiceDecorationKind.Bar);

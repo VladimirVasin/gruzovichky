@@ -1,0 +1,667 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public partial class GameBootstrap
+{
+    private void UpdateLaborExchangeRuntime()
+    {
+        if (laborExchangeApplicantDay != currentDay)
+        {
+            laborExchangeApplicantDay = currentDay;
+            laborExchangeApplicantsToday = 0;
+        }
+
+        bool built = locations.ContainsKey(LocationType.LaborExchange);
+        if (built != wasLaborExchangeBuiltLastTick)
+        {
+            wasLaborExchangeBuiltLastTick = built;
+            SessionDebugLogger.Log("LABOR_EXCHANGE", built
+                ? "Labor Exchange is built; waiting for higher-educated clerk during work hours."
+                : "Labor Exchange is missing; vacancy automation is offline.");
+        }
+
+        PruneLaborExchangePostings();
+        if (!built)
+        {
+            ClearLaborExchangePostings("building missing");
+            wasLaborExchangeStaffedLastTick = false;
+            return;
+        }
+
+        bool staffed = IsLaborExchangeStaffed();
+        if (staffed != wasLaborExchangeStaffedLastTick)
+        {
+            wasLaborExchangeStaffedLastTick = staffed;
+            SessionDebugLogger.Log("LABOR_EXCHANGE", staffed
+                ? "Labor Exchange staffed; vacancy generation online."
+                : "Labor Exchange has no active clerk; vacancy generation paused.");
+        }
+
+        if (!staffed)
+        {
+            return;
+        }
+
+        laborExchangePostingTimer -= Time.deltaTime * Mathf.Max(0f, gameSpeedMultiplier);
+        if (laborExchangePostings.Count == 0 || laborExchangePostingTimer <= 0f)
+        {
+            bool posted = TryPublishNextLaborExchangePosting();
+            laborExchangePostingTimer = posted
+                ? LaborExchangePostingInterval
+                : LaborExchangePostingInterval * 0.5f;
+        }
+    }
+
+    private bool IsLaborExchangeStaffed()
+    {
+        return locations.ContainsKey(LocationType.LaborExchange) &&
+               CountWorkersOnShiftAt(LocationType.LaborExchange) > 0;
+    }
+
+    private bool IsLaborExchangeReadyForApplicants(out string reason)
+    {
+        if (!locations.ContainsKey(LocationType.LaborExchange))
+        {
+            reason = "Labor Exchange is not built";
+            return false;
+        }
+
+        if (!IsLaborExchangeStaffed())
+        {
+            reason = "Labor Exchange has no clerk on shift";
+            return false;
+        }
+
+        reason = string.Empty;
+        return true;
+    }
+
+    private void ClearLaborExchangePostings(string reason)
+    {
+        if (laborExchangePostings.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < laborExchangePostings.Count; i++)
+        {
+            ReleaseLaborExchangePostingReservation(laborExchangePostings[i]);
+        }
+
+        int count = laborExchangePostings.Count;
+        laborExchangePostings.Clear();
+        SessionDebugLogger.Log("LABOR_EXCHANGE", $"Cleared {count} posting(s): {reason}.");
+    }
+
+    private void PruneLaborExchangePostings()
+    {
+        for (int i = laborExchangePostings.Count - 1; i >= 0; i--)
+        {
+            LaborExchangePosting posting = laborExchangePostings[i];
+            if (IsLaborExchangePostingFilled(posting))
+            {
+                ReleaseLaborExchangePostingReservation(posting);
+                laborExchangePostings.RemoveAt(i);
+                SessionDebugLogger.Log("LABOR_EXCHANGE", $"Posting #{posting.Id} removed because target is already filled: {GetLaborExchangePostingLabel(posting)}.");
+                continue;
+            }
+
+            if (posting.ReservedWorkerId <= 0)
+            {
+                continue;
+            }
+
+            DriverAgent worker = GetDriverAgentById(posting.ReservedWorkerId);
+            bool stillApplying = worker != null &&
+                                  worker.ReservedLaborExchangePostingId == posting.Id &&
+                                  worker.LifeGoal == WorkerLifeGoal.FindJob &&
+                                  IsWorkerTravellingToLaborExchange(worker);
+            if (!stillApplying)
+            {
+                SessionDebugLogger.Log("LABOR_EXCHANGE", $"Posting #{posting.Id} reservation released: worker no longer applying.");
+                ReleaseLaborExchangePostingReservation(posting);
+            }
+        }
+    }
+
+    private static bool IsWorkerTravellingToLaborExchange(DriverAgent worker)
+    {
+        return worker != null &&
+               (worker.WalkPhase == DriverRescuePhase.ToLaborExchangeForJob ||
+                worker.WalkPhase == DriverRescuePhase.AtLaborExchange ||
+                worker.WalkPhase == DriverRescuePhase.WalkToLocalBusStop ||
+                worker.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop ||
+                worker.WalkPhase == DriverRescuePhase.RidingLocalBus);
+    }
+
+    private void ReleaseLaborExchangePostingReservation(LaborExchangePosting posting)
+    {
+        if (posting == null || posting.ReservedWorkerId <= 0)
+        {
+            return;
+        }
+
+        DriverAgent worker = GetDriverAgentById(posting.ReservedWorkerId);
+        if (worker != null && worker.ReservedLaborExchangePostingId == posting.Id)
+        {
+            worker.ReservedLaborExchangePostingId = 0;
+            worker.LaborExchangeInterviewTimer = 0f;
+            if (worker.LifeGoal == WorkerLifeGoal.FindJob)
+            {
+                worker.LifeGoal = WorkerLifeGoal.Idle;
+            }
+        }
+
+        posting.ReservedWorkerId = 0;
+    }
+
+    private bool TryPublishNextLaborExchangePosting()
+    {
+        if (laborExchangePostings.Count >= LaborExchangeMaxActivePostings)
+        {
+            return false;
+        }
+
+        List<LaborExchangeCandidate> candidates = new();
+        AddLaborExchangeShiftCandidates(candidates);
+        AddLaborExchangeBuildingCandidates(candidates);
+        if (candidates.Count == 0)
+        {
+            if (SessionDebugLogger.IsVerboseEnabled("LABOR_EXCHANGE"))
+            {
+                SessionDebugLogger.LogVerbose("LABOR_EXCHANGE", "No open target vacancies found for posting generation.");
+            }
+            return false;
+        }
+
+        candidates.Sort((a, b) => a.Priority.CompareTo(b.Priority));
+        LaborExchangeCandidate candidate = candidates[0];
+        LaborExchangePosting posting = new()
+        {
+            Id = nextLaborExchangePostingId++,
+            Kind = candidate.Kind,
+            BuildingType = candidate.BuildingType,
+            SlotIndex = candidate.SlotIndex,
+            ShiftIndex = candidate.ShiftIndex,
+            TruckNumber = candidate.TruckNumber,
+            CreatedAtWorldHour = GetCurrentWorldHour()
+        };
+
+        laborExchangePostings.Add(posting);
+        SessionDebugLogger.Log("LABOR_EXCHANGE", $"Posted vacancy #{posting.Id}: {GetLaborExchangePostingLabel(posting)}; active={laborExchangePostings.Count}/{LaborExchangeMaxActivePostings}.");
+        PushFeedEvent(
+            $"Labor Exchange posted: {GetLaborExchangePostingLabel(posting)}.",
+            $"\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u043d\u043e\u0432\u0430\u044f \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u044f {GetLaborExchangePostingLabel(posting)}.",
+            FeedEventType.Info);
+        isShiftsScreenDirty = true;
+        return true;
+    }
+
+    private void AddLaborExchangeShiftCandidates(List<LaborExchangeCandidate> candidates)
+    {
+        if (IsVacancyUnlockedForCurrentTutorial(VacancyKind.TruckDriver) &&
+            locations.ContainsKey(LocationType.Parking) &&
+            HasAvailableTruckInParking())
+        {
+            for (int i = 0; i < ShiftPresetHours.Length; i++)
+            {
+                if (!IsAnyTruckDriverAssignedToShift(i) &&
+                    !HasLaborExchangePosting(VacancyKind.TruckDriver, LocationType.Parking, -1, i))
+                {
+                    candidates.Add(new LaborExchangeCandidate(VacancyKind.TruckDriver, LocationType.Parking, -1, i, 0, 30));
+                }
+            }
+        }
+
+        if (IsVacancyUnlockedForCurrentTutorial(VacancyKind.BusDriver) &&
+            locations.ContainsKey(LocationType.Parking) &&
+            HasAvailableBusInParking())
+        {
+            for (int i = 0; i < ShiftPresetHours.Length; i++)
+            {
+                if (GetBusAssignedDriver(i) == null &&
+                    !HasLaborExchangePosting(VacancyKind.BusDriver, LocationType.Parking, -1, i))
+                {
+                    candidates.Add(new LaborExchangeCandidate(VacancyKind.BusDriver, LocationType.Parking, -1, i, 0, 50));
+                }
+            }
+        }
+    }
+
+    private void AddLaborExchangeBuildingCandidates(List<LaborExchangeCandidate> candidates)
+    {
+        if (locations.ContainsKey(LocationType.Warehouse) &&
+            IsVacancyUnlockedForCurrentTutorial(VacancyKind.Production, LocationType.Warehouse))
+        {
+            for (int i = 0; i < WarehouseMaxWorkers; i++)
+            {
+                if (GetNthLogisticsWorker(LocationType.Warehouse, i) == null &&
+                    !HasLaborExchangePosting(VacancyKind.Production, LocationType.Warehouse, i, -1))
+                {
+                    candidates.Add(new LaborExchangeCandidate(VacancyKind.Production, LocationType.Warehouse, i, -1, 0, 15));
+                }
+            }
+        }
+
+        for (int i = 0; i < logisticsSlots.Length; i++)
+        {
+            LogisticsSlotUi slot = logisticsSlots[i];
+            if (slot == null ||
+                slot.BuildingType == LocationType.Warehouse ||
+                !locations.ContainsKey(slot.BuildingType) ||
+                GetNthLogisticsWorker(slot.BuildingType, slot.SlotIndex) != null)
+            {
+                continue;
+            }
+
+            VacancyKind kind = IsProductionLocation(slot.BuildingType) ? VacancyKind.Production : VacancyKind.Service;
+            if (!IsVacancyUnlockedForCurrentTutorial(kind, slot.BuildingType) ||
+                HasLaborExchangePosting(kind, slot.BuildingType, slot.SlotIndex, -1))
+            {
+                continue;
+            }
+
+            int priority = kind == VacancyKind.Production ? 20 : 40;
+            if (slot.BuildingType == LocationType.LaborExchange)
+            {
+                priority = 12;
+            }
+
+            candidates.Add(new LaborExchangeCandidate(kind, slot.BuildingType, slot.SlotIndex, -1, 0, priority));
+        }
+    }
+
+    private bool HasLaborExchangePosting(VacancyKind kind, LocationType buildingType, int slotIndex, int shiftIndex)
+    {
+        for (int i = 0; i < laborExchangePostings.Count; i++)
+        {
+            LaborExchangePosting posting = laborExchangePostings[i];
+            if (posting.Kind == kind &&
+                posting.BuildingType == buildingType &&
+                posting.SlotIndex == slotIndex &&
+                posting.ShiftIndex == shiftIndex)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryStartLaborExchangeJobSearch(DriverAgent driver)
+    {
+        string readyReason = string.Empty;
+        if (driver == null ||
+            driver.DriverObject == null ||
+            driver.ReservedLaborExchangePostingId > 0 ||
+            !IsLaborExchangeReadyForApplicants(out readyReason) ||
+            HasCriticalWorkerNeed(driver) ||
+            !IsWorkerVacantForVacancyAssignment(driver))
+        {
+            if (driver != null && !string.IsNullOrEmpty(readyReason))
+            {
+                LogWorkerDecision(driver, "skip-labor-exchange", readyReason);
+            }
+            return false;
+        }
+
+        if (!TryReserveLaborExchangePostingForWorker(driver, out LaborExchangePosting posting, out string reserveReason))
+        {
+            LogWorkerDecision(driver, "skip-labor-exchange", reserveReason);
+            return false;
+        }
+
+        Vector3 startPosition = driver.DriverObject.transform.position;
+        Vector3 target = GetDriverStandPointNearLocation(LocationType.LaborExchange);
+        driver.LifeGoal = WorkerLifeGoal.FindJob;
+        driver.IdleWanderPauseTimer = 0f;
+        driver.IdleWanderPointIndex = -1;
+        driver.IdleConversationTimer = 0f;
+        driver.IdleConversationPartnerId = -1;
+        ReleaseBench(driver);
+        ReleaseCatInteraction(driver);
+        ResetWorkerLocalBusTripState(driver);
+
+        if (TryStartWorkerLocalBusTrip(driver, startPosition, target, DriverRescuePhase.ToLaborExchangeForJob, "Labor Exchange job search"))
+        {
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} reserved posting #{posting.Id} and travels by bus: {GetLaborExchangePostingLabel(posting)}.");
+            return true;
+        }
+
+        driver.WalkPhase = DriverRescuePhase.ToLaborExchangeForJob;
+        driver.WalkTargetWorld = target;
+        driver.WalkAnimationTime = 0f;
+        BuildDriverWalkPath(driver, startPosition, target);
+        SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} reserved posting #{posting.Id} and walks to Labor Exchange: {GetLaborExchangePostingLabel(posting)}.");
+        LogWorkerDecision(driver, "labor-exchange-apply", $"posting #{posting.Id}: {GetLaborExchangePostingLabel(posting)}", true);
+        return true;
+    }
+
+    private bool TryReserveLaborExchangePostingForWorker(DriverAgent driver, out LaborExchangePosting posting, out string reason)
+    {
+        posting = null;
+        reason = "no suitable labor exchange postings";
+        for (int i = 0; i < laborExchangePostings.Count; i++)
+        {
+            LaborExchangePosting candidate = laborExchangePostings[i];
+            if (candidate.ReservedWorkerId > 0)
+            {
+                continue;
+            }
+
+            if (!CanWorkerFillLaborExchangePosting(candidate, driver, out reason))
+            {
+                continue;
+            }
+
+            candidate.ReservedWorkerId = driver.DriverId;
+            driver.ReservedLaborExchangePostingId = candidate.Id;
+            posting = candidate;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool CanWorkerFillLaborExchangePosting(LaborExchangePosting posting, DriverAgent driver, out string reason)
+    {
+        reason = string.Empty;
+        if (posting == null || driver == null)
+        {
+            reason = "missing worker or posting";
+            return false;
+        }
+
+        if (!IsWorkerVacantForVacancyAssignment(driver))
+        {
+            reason = "worker is not vacant";
+            return false;
+        }
+
+        if (IsLaborExchangePostingFilled(posting))
+        {
+            reason = "posting already filled";
+            return false;
+        }
+
+        if ((posting.Kind == VacancyKind.Production || posting.Kind == VacancyKind.Service) &&
+            !CanWorkerMeetBuildingEducationRequirement(driver, posting.BuildingType, out reason))
+        {
+            return false;
+        }
+
+        return posting.Kind switch
+        {
+            VacancyKind.Production or VacancyKind.Service =>
+                locations.ContainsKey(posting.BuildingType) &&
+                GetNthLogisticsWorker(posting.BuildingType, posting.SlotIndex) == null,
+            VacancyKind.TruckDriver =>
+                posting.ShiftIndex >= 0 &&
+                posting.ShiftIndex < ShiftPresetHours.Length &&
+                !IsAnyTruckDriverAssignedToShift(posting.ShiftIndex) &&
+                HasAvailableTruckInParking(),
+            VacancyKind.BusDriver =>
+                posting.ShiftIndex >= 0 &&
+                posting.ShiftIndex < ShiftPresetHours.Length &&
+                GetBusAssignedDriver(posting.ShiftIndex) == null &&
+                HasAvailableBusInParking(),
+            _ => false
+        };
+    }
+
+    private bool IsLaborExchangePostingFilled(LaborExchangePosting posting)
+    {
+        if (posting == null)
+        {
+            return true;
+        }
+
+        return posting.Kind switch
+        {
+            VacancyKind.Production or VacancyKind.Service =>
+                !locations.ContainsKey(posting.BuildingType) ||
+                GetNthLogisticsWorker(posting.BuildingType, posting.SlotIndex) != null,
+            VacancyKind.TruckDriver =>
+                posting.ShiftIndex < 0 ||
+                posting.ShiftIndex >= ShiftPresetHours.Length ||
+                IsAnyTruckDriverAssignedToShift(posting.ShiftIndex) ||
+                !HasAvailableTruckInParking(),
+            VacancyKind.BusDriver =>
+                posting.ShiftIndex < 0 ||
+                posting.ShiftIndex >= ShiftPresetHours.Length ||
+                GetBusAssignedDriver(posting.ShiftIndex) != null ||
+                !HasAvailableBusInParking(),
+            _ => true
+        };
+    }
+
+    private void StartLaborExchangeInterview(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return;
+        }
+
+        driver.WalkPhase = DriverRescuePhase.AtLaborExchange;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        driver.WalkAnimationTime = 0f;
+        driver.LaborExchangeInterviewTimer = LaborExchangeInterviewDuration;
+        driver.IdleActivityTimer = LaborExchangeInterviewDuration;
+        laborExchangeApplicantsToday++;
+        EnterWorkerServiceInterior(driver, LocationType.LaborExchange);
+        SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} entered Labor Exchange interview; reservedPosting={driver.ReservedLaborExchangePostingId}.");
+        isDriversScreenDirty = true;
+    }
+
+    private void CompleteLaborExchangeApplication(DriverAgent driver, Vector3 exitPosition)
+    {
+        if (driver == null)
+        {
+            return;
+        }
+
+        int postingId = driver.ReservedLaborExchangePostingId;
+        LaborExchangePosting posting = FindLaborExchangePosting(postingId);
+        driver.ReservedLaborExchangePostingId = 0;
+        driver.LaborExchangeInterviewTimer = 0f;
+        driver.IdleActivityTimer = 0f;
+        driver.WalkPhase = DriverRescuePhase.None;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        ResetWorkerLocalBusTripState(driver);
+
+        bool assigned = false;
+        string resultReason = string.Empty;
+        if (posting == null)
+        {
+            resultReason = $"posting #{postingId} no longer exists";
+        }
+        else if (!IsLaborExchangeReadyForApplicants(out resultReason))
+        {
+            posting.ReservedWorkerId = 0;
+        }
+        else if (!CanWorkerFillLaborExchangePosting(posting, driver, out resultReason))
+        {
+            posting.ReservedWorkerId = 0;
+        }
+        else
+        {
+            assigned = TryAssignLaborExchangePosting(driver, posting);
+            resultReason = assigned ? "assigned" : "assignment failed";
+        }
+
+        if (assigned)
+        {
+            laborExchangePostings.Remove(posting);
+            driver.LifeGoal = WorkerLifeGoal.Work;
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} hired via Labor Exchange posting #{posting.Id}: {GetLaborExchangePostingLabel(posting)}.");
+            PushFeedEvent(
+                $"{driver.DriverName} found work: {GetLaborExchangePostingLabel(posting)}.",
+                $"{driver.DriverName} \u0443\u0441\u0442\u0440\u043e\u0438\u043b\u0441\u044f \u0447\u0435\u0440\u0435\u0437 \u0411\u0438\u0440\u0436\u0443 \u0442\u0440\u0443\u0434\u0430.",
+                FeedEventType.Success);
+        }
+        else
+        {
+            driver.LifeGoal = WorkerLifeGoal.Idle;
+            driver.IdleWanderPauseTimer = Random.Range(0.5f, 1.5f);
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} left Labor Exchange without assignment: {resultReason}.");
+            if (exitPosition != Vector3.zero)
+            {
+                BuildDriverWalkPath(driver, exitPosition, FindDriverIdleWanderTarget(driver, exitPosition));
+                driver.WalkPhase = DriverRescuePhase.IdleWander;
+            }
+        }
+
+        isDriversScreenDirty = true;
+        isShiftsScreenDirty = true;
+    }
+
+    private LaborExchangePosting FindLaborExchangePosting(int postingId)
+    {
+        for (int i = 0; i < laborExchangePostings.Count; i++)
+        {
+            if (laborExchangePostings[i].Id == postingId)
+            {
+                return laborExchangePostings[i];
+            }
+        }
+
+        return null;
+    }
+
+    private bool TryAssignLaborExchangePosting(DriverAgent worker, LaborExchangePosting posting)
+    {
+        int oldShiftIndex = selectedVacancyShiftIndex;
+        int oldTruckNumber = selectedVacancyTruckNumber;
+        int oldVacancyIndex = selectedVacancyIndex;
+
+        try
+        {
+            switch (posting.Kind)
+            {
+                case VacancyKind.Production:
+                case VacancyKind.Service:
+                    AssignWorkerToBuilding(worker, FindLogisticsSlot(posting.BuildingType, posting.SlotIndex));
+                    return worker.DutyMode == DriverDutyMode.Logistics &&
+                           worker.AssignedBuildingType == posting.BuildingType;
+                case VacancyKind.TruckDriver:
+                    selectedVacancyShiftIndex = posting.ShiftIndex;
+                    selectedVacancyTruckNumber = posting.TruckNumber;
+                    return AssignTruckDriverVacancy(worker);
+                case VacancyKind.BusDriver:
+                    AssignDriverToBusSlot(worker, posting.ShiftIndex);
+                    return GetBusAssignedDriver(posting.ShiftIndex) == worker;
+                default:
+                    return false;
+            }
+        }
+        finally
+        {
+            selectedVacancyShiftIndex = oldShiftIndex;
+            selectedVacancyTruckNumber = oldTruckNumber;
+            selectedVacancyIndex = oldVacancyIndex;
+        }
+    }
+
+    private int CountAvailableLaborExchangePostings()
+    {
+        int count = 0;
+        for (int i = 0; i < laborExchangePostings.Count; i++)
+        {
+            if (laborExchangePostings[i].ReservedWorkerId <= 0 && !IsLaborExchangePostingFilled(laborExchangePostings[i]))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private int CountReservedLaborExchangePostings()
+    {
+        int count = 0;
+        for (int i = 0; i < laborExchangePostings.Count; i++)
+        {
+            if (laborExchangePostings[i].ReservedWorkerId > 0)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private string FormatLaborExchangePostingLines(int maxLines, bool ru)
+    {
+        int emitted = 0;
+        string text = string.Empty;
+        for (int i = 0; i < laborExchangePostings.Count && emitted < maxLines; i++)
+        {
+            LaborExchangePosting posting = laborExchangePostings[i];
+            if (posting.ReservedWorkerId > 0 || IsLaborExchangePostingFilled(posting))
+            {
+                continue;
+            }
+
+            text += (text.Length > 0 ? "\n" : string.Empty) + FormatValueLine($"{emitted + 1}.", GetLaborExchangePostingDisplayLabel(posting, ru));
+            emitted++;
+        }
+
+        if (emitted == 0)
+        {
+            text = FormatValueLine(ru ? "\u0421\u043f\u0438\u0441\u043e\u043a" : "List", ru ? "\u043f\u0443\u0441\u0442\u043e" : "empty");
+        }
+
+        return text;
+    }
+
+    private string GetLaborExchangePostingLabel(LaborExchangePosting posting)
+    {
+        if (posting == null)
+        {
+            return "Unknown vacancy";
+        }
+
+        return posting.Kind switch
+        {
+            VacancyKind.Production or VacancyKind.Service =>
+                $"{GetSelectedLocationDisplayName(posting.BuildingType)} slot {posting.SlotIndex + 1}",
+            VacancyKind.TruckDriver =>
+                posting.ShiftIndex >= 0 && posting.ShiftIndex < ShiftNames.Length
+                    ? $"Truck Driver {ShiftNames[posting.ShiftIndex]}"
+                    : "Truck Driver",
+            VacancyKind.BusDriver =>
+                posting.ShiftIndex >= 0 && posting.ShiftIndex < ShiftNames.Length
+                    ? $"Bus Driver {ShiftNames[posting.ShiftIndex]}"
+                    : "Bus Driver",
+            _ => "Unknown vacancy"
+        };
+    }
+
+    private string GetLaborExchangePostingDisplayLabel(LaborExchangePosting posting, bool ru)
+    {
+        if (posting == null)
+        {
+            return ru ? "\u043d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e" : "unknown";
+        }
+
+        if (posting.Kind == VacancyKind.Production || posting.Kind == VacancyKind.Service)
+        {
+            string role = L(GetBuildingWorkerRoleLabel(posting.BuildingType));
+            string building = L(GetSelectedLocationDisplayName(posting.BuildingType));
+            string slot = GetMaxBuildingWorkerSlots(posting.BuildingType) > 1 ? $" #{posting.SlotIndex + 1}" : string.Empty;
+            return $"{role}: {building}{slot}";
+        }
+
+        if (posting.ShiftIndex >= 0 && posting.ShiftIndex < ShiftPresetHours.Length)
+        {
+            string title = posting.Kind == VacancyKind.BusDriver
+                ? (ru ? "\u0412\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0430" : "Bus Driver")
+                : (ru ? "\u0412\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0430" : "Truck Driver");
+            return $"{title}: {L(ShiftNames[posting.ShiftIndex])}";
+        }
+
+        return GetLaborExchangePostingLabel(posting);
+    }
+}

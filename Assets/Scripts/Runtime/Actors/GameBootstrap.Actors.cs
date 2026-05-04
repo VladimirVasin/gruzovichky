@@ -96,9 +96,11 @@ public partial class GameBootstrap
     {
         if (locations.ContainsKey(LocationType.Parking))
         {
-            TruckAgent firstTruck = CreateAndRegisterTruckAgent(1, 0);
-            LoadTruckState(firstTruck);
-            SessionDebugLogger.Log("TRUCK", $"Spawned initial {firstTruck.DisplayName} in parking slot {firstTruck.ParkingSlotIndex}.");
+            if (TryProvisionTruckFromParkingCapacity(out TruckAgent firstTruck, "initial Parking capacity"))
+            {
+                LoadTruckState(firstTruck);
+                SessionDebugLogger.Log("TRUCK", $"Spawned initial {firstTruck.DisplayName} in parking slot {firstTruck.ParkingSlotIndex}.");
+            }
         }
         else
         {
@@ -108,10 +110,19 @@ public partial class GameBootstrap
         if (locations.ContainsKey(LocationType.Motel) || selectedGameStartMode == GameStartMode.User)
         {
             int spawnCount = selectedGameStartMode == GameStartMode.Debug ? 9 : InitialWorkerCount;
+            DriverAgent firstStarterWorker = null;
+            bool hasStarterWithHigherEducation = false;
             for (int i = 0; i < spawnCount; i++)
             {
                 DriverAgent worker = CreateAndRegisterDriverAgent();
+                firstStarterWorker ??= worker;
+                hasStarterWithHigherEducation |= worker.Education == WorkerEducationLevel.Higher;
                 SessionDebugLogger.Log("DRIVER", $"{worker.DriverName} hired (unassigned, idle).");
+            }
+
+            if (!hasStarterWithHigherEducation)
+            {
+                PromoteWorkerToHigherEducation(firstStarterWorker, "starter labor exchange guarantee");
             }
         }
         else
@@ -305,15 +316,6 @@ public partial class GameBootstrap
                 break;
             case CargoType.Furniture:
                 BuildTruckBlockCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.58f, 0.36f, 0.18f), new Vector3(0.22f, 0.22f, 0.22f), 0.09f, VisualSmoothnessWood);
-                break;
-            case CargoType.Fuel:
-                BuildTruckBarrelCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.86f, 0.68f, 0.16f));
-                break;
-            case CargoType.Alcohol:
-                BuildTruckBarrelCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.20f, 0.13f, 0.10f));
-                break;
-            case CargoType.Food:
-                BuildTruckBlockCargo(truckAgent.TruckCargoVisualRoot, visibleUnits, new Color(0.74f, 0.46f, 0.22f), new Vector3(0.22f, 0.15f, 0.22f), 0.07f);
                 break;
         }
     }
@@ -601,8 +603,9 @@ public partial class GameBootstrap
             Money = Random.Range(WorkerStartingMoneyMin, WorkerStartingMoneyMax + 1)
         };
         driver.Age = Random.Range(18, 51);
+        AssignWorkerEducation(driver);
         AssignWorkerPortrait(driver);
-        AssignWorkerStats(driver);
+        AssignWorkerPerks(driver);
         nextDriverId++;
 
         driver.DriverObject = new GameObject("Driver");
@@ -875,6 +878,11 @@ public partial class GameBootstrap
     private void SetupTruckAudio(TruckAgent truckAgent)
     {
         if (truckAgent == null || truckAgent.TruckObject == null)
+        {
+            return;
+        }
+
+        if (truckAgent.TruckLoopAudioSource != null && truckAgent.TruckFxAudioSource != null)
         {
             return;
         }

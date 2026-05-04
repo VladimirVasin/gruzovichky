@@ -47,6 +47,7 @@ public partial class GameBootstrap
         ApplyColor(pump, new Color(0.2f, 0.22f, 0.26f), VisualSmoothnessVehicleMetal);
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.58f);
+        EnhanceGasStationModel(parent, center, min, max, anchor);
     }
 
     private void CreateDrivewayToAnchor(Transform parent, Vector2Int min, Vector2Int max, Vector2Int anchor, float width)
@@ -124,7 +125,7 @@ public partial class GameBootstrap
         ConfigureStaticVisual(drivewayTop, VisualSmoothnessAsphalt);
     }
 
-    private void CreateWarehouseDecoration(Transform parent, Vector3 center)
+    private void CreateWarehouseDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
         Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
@@ -134,9 +135,11 @@ public partial class GameBootstrap
         roof.transform.position = center + ScaleOffset(new Vector3(0f, 0.47f, 0f));
         roof.transform.localScale = ScaleSize(new Vector3(2.05f, 0.12f, 2.05f));
         ApplyColor(roof, new Color(0.88f, 0.24f, 0.2f), VisualSmoothnessRoofMetal);
+
+        EnhanceWarehouseModel(parent, center, min, max, anchor);
     }
 
-    private void CreateSawmillDecoration(Transform parent, Vector3 center)
+    private void CreateSawmillDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
         Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
@@ -149,6 +152,8 @@ public partial class GameBootstrap
             house.transform.localScale = ScaleSize(new Vector3(0.45f, 0.5f, 0.45f));
             ApplyColor(house, new Color(0.92f, 0.84f, 0.66f), VisualSmoothnessBuildingWall);
         }
+
+        EnhanceSawmillModel(parent, center, min, max, anchor);
     }
 
     private void CreateCarMarketDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -211,6 +216,8 @@ public partial class GameBootstrap
             car.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
             car.transform.localScale = Vector3.one * 0.7f;
         }
+
+        EnhanceCarMarketModel(parent, center, min, max, anchor);
     }
 
     private void CreateFurnitureFactoryDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -282,6 +289,7 @@ public partial class GameBootstrap
         }
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.96f);
+        EnhanceFurnitureFactoryModel(parent, center, min, max, anchor);
     }
 
     private void CreateMotelDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -361,6 +369,7 @@ public partial class GameBootstrap
         }
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.88f);
+        EnhanceMotelModel(parent, center, min, max, anchor);
     }
 
     private void CreateLocationNightLights(LocationType type, Transform parent, Vector3 center, Vector2Int size)

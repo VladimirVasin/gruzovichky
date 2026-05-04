@@ -152,7 +152,7 @@ public partial class GameBootstrap
         };
 
         int slotIndex = Mathf.Clamp(parkingSlotIndex, 0, parkingSlots.Length - 1);
-        return parkingSlots[slotIndex];
+        return WithRoadVehicleHeight(parkingSlots[slotIndex], TruckSegmentStartLift);
     }
 
     private Vector3 GetDriverIdleMotelPosition(int driverIndex)
@@ -374,6 +374,15 @@ public partial class GameBootstrap
             return true;
         }
 
+        if (TryProvisionTruckFromParkingCapacity(out TruckAgent provisionedTruck, reason) &&
+            IsTruckAvailableForDriver(provisionedTruck, driver))
+        {
+            EnsureDriverInTruckRoster(provisionedTruck, driver);
+            truckAgent = provisionedTruck;
+            SessionDebugLogger.Log("TRUCK_POOL", $"{driver.DriverName} reserved {provisionedTruck.DisplayName} automatically for {reason}.");
+            return true;
+        }
+
         SessionDebugLogger.Log("TRUCK_POOL", $"{driver.DriverName} could not reserve a truck for {reason}: no available parked trucks.");
         return false;
     }
@@ -383,13 +392,15 @@ public partial class GameBootstrap
         for (int i = 0; i < truckAgents.Count; i++)
         {
             TruckAgent truckAgent = truckAgents[i];
-            if (IsTruckOperationallyAvailable(truckAgent) && truckAgent.Driver == null)
+            if (IsTruckOperationallyAvailable(truckAgent) &&
+                truckAgent.Driver == null &&
+                truckAgent.AssignedDrivers.Count < 2)
             {
                 return true;
             }
         }
 
-        return false;
+        return CanProvisionTruckFromParkingCapacity();
     }
 
     private bool IsTruckAvailableForDriver(TruckAgent truckAgent, DriverAgent driver)
@@ -400,6 +411,11 @@ public partial class GameBootstrap
         }
 
         if (truckAgent.Driver != null && truckAgent.Driver != driver)
+        {
+            return false;
+        }
+
+        if (!truckAgent.AssignedDrivers.Contains(driver) && truckAgent.AssignedDrivers.Count >= 2)
         {
             return false;
         }

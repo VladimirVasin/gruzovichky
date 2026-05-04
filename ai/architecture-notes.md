@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-05-03
+Last updated: 2026-05-04
 
 Purpose: describe the real implemented architecture and current hotspots.
 
@@ -14,7 +14,7 @@ Purpose: describe the real implemented architecture and current hotspots.
   - input handling
   - pathfinding
   - truck, bus, worker, and trade simulation
-  - worker needs/life-cycle logic
+  - worker needs/perks/life-cycle logic
   - tutorial, HUD, main menu, regional map, racing, UI, and audio
 
 ## Practical Consequences
@@ -22,6 +22,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 - This is still fast for prototype iteration.
 - It still couples presentation and simulation, but the runtime is now split into concern-based partial scripts under `Assets/Scripts/Runtime/`.
 - Runtime C# files are kept under the 900-line cleanup target by splitting feature clusters into focused partials such as `Runtime/Racing/`, `Runtime/UI/FleetCanvas/`, `GameBootstrap.Types*.cs`, `GameBootstrap.WorldVisuals.*.cs`, `GameBootstrap.MainMenuHud*.cs`, and `GameBootstrap.Drivers.*.cs`.
+- Numeric worker skills and temporary worker effects have been removed; `GameBootstrap.WorkerPerks*` owns perk assignment/display, while `GameBootstrap.WorkerEducation.cs` keeps the small Basic/Vocational/Higher gate needed by Labor Exchange staffing.
 - Navigation now starts from `ai/systems-map.md` -> `System Owner Map`; owner cards are maintained when paths, ownership, or responsibilities change.
 - `tools/check-all.ps1` is the preferred project sanity runner, with `-SkipSmokeTests` for fast checks while Unity is already open.
 - `tools/check-line-count.ps1` and CI default to the 900-line limit.
@@ -94,6 +95,11 @@ Purpose: describe the real implemented architecture and current hotspots.
 - Owns the active trip/refuel state machine.
 - Runtime guards are delegated to `TruckRuntimeGuardService`.
 - Trip and refuel phase-step decisions are delegated to `TruckTripRuntimeService` and `TruckRefuelRuntimeService`; the partial still owns Unity-side effects such as movement commands, interactions, audio, salary/rest handoff, and feed/debug output.
+
+### `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.Infrastructure.cs`
+
+- Owns Parking-provided truck and bus slot capacity plus automatic vehicle provisioning helpers.
+- Vacancies, Labor Exchange, tutorial freight setup, and bus-shift assignment should ask this partial for available/provisionable vehicles instead of creating or buying trucks/buses directly.
 
 ### `Assets/Scripts/Runtime/Transport/Services/TruckRuntimeGuardService.cs`
 
@@ -184,11 +190,6 @@ Purpose: describe the real implemented architecture and current hotspots.
 - Pure helper for local-bus passenger boarding decisions.
 - Encodes capacity, fare exemption, paid fare, and fallback-to-walking rules while `GameBootstrap.LocalBus.cs` keeps concrete worker/object mutations.
 
-### `Assets/Scripts/Runtime/Transport/Services/WarehouseBusDeliveryService.cs`
-
-- Pure helper for deciding whether a warehouse delivery should attempt local-bus travel or walk directly.
-- `GameBootstrap.Drivers.cs` still owns cargo mutation, path building, and worker state changes, but bus-vs-walk reasons are now testable and written into debug logs.
-
 ### `Assets/Scripts/Runtime/World/WorldLayoutRoadValidator.cs`
 
 - Pure helper for validating whether required generated-world road-access pairs can support a wide two-lane road.
@@ -215,6 +216,12 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 - Shared style helper for service-building light identity (`Bar`, `Canteen`, `GamblingHall`).
 - Concrete primitive constructors still live in `GameBootstrap.World.cs`, but color/intensity/range choices are now centralized and smoke-tested.
+
+### `Assets/Scripts/Runtime/World/GameBootstrap.BuildingModel*.cs`
+
+- Shared low-poly building-model helper layer and enhancement pass.
+- `GameBootstrap.BuildingModelHelpers.cs` wraps primitive box/cylinder/sphere creation, cardinal anchor-facing roots, window rows, crate stacks, and collider disabling for decorative pieces.
+- `GameBootstrap.BuildingModelEnhancements.cs` adds per-building detail overlays for all buildable/location types while existing placement, runtime location state, and base decoration methods stay in the transport/world decoration partials.
 
 ### `Assets/Scripts/Runtime/UI/FleetCanvas/FleetCanvasUiFactory.cs`
 

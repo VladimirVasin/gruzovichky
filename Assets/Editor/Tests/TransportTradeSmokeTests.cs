@@ -65,37 +65,6 @@ public sealed class TransportTradeSmokeTests
     }
 
     [Test]
-    public void WarehouseBusDeliveryService_DoesNotUseBusForSameStopOrWeakSavings()
-    {
-        WarehouseBusDeliveryDecision sameStop = WarehouseBusDeliveryService.Evaluate(
-            workerCanDeliver: true,
-            hasCargo: true,
-            orderedStopCount: 3,
-            directDistance: 40,
-            accessWalkDistance: 1,
-            exitWalkDistance: 1,
-            directWalkThreshold: 10,
-            maxAccessWalkDistance: 8,
-            minimumSavings: 5,
-            sameStop: true);
-
-        Assert.That(sameStop.Kind, Is.EqualTo(WarehouseBusDeliveryDecisionKind.Walk));
-
-        WarehouseBusDeliveryDecision weakSavings = WarehouseBusDeliveryService.Evaluate(
-            workerCanDeliver: true,
-            hasCargo: true,
-            orderedStopCount: 3,
-            directDistance: 12,
-            accessWalkDistance: 5,
-            exitWalkDistance: 4,
-            directWalkThreshold: 10,
-            maxAccessWalkDistance: 8,
-            minimumSavings: 5);
-
-        Assert.That(weakSavings.Kind, Is.EqualTo(WarehouseBusDeliveryDecisionKind.Walk));
-    }
-
-    [Test]
     public void TradeDispatchPreconditionService_BlocksActiveRunsAndSellWithoutStock()
     {
         TradeDispatchPreconditionResult activeRun = TradeDispatchPreconditionService.Evaluate(new TradeDispatchPreconditionInput(
@@ -146,7 +115,7 @@ public sealed class TransportTradeSmokeTests
     {
         List<GameBootstrap.TradeHudOrder> orders = new()
         {
-            TradeOrderQueueService.CreateOrder(10, GameBootstrap.TradeResourceType.Alcohol, GameBootstrap.TradeOrderType.Buy, 2, targetRegionIndex: 6),
+            TradeOrderQueueService.CreateOrder(10, GameBootstrap.TradeResourceType.Textile, GameBootstrap.TradeOrderType.Buy, 2, targetRegionIndex: 5),
             TradeOrderQueueService.CreateOrder(11, GameBootstrap.TradeResourceType.Boards, GameBootstrap.TradeOrderType.Sell, 4, targetRegionIndex: 6),
             TradeOrderQueueService.CreateOrder(12, GameBootstrap.TradeResourceType.Cotton, GameBootstrap.TradeOrderType.Buy, 1)
         };

@@ -20,6 +20,7 @@ public partial class GameBootstrap
         if (!isDriversScreenDirty) return;
 
         driversScreenUi.HeaderCountText.text = $"{driverAgents.Count} {(driverAgents.Count == 1 ? L("Worker") : L("Workers"))}";
+        EnsureWorkerRows(driverAgents.Count);
 
         // Left panel — compact row list
         for (int i = 0; i < driversScreenUi.WorkerRows.Count; i++)
@@ -27,7 +28,11 @@ public partial class GameBootstrap
             WorkerRowUi row = driversScreenUi.WorkerRows[i];
             bool active = i < driverAgents.Count;
             row.Root.gameObject.SetActive(active);
-            if (!active) continue;
+            if (!active)
+            {
+                row.DriverId = 0;
+                continue;
+            }
 
             DriverAgent d = driverAgents[i];
             TruckAgent truck = GetAssignedTruckForDriver(d);
@@ -71,6 +76,11 @@ public partial class GameBootstrap
 
         // Right panel — visibility toggle (done before LocalizeCanvas so layout is correct)
         DriverAgent sel = driverAgents.Find(d => d.DriverId == selectedWorkerPanelDriverId);
+        if (selectedWorkerPanelDriverId != 0 && sel == null)
+        {
+            selectedWorkerPanelDriverId = 0;
+        }
+
         bool hasSel = sel != null;
         if (driversScreenUi.DetailPlaceholderCard != null)
             driversScreenUi.DetailPlaceholderCard.SetActive(!hasSel);
@@ -107,9 +117,8 @@ public partial class GameBootstrap
             if (driversScreenUi.DetailProfileTitleText != null)
                 driversScreenUi.DetailProfileTitleText.text = ru ? "Профиль" : "Profile";
             if (driversScreenUi.DetailRoleText != null)
-                driversScreenUi.DetailRoleText.text = $"{L(GetWorkerOccupationLabel(sel))} • {GetWorkerGenderLabel(sel, ru)}";
+                driversScreenUi.DetailRoleText.text = $"{L(GetWorkerOccupationLabel(sel))} • {GetWorkerGenderLabel(sel, ru)} • {GetWorkerEducationDisplayName(sel.Education, ru)}";
             UpdateWorkerPortraitUi(sel);
-            UpdateWorkerStatsUi(sel, ru);
             UpdateWorkerNeedsUi(sel, ru);
 
             string statusLabel = GetWorkerListStatusLabel(sel, ru);
@@ -134,8 +143,6 @@ public partial class GameBootstrap
                 driversScreenUi.DetailHomeLabel.text = ru ? "Жилой дом" : "Home";
             if (driversScreenUi.DetailCarLabel != null)
                 driversScreenUi.DetailCarLabel.text = ru ? "\u0410\u0432\u0442\u043e" : "Car";
-            if (driversScreenUi.DetailEducationLabel != null)
-                driversScreenUi.DetailEducationLabel.text = ru ? "\u041e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435" : "Education";
             if (driversScreenUi.DetailAgeLabel != null)
                 driversScreenUi.DetailAgeLabel.text = ru ? "\u0412\u043e\u0437\u0440\u0430\u0441\u0442" : "Age";
             if (driversScreenUi.DetailWorkTitleText != null)
@@ -164,18 +171,6 @@ public partial class GameBootstrap
                 bool hasCar = sel.OwnedCarModelIndex >= 0 && sel.OwnedCarModelIndex < CarModelNames.Length;
                 driversScreenUi.DetailCarText.text = hasCar ? CarModelNames[sel.OwnedCarModelIndex] : "\u2014";
                 driversScreenUi.DetailCarText.color = hasCar ? Color.white : FleetMutedTextColor;
-            }
-
-            if (driversScreenUi.DetailEducationText != null)
-            {
-                driversScreenUi.DetailEducationText.text = sel.Education switch
-                {
-                    WorkerEducation.Skilled => ru ? "\u041a\u0432\u0430\u043b\u0438\u0444\u0438\u0446\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439" : "Skilled",
-                    _                       => ru ? "\u0411\u0430\u0437\u043e\u0432\u043e\u0435" : "Basic"
-                };
-                driversScreenUi.DetailEducationText.color = sel.Education == WorkerEducation.Skilled
-                    ? new Color(0.55f, 0.88f, 0.55f, 1f)
-                    : Color.white;
             }
 
             if (driversScreenUi.DetailAgeText != null)

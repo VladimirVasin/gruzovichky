@@ -12,6 +12,7 @@ public sealed class VacancyTutorialSmokeTests
         Assert.That(VacancyFlowRulesService.RequiresShiftStep(VacancyFlowKind.BusDriver), Is.True);
         Assert.That(VacancyFlowRulesService.RequiresShiftStep(VacancyFlowKind.TruckDriver), Is.True);
         Assert.That(VacancyFlowRulesService.RequiresShiftStep(VacancyFlowKind.Intercity), Is.True);
+        Assert.That(VacancyFlowRulesService.RequiresShiftStep(VacancyFlowKind.Service), Is.True);
     }
 
     [Test]
@@ -21,6 +22,7 @@ public sealed class VacancyTutorialSmokeTests
         Assert.That(VacancyFlowRulesService.RequiresTruckStep(VacancyFlowKind.BusDriver), Is.False);
         Assert.That(VacancyFlowRulesService.RequiresTruckStep(VacancyFlowKind.TruckDriver), Is.False);
         Assert.That(VacancyFlowRulesService.RequiresTruckStep(VacancyFlowKind.Intercity), Is.False);
+        Assert.That(VacancyFlowRulesService.RequiresTruckStep(VacancyFlowKind.Service), Is.False);
     }
 
     [Test]

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -27,6 +26,7 @@ public partial class GameBootstrap
         public Text TimeText;
         public RectTransform ProgressBarFill;
         public Image ProgressBarFillImage;
+        public Button FocusButton;
         public int CurrentDriverId = -1;
 
         // Slot machine reels
@@ -71,6 +71,8 @@ public partial class GameBootstrap
         public Text CloseButtonText;
         public RectTransform WorkerSlotsSection;
         public Text WorkerSlotsSectionHeader;
+        public ScrollRect WorkerSlotsScroll;
+        public RectTransform WorkerSlotsContent;
         public ServiceWorkerSlotUi[] WorkerSlots;
         public RectTransform PersonalHouseSection;
         public Text PersonalHouseSectionHeader;
@@ -230,6 +232,10 @@ public partial class GameBootstrap
         buildingQuickHud.WorkerSlotsSectionHeader = CreateBodyText("WorkersHeader", workerSection, uiFont, "Workers inside", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
         buildingQuickHud.WorkerSlotsSectionHeader.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
+        FleetCanvasUiFactory.ScrollPanelRefs workerScroll = CreateVerticalScrollList("WorkerSlotsScroll", workerSection, "WorkerSlotsContent", 6f, preferredHeight: 190f);
+        buildingQuickHud.WorkerSlotsScroll = workerScroll.ScrollRect;
+        buildingQuickHud.WorkerSlotsContent = workerScroll.Content;
+
         const int MaxServiceSlots = 4;
         buildingQuickHud.WorkerSlots = new ServiceWorkerSlotUi[MaxServiceSlots];
         for (int i = 0; i < MaxServiceSlots; i++)
@@ -237,9 +243,13 @@ public partial class GameBootstrap
             ServiceWorkerSlotUi slot = new ServiceWorkerSlotUi();
             buildingQuickHud.WorkerSlots[i] = slot;
 
-            RectTransform slotRoot = CreateUiObject($"WorkerSlot{i}", workerSection).GetComponent<RectTransform>();
+            RectTransform slotRoot = CreateUiObject($"WorkerSlot{i}", buildingQuickHud.WorkerSlotsContent).GetComponent<RectTransform>();
             Image slotBg = slotRoot.gameObject.AddComponent<Image>();
             slotBg.color = new Color(0.14f, 0.18f, 0.25f, 1f);
+            int capturedWorkerIndex = i;
+            slot.FocusButton = slotRoot.gameObject.AddComponent<Button>();
+            slot.FocusButton.targetGraphic = slotBg;
+            slot.FocusButton.onClick.AddListener(() => OnBuildingWorkerSlotClick(capturedWorkerIndex));
             slot.SlotLayout = slotRoot.gameObject.AddComponent<LayoutElement>();
             slot.SlotLayout.preferredHeight = 54f;
             HorizontalLayoutGroup slotLayout = slotRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -478,370 +488,6 @@ public partial class GameBootstrap
         LayoutRebuilder.ForceRebuildLayoutImmediate(buildingQuickHud.Root);
     }
 
-    private void UpdateBuildingServiceWorkerSlots(LocationType locationType, bool ru)
-    {
-        if (buildingQuickHud?.WorkerSlots == null) return;
-
-        bool isServiceWithVisitors = locationType == LocationType.Bar ||
-                                     locationType == LocationType.Canteen ||
-                                     locationType == LocationType.GamblingHall ||
-                                     locationType == LocationType.CityPark ||
-                                     locationType == LocationType.Motel;
-
-        buildingQuickHud.WorkerSlotsSection.gameObject.SetActive(isServiceWithVisitors);
-        if (!isServiceWithVisitors) return;
-
-        buildingQuickHud.WorkerSlotsSectionHeader.text = ru ? "Рабочие внутри" : "Workers inside";
-
-        // Collect workers currently inside this building
-        List<DriverAgent> inside = new();
-        foreach (DriverAgent d in driverAgents)
-        {
-            bool isInside = locationType == LocationType.Motel
-                ? d.RestPhase == DriverRestPhase.Sleeping
-                : GetDriverServiceLocation(d.WalkPhase) == locationType;
-            if (isInside) inside.Add(d);
-        }
-
-        float maxDuration = GetServiceBuildingVisitDuration(locationType);
-        string activityLabel = GetServiceBuildingActivityLabel(locationType, ru);
-
-        for (int i = 0; i < buildingQuickHud.WorkerSlots.Length; i++)
-        {
-            ServiceWorkerSlotUi slot = buildingQuickHud.WorkerSlots[i];
-            if (i >= inside.Count)
-            {
-                slot.Root.gameObject.SetActive(false);
-                if (slot.CurrentDriverId != -1)
-                {
-                    slot.CurrentDriverId = -1;
-                    for (int c = slot.PortraitRoot.childCount - 1; c >= 0; c--)
-                        Destroy(slot.PortraitRoot.GetChild(c).gameObject);
-                }
-                continue;
-            }
-
-            DriverAgent d = inside[i];
-            slot.Root.gameObject.SetActive(true);
-
-            if (slot.CurrentDriverId != d.DriverId)
-            {
-                slot.CurrentDriverId = d.DriverId;
-                DrawWorkerPortraitScaled(d, slot.PortraitRoot, 0.37f);
-            }
-
-            slot.NameText.text = d.DriverName;
-
-            if (locationType == LocationType.GamblingHall)
-            {
-                UpdateGamblingReels(slot, d);
-
-                bool spinDone = slot.SlotPhase == GamblingSlotPhase.Done || slot.SlotPhase == GamblingSlotPhase.ResultPause;
-                if (spinDone)
-                {
-                    string outcomeLabel = d.GamblingMultiplier == 0 ? (ru ? "Проигрыш" : "Loss")
-                                        : d.GamblingMultiplier == 1 ? (ru ? "Ставка x1" : "Break even")
-                                        : d.GamblingMultiplier == 5 ? (ru ? "Выигрыш x5" : "Win x5")
-                                        :                             (ru ? "Джекпот x10" : "Jackpot x10");
-                    int net = d.GamblingPayout - d.GamblingBet;
-                    string netStr = net >= 0 ? $"+${net}" : $"-${-net}";
-                    slot.ActivityText.text  = $"{(ru ? "Ставка" : "Bet")}: ${d.GamblingBet}  {outcomeLabel}\n{(ru ? "Итог" : "Net")}: {netStr}  ->  ${d.GamblingPayout}";
-                    slot.ActivityText.color = GetReelResultColor(d.GamblingMultiplier);
-                    slot.ActivityTextLayout.preferredHeight = 28f;
-                }
-                else if (slot.SlotPhase == GamblingSlotPhase.ShowBet && d.GamblingBet > 0)
-                {
-                    slot.ActivityText.text  = $"{(ru ? "Ставка" : "Bet")}: ${d.GamblingBet}";
-                    slot.ActivityText.color = new Color(1f, 0.85f, 0.3f);
-                    slot.ActivityTextLayout.preferredHeight = 14f;
-                }
-                else if (d.GamblingBet > 0)
-                {
-                    slot.ActivityText.text  = ru ? "Вращение..." : "Spinning...";
-                    slot.ActivityText.color = Color.gray;
-                    slot.ActivityTextLayout.preferredHeight = 14f;
-                }
-                else if (d.GamblerBroke)
-                {
-                    slot.ActivityText.text  = ru ? "На мели" : "Broke";
-                    slot.ActivityText.color = new Color(0.6f, 0.4f, 0.4f);
-                    slot.ActivityTextLayout.preferredHeight = 14f;
-                }
-                else
-                {
-                    slot.ActivityText.text  = activityLabel;
-                    slot.ActivityText.color = Color.white;
-                    slot.ActivityTextLayout.preferredHeight = 14f;
-                }
-            }
-            else
-            {
-                slot.ReelRow?.gameObject.SetActive(false);
-                slot.ActivityText.text  = activityLabel;
-                slot.ActivityText.color = Color.white;
-                slot.ActivityTextLayout.preferredHeight = 14f;
-            }
-
-            float remaining = locationType == LocationType.Motel ? d.SleepTimer : d.IdleActivityTimer;
-            float progress   = Mathf.Clamp01(remaining / Mathf.Max(maxDuration, 0.01f));
-            slot.TimeText.text = FormatGameTimeRemaining(remaining);
-
-            slot.ProgressBarFill.anchorMax = new Vector2(progress, 1f);
-            slot.ProgressBarFillImage.color = progress > 0.5f
-                ? new Color(0.30f, 0.80f, 0.32f)
-                : progress > 0.2f
-                    ? new Color(0.90f, 0.70f, 0.20f)
-                    : new Color(0.85f, 0.30f, 0.22f);
-        }
-    }
-
-    private void UpdateGamblingReels(ServiceWorkerSlotUi slot, DriverAgent d)
-    {
-        bool hasBet = d.GamblingBet > 0;
-        float uiDelta = Time.unscaledDeltaTime * Mathf.Max(0f, gameSpeedMultiplier);
-        slot.SlotLayout.preferredHeight = hasBet ? 90f : 54f;
-
-        if (!hasBet)
-        {
-            slot.ReelRow.gameObject.SetActive(false);
-            slot.SlotPhase   = GamblingSlotPhase.Idle;
-            slot.LastSpinBet = 0;
-            return;
-        }
-
-        // Detect new bet (first visit or second bet after result pause)
-        if (d.GamblingBet != slot.LastSpinBet)
-        {
-            slot.LastSpinBet          = d.GamblingBet;
-            slot.SlotPhase            = GamblingSlotPhase.ShowBet;
-            slot.SpinTimer            = 0f;
-            slot.SpinCycleTimer       = 0f;
-            slot.ResultDisplayTimer   = 0f;
-            slot.ReelStopped          = new bool[3];
-            slot.FinalReelChars       = GetReelFinalChars(d.GamblingMultiplier);
-            foreach (Text t in slot.ReelTexts) { t.text = "?"; t.color = Color.gray; }
-            slot.ReelRow.gameObject.SetActive(false);
-        }
-
-        slot.SpinTimer += uiDelta;
-
-        switch (slot.SlotPhase)
-        {
-            case GamblingSlotPhase.ShowBet:
-                if (slot.SpinTimer >= 2.5f)
-                {
-                    slot.SlotPhase = GamblingSlotPhase.Spinning;
-                    slot.SpinTimer = 0f;
-                    slot.ReelRow.gameObject.SetActive(true);
-                }
-                break;
-
-            case GamblingSlotPhase.Spinning:
-                slot.SpinCycleTimer -= uiDelta;
-                if (slot.SpinCycleTimer <= 0f)
-                {
-                    slot.SpinCycleTimer = 0.26f;
-                    bool anyStillSpinning = false;
-                    for (int r = 0; r < 3; r++)
-                    {
-                        if (!slot.ReelStopped[r])
-                        {
-                            slot.ReelTexts[r].text = SlotSymbols[UnityEngine.Random.Range(0, SlotSymbols.Length)];
-                            anyStillSpinning = true;
-                        }
-                    }
-                    if (anyStillSpinning) PlayUiSound(slotReelTickClip, 0.45f);
-                }
-
-                TryStopReel(slot, 0, 3.5f, d.GamblingMultiplier);
-                TryStopReel(slot, 1, 6.0f, d.GamblingMultiplier);
-                if (TryStopReel(slot, 2, 9.0f, d.GamblingMultiplier))
-                {
-                    slot.SlotPhase          = GamblingSlotPhase.Done;
-                    slot.ResultDisplayTimer = 3.5f;
-                    TriggerHudGamblingResult(d);
-                }
-                break;
-
-            case GamblingSlotPhase.Done:
-                slot.ResultDisplayTimer -= uiDelta;
-                // Trigger second bet when result has been shown long enough
-                if (slot.ResultDisplayTimer <= 0f && d.GamblingBetCount < 2 && d.IdleActivityTimer > 12f && d.Money >= WorkerGamblingMinBet)
-                {
-                    slot.SlotPhase = GamblingSlotPhase.ResultPause;
-                    ResolveWorkerGamblingSpinResult(d);
-                    // d.GamblingBet is now a new value; next frame detects it and restarts ShowBet
-                }
-                break;
-
-            // ResultPause: waiting for next frame to detect the new bet value
-        }
-    }
-
-    // Returns true if the reel just stopped this frame
-    private bool TryStopReel(ServiceWorkerSlotUi slot, int r, float atTime, int multiplier)
-    {
-        if (!slot.ReelStopped[r] && slot.SpinTimer >= atTime)
-        {
-            slot.ReelStopped[r]     = true;
-            slot.ReelTexts[r].text  = slot.FinalReelChars[r];
-            slot.ReelTexts[r].color = GetReelResultColor(multiplier);
-            if (IsGamblingHallQuickHudVisible())
-            {
-                PlayUiSound(uiPanelCloseClip, 0.55f); // reel stop thump
-            }
-            return true;
-        }
-        return false;
-    }
-
-    private void TriggerHudGamblingResult(DriverAgent d)
-    {
-        // Apply money now that animation is complete
-        if (d.GamblingMoneyPending)
-        {
-            d.GamblingMoneyPending = false;
-            int net = d.GamblingPayout - d.GamblingBet;
-            d.Money = Mathf.Max(0, d.Money + net);
-
-            // Update the hall's bank: gains bets, pays out winnings
-            if (locations.TryGetValue(LocationType.GamblingHall, out LocationData gh))
-                gh.BuildingBank = Mathf.Max(0, gh.BuildingBank - net);
-
-            if (d.DriverObject != null)
-            {
-                Vector3 pos = d.DriverObject.transform.position;
-                if (d.GamblingMultiplier == 0) SpawnMoneySpendPopup(pos, d.GamblingBet - d.GamblingPayout);
-                else if (net > 0)              SpawnMoneyEarnPopup(pos, net);
-            }
-            SessionDebugLogger.Log("NEEDS", $"{d.DriverName} gambling resolved: net={d.GamblingPayout - d.GamblingBet:+#;-#;0}, balance=${d.Money}.");
-        }
-
-        bool hudVisible = IsGamblingHallQuickHudVisible();
-
-        if (d.GamblingMultiplier == 0)
-        {
-            if (hudVisible)
-            {
-                PlayUiSound(slotLoseClip, 0.88f);
-                hudFlashColor    = new Color(0.85f, 0.12f, 0.08f);
-                hudFlashDuration = hudFlashTimer = 2.2f;
-                hudShakeDuration = hudShakeTimer = 0.65f;
-            }
-        }
-        else
-        {
-            if (hudVisible)
-            {
-                PlayUiSound(slotWinClip, 0.88f);
-                hudFlashColor    = d.GamblingMultiplier >= 5 ? new Color(0.05f, 0.82f, 0.18f) : new Color(0.4f, 0.75f, 1f);
-                hudFlashDuration = hudFlashTimer = 2.2f;
-                hudShakeDuration = 0f;
-                hudShakeTimer    = 0f;
-            }
-        }
-    }
-
-    private bool IsGamblingHallQuickHudVisible()
-    {
-        return buildingQuickHud?.CanvasRoot != null &&
-               buildingQuickHud.CanvasRoot.activeSelf &&
-               selectedLocation.HasValue &&
-               selectedLocation.Value == LocationType.GamblingHall;
-    }
-
-    private void UpdateHudGamblingEffects()
-    {
-        if (buildingQuickHud?.FlashOverlay == null) return;
-
-        if (hudFlashTimer > 0f)
-        {
-            hudFlashTimer -= Time.unscaledDeltaTime;
-            float t = Mathf.Clamp01(hudFlashTimer / Mathf.Max(hudFlashDuration, 0.01f));
-            float alpha = Mathf.SmoothStep(0f, 1f, t) * 0.38f;
-            buildingQuickHud.FlashOverlay.color = new Color(hudFlashColor.r, hudFlashColor.g, hudFlashColor.b, alpha);
-            buildingQuickHud.FlashOverlay.gameObject.SetActive(true);
-        }
-        else
-        {
-            buildingQuickHud.FlashOverlay.gameObject.SetActive(false);
-        }
-
-        if (hudShakeTimer > 0f && buildingQuickHud.Root != null)
-        {
-            hudShakeTimer -= Time.unscaledDeltaTime;
-            float progress = Mathf.Clamp01(hudShakeTimer / Mathf.Max(hudShakeDuration, 0.01f));
-            float shakeX = Mathf.Sin(hudShakeTimer * 42f) * 5f * progress;
-            buildingQuickHud.Root.anchoredPosition = buildingQuickHud.OriginalPos + new Vector2(shakeX, 0f);
-        }
-        else if (buildingQuickHud.Root != null)
-        {
-            buildingQuickHud.Root.anchoredPosition = buildingQuickHud.OriginalPos;
-        }
-    }
-
-    private static string[] GetReelFinalChars(int multiplier) => multiplier switch
-    {
-        10 => new[] { "7", "7", "7" },
-        5  => new[] { "в…", "в…", "в…" },
-        1  => new[] { "в™¦", "в™¦", "в™¦" },
-        _  => new[] { "в™Ґ", "в™ ", "в—Џ" }
-    };
-
-    private static Color GetReelResultColor(int multiplier) => multiplier switch
-    {
-        10 => new Color(1f,    0.85f, 0.1f),
-        5  => new Color(0.95f, 0.80f, 0.2f),
-        1  => new Color(0.4f,  0.85f, 1f),
-        _  => new Color(0.6f,  0.3f,  0.3f)
-    };
-
-    private static LocationType? GetDriverServiceLocation(DriverRescuePhase phase)
-    {
-        return phase switch
-        {
-            DriverRescuePhase.IdleAtBar          => LocationType.Bar,
-            DriverRescuePhase.IdleAtCanteen      => LocationType.Canteen,
-            DriverRescuePhase.IdleAtGamblingHall => LocationType.GamblingHall,
-            DriverRescuePhase.IdleAtCityPark     => LocationType.CityPark,
-            _                                    => (LocationType?)null
-        };
-    }
-
-    private float GetServiceBuildingVisitDuration(LocationType type)
-    {
-        return type switch
-        {
-            LocationType.Bar          => WorkerLeisureDuration,
-            LocationType.Canteen      => WorkerCanteenDuration,
-            LocationType.GamblingHall => WorkerGamblingHallDuration,
-            LocationType.CityPark     => WorkerCityParkDuration,
-            LocationType.Motel        => DriverSleepDuration,
-            _                         => 1f
-        };
-    }
-
-    private static string GetServiceBuildingActivityLabel(LocationType type, bool ru)
-    {
-        return type switch
-        {
-            LocationType.Bar          => ru ? "Пьёт" : "Drinking",
-            LocationType.Canteen      => ru ? "Ест" : "Eating",
-            LocationType.GamblingHall => ru ? "Играет в автоматы" : "Playing slots",
-            LocationType.CityPark     => ru ? "Гуляет в парке" : "Strolling in park",
-            LocationType.Motel        => ru ? "Спит" : "Sleeping",
-            _                         => ru ? "Внутри" : "Inside"
-        };
-    }
-
-    private string FormatGameTimeRemaining(float realSeconds)
-    {
-        float hours = realSeconds * 24f / DayNightCycleDuration;
-        int h = Mathf.FloorToInt(hours);
-        int m = Mathf.FloorToInt((hours - h) * 60f);
-        return h > 0 ? $"{h}h {m}m" : $"{m}m";
-    }
-
     private void OpenContextPanelFromBuildingQuickHud()
     {
         if (!selectedLocation.HasValue)
@@ -865,6 +511,14 @@ public partial class GameBootstrap
                 isDriversPanelOpen = true;
                 isFleetPanelOpen = false;
                 isShiftsPanelOpen = false;
+                isResourcesPanelOpen = false;
+                isBuildPanelOpen = false;
+                break;
+            case LocationType.LaborExchange:
+                LogUiInput("Quick HUD: opened Vacancies from Labor Exchange");
+                isShiftsPanelOpen = true;
+                isFleetPanelOpen = false;
+                isDriversPanelOpen = false;
                 isResourcesPanelOpen = false;
                 isBuildPanelOpen = false;
                 break;

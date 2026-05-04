@@ -2,7 +2,7 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private const float WorkerDecisionRepeatThrottleSeconds = 4f;
+    private const float WorkerDecisionRepeatThrottleSeconds = 8f;
 
     private void LogWorkerDecision(
         DriverAgent driver,
@@ -20,7 +20,7 @@ public partial class GameBootstrap
         WorkerLifeGoal goalBefore = selectedGoalBefore ?? driver.LifeGoal;
         WorkerLifeGoal goalAfter = selectedGoalAfter ?? driver.LifeGoal;
         string key = $"{decision}|{reason}|before={goalBefore}|after={goalAfter}|{driver.WalkPhase}|{driver.RestPhase}|{driver.LifeGoal}|{driver.DutyMode}|{driver.ShiftStartHour}|{driver.AssignedBuildingType}|{driver.AssignedTruckNumber}|{driver.IsOnActiveShift}|{driver.IsInsideBuilding}";
-        bool shouldThrottleRepeats = decision == "idle-blocked" || decision == "life-goal-selected";
+        bool shouldThrottleRepeats = ShouldThrottleWorkerDecisionRepeats(decision);
         if (shouldThrottleRepeats &&
             driver.LastThrottledWorkerDecisionDebugKey == key &&
             Time.unscaledTime - driver.LastThrottledWorkerDecisionDebugTime < WorkerDecisionRepeatThrottleSeconds)
@@ -43,6 +43,20 @@ public partial class GameBootstrap
         SessionDebugLogger.Log(
             "WORKER_DECISION",
             $"{driver.DriverName}: {decision}; reason={reason}; selectedGoalBefore={goalBefore}; selectedGoalAfter={goalAfter}; {FormatWorkerDecisionSnapshot(driver)}.");
+    }
+
+    private static bool ShouldThrottleWorkerDecisionRepeats(string decision)
+    {
+        return decision == "idle-blocked" ||
+               decision == "idle-activity" ||
+               decision == "life-goal-selected" ||
+               decision == "service-unavailable" ||
+               decision == "skip-meal-service" ||
+               decision == "skip-sleep-service" ||
+               decision == "buy-house-skip" ||
+               decision == "skip-due-life-cycle" ||
+               decision == "need-fallback-walk" ||
+               decision == "need-retry-cooldown";
     }
 
     private string FormatWorkerDecisionSnapshot(DriverAgent driver)
@@ -86,7 +100,7 @@ public partial class GameBootstrap
         int driverMoneyAfter = driver != null ? driver.Money : driverMoneyBefore;
         SessionDebugLogger.Log(
             "BUILDING_BANK",
-            $"{location.Label}: +${amount} from {workerLabel}; reason={reason}; workerMoney ${driverMoneyBefore}->{driverMoneyAfter}; bank ${bankBefore}->{location.BuildingBank}; resources fuel={location.FuelStored}, alcohol={location.AlcoholStored}, food={location.FoodStored}, logs={location.LogsStored}, boards={location.BoardsStored}, textile={location.TextileStored}, furniture={location.FurnitureStored}.");
+            $"{location.Label}: +${amount} from {workerLabel}; reason={reason}; workerMoney ${driverMoneyBefore}->{driverMoneyAfter}; bank ${bankBefore}->{location.BuildingBank}; resources logs={location.LogsStored}, boards={location.BoardsStored}, textile={location.TextileStored}, furniture={location.FurnitureStored}.");
     }
 
     private void LogEconomyMovement(MoneyLedgerEntry entry)

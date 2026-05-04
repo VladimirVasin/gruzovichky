@@ -9,19 +9,25 @@ public partial class GameBootstrap
         public RectTransform Root;
         public Text HeaderText;
         public Text OccupationText;
+        public RectTransform PortraitRoot;
+        public Text ProfileText;
+        public Text PlaceText;
         public Text StatusText;
         public RectTransform NeedsMealBarFill;
         public RectTransform NeedsSleepBarFill;
         public RectTransform NeedsLeisureBarFill;
+        public Text NeedsText;
         public GameObject TruckRow;
         public Text TruckText;
         public Text ShiftText;
+        public Text HomeText;
         public Text CarText;
         public Text BalanceText;
-        public Text EffectsText;
+        public Text PerksText;
         public Button OpenDriversButton;
         public Text OpenDriversButtonText;
         public Button CloseButton;
+        public int PortraitDriverId = -1;
     }
 
     private DriverQuickHudRefs driverQuickHud;
@@ -52,7 +58,7 @@ public partial class GameBootstrap
         root.anchorMax = new Vector2(1f, 0f);
         root.pivot = new Vector2(1f, 0f);
         root.anchoredPosition = new Vector2(-18f, 104f);
-        root.sizeDelta = new Vector2(360f, 280f);
+        root.sizeDelta = new Vector2(390f, 420f);
         root.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         VerticalLayoutGroup rootLayout = root.gameObject.AddComponent<VerticalLayoutGroup>();
         rootLayout.padding = new RectOffset(16, 16, 16, 16);
@@ -75,6 +81,24 @@ public partial class GameBootstrap
         driverQuickHud.OccupationText = CreateBodyText("OccupationText", root, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, new Color(0.55f, 0.65f, 0.80f, 1f));
         driverQuickHud.OccupationText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
+        RectTransform profileRow = CreateLayoutRow("DriverQuickHudProfile", root, 58f, 10f);
+        driverQuickHud.PortraitRoot = CreateUiObject("DriverPortrait", profileRow).GetComponent<RectTransform>();
+        driverQuickHud.PortraitRoot.gameObject.AddComponent<RectMask2D>();
+        driverQuickHud.PortraitRoot.gameObject.AddComponent<LayoutElement>().preferredWidth = 52f;
+
+        RectTransform profileColumn = CreateUiObject("DriverProfileColumn", profileRow).GetComponent<RectTransform>();
+        profileColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup profileLayout = profileColumn.gameObject.AddComponent<VerticalLayoutGroup>();
+        profileLayout.spacing = 4f;
+        profileLayout.childControlWidth = true;
+        profileLayout.childControlHeight = true;
+        profileLayout.childForceExpandWidth = true;
+        profileLayout.childForceExpandHeight = false;
+        driverQuickHud.ProfileText = CreateBodyText("ProfileText", profileColumn, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        driverQuickHud.ProfileText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
+        driverQuickHud.PlaceText = CreateBodyText("PlaceText", profileColumn, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.PlaceText.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+
         RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
         summaryCard.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
@@ -94,6 +118,8 @@ public partial class GameBootstrap
         driverQuickHud.NeedsMealBarFill    = CreateNeedsMiniBar(needsBlock, GetNeedsMealIcon(),    "DQHMeal",    80f);
         driverQuickHud.NeedsSleepBarFill   = CreateNeedsMiniBar(needsBlock, GetNeedsSleepIcon(),   "DQHSleep",   80f);
         driverQuickHud.NeedsLeisureBarFill = CreateNeedsMiniBar(needsBlock, GetNeedsLeisureIcon(), "DQHLeisure", 80f);
+        driverQuickHud.NeedsText = CreateBodyText("NeedsText", summaryBody, uiFont, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        driverQuickHud.NeedsText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         RectTransform statsGrid = CreateUiObject("StatsGrid", summaryBody).GetComponent<RectTransform>();
         VerticalLayoutGroup statsLayout = statsGrid.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -115,12 +141,14 @@ public partial class GameBootstrap
 
         driverQuickHud.ShiftText = CreateBodyText("ShiftText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.ShiftText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        driverQuickHud.HomeText = CreateBodyText("HomeText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.HomeText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         driverQuickHud.CarText = CreateBodyText("CarText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driverQuickHud.CarText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
         driverQuickHud.BalanceText = CreateBodyText("BalanceText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
         driverQuickHud.BalanceText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
-        driverQuickHud.EffectsText = CreateBodyText("EffectsText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, new Color(0.72f, 0.88f, 0.68f, 1f));
-        driverQuickHud.EffectsText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        driverQuickHud.PerksText = CreateBodyText("PerksText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        driverQuickHud.PerksText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         RectTransform actionRow = CreateLayoutRow("DriverQuickHudActions", root, 34f, 0f);
         driverQuickHud.OpenDriversButton = CreateButton("OpenDriversBtn", actionRow, uiFont, out driverQuickHud.OpenDriversButtonText, "Open Drivers", 13, FleetPrimaryButtonColor, Color.white);
@@ -143,11 +171,7 @@ public partial class GameBootstrap
 
         bool shouldShow =
             isDriverDetailsOpen &&
-            !isFleetPanelOpen &&
-            !isDriversPanelOpen &&
-            !isShiftsPanelOpen &&
-            !isResourcesPanelOpen &&
-            !isBuildPanelOpen;
+            !HasBlockingHudOpenForQuickHuds();
 
         if (driverQuickHud.CanvasRoot.activeSelf != shouldShow)
             driverQuickHud.CanvasRoot.SetActive(shouldShow);
@@ -162,10 +186,18 @@ public partial class GameBootstrap
         }
 
         TruckAgent truck = GetAssignedTruckForDriver(driver);
+        bool ru = IsRussianLanguage();
 
         driverQuickHud.HeaderText.text = driver.DriverName;
         string occupationLabel = GetWorkerOccupationLabel(driver);
         driverQuickHud.OccupationText.text = L(occupationLabel);
+        if (driverQuickHud.PortraitDriverId != driver.DriverId)
+        {
+            driverQuickHud.PortraitDriverId = driver.DriverId;
+            DrawWorkerPortraitScaled(driver, driverQuickHud.PortraitRoot, 0.50f);
+        }
+        driverQuickHud.ProfileText.text = $"{GetWorkerGenderLabel(driver, ru)} | {GetWorkerEducationDisplayName(driver.Education, ru)} | {GetWorkerQuickHudAgeLabel(driver, ru)}";
+        driverQuickHud.PlaceText.text = FormatValueLine(ru ? "\u0421\u0435\u0439\u0447\u0430\u0441" : "Now", GetWorkerQuickHudPlaceLabel(driver, ru));
 
         driverQuickHud.StatusText.text = GetDriverQuickHudStatusLabel(driver);
 
@@ -174,10 +206,16 @@ public partial class GameBootstrap
         if (hasTruck)
             driverQuickHud.TruckText.text = FormatValueLine("Truck", truck.DisplayName);
 
-        driverQuickHud.ShiftText.text = FormatValueLine("Shift", driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—");
+        string shiftLabel = driver.DutyMode == DriverDutyMode.Logistics
+            ? GetProductionWorkRangeLabel()
+            : driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—";
+        driverQuickHud.ShiftText.text = FormatValueLine("Shift", shiftLabel);
+        driverQuickHud.HomeText.text = FormatValueLine(ru ? "\u0414\u043e\u043c" : "Home", GetWorkerQuickHudHomeLabel(driver));
         bool hasCar = driver.OwnedCarModelIndex >= 0 && driver.OwnedCarModelIndex < CarModelNames.Length;
-        driverQuickHud.CarText.text = FormatValueLine(IsRussianLanguage() ? "\u0410\u0432\u0442\u043e" : "Car", hasCar ? CarModelNames[driver.OwnedCarModelIndex] : "—");
+        driverQuickHud.CarText.text = FormatValueLine(ru ? "\u0410\u0432\u0442\u043e" : "Car", hasCar ? CarModelNames[driver.OwnedCarModelIndex] : "—");
         driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
+        driverQuickHud.PerksText.text = FormatValueLine(ru ? "\u041f\u0435\u0440\u043a\u0438" : "Perks", FormatWorkerPerksInline(driver, ru, 4));
+        driverQuickHud.NeedsText.text = GetWorkerQuickHudNeedsLine(driver, ru);
 
         if (driverQuickHud.NeedsMealBarFill != null)
         {
@@ -192,11 +230,6 @@ public partial class GameBootstrap
             driverQuickHud.NeedsLeisureBarFill.GetComponent<Image>().color = GetNeedBarColor(leisurePct);
         }
 
-        bool ru = IsRussianLanguage();
-        string effectsValue = driver.ActiveEffects.Count > 0
-            ? string.Join(", ", driver.ActiveEffects.ConvertAll(e => ru ? e.RussianName : e.EnglishName))
-            : "—";
-        driverQuickHud.EffectsText.text = FormatValueLine(ru ? "Эффекты" : "Effects", effectsValue);
     }
 
     private string GetDriverQuickHudStatusLabel(DriverAgent driver)
@@ -243,6 +276,86 @@ public partial class GameBootstrap
         return IsRussianLanguage() ? "Бездельничает" : "Idling";
     }
 
+    private string GetWorkerQuickHudNeedsLine(DriverAgent driver, bool ru)
+    {
+        string meal = FormatWorkerNeedShort(ru ? "\u0415\u0434\u0430" : "Food", driver.HoursSinceMeal, WorkerMealCriticalHours);
+        string sleep = FormatWorkerNeedShort(ru ? "\u0421\u043e\u043d" : "Sleep", driver.HoursSinceSleep, WorkerSleepCriticalHours);
+        string leisure = FormatWorkerNeedShort(ru ? "\u0414\u043e\u0441\u0443\u0433" : "Leisure", driver.HoursSinceLeisure, WorkerLeisureCriticalHours);
+        return $"{meal}\n{sleep}  |  {leisure}";
+    }
+
+    private static string FormatWorkerNeedShort(string label, float hoursSince, float criticalHours)
+    {
+        float remaining = Mathf.Max(0f, criticalHours - hoursSince);
+        return $"{label}: {hoursSince:0.0}h / {criticalHours:0.0}h ({remaining:0.0}h left)";
+    }
+
+    private string GetWorkerQuickHudPlaceLabel(DriverAgent driver, bool ru)
+    {
+        if (driver.RestPhase == DriverRestPhase.SleepingAtHome)
+        {
+            return ru ? "\u0421\u043f\u0438\u0442 \u0434\u043e\u043c\u0430" : "Sleeping at home";
+        }
+
+        if (driver.RestPhase == DriverRestPhase.Sleeping)
+        {
+            return ru ? "\u0421\u043f\u0438\u0442 \u0432 Motel" : "Sleeping at Motel";
+        }
+
+        if (driver.WalkPhase == DriverRescuePhase.RidingLocalBus)
+        {
+            return driver.BusDestinationStopNumber > 0
+                ? (ru ? $"\u0412 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435 -> #{driver.BusDestinationStopNumber}" : $"On bus -> #{driver.BusDestinationStopNumber}")
+                : (ru ? "\u0412 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435" : "On bus");
+        }
+
+        LocationType? serviceLocation = GetDriverServiceLocation(driver.WalkPhase);
+        if (serviceLocation.HasValue)
+        {
+            return GetSelectedLocationDisplayName(serviceLocation.Value);
+        }
+
+        if (driver.IsInsideBuilding && driver.AssignedBuildingType.HasValue)
+        {
+            return GetSelectedLocationDisplayName(driver.AssignedBuildingType.Value);
+        }
+
+        if (driver.WaitingForShiftAtParking)
+        {
+            return ru ? "\u041f\u0430\u0440\u043a\u043e\u0432\u043a\u0430" : "Parking";
+        }
+
+        if (driver.AssignedBuildingType.HasValue && driver.IsOnActiveShift)
+        {
+            return GetSelectedLocationDisplayName(driver.AssignedBuildingType.Value);
+        }
+
+        TruckAgent truck = GetAssignedTruckForDriver(driver);
+        if (truck != null)
+        {
+            return truck.DisplayName;
+        }
+
+        return GetDriverQuickHudStatusLabel(driver);
+    }
+
+    private string GetWorkerQuickHudHomeLabel(DriverAgent driver)
+    {
+        return driver.AssignedPersonalHouseIndex >= 0 && driver.AssignedPersonalHouseIndex < personalHouses.Count
+            ? personalHouses[driver.AssignedPersonalHouseIndex].Label
+            : "\u2014";
+    }
+
+    private static string GetWorkerQuickHudAgeLabel(DriverAgent driver, bool ru)
+    {
+        if (driver.Age <= 0)
+        {
+            return "\u2014";
+        }
+
+        return ru ? $"{driver.Age} \u043b\u0435\u0442" : $"{driver.Age} y.o.";
+    }
+
     private void FocusDriver(int driverId)
     {
         selectedDriverId = driverId;
@@ -263,6 +376,9 @@ public partial class GameBootstrap
 
     private string GetWorkerOccupationLabel(DriverAgent driver)
     {
+        if (driver != null && driver.LifeGoal == WorkerLifeGoal.FindJob)
+            return "Job Seeker";
+
         if (IsDriverBusDriver(driver))
             return "Bus Driver";
 
@@ -271,14 +387,7 @@ public partial class GameBootstrap
 
         if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
         {
-            return driver.AssignedBuildingType.Value switch
-            {
-                LocationType.Forest           => "Lumberjack",
-                LocationType.Sawmill          => "Sawmill Worker",
-                LocationType.FurnitureFactory => "Carpenter",
-                LocationType.Warehouse        => "Warehouse Loader",
-                _                             => "Production Worker"
-            };
+            return GetBuildingWorkerRoleLabel(driver.AssignedBuildingType.Value);
         }
 
         if (driver.AssignedTruckNumber > 0)

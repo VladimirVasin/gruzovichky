@@ -14,7 +14,7 @@ public partial class GameBootstrap
     private bool isDriversScreenDirty = true;
     private int  selectedWorkerPanelDriverId = 0;
     private bool isEconomyScreenDirty = true;
-    private const int MaxDriverCardSlots = 8;
+    private const int InitialWorkerRowSlots = 8;
     private const int MaxShiftDriverSlots = 32;
     private const int MaxVacancyOptionRows = 18;
     private const int MaxEconomyRowSlots = 64;
@@ -44,7 +44,7 @@ public partial class GameBootstrap
     private RectTransform shiftsTransportPanel;
     private string lastShiftsHudDebugState = string.Empty;
     private bool hasLoggedLegacyShiftsHudDraw;
-    private readonly LogisticsSlotUi[] logisticsSlots = new LogisticsSlotUi[6];
+    private readonly LogisticsSlotUi[] logisticsSlots = new LogisticsSlotUi[AssignableBuildingWorkerSlotCapacity];
     private readonly List<VacancyViewModel> vacancyViewModels = new();
     private readonly List<VacancyFlowOption> vacancyFlowOptions = new();
     private BuildScreenUiRefs buildScreenUi;
@@ -59,6 +59,7 @@ public partial class GameBootstrap
         public RectTransform LeftPanel;
         public RectTransform RightPanel;
         public RectTransform WorkerListContent;
+        public ScrollRect WorkerListScrollRect;
         public readonly List<WorkerRowUi> WorkerRows = new();
         public Button HireButton;
         public Text   HireButtonText;
@@ -71,15 +72,6 @@ public partial class GameBootstrap
         public Text  DetailProfileTitleText;
         public Text  DetailRoleText;
         public RectTransform DetailPortraitRoot;
-        public Text  DetailSkillsTitleText;
-        public Text  DetailDrivingSkillText;
-        public Text  DetailStaminaSkillText;
-        public Text  DetailProductionSkillText;
-        public Text  DetailLogisticsSkillText;
-        public Text  DetailEffectsTitleText;
-        public RectTransform DetailEffectsListRoot;
-        public Text  DetailEffectsEmptyText;
-        public readonly List<Text> DetailEffectTexts = new();
         public Text  DetailNeedsTitleText;
         public Text  DetailMealNeedText;
         public Text  DetailSleepNeedText;
@@ -87,9 +79,9 @@ public partial class GameBootstrap
         public Text  DetailPerksTitleText;
         public Text  DetailPerksEmptyText;
         public readonly List<Text> DetailPerkTexts = new();
-        public GameObject DetailSkillTooltipRoot;
-        public Text DetailSkillTooltipTitleText;
-        public Text DetailSkillTooltipBodyText;
+        public GameObject DetailTraitTooltipRoot;
+        public Text DetailTraitTooltipTitleText;
+        public Text DetailTraitTooltipBodyText;
         public Image DetailStatusBadge;
         public Text  DetailStatusText;
         public Text  DetailAssignmentLabel;
@@ -102,8 +94,6 @@ public partial class GameBootstrap
         public Text  DetailHomeText;
         public Text  DetailCarLabel;
         public Text  DetailCarText;
-        public Text  DetailEducationLabel;
-        public Text  DetailEducationText;
         public Text  DetailAgeLabel;
         public Text  DetailAgeText;
         public Text  DetailWorkTitleText;
@@ -216,7 +206,8 @@ public partial class GameBootstrap
         TruckDriver,
         Intercity,
         BusDriver,
-        Production
+        Production,
+        Service
     }
 
     private enum VacancyFlowOptionKind
@@ -240,7 +231,6 @@ public partial class GameBootstrap
         public int SlotIndex;
         public int ShiftIndex = -1;
         public int TruckNumber;
-        public WorkerEducation RequiredEducation;
         public bool IsGroupedWarehouse;
         public int FilledSlots;
         public int MaxSlots;

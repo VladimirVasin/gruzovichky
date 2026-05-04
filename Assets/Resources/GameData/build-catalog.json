@@ -247,6 +247,21 @@
           }
         },
         {
+          "tool": "LaborExchange",
+          "abbrev": "LE",
+          "title": { "en": "Labor Exchange", "ru": "Биржа труда" },
+          "color": "#56788F",
+          "activeDescription": {
+            "en": "Mode active: place one 3x2 labor exchange from its driveway cell. R rotates ({rot}).",
+            "ru": "Режим активен: поставь Биржу труда 3x2 от подъездной клетки. R - поворот ({rot})."
+          },
+          "description": {
+            "en": "3x2 labor exchange: a higher-educated clerk posts vacancies and workers apply here.",
+            "ru": "Биржа труда 3x2: клерк с высшим образованием публикует вакансии, а рабочие приходят устраиваться."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
+        },
+        {
           "tool": "CarMarket",
           "abbrev": "CM",
           "title": { "en": "Car Market", "ru": "Авторынок" },

@@ -42,15 +42,6 @@ public partial class GameBootstrap
         buildCursorAssistRoot = new GameObject("BuildCursorAssist");
         buildCursorAssistRoot.transform.SetParent(worldRoot, false);
 
-        GameObject glow = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        glow.name = "BuildCursorAssistGlow";
-        glow.transform.SetParent(buildCursorAssistRoot.transform, false);
-        glow.transform.localScale = new Vector3(1f, 0.012f, 1f);
-        glow.GetComponent<Collider>().enabled = false;
-        buildCursorAssistGlowRenderer = glow.GetComponent<Renderer>();
-        buildCursorAssistGlowMaterial = CreateTransparentOverlayMaterial(new Color(1f, 0.82f, 0.42f, 0f));
-        buildCursorAssistGlowRenderer.material = buildCursorAssistGlowMaterial;
-
         GameObject lightObject = new("BuildCursorAssistLight");
         lightObject.transform.SetParent(buildCursorAssistRoot.transform, false);
         lightObject.transform.localPosition = new Vector3(0f, 2.4f, 0f);
@@ -123,42 +114,24 @@ public partial class GameBootstrap
 
     private void UpdateBuildCursorAssist(Vector3 position, float radius, bool canBuild)
     {
-        if (buildCursorAssistRoot == null || buildCursorAssistGlowMaterial == null)
+        if (buildCursorAssistRoot == null || buildCursorAssistLight == null)
         {
             return;
         }
 
-        float nightFactor = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.72f, 0.24f, currentStylizedDaylight));
+        float nightFactor = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.34f, 0.12f, currentStylizedDaylight));
         if (nightFactor <= 0.015f)
         {
             HideBuildCursorAssist();
             return;
         }
 
-        Color tint = canBuild
-            ? new Color(1f, 0.78f, 0.38f, Mathf.Lerp(0.06f, 0.26f, nightFactor))
-            : new Color(1f, 0.28f, 0.18f, Mathf.Lerp(0.08f, 0.30f, nightFactor));
-
         buildCursorAssistRoot.SetActive(true);
         buildCursorAssistRoot.transform.position = position;
-        buildCursorAssistRoot.transform.localScale = new Vector3(radius, 1f, radius);
-        buildCursorAssistGlowMaterial.color = tint;
-        if (buildCursorAssistGlowMaterial.HasProperty("_BaseColor"))
-        {
-            buildCursorAssistGlowMaterial.SetColor("_BaseColor", tint);
-        }
 
-        if (buildCursorAssistLight != null)
-        {
-            buildCursorAssistLight.enabled = true;
-            buildCursorAssistLight.color = canBuild ? new Color(1f, 0.78f, 0.46f) : new Color(1f, 0.36f, 0.24f);
-            buildCursorAssistLight.range = Mathf.Clamp(radius * 1.45f, 4.5f, 12f);
-            buildCursorAssistLight.intensity = Mathf.Lerp(0.25f, 1.45f, nightFactor);
-        }
-
-        if (buildCursorAssistGlowRenderer != null)
-        {
-            buildCursorAssistGlowRenderer.enabled = true;
-        }
+        buildCursorAssistLight.enabled = true;
+        buildCursorAssistLight.color = canBuild ? new Color(1f, 0.78f, 0.46f) : new Color(1f, 0.36f, 0.24f);
+        buildCursorAssistLight.range = Mathf.Clamp(radius * 1.25f, 4f, 10f);
+        buildCursorAssistLight.intensity = Mathf.Lerp(0.15f, 0.9f, nightFactor);
     }
 }

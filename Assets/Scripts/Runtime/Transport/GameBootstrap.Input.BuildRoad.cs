@@ -148,6 +148,7 @@ public partial class GameBootstrap
             BuildTool.CityPark        => TryPlaceCityParkAtAnchor(cell),
             BuildTool.PersonalHouse   => TryPlacePersonalHouseAtAnchor(cell),
             BuildTool.CarMarket       => TryPlaceCarMarketAtAnchor(cell),
+            BuildTool.LaborExchange   => TryPlaceLaborExchangeAtAnchor(cell),
             _ => false
         };
 
@@ -229,7 +230,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        SessionDebugLogger.Log("BUILD_ROAD", $"path-finish requested tool={activeBuildTool} start={FormatCell(roadPathStart.Value)} requestedEnd={FormatCell(cell)} axisLocked={IsActiveRoadSegmentAxisLocked()} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
+        SessionDebugLogger.Log("BUILD_ROAD", $"path-finish requested tool={activeBuildTool} start={FormatCell(roadPathStart.Value)} requestedEnd={FormatCell(cell)} axisLocked={IsActiveRoadSegmentAxisLocked()} previewFootprintCells={FormatCellList(buildPreviewFootprintCells)}.");
         bool built = TryBuildRoadPath(roadPathStart.Value, cell);
         if (built)
         {
@@ -246,7 +247,7 @@ public partial class GameBootstrap
         {
             if (start == end)
             {
-                SessionDebugLogger.Log("BUILD_ROAD", $"path-build same-cell start={FormatCell(start)} tool={activeBuildTool} previewCells={FormatCellList(buildPreviewFootprintCells)} lanePairId=single.");
+                SessionDebugLogger.Log("BUILD_ROAD", $"path-build same-cell start={FormatCell(start)} tool={activeBuildTool} previewFootprintCells={FormatCellList(buildPreviewFootprintCells)} lanePairId=single.");
                 return activeBuildTool == BuildTool.SingleRoad
                     ? TryPlaceSingleRoadCell(start, "player-path")
                     : TryPlaceRoadFootprint(start, GetBuildRoadDirection(), "player-path");
@@ -261,14 +262,16 @@ public partial class GameBootstrap
 
             if (activeBuildTool == BuildTool.Road && !CanCommitTwoLaneRoadSegmentPath(path, out string blockedReason))
             {
-                SessionDebugLogger.Log("BUILD_ROAD", $"segment-build rejected start={FormatCell(start)} requestedEnd={FormatCell(end)} resolvedEnd={FormatCell(path[^1])} axisLocked={IsActiveRoadSegmentAxisLocked()} reason={blockedReason} path={FormatCellList(path)} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
+                SessionDebugLogger.Log("BUILD_ROAD", $"segment-build rejected start={FormatCell(start)} requestedEnd={FormatCell(end)} resolvedEnd={FormatCell(path[^1])} axisLocked={IsActiveRoadSegmentAxisLocked()} reason={blockedReason} path={FormatCellList(path)} previewFootprintCells={FormatCellList(buildPreviewFootprintCells)}.");
                 return false;
             }
 
             HashSet<Vector2Int> roadsBeforeBuild = new(roadCells);
             List<Vector2Int> turnFillCells = new();
             List<string> lanePairIds = new();
-            SessionDebugLogger.Log("BUILD_ROAD", $"path-build start={FormatCell(start)} requestedEnd={FormatCell(end)} resolvedEnd={FormatCell(path[^1])} axisLocked={IsActiveRoadSegmentAxisLocked()} cells={path.Count} tool={activeBuildTool} path={FormatCellList(path)} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
+            Vector2Int[] pathOffsets = activeBuildTool == BuildTool.SingleRoad ? null : new Vector2Int[path.Count];
+            bool[] pathOffsetResolved = activeBuildTool == BuildTool.SingleRoad ? null : new bool[path.Count];
+            SessionDebugLogger.Log("BUILD_ROAD", $"path-build start={FormatCell(start)} requestedEnd={FormatCell(end)} resolvedEnd={FormatCell(path[^1])} axisLocked={IsActiveRoadSegmentAxisLocked()} cells={path.Count} tool={activeBuildTool} path={FormatCellList(path)} previewFootprintCells={FormatCellList(buildPreviewFootprintCells)}.");
 
             bool anyBuilt = false;
             for (int i = 0; i < path.Count; i++)
@@ -280,58 +283,72 @@ public partial class GameBootstrap
                     continue;
                 }
 
-                if (CanPlaceRoadFootprint(path[i], direction, requireNewRoadCell: true))
+                List<(Vector2Int Direction, Vector2Int Offset)> junctionTurns = null;
+                if (i == 0)
                 {
-                    if (TryResolveContinuingPathRoadFootprintOffset(path, i, direction, IsBuildRoadBlockedCell, out Vector2Int continuingOffset))
+                    Vector2Int behindCell = path[0] - direction;
+                    if (roadCells.Contains(behindCell))
                     {
-                        AddUniqueDebugValue(lanePairIds, FormatRoadLanePairId(path[i], continuingOffset, direction));
-                        anyBuilt |= TryPlaceRoadFootprintWithOffset(path[i], direction, continuingOffset, "player-path");
-                    }
-                    else
-                    {
-                        if (TryResolveRoadFootprintOffset(path[i], direction, requireNewRoadCell: true, IsBuildRoadBlockedCell, out Vector2Int resolvedOffset))
+                        junctionTurns = new List<(Vector2Int Direction, Vector2Int Offset)>();
+                        foreach (Vector2Int previousDirection in RoadBuildPlacementService.GetConnectedPerpendicularDirections(behindCell, direction, roadCells))
                         {
-                            AddUniqueDebugValue(lanePairIds, FormatRoadLanePairId(path[i], resolvedOffset, direction));
+                            junctionTurns.Add((previousDirection, GetExistingRoadWidthOffset(behindCell, previousDirection)));
                         }
-
-                        anyBuilt |= TryPlaceRoadFootprint(path[i], direction, "player-path");
                     }
+                }
+
+                Vector2Int widthOffset = Vector2Int.zero;
+                bool hasWidthOffset = false;
+                if (TryResolveContinuingPathRoadFootprintOffset(path, i, direction, IsBuildRoadBlockedCell, out Vector2Int continuingOffset))
+                {
+                    widthOffset = continuingOffset;
+                    hasWidthOffset = true;
+                }
+                else if (TryResolveRoadFootprintOffset(path[i], direction, requireNewRoadCell: true, IsBuildRoadBlockedCell, out Vector2Int resolvedOffset))
+                {
+                    widthOffset = resolvedOffset;
+                    hasWidthOffset = true;
+                }
+
+                if (hasWidthOffset)
+                {
+                    pathOffsets[i] = widthOffset;
+                    pathOffsetResolved[i] = true;
+                    AddUniqueDebugValue(lanePairIds, FormatRoadLanePairId(path[i], widthOffset, direction));
+                    anyBuilt |= TryPlaceRoadFootprintWithOffset(path[i], direction, widthOffset, "player-path");
                 }
                 else
                 {
                     SessionDebugLogger.Log("BUILD_ROAD", $"player-path skipped footprint cell={FormatCell(path[i])} dir={FormatCell(direction)} reason={GetRoadBuildBlockReason(path[i])}.");
                 }
 
-                if (i > 0)
+                if (i > 0 && pathOffsetResolved[i - 1] && pathOffsetResolved[i])
                 {
                     Vector2Int previousDirection = GetRoadPathPreviewDirection(path, i - 1);
-                    anyBuilt |= TryFillRoadTurnFootprint(path[i - 1], previousDirection, path[i], direction, IsBuildRoadBlockedCell, "player", turnFillCells);
+                    anyBuilt |= TryFillRoadTurnFootprint(path[i - 1], previousDirection, pathOffsets[i - 1], path[i], direction, pathOffsets[i], IsBuildRoadBlockedCell, "player", turnFillCells);
                 }
-                else
+                else if (i == 0 && junctionTurns != null && pathOffsetResolved[i])
                 {
                     Vector2Int behindCell = path[0] - direction;
-                    if (roadCells.Contains(behindCell))
+                    foreach ((Vector2Int previousDirection, Vector2Int previousOffset) in junctionTurns)
                     {
-                        foreach (Vector2Int previousDirection in RoadBuildPlacementService.GetConnectedPerpendicularDirections(behindCell, direction, roadCells))
-                        {
-                            anyBuilt |= TryFillRoadTurnFootprint(behindCell, previousDirection, path[0], direction, IsBuildRoadBlockedCell, "player-junction", turnFillCells);
-                        }
+                        anyBuilt |= TryFillRoadTurnFootprint(behindCell, previousDirection, previousOffset, path[0], direction, pathOffsets[i], IsBuildRoadBlockedCell, "player-junction", turnFillCells);
                     }
                 }
             }
 
-            List<Vector2Int> committedCells = new();
+            List<Vector2Int> newRoadCells = new();
             foreach (Vector2Int roadCell in roadCells)
             {
                 if (!roadsBeforeBuild.Contains(roadCell))
                 {
-                    committedCells.Add(roadCell);
+                    newRoadCells.Add(roadCell);
                 }
             }
 
             SessionDebugLogger.Log(
                 "BUILD_ROAD",
-                $"path-build result start={FormatCell(start)} requestedEnd={FormatCell(end)} resolvedEnd={FormatCell(path[^1])} axisLocked={IsActiveRoadSegmentAxisLocked()} built={anyBuilt} committedCells={FormatCellList(committedCells)} turnFillCells={FormatCellList(turnFillCells)} lanePairId={FormatStringList(lanePairIds)} previewCells={FormatCellList(buildPreviewFootprintCells)}.");
+                $"path-build result start={FormatCell(start)} requestedEnd={FormatCell(end)} resolvedEnd={FormatCell(path[^1])} axisLocked={IsActiveRoadSegmentAxisLocked()} built={anyBuilt} newRoadCells={FormatCellList(newRoadCells)} turnFillCells={FormatCellList(turnFillCells)} lanePairId={FormatStringList(lanePairIds)} previewFootprintCells={FormatCellList(buildPreviewFootprintCells)}.");
             return anyBuilt;
         });
     }
@@ -621,6 +638,11 @@ public partial class GameBootstrap
         if (activeBuildTool == BuildTool.CarMarket)
         {
             return GetCarMarketPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
+        if (activeBuildTool == BuildTool.LaborExchange)
+        {
+            return GetLaborExchangePlacementPreview(cell, out previewPosition, out previewScale);
         }
 
         return false;

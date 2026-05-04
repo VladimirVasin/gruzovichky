@@ -11,10 +11,10 @@ public partial class GameBootstrap
         Rect panelRect = GetParkingHudRect();
         GUI.Box(panelRect, "Parking HUD");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 30, 250, 22), "Selected building: Parking");
-        int trucksInsideCount = GetParkingTruckCount();
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 54, 250, 22), $"Trucks inside parking: {trucksInsideCount}/{MaxTruckCount}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 54, 250, 22), $"Truck slots: {GetOwnedTruckCount()}/{GetTruckParkingCapacity()}");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 74, 250, 22), $"Bus slots: {GetOwnedBusCount()}/{GetBusParkingCapacity()}");
 
-        float y = panelRect.y + 82f;
+        float y = panelRect.y + 104f;
         TruckAgent firstTruck = GetTruckAgent(1);
         if (IsTruckInsideParking(firstTruck))
         {
@@ -65,48 +65,28 @@ public partial class GameBootstrap
             isTruckDetailsOpen = false;
         }
 
-        y += 8f;
-        bool canHireTruck = locations.ContainsKey(LocationType.Parking) && GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
-        GUI.enabled = canHireTruck;
-        if (GUI.Button(new Rect(panelRect.x + 12, y, panelRect.width - 24, 28), $"Hire New Truck  ${HireTruckCost}"))
-        {
-            HireNewTruck();
-        }
-
-        GUI.enabled = true;
         if (!locations.ContainsKey(LocationType.Parking))
         {
-            GUI.Label(new Rect(panelRect.x + 12, y + 32f, 240, 20), "Build Parking first.");
+            GUI.Label(new Rect(panelRect.x + 12, y + 8f, 240, 20), "Build Parking first.");
         }
-        else if (GetOwnedTruckCount() >= MaxTruckCount)
+        else
         {
-            GUI.Label(new Rect(panelRect.x + 12, y + 32f, 240, 20), "Parking is full.");
-        }
-        else if (money < HireTruckCost)
-        {
-            GUI.Label(new Rect(panelRect.x + 12, y + 32f, 240, 20), $"Need ${HireTruckCost} to hire a truck.");
+            GUI.Label(new Rect(panelRect.x + 12, y + 8f, panelRect.width - 24, 36), "Vehicles appear automatically from Parking slots when drivers need them.");
         }
     }
 
     private void HireNewTruck()
     {
-        LogUiInput("Fleet/Parking: clicked Buy New Truck");
-        LogCommand($"HireNewTruck(cost=${HireTruckCost})");
-        if (!locations.ContainsKey(LocationType.Parking) || GetOwnedTruckCount() >= MaxTruckCount || money < HireTruckCost)
+        LogUiInput("Fleet/Parking: requested Parking truck slot");
+        LogCommand("ProvisionTruckFromParkingSlot()");
+        if (!TryProvisionTruckFromParkingCapacity(out TruckAgent truckAgent, "manual Parking slot request"))
         {
-            SessionDebugLogger.Log("TRUCK_REACTION", $"Hire new truck rejected: {GetFleetBuyStatusLabel()}");
+            SessionDebugLogger.Log("TRUCK_REACTION", $"Truck slot request rejected: {GetFleetBuyStatusLabel()}");
             return;
         }
 
-        TruckAgent hiredTruck = CreateAndRegisterTruckAgent(nextHireTruckNumber, truckAgents.Count);
-        SetupTruckAudio(hiredTruck);
-        nextHireTruckNumber++;
-        money -= HireTruckCost;
-        RecordMoneyMovement(-HireTruckCost, "Treasury", "Fleet Expansion", $"Hire {hiredTruck.DisplayName}", money);
-        SessionDebugLogger.Log("TRUCK", $"Hired {hiredTruck.DisplayName} for ${HireTruckCost}. Money now ${money}.");
-        StartPurchasedTruckArrival(hiredTruck);
-        NotifyTutorialTruckPurchased(hiredTruck);
-        LogTruckReaction(hiredTruck, $"purchased for ${HireTruckCost}; arriving from edge highway");
+        SessionDebugLogger.Log("TRUCK", $"{truckAgent.DisplayName} is ready in Parking; no separate purchase was required.");
+        LogTruckReaction(truckAgent, "provisioned from Parking infrastructure slot");
         TruckAgent selectedTruck = GetTruckAgent(selectedTruckNumber) ?? GetTruckAgent(1);
         if (selectedTruck != null)
         {
@@ -576,7 +556,7 @@ public partial class GameBootstrap
     {
         return locationType switch
         {
-            LocationType.Parking => $"Trucks parked: {GetParkingTruckCount()}/{MaxTruckCount}",
+            LocationType.Parking => $"Truck slots: {GetOwnedTruckCount()}/{GetTruckParkingCapacity()} | Bus slots: {GetOwnedBusCount()}/{GetBusParkingCapacity()}",
             LocationType.GasStation => "Fuel service: Ready",
             LocationType.Forest => $"Logs stored: {locations[LocationType.Forest].LogsStored}/{ForestMaxLogsStorage}",
             LocationType.Warehouse => $"Boards stored: {locations[LocationType.Warehouse].BoardsStored}",
@@ -587,6 +567,7 @@ public partial class GameBootstrap
             LocationType.Stop => "Local bus stop",
             LocationType.Bar => "Service fee: $10",
             LocationType.Canteen => "Service fee: $10",
+            LocationType.LaborExchange => $"Vacancies: {CountAvailableLaborExchangePostings()}",
             _ => string.Empty
         };
     }
@@ -610,6 +591,7 @@ public partial class GameBootstrap
             LocationType.CityPark      => IsRussianLanguage() ? "Городской парк" : "City Park",
             LocationType.PersonalHouse => IsRussianLanguage() ? "Жилой дом" : "Personal House",
             LocationType.CarMarket     => IsRussianLanguage() ? "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a" : "Car Market",
+            LocationType.LaborExchange => IsRussianLanguage() ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430" : "Labor Exchange",
             _ => L("Location")
         };
     }

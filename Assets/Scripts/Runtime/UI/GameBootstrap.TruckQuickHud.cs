@@ -96,8 +96,7 @@ public partial class GameBootstrap
                 return;
             }
 
-            LogUiInput($"Quick HUD: opened Drivers for {selectedTruck.Driver.DriverName} from {selectedTruck.DisplayName}");
-            OpenDriversPanelForDriver(selectedTruck.Driver.DriverId);
+            FocusWorkerFromQuickHud(selectedTruck.Driver.DriverId, selectedTruck.DisplayName);
         });
 
         RectTransform statsGrid = CreateUiObject("StatsGrid", summaryBody).GetComponent<RectTransform>();

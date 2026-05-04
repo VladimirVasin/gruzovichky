@@ -139,6 +139,25 @@ public static class RoadBuildPlacementService
         return Contains(roadCells, cell + offset) && Contains(roadCells, cell - offset);
     }
 
+    public static void GetTurnFillBoundsFromOffsets(
+        Vector2Int previousCell,
+        Vector2Int previousOffset,
+        Vector2Int currentCell,
+        Vector2Int currentOffset,
+        out int minX,
+        out int maxX,
+        out int minY,
+        out int maxY)
+    {
+        Vector2Int previousSide = previousCell + previousOffset;
+        Vector2Int currentSide = currentCell + currentOffset;
+
+        minX = Mathf.Min(Mathf.Min(previousCell.x, previousSide.x), Mathf.Min(currentCell.x, currentSide.x));
+        maxX = Mathf.Max(Mathf.Max(previousCell.x, previousSide.x), Mathf.Max(currentCell.x, currentSide.x));
+        minY = Mathf.Min(Mathf.Min(previousCell.y, previousSide.y), Mathf.Min(currentCell.y, currentSide.y));
+        maxY = Mathf.Max(Mathf.Max(previousCell.y, previousSide.y), Mathf.Max(currentCell.y, currentSide.y));
+    }
+
     private static bool Contains(ISet<Vector2Int> cells, Vector2Int cell)
     {
         return cells != null && cells.Contains(cell);

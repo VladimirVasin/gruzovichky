@@ -24,6 +24,7 @@ public partial class GameBootstrap : MonoBehaviour
         {
             if (IsDriverIdleWanderPhase(driver) || IsDriverInIdleActivity(driver))
             {
+                ExitWorkerServiceInterior(driver, driver.WalkPhase);
                 ReleaseBench(driver);
                 ReleaseCatInteraction(driver);
                 driver.WalkPhase = DriverRescuePhase.None;
@@ -82,6 +83,7 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan ||
             driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
             driver.WalkPhase == DriverRescuePhase.IdleAtCityPark ||
+            driver.WalkPhase == DriverRescuePhase.AtLaborExchange ||
             driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
             driver.WalkPhase == DriverRescuePhase.IdlePhoneCall ||
             driver.WalkPhase == DriverRescuePhase.IdlePettingCat)
@@ -91,6 +93,7 @@ public partial class GameBootstrap : MonoBehaviour
             {
                 WorkerLifeGoal completedGoal = driver.LifeGoal;
                 DriverRescuePhase completedPhase = driver.WalkPhase;
+                Vector3 completionPosition = ExitWorkerServiceInterior(driver, completedPhase);
                 if (driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench)
                 {
                     ReleaseBench(driver);
@@ -115,13 +118,20 @@ public partial class GameBootstrap : MonoBehaviour
                     ReleaseCatInteraction(driver);
                 }
 
+                if (completedPhase == DriverRescuePhase.AtLaborExchange)
+                {
+                    driver.WalkPhase = DriverRescuePhase.None;
+                    CompleteLaborExchangeApplication(driver, completionPosition);
+                    return;
+                }
+
                 driver.WalkPhase = DriverRescuePhase.None;
                 if (completedGoal == WorkerLifeGoal.Eat)
                 {
                     ResetWorkerNeedTimer(driver, WorkerNeedKind.Meal);
                     driver.AteToday = true;
                     driver.LifeGoal = WorkerLifeGoal.None;
-                    ContinueWorkerLifeCycle(driver, driver.DriverObject.transform.position);
+                    ContinueWorkerLifeCycle(driver, completionPosition);
                     return;
                 }
 
@@ -143,7 +153,7 @@ public partial class GameBootstrap : MonoBehaviour
                     driver.GamblingBetCount = 0;
                     driver.GamblerBroke = false;
                     driver.LifeGoal = WorkerLifeGoal.None;
-                    ContinueWorkerLifeCycle(driver, driver.DriverObject.transform.position);
+                    ContinueWorkerLifeCycle(driver, completionPosition);
                     return;
                 }
 
@@ -152,7 +162,7 @@ public partial class GameBootstrap : MonoBehaviour
                     ResetWorkerNeedTimer(driver, WorkerNeedKind.Sleep);
                     driver.SleptToday = true;
                     driver.LifeGoal = WorkerLifeGoal.None;
-                    ContinueWorkerLifeCycle(driver, driver.DriverObject.transform.position);
+                    ContinueWorkerLifeCycle(driver, completionPosition);
                     return;
                 }
 
@@ -181,6 +191,11 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        if (TryStartLaborExchangeJobSearch(driver))
+        {
+            return;
+        }
+
         if (driver.IdleWanderPauseTimer > 0f)
         {
             driver.IdleWanderPauseTimer -= Time.deltaTime * gameSpeedMultiplier;
@@ -202,6 +217,51 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         SelectNextIdleActivity(driver, startPosition, targetPosition);
+    }
+
+    private void EnterWorkerServiceInterior(DriverAgent driver, LocationType locationType)
+    {
+        if (driver?.DriverObject == null)
+        {
+            return;
+        }
+
+        driver.IsInsideBuilding = true;
+        driver.DriverObject.SetActive(false);
+        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered {locationType} interior.");
+    }
+
+    private Vector3 ExitWorkerServiceInterior(DriverAgent driver, DriverRescuePhase completedPhase)
+    {
+        if (driver?.DriverObject == null)
+        {
+            return Vector3.zero;
+        }
+
+        LocationType? locationType = GetDriverServiceLocation(completedPhase);
+        if (locationType != LocationType.Bar &&
+            locationType != LocationType.Canteen &&
+            locationType != LocationType.GamblingHall &&
+            locationType != LocationType.LaborExchange)
+        {
+            return driver.DriverObject.transform.position;
+        }
+
+        Vector3 exitPosition = GetDriverStandPointNearLocation(locationType.Value);
+        if (exitPosition == Vector3.zero)
+        {
+            exitPosition = driver.DriverObject.transform.position;
+            exitPosition.y = SampleTerrainHeight(exitPosition.x, exitPosition.z);
+        }
+
+        driver.IsInsideBuilding = false;
+        driver.DriverObject.transform.position = exitPosition;
+        driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        driver.DriverObject.SetActive(true);
+        driver.WalkAnimationTime = 0f;
+        ApplyDriverPose(driver, 0f, 0f);
+        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} exited {locationType.Value} interior.");
+        return exitPosition;
     }
 
     private void SelectNextIdleActivity(DriverAgent driver, Vector3 startPosition, Vector3 wanderTarget)

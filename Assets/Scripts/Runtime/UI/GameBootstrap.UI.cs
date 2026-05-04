@@ -15,11 +15,11 @@ public partial class GameBootstrap
 
     private void BeginNextTruckSegment(Vector2Int nextCell)
     {
-        truckSegmentStartWorld = truckObject.transform.position;
+        truckSegmentStartWorld = WithRoadVehicleHeight(truckObject.transform.position, TruckSegmentStartLift);
+        truckObject.transform.position = truckSegmentStartWorld;
         Vector3 baseTargetWorld = GetTruckWorldPosition(nextCell);
-        baseTargetWorld.y = SampleRoadSurfaceHeight(baseTargetWorld.x, baseTargetWorld.z) + TruckSegmentStartLift;
         Vector3 laneOffset = GetTruckTargetLaneOffset(truckCell, nextCell, out string laneReason);
-        truckTargetWorld = baseTargetWorld + laneOffset;
+        truckTargetWorld = WithRoadVehicleHeight(baseTargetWorld + laneOffset, TruckSegmentStartLift);
         LogTruckLaneSegment(truckCell, nextCell, laneOffset, laneReason, baseTargetWorld, truckTargetWorld);
         truckSegmentProgress = 0f;
         float distance = Vector3.Distance(truckSegmentStartWorld, truckTargetWorld);
@@ -203,12 +203,6 @@ public partial class GameBootstrap
         }
         if (driver == null || driver.DriverObject == null) return;
 
-        // If driver is already on a rest journey, silently refuel and continue.
-        if (locations.TryGetValue(LocationType.GasStation, out LocationData gsCheck))
-        {
-            gsCheck.FuelStored = GasStationMaxFuelStorage;
-        }
-
         if (driver.RestPhase != DriverRestPhase.None)
         {
             truckFuel = TruckFuelCapacity;
@@ -272,6 +266,21 @@ public partial class GameBootstrap
                 return;
             }
 
+            if (!isIdleWander &&
+                TryFindNearestDriverWalkFallbackTarget(startCell, goalCell, driver.WalkPhase, out Vector2Int fallbackCell, out List<Vector2Int> fallbackPath))
+            {
+                for (int i = 1; i < fallbackPath.Count; i++)
+                {
+                    driver.WalkPath.Add(GetCellCenter(fallbackPath[i]));
+                }
+
+                driver.WalkTargetWorld = GetCellCenter(fallbackCell);
+                SessionDebugLogger.Log(
+                    "DRIVER",
+                    $"{driver.DriverName} rerouted blocked walk target for {driver.WalkPhase} from ({goalCell.x},{goalCell.y}) to nearest safe cell ({fallbackCell.x},{fallbackCell.y}); steps={fallbackPath.Count - 1}.");
+                return;
+            }
+
             driver.WalkTargetWorld = startWorld;
             SessionDebugLogger.Log(
                 "DRIVER",
@@ -298,6 +307,51 @@ public partial class GameBootstrap
                    goal,
                    GridPathService.GetCardinalNeighbors,
                    neighbor => IsWalkableDriverCell(neighbor, start, goal, walkPhase));
+    }
+
+    private bool TryFindNearestDriverWalkFallbackTarget(Vector2Int startCell, Vector2Int blockedGoalCell, DriverRescuePhase walkPhase, out Vector2Int targetCell, out List<Vector2Int> cellPath)
+    {
+        targetCell = blockedGoalCell;
+        cellPath = null;
+        float bestScore = float.PositiveInfinity;
+        const int maxRadius = 5;
+        for (int radius = 1; radius <= maxRadius; radius++)
+        {
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                for (int dy = -radius; dy <= radius; dy++)
+                {
+                    if (Mathf.Abs(dx) + Mathf.Abs(dy) != radius)
+                        continue;
+
+                    Vector2Int candidate = blockedGoalCell + new Vector2Int(dx, dy);
+                    if (!IsDriverWalkFallbackCell(candidate))
+                        continue;
+
+                    List<Vector2Int> path = FindDriverWalkPath(startCell, candidate, walkPhase);
+                    if (path == null || path.Count == 0)
+                        continue;
+
+                    float score = path.Count * 10f + radius;
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
+                        targetCell = candidate;
+                        cellPath = path;
+                    }
+                }
+            }
+        }
+
+        return cellPath != null;
+    }
+
+    private bool IsDriverWalkFallbackCell(Vector2Int cell)
+    {
+        return IsInsideGrid(cell) &&
+               !waterCells.Contains(cell) &&
+               !edgeHighwayCells.Contains(cell) &&
+               !IsLocationCell(cell);
     }
 
     private bool IsWalkableDriverCell(Vector2Int cell, Vector2Int start, Vector2Int goal, DriverRescuePhase walkPhase)
@@ -361,17 +415,7 @@ public partial class GameBootstrap
             return Vector3.zero;
         }
 
-        Vector3 anchorPoint = GetCellCenter(location.Anchor);
-        Vector3 locationCenter = GetLocationCenter(locationType);
-        Vector3 outwardDirection = (anchorPoint - locationCenter);
-        outwardDirection.y = 0f;
-        if (outwardDirection.sqrMagnitude < 0.0001f)
-        {
-            outwardDirection = Vector3.forward;
-        }
-
-        outwardDirection.Normalize();
-        Vector3 standPoint = anchorPoint - outwardDirection * 0.12f;
+        Vector3 standPoint = GetCellCenter(location.RoadAccess == default ? location.Anchor : location.RoadAccess);
         standPoint.y = SampleTerrainHeight(standPoint.x, standPoint.z);
         return standPoint;
     }
@@ -380,13 +424,7 @@ public partial class GameBootstrap
     {
         if (houseIndex < 0 || houseIndex >= personalHouses.Count) return Vector3.zero;
         LocationData house = personalHouses[houseIndex];
-        Vector3 anchorPoint = GetCellCenter(house.Anchor);
-        Vector3 center = GetLocationCenter(house);
-        Vector3 outward = anchorPoint - center;
-        outward.y = 0f;
-        if (outward.sqrMagnitude < 0.0001f) outward = Vector3.forward;
-        outward.Normalize();
-        Vector3 standPoint = anchorPoint - outward * 0.12f;
+        Vector3 standPoint = GetCellCenter(house.RoadAccess == default ? house.Anchor : house.RoadAccess);
         standPoint.y = SampleTerrainHeight(standPoint.x, standPoint.z);
         return standPoint;
     }

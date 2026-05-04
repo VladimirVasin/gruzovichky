@@ -156,11 +156,11 @@ public partial class GameBootstrap
         buyLayout.childControlHeight = true;
         buyLayout.childForceExpandWidth = true;
         buyLayout.childForceExpandHeight = false;
-        fleetScreenUi.BuyTruckButton = CreateButton("BuyTruckButton", buyContainer, uiFont, out fleetScreenUi.BuyTruckButtonText, "Buy New Truck", 16, FleetPrimaryButtonColor, Color.white);
+        fleetScreenUi.BuyTruckButton = CreateButton("BuyTruckButton", buyContainer, uiFont, out fleetScreenUi.BuyTruckButtonText, "Parking Slots", 16, FleetPrimaryButtonColor, Color.white);
         fleetScreenUi.BuyTruckButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
         fleetScreenUi.BuyTruckButton.onClick.AddListener(() =>
         {
-            LogUiInput("Fleet Canvas: clicked Buy New Truck");
+            LogUiInput("Fleet Canvas: requested Parking truck slot");
             HireNewTruck();
         });
         fleetScreenUi.BuyTruckStatusText = CreateBodyText("BuyTruckStatus", buyContainer, uiFont, string.Empty, 12, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
@@ -445,7 +445,7 @@ public partial class GameBootstrap
     private void UpdateFleetListPanel()
     {
         bool ru = IsRussianLanguage();
-        fleetScreenUi.FleetCountText.text = $"{GetOwnedTruckCount()} / {MaxTruckCount} {(ru ? "грузовиков" : "Trucks")}";
+        fleetScreenUi.FleetCountText.text = $"{GetOwnedTruckCount()} / {GetTruckParkingCapacity()} {(ru ? "грузовиков" : "Trucks")}";
 
         for (int i = 0; i < truckAgents.Count; i++)
         {
@@ -468,7 +468,6 @@ public partial class GameBootstrap
             SaveTruckState(truckAgent);
         }
 
-        bool canHireTruck = locations.ContainsKey(LocationType.Parking) && GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
         bool hideBuyPanelForTutorial = false;
         ApplyFleetTutorialVisibility();
 
@@ -477,10 +476,10 @@ public partial class GameBootstrap
             return;
         }
 
-        fleetScreenUi.BuyTruckButton.interactable = canHireTruck;
-        fleetScreenUi.BuyTruckButtonText.text = $"{L("Buy New Truck")} — ${HireTruckCost}";
+        fleetScreenUi.BuyTruckButton.interactable = false;
+        fleetScreenUi.BuyTruckButtonText.text = IsRussianLanguage() ? "Слоты Parking" : "Parking Slots";
         fleetScreenUi.BuyTruckStatusText.text = GetFleetBuyStatusLabel();
-        fleetScreenUi.BuyTruckStatusText.color = canHireTruck ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
+        fleetScreenUi.BuyTruckStatusText.color = locations.ContainsKey(LocationType.Parking) ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
     }
 
     private void UpdateFleetDetailsPanel()
@@ -618,19 +617,14 @@ public partial class GameBootstrap
             return IsRussianLanguage() ? "Сначала построй Парковку." : "Build Parking first.";
         }
 
-        if (GetOwnedTruckCount() >= MaxTruckCount)
+        if (!CanProvisionTruckFromParkingCapacity())
         {
-            return L("Fleet capacity reached.");
-        }
-
-        if (money < HireTruckCost)
-        {
-            return $"{L("Need")} ${HireTruckCost} {L("to hire a new truck.")}";
+            return IsRussianLanguage() ? "Все слоты грузовиков Parking заняты." : "All Parking truck slots are in use.";
         }
 
         return IsRussianLanguage()
-            ? "Новый грузовик приедет с магистрали и сам припаркуется."
-            : "A new truck arrives from the highway and parks itself.";
+            ? "Parking создаёт грузовик автоматически, когда водитель получает смену."
+            : "Parking provisions a truck automatically when a driver needs one.";
     }
 
     private string GetTruckAssignedDriverName(TruckAgent truckAgent)

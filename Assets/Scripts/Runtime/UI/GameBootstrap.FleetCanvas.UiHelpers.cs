@@ -243,9 +243,6 @@ public partial class GameBootstrap
             CargoType.Cotton    => L("Cotton"),
             CargoType.Textile   => L("Textile"),
             CargoType.Furniture => L("Furniture"),
-            CargoType.Fuel      => L("Fuel"),
-            CargoType.Alcohol   => L("Alcohol"),
-            CargoType.Food      => L("Food"),
             _                   => L("None")
         };
     }

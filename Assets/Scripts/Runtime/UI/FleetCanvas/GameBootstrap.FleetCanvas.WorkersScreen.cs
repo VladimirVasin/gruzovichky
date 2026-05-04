@@ -73,11 +73,20 @@ public partial class GameBootstrap
             new Color(0f, 0f, 0f, 0.04f),
             8f,
             8f);
+        StretchRect(workerScroll.Root, 8f, 8f, 22f, 8f);
+        workerScroll.ScrollRect.vertical = true;
+        workerScroll.ScrollRect.movementType = ScrollRect.MovementType.Clamped;
+        workerScroll.ScrollRect.inertia = false;
+        workerScroll.ScrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        workerScroll.ScrollRect.verticalScrollbar = CreatePanelScrollbar("WorkersScrollbar", listFrame);
         RectTransform contentRect = workerScroll.Content;
         driversScreenUi.WorkerListContent = contentRect;
+        driversScreenUi.WorkerListScrollRect = workerScroll.ScrollRect;
 
-        for (int i = 0; i < MaxDriverCardSlots; i++)
+        for (int i = 0; i < InitialWorkerRowSlots; i++)
+        {
             driversScreenUi.WorkerRows.Add(CreateWorkerRow(contentRect, font, i));
+        }
 
         // Hire section
         RectTransform hireSection = CreateStyledPanel("HireSection", leftPanel, FleetInsetColor);
@@ -178,88 +187,9 @@ public partial class GameBootstrap
         driversScreenUi.DetailRoleText = CreateHeaderText("WorkerRole", profileInfoColumn, font, string.Empty, 16, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailRoleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
-        // Condition row 1: Skills | Effects
-        RectTransform conditionTopRow = CreateLayoutRow("WorkerConditionTopRow", detailRoot.transform, 118f, 14f);
+        RectTransform conditionRow = CreateLayoutRow("WorkerConditionRow", detailRoot.transform, 112f, 14f);
 
-        RectTransform skillsCard = CreateStyledPanel("WorkerSkillsCard", conditionTopRow, FleetInsetColor);
-        skillsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        VerticalLayoutGroup skillsCardLayout = skillsCard.gameObject.AddComponent<VerticalLayoutGroup>();
-        skillsCardLayout.padding = new RectOffset(16, 16, 10, 10);
-        skillsCardLayout.spacing = 4f;
-        skillsCardLayout.childControlWidth = true;
-        skillsCardLayout.childControlHeight = true;
-        skillsCardLayout.childForceExpandWidth = true;
-        skillsCardLayout.childForceExpandHeight = false;
-
-        RectTransform skillsColumn = CreateUiObject("WorkerStatsColumn", skillsCard).GetComponent<RectTransform>();
-        LayoutElement skillsColumnLayoutElement = skillsColumn.gameObject.AddComponent<LayoutElement>();
-        skillsColumnLayoutElement.flexibleWidth = 1f;
-        VerticalLayoutGroup skillsLayout = skillsColumn.gameObject.AddComponent<VerticalLayoutGroup>();
-        skillsLayout.spacing = 4f;
-        skillsLayout.childControlWidth = true;
-        skillsLayout.childControlHeight = true;
-        skillsLayout.childForceExpandWidth = true;
-        skillsLayout.childForceExpandHeight = false;
-        driversScreenUi.DetailSkillsTitleText = CreateHeaderText("WorkerStatsTitle", skillsColumn, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
-        driversScreenUi.DetailSkillsTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
-        driversScreenUi.DetailDrivingSkillText = CreateBodyText("WorkerDrivingSkill", skillsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driversScreenUi.DetailDrivingSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
-        ConfigureWorkerSkillTooltip(driversScreenUi.DetailDrivingSkillText, WorkerSkillKind.Driving);
-        driversScreenUi.DetailStaminaSkillText = CreateBodyText("WorkerStaminaSkill", skillsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driversScreenUi.DetailStaminaSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
-        ConfigureWorkerSkillTooltip(driversScreenUi.DetailStaminaSkillText, WorkerSkillKind.Stamina);
-        driversScreenUi.DetailProductionSkillText = CreateBodyText("WorkerProductionSkill", skillsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driversScreenUi.DetailProductionSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
-        ConfigureWorkerSkillTooltip(driversScreenUi.DetailProductionSkillText, WorkerSkillKind.Production);
-        driversScreenUi.DetailLogisticsSkillText = CreateBodyText("WorkerLogisticsSkill", skillsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driversScreenUi.DetailLogisticsSkillText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
-        ConfigureWorkerSkillTooltip(driversScreenUi.DetailLogisticsSkillText, WorkerSkillKind.Logistics);
-
-        RectTransform effectsCard = CreateStyledPanel("WorkerEffectsCard", conditionTopRow, FleetInsetColor);
-        effectsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        VerticalLayoutGroup effectsCardLayout = effectsCard.gameObject.AddComponent<VerticalLayoutGroup>();
-        effectsCardLayout.padding = new RectOffset(16, 16, 10, 10);
-        effectsCardLayout.spacing = 4f;
-        effectsCardLayout.childControlWidth = true;
-        effectsCardLayout.childControlHeight = true;
-        effectsCardLayout.childForceExpandWidth = true;
-        effectsCardLayout.childForceExpandHeight = false;
-
-        RectTransform effectsColumn = CreateUiObject("WorkerEffectsColumn", effectsCard).GetComponent<RectTransform>();
-        effectsColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        VerticalLayoutGroup effectsLayout = effectsColumn.gameObject.AddComponent<VerticalLayoutGroup>();
-        effectsLayout.spacing = 4f;
-        effectsLayout.childControlWidth = true;
-        effectsLayout.childControlHeight = true;
-        effectsLayout.childForceExpandWidth = true;
-        effectsLayout.childForceExpandHeight = false;
-        driversScreenUi.DetailEffectsTitleText = CreateHeaderText("WorkerEffectsTitle", effectsColumn, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
-        driversScreenUi.DetailEffectsTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
-        driversScreenUi.DetailEffectsListRoot = CreateUiObject("WorkerEffectsList", effectsColumn).GetComponent<RectTransform>();
-        LayoutElement effectsListLayout = driversScreenUi.DetailEffectsListRoot.gameObject.AddComponent<LayoutElement>();
-        effectsListLayout.preferredHeight = 64f;
-        effectsListLayout.flexibleHeight = 1f;
-        VerticalLayoutGroup effectsListGroup = driversScreenUi.DetailEffectsListRoot.gameObject.AddComponent<VerticalLayoutGroup>();
-        effectsListGroup.spacing = 1f;
-        effectsListGroup.childControlWidth = true;
-        effectsListGroup.childControlHeight = true;
-        effectsListGroup.childForceExpandWidth = true;
-        effectsListGroup.childForceExpandHeight = false;
-
-        driversScreenUi.DetailEffectsEmptyText = CreateBodyText("WorkerEffectsEmpty", driversScreenUi.DetailEffectsListRoot, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
-        driversScreenUi.DetailEffectsEmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
-        for (int i = 0; i < WorkerEffectHudRowCount; i++)
-        {
-            Text effectText = CreateBodyText($"WorkerEffectRow{i + 1}", driversScreenUi.DetailEffectsListRoot, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-            effectText.gameObject.AddComponent<LayoutElement>().preferredHeight = 15f;
-            effectText.gameObject.SetActive(false);
-            driversScreenUi.DetailEffectTexts.Add(effectText);
-        }
-
-        // Condition row 2: Needs | Perks
-        RectTransform conditionBottomRow = CreateLayoutRow("WorkerConditionBottomRow", detailRoot.transform, 104f, 14f);
-
-        RectTransform needsCard = CreateStyledPanel("WorkerNeedsCard", conditionBottomRow, FleetInsetColor);
+        RectTransform needsCard = CreateStyledPanel("WorkerNeedsCard", conditionRow, FleetInsetColor);
         needsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         VerticalLayoutGroup needsCardLayout = needsCard.gameObject.AddComponent<VerticalLayoutGroup>();
         needsCardLayout.padding = new RectOffset(16, 16, 8, 8);
@@ -286,7 +216,7 @@ public partial class GameBootstrap
         driversScreenUi.DetailLeisureNeedText = CreateBodyText("WorkerLeisureNeed", needsColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailLeisureNeedText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
 
-        RectTransform perksCard = CreateStyledPanel("WorkerPerksCard", conditionBottomRow, FleetInsetColor);
+        RectTransform perksCard = CreateStyledPanel("WorkerPerksCard", conditionRow, FleetInsetColor);
         perksCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         VerticalLayoutGroup perksCardLayout = perksCard.gameObject.AddComponent<VerticalLayoutGroup>();
         perksCardLayout.padding = new RectOffset(16, 16, 8, 8);
@@ -354,19 +284,13 @@ public partial class GameBootstrap
         driversScreenUi.DetailCarText = CreateBodyText("CarV", carRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailCarText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        RectTransform educationRow = CreateLayoutRow("EducationRow", assignBody, 20f, 12f);
-        driversScreenUi.DetailEducationLabel = CreateBodyText("EduL", educationRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
-        driversScreenUi.DetailEducationLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
-        driversScreenUi.DetailEducationText = CreateBodyText("EduV", educationRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
-        driversScreenUi.DetailEducationText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-
         RectTransform ageRow = CreateLayoutRow("AgeRow", assignBody, 20f, 12f);
         driversScreenUi.DetailAgeLabel = CreateBodyText("AgeL", ageRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
         driversScreenUi.DetailAgeLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
         driversScreenUi.DetailAgeText = CreateBodyText("AgeV", ageRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailAgeText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        // Stats card (salary, balance) — compact
+        // Contract card (salary, balance) — compact
         RectTransform statsCard = CreateSectionCard(detailRoot.transform, font, string.Empty, out RectTransform statsBody, false);
         statsCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
         statsCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
@@ -429,11 +353,26 @@ public partial class GameBootstrap
         });
 
         detailRoot.SetActive(false);
-        SetupWorkerSkillTooltip(windowRect, font);
+        SetupWorkerTraitTooltip(windowRect, font);
 
         AddOverlayCloseButton(windowRect, font);
         driversScreenUi.CanvasRoot.SetActive(false);
         UpdateDriversScreenUi();
+    }
+
+    private void EnsureWorkerRows(int targetCount)
+    {
+        if (driversScreenUi?.WorkerListContent == null || targetCount <= driversScreenUi.WorkerRows.Count)
+        {
+            return;
+        }
+
+        Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        while (driversScreenUi.WorkerRows.Count < targetCount)
+        {
+            int rowIndex = driversScreenUi.WorkerRows.Count;
+            driversScreenUi.WorkerRows.Add(CreateWorkerRow(driversScreenUi.WorkerListContent, font, rowIndex));
+        }
     }
 
     private WorkerRowUi CreateWorkerRow(RectTransform parent, Font font, int index)
@@ -489,12 +428,14 @@ public partial class GameBootstrap
         rowColors.fadeDuration = 0.08f;
         row.SelectButton.colors = rowColors;
 
-        int rowIndex = index;
         row.SelectButton.onClick.AddListener(() =>
         {
-            if (rowIndex >= driverAgents.Count) return;
-            DriverAgent d = driverAgents[rowIndex];
-            selectedWorkerPanelDriverId = selectedWorkerPanelDriverId == d.DriverId ? 0 : d.DriverId;
+            if (row.DriverId <= 0 || driverAgents.Find(d => d.DriverId == row.DriverId) == null)
+            {
+                return;
+            }
+
+            selectedWorkerPanelDriverId = selectedWorkerPanelDriverId == row.DriverId ? 0 : row.DriverId;
             PlayUiSound(uiSelectClip, 0.8f);
             isDriversScreenDirty = true;
         });
@@ -756,10 +697,17 @@ public partial class GameBootstrap
 
         TruckAgent truck = GetAssignedTruckForDriver(driver);
         bool isProduction = driver.DutyMode == DriverDutyMode.Logistics;
+        bool isService = isProduction && driver.AssignedBuildingType.HasValue && HasServiceWorkerSlot(driver.AssignedBuildingType.Value);
+        if (driver.WalkPhase == DriverRescuePhase.ToLaborExchangeForJob ||
+            driver.WalkPhase == DriverRescuePhase.AtLaborExchange)
+        {
+            return ru ? "\u0418\u0449\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0443" : "Job search";
+        }
         return driver.IsArrivingByBus ? (ru ? "В пути" : "Arriving")
             : IsDriverOnActiveTradeRun(driver) ? (ru ? "Торговый рейс" : "Trade Run")
             : IsDriverIntercity(driver) ? (ru ? "Межгород" : "Intercity")
             : IsDriverBusDriver(driver) ? (ru ? "Логистика" : "Logistics")
+            : isService ? (ru ? "На сервисе" : "Service")
             : isProduction ? (ru ? "На производстве" : "Production")
             : truck != null ? (ru ? "На логистике" : "Logistics")
             : driver.RestPhase != DriverRestPhase.None ? (ru ? "Отдыхает" : "Resting")
@@ -770,7 +718,9 @@ public partial class GameBootstrap
     {
         if (driver == null) return "—";
 
-        return driver.IsInsideBuilding ? (ru ? "Работает в здании" : "Inside building")
+        return driver.WalkPhase == DriverRescuePhase.ToLaborExchangeForJob || driver.WalkPhase == DriverRescuePhase.AtLaborExchange
+            ? (ru ? "\u041d\u0430 \u0411\u0438\u0440\u0436\u0435 \u0442\u0440\u0443\u0434\u0430" : "At Labor Exchange")
+            : driver.IsInsideBuilding ? (ru ? "Работает в здании" : "Inside building")
             : IsBusDriverOnActiveRoute(driver) ? (ru ? "На автобусном маршруте" : "On bus route")
             : driver.IsOnActiveShift ? (ru ? "На смене" : "On shift")
             : driver.RestPhase != DriverRestPhase.None ? (ru ? "Отдыхает" : "Resting")

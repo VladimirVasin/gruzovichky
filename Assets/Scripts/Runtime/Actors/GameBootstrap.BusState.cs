@@ -53,8 +53,7 @@ public partial class GameBootstrap
 
         int slotIndex = Mathf.Clamp(parkingSlotIndex, 0, parkingSlots.Length - 1);
         Vector3 position = parkingSlots[slotIndex];
-        position.y = SampleTerrainHeight(position.x, position.z) + RoadHeight + EdgeHighwayBusLift;
-        return position;
+        return WithRoadVehicleHeight(position, LocalBusRoadSurfaceLift);
     }
 
     private bool IsBusInsideParking(BusAgent busAgent)
@@ -106,7 +105,7 @@ public partial class GameBootstrap
             }
         }
 
-        return false;
+        return CanProvisionBusFromParkingCapacity();
     }
 
     private bool TryReserveAvailableBusForDriver(DriverAgent driver, out BusAgent busAgent, string reason)
@@ -128,6 +127,15 @@ public partial class GameBootstrap
             candidate.Driver = driver;
             busAgent = candidate;
             SessionDebugLogger.Log("BUS_POOL", $"{driver.DriverName} reserved {candidate.DisplayName} automatically for {reason}.");
+            return true;
+        }
+
+        if (TryProvisionBusFromParkingCapacity(out BusAgent provisionedBus, reason) &&
+            IsBusOperationallyAvailable(provisionedBus))
+        {
+            provisionedBus.Driver = driver;
+            busAgent = provisionedBus;
+            SessionDebugLogger.Log("BUS_POOL", $"{driver.DriverName} reserved {provisionedBus.DisplayName} automatically for {reason}.");
             return true;
         }
 
@@ -176,20 +184,15 @@ public partial class GameBootstrap
 
     private void HireNewBus()
     {
-        LogUiInput("Vacancies: clicked Buy New Bus");
-        LogCommand($"HireNewBus(cost=${HireBusCost})");
-        if (!locations.ContainsKey(LocationType.Parking) || GetOwnedBusCount() >= MaxBusCount || money < HireBusCost)
+        LogUiInput("Vacancies: requested Parking bus slot");
+        LogCommand("ProvisionBusFromParkingSlot()");
+        if (!TryProvisionBusFromParkingCapacity(out BusAgent busAgent, "manual Parking slot request"))
         {
-            SessionDebugLogger.Log("BUS_POOL", $"Hire new bus rejected: {GetBusBuyStatusLabel()}");
+            SessionDebugLogger.Log("BUS_POOL", $"Bus slot request rejected: {GetBusBuyStatusLabel()}");
             return;
         }
 
-        BusAgent hiredBus = CreateAndRegisterBusAgent(nextHireBusNumber, busAgents.Count, spawnAtParking: false);
-        nextHireBusNumber++;
-        money -= HireBusCost;
-        RecordMoneyMovement(-HireBusCost, "Treasury", "Fleet Expansion", $"Hire {hiredBus.DisplayName}", money);
-        SessionDebugLogger.Log("BUS_POOL", $"Hired {hiredBus.DisplayName} for ${HireBusCost}. Money now ${money}.");
-        StartPurchasedBusArrival(hiredBus);
+        SessionDebugLogger.Log("BUS_POOL", $"{busAgent.DisplayName} is ready in Parking; no separate purchase was required.");
         isShiftsScreenDirty = true;
         PlayUiSound(uiSelectClip, 1f);
     }
@@ -202,16 +205,13 @@ public partial class GameBootstrap
             return ru ? "\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u043f\u043e\u0441\u0442\u0440\u043e\u0439 Parking." : "Build Parking first.";
         }
 
-        if (GetOwnedBusCount() >= MaxBusCount)
+        if (!CanProvisionBusFromParkingCapacity())
         {
-            return ru ? "\u041f\u0430\u0440\u043a \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043e\u0432 \u0437\u0430\u043f\u043e\u043b\u043d\u0435\u043d." : "Bus parking is full.";
+            return ru ? "\u0412\u0441\u0435 \u0441\u043b\u043e\u0442\u044b \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043e\u0432 Parking \u0437\u0430\u043d\u044f\u0442\u044b." : "All Parking bus slots are in use.";
         }
 
-        if (money < HireBusCost)
-        {
-            return ru ? $"\u041d\u0443\u0436\u043d\u043e ${HireBusCost} \u043d\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441." : $"Need ${HireBusCost} to buy a bus.";
-        }
-
-        return ru ? "\u041c\u043e\u0436\u043d\u043e \u043a\u0443\u043f\u0438\u0442\u044c \u0435\u0449\u0451 \u0430\u0432\u0442\u043e\u0431\u0443\u0441." : "Ready to buy another bus.";
+        return ru
+            ? "Parking \u0441\u043e\u0437\u0434\u0430\u0451\u0442 \u0430\u0432\u0442\u043e\u0431\u0443\u0441 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438, \u043a\u043e\u0433\u0434\u0430 \u043e\u043d \u043d\u0443\u0436\u0435\u043d \u0434\u043b\u044f \u0441\u043c\u0435\u043d\u044b."
+            : "Parking provisions a bus automatically when a shift needs one.";
     }
 }

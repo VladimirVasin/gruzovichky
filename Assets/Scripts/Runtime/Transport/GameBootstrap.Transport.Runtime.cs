@@ -170,10 +170,16 @@ public partial class GameBootstrap
         truckSegmentProgress += Time.deltaTime / truckSegmentDuration;
         float easedProgress = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(truckSegmentProgress));
         Vector3 currentPosition = Vector3.Lerp(truckSegmentStartWorld, truckTargetWorld, easedProgress);
+        currentPosition = WithRoadVehicleHeight(currentPosition, TruckSegmentStartLift);
         truckObject.transform.position = currentPosition;
 
-        Vector3 desiredForward = segmentDirection.normalized;
-        truckSmoothedForward = Vector3.Slerp(truckSmoothedForward, desiredForward, 6f * Time.deltaTime).normalized;
+        Vector3 desiredForward = segmentDirection;
+        desiredForward.y = 0f;
+        if (desiredForward.sqrMagnitude > 0.0001f)
+        {
+            desiredForward = desiredForward.normalized;
+            truckSmoothedForward = Vector3.Slerp(truckSmoothedForward, desiredForward, 6f * Time.deltaTime).normalized;
+        }
         if (truckSmoothedForward.sqrMagnitude > 0.0001f)
         {
             truckObject.transform.rotation = Quaternion.Slerp(
@@ -763,9 +769,6 @@ public partial class GameBootstrap
         driver.GamblingMultiplier   = multiplier;
         driver.GamblingMoneyPending = true;
         driver.GamblingBetCount++;
-
-        if (multiplier > 0)
-            ApplyWorkerLuckyEffect(driver);
 
         string outcomeStr = multiplier == 0 ? "LOSS" : $"WIN x{multiplier}";
         string gamblerTag = isGambler ? $" [GAMBLER bet#{driver.GamblingBetCount}]" : "";

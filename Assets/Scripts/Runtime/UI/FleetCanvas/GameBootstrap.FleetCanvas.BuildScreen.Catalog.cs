@@ -200,6 +200,7 @@ public partial class GameBootstrap
             BuildTool.CityPark         => locations.ContainsKey(LocationType.CityPark),
             BuildTool.PersonalHouse    => false,
             BuildTool.CarMarket        => locations.ContainsKey(LocationType.CarMarket),
+            BuildTool.LaborExchange    => locations.ContainsKey(LocationType.LaborExchange),
             _                          => false
         };
     }
@@ -233,6 +234,7 @@ public partial class GameBootstrap
                 BuildTool.CityPark         => ru ? $"Режим активен: поставь городской парк 8x8 с входом. R — поворот ({rot})." : $"Mode active: place one 8x8 city park from its entrance cell. R rotates ({rot}).",
                 BuildTool.PersonalHouse    => ru ? $"Режим активен: жилой дом 5x6, вход со стороны дороги. R — поворот ({rot})." : $"Mode active: 5x6 personal house, entrance faces the road. R rotates ({rot}).",
                 BuildTool.CarMarket        => $"Mode active: place one 5x5 car market from its driveway cell. R rotates ({rot}).",
+                BuildTool.LaborExchange    => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0411\u0438\u0440\u0436\u0443 \u0442\u0440\u0443\u0434\u0430 3x2 \u0441 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u043e\u043c. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place one 3x2 labor exchange from its driveway cell. R rotates ({rot}).",
                 BuildTool.GasStation       => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0437\u0430\u043f\u0440\u0430\u0432\u043a\u0443 2x2 \u0441 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u043e\u043c. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place one 2x2 gas station from its driveway cell. R rotates ({rot}).",
                 _                          => string.Empty
             };
@@ -256,6 +258,7 @@ public partial class GameBootstrap
             BuildTool.CityPark         => locations.ContainsKey(LocationType.CityPark)         ? alreadyBuilt : (ru ? "Парк 8x8: рабочие гуляют и сидят на лавочках. Бесплатно, повышает настроение." : "8x8 park: workers stroll and sit on benches. Free entry, boosts leisure need."),
             BuildTool.PersonalHouse    => ru ? "Жилой дом 5x6 — американский пригородный дом в одной из 5 случайных вариаций." : "5x6 suburban house — one of 5 random American home styles. Decorative for now.",
             BuildTool.CarMarket        => locations.ContainsKey(LocationType.CarMarket) ? alreadyBuilt : "5x5 car market: workers with $100 can buy personal cars here.",
+            BuildTool.LaborExchange    => locations.ContainsKey(LocationType.LaborExchange) ? alreadyBuilt : (ru ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430 3x2: \u043a\u043b\u0435\u0440\u043a \u0441 \u0432\u044b\u0441\u0448\u0438\u043c \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435\u043c \u043f\u0443\u0431\u043b\u0438\u043a\u0443\u0435\u0442 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438." : "3x2 labor exchange: a higher-educated clerk publishes vacancies for workers."),
             BuildTool.GasStation       => locations.ContainsKey(LocationType.GasStation) ? alreadyBuilt : (ru ? "\u0417\u0430\u043f\u0440\u0430\u0432\u043a\u0430 2x2: \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0438 \u0435\u0434\u0443\u0442 \u0441\u044e\u0434\u0430 \u0437\u0430 \u0442\u043e\u043f\u043b\u0438\u0432\u043e\u043c, \u043a\u043e\u0433\u0434\u0430 \u0440\u0435\u0439\u0441\u044b \u0441\u0442\u0430\u043d\u043e\u0432\u044f\u0442\u0441\u044f \u0441\u043b\u0438\u0448\u043a\u043e\u043c \u0434\u043b\u0438\u043d\u043d\u044b\u043c\u0438." : "2x2 fuel service: trucks refuel here when routes get too long."),
             _                          => string.Empty
         };

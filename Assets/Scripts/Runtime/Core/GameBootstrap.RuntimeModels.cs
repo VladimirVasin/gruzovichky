@@ -88,20 +88,6 @@ public partial class GameBootstrap
         public float PurchaseArrivalSpeed = 4.3f;
     }
 
-    private sealed class WorkerEffectState
-    {
-        public string EffectId;
-        public string EnglishName;
-        public string RussianName;
-        public string EnglishDescription;
-        public string RussianDescription;
-        public int DrivingDelta;
-        public int StaminaDelta;
-        public int ProductionDelta;
-        public int LogisticsDelta;
-        public float RemainingHours;
-    }
-
     private enum WorkerPerkKind
     {
         Alcoholism,
@@ -122,19 +108,21 @@ public partial class GameBootstrap
         Negative
     }
 
-    private enum WorkerEducation
+    private enum WorkerGender { Male, Female }
+
+    private enum WorkerEducationLevel
     {
         Basic,
-        Skilled
+        Vocational,
+        Higher
     }
-
-    private enum WorkerGender { Male, Female }
 
     private sealed class DriverAgent
     {
         public int DriverId;
         public string DriverName;
         public WorkerGender Gender;
+        public WorkerEducationLevel Education;
         public bool HasPortrait;
         public int PortraitSkinTone;
         public int PortraitHairStyle;
@@ -143,13 +131,7 @@ public partial class GameBootstrap
         public int PortraitMouthStyle;
         public int PortraitAccessory;
         public int PortraitHeadShape;
-        public bool HasWorkerStats;
-        public int DrivingSkill;
-        public int StaminaSkill;
-        public int ProductionSkill;
-        public int LogisticsSkill;
         public readonly List<WorkerPerkKind> Perks = new();
-        public readonly List<WorkerEffectState> ActiveEffects = new();
         public DriverDutyMode DutyMode = DriverDutyMode.Local;
         public int ShiftStartHour = -1;
         public bool IsOnActiveShift;
@@ -228,19 +210,48 @@ public partial class GameBootstrap
         public bool BusRideFareExempt;
         public int AssignedPersonalHouseIndex = -1;
         public int IdleCatPetTargetIndex = -1;
-        public WorkerEducation Education = WorkerEducation.Basic;
         public int Age;
         public int DaysOnMap;
         public int OwnedCarModelIndex = -1;
         public GameObject OwnedCarObject;
         public LocationType? AssignedBuildingType;
+        public int ReservedLaborExchangePostingId;
+        public float LaborExchangeInterviewTimer;
         public bool IsInsideBuilding;
-        public LocationType? WarehouseDeliveryTarget;
-        public WarehouseResourceType WarehouseDeliveryResourceType;
-        public int WarehouseDeliveryAmount;
-        public bool IsCarryingWarehouseDelivery;
         public string LastWorkerDecisionDebugKey;
         public string LastThrottledWorkerDecisionDebugKey;
         public float LastThrottledWorkerDecisionDebugTime = -999f;
+    }
+
+    private sealed class LaborExchangePosting
+    {
+        public int Id;
+        public VacancyKind Kind;
+        public LocationType BuildingType;
+        public int SlotIndex;
+        public int ShiftIndex = -1;
+        public int TruckNumber;
+        public int ReservedWorkerId;
+        public float CreatedAtWorldHour;
+    }
+
+    private readonly struct LaborExchangeCandidate
+    {
+        public LaborExchangeCandidate(VacancyKind kind, LocationType buildingType, int slotIndex, int shiftIndex, int truckNumber, int priority)
+        {
+            Kind = kind;
+            BuildingType = buildingType;
+            SlotIndex = slotIndex;
+            ShiftIndex = shiftIndex;
+            TruckNumber = truckNumber;
+            Priority = priority;
+        }
+
+        public readonly VacancyKind Kind;
+        public readonly LocationType BuildingType;
+        public readonly int SlotIndex;
+        public readonly int ShiftIndex;
+        public readonly int TruckNumber;
+        public readonly int Priority;
     }
 }

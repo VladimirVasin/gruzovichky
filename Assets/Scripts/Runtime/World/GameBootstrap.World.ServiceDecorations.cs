@@ -115,6 +115,7 @@ public partial class GameBootstrap
 
         // Walkway from entrance to anchor
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
+        EnhanceBarModel(parent, center, min, max, anchor);
     }
 
     private void CreateCanteenDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -201,6 +202,7 @@ public partial class GameBootstrap
         canteenLight.shadows = LightShadows.None;
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
+        EnhanceCanteenModel(parent, center, min, max, anchor);
     }
 
     private void CreateGamblingHallDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -277,6 +279,7 @@ public partial class GameBootstrap
         gamblingLight.shadows = LightShadows.None;
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
+        EnhanceGamblingHallModel(parent, center, min, max, anchor);
     }
 
     private void CreateCityParkDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
@@ -502,6 +505,7 @@ public partial class GameBootstrap
         }
 
         TryCreateSquirrelMemorialSign(parent, center + new Vector3(-2.2f, groundY + 0.02f, -3.55f), Quaternion.identity);
+        EnhanceCityParkModel(parent, center, min, max, anchor);
     }
 
     private bool TryGetFurnitureFactoryPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
@@ -541,6 +545,7 @@ public partial class GameBootstrap
         }
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.72f);
+        EnhancePersonalHouseModel(parent, center, min, max, anchor);
     }
 
     // ── Local helper shared by all house variants ────────────────────────────

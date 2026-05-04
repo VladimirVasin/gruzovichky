@@ -90,9 +90,6 @@ public partial class GameBootstrap
         CreateResourceSummaryRow(wContentRoot, font, "Cotton",    ResourceVisualKind.Cotton,    TradeResourceType.Cotton,    resourcesScreenUi.WarehouseRows);
         CreateResourceSummaryRow(wContentRoot, font, "Textile",   ResourceVisualKind.Textile,   TradeResourceType.Textile,   resourcesScreenUi.WarehouseRows);
         CreateResourceSummaryRow(wContentRoot, font, "Furniture", ResourceVisualKind.Furniture, TradeResourceType.Furniture, resourcesScreenUi.WarehouseRows);
-        CreateResourceSummaryRow(wContentRoot, font, "Fuel",      ResourceVisualKind.Fuel,      resourcesScreenUi.WarehouseRows);
-        CreateResourceSummaryRow(wContentRoot, font, "Alcohol",   ResourceVisualKind.Alcohol,   resourcesScreenUi.WarehouseRows);
-        CreateResourceSummaryRow(wContentRoot, font, "Food",      ResourceVisualKind.Food,       resourcesScreenUi.WarehouseRows);
 
         // --- PRODUCTION PANEL ---
         GameObject productionPanel = CreateUiObject("ProductionPanel", windowRoot.transform);
@@ -109,11 +106,10 @@ public partial class GameBootstrap
             10f);
         RectTransform pContentRoot = productionScroll.Content;
 
-        // Production sections: Forest, Sawmill, FurnitureFactory, GasStation
+        // Production sections: service buildings no longer expose local resource buffers.
         resourcesScreenUi.ProductionSections.Add(CreateProductionSection(pContentRoot, font, LocationType.Forest,           "Forest",            new[] { (ResourceVisualKind.Logs,      TradeResourceType.Logs,      "Logs")      }));
         resourcesScreenUi.ProductionSections.Add(CreateProductionSection(pContentRoot, font, LocationType.Sawmill,          "Sawmill",           new[] { (ResourceVisualKind.Logs,      TradeResourceType.Logs,      "Logs"),      (ResourceVisualKind.Boards,   TradeResourceType.Boards,   "Boards")    }));
         resourcesScreenUi.ProductionSections.Add(CreateProductionSection(pContentRoot, font, LocationType.FurnitureFactory,  "Furniture Factory", new[] { (ResourceVisualKind.Boards,    TradeResourceType.Boards,    "Boards"),    (ResourceVisualKind.Textile,  TradeResourceType.Textile,  "Textile"),   (ResourceVisualKind.Furniture, TradeResourceType.Furniture, "Furniture") }));
-        resourcesScreenUi.ProductionSections.Add(CreateProductionSection(pContentRoot, font, LocationType.GasStation,        "Gas Station",       new[] { (ResourceVisualKind.Fuel,      TradeResourceType.Logs,      "Fuel")      }));
 
         // Treasury footer
         RectTransform footerCard = CreateSectionCard(windowRoot.transform, font, "Treasury", out RectTransform footerBody);
@@ -165,10 +161,7 @@ public partial class GameBootstrap
         Boards,
         Cotton,
         Textile,
-        Furniture,
-        Fuel,
-        Alcohol,
-        Food
+        Furniture
     }
 
     private void CreateResourceSummaryRow(RectTransform parent, Font font, string title, ResourceVisualKind iconKind, List<ResourceSummaryRowUi> rows)
@@ -249,32 +242,6 @@ public partial class GameBootstrap
                 CreateIconBar(parent, new Vector2(3f, 10f), new Vector2(-6f, -8f), new Color(0.58f, 0.39f, 0.18f));
                 CreateIconBar(parent, new Vector2(3f, 10f), new Vector2(6f, -8f), new Color(0.58f, 0.39f, 0.18f));
                 break;
-            case ResourceVisualKind.Fuel:
-                // pump body
-                CreateIconBar(parent, new Vector2(12f, 16f), new Vector2(-3f, -2f), new Color(0.30f, 0.36f, 0.44f));
-                // arm
-                CreateIconBar(parent, new Vector2(7f, 3f), new Vector2(4f, 5f), new Color(0.45f, 0.52f, 0.60f));
-                // nozzle
-                CreateIconBar(parent, new Vector2(3f, 9f), new Vector2(7f, 0f), new Color(0.45f, 0.52f, 0.60f));
-                // fuel fill line
-                CreateIconBar(parent, new Vector2(8f, 3f), new Vector2(-3f, -4f), new Color(0.98f, 0.80f, 0.20f));
-                break;
-            case ResourceVisualKind.Alcohol:
-                // bottle body
-                CreateIconBar(parent, new Vector2(10f, 14f), new Vector2(0f, -4f), new Color(0.28f, 0.58f, 0.36f));
-                // bottle neck
-                CreateIconBar(parent, new Vector2(5f, 6f), new Vector2(0f, 7f), new Color(0.24f, 0.50f, 0.30f));
-                // cap
-                CreateIconBar(parent, new Vector2(7f, 3f), new Vector2(0f, 11f), new Color(0.60f, 0.40f, 0.20f));
-                break;
-            case ResourceVisualKind.Food:
-                // plate
-                CreateIconCircle(parent, 20f, new Vector2(0f, -2f), new Color(0.90f, 0.86f, 0.78f));
-                // food on plate
-                CreateIconCircle(parent, 12f, new Vector2(0f, -2f), new Color(0.94f, 0.68f, 0.32f));
-                // bread top
-                CreateIconCircle(parent, 7f, new Vector2(0f, 2f), new Color(0.82f, 0.54f, 0.20f));
-                break;
         }
     }
 
@@ -345,10 +312,7 @@ public partial class GameBootstrap
                 ru ? "Доски"     : "Boards",
                 ru ? "Хлопок"    : "Cotton",
                 ru ? "Ткань"     : "Textile",
-                ru ? "Мебель"    : "Furniture",
-                ru ? "Топливо"   : "Fuel",
-                ru ? "Алкоголь"  : "Alcohol",
-                ru ? "Еда"       : "Food"
+                ru ? "Мебель"    : "Furniture"
             };
             string[] resourceValues =
             {
@@ -356,10 +320,7 @@ public partial class GameBootstrap
                 (warehouseData?.BoardsStored ?? 0).ToString(),
                 cottonStored.ToString(),
                 textileStored.ToString(),
-                furnitureStored.ToString(),
-                $"{warehouseData?.FuelStored ?? 0} / {WarehouseMaxFuelStorage}",
-                $"{warehouseData?.AlcoholStored ?? 0} / {WarehouseMaxAlcoholStorage}",
-                $"{warehouseData?.FoodStored ?? 0} / {WarehouseMaxFoodStorage}"
+                furnitureStored.ToString()
             };
 
             for (int i = 0; i < resourcesScreenUi.WarehouseRows.Count && i < resourceNames.Length; i++)
@@ -407,10 +368,6 @@ public partial class GameBootstrap
                         TradeResourceType.Furniture => ru ? "Мебель"  : "Furniture",
                         _ => row.NameText.text
                     };
-                    // Fuel row has resource type Logs as sentinel — detect by name
-                    if (section.BuildingType == LocationType.GasStation && row.ResourceType == TradeResourceType.Logs)
-                        rowName = ru ? "Топливо" : "Fuel";
-
                     string rowValue = exists ? GetProductionBuildingResourceValue(bData, section.BuildingType, row.ResourceType) : "—";
 
                     if (row.LastName != rowName) { row.NameText.text = rowName; row.LastName = rowName; forceLayoutRebuild = true; }
@@ -435,8 +392,6 @@ public partial class GameBootstrap
 
     private string GetProductionBuildingResourceValue(LocationData bData, LocationType buildingType, TradeResourceType resType)
     {
-        if (buildingType == LocationType.GasStation && resType == TradeResourceType.Logs)
-            return $"{bData.FuelStored} / {WarehouseMaxFuelStorage}";
         return resType switch
         {
             TradeResourceType.Logs      => bData.LogsStored.ToString(),
@@ -481,30 +436,6 @@ public partial class GameBootstrap
         return total;
     }
 
-    private int GetTotalFuelAmount()
-    {
-        int total = 0;
-        if (locations.TryGetValue(LocationType.Warehouse, out LocationData wh)) total += wh.FuelStored;
-        if (locations.TryGetValue(LocationType.GasStation, out LocationData gs)) total += gs.FuelStored;
-        return total;
-    }
-
-    private int GetTotalAlcoholAmount()
-    {
-        int total = 0;
-        if (locations.TryGetValue(LocationType.Warehouse, out LocationData wh)) total += wh.AlcoholStored;
-        if (locations.TryGetValue(LocationType.Bar, out LocationData bar)) total += bar.AlcoholStored;
-        return total;
-    }
-
-    private int GetTotalFoodAmount()
-    {
-        int total = 0;
-        if (locations.TryGetValue(LocationType.Warehouse, out LocationData wh)) total += wh.FoodStored;
-        if (locations.TryGetValue(LocationType.Canteen, out LocationData canteen)) total += canteen.FoodStored;
-        return total;
-    }
-
     private bool IsTruckOnActiveTradeSellRun(TruckAgent truck)
     {
         return HasActiveTradeRun() &&
@@ -545,9 +476,6 @@ public partial class GameBootstrap
         TradeResourceType.Cotton,
         TradeResourceType.Textile,
         TradeResourceType.Furniture,
-        TradeResourceType.Fuel,
-        TradeResourceType.Alcohol,
-        TradeResourceType.Food,
     };
 
 }

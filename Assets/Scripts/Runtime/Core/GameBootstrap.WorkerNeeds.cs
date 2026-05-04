@@ -18,7 +18,13 @@ public partial class GameBootstrap
     private const float WorkerLeisureSeekHours = 10f;
     private const float WorkerNeedRetryCooldownHours = 1.25f;
     private const float WorkerNeedMoneyRetryCooldownHours = 3.5f;
-    private const float WorkerNeedNoStockRetryCooldownHours = 0.65f;
+
+    private static bool IsWorkerActivelySleeping(DriverAgent driver)
+    {
+        return driver != null &&
+               (driver.RestPhase == DriverRestPhase.Sleeping ||
+                driver.RestPhase == DriverRestPhase.SleepingAtHome);
+    }
 
     private void UpdateWorkerNeedsClock(DriverAgent driver)
     {
@@ -36,9 +42,14 @@ public partial class GameBootstrap
         WorkerNeedStatus oldMeal = driver.LastMealNeedStatus;
         WorkerNeedStatus oldSleep = driver.LastSleepNeedStatus;
         WorkerNeedStatus oldLeisure = driver.LastLeisureNeedStatus;
+        bool isSleeping = IsWorkerActivelySleeping(driver);
 
         driver.HoursSinceMeal = Mathf.Min(999f, driver.HoursSinceMeal + hourDelta);
-        driver.HoursSinceSleep = Mathf.Min(999f, driver.HoursSinceSleep + hourDelta);
+        if (!isSleeping)
+        {
+            driver.HoursSinceSleep = Mathf.Min(999f, driver.HoursSinceSleep + hourDelta);
+        }
+
         driver.HoursSinceLeisure = Mathf.Min(999f, driver.HoursSinceLeisure + hourDelta);
 
         driver.LastMealNeedStatus = GetWorkerNeedStatus(WorkerNeedKind.Meal, driver.HoursSinceMeal);
@@ -51,7 +62,6 @@ public partial class GameBootstrap
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Meal, oldMeal, driver.LastMealNeedStatus, driver.HoursSinceMeal);
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Sleep, oldSleep, driver.LastSleepNeedStatus, driver.HoursSinceSleep);
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Leisure, oldLeisure, driver.LastLeisureNeedStatus, driver.HoursSinceLeisure);
-        SyncWorkerNeedEffects(driver);
 
         if (isDriversPanelOpen && selectedWorkerPanelDriverId == driver.DriverId)
         {
@@ -147,12 +157,6 @@ public partial class GameBootstrap
         if (!string.IsNullOrEmpty(reason) && reason.Contains("not enough money"))
         {
             return WorkerNeedMoneyRetryCooldownHours;
-        }
-
-        if (!string.IsNullOrEmpty(reason) &&
-            (reason.Contains("has no Food") || reason.Contains("has no Alcohol")))
-        {
-            return WorkerNeedNoStockRetryCooldownHours;
         }
 
         return WorkerNeedRetryCooldownHours;
@@ -253,36 +257,20 @@ public partial class GameBootstrap
 
     private string FormatNeedsEconomyStockSnapshot()
     {
-        int warehouseFuel = 0;
-        int warehouseAlcohol = 0;
-        int warehouseFood = 0;
-        int gasFuel = 0;
-        int barAlcohol = 0;
-        int canteenFood = 0;
+        int warehouseLogs = 0;
+        int warehouseBoards = 0;
+        int warehouseTextile = 0;
+        int warehouseFurniture = 0;
 
         if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse))
         {
-            warehouseFuel = warehouse.FuelStored;
-            warehouseAlcohol = warehouse.AlcoholStored;
-            warehouseFood = warehouse.FoodStored;
+            warehouseLogs = warehouse.LogsStored;
+            warehouseBoards = warehouse.BoardsStored;
+            warehouseTextile = warehouse.TextileStored;
+            warehouseFurniture = warehouse.FurnitureStored;
         }
 
-        if (locations.TryGetValue(LocationType.GasStation, out LocationData gasStation))
-        {
-            gasFuel = gasStation.FuelStored;
-        }
-
-        if (locations.TryGetValue(LocationType.Bar, out LocationData bar))
-        {
-            barAlcohol = bar.AlcoholStored;
-        }
-
-        if (locations.TryGetValue(LocationType.Canteen, out LocationData canteen))
-        {
-            canteenFood = canteen.FoodStored;
-        }
-
-        return $"stocks: Warehouse(Fuel={warehouseFuel}/{WarehouseMaxFuelStorage}, Alcohol={warehouseAlcohol}/{WarehouseMaxAlcoholStorage}, Food={warehouseFood}/{WarehouseMaxFoodStorage}), GasStation(Fuel={gasFuel}/{GasStationMaxFuelStorage}), Bar(Alcohol={barAlcohol}/{BarMaxAlcoholStorage}), Canteen(Food={canteenFood}/{CanteenMaxFoodStorage})";
+        return $"stocks: Warehouse(Logs={warehouseLogs}, Boards={warehouseBoards}, Textile={warehouseTextile}, Furniture={warehouseFurniture}), Cotton={cottonStored}";
     }
 
     private void ResetWorkerNeedTimer(DriverAgent driver, WorkerNeedKind need)
@@ -300,24 +288,18 @@ public partial class GameBootstrap
                 driver.HoursSinceMeal = 0f;
                 driver.NextMealRetryAtWorldHour = 0f;
                 driver.LastMealNeedStatus = WorkerNeedStatus.Ok;
-                RemoveWorkerEffect(driver, WorkerHungryEffectId);
-                RemoveWorkerEffect(driver, WorkerStarvingEffectId);
                 break;
 
             case WorkerNeedKind.Sleep:
                 driver.HoursSinceSleep = 0f;
                 driver.NextSleepRetryAtWorldHour = 0f;
                 driver.LastSleepNeedStatus = WorkerNeedStatus.Ok;
-                RemoveWorkerEffect(driver, WorkerSleepDeprivedEffectId);
-                RemoveWorkerEffect(driver, WorkerExhaustedEffectId);
                 break;
 
             case WorkerNeedKind.Leisure:
                 driver.HoursSinceLeisure = 0f;
                 driver.NextLeisureRetryAtWorldHour = 0f;
                 driver.LastLeisureNeedStatus = WorkerNeedStatus.Ok;
-                RemoveWorkerEffect(driver, WorkerBoredEffectId);
-                RemoveWorkerEffect(driver, WorkerBurnedOutEffectId);
                 break;
         }
 
@@ -331,7 +313,7 @@ public partial class GameBootstrap
 
     private bool ShouldWorkerSeekSleep(DriverAgent driver)
     {
-        return driver != null && driver.HoursSinceSleep >= WorkerSleepSeekHours;
+        return driver != null && !IsWorkerActivelySleeping(driver) && driver.HoursSinceSleep >= WorkerSleepSeekHours;
     }
 
     private bool ShouldWorkerSeekLeisure(DriverAgent driver)
@@ -457,12 +439,7 @@ public partial class GameBootstrap
             return $"not enough money (${driver.Money}/${service.ServiceFee})";
         }
 
-        return type switch
-        {
-            LocationType.Canteen when service.FoodStored <= 0 => "Canteen has no Food",
-            LocationType.Bar when service.AlcoholStored <= 0 => "Bar has no Alcohol",
-            _ => "available"
-        };
+        return "available";
     }
 
     private void UpdateWorkerNeedsUi(DriverAgent driver, bool ru)

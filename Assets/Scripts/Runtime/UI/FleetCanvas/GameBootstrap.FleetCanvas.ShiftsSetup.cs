@@ -240,7 +240,7 @@ public partial class GameBootstrap
         shiftsScreenUi.VacancyTransportParkCountText.gameObject.AddComponent<LayoutElement>().preferredWidth = 112f;
         shiftsScreenUi.VacancyTransportParkSummaryText = CreateBodyText("VacancyTransportParkSummary", transportParkCard, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
         shiftsScreenUi.VacancyTransportParkSummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
-        shiftsScreenUi.VacancyBuyTruckButton = CreateButton("VacancyTransportParkBuyTruck", transportParkCard, font, out shiftsScreenUi.VacancyBuyTruckButtonText, "Buy New Truck", 12, FleetPrimaryButtonColor, Color.white);
+        shiftsScreenUi.VacancyBuyTruckButton = CreateButton("VacancyTransportParkBuyTruck", transportParkCard, font, out shiftsScreenUi.VacancyBuyTruckButtonText, "Parking Slots", 12, FleetPrimaryButtonColor, Color.white);
         shiftsScreenUi.VacancyBuyTruckButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
         shiftsScreenUi.VacancyBuyTruckButton.onClick.AddListener(() =>
         {
@@ -375,7 +375,7 @@ public partial class GameBootstrap
         fleetBuyLayout.childControlHeight = true;
         fleetBuyLayout.childForceExpandWidth = true;
         fleetBuyLayout.childForceExpandHeight = false;
-        shiftsScreenUi.FleetBuyTruckButton = CreateButton("AssignmentsFleetBuyTruckButton", fleetBuyPanel, font, out shiftsScreenUi.FleetBuyTruckButtonText, "Buy New Truck", 13, FleetPrimaryButtonColor, Color.white);
+        shiftsScreenUi.FleetBuyTruckButton = CreateButton("AssignmentsFleetBuyTruckButton", fleetBuyPanel, font, out shiftsScreenUi.FleetBuyTruckButtonText, "Parking Slots", 13, FleetPrimaryButtonColor, Color.white);
         shiftsScreenUi.FleetBuyTruckButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
         shiftsScreenUi.FleetBuyTruckButton.onClick.AddListener(() =>
         {
@@ -758,107 +758,29 @@ public partial class GameBootstrap
         shiftsScreenUi.ProductionSectionTitleText = CreateHeaderText("AssignmentsProductionSectionTitle", productionIntroBody, font, "Production", 16, TextAnchor.MiddleLeft, Color.white);
         shiftsScreenUi.ProductionSectionSummaryText = CreateBodyText("AssignmentsProductionSectionSummary", productionIntroBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
 
-        // Slots 0-2: Forest, Sawmill, FurnitureFactory (one card each, one worker each)
-        LocationType[] singleTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory };
-        string[] singleNames = { "Forest", "Sawmill", "Furniture Factory" };
-        for (int si = 0; si < singleTypes.Length; si++)
+        int slotArrayIndex = 0;
+        LocationType[] productionTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory };
+        for (int pi = 0; pi < productionTypes.Length; pi++)
         {
-            LogisticsSlotUi slot = new() { BuildingType = singleTypes[si], SlotIndex = 0 };
-            RectTransform slotCard = CreateSectionCard(logisticsContent, font, string.Empty, out RectTransform slotBody, false);
-            slot.Root = slotCard;
-            LayoutElement slotCardLE = slotCard.gameObject.AddComponent<LayoutElement>();
-            slotCardLE.preferredHeight = 102f;
-            slotCardLE.flexibleHeight  = 0f;
-            VerticalLayoutGroup slotBodyLayout = slotBody.GetComponent<VerticalLayoutGroup>();
-            slotBodyLayout.spacing = 4;
-
-            slot.BuildingNameText = CreateHeaderText($"LogBldgName{si}", slotBody, font, singleNames[si], 16, TextAnchor.MiddleLeft, Color.white);
-            slot.AssignedWorkerText = CreateHeaderText($"LogWorker{si}", slotBody, font, "No worker assigned", 14, TextAnchor.MiddleLeft, FleetAccentColor);
-            slot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
-
-            RectTransform workRow = CreateLayoutRow($"LogWorkRow{si}", slotBody, 22f, 8f);
-            workRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
-            CreateBodyText($"LogWorkLabel{si}", workRow, font, "Hours:", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-            slot.WorkHoursText = CreateHeaderText($"LogWorkHours{si}", workRow, font, GetProductionWorkRangeLabel(), 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-            slot.WorkHoursText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-
-            RectTransform actionRow = CreateLayoutRow($"LogActionRow{si}", slotBody, 26f, 8f);
-            actionRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
-            slot.AssignButton = CreateButton($"LogAssignBtn{si}", actionRow, font, out slot.AssignButtonText, "Assign Worker", 12, FleetPrimaryButtonColor, Color.white);
-            slot.AssignButton.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-            slot.RemoveButton = CreateButton($"LogRemoveBtn{si}", actionRow, font, out _, "Remove", 12, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
-            slot.RemoveButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
-            int capturedIndex = si;
-            slot.AssignButton.onClick.AddListener(() =>
+            for (int workerSlot = 0; workerSlot < ProductionMaxWorkersPerBuilding; workerSlot++)
             {
-                DriverAgent selectedDriver = driverAgents.Find(d => d.DriverId == selectedShiftDriverId);
-                if (selectedDriver == null) return;
-                AssignWorkerToBuilding(selectedDriver, logisticsSlots[capturedIndex]);
-                PlayUiSound(uiSelectClip, 0.85f);
-                if (capturedIndex == 0)
-                {
-                    NotifyTutorialLumberjackWorkerAssigned();
-                }
-            });
-            slot.RemoveButton.onClick.AddListener(() =>
-            {
-                RemoveWorkerFromBuilding(logisticsSlots[capturedIndex]);
-                PlayUiSound(uiSelectClip, 0.85f);
-            });
-            logisticsSlots[si] = slot;
+                slotArrayIndex = AddBuildingWorkerSlotCard(logisticsContent, font, slotArrayIndex, productionTypes[pi], workerSlot);
+            }
         }
 
-        // Slots 3-5: Warehouse — one grouped card with 3 worker rows
+        slotArrayIndex = AddWarehouseWorkerSlotCard(logisticsContent, font, slotArrayIndex);
+
+        RectTransform serviceIntroCard = CreateSectionCard(logisticsContent, font, string.Empty, out RectTransform serviceIntroBody, false);
+        serviceIntroCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 64f;
+        VerticalLayoutGroup serviceIntroLayout = serviceIntroBody.GetComponent<VerticalLayoutGroup>();
+        serviceIntroLayout.spacing = 6f;
+        CreateHeaderText("AssignmentsServiceSectionTitle", serviceIntroBody, font, "Services", 16, TextAnchor.MiddleLeft, Color.white);
+        CreateBodyText("AssignmentsServiceSectionSummary", serviceIntroBody, font, "One staff slot per service building.", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+
+        LocationType[] serviceTypes = { LocationType.Motel, LocationType.Bar, LocationType.Canteen, LocationType.GasStation, LocationType.GamblingHall, LocationType.CarMarket, LocationType.LaborExchange };
+        for (int si = 0; si < serviceTypes.Length; si++)
         {
-            RectTransform warehouseCard = CreateSectionCard(logisticsContent, font, string.Empty, out RectTransform warehouseBody, false);
-            LayoutElement warehouseCardLE = warehouseCard.gameObject.AddComponent<LayoutElement>();
-            warehouseCardLE.preferredHeight = 170f;
-            warehouseCardLE.flexibleHeight  = 0f;
-            VerticalLayoutGroup warehouseBodyLayout = warehouseBody.GetComponent<VerticalLayoutGroup>();
-            warehouseBodyLayout.spacing = 4;
-
-            Text warehouseTitle = CreateHeaderText("LogBldgNameWarehouse", warehouseBody, font, "Warehouse", 16, TextAnchor.MiddleLeft, Color.white);
-            RectTransform workRow = CreateLayoutRow("LogWorkRowWarehouse", warehouseBody, 22f, 8f);
-            workRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
-            CreateBodyText("LogWorkLabelWarehouse", workRow, font, "Hours:", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-            Text warehouseWorkHours = CreateHeaderText("LogWorkHoursWarehouse", workRow, font, GetProductionWorkRangeLabel(), 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-            warehouseWorkHours.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-
-            for (int wi = 0; wi < WarehouseMaxWorkers; wi++)
-            {
-                int slotArrayIdx = 3 + wi;
-                LogisticsSlotUi wSlot = new() { BuildingType = LocationType.Warehouse, SlotIndex = wi, Root = warehouseCard };
-                // Store WorkHoursText only on first warehouse slot (used by UpdateLogisticsTabUi)
-                if (wi == 0)
-                {
-                    wSlot.WorkHoursText = warehouseWorkHours;
-                    wSlot.BuildingNameText = warehouseTitle;
-                }
-
-                RectTransform wActionRow = CreateLayoutRow($"LogActionRowWarehouse{wi}", warehouseBody, 26f, 4f);
-                wActionRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
-                wSlot.AssignedWorkerText = CreateHeaderText($"LogWorkerWarehouse{wi}", wActionRow, font, $"Loader {wi + 1}: —", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-                wSlot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-                wSlot.AssignButton = CreateButton($"LogAssignBtnWarehouse{wi}", wActionRow, font, out wSlot.AssignButtonText, "Assign", 11, FleetPrimaryButtonColor, Color.white);
-                wSlot.AssignButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 104f;
-                wSlot.RemoveButton = CreateButton($"LogRemoveBtnWarehouse{wi}", wActionRow, font, out _, "×", 12, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
-                wSlot.RemoveButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
-
-                int capturedIdx = slotArrayIdx;
-                wSlot.AssignButton.onClick.AddListener(() =>
-                {
-                    DriverAgent sel = driverAgents.Find(d => d.DriverId == selectedShiftDriverId);
-                    if (sel == null) return;
-                    AssignWorkerToBuilding(sel, logisticsSlots[capturedIdx]);
-                    PlayUiSound(uiSelectClip, 0.85f);
-                });
-                wSlot.RemoveButton.onClick.AddListener(() =>
-                {
-                    RemoveWorkerFromBuilding(logisticsSlots[capturedIdx]);
-                    PlayUiSound(uiSelectClip, 0.85f);
-                });
-                logisticsSlots[slotArrayIdx] = wSlot;
-            }
+            slotArrayIndex = AddBuildingWorkerSlotCard(logisticsContent, font, slotArrayIndex, serviceTypes[si], 0);
         }
 
         // Start with Transport tab visible
@@ -870,5 +792,107 @@ public partial class GameBootstrap
         shiftsScreenUi.CanvasRoot.SetActive(false);
         UpdateShiftsScreenUi();
     }
+
+    private int AddBuildingWorkerSlotCard(RectTransform parent, Font font, int slotArrayIndex, LocationType buildingType, int workerSlot)
+    {
+        LogisticsSlotUi slot = new() { BuildingType = buildingType, SlotIndex = workerSlot };
+        RectTransform slotCard = CreateSectionCard(parent, font, string.Empty, out RectTransform slotBody, false);
+        slot.Root = slotCard;
+        LayoutElement slotCardLE = slotCard.gameObject.AddComponent<LayoutElement>();
+        slotCardLE.preferredHeight = 102f;
+        slotCardLE.flexibleHeight = 0f;
+        VerticalLayoutGroup slotBodyLayout = slotBody.GetComponent<VerticalLayoutGroup>();
+        slotBodyLayout.spacing = 4;
+
+        slot.BuildingNameText = CreateHeaderText($"LogBldgName{slotArrayIndex}", slotBody, font, GetBuildingWorkerSlotTitle(buildingType, workerSlot), 16, TextAnchor.MiddleLeft, Color.white);
+        slot.AssignedWorkerText = CreateHeaderText($"LogWorker{slotArrayIndex}", slotBody, font, "No worker assigned", 14, TextAnchor.MiddleLeft, FleetAccentColor);
+        slot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+        RectTransform workRow = CreateLayoutRow($"LogWorkRow{slotArrayIndex}", slotBody, 22f, 8f);
+        workRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+        CreateBodyText($"LogWorkLabel{slotArrayIndex}", workRow, font, "Hours:", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        slot.WorkHoursText = CreateHeaderText($"LogWorkHours{slotArrayIndex}", workRow, font, GetProductionWorkRangeLabel(), 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        slot.WorkHoursText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        RectTransform actionRow = CreateLayoutRow($"LogActionRow{slotArrayIndex}", slotBody, 26f, 8f);
+        actionRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+        slot.AssignButton = CreateButton($"LogAssignBtn{slotArrayIndex}", actionRow, font, out slot.AssignButtonText, "Assign Worker", 12, FleetPrimaryButtonColor, Color.white);
+        slot.AssignButton.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        slot.RemoveButton = CreateButton($"LogRemoveBtn{slotArrayIndex}", actionRow, font, out _, "Remove", 12, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
+        slot.RemoveButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
+
+        int capturedIndex = slotArrayIndex;
+        slot.AssignButton.onClick.AddListener(() =>
+        {
+            DriverAgent selectedDriver = driverAgents.Find(d => d.DriverId == selectedShiftDriverId);
+            if (selectedDriver == null) return;
+            AssignWorkerToBuilding(selectedDriver, logisticsSlots[capturedIndex]);
+            PlayUiSound(uiSelectClip, 0.85f);
+        });
+        slot.RemoveButton.onClick.AddListener(() =>
+        {
+            RemoveWorkerFromBuilding(logisticsSlots[capturedIndex]);
+            PlayUiSound(uiSelectClip, 0.85f);
+        });
+        logisticsSlots[slotArrayIndex] = slot;
+        return slotArrayIndex + 1;
+    }
+
+    private int AddWarehouseWorkerSlotCard(RectTransform parent, Font font, int slotArrayIndex)
+    {
+        RectTransform warehouseCard = CreateSectionCard(parent, font, string.Empty, out RectTransform warehouseBody, false);
+        LayoutElement warehouseCardLE = warehouseCard.gameObject.AddComponent<LayoutElement>();
+        warehouseCardLE.preferredHeight = 126f + WarehouseMaxWorkers * 28f;
+        warehouseCardLE.flexibleHeight = 0f;
+        VerticalLayoutGroup warehouseBodyLayout = warehouseBody.GetComponent<VerticalLayoutGroup>();
+        warehouseBodyLayout.spacing = 4;
+
+        Text warehouseTitle = CreateHeaderText("LogBldgNameWarehouse", warehouseBody, font, "Warehouse", 16, TextAnchor.MiddleLeft, Color.white);
+        RectTransform workRow = CreateLayoutRow("LogWorkRowWarehouse", warehouseBody, 22f, 8f);
+        workRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+        CreateBodyText("LogWorkLabelWarehouse", workRow, font, "Hours:", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        Text warehouseWorkHours = CreateHeaderText("LogWorkHoursWarehouse", workRow, font, GetProductionWorkRangeLabel(), 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        warehouseWorkHours.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        for (int wi = 0; wi < WarehouseMaxWorkers; wi++)
+        {
+            LogisticsSlotUi wSlot = new() { BuildingType = LocationType.Warehouse, SlotIndex = wi, Root = warehouseCard };
+            if (wi == 0)
+            {
+                wSlot.WorkHoursText = warehouseWorkHours;
+                wSlot.BuildingNameText = warehouseTitle;
+            }
+
+            RectTransform wActionRow = CreateLayoutRow($"LogActionRowWarehouse{wi}", warehouseBody, 26f, 4f);
+            wActionRow.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+            wSlot.AssignedWorkerText = CreateHeaderText($"LogWorkerWarehouse{wi}", wActionRow, font, $"Loader {wi + 1}: -", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            wSlot.AssignedWorkerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            wSlot.AssignButton = CreateButton($"LogAssignBtnWarehouse{wi}", wActionRow, font, out wSlot.AssignButtonText, "Assign", 11, FleetPrimaryButtonColor, Color.white);
+            wSlot.AssignButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 104f;
+            wSlot.RemoveButton = CreateButton($"LogRemoveBtnWarehouse{wi}", wActionRow, font, out _, "X", 12, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
+            wSlot.RemoveButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
+
+            int capturedIdx = slotArrayIndex;
+            wSlot.AssignButton.onClick.AddListener(() =>
+            {
+                DriverAgent sel = driverAgents.Find(d => d.DriverId == selectedShiftDriverId);
+                if (sel == null) return;
+                AssignWorkerToBuilding(sel, logisticsSlots[capturedIdx]);
+                PlayUiSound(uiSelectClip, 0.85f);
+            });
+            wSlot.RemoveButton.onClick.AddListener(() =>
+            {
+                RemoveWorkerFromBuilding(logisticsSlots[capturedIdx]);
+                PlayUiSound(uiSelectClip, 0.85f);
+            });
+            logisticsSlots[slotArrayIndex] = wSlot;
+            slotArrayIndex++;
+        }
+
+        return slotArrayIndex;
+    }
+
+    private string GetBuildingWorkerSlotTitle(LocationType buildingType, int workerSlot) =>
+        GetMaxBuildingWorkerSlots(buildingType) > 1 ? $"{GetSelectedLocationDisplayName(buildingType)} #{workerSlot + 1}" : GetSelectedLocationDisplayName(buildingType);
 
 }

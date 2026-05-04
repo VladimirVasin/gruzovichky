@@ -292,7 +292,7 @@ public partial class GameBootstrap
         {
             4 => "Logs, Boards, Furniture",
             5 => "Cotton, Textile",
-            6 => "Grain, Alcohol",
+            6 => "Boards market",
             2 => "Trade logistics",
             _ => "No confirmed survey data"
         };
@@ -317,7 +317,7 @@ public partial class GameBootstrap
     {
         return regionIndex switch
         {
-            4 => "Cotton, Textile, Fuel, Alcohol, Food",
+            4 => "Cotton, Textile",
             5 => "—",
             6 => "Boards",
             2 => "—",
@@ -607,7 +607,7 @@ public partial class GameBootstrap
         return regionIndex switch
         {
             5 => (new[] { TradeResourceType.Cotton, TradeResourceType.Textile }, System.Array.Empty<TradeResourceType>()),
-            6 => (new[] { TradeResourceType.Alcohol }, new[] { TradeResourceType.Boards }),
+            6 => (System.Array.Empty<TradeResourceType>(), new[] { TradeResourceType.Boards }),
             _ => (TradeImportCatalog, TradeExportCatalog)
         };
     }

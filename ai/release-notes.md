@@ -40,7 +40,7 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 - Trade dispatch now uses the regular Truck Driver shift pool and automatically reserves an available parked truck from Parking.
 - Local bus service now requires at least two local stops before it becomes active; one-stop networks show clearer warnings and no longer trap passengers in dead-wait loops.
 - Bought city buses now arrive from the edge highway and drive into Parking before becoming operational.
-- Warehouse/service logistics were rebalanced with larger buffers and smarter delivery target selection for Fuel, Food, and Alcohol.
+- Fuel, Food, and Alcohol were removed as trade/storage resources; services now operate directly through worker needs, fees, and truck refuel orders.
 
 #### Regional Map
 
@@ -65,9 +65,9 @@ Status: previous documented prototype version.
 
 ### Workers
 
-- Workers now have portraits, gender, skills, needs, effects, and perks.
+- Workers now have portraits, gender, needs, money, jobs, and perks.
 - Food, sleep, and leisure are now part of the worker life cycle.
-- The Alcoholism perk now has distinct Drunk and Hangover behavior.
+- The Alcoholism and Gambler perks steer leisure behavior without temporary modifiers.
 
 ### Production
 
@@ -124,14 +124,14 @@ Status: previous documented prototype baseline.
 
 - Workers can be hired from the Workers HUD.
 - New hires arrive by bus before checking in.
-- Workers have generated low-poly portrait UI, base stats (`Driving`, `Stamina`, `Production`, `Logistics`), skill hover descriptions, salary, balance, and focus controls.
+- Workers have generated low-poly portrait UI, perks, salary, balance, and focus controls.
 - Workers have need timers for Food, Sleep, and Leisure shown in the Workers HUD.
 - Worker daily/life behavior can route them through work, Canteen, Bar/leisure, Motel sleep, and idle.
 - Need changes and lifecycle decisions are logged to `debug.log`.
 
 ### Production And Resources
 
-- Resource set includes Logs, Boards, Cotton, Textile, Furniture, Fuel, Food, and Alcohol.
+- Resource set includes Logs, Boards, Cotton, Textile, and Furniture.
 - Forest produces Logs.
 - Sawmill converts Logs into Boards.
 - Furniture Factory converts Boards plus Textile into Furniture.

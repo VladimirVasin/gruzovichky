@@ -224,7 +224,8 @@ public partial class GameBootstrap : MonoBehaviour
         GamblingHall,
         CityPark,
         PersonalHouse,
-        CarMarket
+        CarMarket,
+        LaborExchange
     }
 
     /// <summary>
@@ -242,6 +243,39 @@ public partial class GameBootstrap : MonoBehaviour
 
     private static bool IsServiceLocation(LocationType type) => !IsProductionLocation(type);
 
+    private static bool HasServiceWorkerSlot(LocationType type) => type switch
+    {
+        LocationType.GasStation    => true,
+        LocationType.Motel         => true,
+        LocationType.Bar           => true,
+        LocationType.Canteen       => true,
+        LocationType.GamblingHall  => true,
+        LocationType.CarMarket     => true,
+        LocationType.LaborExchange => true,
+        _                          => false
+    };
+
+    private static int GetMaxBuildingWorkerSlots(LocationType type) => type switch
+    {
+        LocationType.Warehouse => WarehouseMaxWorkers,
+        LocationType.Forest => ProductionMaxWorkersPerBuilding,
+        LocationType.Sawmill => ProductionMaxWorkersPerBuilding,
+        LocationType.FurnitureFactory => ProductionMaxWorkersPerBuilding,
+        _ when HasServiceWorkerSlot(type) => ServiceMaxWorkersPerBuilding,
+        _ => 0
+    };
+
+    private static string GetBuildingWorkerRoleLabel(LocationType type) => type switch
+    {
+        LocationType.Forest           => "Lumberjack",
+        LocationType.Sawmill          => "Sawmill Worker",
+        LocationType.FurnitureFactory => "Carpenter",
+        LocationType.Warehouse        => "Warehouse Loader",
+        LocationType.LaborExchange    => "Employment Clerk",
+        _ when HasServiceWorkerSlot(type) => "Service Worker",
+        _                             => "Worker"
+    };
+
     private bool IsLocationOperational(LocationType type) =>
         !IsProductionLocation(type) ||
         (locations.TryGetValue(type, out LocationData d) && d.Workers > 0);
@@ -253,10 +287,7 @@ public partial class GameBootstrap : MonoBehaviour
         Boards,
         Cotton,
         Textile,
-        Furniture,
-        Fuel,
-        Alcohol,
-        Food
+        Furniture
     }
 
     private enum TransportTask
@@ -322,7 +353,8 @@ public partial class GameBootstrap : MonoBehaviour
         GamblingHall,
         CityPark,
         PersonalHouse,
-        CarMarket
+        CarMarket,
+        LaborExchange
     }
 
     private enum GameStartMode
@@ -382,8 +414,6 @@ public partial class GameBootstrap : MonoBehaviour
         RidingLocalBus,
         ToBuildingForShift,        // walking motel -> production building (logistics pre-shift)
         ToMotelFromBuilding,       // walking building -> motel (logistics post-shift)
-        WarehouseDeliveryToService, // walking Warehouse -> service building (carrying resource)
-        WarehouseDeliveryReturn,    // walking service building -> Warehouse (empty-handed)
         LumberToTree,
         LumberChopping,
         LumberCarryLogToBuilding,
@@ -392,7 +422,9 @@ public partial class GameBootstrap : MonoBehaviour
         LumberReturnToBuilding,
         ToPersonalHouseForPurchase,
         ToPersonalHouseEntrance,
-        ToCarMarketForPurchase
+        ToCarMarketForPurchase,
+        ToLaborExchangeForJob,
+        AtLaborExchange
     }
 
     private enum DriverRestPhase
@@ -416,6 +448,7 @@ public partial class GameBootstrap : MonoBehaviour
         Sleep,
         BuyHouse,
         BuyCar,
+        FindJob,
         Idle
     }
 
@@ -437,7 +470,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         Local,
         Intercity,
-        Logistics   // assigned to a production building
+        Logistics   // assigned directly to a production or service building
     }
 
     public enum TradeResourceType
@@ -446,10 +479,7 @@ public partial class GameBootstrap : MonoBehaviour
         Boards,
         Cotton,
         Textile,
-        Furniture,
-        Fuel,
-        Alcohol,
-        Food
+        Furniture
     }
 
     public enum TradeOrderType
@@ -457,14 +487,6 @@ public partial class GameBootstrap : MonoBehaviour
         Buy,
         Sell
     }
-
-    private enum WarehouseResourceType
-    {
-        Fuel,
-        Alcohol,
-        Food
-    }
-
 
     private sealed class LocationData
     {
@@ -479,17 +501,13 @@ public partial class GameBootstrap : MonoBehaviour
         public int BoardsStored;
         public int TextileStored;
         public int FurnitureStored;
-        // Warehouse consumable resources
-        public int FuelStored;
-        public int AlcoholStored;
-        public int FoodStored;
         public GameObject RootObject;
         public GameObject LocalBusWarningMarker;
         public Renderer BaseRenderer;
         public readonly List<GameObject> StoredLogVisuals = new();
         public readonly List<GameObject> StoredBoardVisuals = new();
 
-        public int Workers;      // production buildings only: >0 = operational, 0 = offline
+        public int Workers;      // active assigned staff currently inside the building
         public int ServiceFee;   // Service buildings deduct from driver.Money on entry.
         public int BuildingBank; // Internal revenue: service fees in, gambling payouts out.
 

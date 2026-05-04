@@ -44,13 +44,13 @@ public partial class GameBootstrap
         }
         if (shiftsScreenUi.ProductionSectionTitleText != null)
         {
-            shiftsScreenUi.ProductionSectionTitleText.text = ru ? "Производство" : "Production";
+            shiftsScreenUi.ProductionSectionTitleText.text = ru ? "Здания" : "Buildings";
         }
         if (shiftsScreenUi.ProductionSectionSummaryText != null)
         {
             shiftsScreenUi.ProductionSectionSummaryText.text = ru
-                ? "Здесь рабочий закрепляется прямо за зданием и трудится по графику 08:00-18:00."
-                : "Here a worker is assigned directly to a building and works on an 08:00-18:00 schedule.";
+                ? "Здесь рабочий закрепляется прямо за производственным или сервисным зданием и трудится по графику 08:00-18:00."
+                : "Assign workers directly to production and service buildings on an 08:00-18:00 schedule.";
         }
         shiftsScreenUi.HeaderCountText.text = $"{driverAgents.Count} {(driverAgents.Count == 1 ? L("Worker") : L("Workers"))}";
 
@@ -83,6 +83,7 @@ public partial class GameBootstrap
             bool isIntercity = IsDriverIntercity(driver);
             bool isBusDriver = IsDriverBusDriver(driver);
             bool isProduction = driver.DutyMode == DriverDutyMode.Logistics;
+            bool isService = isProduction && driver.AssignedBuildingType.HasValue && HasServiceWorkerSlot(driver.AssignedBuildingType.Value);
             bool isTruckAssigned = driver.AssignedTruckNumber > 0;
             row.StatusText.text = isIntercity
                 ? L("Intercity")
@@ -91,7 +92,7 @@ public partial class GameBootstrap
                 : isTruckAssigned
                     ? L("Logistics")
                     : isProduction
-                        ? L("Production")
+                        ? (isService ? L("Service") : L("Production"))
                         : isAssigned
                             ? $"{L("Assigned")}: {GetShiftRangeLabel(driver.ShiftStartHour)}"
                             : L("Idle");
@@ -410,31 +411,30 @@ public partial class GameBootstrap
 
         if (shiftsScreenUi.FleetCountText != null)
         {
-            shiftsScreenUi.FleetCountText.text = $"{GetOwnedTruckCount()} / {MaxTruckCount} {(ru ? "\u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u043e\u0432" : "trucks")}";
+            shiftsScreenUi.FleetCountText.text = $"{GetOwnedTruckCount()} / {GetTruckParkingCapacity()} {(ru ? "\u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u043e\u0432" : "trucks")}";
         }
 
         if (shiftsScreenUi.FleetSectionSummaryText != null)
         {
             shiftsScreenUi.FleetSectionSummaryText.text = ru
-                ? "\u041f\u043e\u043a\u0443\u043f\u043a\u0430 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u043e\u0432 \u0438 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435 \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u0432 \u044d\u043a\u0438\u043f\u0430\u0436. \u0421\u043c\u0435\u043d\u044b \u0434\u043b\u044f \u044d\u043a\u0438\u043f\u0430\u0436\u0430 \u0437\u0430\u0434\u0430\u044e\u0442\u0441\u044f \u043d\u0438\u0436\u0435."
-                : "Buy trucks and assign the selected worker to a truck crew. Crew shift timing is managed below.";
+                ? "Parking даёт слоты автопарка. Транспорт появляется автоматически, когда водитель получает смену."
+                : "Parking provides fleet slots. Vehicles appear automatically when a driver gets a shift.";
         }
 
-        bool canHireTruck = locations.ContainsKey(LocationType.Parking) && GetOwnedTruckCount() < MaxTruckCount && money >= HireTruckCost;
         if (shiftsScreenUi.FleetBuyTruckButton != null)
         {
-            shiftsScreenUi.FleetBuyTruckButton.interactable = canHireTruck;
+            shiftsScreenUi.FleetBuyTruckButton.interactable = false;
         }
         if (shiftsScreenUi.FleetBuyTruckButtonText != null)
         {
             shiftsScreenUi.FleetBuyTruckButtonText.text = ru
-                ? $"\u041a\u0443\u043f\u0438\u0442\u044c \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a - ${HireTruckCost}"
-                : $"{L("Buy New Truck")} - ${HireTruckCost}";
+                ? "Слоты Parking"
+                : "Parking Slots";
         }
         if (shiftsScreenUi.FleetBuyTruckStatusText != null)
         {
             shiftsScreenUi.FleetBuyTruckStatusText.text = GetFleetBuyStatusLabel();
-            shiftsScreenUi.FleetBuyTruckStatusText.color = canHireTruck ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
+            shiftsScreenUi.FleetBuyTruckStatusText.color = locations.ContainsKey(LocationType.Parking) ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
         }
 
         for (int i = 0; i < shiftsScreenUi.FleetTruckRows.Count; i++)
@@ -622,6 +622,13 @@ public partial class GameBootstrap
 
         if (driver.AssignedTruckNumber > 0 || driver.DutyMode == DriverDutyMode.Logistics || IsDriverIntercity(driver))
         {
+            return;
+        }
+
+        if (!EnsureBusProvisionedForAssignment("bus vacancy assignment"))
+        {
+            SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} bus assignment blocked: no Parking bus slot available.");
+            LogDriverReaction(driver, "cannot start bus duty: no Parking bus slot available");
             return;
         }
 

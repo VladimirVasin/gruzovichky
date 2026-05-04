@@ -71,6 +71,14 @@ public partial class GameBootstrap
         Vector2Int dir = NormalizeRoadDirection(roadDirection);
         Vector2Int offset = NormalizeRoadDirection(widthOffset);
         Vector2Int sideCell = cell + offset;
+        if (roadCells.Contains(cell) &&
+            roadCells.Contains(sideCell) &&
+            CanPlaceRoadFootprintWithOffset(cell, offset, requireNewRoadCell: false, IsBuildRoadBlockedCell))
+        {
+            SessionDebugLogger.Log("BUILD_ROAD", $"{source} two-lane fixed-offset no-op anchor={FormatCell(cell)} side={FormatCell(sideCell)} dir={FormatCell(dir)} reason=already-road.");
+            return false;
+        }
+
         if (!CanPlaceRoadFootprintWithOffset(cell, offset, requireNewRoadCell: true, IsBuildRoadBlockedCell))
         {
             SessionDebugLogger.Log(
@@ -133,6 +141,29 @@ public partial class GameBootstrap
         string source,
         List<Vector2Int> debugTurnFillCells = null)
     {
+        return TryFillRoadTurnFootprint(
+            previousCell,
+            previousDirection,
+            GetExistingRoadWidthOffset(previousCell, previousDirection),
+            currentCell,
+            currentDirection,
+            GetExistingRoadWidthOffset(currentCell, currentDirection),
+            isBlockedLocationCell,
+            source,
+            debugTurnFillCells);
+    }
+
+    private bool TryFillRoadTurnFootprint(
+        Vector2Int previousCell,
+        Vector2Int previousDirection,
+        Vector2Int previousOffset,
+        Vector2Int currentCell,
+        Vector2Int currentDirection,
+        Vector2Int currentOffset,
+        System.Func<Vector2Int, bool> isBlockedLocationCell,
+        string source,
+        List<Vector2Int> debugTurnFillCells = null)
+    {
         Vector2Int prevDir = NormalizeRoadDirection(previousDirection);
         Vector2Int curDir = NormalizeRoadDirection(currentDirection);
         if (prevDir == curDir)
@@ -140,7 +171,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        GetExistingRoadTurnFillBounds(previousCell, prevDir, currentCell, curDir, out int minX, out int maxX, out int minY, out int maxY);
+        GetRoadTurnFillBounds(previousCell, previousOffset, currentCell, currentOffset, out int minX, out int maxX, out int minY, out int maxY);
 
         bool anyBuilt = false;
         List<Vector2Int> filledCells = new();
@@ -238,13 +269,28 @@ public partial class GameBootstrap
     {
         Vector2Int previousOffset = GetExistingRoadWidthOffset(previousCell, previousDirection);
         Vector2Int currentOffset = GetExistingRoadWidthOffset(currentCell, currentDirection);
-        Vector2Int previousSide = previousCell + previousOffset;
-        Vector2Int currentSide = currentCell + currentOffset;
+        GetRoadTurnFillBounds(previousCell, previousOffset, currentCell, currentOffset, out minX, out maxX, out minY, out maxY);
+    }
 
-        minX = Mathf.Min(Mathf.Min(previousCell.x, previousSide.x), Mathf.Min(currentCell.x, currentSide.x));
-        maxX = Mathf.Max(Mathf.Max(previousCell.x, previousSide.x), Mathf.Max(currentCell.x, currentSide.x));
-        minY = Mathf.Min(Mathf.Min(previousCell.y, previousSide.y), Mathf.Min(currentCell.y, currentSide.y));
-        maxY = Mathf.Max(Mathf.Max(previousCell.y, previousSide.y), Mathf.Max(currentCell.y, currentSide.y));
+    private static void GetRoadTurnFillBounds(
+        Vector2Int previousCell,
+        Vector2Int previousOffset,
+        Vector2Int currentCell,
+        Vector2Int currentOffset,
+        out int minX,
+        out int maxX,
+        out int minY,
+        out int maxY)
+    {
+        RoadBuildPlacementService.GetTurnFillBoundsFromOffsets(
+            previousCell,
+            previousOffset,
+            currentCell,
+            currentOffset,
+            out minX,
+            out maxX,
+            out minY,
+            out maxY);
     }
 
     private Vector2Int GetExistingRoadWidthOffset(Vector2Int cell, Vector2Int roadDirection)

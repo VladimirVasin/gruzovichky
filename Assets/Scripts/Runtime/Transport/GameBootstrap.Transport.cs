@@ -17,7 +17,18 @@ public partial class GameBootstrap
 
     private Vector3 GetTruckWorldPosition(Vector2Int cell)
     {
-        return GetCellCenter(cell) + new Vector3(0f, TruckSegmentStartLift, 0f);
+        return GetRoadVehicleWorldPosition(cell.x + 0.5f, cell.y + 0.5f, TruckSegmentStartLift);
+    }
+
+    private Vector3 GetRoadVehicleWorldPosition(float worldX, float worldZ, float verticalLift)
+    {
+        return new Vector3(worldX, SampleRoadSurfaceHeight(worldX, worldZ) + verticalLift, worldZ);
+    }
+
+    private Vector3 WithRoadVehicleHeight(Vector3 position, float verticalLift)
+    {
+        position.y = SampleRoadSurfaceHeight(position.x, position.z) + verticalLift;
+        return position;
     }
 
     private static Vector2Int WorldToCell(Vector3 point)

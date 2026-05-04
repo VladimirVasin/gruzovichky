@@ -79,12 +79,9 @@ public partial class GameBootstrap
             string workerPart = vacancy.AssignedWorker != null
                 ? vacancy.AssignedWorker.DriverName
                 : (ru ? "без рабочего" : "no worker");
-            string eduPart = vacancy.RequiredEducation == WorkerEducation.Skilled
-                ? (ru ? "Квалифицированный" : "Skilled")
-                : (ru ? "Базовый" : "Basic");
             row.StatusText.text = string.IsNullOrWhiteSpace(vacancy.Schedule)
-                ? $"{vacancy.Subtitle} · {eduPart} · {workerPart}"
-                : $"{vacancy.Subtitle} · {vacancy.Schedule} · {eduPart} · {workerPart}";
+                ? $"{vacancy.Subtitle} · {workerPart}"
+                : $"{vacancy.Subtitle} · {vacancy.Schedule} · {workerPart}";
             row.StatusText.color = selected ? Color.white : vacancy.IsOccupied ? FleetAccentColor : FleetSecondaryTextColor;
         }
 
@@ -187,6 +184,7 @@ public partial class GameBootstrap
             VacancyKind.TruckDriver => VacancyFlowKind.TruckDriver,
             VacancyKind.Intercity => VacancyFlowKind.Intercity,
             VacancyKind.BusDriver => VacancyFlowKind.BusDriver,
+            VacancyKind.Service => VacancyFlowKind.Service,
             _ => VacancyFlowKind.Production
         };
     }
@@ -332,7 +330,6 @@ public partial class GameBootstrap
                 Title = ru ? "Водитель грузовика" : "Truck Driver",
                 Subtitle = ru ? "грузоперевозки" : "freight routes",
                 IsOccupied = false,
-                RequiredEducation = WorkerEducation.Basic
             });
         }
 
@@ -357,7 +354,6 @@ public partial class GameBootstrap
                 AssignedWorker = driver,
                 ShiftIndex = GetShiftIndexForHour(driver.ShiftStartHour),
                 TruckNumber = driver.AssignedTruckNumber,
-                RequiredEducation = WorkerEducation.Basic
             });
         }
 
@@ -369,7 +365,6 @@ public partial class GameBootstrap
                 Title = ru ? "Водитель автобуса" : "Bus Driver",
                 Subtitle = ru ? "городской маршрут" : "local bus route",
                 IsOccupied = false,
-                RequiredEducation = WorkerEducation.Basic
             });
         }
 
@@ -390,7 +385,6 @@ public partial class GameBootstrap
                 IsOccupied = true,
                 AssignedWorker = busDriver,
                 ShiftIndex = i,
-                RequiredEducation = WorkerEducation.Basic
             });
         }
 
@@ -409,7 +403,6 @@ public partial class GameBootstrap
                 IsOccupied = false,
                 BuildingType = LocationType.Warehouse,
                 SlotIndex = -1,
-                RequiredEducation = WorkerEducation.Basic,
                 IsGroupedWarehouse = true,
                 FilledSlots = assignedWarehouseLoaders,
                 MaxSlots = WarehouseMaxWorkers
@@ -421,8 +414,13 @@ public partial class GameBootstrap
             LogisticsSlotUi slot = logisticsSlots[i];
             if (slot == null ||
                 slot.BuildingType == LocationType.Warehouse ||
-                !locations.ContainsKey(slot.BuildingType) ||
-                !IsVacancyUnlockedForCurrentTutorial(VacancyKind.Production, slot.BuildingType))
+                !locations.ContainsKey(slot.BuildingType))
+            {
+                continue;
+            }
+
+            VacancyKind slotKind = IsProductionLocation(slot.BuildingType) ? VacancyKind.Production : VacancyKind.Service;
+            if (!IsVacancyUnlockedForCurrentTutorial(slotKind, slot.BuildingType))
             {
                 continue;
             }
@@ -431,18 +429,23 @@ public partial class GameBootstrap
             string buildingName = L(GetSelectedLocationDisplayName(slot.BuildingType));
             string slotLabel = slot.BuildingType == LocationType.Warehouse
                 ? (ru ? $"Складской слот {slot.SlotIndex + 1}" : $"Warehouse slot {slot.SlotIndex + 1}")
-                : buildingName;
+                : GetMaxBuildingWorkerSlots(slot.BuildingType) > 1
+                    ? $"{buildingName} #{slot.SlotIndex + 1}"
+                    : buildingName;
             vacancyViewModels.Add(new VacancyViewModel
             {
-                Kind = VacancyKind.Production,
+                Kind = slotKind,
                 Title = slotLabel,
-                Subtitle = ru ? "производство" : "production",
+                Subtitle = slot.BuildingType == LocationType.LaborExchange
+                    ? (ru ? "\u0441\u0435\u0440\u0432\u0438\u0441, \u043d\u0443\u0436\u043d\u043e \u0432\u044b\u0441\u0448\u0435\u0435 \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435" : "service, higher education required")
+                    : slotKind == VacancyKind.Service
+                    ? (ru ? "сервис" : "service")
+                    : (ru ? "производство" : "production"),
                 Schedule = GetProductionWorkRangeLabel(),
                 IsOccupied = assigned != null,
                 AssignedWorker = assigned,
                 BuildingType = slot.BuildingType,
                 SlotIndex = slot.SlotIndex,
-                RequiredEducation = WorkerEducation.Basic
             });
         }
 
@@ -596,12 +599,10 @@ public partial class GameBootstrap
 
         bool ru = IsRussianLanguage();
         int ownedVehicleCount = isBusDriverVacancy ? GetOwnedBusCount() : GetOwnedTruckCount();
-        int maxVehicleCount = isBusDriverVacancy ? MaxBusCount : MaxTruckCount;
-        int hireCost = isBusDriverVacancy ? HireBusCost : HireTruckCost;
+        int maxVehicleCount = isBusDriverVacancy ? GetBusParkingCapacity() : GetTruckParkingCapacity();
         bool hasParking = locations.ContainsKey(LocationType.Parking);
-        bool canHireVehicle = hasParking && ownedVehicleCount < maxVehicleCount && money >= hireCost;
         bool hasSelectedShift = HasSelectedVacancyShift(selectedVacancy);
-        bool hasAvailableVehicle = isBusDriverVacancy ? GetOwnedBusCount() > 0 : HasAvailableTruckForVacancy(selectedVacancy);
+        bool hasAvailableVehicle = isBusDriverVacancy ? HasAvailableBusForVacancy(selectedVacancy) : HasAvailableTruckForVacancy(selectedVacancy);
 
         if (shiftsScreenUi.VacancyTransportParkTitleText != null)
         {
@@ -628,19 +629,19 @@ public partial class GameBootstrap
             string vehicleRuStart = isBusDriverVacancy ? "\u0410\u0432\u0442\u043e\u0431\u0443\u0441" : "\u0413\u0440\u0443\u0437\u043e\u0432\u0438\u043a";
             string summary = !hasSelectedShift
                 ? (ru
-                    ? $"\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u044b\u0431\u0435\u0440\u0438 \u0441\u043c\u0435\u043d\u0443. {vehicleRuStart} \u0431\u0443\u0434\u0435\u0442 \u0432\u0437\u044f\u0442 \u0438\u0437 Parking \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438."
-                    : $"Choose a shift first. A {vehicleEn} will be picked automatically from Parking.")
+                    ? $"\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u044b\u0431\u0435\u0440\u0438 \u0441\u043c\u0435\u043d\u0443. {vehicleRuStart} \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u0438\u0437 \u0441\u043b\u043e\u0442\u0430 Parking \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438."
+                    : $"Choose a shift first. A {vehicleEn} will be provisioned automatically from a Parking slot.")
                 : isBusDriverVacancy && hasAvailableVehicle
                     ? (ru
-                        ? "\u0412 \u043f\u0430\u0440\u043a\u0435 \u0435\u0441\u0442\u044c \u0430\u0432\u0442\u043e\u0431\u0443\u0441. \u0421\u0432\u043e\u0431\u043e\u0434\u043d\u043e\u0441\u0442\u044c \u0431\u0443\u0434\u0435\u0442 \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u0430 \u043f\u0440\u0438 \u0441\u0442\u0430\u0440\u0442\u0435 \u0441\u043c\u0435\u043d\u044b."
-                        : "A bus exists in the fleet. Availability is checked when the shift starts.")
+                        ? "\u0421\u043b\u043e\u0442 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d. Parking \u0432\u044b\u0434\u0430\u0441\u0442 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442 \u043f\u0440\u0438 \u0441\u0442\u0430\u0440\u0442\u0435 \u0441\u043c\u0435\u043d\u044b."
+                        : "A bus slot is available. Parking will provide the vehicle when the shift starts.")
                 : hasAvailableVehicle
                     ? (ru
-                        ? $"\u0421\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439 {vehicleRu} \u0435\u0441\u0442\u044c. \u0412\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0432\u043e\u0437\u044c\u043c\u0451\u0442 \u0435\u0433\u043e \u0441\u0430\u043c \u043f\u0440\u0438 \u0441\u0442\u0430\u0440\u0442\u0435 \u0441\u043c\u0435\u043d\u044b."
-                        : $"A free {vehicleEn} is available. The worker will take it automatically when needed.")
+                        ? $"\u0421\u043b\u043e\u0442 \u0434\u043b\u044f {vehicleRu} \u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d. \u0412\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0437\u0430\u0440\u0435\u0437\u0435\u0440\u0432\u0438\u0440\u0443\u0435\u0442 \u0435\u0433\u043e \u043f\u0440\u0438 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0438."
+                        : $"A {vehicleEn} slot is available. The worker reserves it when assigned.")
                     : (ru
-                        ? $"\u041d\u0443\u0436\u0435\u043d \u0445\u043e\u0442\u044f \u0431\u044b \u043e\u0434\u0438\u043d \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439 {vehicleRu} \u043d\u0430 Parking."
-                        : $"At least one free parked {vehicleEn} is needed.");
+                        ? $"\u041d\u0443\u0436\u0435\u043d \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439 \u0441\u043b\u043e\u0442 Parking \u0434\u043b\u044f {vehicleRu}."
+                        : $"A free Parking slot is needed for this {vehicleEn}.");
             shiftsScreenUi.VacancyTransportParkSummaryText.text = summary;
             shiftsScreenUi.VacancyTransportParkSummaryText.color = !hasAvailableVehicle
                 ? new Color(0.96f, 0.72f, 0.42f, 1f)
@@ -649,24 +650,24 @@ public partial class GameBootstrap
 
         if (shiftsScreenUi.VacancyBuyTruckButton != null)
         {
-            shiftsScreenUi.VacancyBuyTruckButton.interactable = canHireVehicle;
+            shiftsScreenUi.VacancyBuyTruckButton.interactable = false;
         }
 
         if (shiftsScreenUi.VacancyBuyTruckButtonText != null)
         {
             shiftsScreenUi.VacancyBuyTruckButtonText.text = isBusDriverVacancy
                 ? (ru
-                    ? $"\u041a\u0443\u043f\u0438\u0442\u044c \u0430\u0432\u0442\u043e\u0431\u0443\u0441 - ${HireBusCost}"
-                    : $"Buy bus - ${HireBusCost}")
+                    ? "\u0421\u043b\u043e\u0442\u044b \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043e\u0432"
+                    : "Bus slots")
                 : (ru
-                    ? $"\u041a\u0443\u043f\u0438\u0442\u044c \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a - ${HireTruckCost}"
-                    : $"Buy truck - ${HireTruckCost}");
+                    ? "\u0421\u043b\u043e\u0442\u044b \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u043e\u0432"
+                    : "Truck slots");
         }
 
         if (shiftsScreenUi.VacancyBuyTruckStatusText != null)
         {
             shiftsScreenUi.VacancyBuyTruckStatusText.text = isBusDriverVacancy ? GetBusBuyStatusLabel() : GetFleetBuyStatusLabel();
-            shiftsScreenUi.VacancyBuyTruckStatusText.color = canHireVehicle
+            shiftsScreenUi.VacancyBuyTruckStatusText.color = hasParking && hasAvailableVehicle
                 ? FleetSecondaryTextColor
                 : new Color(0.96f, 0.72f, 0.42f, 1f);
         }
@@ -758,6 +759,7 @@ public partial class GameBootstrap
             VacancyKind.TruckDriver when !HasSelectedVacancyShift(vacancy) => ru ? "Выбери смену" : "Choose Shift",
             VacancyKind.BusDriver when !HasSelectedVacancyShift(vacancy) => ru ? "Выбери смену" : "Choose Shift",
             VacancyKind.Production when !HasSelectedVacancyShift(vacancy) => ru ? "Выбери смену" : "Choose Shift",
+            VacancyKind.Service when !HasSelectedVacancyShift(vacancy) => ru ? "Выбери смену" : "Choose Shift",
             VacancyKind.Intercity when !HasSelectedVacancyShift(vacancy) => ru ? "Выбери смену" : "Choose Shift",
             _ => ru ? "Выбери рабочего" : "Choose Worker"
         };
@@ -799,6 +801,7 @@ public partial class GameBootstrap
             VacancyKind.TruckDriver when !HasSelectedVacancyShift(vacancy) => ru ? "Сначала выбери смену для грузоперевозок." : "First choose the freight shift.",
             VacancyKind.BusDriver when !HasSelectedVacancyShift(vacancy) => ru ? "Сначала выбери смену городского автобуса." : "First choose the local bus shift.",
             VacancyKind.Production when !HasSelectedVacancyShift(vacancy) => ru ? "Подтверди рабочую смену этого здания." : "Confirm this building's work shift.",
+            VacancyKind.Service when !HasSelectedVacancyShift(vacancy) => ru ? "Подтверди сервисную смену этого здания." : "Confirm this building's service shift.",
             VacancyKind.Intercity when !HasSelectedVacancyShift(vacancy) => ru ? "Подтверди межгороднюю смену." : "Confirm the intercity duty shift.",
             _ => ru ? "Выбери доступного рабочего из списка." : "Choose an available worker from the list."
         };
