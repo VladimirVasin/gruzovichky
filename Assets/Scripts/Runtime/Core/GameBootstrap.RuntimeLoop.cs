@@ -175,6 +175,7 @@ public partial class GameBootstrap
         UpdateActiveTradeRun();
         UpdateTradeAutoDispatch();
         UpdateDocksRuntime();
+        UpdateRegionalTradeRuntime();
         UpdateLaborExchangeRuntime();
         foreach (DriverAgent driver in driverAgents)
         {

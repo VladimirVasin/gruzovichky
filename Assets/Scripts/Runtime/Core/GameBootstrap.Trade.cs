@@ -697,6 +697,12 @@ public partial class GameBootstrap
             return;
         }
 
+        if (HasActiveRegionalLandTrade())
+        {
+            SessionDebugLogger.Log("TRADE_AUTO", $"Auto-dispatch skipped: regional land trade active, activePolicies={CountActiveTradePolicies()}.");
+            return;
+        }
+
         if (!TryBuildTradePolicyDispatchRequest(out TradeHudOrder next))
         {
             return;
@@ -707,8 +713,8 @@ public partial class GameBootstrap
         selectedTradeOrderAmount   = Mathf.Clamp(next.Amount, 1, 5);
         SessionDebugLogger.Log(
             "TRADE_AUTO",
-            $"Trying policy dispatch: {next.OrderType} {next.ResourceType} x{next.Amount}, target={GetTradePolicyTarget(next.ResourceType)}, warehouse={GetWarehouseTradeResourceAmount(next.ResourceType)}, activePolicies={CountActiveTradePolicies()}.");
-        bool dispatched = BeginTradeRun();
+            $"Trying regional land policy dispatch: {next.OrderType} {next.ResourceType} x{next.Amount}, target={GetTradePolicyTarget(next.ResourceType)}, warehouse={GetWarehouseTradeResourceAmount(next.ResourceType)}, activePolicies={CountActiveTradePolicies()}, targetRegion={next.TargetRegionIndex}.");
+        bool dispatched = TryDispatchRegionalLandTrade(next);
         isEconomyScreenDirty = true;
         isTradeScreenDirty = true;
         if (dispatched)
@@ -725,7 +731,7 @@ public partial class GameBootstrap
     {
         TradeAutoDispatchTick tick = TradeAutoDispatchService.Tick(
             IsWeekend(),
-            HasActiveTradeRun(),
+            HasActiveTradeRun() || HasActiveRegionalLandTrade(),
             CountDispatchableTradePolicies(),
             tradeAutoDispatchRetryTimer,
             Time.deltaTime,
@@ -739,6 +745,13 @@ public partial class GameBootstrap
 
     private bool BeginTradeRun()
     {
+        if (!LegacyIntercityTradeEnabled)
+        {
+            tradeDispatchStatusText = "Legacy intercity driver trade is blocked";
+            SessionDebugLogger.Log("TRADE_BLOCK", "Legacy intercity driver trade is blocked; use generated regional river/land routes.");
+            return false;
+        }
+
         EnsureTradeSelectionMatchesCurrentZone();
         if (!TryGetTradeDispatchContext(out DriverAgent driver, out TruckAgent truckAgent, out string blockReason))
         {

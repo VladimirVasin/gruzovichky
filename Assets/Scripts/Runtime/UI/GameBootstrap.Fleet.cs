@@ -647,9 +647,8 @@ public partial class GameBootstrap
 
     private void AddDocksExportTripIfAvailable(List<TripOption> trips, LocationData docks, TradeResourceType resource, TripType tripType, string label)
     {
-        if (docks.DocksExportResource != resource ||
-            GetTradePolicyMode(resource) != TradePolicyMode.SellAbove ||
-            !HasBuiltTradeRouteForOrder(resource, TradeOrderType.Sell) ||
+        if (GetTradePolicyMode(resource) != TradePolicyMode.SellAbove ||
+            !HasBuiltRegionalTradeRoute(resource, TradeOrderType.Sell, RegionalTradeRouteMode.River) ||
             GetWarehouseExportResourceAmount(resource) <= 0 ||
             GetWarehouseExportResourceAmount(resource) <= GetTradePolicyTarget(resource) ||
             GetDocksExportStoredResource(docks, resource) >= DocksResourceCapacity)
@@ -669,7 +668,7 @@ public partial class GameBootstrap
 
     private void AddDocksImportTripIfAvailable(List<TripOption> trips, LocationData docks, TradeResourceType resource, TripType tripType, string label)
     {
-        if (docks.DocksImportResource != resource || GetDocksImportStoredResource(docks, resource) <= 0)
+        if (GetDocksImportStoredResource(docks, resource) <= 0)
         {
             return;
         }

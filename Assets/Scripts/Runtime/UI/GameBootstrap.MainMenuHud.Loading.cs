@@ -84,7 +84,7 @@ public partial class GameBootstrap
         miscRoot = new GameObject("Misc").transform;
         miscRoot.SetParent(worldRoot, false);
 
-        const int totalSteps = 25;
+        const int totalSteps = 26;
         int step = 0;
 
         SetLoadingProgress(++step / (float)totalSteps, "Camera & lighting..."); yield return null;
@@ -92,6 +92,9 @@ public partial class GameBootstrap
 
         SetLoadingProgress(++step / (float)totalSteps, "Populating water..."); yield return null;
         GenerateNaturalZones(); PopulateWaterCells();
+
+        SetLoadingProgress(++step / (float)totalSteps, "Regional map..."); yield return null;
+        GenerateRegionalMapState();
 
         SetLoadingProgress(++step / (float)totalSteps, "Setting up locations..."); yield return null;
         SetupLocations();

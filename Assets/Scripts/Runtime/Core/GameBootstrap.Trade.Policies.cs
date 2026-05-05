@@ -77,25 +77,7 @@ public partial class GameBootstrap
 
     private bool HasBuiltTradeRouteForOrder(TradeResourceType resourceType, TradeOrderType orderType)
     {
-        for (int i = 0; i < worldMapTradeRoutesBuilt.Length; i++)
-        {
-            if (i == 4 || !IsWorldMapTradeRouteBuilt(i) || !IsWorldMapRegionKnown(i))
-            {
-                continue;
-            }
-
-            (TradeResourceType[] regionSells, TradeResourceType[] regionBuys) = GetRegionTradeCatalog(i);
-            TradeResourceType[] catalog = orderType == TradeOrderType.Buy ? regionSells : regionBuys;
-            for (int j = 0; j < catalog.Length; j++)
-            {
-                if (catalog[j] == resourceType)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return HasBuiltRegionalTradeRoute(resourceType, orderType);
     }
 
     private string GetTradeRouteMissingLabel(TradeResourceType resourceType, TradeOrderType orderType)
@@ -138,7 +120,7 @@ public partial class GameBootstrap
             int amount = GetWarehouseTradeResourceAmount(resourceType);
             int target = GetTradePolicyTarget(resourceType);
             TradeOrderType orderType = mode == TradePolicyMode.SellAbove ? TradeOrderType.Sell : TradeOrderType.Buy;
-            if (!HasBuiltTradeRouteForOrder(resourceType, orderType))
+            if (!HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land))
             {
                 continue;
             }
@@ -174,13 +156,14 @@ public partial class GameBootstrap
             }
 
             TradeOrderType orderType = mode == TradePolicyMode.SellAbove ? TradeOrderType.Sell : TradeOrderType.Buy;
-            if (!HasBuiltTradeRouteForOrder(resourceType, orderType))
+            if (!HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land))
             {
-                SessionDebugLogger.Log("TRADE_AUTO", $"Policy skipped: {orderType} {resourceType} has no built regional route.");
+                SessionDebugLogger.Log("TRADE_AUTO", $"Policy skipped for land dispatch: {orderType} {resourceType} has no built land route.");
                 continue;
             }
 
-            request = TradeOrderQueueService.CreateOrder(0, resourceType, orderType, Mathf.Clamp(delta, 1, 5));
+            TryFindBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land, out RegionalCityData city);
+            request = TradeOrderQueueService.CreateOrder(0, resourceType, orderType, Mathf.Clamp(delta, 1, 5), city?.RegionIndex ?? -1);
             return true;
         }
 

@@ -6,8 +6,6 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
-    private static Sprite s_regionalWorldMapSprite;
-
     private void SetupWorldMapScreenUi()
     {
         if (worldMapScreenUi != null) return;
@@ -234,25 +232,20 @@ public partial class GameBootstrap
         PlayUiSound(uiSelectClip, 0.82f);
     }
 
-    private static string GetWorldMapRegionName(int regionIndex)
+    private string GetWorldMapRegionName(int regionIndex)
     {
-        return regionIndex switch
-        {
-            0 => "Undeveloped North",
-            1 => "Undeveloped Woods",
-            2 => "Undeveloped Port",
-            3 => "Undeveloped Flats",
-            4 => "Your Town",
-            5 => "Weaverford",
-            6 => "Oakbarrel",
-            7 => "Undeveloped Steppe",
-            8 => "Undeveloped Coast",
-            _ => "Unknown Region"
-        };
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        return city != null && city.IsKnown ? city.NameEn : "Unknown Region";
     }
 
     private string GetWorldMapRegionDisplayName(int regionIndex)
     {
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        if (city != null && city.IsKnown)
+        {
+            return IsRussianLanguage() ? city.NameRu : city.NameEn;
+        }
+
         if (!IsRussianLanguage())
             return GetWorldMapRegionName(regionIndex);
 
@@ -271,18 +264,20 @@ public partial class GameBootstrap
         };
     }
 
-    private static string GetWorldMapRegionTypeLabel(int regionIndex)
+    private string GetWorldMapRegionTypeLabel(int regionIndex)
     {
-        return regionIndex switch
-        {
-            4 => "Current region",
-            5 or 6 => "Neighbor city",
-            _ => "Empty region slot"
-        };
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        return city != null && city.IsKnown ? city.TypeEn : "Empty region slot";
     }
 
     private string GetWorldMapRegionTypeDisplayLabel(int regionIndex)
     {
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        if (city != null && city.IsKnown)
+        {
+            return IsRussianLanguage() ? city.TypeRu : city.TypeEn;
+        }
+
         if (!IsRussianLanguage())
             return GetWorldMapRegionTypeLabel(regionIndex);
 
@@ -303,6 +298,19 @@ public partial class GameBootstrap
         }
 
         bool hasRoute = IsWorldMapTradeRouteBuilt(regionIndex);
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        if (city != null)
+        {
+            string routeMode = GetRegionalRouteModeLabel(city.RouteMode);
+            if (IsRussianLanguage())
+            {
+                return hasRoute
+                    ? $"{type} В· {routeMode} В· \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043f\u0440\u043e\u043b\u043e\u0436\u0435\u043d"
+                    : $"{type} В· {routeMode} В· \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043d\u0435 \u043f\u0440\u043e\u043b\u043e\u0436\u0435\u043d";
+            }
+
+            return hasRoute ? $"{type} В· {routeMode} В· route built" : $"{type} В· {routeMode} В· no trade route";
+        }
         if (IsRussianLanguage())
         {
             return hasRoute ? $"{type} · \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043f\u0440\u043e\u043b\u043e\u0436\u0435\u043d" : $"{type} · \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043d\u0435 \u043f\u0440\u043e\u043b\u043e\u0436\u0435\u043d";
@@ -361,19 +369,22 @@ public partial class GameBootstrap
         };
     }
 
-    private static string GetWorldMapRegionDescription(int regionIndex)
+    private string GetWorldMapRegionDescription(int regionIndex)
     {
-        return regionIndex switch
-        {
-            4 => "This is your active simulation region. It contains the current town, highways, production buildings, and local roads.",
-            5 => "A compact textile town built around old weaving mills. It sells finished textile and buys furniture for workshops, offices, and worker housing.",
-            6 => "A river-valley distillery town with barrel houses and bottling shops. It sells alcohol, while local workshops buy boards and furniture.",
-            _ => "This region exists on the wider map, but it has not been fully designed or assigned concrete production data yet."
-        };
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        return city != null && city.IsKnown
+            ? city.DescriptionEn
+            : "This region exists on the wider map, but it has not been fully surveyed yet.";
     }
 
     private string GetWorldMapRegionDescriptionDisplay(int regionIndex)
     {
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        if (city != null && city.IsKnown)
+        {
+            return IsRussianLanguage() ? city.DescriptionRu : city.DescriptionEn;
+        }
+
         if (!IsRussianLanguage())
             return GetWorldMapRegionDescription(regionIndex);
 
@@ -386,9 +397,10 @@ public partial class GameBootstrap
         };
     }
 
-    private static bool IsWorldMapRegionKnown(int regionIndex)
+    private bool IsWorldMapRegionKnown(int regionIndex)
     {
-        return regionIndex == 4 || regionIndex == 5 || regionIndex == 6;
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        return city != null && city.IsKnown;
     }
 
     private void UpdateWorldMapScreenUi()
@@ -548,7 +560,8 @@ public partial class GameBootstrap
 
     private bool IsWorldMapTradeRouteBuilt(int regionIndex)
     {
-        return regionIndex >= 0 && regionIndex < worldMapTradeRoutesBuilt.Length && worldMapTradeRoutesBuilt[regionIndex];
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        return city != null && city.TradeRouteBuilt;
     }
 
     private void RefreshWorldMapResourceTables(int regionIndex)
@@ -647,14 +660,12 @@ public partial class GameBootstrap
         return IsRussianLanguage() ? $"Регион: {name}" : $"Region: {name}";
     }
 
-    private static (TradeResourceType[] buyable, TradeResourceType[] sellable) GetRegionTradeCatalog(int regionIndex)
+    private (TradeResourceType[] buyable, TradeResourceType[] sellable) GetRegionTradeCatalog(int regionIndex)
     {
-        return regionIndex switch
-        {
-            5 => (new[] { TradeResourceType.Textile }, new[] { TradeResourceType.Furniture }),
-            6 => (new[] { TradeResourceType.Alcohol }, new[] { TradeResourceType.Boards, TradeResourceType.Furniture }),
-            _ => (TradeImportCatalog, TradeExportCatalog)
-        };
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        return city != null && city.IsKnown
+            ? (city.Sells, city.Buys)
+            : (System.Array.Empty<TradeResourceType>(), System.Array.Empty<TradeResourceType>());
     }
 
     private void BuildSelectedWorldMapTradeRoute()
@@ -665,9 +676,15 @@ public partial class GameBootstrap
             return;
         }
 
-        worldMapTradeRoutesBuilt[regionIndex] = true;
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        if (city == null)
+        {
+            return;
+        }
+
+        city.TradeRouteBuilt = true;
         isWorldMapScreenDirty = true;
-        SessionDebugLogger.Log("TRADE_HUD", $"Built regional trade route: region={regionIndex}; name={GetWorldMapRegionName(regionIndex)}.");
+        SessionDebugLogger.Log("TRADE_ROUTE", $"Built regional trade route: region={regionIndex}; name={city.NameEn}; mode={city.RouteMode}.");
         PlayUiSound(uiPanelOpenClip, 0.88f);
         LogUiInput($"Map trade route built -> region {regionIndex}");
     }

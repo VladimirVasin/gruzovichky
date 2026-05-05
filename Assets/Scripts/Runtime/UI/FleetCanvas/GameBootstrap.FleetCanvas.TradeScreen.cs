@@ -213,7 +213,7 @@ public partial class GameBootstrap
 
         return IsRussianLanguage()
             ? $"Активных политик: {CountActiveTradePolicies()}. Рейсы запускаются автоматически при наличии водителя и грузовика."
-            : $"Active policies: {CountActiveTradePolicies()}. Runs dispatch automatically when a driver and truck are available.";
+            : $"Active policies: {CountActiveTradePolicies()}. Land routes send merchant trucks; river routes wait for a ship at Docks.";
     }
 
     private void SetTradePolicyMode(TradeResourceType resourceType, TradePolicyMode mode)

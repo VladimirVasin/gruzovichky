@@ -43,15 +43,16 @@ public partial class GameBootstrap
         return image;
     }
 
-    private static Sprite GetRegionalWorldMapSprite()
+    private Sprite GetRegionalWorldMapSprite()
     {
-        if (s_regionalWorldMapSprite != null)
+        if (regionalWorldMapSprite != null)
         {
-            return s_regionalWorldMapSprite;
+            return regionalWorldMapSprite;
         }
 
-        s_regionalWorldMapSprite = CreateRegionalWorldMapPixelSprite();
-        return s_regionalWorldMapSprite;
+        EnsureRegionalMapState();
+        regionalWorldMapSprite = CreateRegionalWorldMapPixelSprite();
+        return regionalWorldMapSprite;
     }
 
     private static float DistanceToEllipse(float x, float y, float cx, float cy, float rx, float ry)
@@ -480,24 +481,27 @@ public partial class GameBootstrap
             image.gameObject.SetActive(active);
     }
 
-    private static Vector2 GetWorldMapRegionPosition(int regionIndex)
+    private Vector2 GetWorldMapRegionPosition(int regionIndex)
     {
+        RegionalCityData city = GetRegionalCity(regionIndex);
+        if (city != null && city.IsKnown)
+        {
+            return city.Position;
+        }
+
         return regionIndex switch
         {
             0 => new Vector2(0.18f, 0.82f),
             1 => new Vector2(0.42f, 0.76f),
             2 => new Vector2(0.78f, 0.68f),
             3 => new Vector2(0.18f, 0.48f),
-            4 => new Vector2(0.50f, 0.47f),
-            5 => new Vector2(0.76f, 0.45f),
-            6 => new Vector2(0.28f, 0.20f),
             7 => new Vector2(0.52f, 0.18f),
             8 => new Vector2(0.83f, 0.24f),
             _ => new Vector2(0.5f, 0.5f)
         };
     }
 
-    private static void UpdateWorldMapRouteLine(Image line, RectTransform mapRoot, int regionIndex, bool visible, Color color)
+    private void UpdateWorldMapRouteLine(Image line, RectTransform mapRoot, int regionIndex, bool visible, Color color)
     {
         if (line == null || mapRoot == null)
         {

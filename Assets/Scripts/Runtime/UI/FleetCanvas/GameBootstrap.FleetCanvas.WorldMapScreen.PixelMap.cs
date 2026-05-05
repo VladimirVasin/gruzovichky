@@ -2,8 +2,9 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private static Sprite CreateRegionalWorldMapPixelSprite()
+    private Sprite CreateRegionalWorldMapPixelSprite()
     {
+        EnsureRegionalMapState();
         const int width = 384;
         const int height = 216;
         Texture2D tex = new(width, height, TextureFormat.RGBA32, false)
@@ -16,7 +17,6 @@ public partial class GameBootstrap
         Color grass = new(0.29f, 0.50f, 0.30f, 1f);
         Color dryGrass = new(0.50f, 0.53f, 0.34f, 1f);
         Color sand = new(0.74f, 0.63f, 0.38f, 1f);
-        Color desert = new(0.66f, 0.54f, 0.31f, 1f);
         Color water = new(0.16f, 0.45f, 0.62f, 1f);
         Color deepWater = new(0.10f, 0.31f, 0.47f, 1f);
         Color shore = new(0.62f, 0.62f, 0.38f, 1f);
@@ -27,51 +27,66 @@ public partial class GameBootstrap
             for (int x = 0; x < width; x++)
             {
                 float nx = x / (float)(width - 1);
-                Color baseColor = nx < 0.34f && ny > 0.50f ? grass : nx > 0.62f ? sand : dryGrass;
-                if (nx > 0.72f && ny < 0.62f) baseColor = desert;
-                if (nx < 0.10f && ny > 0.44f) baseColor = water;
-                if (nx > 0.80f && ny < 0.44f) baseColor = water;
-                if (ny > 0.80f && nx < 0.78f) baseColor = Color.Lerp(water, deepWater, 0.35f);
+                Vector2 p = new(nx, ny);
+                Color baseColor = nx < 0.34f && ny > 0.50f ? grass : nx > 0.68f ? sand : dryGrass;
+                if (ny > 0.88f || nx < 0.055f && ny > 0.36f || nx > 0.92f && ny < 0.46f)
+                {
+                    baseColor = Color.Lerp(water, deepWater, ny > 0.88f ? 0.30f : 0.12f);
+                }
 
-                float hash = PixelMapHash01(x / 6, y / 6);
+                for (int i = 0; i < regionalMapData.Lakes.Count; i++)
+                {
+                    Vector2 lake = regionalMapData.Lakes[i];
+                    float lakeDistance = DistanceToEllipse(nx, ny, lake.x, lake.y, 0.070f, 0.045f);
+                    if (lakeDistance < 1.0f)
+                    {
+                        baseColor = Color.Lerp(water, deepWater, 0.10f);
+                    }
+                    else if (lakeDistance < 1.25f)
+                    {
+                        baseColor = shore;
+                    }
+                }
+
+                float riverDistance = DistanceToRegionalRiver(p);
+                if (riverDistance < 0.014f)
+                {
+                    baseColor = water;
+                }
+                else if (riverDistance < 0.024f)
+                {
+                    baseColor = shore;
+                }
+
+                float hash = PixelMapHash01(x / 6 + regionalMapData.Seed, y / 6);
                 float shade = 0.94f + hash * 0.12f;
                 pixels[y * width + x] = baseColor * shade;
             }
         }
 
-        DrawPixelPatch(pixels, width, height, new Vector2(0.21f, 0.72f), new Vector2(0.34f, 0.16f), new Color(0.23f, 0.43f, 0.25f, 1f));
-        DrawPixelPatch(pixels, width, height, new Vector2(0.28f, 0.27f), new Vector2(0.30f, 0.16f), new Color(0.27f, 0.46f, 0.27f, 1f));
-        DrawPixelPatch(pixels, width, height, new Vector2(0.47f, 0.45f), new Vector2(0.22f, 0.10f), new Color(0.34f, 0.49f, 0.29f, 1f));
-        DrawPixelPatch(pixels, width, height, new Vector2(0.73f, 0.18f), new Vector2(0.22f, 0.09f), new Color(0.51f, 0.48f, 0.40f, 1f));
+        for (int i = 0; i < regionalMapData.Forests.Count; i++)
+        {
+            DrawPixelPatch(pixels, width, height, regionalMapData.Forests[i], new Vector2(0.28f, 0.15f), new Color(0.23f, 0.43f, 0.25f, 1f));
+            DrawPixelTreeCluster(pixels, width, height, regionalMapData.Forests[i], 26 + i * 7);
+        }
 
         Color river = new(0.14f, 0.43f, 0.60f, 1f);
-        DrawPixelPath(pixels, width, height, shore, 8,
-            new Vector2(0.50f, 1.03f), new Vector2(0.49f, 0.82f), new Vector2(0.53f, 0.64f),
-            new Vector2(0.49f, 0.47f), new Vector2(0.54f, 0.30f), new Vector2(0.58f, -0.03f));
-        DrawPixelPath(pixels, width, height, river, 6,
-            new Vector2(0.50f, 1.03f), new Vector2(0.49f, 0.82f), new Vector2(0.53f, 0.64f),
-            new Vector2(0.49f, 0.47f), new Vector2(0.54f, 0.30f), new Vector2(0.58f, -0.03f));
-        DrawPixelPath(pixels, width, height, new Color(0.22f, 0.56f, 0.70f, 1f), 2,
-            new Vector2(0.50f, 1.03f), new Vector2(0.49f, 0.82f), new Vector2(0.53f, 0.64f),
-            new Vector2(0.49f, 0.47f), new Vector2(0.54f, 0.30f), new Vector2(0.58f, -0.03f));
-        DrawPixelPath(pixels, width, height, shore, 5, new Vector2(0.50f, 0.55f), new Vector2(0.68f, 0.43f));
-        DrawPixelPath(pixels, width, height, river, 3, new Vector2(0.50f, 0.55f), new Vector2(0.68f, 0.43f));
-        DrawPixelPath(pixels, width, height, shore, 5, new Vector2(0.49f, 0.70f), new Vector2(0.34f, 0.76f));
-        DrawPixelPath(pixels, width, height, river, 3, new Vector2(0.49f, 0.70f), new Vector2(0.34f, 0.76f));
-
-        DrawPixelTreeCluster(pixels, width, height, new Vector2(0.18f, 0.74f), 32);
-        DrawPixelTreeCluster(pixels, width, height, new Vector2(0.27f, 0.24f), 28);
-        DrawPixelTreeCluster(pixels, width, height, new Vector2(0.34f, 0.14f), 12);
+        DrawPixelPath(pixels, width, height, shore, 8, regionalMapData.RiverPath);
+        DrawPixelPath(pixels, width, height, river, 6, regionalMapData.RiverPath);
+        DrawPixelPath(pixels, width, height, new Color(0.22f, 0.56f, 0.70f, 1f), 2, regionalMapData.RiverPath);
         DrawPixelShrubCluster(pixels, width, height, new Vector2(0.62f, 0.62f), 22);
         DrawPixelShrubCluster(pixels, width, height, new Vector2(0.66f, 0.30f), 16);
-        DrawPixelMountainCluster(pixels, width, height, new Vector2(0.25f, 0.86f), 9);
-        DrawPixelMountainCluster(pixels, width, height, new Vector2(0.73f, 0.19f), 8);
+        for (int i = 0; i < regionalMapData.Mountains.Count; i++)
+        {
+            DrawPixelMountainCluster(pixels, width, height, regionalMapData.Mountains[i], 7 + i);
+        }
 
         for (int i = 0; i < 9; i++)
         {
-            if (IsWorldMapRegionKnown(i))
+            RegionalCityData city = GetRegionalCity(i);
+            if (city != null && city.IsKnown)
             {
-                DrawPixelTown(pixels, width, height, GetWorldMapRegionPosition(i), i == 4, true);
+                DrawPixelTown(pixels, width, height, city.Position, city.IsCurrentCity, true);
             }
         }
 

@@ -519,7 +519,9 @@ public partial class GameBootstrap
             return;
         }
 
-        bool entranceConnected = IsBuildingEntranceConnectedToRoad(anchorCell);
+        Vector2Int connectionCell = GetPlacedBuildingConnectionCell(placedTool, anchorCell);
+        string connectionLabel = placedTool == BuildTool.Docks ? "road access" : "entrance";
+        bool entranceConnected = IsBuildingEntranceConnectedToRoad(connectionCell);
         if (entranceConnected)
         {
             activeBuildTool = BuildTool.None;
@@ -527,7 +529,7 @@ public partial class GameBootstrap
             HideBuildHoverHighlights();
             isBuildScreenDirty = true;
             RefreshSelectionVisuals();
-            SessionDebugLogger.Log("BUILD", $"{placedTool} entrance at ({anchorCell.x},{anchorCell.y}) is connected to road. Build mode cleared.");
+            SessionDebugLogger.Log("BUILD", $"{placedTool} {connectionLabel} at ({connectionCell.x},{connectionCell.y}) is connected to road. Build mode cleared.");
             return;
         }
 
@@ -537,7 +539,18 @@ public partial class GameBootstrap
         isBuildScreenDirty = true;
         UpdateBuildHoverHighlight();
         RefreshSelectionVisuals();
-        SessionDebugLogger.Log("BUILD", $"{placedTool} entrance at ({anchorCell.x},{anchorCell.y}) is not connected to road. Switched to Road build tool.");
+        SessionDebugLogger.Log("BUILD", $"{placedTool} {connectionLabel} at ({connectionCell.x},{connectionCell.y}) is not connected to road. Switched to Road build tool.");
+    }
+
+    private Vector2Int GetPlacedBuildingConnectionCell(BuildTool placedTool, Vector2Int fallbackCell)
+    {
+        if (placedTool == BuildTool.Docks &&
+            locations.TryGetValue(LocationType.Docks, out LocationData docks))
+        {
+            return docks.RoadAccess;
+        }
+
+        return fallbackCell;
     }
 
     private bool IsBuildingEntranceConnectedToRoad(Vector2Int anchorCell)

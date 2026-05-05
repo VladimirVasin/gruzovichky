@@ -113,33 +113,30 @@ public partial class GameBootstrap
 
     private string PerformDocksShipTrade(LocationData docks)
     {
-        bool canSell = CanDocksSellResource(docks.DocksExportResource);
-        int sold = canSell ? Mathf.Min(DocksShipTradeBatch, GetDocksExportStoredResource(docks, docks.DocksExportResource)) : 0;
+        bool canSell = TryFindDocksShipTrade(docks, TradeOrderType.Sell, out TradeResourceType sellResource, out int sellQuantity);
+        int sold = canSell ? sellQuantity : 0;
         int saleMoney = 0;
-        if (sold > 0 && TryConsumeDocksExportStoredResource(docks, docks.DocksExportResource, sold))
+        if (sold > 0 && TryConsumeDocksExportStoredResource(docks, sellResource, sold))
         {
-            saleMoney = sold * GetDocksSellPrice(docks.DocksExportResource);
+            saleMoney = sold * GetDocksSellPrice(sellResource);
             money += saleMoney;
-            RecordMoneyMovement(saleMoney, "River Ship", "Treasury", $"Docks sale: {GetTradeResourceLabel(docks.DocksExportResource)} x{sold}", money);
+            RecordMoneyMovement(saleMoney, "River Ship", "Treasury", $"Docks sale: {GetTradeResourceLabel(sellResource)} x{sold}", money);
         }
 
-        bool canBuy = CanDocksBuyResource(docks.DocksImportResource);
-        int buyRoom = DocksResourceCapacity - GetDocksImportStoredResource(docks, docks.DocksImportResource);
-        int targetNeed = GetTradePolicyTarget(docks.DocksImportResource) -
-                         (GetWarehouseTradeResourceAmount(docks.DocksImportResource) + GetDocksImportStoredResource(docks, docks.DocksImportResource));
-        int bought = canBuy ? Mathf.Min(DocksShipTradeBatch, Mathf.Min(Mathf.Max(0, buyRoom), Mathf.Max(0, targetNeed))) : 0;
+        bool canBuy = TryFindDocksShipTrade(docks, TradeOrderType.Buy, out TradeResourceType buyResource, out int buyQuantity);
+        int bought = canBuy ? buyQuantity : 0;
         int buyMoney = 0;
         if (bought > 0)
         {
-            int unitPrice = GetDocksBuyPrice(docks.DocksImportResource);
+            int unitPrice = GetDocksBuyPrice(buyResource);
             int affordable = Mathf.Min(bought, unitPrice > 0 ? money / unitPrice : 0);
             if (affordable > 0)
             {
                 bought = affordable;
                 buyMoney = bought * unitPrice;
                 money -= buyMoney;
-                AddDocksImportStoredResource(docks, docks.DocksImportResource, bought);
-                RecordMoneyMovement(-buyMoney, "Treasury", "River Ship", $"Docks purchase: {GetTradeResourceLabel(docks.DocksImportResource)} x{bought}", money);
+                AddDocksImportStoredResource(docks, buyResource, bought);
+                RecordMoneyMovement(-buyMoney, "Treasury", "River Ship", $"Docks purchase: {GetTradeResourceLabel(buyResource)} x{bought}", money);
             }
             else
             {
@@ -148,16 +145,60 @@ public partial class GameBootstrap
         }
 
         string soldText = sold > 0
-            ? $"sold {GetTradeResourceLabel(docks.DocksExportResource)} x{sold} for ${saleMoney}"
+            ? $"sold {GetTradeResourceLabel(sellResource)} x{sold} for ${saleMoney}"
             : canSell
-                ? $"no {GetTradeResourceLabel(docks.DocksExportResource)} ready to sell"
-                : $"export disabled for {GetTradeResourceLabel(docks.DocksExportResource)}";
+                ? $"no {GetTradeResourceLabel(sellResource)} ready to sell"
+                : "no river export policy ready";
         string boughtText = bought > 0
-            ? $"bought {GetTradeResourceLabel(docks.DocksImportResource)} x{bought} for ${buyMoney}"
+            ? $"bought {GetTradeResourceLabel(buyResource)} x{bought} for ${buyMoney}"
             : canBuy
-                ? $"no {GetTradeResourceLabel(docks.DocksImportResource)} bought"
-                : $"import disabled for {GetTradeResourceLabel(docks.DocksImportResource)}";
+                ? $"no {GetTradeResourceLabel(buyResource)} bought"
+                : "no river import policy ready";
+        SessionDebugLogger.Log("TRADE_RIVER", $"Ship trade at Docks: {soldText}; {boughtText}; treasury=${money}.");
         return $"{soldText}; {boughtText}.";
+    }
+
+    private bool TryFindDocksShipTrade(LocationData docks, TradeOrderType orderType, out TradeResourceType resourceType, out int quantity)
+    {
+        for (int i = 0; i < TradeHudResources.Length; i++)
+        {
+            TradeResourceType candidate = TradeHudResources[i];
+            TradePolicyMode mode = GetTradePolicyMode(candidate);
+            if (orderType == TradeOrderType.Buy && mode != TradePolicyMode.BuyUpTo ||
+                orderType == TradeOrderType.Sell && mode != TradePolicyMode.SellAbove ||
+                !HasBuiltRegionalTradeRoute(candidate, orderType, RegionalTradeRouteMode.River))
+            {
+                continue;
+            }
+
+            int target = GetTradePolicyTarget(candidate);
+            if (orderType == TradeOrderType.Buy)
+            {
+                int stock = GetWarehouseTradeResourceAmount(candidate) + GetDocksImportStoredResource(docks, candidate);
+                int room = DocksResourceCapacity - GetDocksImportStoredResource(docks, candidate);
+                quantity = Mathf.Min(DocksShipTradeBatch, Mathf.Min(Mathf.Max(0, target - stock), Mathf.Max(0, room)));
+                if (quantity > 0)
+                {
+                    resourceType = candidate;
+                    return true;
+                }
+            }
+            else
+            {
+                int dockStock = GetDocksExportStoredResource(docks, candidate);
+                int totalStock = GetWarehouseTradeResourceAmount(candidate) + dockStock;
+                quantity = Mathf.Min(DocksShipTradeBatch, Mathf.Min(dockStock, Mathf.Max(0, totalStock - target)));
+                if (quantity > 0)
+                {
+                    resourceType = candidate;
+                    return true;
+                }
+            }
+        }
+
+        resourceType = TradeResourceType.Logs;
+        quantity = 0;
+        return false;
     }
 
     private void EnsureDocksShipObject(LocationData docks)
