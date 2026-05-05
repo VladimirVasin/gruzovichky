@@ -542,8 +542,8 @@ public partial class GameBootstrap
                 flickerBlend = softPulse * randomPulse * blinkPulse;
             }
 
-            float lightIntensity = Mathf.Lerp(0.2f, 1.56f, baseActivation) * flickerBlend;
-            float glowStrength = Mathf.Lerp(0.14f, 1f, baseActivation) * Mathf.Lerp(0.92f, 1f, flickerBlend);
+            float lightIntensity = Mathf.Lerp(0.35f, 2.35f, baseActivation) * flickerBlend;
+            float glowStrength = Mathf.Lerp(0.18f, 1.18f, baseActivation) * Mathf.Lerp(0.92f, 1f, flickerBlend);
             Color lanternColor = Color.Lerp(
                 new Color(0.26f, 0.16f, 0.08f),
                 new Color(1f, 0.78f, 0.42f),

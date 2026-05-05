@@ -168,6 +168,7 @@ public partial class GameBootstrap
         public int ContractStartedDay;
         public VacancyKind ContractVacancyKind = VacancyKind.None;
         public LocationType? ContractBuildingType;
+        public int ContractBuildingInstanceId;
         public int ContractSlotIndex = -1;
         public int ContractShiftIndex = -1;
         public WorkerProfessionalTrack ContractProfessionalTrack = WorkerProfessionalTrack.None;
@@ -245,6 +246,7 @@ public partial class GameBootstrap
         public readonly List<Vector3> PersonalCarPath = new();
         public int PersonalCarWaypointIndex;
         public LocationType? AssignedBuildingType;
+        public int AssignedBuildingInstanceId;
         public int LogisticsExperienceDays;
         public int ProductionExperienceDays;
         public int ServiceExperienceDays;
@@ -267,6 +269,7 @@ public partial class GameBootstrap
         public int Id;
         public VacancyKind Kind;
         public LocationType BuildingType;
+        public int BuildingInstanceId;
         public int SlotIndex;
         public int ShiftIndex = -1;
         public int TruckNumber;
@@ -281,10 +284,11 @@ public partial class GameBootstrap
 
     private readonly struct LaborExchangeCandidate
     {
-        public LaborExchangeCandidate(VacancyKind kind, LocationType buildingType, int slotIndex, int shiftIndex, int truckNumber, int priority)
+        public LaborExchangeCandidate(VacancyKind kind, LocationType buildingType, int buildingInstanceId, int slotIndex, int shiftIndex, int truckNumber, int priority)
         {
             Kind = kind;
             BuildingType = buildingType;
+            BuildingInstanceId = buildingInstanceId;
             SlotIndex = slotIndex;
             ShiftIndex = shiftIndex;
             TruckNumber = truckNumber;
@@ -293,6 +297,7 @@ public partial class GameBootstrap
 
         public readonly VacancyKind Kind;
         public readonly LocationType BuildingType;
+        public readonly int BuildingInstanceId;
         public readonly int SlotIndex;
         public readonly int ShiftIndex;
         public readonly int TruckNumber;

@@ -162,7 +162,8 @@ public partial class GameBootstrap
         Boards,
         Cotton,
         Textile,
-        Furniture
+        Furniture,
+        Alcohol
     }
 
     private void CreateResourceSummaryRow(RectTransform parent, Font font, string title, ResourceVisualKind iconKind, List<ResourceSummaryRowUi> rows)
@@ -242,6 +243,12 @@ public partial class GameBootstrap
                 CreateIconBar(parent, new Vector2(14f, 4f), new Vector2(0f, -1f), new Color(0.72f, 0.5f, 0.25f));
                 CreateIconBar(parent, new Vector2(3f, 10f), new Vector2(-6f, -8f), new Color(0.58f, 0.39f, 0.18f));
                 CreateIconBar(parent, new Vector2(3f, 10f), new Vector2(6f, -8f), new Color(0.58f, 0.39f, 0.18f));
+                break;
+            case ResourceVisualKind.Alcohol:
+                CreateIconBar(parent, new Vector2(8f, 16f), new Vector2(0f, -4f), new Color(0.38f, 0.18f, 0.08f));
+                CreateIconBar(parent, new Vector2(5f, 7f), new Vector2(0f, 7f), new Color(0.18f, 0.42f, 0.22f));
+                CreateIconBar(parent, new Vector2(10f, 3f), new Vector2(0f, -2f), new Color(0.82f, 0.60f, 0.22f));
+                CreateIconBar(parent, new Vector2(6f, 3f), new Vector2(0f, -8f), new Color(0.92f, 0.72f, 0.30f));
                 break;
         }
     }

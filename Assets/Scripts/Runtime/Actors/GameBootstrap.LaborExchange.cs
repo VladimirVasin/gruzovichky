@@ -59,6 +59,69 @@ public partial class GameBootstrap
                CountWorkersOnShiftAt(LocationType.LaborExchange) > 0;
     }
 
+    private void TryAutoAssignHigherEducatedLaborExchangeClerk(string reason)
+    {
+        if (!locations.ContainsKey(LocationType.LaborExchange))
+        {
+            return;
+        }
+
+        if (CountLogisticsWorkers(LocationType.LaborExchange) > 0)
+        {
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"Auto clerk assignment skipped ({reason}): Labor Exchange already has assigned staff.");
+            return;
+        }
+
+        LogisticsSlotUi slot = FindLogisticsSlot(LocationType.LaborExchange, 0);
+        if (slot == null)
+        {
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"Auto clerk assignment skipped ({reason}): Labor Exchange staff slot is not initialized.");
+            return;
+        }
+
+        DriverAgent candidate = FindAutoLaborExchangeClerkCandidate();
+        if (candidate == null)
+        {
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"Auto clerk assignment skipped ({reason}): no vacant higher-educated worker found.");
+            return;
+        }
+
+        AssignWorkerToBuilding(candidate, slot);
+        if (candidate.DutyMode == DriverDutyMode.Logistics &&
+            candidate.AssignedBuildingType == LocationType.LaborExchange)
+        {
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"Auto-assigned {candidate.DriverName} as Labor Exchange clerk ({reason}).");
+        }
+    }
+
+    private DriverAgent FindAutoLaborExchangeClerkCandidate()
+    {
+        DriverAgent fallback = null;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (!HasHigherEducation(driver))
+            {
+                continue;
+            }
+
+            if (!IsWorkerVacantForVacancyAssignment(driver))
+            {
+                fallback ??= driver;
+                continue;
+            }
+
+            return driver;
+        }
+
+        if (fallback != null)
+        {
+            SessionDebugLogger.Log("LABOR_EXCHANGE", $"Higher-educated worker exists but is unavailable for clerk auto-assignment: {fallback.DriverName}.");
+        }
+
+        return null;
+    }
+
     private bool IsLaborExchangeReadyForApplicants(out string reason)
     {
         if (!locations.ContainsKey(LocationType.LaborExchange))
@@ -202,6 +265,7 @@ public partial class GameBootstrap
             Id = nextLaborExchangePostingId++,
             Kind = candidate.Kind,
             BuildingType = candidate.BuildingType,
+            BuildingInstanceId = candidate.BuildingInstanceId,
             SlotIndex = candidate.SlotIndex,
             ShiftIndex = candidate.ShiftIndex,
             TruckNumber = candidate.TruckNumber,
@@ -268,9 +332,9 @@ public partial class GameBootstrap
             for (int i = 0; i < ShiftPresetHours.Length; i++)
             {
                 if (!IsAnyTruckDriverAssignedToShift(i) &&
-                    !HasLaborExchangePosting(VacancyKind.TruckDriver, LocationType.Parking, -1, i))
+                    !HasLaborExchangePosting(VacancyKind.TruckDriver, LocationType.Parking, 0, -1, i))
                 {
-                    candidates.Add(new LaborExchangeCandidate(VacancyKind.TruckDriver, LocationType.Parking, -1, i, 0, 30));
+                    candidates.Add(new LaborExchangeCandidate(VacancyKind.TruckDriver, LocationType.Parking, 0, -1, i, 0, 30));
                 }
             }
         }
@@ -282,9 +346,9 @@ public partial class GameBootstrap
             for (int i = 0; i < ShiftPresetHours.Length; i++)
             {
                 if (GetBusAssignedDriver(i) == null &&
-                    !HasLaborExchangePosting(VacancyKind.BusDriver, LocationType.Parking, -1, i))
+                    !HasLaborExchangePosting(VacancyKind.BusDriver, LocationType.Parking, 0, -1, i))
                 {
-                    candidates.Add(new LaborExchangeCandidate(VacancyKind.BusDriver, LocationType.Parking, -1, i, 0, 50));
+                    candidates.Add(new LaborExchangeCandidate(VacancyKind.BusDriver, LocationType.Parking, 0, -1, i, 0, 50));
                 }
             }
         }
@@ -298,48 +362,74 @@ public partial class GameBootstrap
             for (int i = 0; i < WarehouseMaxWorkers; i++)
             {
                 if (GetNthLogisticsWorker(LocationType.Warehouse, i) == null &&
-                    !HasLaborExchangePosting(VacancyKind.Production, LocationType.Warehouse, i, -1))
+                    !HasLaborExchangePosting(VacancyKind.Production, LocationType.Warehouse, 0, i, -1))
                 {
-                    candidates.Add(new LaborExchangeCandidate(VacancyKind.Production, LocationType.Warehouse, i, -1, 0, 15));
+                    candidates.Add(new LaborExchangeCandidate(VacancyKind.Production, LocationType.Warehouse, 0, i, -1, 0, 15));
                 }
             }
         }
 
-        for (int i = 0; i < logisticsSlots.Length; i++)
+        LocationType[] buildingTypes =
         {
-            LogisticsSlotUi slot = logisticsSlots[i];
-            if (slot == null ||
-                slot.BuildingType == LocationType.Warehouse ||
-                !locations.ContainsKey(slot.BuildingType) ||
-                GetNthLogisticsWorker(slot.BuildingType, slot.SlotIndex) != null)
+            LocationType.Forest,
+            LocationType.Sawmill,
+            LocationType.FurnitureFactory,
+            LocationType.Docks,
+            LocationType.Motel,
+            LocationType.Bar,
+            LocationType.Canteen,
+            LocationType.GasStation,
+            LocationType.GamblingHall,
+            LocationType.CarMarket,
+            LocationType.LaborExchange
+        };
+
+        for (int ti = 0; ti < buildingTypes.Length; ti++)
+        {
+            LocationType buildingType = buildingTypes[ti];
+            int maxSlots = GetMaxBuildingWorkerSlots(buildingType);
+            if (maxSlots <= 0)
             {
                 continue;
             }
 
-            VacancyKind kind = IsProductionLocation(slot.BuildingType) ? VacancyKind.Production : VacancyKind.Service;
-            if (!IsVacancyUnlockedForCurrentTutorial(kind, slot.BuildingType) ||
-                HasLaborExchangePosting(kind, slot.BuildingType, slot.SlotIndex, -1))
+            VacancyKind kind = IsProductionLocation(buildingType) ? VacancyKind.Production : VacancyKind.Service;
+            if (!IsVacancyUnlockedForCurrentTutorial(kind, buildingType))
             {
                 continue;
             }
 
-            int priority = kind == VacancyKind.Production ? 20 : 40;
-            if (slot.BuildingType == LocationType.LaborExchange)
+            foreach (LocationData location in EnumerateAssignableBuildingLocations(buildingType))
             {
-                priority = 12;
-            }
+                for (int slotIndex = 0; slotIndex < maxSlots; slotIndex++)
+                {
+                    if (GetNthLogisticsWorker(buildingType, slotIndex, location.InstanceId) != null ||
+                        HasLaborExchangePosting(kind, buildingType, location.InstanceId, slotIndex, -1))
+                    {
+                        continue;
+                    }
 
-            candidates.Add(new LaborExchangeCandidate(kind, slot.BuildingType, slot.SlotIndex, -1, 0, priority));
+                    int priority = kind == VacancyKind.Production ? 20 : 40;
+                    if (buildingType == LocationType.LaborExchange)
+                    {
+                        priority = 12;
+                    }
+
+                    candidates.Add(new LaborExchangeCandidate(kind, buildingType, location.InstanceId, slotIndex, -1, 0, priority));
+                }
+            }
         }
     }
 
-    private bool HasLaborExchangePosting(VacancyKind kind, LocationType buildingType, int slotIndex, int shiftIndex)
+    private bool HasLaborExchangePosting(VacancyKind kind, LocationType buildingType, int buildingInstanceId, int slotIndex, int shiftIndex)
     {
+        int resolvedInstanceId = ResolveBuildingInstanceId(buildingType, buildingInstanceId);
         for (int i = 0; i < laborExchangePostings.Count; i++)
         {
             LaborExchangePosting posting = laborExchangePostings[i];
             if (posting.Kind == kind &&
                 posting.BuildingType == buildingType &&
+                posting.BuildingInstanceId == resolvedInstanceId &&
                 posting.SlotIndex == slotIndex &&
                 posting.ShiftIndex == shiftIndex)
             {
@@ -496,8 +586,8 @@ public partial class GameBootstrap
         return posting.Kind switch
         {
             VacancyKind.Production or VacancyKind.Service =>
-                locations.ContainsKey(posting.BuildingType) &&
-                GetNthLogisticsWorker(posting.BuildingType, posting.SlotIndex) == null,
+                IsLocationInstanceBuilt(posting.BuildingType, posting.BuildingInstanceId) &&
+                GetNthLogisticsWorker(posting.BuildingType, posting.SlotIndex, posting.BuildingInstanceId) == null,
             VacancyKind.TruckDriver =>
                 posting.ShiftIndex >= 0 &&
                 posting.ShiftIndex < ShiftPresetHours.Length &&
@@ -522,8 +612,8 @@ public partial class GameBootstrap
         return posting.Kind switch
         {
             VacancyKind.Production or VacancyKind.Service =>
-                !locations.ContainsKey(posting.BuildingType) ||
-                GetNthLogisticsWorker(posting.BuildingType, posting.SlotIndex) != null,
+                !IsLocationInstanceBuilt(posting.BuildingType, posting.BuildingInstanceId) ||
+                GetNthLogisticsWorker(posting.BuildingType, posting.SlotIndex, posting.BuildingInstanceId) != null,
             VacancyKind.TruckDriver =>
                 posting.ShiftIndex < 0 ||
                 posting.ShiftIndex >= ShiftPresetHours.Length ||
@@ -645,12 +735,12 @@ public partial class GameBootstrap
             {
                 case VacancyKind.Production:
                 case VacancyKind.Service:
-                    AssignWorkerToBuilding(worker, FindLogisticsSlot(posting.BuildingType, posting.SlotIndex));
+                    AssignWorkerToBuilding(worker, FindLogisticsSlot(posting.BuildingType, posting.SlotIndex, posting.BuildingInstanceId));
                     bool buildingAssigned = worker.DutyMode == DriverDutyMode.Logistics &&
-                                            worker.AssignedBuildingType == posting.BuildingType;
+                                            IsDriverAssignedToBuildingSlot(worker, posting.BuildingType, posting.BuildingInstanceId);
                     if (buildingAssigned)
                     {
-                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, posting.RequiredProfessionalLevel, $"Labor Exchange posting #{posting.Id}");
+                        ApplyWorkerContract(worker, posting.Kind, posting.BuildingType, posting.SlotIndex, posting.ShiftIndex, posting.OfferedSalary, posting.ContractWorkDays, posting.RequiredProfessionalLevel, $"Labor Exchange posting #{posting.Id}", posting.BuildingInstanceId);
                     }
                     return buildingAssigned;
                 case VacancyKind.TruckDriver:
@@ -744,7 +834,7 @@ public partial class GameBootstrap
         return posting.Kind switch
         {
             VacancyKind.Production or VacancyKind.Service =>
-                $"{GetSelectedLocationDisplayName(posting.BuildingType)} slot {posting.SlotIndex + 1}",
+                $"{GetBuildingInstanceDisplayName(posting.BuildingType, posting.BuildingInstanceId)} slot {posting.SlotIndex + 1}",
             VacancyKind.TruckDriver =>
                 posting.ShiftIndex >= 0 && posting.ShiftIndex < ShiftNames.Length
                     ? $"Truck Driver {ShiftNames[posting.ShiftIndex]}"
@@ -767,7 +857,7 @@ public partial class GameBootstrap
         if (posting.Kind == VacancyKind.Production || posting.Kind == VacancyKind.Service)
         {
             string role = L(GetBuildingWorkerRoleLabel(posting.BuildingType));
-            string building = L(GetSelectedLocationDisplayName(posting.BuildingType));
+            string building = L(GetBuildingInstanceDisplayName(posting.BuildingType, posting.BuildingInstanceId));
             string slot = GetMaxBuildingWorkerSlots(posting.BuildingType) > 1 ? $" #{posting.SlotIndex + 1}" : string.Empty;
             return $"{role}: {building}{slot}";
         }

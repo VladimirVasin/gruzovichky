@@ -810,7 +810,7 @@ public partial class GameBootstrap
         Light lanternLight = lightObject.AddComponent<Light>();
         lanternLight.type = LightType.Point;
         lanternLight.color = new Color(1f, 0.78f, 0.42f);
-        lanternLight.range = 4.4f;
+        lanternLight.range = 6.2f;
         lanternLight.intensity = 0f;
         lanternLight.shadows = LightShadows.None;
         lanternLight.enabled = false;

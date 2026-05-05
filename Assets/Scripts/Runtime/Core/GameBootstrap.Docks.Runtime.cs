@@ -113,17 +113,21 @@ public partial class GameBootstrap
 
     private string PerformDocksShipTrade(LocationData docks)
     {
-        int sold = Mathf.Min(DocksShipTradeBatch, GetDocksStoredResource(docks, docks.DocksExportResource));
+        bool canSell = CanDocksSellResource(docks.DocksExportResource);
+        int sold = canSell ? Mathf.Min(DocksShipTradeBatch, GetDocksExportStoredResource(docks, docks.DocksExportResource)) : 0;
         int saleMoney = 0;
-        if (sold > 0 && TryConsumeDocksStoredResource(docks, docks.DocksExportResource, sold))
+        if (sold > 0 && TryConsumeDocksExportStoredResource(docks, docks.DocksExportResource, sold))
         {
             saleMoney = sold * GetDocksSellPrice(docks.DocksExportResource);
             money += saleMoney;
             RecordMoneyMovement(saleMoney, "River Ship", "Treasury", $"Docks sale: {GetTradeResourceLabel(docks.DocksExportResource)} x{sold}", money);
         }
 
-        int buyRoom = DocksResourceCapacity - GetDocksStoredResource(docks, docks.DocksImportResource);
-        int bought = Mathf.Min(DocksShipTradeBatch, Mathf.Max(0, buyRoom));
+        bool canBuy = CanDocksBuyResource(docks.DocksImportResource);
+        int buyRoom = DocksResourceCapacity - GetDocksImportStoredResource(docks, docks.DocksImportResource);
+        int targetNeed = GetTradePolicyTarget(docks.DocksImportResource) -
+                         (GetWarehouseTradeResourceAmount(docks.DocksImportResource) + GetDocksImportStoredResource(docks, docks.DocksImportResource));
+        int bought = canBuy ? Mathf.Min(DocksShipTradeBatch, Mathf.Min(Mathf.Max(0, buyRoom), Mathf.Max(0, targetNeed))) : 0;
         int buyMoney = 0;
         if (bought > 0)
         {
@@ -134,7 +138,7 @@ public partial class GameBootstrap
                 bought = affordable;
                 buyMoney = bought * unitPrice;
                 money -= buyMoney;
-                AddDocksStoredResource(docks, docks.DocksImportResource, bought);
+                AddDocksImportStoredResource(docks, docks.DocksImportResource, bought);
                 RecordMoneyMovement(-buyMoney, "Treasury", "River Ship", $"Docks purchase: {GetTradeResourceLabel(docks.DocksImportResource)} x{bought}", money);
             }
             else
@@ -145,10 +149,14 @@ public partial class GameBootstrap
 
         string soldText = sold > 0
             ? $"sold {GetTradeResourceLabel(docks.DocksExportResource)} x{sold} for ${saleMoney}"
-            : $"no {GetTradeResourceLabel(docks.DocksExportResource)} ready to sell";
+            : canSell
+                ? $"no {GetTradeResourceLabel(docks.DocksExportResource)} ready to sell"
+                : $"export disabled for {GetTradeResourceLabel(docks.DocksExportResource)}";
         string boughtText = bought > 0
             ? $"bought {GetTradeResourceLabel(docks.DocksImportResource)} x{bought} for ${buyMoney}"
-            : $"no {GetTradeResourceLabel(docks.DocksImportResource)} bought";
+            : canBuy
+                ? $"no {GetTradeResourceLabel(docks.DocksImportResource)} bought"
+                : $"import disabled for {GetTradeResourceLabel(docks.DocksImportResource)}";
         return $"{soldText}; {boughtText}.";
     }
 
@@ -206,7 +214,19 @@ public partial class GameBootstrap
         return waterCells.Contains(cell) ? GetCurrentVisualWaterHeight(cell) : 0.22f;
     }
 
-    private int GetDocksStoredResource(LocationData docks, TradeResourceType resourceType)
+    private bool CanDocksSellResource(TradeResourceType resourceType)
+    {
+        return GetTradePolicyMode(resourceType) == TradePolicyMode.SellAbove &&
+               HasBuiltTradeRouteForOrder(resourceType, TradeOrderType.Sell);
+    }
+
+    private bool CanDocksBuyResource(TradeResourceType resourceType)
+    {
+        return GetTradePolicyMode(resourceType) == TradePolicyMode.BuyUpTo &&
+               HasBuiltTradeRouteForOrder(resourceType, TradeOrderType.Buy);
+    }
+
+    private int GetDocksExportStoredResource(LocationData docks, TradeResourceType resourceType)
     {
         if (docks == null)
         {
@@ -220,6 +240,24 @@ public partial class GameBootstrap
             TradeResourceType.Cotton => docks.CottonStored,
             TradeResourceType.Textile => docks.TextileStored,
             TradeResourceType.Furniture => docks.FurnitureStored,
+            _ => 0
+        };
+    }
+
+    private int GetDocksImportStoredResource(LocationData docks, TradeResourceType resourceType)
+    {
+        if (docks == null)
+        {
+            return 0;
+        }
+
+        return resourceType switch
+        {
+            TradeResourceType.Logs => docks.DocksImportLogsStored,
+            TradeResourceType.Boards => docks.DocksImportBoardsStored,
+            TradeResourceType.Cotton => docks.DocksImportCottonStored,
+            TradeResourceType.Textile => docks.DocksImportTextileStored,
+            TradeResourceType.Furniture => docks.DocksImportFurnitureStored,
             _ => 0
         };
     }
@@ -259,14 +297,14 @@ public partial class GameBootstrap
         };
     }
 
-    private void AddDocksStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
+    private void AddDocksExportStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
     {
         if (docks == null || amount <= 0)
         {
             return;
         }
 
-        int capped = Mathf.Min(amount, DocksResourceCapacity - GetDocksStoredResource(docks, resourceType));
+        int capped = Mathf.Min(amount, DocksResourceCapacity - GetDocksExportStoredResource(docks, resourceType));
         if (capped <= 0)
         {
             return;
@@ -282,9 +320,32 @@ public partial class GameBootstrap
         }
     }
 
-    private bool TryConsumeDocksStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
+    private void AddDocksImportStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
     {
-        if (docks == null || amount <= 0 || GetDocksStoredResource(docks, resourceType) < amount)
+        if (docks == null || amount <= 0)
+        {
+            return;
+        }
+
+        int capped = Mathf.Min(amount, DocksResourceCapacity - GetDocksImportStoredResource(docks, resourceType));
+        if (capped <= 0)
+        {
+            return;
+        }
+
+        switch (resourceType)
+        {
+            case TradeResourceType.Logs: docks.DocksImportLogsStored += capped; break;
+            case TradeResourceType.Boards: docks.DocksImportBoardsStored += capped; break;
+            case TradeResourceType.Cotton: docks.DocksImportCottonStored += capped; break;
+            case TradeResourceType.Textile: docks.DocksImportTextileStored += capped; break;
+            case TradeResourceType.Furniture: docks.DocksImportFurnitureStored += capped; break;
+        }
+    }
+
+    private bool TryConsumeDocksExportStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
+    {
+        if (docks == null || amount <= 0 || GetDocksExportStoredResource(docks, resourceType) < amount)
         {
             return false;
         }
@@ -301,6 +362,25 @@ public partial class GameBootstrap
         return true;
     }
 
+    private bool TryConsumeDocksImportStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
+    {
+        if (docks == null || amount <= 0 || GetDocksImportStoredResource(docks, resourceType) < amount)
+        {
+            return false;
+        }
+
+        switch (resourceType)
+        {
+            case TradeResourceType.Logs: docks.DocksImportLogsStored -= amount; break;
+            case TradeResourceType.Boards: docks.DocksImportBoardsStored -= amount; break;
+            case TradeResourceType.Cotton: docks.DocksImportCottonStored -= amount; break;
+            case TradeResourceType.Textile: docks.DocksImportTextileStored -= amount; break;
+            case TradeResourceType.Furniture: docks.DocksImportFurnitureStored -= amount; break;
+        }
+
+        return true;
+    }
+
     private int GetDocksSellPrice(TradeResourceType resourceType) => resourceType switch
     {
         TradeResourceType.Logs => 22,
@@ -308,6 +388,7 @@ public partial class GameBootstrap
         TradeResourceType.Cotton => 32,
         TradeResourceType.Textile => 50,
         TradeResourceType.Furniture => 78,
+        TradeResourceType.Alcohol => 46,
         _ => 40
     };
 
@@ -320,9 +401,11 @@ public partial class GameBootstrap
             return string.Empty;
         }
 
-        return IsRussianLanguage()
-            ? "Содержимое склада доков"
-            : "Docks cargo storage";
+        bool ru = IsRussianLanguage();
+        string workerStatus = docks.Workers > 0
+            ? (ru ? "Рабочий на смене" : "Worker on shift")
+            : (ru ? "Нет рабочего на смене" : "No worker on shift");
+        return $"{workerStatus}\n{(ru ? "Корабль" : "Ship")}: {GetDocksShipHudState(docks)}";
     }
 
     private string GetDocksQuickResourceText()
@@ -337,12 +420,13 @@ public partial class GameBootstrap
 
     private string GetDocksShipHudState(LocationData docks)
     {
+        bool ru = IsRussianLanguage();
         return docks.DocksShipPhase switch
         {
-            DocksShipPhase.Arriving => "Arriving",
-            DocksShipPhase.Docked => $"Docked {Mathf.CeilToInt(docks.DocksShipDockedTimer)}s",
-            DocksShipPhase.Departing => "Departing",
-            _ => $"ETA {Mathf.CeilToInt(docks.DocksShipTimer)}s"
+            DocksShipPhase.Arriving => ru ? "подходит" : "Arriving",
+            DocksShipPhase.Docked => ru ? $"у причала {Mathf.CeilToInt(docks.DocksShipDockedTimer)}с" : $"Docked {Mathf.CeilToInt(docks.DocksShipDockedTimer)}s",
+            DocksShipPhase.Departing => ru ? "отходит" : "Departing",
+            _ => ru ? $"ожидание {Mathf.CeilToInt(docks.DocksShipTimer)}с" : $"ETA {Mathf.CeilToInt(docks.DocksShipTimer)}s"
         };
     }
 
@@ -354,11 +438,11 @@ public partial class GameBootstrap
         }
 
         string text = string.Empty;
-        AppendDocksCargoSummary(ref text, "Logs", docks.LogsStored);
-        AppendDocksCargoSummary(ref text, "Boards", docks.BoardsStored);
-        AppendDocksCargoSummary(ref text, "Cotton", docks.CottonStored);
-        AppendDocksCargoSummary(ref text, "Textile", docks.TextileStored);
-        AppendDocksCargoSummary(ref text, "Furniture", docks.FurnitureStored);
+        AppendDocksCargoSummary(ref text, "Logs", docks.LogsStored + docks.DocksImportLogsStored);
+        AppendDocksCargoSummary(ref text, "Boards", docks.BoardsStored + docks.DocksImportBoardsStored);
+        AppendDocksCargoSummary(ref text, "Cotton", docks.CottonStored + docks.DocksImportCottonStored);
+        AppendDocksCargoSummary(ref text, "Textile", docks.TextileStored + docks.DocksImportTextileStored);
+        AppendDocksCargoSummary(ref text, "Furniture", docks.FurnitureStored + docks.DocksImportFurnitureStored);
         return text.Length > 0 ? text : L("Empty");
     }
 
@@ -370,16 +454,26 @@ public partial class GameBootstrap
         }
 
         bool ru = IsRussianLanguage();
-        string text = string.Empty;
-        AppendDocksCargoLine(ref text, "Logs", docks.LogsStored);
-        AppendDocksCargoLine(ref text, "Boards", docks.BoardsStored);
-        AppendDocksCargoLine(ref text, "Cotton", docks.CottonStored);
-        AppendDocksCargoLine(ref text, "Textile", docks.TextileStored);
-        AppendDocksCargoLine(ref text, "Furniture", docks.FurnitureStored);
+        string exportText = string.Empty;
+        AppendDocksCargoLine(ref exportText, "Logs", docks.LogsStored);
+        AppendDocksCargoLine(ref exportText, "Boards", docks.BoardsStored);
+        AppendDocksCargoLine(ref exportText, "Cotton", docks.CottonStored);
+        AppendDocksCargoLine(ref exportText, "Textile", docks.TextileStored);
+        AppendDocksCargoLine(ref exportText, "Furniture", docks.FurnitureStored);
 
-        return text.Length > 0
-            ? text
-            : FormatValueLine(ru ? "Груз" : "Cargo", ru ? "пусто" : "empty");
+        string importText = string.Empty;
+        AppendDocksCargoLine(ref importText, "Logs", docks.DocksImportLogsStored);
+        AppendDocksCargoLine(ref importText, "Boards", docks.DocksImportBoardsStored);
+        AppendDocksCargoLine(ref importText, "Cotton", docks.DocksImportCottonStored);
+        AppendDocksCargoLine(ref importText, "Textile", docks.DocksImportTextileStored);
+        AppendDocksCargoLine(ref importText, "Furniture", docks.DocksImportFurnitureStored);
+
+        string text = $"{(ru ? "Товары на продажу" : "Goods for sale")}\n";
+        text += exportText.Length > 0 ? exportText : FormatValueLine(ru ? "Груз" : "Cargo", ru ? "пусто" : "empty");
+        text += $"\n\n{(ru ? "Купленные товары" : "Purchased goods")}\n";
+        text += importText.Length > 0 ? importText : FormatValueLine(ru ? "Груз" : "Cargo", ru ? "пусто" : "empty");
+
+        return text;
     }
 
     private static void AppendDocksCargoSummary(ref string text, string label, int amount)

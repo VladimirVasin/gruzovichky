@@ -17,6 +17,7 @@ public partial class GameBootstrap
         }
 
         CreateLocation(LocationType.LaborExchange, "Labor Exchange", min, max, anchorCell, new Color(0.34f, 0.47f, 0.56f));
+        TryAutoAssignHigherEducatedLaborExchangeClerk("building placed");
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         isShiftsScreenDirty = true;

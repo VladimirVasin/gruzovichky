@@ -543,7 +543,8 @@ public partial class GameBootstrap
                 driver.IsInsideBuilding  = true;
                 driver.IsShiftSalaryPending = true;
                 driver.DriverObject.SetActive(false);
-                if (driver.AssignedBuildingType.HasValue && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData enteredBuilding))
+                LocationData enteredBuilding = GetAssignedBuildingLocation(driver);
+                if (driver.AssignedBuildingType.HasValue && enteredBuilding != null)
                 {
                     enteredBuilding.Workers = Mathf.Min(
                         enteredBuilding.Workers + 1,

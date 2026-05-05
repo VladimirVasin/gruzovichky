@@ -194,7 +194,7 @@ public partial class GameBootstrap
             : $"${driver.Salary}/day, {remaining}/{driver.ContractTotalWorkDays} workdays, {requirement}";
     }
 
-    private void ApplyWorkerContract(DriverAgent worker, VacancyKind kind, LocationType buildingType, int slotIndex, int shiftIndex, int salary, int contractWorkDays, int requiredProfessionalLevel, string source)
+    private void ApplyWorkerContract(DriverAgent worker, VacancyKind kind, LocationType buildingType, int slotIndex, int shiftIndex, int salary, int contractWorkDays, int requiredProfessionalLevel, string source, int buildingInstanceId = 0)
     {
         if (worker == null || kind == VacancyKind.None)
         {
@@ -208,12 +208,13 @@ public partial class GameBootstrap
         worker.ContractStartedDay = currentDay;
         worker.ContractVacancyKind = kind;
         worker.ContractBuildingType = buildingType;
+        worker.ContractBuildingInstanceId = ResolveBuildingInstanceId(buildingType, buildingInstanceId);
         worker.ContractSlotIndex = slotIndex;
         worker.ContractShiftIndex = shiftIndex;
         worker.ContractProfessionalTrack = GetVacancyProfessionalTrack(kind, buildingType);
         worker.ContractRequiredProfessionalLevel = Mathf.Clamp(requiredProfessionalLevel, 1, WorkerProfessionalMaxLevel);
         int workerLevel = GetWorkerProfessionalLevel(worker, worker.ContractProfessionalTrack);
-        SessionDebugLogger.Log("CONTRACT", $"{worker.DriverName} signed {kind} contract from {source}: salary=${worker.Salary}, days={worker.ContractTotalWorkDays}, building={buildingType}, slot={slotIndex}, shift={shiftIndex}, track={worker.ContractProfessionalTrack}, requiredLevel={worker.ContractRequiredProfessionalLevel}, workerLevel={workerLevel}.");
+        SessionDebugLogger.Log("CONTRACT", $"{worker.DriverName} signed {kind} contract from {source}: salary=${worker.Salary}, days={worker.ContractTotalWorkDays}, building={buildingType}, instance={worker.ContractBuildingInstanceId}, slot={slotIndex}, shift={shiftIndex}, track={worker.ContractProfessionalTrack}, requiredLevel={worker.ContractRequiredProfessionalLevel}, workerLevel={workerLevel}.");
     }
 
     private void ClearWorkerContract(DriverAgent worker, string reason)
@@ -234,6 +235,7 @@ public partial class GameBootstrap
         worker.ContractStartedDay = 0;
         worker.ContractVacancyKind = VacancyKind.None;
         worker.ContractBuildingType = null;
+        worker.ContractBuildingInstanceId = 0;
         worker.ContractSlotIndex = -1;
         worker.ContractShiftIndex = -1;
         worker.ContractProfessionalTrack = WorkerProfessionalTrack.None;
@@ -322,6 +324,7 @@ public partial class GameBootstrap
         worker.IsShiftSalaryPending = false;
         worker.DutyMode = DriverDutyMode.Local;
         worker.AssignedBuildingType = null;
+        worker.AssignedBuildingInstanceId = 0;
         SessionDebugLogger.Log("CONTRACT", $"{worker.DriverName} returned to the free worker pool after contract completion.");
     }
 }

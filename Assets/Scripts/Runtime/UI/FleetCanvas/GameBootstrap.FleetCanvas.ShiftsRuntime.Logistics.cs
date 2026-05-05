@@ -35,7 +35,7 @@ public partial class GameBootstrap
                 continue;
             }
 
-            DriverAgent assigned = GetNthLogisticsWorker(slot.BuildingType, slot.SlotIndex);
+            DriverAgent assigned = GetNthLogisticsWorker(slot.BuildingType, slot.SlotIndex, slot.LocationInstanceId);
 
             if (slot.BuildingNameText != null)
             {
@@ -69,8 +69,7 @@ public partial class GameBootstrap
 
             bool selectedIsIdle = IsWorkerVacantForVacancyAssignment(selectedDriver);
             bool selectedAlreadyHere = selectedDriver != null &&
-                selectedDriver.DutyMode == DriverDutyMode.Logistics &&
-                selectedDriver.AssignedBuildingType == slot.BuildingType;
+                IsDriverAssignedToBuildingSlot(selectedDriver, slot.BuildingType, slot.LocationInstanceId);
             string educationReason = string.Empty;
             bool meetsEducation = selectedDriver == null ||
                                   CanWorkerMeetBuildingEducationRequirement(selectedDriver, slot.BuildingType, out educationReason);
@@ -95,13 +94,16 @@ public partial class GameBootstrap
         }
     }
 
-    private DriverAgent GetNthLogisticsWorker(LocationType buildingType, int slotIndex)
+    private DriverAgent GetNthLogisticsWorker(LocationType buildingType, int slotIndex, int locationInstanceId = 0)
     {
         int count = 0;
+        int resolvedInstanceId = ResolveBuildingInstanceId(buildingType, locationInstanceId);
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent d = driverAgents[i];
-            if (d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == buildingType)
+            if (d.DutyMode == DriverDutyMode.Logistics &&
+                d.AssignedBuildingType == buildingType &&
+                (locationInstanceId <= 0 || d.AssignedBuildingInstanceId == resolvedInstanceId))
             {
                 if (count == slotIndex) return d;
                 count++;
@@ -166,6 +168,7 @@ public partial class GameBootstrap
 
         SetDriverDutyMode(driver, DriverDutyMode.Logistics);
         driver.AssignedBuildingType = slot.BuildingType;
+        driver.AssignedBuildingInstanceId = ResolveBuildingInstanceId(slot.BuildingType, slot.LocationInstanceId);
         driver.ShiftStartHour = -1;
         if (slot.BuildingType == LocationType.Forest)
         {
@@ -189,10 +192,11 @@ public partial class GameBootstrap
         }
 
         string workKind = IsProductionLocation(slot.BuildingType) ? "production" : "service";
-        LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {slot.BuildingType} ({GetProductionWorkRangeLabel()})");
-        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType} {workKind} work ({GetProductionWorkRangeLabel()}).");
+        string buildingName = GetBuildingInstanceDisplayName(slot.BuildingType, slot.LocationInstanceId);
+        LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {buildingName} ({GetProductionWorkRangeLabel()})");
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType}#{driver.AssignedBuildingInstanceId} {workKind} work ({GetProductionWorkRangeLabel()}).");
         PushFeedEvent(
-            $"{driver.DriverName} assigned to {GetSelectedLocationDisplayName(slot.BuildingType)}.",
+            $"{driver.DriverName} assigned to {buildingName}.",
             $"{driver.DriverName} назначен в {GetSelectedLocationDisplayName(slot.BuildingType)}.",
             FeedEventType.Info);
         isShiftsScreenDirty = true;
@@ -202,7 +206,7 @@ public partial class GameBootstrap
     private void RemoveWorkerFromBuilding(LogisticsSlotUi slot)
     {
         if (slot == null) return;
-        DriverAgent assigned = GetNthLogisticsWorker(slot.BuildingType, slot.SlotIndex);
+        DriverAgent assigned = GetNthLogisticsWorker(slot.BuildingType, slot.SlotIndex, slot.LocationInstanceId);
         if (assigned == null) return;
         LogUiInput($"Shifts Canvas: removed {assigned.DriverName} from {slot.BuildingType}");
         SetDriverDutyMode(assigned, DriverDutyMode.Local);

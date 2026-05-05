@@ -412,7 +412,9 @@ public partial class GameBootstrap
             });
         }
 
-        for (int i = 0; i < logisticsSlots.Length; i++)
+        AddVacancyModelsForAssignableBuildings(ru);
+
+        for (int i = logisticsSlots.Length; i < logisticsSlots.Length; i++)
         {
             LogisticsSlotUi slot = logisticsSlots[i];
             if (slot == null ||
@@ -462,6 +464,64 @@ public partial class GameBootstrap
             int occupiedCompare = a.IsOccupied.CompareTo(b.IsOccupied);
             return occupiedCompare != 0 ? occupiedCompare : string.CompareOrdinal(a.Title, b.Title);
         });
+    }
+
+    private void AddVacancyModelsForAssignableBuildings(bool ru)
+    {
+        LocationType[] buildingTypes =
+        {
+            LocationType.Forest,
+            LocationType.Sawmill,
+            LocationType.FurnitureFactory,
+            LocationType.Docks,
+            LocationType.Motel,
+            LocationType.Bar,
+            LocationType.Canteen,
+            LocationType.GasStation,
+            LocationType.GamblingHall,
+            LocationType.CarMarket,
+            LocationType.LaborExchange
+        };
+
+        for (int ti = 0; ti < buildingTypes.Length; ti++)
+        {
+            LocationType buildingType = buildingTypes[ti];
+            int maxSlots = GetMaxBuildingWorkerSlots(buildingType);
+            if (maxSlots <= 0)
+            {
+                continue;
+            }
+
+            VacancyKind slotKind = IsProductionLocation(buildingType) ? VacancyKind.Production : VacancyKind.Service;
+            if (!IsVacancyUnlockedForCurrentTutorial(slotKind, buildingType))
+            {
+                continue;
+            }
+
+            foreach (LocationData location in EnumerateAssignableBuildingLocations(buildingType))
+            {
+                for (int slotIndex = 0; slotIndex < maxSlots; slotIndex++)
+                {
+                    DriverAgent assigned = GetNthLogisticsWorker(buildingType, slotIndex, location.InstanceId);
+                    vacancyViewModels.Add(new VacancyViewModel
+                    {
+                        Kind = slotKind,
+                        Title = L(GetBuildingWorkerSlotTitle(buildingType, slotIndex, location.InstanceId)),
+                        Subtitle = buildingType == LocationType.LaborExchange
+                            ? (ru ? "\u0441\u0435\u0440\u0432\u0438\u0441, \u043d\u0443\u0436\u043d\u043e \u0432\u044b\u0441\u0448\u0435\u0435 \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435" : "service, higher education required")
+                            : slotKind == VacancyKind.Service
+                                ? (ru ? "СЃРµСЂРІРёСЃ" : "service")
+                                : (ru ? "РїСЂРѕРёР·РІРѕРґСЃС‚РІРѕ" : "production"),
+                        Schedule = GetProductionWorkRangeLabel(),
+                        IsOccupied = assigned != null,
+                        AssignedWorker = assigned,
+                        BuildingType = buildingType,
+                        LocationInstanceId = location.InstanceId,
+                        SlotIndex = slotIndex,
+                    });
+                }
+            }
+        }
     }
 
     private void BuildVacancyFlowOptions(VacancyViewModel vacancy)

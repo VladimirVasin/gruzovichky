@@ -288,9 +288,9 @@ public partial class GameBootstrap
             case VacancyKind.Service:
                 int slotIndex = IsGroupedWarehouseVacancy(vacancy) ? selectedVacancyShiftIndex : vacancy.SlotIndex;
                 contractSlotIndex = slotIndex;
-                AssignWorkerToBuilding(worker, FindLogisticsSlot(vacancy.BuildingType, slotIndex));
+                AssignWorkerToBuilding(worker, FindLogisticsSlot(vacancy.BuildingType, slotIndex, vacancy.LocationInstanceId));
                 assigned = worker.DutyMode == DriverDutyMode.Logistics &&
-                           worker.AssignedBuildingType == vacancy.BuildingType;
+                           IsDriverAssignedToBuildingSlot(worker, vacancy.BuildingType, vacancy.LocationInstanceId);
                 break;
             case VacancyKind.Intercity:
                 contractBuildingType = LocationType.Parking;
@@ -313,7 +313,7 @@ public partial class GameBootstrap
         }
 
         VacancyOffer offer = CalculateVacancyOffer(vacancy.Kind, contractBuildingType, contractSlotIndex, contractShiftIndex);
-        ApplyWorkerContract(worker, vacancy.Kind, contractBuildingType, contractSlotIndex, contractShiftIndex, offer.Salary, offer.ContractWorkDays, offer.RequiredProfessionalLevel, "Vacancies UI assignment");
+        ApplyWorkerContract(worker, vacancy.Kind, contractBuildingType, contractSlotIndex, contractShiftIndex, offer.Salary, offer.ContractWorkDays, offer.RequiredProfessionalLevel, "Vacancies UI assignment", vacancy.LocationInstanceId);
         bool ru = IsRussianLanguage();
         vacancySuccessMessage = ru
             ? $"✓ Назначено: {worker.DriverName}"
@@ -416,7 +416,7 @@ public partial class GameBootstrap
         {
             case VacancyKind.Production:
             case VacancyKind.Service:
-                RemoveWorkerFromBuilding(FindLogisticsSlot(vacancy.BuildingType, vacancy.SlotIndex));
+                RemoveWorkerFromBuilding(FindLogisticsSlot(vacancy.BuildingType, vacancy.SlotIndex, vacancy.LocationInstanceId));
                 break;
             case VacancyKind.Intercity:
                 RemoveIntercityDriverAssignment();
@@ -459,17 +459,27 @@ public partial class GameBootstrap
         LogDriverReaction(worker, "truck vacancy removed");
     }
 
-    private LogisticsSlotUi FindLogisticsSlot(LocationType buildingType, int slotIndex)
+    private LogisticsSlotUi FindLogisticsSlot(LocationType buildingType, int slotIndex, int locationInstanceId = 0)
     {
+        int resolvedInstanceId = ResolveBuildingInstanceId(buildingType, locationInstanceId);
         for (int i = 0; i < logisticsSlots.Length; i++)
         {
             LogisticsSlotUi slot = logisticsSlots[i];
-            if (slot != null && slot.BuildingType == buildingType && slot.SlotIndex == slotIndex)
+            if (slot != null &&
+                slot.BuildingType == buildingType &&
+                slot.SlotIndex == slotIndex &&
+                (locationInstanceId <= 0 || ResolveBuildingInstanceId(slot.BuildingType, slot.LocationInstanceId) == resolvedInstanceId))
             {
                 return slot;
             }
         }
-        return null;
+
+        return new LogisticsSlotUi
+        {
+            BuildingType = buildingType,
+            SlotIndex = slotIndex,
+            LocationInstanceId = resolvedInstanceId
+        };
     }
 
     private int FindVacancyIndexForAssignedWorker(DriverAgent worker)

@@ -555,15 +555,17 @@ public partial class GameBootstrap
         float y = table.y + 14f;
         float nameW = 190f;
         float stockW = 86f;
-        float modeW = 260f;
+        float modeW = 245f;
         float targetW = 132f;
+        float priceW = 170f;
         float gap = 12f;
 
         GUI.Label(new Rect(x, y, nameW, 24f), L("Resource"), headerStyle);
         GUI.Label(new Rect(x + nameW + gap, y, stockW, 24f), ru ? "Склад" : "Stock", headerStyle);
         GUI.Label(new Rect(x + nameW + stockW + gap * 2f, y, modeW, 24f), ru ? "Режим" : "Mode", headerStyle);
         GUI.Label(new Rect(x + nameW + stockW + modeW + gap * 3f, y, targetW, 24f), ru ? "Цель" : "Target", headerStyle);
-        GUI.Label(new Rect(x + nameW + stockW + modeW + targetW + gap * 4f, y, table.width - nameW - stockW - modeW - targetW - 72f, 24f), L("Status"), headerStyle);
+        GUI.Label(new Rect(x + nameW + stockW + modeW + targetW + gap * 4f, y, priceW, 24f), ru ? "Цена" : "Price", headerStyle);
+        GUI.Label(new Rect(x + nameW + stockW + modeW + targetW + priceW + gap * 5f, y, table.width - nameW - stockW - modeW - targetW - priceW - 84f, 24f), L("Status"), headerStyle);
 
         y += 34f;
         for (int i = 0; i < TradeHudResources.Length; i++)
@@ -583,9 +585,18 @@ public partial class GameBootstrap
             }
 
             DrawTradeTargetControls(resourceType, new Rect(x + nameW + stockW + modeW + gap * 3f, y + 6f, targetW, 30f));
-            GUI.Label(new Rect(x + nameW + stockW + modeW + targetW + gap * 4f, y + 8f, table.width - nameW - stockW - modeW - targetW - 72f, 26f), GetTradePolicyStatusText(resourceType), statusStyle);
+            GUI.Label(new Rect(x + nameW + stockW + modeW + targetW + gap * 4f, y + 8f, priceW, 26f), GetTradePolicyPriceText(resourceType), statusStyle);
+            GUI.Label(new Rect(x + nameW + stockW + modeW + targetW + priceW + gap * 5f, y + 8f, table.width - nameW - stockW - modeW - targetW - priceW - 84f, 26f), GetTradePolicyStatusText(resourceType), statusStyle);
             y += 62f;
         }
+    }
+
+    private string GetTradePolicyPriceText(TradeResourceType resourceType)
+    {
+        bool ru = IsRussianLanguage();
+        int sell = GetTradeResourceUnitPrice(resourceType, TradeOrderType.Sell);
+        int buy = GetTradeResourceUnitPrice(resourceType, TradeOrderType.Buy);
+        return ru ? $"Прод. ${sell} / Пок. ${buy}" : $"Sell ${sell} / Buy ${buy}";
     }
 
     private static ResourceVisualKind GetTradeResourceVisualKind(TradeResourceType resourceType)

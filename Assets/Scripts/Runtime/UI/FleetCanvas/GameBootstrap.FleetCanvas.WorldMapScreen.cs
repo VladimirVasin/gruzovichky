@@ -150,7 +150,7 @@ public partial class GameBootstrap
         worldMapScreenUi.DetailsImportsText.gameObject.SetActive(false);
 
         RectTransform routeBody = CreateUiObject("WorldMapRouteOverlay", detailsPanel).GetComponent<RectTransform>();
-        routeBody.gameObject.AddComponent<LayoutElement>().preferredHeight = 96f;
+        routeBody.gameObject.AddComponent<LayoutElement>().preferredHeight = 148f;
         worldMapScreenUi.RoutePanelRoot = routeBody.gameObject;
 
         VerticalLayoutGroup routeBodyLayout = routeBody.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -180,6 +180,20 @@ public partial class GameBootstrap
         worldMapScreenUi.BuildRouteButtonText.verticalOverflow = VerticalWrapMode.Truncate;
         worldMapScreenUi.BuildRouteButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
         worldMapScreenUi.BuildRouteButton.onClick.AddListener(BuildSelectedWorldMapTradeRoute);
+
+        worldMapScreenUi.OpenTradeButton = CreateButton(
+            "OpenTradeFromMapButton",
+            routeBody,
+            font,
+            out worldMapScreenUi.OpenTradeButtonText,
+            string.Empty,
+            15,
+            new Color(0.13f, 0.33f, 0.48f),
+            Color.white);
+        worldMapScreenUi.OpenTradeButtonText.fontStyle = FontStyle.Bold;
+        worldMapScreenUi.OpenTradeButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
+        worldMapScreenUi.OpenTradeButton.onClick.AddListener(OpenTradePanelFromWorldMap);
+        worldMapScreenUi.OpenTradeButton.gameObject.SetActive(false);
 
         AddOverlayCloseButton(windowRect, font);
         worldMapScreenUi.CanvasRoot.SetActive(false);
@@ -224,15 +238,15 @@ public partial class GameBootstrap
     {
         return regionIndex switch
         {
-            0 => "North Ridge",
-            1 => "Forest Belt",
-            2 => "River Port",
-            3 => "Barren Flats",
+            0 => "Undeveloped North",
+            1 => "Undeveloped Woods",
+            2 => "Undeveloped Port",
+            3 => "Undeveloped Flats",
             4 => "Your Town",
-            5 => "Cotton & Textile Belt",
-            6 => "Dry South",
-            7 => "Freight Steppe",
-            8 => "Coastal Gate",
+            5 => "Weaverford",
+            6 => "Oakbarrel",
+            7 => "Undeveloped Steppe",
+            8 => "Undeveloped Coast",
             _ => "Unknown Region"
         };
     }
@@ -244,15 +258,15 @@ public partial class GameBootstrap
 
         return regionIndex switch
         {
-            0 => "Северный кряж",
-            1 => "Лесной пояс",
-            2 => "Речной порт",
-            3 => "Пустоши",
+            0 => "Неразведанный север",
+            1 => "Неразведанный лес",
+            2 => "Неразведанный порт",
+            3 => "Неразведанные равнины",
             4 => "Твой город",
-            5 => "Хлопково-текстильный пояс",
-            6 => "Сухой юг",
-            7 => "Грузовая степь",
-            8 => "Прибрежные ворота",
+            5 => "Ткацкая Слобода",
+            6 => "Винокуренный Яр",
+            7 => "Неразведанная степь",
+            8 => "Неразведанный берег",
             _ => "Неизвестный регион"
         };
     }
@@ -262,7 +276,7 @@ public partial class GameBootstrap
         return regionIndex switch
         {
             4 => "Current region",
-            2 or 5 or 6 => "Neighbor region",
+            5 or 6 => "Neighbor city",
             _ => "Empty region slot"
         };
     }
@@ -275,7 +289,7 @@ public partial class GameBootstrap
         return regionIndex switch
         {
             4 => "Текущий регион",
-            2 or 5 or 6 => "Соседний регион",
+            5 or 6 => "Соседний город",
             _ => "Пустой слот региона"
         };
     }
@@ -302,9 +316,8 @@ public partial class GameBootstrap
         return regionIndex switch
         {
             4 => "Logs, Boards, Furniture",
-            5 => "Cotton, Textile",
-            6 => "Boards market",
-            2 => "Trade logistics",
+            5 => "Textile",
+            6 => "Alcohol",
             _ => "No confirmed survey data"
         };
     }
@@ -317,9 +330,8 @@ public partial class GameBootstrap
         return regionIndex switch
         {
             4 => "Брёвна, доски, мебель",
-            5 => "Хлопок, текстиль",
-            6 => "Зерно, алкоголь",
-            2 => "Торговая логистика",
+            5 => "Текстиль",
+            6 => "Алкоголь",
             _ => "Нет подтверждённых данных"
         };
     }
@@ -329,9 +341,8 @@ public partial class GameBootstrap
         return regionIndex switch
         {
             4 => "Cotton, Textile",
-            5 => "—",
-            6 => "Boards",
-            2 => "—",
+            5 => "Furniture",
+            6 => "Boards, Furniture",
             _ => "—"
         };
     }
@@ -343,10 +354,9 @@ public partial class GameBootstrap
 
         return regionIndex switch
         {
-            4 => "Хлопок, текстиль, топливо, алкоголь, еда",
-            5 => "—",
-            6 => "Доски",
-            2 => "—",
+            4 => "Хлопок, текстиль",
+            5 => "Мебель",
+            6 => "Доски, мебель",
             _ => "—"
         };
     }
@@ -356,9 +366,8 @@ public partial class GameBootstrap
         return regionIndex switch
         {
             4 => "This is your active simulation region. It contains the current town, highways, production buildings, and local roads.",
-            5 => "A combined agricultural and industrial belt. Raw cotton is grown here and processed into textile on-site, making it the primary external source for both resources.",
-            6 => "A hot, arid territory dominated by grain farms and distilleries. The region exports alcohol and raw grain, and relies on outside supply of construction materials.",
-            2 => "A schematic route hub near the river corridor, reserved for future logistics and regional expansion passes.",
+            5 => "A compact textile town built around old weaving mills. It sells finished textile and buys furniture for workshops, offices, and worker housing.",
+            6 => "A river-valley distillery town with barrel houses and bottling shops. It sells alcohol, while local workshops buy boards and furniture.",
             _ => "This region exists on the wider map, but it has not been fully designed or assigned concrete production data yet."
         };
     }
@@ -371,16 +380,15 @@ public partial class GameBootstrap
         return regionIndex switch
         {
             4 => "Это текущий игровой регион: город, магистраль, дороги, производство и все местные проблемы.",
-            5 => "Сельскохозяйственно-промышленный пояс. Здесь выращивают хлопок и делают текстиль, поэтому регион важен для внешних закупок.",
-            6 => "Сухая территория с фермами и винокурнями. Экспортирует алкоголь и зерно, но нуждается в строительных материалах.",
-            2 => "Речной транспортный узел. Сейчас это схематичный маршрутный регион для будущего расширения торговли.",
+            5 => "Небольшой текстильный город со старыми ткацкими цехами. Продаёт готовый текстиль и закупает мебель для мастерских, контор и жилья рабочих.",
+            6 => "Городок в речной долине с винокурнями, бондарнями и линиями розлива. Продаёт алкоголь, а местные мастерские закупают доски и мебель.",
             _ => "Регион есть на глобальной карте, но пока не разведан и не имеет подробной производственной схемы."
         };
     }
 
     private static bool IsWorldMapRegionKnown(int regionIndex)
     {
-        return regionIndex == 2 || regionIndex == 4 || regionIndex == 5 || regionIndex == 6;
+        return regionIndex == 4 || regionIndex == 5 || regionIndex == 6;
     }
 
     private void UpdateWorldMapScreenUi()
@@ -397,6 +405,11 @@ public partial class GameBootstrap
         if (!shouldShow || !isWorldMapScreenDirty)
         {
             return;
+        }
+
+        if (selectedWorldMapRegionIndex >= 0 && !IsWorldMapRegionKnown(selectedWorldMapRegionIndex))
+        {
+            selectedWorldMapRegionIndex = 4;
         }
 
         bool ru = IsRussianLanguage();
@@ -420,6 +433,16 @@ public partial class GameBootstrap
             bool isSelected = hasSelection && i == selectedWorldMapRegionIndex;
             bool isCurrent = i == 4;
             bool isKnown = IsWorldMapRegionKnown(i);
+            if (cell.Button != null)
+            {
+                cell.Button.gameObject.SetActive(isKnown);
+                cell.Button.interactable = isKnown;
+            }
+
+            if (!isKnown)
+            {
+                continue;
+            }
 
             cell.NameText.text = GetWorldMapRegionDisplayName(i);
             cell.TypeText.text = GetWorldMapRegionTypeDisplayLabel(i);
@@ -509,6 +532,14 @@ public partial class GameBootstrap
                 ? new Color(0.18f, 0.26f, 0.20f, 0.95f)
                 : new Color(0.74f, 0.40f, 0.06f, 1f);
             worldMapScreenUi.BuildRouteButtonText.color = Color.white;
+            if (worldMapScreenUi.OpenTradeButton != null)
+            {
+                worldMapScreenUi.OpenTradeButton.gameObject.SetActive(routeBuilt);
+                worldMapScreenUi.OpenTradeButton.interactable = routeBuilt;
+                worldMapScreenUi.OpenTradeButtonText.text = ru ? "\u041f\u0435\u0440\u0435\u0439\u0442\u0438 \u0432 \u0442\u043e\u0440\u0433\u043e\u0432\u043b\u044e" : "Open Trade";
+                worldMapScreenUi.OpenTradeButton.image.color = new Color(0.13f, 0.33f, 0.48f, 1f);
+                worldMapScreenUi.OpenTradeButtonText.color = Color.white;
+            }
         }
         LayoutRebuilder.ForceRebuildLayoutImmediate(worldMapScreenUi.WindowRoot);
         LocalizeCanvas(worldMapScreenUi.CanvasRoot);
@@ -581,6 +612,7 @@ public partial class GameBootstrap
             TradeResourceType.Cotton => ResourceVisualKind.Cotton,
             TradeResourceType.Textile => ResourceVisualKind.Textile,
             TradeResourceType.Furniture => ResourceVisualKind.Furniture,
+            TradeResourceType.Alcohol => ResourceVisualKind.Alcohol,
             _ => ResourceVisualKind.Logs
         };
     }
@@ -599,6 +631,7 @@ public partial class GameBootstrap
             TradeResourceType.Cotton => "\u0425\u043b\u043e\u043f\u043e\u043a",
             TradeResourceType.Textile => "\u0422\u0435\u043a\u0441\u0442\u0438\u043b\u044c",
             TradeResourceType.Furniture => "\u041c\u0435\u0431\u0435\u043b\u044c",
+            TradeResourceType.Alcohol => "\u0410\u043b\u043a\u043e\u0433\u043e\u043b\u044c",
             _ => GetTradeResourceShortLabel(resourceType)
         };
     }
@@ -618,9 +651,8 @@ public partial class GameBootstrap
     {
         return regionIndex switch
         {
-            5 => (new[] { TradeResourceType.Cotton, TradeResourceType.Textile }, System.Array.Empty<TradeResourceType>()),
-            6 => (System.Array.Empty<TradeResourceType>(), new[] { TradeResourceType.Boards }),
-            2 => (new[] { TradeResourceType.Cotton, TradeResourceType.Textile }, new[] { TradeResourceType.Logs, TradeResourceType.Boards, TradeResourceType.Furniture }),
+            5 => (new[] { TradeResourceType.Textile }, new[] { TradeResourceType.Furniture }),
+            6 => (new[] { TradeResourceType.Alcohol }, new[] { TradeResourceType.Boards, TradeResourceType.Furniture }),
             _ => (TradeImportCatalog, TradeExportCatalog)
         };
     }
@@ -638,5 +670,29 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("TRADE_HUD", $"Built regional trade route: region={regionIndex}; name={GetWorldMapRegionName(regionIndex)}.");
         PlayUiSound(uiPanelOpenClip, 0.88f);
         LogUiInput($"Map trade route built -> region {regionIndex}");
+    }
+
+    private void OpenTradePanelFromWorldMap()
+    {
+        int regionIndex = Mathf.Clamp(selectedWorldMapRegionIndex, 0, 8);
+        if (regionIndex == 4 || !IsWorldMapRegionKnown(regionIndex) || !IsWorldMapTradeRouteBuilt(regionIndex))
+        {
+            return;
+        }
+
+        CloseWorldMapPanel();
+        isFleetPanelOpen = false;
+        isShiftsPanelOpen = false;
+        isDriversPanelOpen = false;
+        isResourcesPanelOpen = false;
+        isEconomyPanelOpen = false;
+        isBuildPanelOpen = false;
+        isStatesPanelOpen = false;
+        isTradePanelOpen = true;
+        isTradeScreenDirty = true;
+        isWorldMapScreenDirty = true;
+        SessionDebugLogger.Log("TRADE_UI", $"Opened Trade HUD from regional map route card: region={regionIndex}; name={GetWorldMapRegionName(regionIndex)}.");
+        LogUiInput($"Map route card -> open Trade for region {regionIndex}");
+        PlayUiSound(uiPanelOpenClip, 0.88f);
     }
 }

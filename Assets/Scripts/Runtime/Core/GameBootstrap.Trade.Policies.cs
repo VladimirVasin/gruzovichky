@@ -75,6 +75,40 @@ public partial class GameBootstrap
         return false;
     }
 
+    private bool HasBuiltTradeRouteForOrder(TradeResourceType resourceType, TradeOrderType orderType)
+    {
+        for (int i = 0; i < worldMapTradeRoutesBuilt.Length; i++)
+        {
+            if (i == 4 || !IsWorldMapTradeRouteBuilt(i) || !IsWorldMapRegionKnown(i))
+            {
+                continue;
+            }
+
+            (TradeResourceType[] regionSells, TradeResourceType[] regionBuys) = GetRegionTradeCatalog(i);
+            TradeResourceType[] catalog = orderType == TradeOrderType.Buy ? regionSells : regionBuys;
+            for (int j = 0; j < catalog.Length; j++)
+            {
+                if (catalog[j] == resourceType)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private string GetTradeRouteMissingLabel(TradeResourceType resourceType, TradeOrderType orderType)
+    {
+        bool ru = IsRussianLanguage();
+        string action = orderType == TradeOrderType.Buy
+            ? (ru ? "покупки" : "buying")
+            : (ru ? "продажи" : "selling");
+        return ru
+            ? $"нет торгового маршрута для {action} {GetTradeResourceDisplayLabel(resourceType)}"
+            : $"no trade route for {action} {GetTradeResourceShortLabel(resourceType)}";
+    }
+
     private int CountActiveTradePolicies()
     {
         int count = 0;
@@ -103,6 +137,12 @@ public partial class GameBootstrap
 
             int amount = GetWarehouseTradeResourceAmount(resourceType);
             int target = GetTradePolicyTarget(resourceType);
+            TradeOrderType orderType = mode == TradePolicyMode.SellAbove ? TradeOrderType.Sell : TradeOrderType.Buy;
+            if (!HasBuiltTradeRouteForOrder(resourceType, orderType))
+            {
+                continue;
+            }
+
             if ((mode == TradePolicyMode.SellAbove && amount > target) ||
                 (mode == TradePolicyMode.BuyUpTo && amount < target))
             {
@@ -134,6 +174,12 @@ public partial class GameBootstrap
             }
 
             TradeOrderType orderType = mode == TradePolicyMode.SellAbove ? TradeOrderType.Sell : TradeOrderType.Buy;
+            if (!HasBuiltTradeRouteForOrder(resourceType, orderType))
+            {
+                SessionDebugLogger.Log("TRADE_AUTO", $"Policy skipped: {orderType} {resourceType} has no built regional route.");
+                continue;
+            }
+
             request = TradeOrderQueueService.CreateOrder(0, resourceType, orderType, Mathf.Clamp(delta, 1, 5));
             return true;
         }

@@ -76,6 +76,14 @@ public partial class GameBootstrap
             }
         }
 
+        for (int i = 0; i < extraServiceLocations.Count; i++)
+        {
+            if (extraServiceLocations[i].Anchor == cell || extraServiceLocations[i].RoadAccess == cell)
+            {
+                return true;
+            }
+        }
+
         for (int i = 0; i < localStops.Count; i++)
         {
             if (localStops[i].Anchor == cell || localStops[i].RoadAccess == cell)
@@ -96,6 +104,14 @@ public partial class GameBootstrap
             }
         }
 
+        for (int i = 0; i < extraServiceLocations.Count; i++)
+        {
+            if (extraServiceLocations[i].Contains(cell) || extraServiceLocations[i].Anchor == cell || extraServiceLocations[i].RoadAccess == cell)
+            {
+                return null;
+            }
+        }
+
         for (int i = 0; i < localStops.Count; i++)
         {
             if (localStops[i].Contains(cell) || localStops[i].Anchor == cell || localStops[i].RoadAccess == cell)
@@ -111,6 +127,14 @@ public partial class GameBootstrap
         foreach (LocationData location in locations.Values)
         {
             if (location.Contains(cell) || location.Anchor == cell)
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < extraServiceLocations.Count; i++)
+        {
+            if (extraServiceLocations[i].Contains(cell) || extraServiceLocations[i].Anchor == cell)
             {
                 return true;
             }

@@ -305,6 +305,7 @@ public partial class GameBootstrap
 
         driver.AssignedTruckNumber = 0;
         driver.AssignedBuildingType = null;
+        driver.AssignedBuildingInstanceId = 0;
         driver.ShiftStartHour = -1;
         driver.DutyMode = DriverDutyMode.Local;
         driver.IsOnActiveShift = false;

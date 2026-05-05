@@ -14,6 +14,8 @@ public partial class GameBootstrap
     private void SetupLocations()
     {
         locations.Clear();
+        extraServiceLocations.Clear();
+        nextLocationInstanceId = 1;
         localStops.Clear();
         locationTrashCanMealTargets.Clear();
         hasShownLocalBusStopMinimumHint = false;
@@ -53,6 +55,17 @@ public partial class GameBootstrap
             };
         }
 
+        foreach (LocationData location in extraServiceLocations)
+        {
+            yield return new WorldLocationPlacement
+            {
+                Min = location.Min,
+                Max = location.Max,
+                Anchor = location.Anchor,
+                RoadAccess = location.RoadAccess
+            };
+        }
+
         foreach (LocationData stop in localStops)
         {
             yield return new WorldLocationPlacement
@@ -72,6 +85,14 @@ public partial class GameBootstrap
             if (pair.Value.RootObject != null)
             {
                 pair.Value.RootObject.transform.position = new Vector3(0f, GetLocationBaseHeight(pair.Key), 0f);
+            }
+        }
+
+        foreach (LocationData location in extraServiceLocations)
+        {
+            if (location.RootObject != null)
+            {
+                location.RootObject.transform.position = new Vector3(0f, GetLocationBaseHeight(location), 0f);
             }
         }
 
@@ -286,12 +307,6 @@ public partial class GameBootstrap
 
     private bool TryPlaceBarAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.Bar))
-        {
-            SessionDebugLogger.Log("BUILD", "Bar placement rejected: bar already exists.");
-            return false;
-        }
-
         if (!TryGetBarPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Bar placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
@@ -331,12 +346,6 @@ public partial class GameBootstrap
 
     private bool TryPlaceCanteenAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.Canteen))
-        {
-            SessionDebugLogger.Log("BUILD", "Canteen placement rejected: canteen already exists.");
-            return false;
-        }
-
         if (!TryGetCanteenPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Canteen placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
@@ -356,12 +365,6 @@ public partial class GameBootstrap
 
     private bool TryPlaceGamblingHallAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.GamblingHall))
-        {
-            SessionDebugLogger.Log("BUILD", "Gambling Hall placement rejected: already exists.");
-            return false;
-        }
-
         if (!TryGetGamblingHallPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Gambling Hall placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
@@ -381,25 +384,19 @@ public partial class GameBootstrap
 
     private bool TryPlaceCityParkAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.CityPark))
-        {
-            SessionDebugLogger.Log("BUILD", "City Park placement rejected: already exists.");
-            return false;
-        }
-
         if (!TryGetCityParkPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"City Park placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
             return false;
         }
 
-        CreateLocation(LocationType.CityPark, "City Park", min, max, anchorCell, new Color(0.30f, 0.52f, 0.22f), anchorCell);
+        CreateLocation(LocationType.CityPark, "City Park", min, max, anchorCell, new Color(0.30f, 0.52f, 0.22f));
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
         RebuildRoadsideBenches();
         RebuildRoadSigns();
-        SessionDebugLogger.Log("BUILD", $"Placed City Park at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell, RoadAccess = anchorCell })}.");
+        SessionDebugLogger.Log("BUILD", $"Placed City Park at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         NotifyTutorialServiceBuildingBuilt(LocationType.CityPark);
         return true;
     }
@@ -530,11 +527,8 @@ public partial class GameBootstrap
 
     private bool TryGetCityParkPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
-        // Park uses the clicked cell as its external entrance/driveway, matching other buildable services.
+        // Park has no driveway or road requirement; the clicked cell is only a pedestrian entrance marker.
         GetRotatedBuildingFootprint(anchorCell, 8, 8, out min, out max);
-
-        if (locations.ContainsKey(LocationType.CityPark))
-            return false;
 
         if (!IsInsideGrid(anchorCell) || IsBuildingPlacementBlockedCell(anchorCell))
             return false;
@@ -557,7 +551,7 @@ public partial class GameBootstrap
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
         GetRotatedBuildingFootprint(anchorCell, 8, 8, out Vector2Int min, out Vector2Int max);
-        SetBuildFootprintPreviewCells(min, max, anchorCell);
+        SetBuildFootprintPreviewCells(min, max);
         bool canPlace = TryGetCityParkPlacement(anchorCell, out _, out _);
         float cx = (min.x + max.x + 1) * 0.5f;
         float cz = (min.y + max.y + 1) * 0.5f;
@@ -580,7 +574,7 @@ public partial class GameBootstrap
     {
         GetRotatedBuildingFootprint(anchorCell, width, depth, out min, out max);
 
-        if (locations.ContainsKey(type))
+        if (locations.ContainsKey(type) && !IsMultiInstanceServiceBuildType(type))
         {
             return false;
         }
@@ -601,7 +595,7 @@ public partial class GameBootstrap
                IsWaterOrBeachCell(cell);
     }
 
-    private void SetBuildFootprintPreviewCells(Vector2Int min, Vector2Int max, Vector2Int drivewayCell)
+    private void SetBuildFootprintPreviewCells(Vector2Int min, Vector2Int max, Vector2Int? drivewayCell = null)
     {
         BuildingPlacementService.FillFootprintCells(buildPreviewFootprintCells, min, max);
         buildPreviewDrivewayCell = drivewayCell;

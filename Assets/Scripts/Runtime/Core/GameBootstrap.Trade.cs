@@ -437,7 +437,14 @@ public partial class GameBootstrap
 
     private int GetTradeRunPrice(TradeResourceType resourceType, TradeOrderType orderType)
     {
-        return 50;
+        return GetTradeResourceUnitPrice(resourceType, orderType) * GetTradeRunQuantity(resourceType);
+    }
+
+    private int GetTradeResourceUnitPrice(TradeResourceType resourceType, TradeOrderType orderType)
+    {
+        return orderType == TradeOrderType.Buy
+            ? GetDocksBuyPrice(resourceType)
+            : GetDocksSellPrice(resourceType);
     }
 
     private float GetTradeRunDuration(TradeResourceType resourceType)
@@ -626,6 +633,12 @@ public partial class GameBootstrap
         int quantity = GetTradeRunQuantity(selectedTradeResourceType);
         int price = GetTradeRunPrice(selectedTradeResourceType, selectedTradeOrderType);
         string resourceLabel = GetTradeResourceLabel(selectedTradeResourceType);
+        if (!HasBuiltTradeRouteForOrder(selectedTradeResourceType, selectedTradeOrderType))
+        {
+            blockReason = GetTradeRouteMissingLabel(selectedTradeResourceType, selectedTradeOrderType);
+            return false;
+        }
+
         bool hasDriver = driver != null;
         bool driverArriving = driver != null && driver.IsArrivingByBus;
         bool driverBusy = driver != null && (driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || IsDriverIdleConversing(driver));

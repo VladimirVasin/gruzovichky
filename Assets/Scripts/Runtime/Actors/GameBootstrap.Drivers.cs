@@ -276,7 +276,8 @@ public partial class GameBootstrap : MonoBehaviour
                 CancelForestFieldWork(driver);
             }
 
-            if (driver.IsInsideBuilding && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData bd))
+            LocationData bd = GetAssignedBuildingLocation(driver);
+            if (driver.IsInsideBuilding && bd != null)
             {
                 bd.Workers = Mathf.Max(0, bd.Workers - 1);
                 driver.IsInsideBuilding = false;
@@ -284,6 +285,7 @@ public partial class GameBootstrap : MonoBehaviour
                 driver.DriverObject.transform.position = driver.MotelIdlePosition;
             }
             driver.AssignedBuildingType = null;
+            driver.AssignedBuildingInstanceId = 0;
         }
 
         if (dutyMode != DriverDutyMode.Local)
@@ -596,7 +598,8 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        if (!locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData building))
+        LocationData building = GetAssignedBuildingLocation(driver);
+        if (building == null)
         {
             return;
         }
@@ -616,7 +619,7 @@ public partial class GameBootstrap : MonoBehaviour
         ReleaseBench(driver);
         ApplyDriverPose(driver, 0f, 0f);
 
-        Vector3 target = GetDriverStandPointNearLocation(driver.AssignedBuildingType.Value);
+        Vector3 target = GetCellCenter(building.Anchor);
         target.y += 0.05f;
         ResetWorkerLocalBusTripState(driver);
         if (TryStartWorkerPersonalCarTrip(driver, driver.DriverObject.transform.position, target, DriverRescuePhase.ToBuildingForShift, $"{building.Label} shift"))
@@ -660,7 +663,8 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        if (driver.IsInsideBuilding && locations.TryGetValue(driver.AssignedBuildingType.Value, out LocationData building))
+        LocationData building = GetAssignedBuildingLocation(driver);
+        if (driver.IsInsideBuilding && building != null)
         {
             // Normal exit: worker is invisible inside the building
             building.Workers = Mathf.Max(0, building.Workers - 1);

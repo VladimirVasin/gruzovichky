@@ -275,6 +275,12 @@ public partial class GameBootstrap
             return ru ? "нет доступного направления" : "no available direction";
         }
 
+        TradeOrderType orderType = mode == TradePolicyMode.SellAbove ? TradeOrderType.Sell : TradeOrderType.Buy;
+        if (!HasBuiltTradeRouteForOrder(resourceType, orderType))
+        {
+            return GetTradeRouteMissingLabel(resourceType, orderType);
+        }
+
         if (mode == TradePolicyMode.SellAbove)
         {
             int excess = amount - target;

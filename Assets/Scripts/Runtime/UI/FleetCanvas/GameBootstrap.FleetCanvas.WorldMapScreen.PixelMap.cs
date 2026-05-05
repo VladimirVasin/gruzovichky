@@ -69,10 +69,10 @@ public partial class GameBootstrap
 
         for (int i = 0; i < 9; i++)
         {
-            if (i == 2 || i == 8)
-                DrawPixelPort(pixels, width, height, GetWorldMapRegionPosition(i), i == 2);
-            else
-                DrawPixelTown(pixels, width, height, GetWorldMapRegionPosition(i), i == 4, IsWorldMapRegionKnown(i));
+            if (IsWorldMapRegionKnown(i))
+            {
+                DrawPixelTown(pixels, width, height, GetWorldMapRegionPosition(i), i == 4, true);
+            }
         }
 
         tex.SetPixels(pixels);

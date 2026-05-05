@@ -506,7 +506,8 @@ public partial class GameBootstrap : MonoBehaviour
         Boards,
         Cotton,
         Textile,
-        Furniture
+        Furniture,
+        Alcohol
     }
 
     public enum TradeOrderType
@@ -525,6 +526,8 @@ public partial class GameBootstrap : MonoBehaviour
 
     private sealed class LocationData
     {
+        public int InstanceId;
+        public LocationType Type;
         public string Label;
         public Vector2Int Min;
         public Vector2Int Max;
@@ -537,6 +540,11 @@ public partial class GameBootstrap : MonoBehaviour
         public int CottonStored;
         public int TextileStored;
         public int FurnitureStored;
+        public int DocksImportLogsStored;
+        public int DocksImportBoardsStored;
+        public int DocksImportCottonStored;
+        public int DocksImportTextileStored;
+        public int DocksImportFurnitureStored;
         public GameObject RootObject;
         public GameObject LocalBusWarningMarker;
         public Renderer BaseRenderer;

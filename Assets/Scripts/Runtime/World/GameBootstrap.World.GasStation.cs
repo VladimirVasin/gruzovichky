@@ -4,12 +4,6 @@ public partial class GameBootstrap
 {
     private bool TryPlaceGasStationAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.GasStation))
-        {
-            SessionDebugLogger.Log("BUILD", "Gas Station placement rejected: gas station already exists.");
-            return false;
-        }
-
         if (!TryGetGasStationPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Gas Station placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");

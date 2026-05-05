@@ -229,6 +229,7 @@ public partial class GameBootstrap
         public bool IsOccupied;
         public DriverAgent AssignedWorker;
         public LocationType BuildingType;
+        public int LocationInstanceId;
         public int SlotIndex;
         public int ShiftIndex = -1;
         public int TruckNumber;
@@ -483,6 +484,8 @@ public partial class GameBootstrap
         public Text RouteStatusText;
         public Button BuildRouteButton;
         public Text BuildRouteButtonText;
+        public Button OpenTradeButton;
+        public Text OpenTradeButtonText;
     }
 
     private sealed class WorldMapCellUi
@@ -525,6 +528,7 @@ public partial class GameBootstrap
     private sealed class LogisticsSlotUi
     {
         public LocationType  BuildingType;
+        public int           LocationInstanceId;
         public int           SlotIndex;  // which worker slot within this building (0-based)
         public RectTransform Root;
         public Text          BuildingNameText;

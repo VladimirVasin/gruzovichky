@@ -893,7 +893,8 @@ public partial class GameBootstrap
         return slotArrayIndex;
     }
 
-    private string GetBuildingWorkerSlotTitle(LocationType buildingType, int workerSlot) =>
-        GetMaxBuildingWorkerSlots(buildingType) > 1 ? $"{GetSelectedLocationDisplayName(buildingType)} #{workerSlot + 1}" : GetSelectedLocationDisplayName(buildingType);
-
+    private string GetBuildingWorkerSlotTitle(LocationType buildingType, int workerSlot, int locationInstanceId = 0) =>
+        GetMaxBuildingWorkerSlots(buildingType) > 1
+            ? $"{GetBuildingInstanceDisplayName(buildingType, locationInstanceId)} #{workerSlot + 1}"
+            : GetBuildingInstanceDisplayName(buildingType, locationInstanceId);
 }

@@ -243,7 +243,7 @@ public partial class GameBootstrap
             case TruckInteractionType.UnloadAtDocks:
                 if (locations.TryGetValue(LocationType.Docks, out LocationData docksUnload))
                 {
-                    AddDocksStoredResource(docksUnload, CargoTypeToTradeResourceType(truckCargoType), truckCargoAmount);
+                    AddDocksExportStoredResource(docksUnload, CargoTypeToTradeResourceType(truckCargoType), truckCargoAmount);
                 }
                 truckCargoAmount = 0;
                 truckCargoType = CargoType.None;
@@ -253,7 +253,7 @@ public partial class GameBootstrap
                 if (locations.TryGetValue(LocationType.Docks, out LocationData docksLoad))
                 {
                     TradeResourceType resource = GetDocksLoadResourceForTrip(currentAssignedTrip);
-                    if (TryConsumeDocksStoredResource(docksLoad, resource, 1))
+                    if (TryConsumeDocksImportStoredResource(docksLoad, resource, 1))
                     {
                         truckCargoAmount = 1;
                         truckCargoType = TradeResourceTypeToCargoType(resource);

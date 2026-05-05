@@ -12,6 +12,8 @@ public partial class GameBootstrap
 
         LocationData data = new()
         {
+            InstanceId = nextLocationInstanceId++,
+            Type = type,
             Label = label,
             Min = min,
             Max = max,
@@ -244,6 +246,11 @@ public partial class GameBootstrap
                     ConfigureStaticVisual));
             }
         }
+        else if (locations.ContainsKey(type) && IsMultiInstanceServiceBuildType(type))
+        {
+            extraServiceLocations.Add(data);
+            root.transform.position = new Vector3(0f, GetLocationBaseHeight(data), 0f);
+        }
         else
         {
             locations[type] = data;
@@ -258,8 +265,21 @@ public partial class GameBootstrap
             }
         }
 
-        EnsureLocationRoadAccessRoadCell(data, type.ToString());
+        if (type != LocationType.CityPark)
+        {
+            EnsureLocationRoadAccessRoadCell(data, type.ToString());
+        }
     }
+
+    private static bool IsMultiInstanceServiceBuildType(LocationType type) => type switch
+    {
+        LocationType.Bar          => true,
+        LocationType.Canteen      => true,
+        LocationType.GamblingHall => true,
+        LocationType.GasStation   => true,
+        LocationType.CityPark     => true,
+        _                         => false
+    };
 
     private void CreateLocationTrashCans(LocationType type, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {

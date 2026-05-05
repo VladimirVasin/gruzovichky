@@ -156,6 +156,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly HashSet<Vector2Int> miscOccupiedCells = new();
     private readonly Dictionary<Vector2Int, GameObject> roadVisuals = new();
     private readonly Dictionary<LocationType, LocationData> locations = new();
+    private readonly List<LocationData> extraServiceLocations = new();
     private readonly List<Vector2Int> activePath = new();
     private readonly List<Transform> truckWheels = new();
     private readonly List<Transform> truckFrontWheels = new();
@@ -223,6 +224,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<NaturalZoneData> hillZones = new();
     private readonly List<NaturalZoneData> lakeZones = new();
     private int nextLaborExchangePostingId = 1;
+    private int nextLocationInstanceId = 1;
     private float laborExchangePostingTimer;
     private int laborExchangeApplicantsToday;
     private int laborExchangeApplicantDay = -1;
