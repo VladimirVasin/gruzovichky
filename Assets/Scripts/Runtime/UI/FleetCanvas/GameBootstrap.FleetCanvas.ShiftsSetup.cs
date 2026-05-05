@@ -759,10 +759,11 @@ public partial class GameBootstrap
         shiftsScreenUi.ProductionSectionSummaryText = CreateBodyText("AssignmentsProductionSectionSummary", productionIntroBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
 
         int slotArrayIndex = 0;
-        LocationType[] productionTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory };
+        LocationType[] productionTypes = { LocationType.Forest, LocationType.Sawmill, LocationType.FurnitureFactory, LocationType.Docks };
         for (int pi = 0; pi < productionTypes.Length; pi++)
         {
-            for (int workerSlot = 0; workerSlot < ProductionMaxWorkersPerBuilding; workerSlot++)
+            int maxWorkerSlots = GetMaxBuildingWorkerSlots(productionTypes[pi]);
+            for (int workerSlot = 0; workerSlot < maxWorkerSlots; workerSlot++)
             {
                 slotArrayIndex = AddBuildingWorkerSlotCard(logisticsContent, font, slotArrayIndex, productionTypes[pi], workerSlot);
             }

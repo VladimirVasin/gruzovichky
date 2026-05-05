@@ -418,13 +418,41 @@ public partial class GameBootstrap
         public int OrderId;
     }
 
-    private sealed class WorldMapRouteRowUi
+    private sealed class TradePolicyRowUi
+    {
+        public RectTransform Root;
+        public TradeResourceType ResourceType;
+        public Text ResourceText;
+        public Text WarehouseText;
+        public RectTransform ModeOptionsRoot;
+        public Button NoTradeButton;
+        public Text NoTradeButtonText;
+        public Button SellAboveButton;
+        public Text SellAboveButtonText;
+        public Button BuyUpToButton;
+        public Text BuyUpToButtonText;
+        public Button TargetMinusButton;
+        public Text TargetMinusText;
+        public Text TargetText;
+        public Button TargetPlusButton;
+        public Text TargetPlusText;
+        public Text StatusText;
+    }
+
+    private sealed class TradeScreenUiRefs
+    {
+        public GameObject CanvasRoot;
+        public RectTransform WindowRoot;
+        public Text HeaderCountText;
+        public Text StatusText;
+        public RectTransform RowsContent;
+        public readonly List<TradePolicyRowUi> PolicyRows = new();
+    }
+
+    private sealed class WorldMapResourceRowUi
     {
         public GameObject Root;
-        public Text TagText;
-        public Text OrderText;
-        public Button RemoveButton;
-        public int OrderId;
+        public TradeResourceType ResourceType;
     }
 
     private sealed class WorldMapScreenUiRefs
@@ -438,25 +466,23 @@ public partial class GameBootstrap
         public readonly List<Image> RegionRouteLines = new();
         public readonly List<WorldMapCellUi> Cells = new();
         public GameObject DetailsPanelRoot;
-        public WorldMapDetailPreviewUi DetailPreview;
         public Text DetailsNameText;
         public Text DetailsStatusText;
         public Text DetailsSellsLabelText;
         public Text DetailsResourcesText;
         public Text DetailsBuysLabelText;
         public Text DetailsImportsText;
+        public RectTransform DetailsSellsListRoot;
+        public RectTransform DetailsBuysListRoot;
+        public readonly List<WorldMapResourceRowUi> DetailsSellsRows = new();
+        public readonly List<WorldMapResourceRowUi> DetailsBuysRows = new();
         public Text DetailsDescriptionText;
         // trade route bottom panel
         public GameObject RoutePanelRoot;
         public Text RoutePanelTitleText;
-        public RectTransform RouteOrdersRow;
-        public readonly List<WorldMapRouteRowUi> RouteRows = new();
-        // add-order form
-        public Text RouteResourceLabel;
-        public Text RouteAmountLabel;
-        public Button RouteTypeButton;
-        public Text RouteTypeButtonText;
-        public Button RoutePlaceButton;
+        public Text RouteStatusText;
+        public Button BuildRouteButton;
+        public Text BuildRouteButtonText;
     }
 
     private sealed class WorldMapCellUi
@@ -512,6 +538,7 @@ public partial class GameBootstrap
     private ResourcesScreenUiRefs resourcesScreenUi;
     private bool isResourcesWarehouseTab = true;
     private EconomyScreenUiRefs economyScreenUi;
+    private TradeScreenUiRefs tradeScreenUi;
 
     private static Color GetNeedBarColor(float satisfactionPct)
     {

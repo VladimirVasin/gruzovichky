@@ -109,7 +109,7 @@ public partial class GameBootstrap
     }
     private bool ShouldStartTutorialWorkerHireWave()
     {
-        return selectedGameStartMode == GameStartMode.User &&
+        return selectedGameStartMode == GameStartMode.Tutorial &&
                !isTutorialSkipped &&
                isTutorialGoalsActive &&
                tutorialGoalsMode == TutorialGoalsMode.WorkerCard &&
@@ -427,6 +427,19 @@ public partial class GameBootstrap
         GUI.color = previousColor;
     }
 
+    private void DrawPopulationHud()
+    {
+        Rect panelRect = GetPopulationHudRect();
+        GUI.Box(panelRect, L("Population"));
+        GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontStyle = FontStyle.Bold
+        };
+
+        GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 26), driverAgents.Count.ToString(), centeredHudValueStyle);
+    }
+
     private void DrawTimeHud()
     {
         Rect panelRect = GetTimeHudRect();
@@ -476,6 +489,210 @@ public partial class GameBootstrap
 
         GUI.Label(overlayRect, L("PAUSE"), pausedStyle);
         GUI.color = previousColor;
+    }
+
+    private void DrawTradePolicyHud()
+    {
+        Color prevColor = GUI.color;
+        bool prevEnabled = GUI.enabled;
+
+        GUI.color = new Color(0.02f, 0.03f, 0.05f, 0.86f);
+        GUI.Box(new Rect(0f, 0f, Screen.width, Screen.height), string.Empty);
+        GUI.color = prevColor;
+
+        Rect window = new Rect(28f, 24f, Screen.width - 56f, Screen.height - 48f);
+        GUI.Box(window, string.Empty);
+
+        GUIStyle titleStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 30,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleLeft
+        };
+        GUI.Label(new Rect(window.x + 18f, window.y + 8f, 420f, 42f), L("Trade"), titleStyle);
+
+        if (GUI.Button(new Rect(window.xMax - 46f, window.y + 8f, 34f, 34f), "X"))
+        {
+            SessionDebugLogger.Log("TRADE_UI", "Closed Trade HUD via OnGUI close button.");
+            CloseAllMenus();
+            GUI.enabled = prevEnabled;
+            GUI.color = prevColor;
+            return;
+        }
+
+        GUIStyle topRightStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleRight,
+            fontStyle = FontStyle.Bold
+        };
+        GUI.Label(new Rect(window.xMax - 230f, window.y + 42f, 176f, 22f), $"{L("Treasury")}: ${money}", topRightStyle);
+
+        Rect summary = new Rect(window.x + 18f, window.y + 62f, window.width - 36f, 70f);
+        GUI.Box(summary, string.Empty);
+        GUI.Label(new Rect(summary.x + 14f, summary.y + 8f, summary.width - 28f, 22f), IsRussianLanguage() ? "Политики торговли склада" : "Warehouse Trade Policies", new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 16 });
+        GUI.Label(new Rect(summary.x + 14f, summary.y + 34f, summary.width - 28f, 24f), BuildTradePoliciesSummaryText());
+
+        Rect table = new Rect(window.x + 18f, summary.yMax + 14f, window.width - 36f, window.height - summary.yMax + window.y - 32f);
+        GUI.Box(table, string.Empty);
+        DrawTradePolicyTable(table);
+        if (isTradeScreenDirty)
+        {
+            isTradeScreenDirty = false;
+        }
+
+        GUI.enabled = prevEnabled;
+        GUI.color = prevColor;
+    }
+
+    private void DrawTradePolicyTable(Rect table)
+    {
+        bool ru = IsRussianLanguage();
+        GUIStyle headerStyle = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
+        GUIStyle valueStyle = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft };
+        GUIStyle statusStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleLeft };
+
+        float x = table.x + 16f;
+        float y = table.y + 14f;
+        float nameW = 190f;
+        float stockW = 86f;
+        float modeW = 260f;
+        float targetW = 132f;
+        float gap = 12f;
+
+        GUI.Label(new Rect(x, y, nameW, 24f), L("Resource"), headerStyle);
+        GUI.Label(new Rect(x + nameW + gap, y, stockW, 24f), ru ? "Склад" : "Stock", headerStyle);
+        GUI.Label(new Rect(x + nameW + stockW + gap * 2f, y, modeW, 24f), ru ? "Режим" : "Mode", headerStyle);
+        GUI.Label(new Rect(x + nameW + stockW + modeW + gap * 3f, y, targetW, 24f), ru ? "Цель" : "Target", headerStyle);
+        GUI.Label(new Rect(x + nameW + stockW + modeW + targetW + gap * 4f, y, table.width - nameW - stockW - modeW - targetW - 72f, 24f), L("Status"), headerStyle);
+
+        y += 34f;
+        for (int i = 0; i < TradeHudResources.Length; i++)
+        {
+            TradeResourceType resourceType = TradeHudResources[i];
+            Rect rowRect = new Rect(table.x + 12f, y - 5f, table.width - 24f, 52f);
+            GUI.Box(rowRect, string.Empty);
+
+            DrawTradeResourceIcon(new Rect(x, y + 4f, 30f, 30f), GetTradeResourceVisualKind(resourceType));
+            GUI.Label(new Rect(x + 38f, y + 8f, nameW - 38f, 26f), L(GetTradeResourceShortLabel(resourceType)), valueStyle);
+            GUI.Label(new Rect(x + nameW + gap, y + 8f, stockW, 26f), GetWarehouseTradeResourceAmount(resourceType).ToString(), valueStyle);
+
+            Rect modeRect = new Rect(x + nameW + stockW + gap * 2f, y + 6f, modeW, 30f);
+            if (GUI.Button(modeRect, GetTradePolicyModeButtonLabel(resourceType)))
+            {
+                CycleTradePolicyMode(resourceType);
+            }
+
+            DrawTradeTargetControls(resourceType, new Rect(x + nameW + stockW + modeW + gap * 3f, y + 6f, targetW, 30f));
+            GUI.Label(new Rect(x + nameW + stockW + modeW + targetW + gap * 4f, y + 8f, table.width - nameW - stockW - modeW - targetW - 72f, 26f), GetTradePolicyStatusText(resourceType), statusStyle);
+            y += 62f;
+        }
+    }
+
+    private static ResourceVisualKind GetTradeResourceVisualKind(TradeResourceType resourceType)
+    {
+        return resourceType switch
+        {
+            TradeResourceType.Logs => ResourceVisualKind.Logs,
+            TradeResourceType.Boards => ResourceVisualKind.Boards,
+            TradeResourceType.Cotton => ResourceVisualKind.Cotton,
+            TradeResourceType.Textile => ResourceVisualKind.Textile,
+            TradeResourceType.Furniture => ResourceVisualKind.Furniture,
+            _ => ResourceVisualKind.Logs
+        };
+    }
+
+    private void DrawTradeResourceIcon(Rect rect, ResourceVisualKind iconKind)
+    {
+        Color prevColor = GUI.color;
+        GUI.color = new Color(1f, 1f, 1f, 0.08f);
+        GUI.DrawTexture(rect, Texture2D.whiteTexture);
+
+        switch (iconKind)
+        {
+            case ResourceVisualKind.Logs:
+                DrawTradeIconBar(rect, new Rect(5f, 7f, 19f, 5f), new Color(0.63f, 0.43f, 0.20f, 1f));
+                DrawTradeIconBar(rect, new Rect(7f, 13f, 20f, 5f), new Color(0.74f, 0.52f, 0.26f, 1f));
+                DrawTradeIconBar(rect, new Rect(4f, 19f, 19f, 5f), new Color(0.56f, 0.36f, 0.16f, 1f));
+                break;
+            case ResourceVisualKind.Boards:
+                DrawTradeIconBar(rect, new Rect(5f, 8f, 21f, 4f), new Color(0.86f, 0.72f, 0.45f, 1f));
+                DrawTradeIconBar(rect, new Rect(5f, 14f, 21f, 4f), new Color(0.81f, 0.67f, 0.40f, 1f));
+                DrawTradeIconBar(rect, new Rect(5f, 20f, 21f, 4f), new Color(0.76f, 0.61f, 0.35f, 1f));
+                break;
+            case ResourceVisualKind.Cotton:
+                DrawTradeIconBar(rect, new Rect(6f, 9f, 11f, 11f), new Color(0.97f, 0.97f, 0.95f, 1f));
+                DrawTradeIconBar(rect, new Rect(14f, 6f, 10f, 10f), new Color(0.98f, 0.98f, 0.96f, 1f));
+                DrawTradeIconBar(rect, new Rect(12f, 16f, 9f, 9f), new Color(0.95f, 0.95f, 0.93f, 1f));
+                break;
+            case ResourceVisualKind.Textile:
+                DrawTradeIconBar(rect, new Rect(5f, 7f, 22f, 18f), new Color(0.72f, 0.84f, 0.95f, 1f));
+                DrawTradeIconBar(rect, new Rect(9f, 7f, 3f, 18f), new Color(0.55f, 0.74f, 0.90f, 1f));
+                DrawTradeIconBar(rect, new Rect(17f, 7f, 3f, 18f), new Color(0.55f, 0.74f, 0.90f, 1f));
+                break;
+            case ResourceVisualKind.Furniture:
+                DrawTradeIconBar(rect, new Rect(6f, 9f, 19f, 4f), new Color(0.78f, 0.56f, 0.30f, 1f));
+                DrawTradeIconBar(rect, new Rect(8f, 16f, 15f, 4f), new Color(0.72f, 0.50f, 0.25f, 1f));
+                DrawTradeIconBar(rect, new Rect(9f, 20f, 3f, 8f), new Color(0.58f, 0.39f, 0.18f, 1f));
+                DrawTradeIconBar(rect, new Rect(20f, 20f, 3f, 8f), new Color(0.58f, 0.39f, 0.18f, 1f));
+                break;
+        }
+
+        GUI.color = prevColor;
+    }
+
+    private static void DrawTradeIconBar(Rect iconRect, Rect localRect, Color color)
+    {
+        Color previous = GUI.color;
+        GUI.color = color;
+        GUI.DrawTexture(
+            new Rect(iconRect.x + localRect.x, iconRect.y + localRect.y, localRect.width, localRect.height),
+            Texture2D.whiteTexture);
+        GUI.color = previous;
+    }
+
+    private void DrawTradeTargetControls(TradeResourceType resourceType, Rect rect)
+    {
+        int target = GetTradePolicyTarget(resourceType);
+        GUI.enabled = target > 0;
+        if (GUI.Button(new Rect(rect.x, rect.y, 32f, rect.height), "-"))
+        {
+            AdjustTradePolicyTarget(resourceType, -1);
+            SessionDebugLogger.Log("TRADE_UI", $"Clicked target minus for {resourceType}.");
+        }
+
+        GUI.enabled = true;
+        GUI.Label(new Rect(rect.x + 38f, rect.y + 4f, 44f, rect.height - 8f), target.ToString(), new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold });
+        GUI.enabled = target < 99;
+        if (GUI.Button(new Rect(rect.x + 88f, rect.y, 32f, rect.height), "+"))
+        {
+            AdjustTradePolicyTarget(resourceType, 1);
+            SessionDebugLogger.Log("TRADE_UI", $"Clicked target plus for {resourceType}.");
+        }
+
+        GUI.enabled = true;
+    }
+
+    private string GetTradePolicyModeButtonLabel(TradeResourceType resourceType)
+    {
+        string suffix = IsRussianLanguage() ? " (клик)" : " (click)";
+        return GetTradePolicyModeLabel(GetTradePolicyMode(resourceType)) + suffix;
+    }
+
+    private void CycleTradePolicyMode(TradeResourceType resourceType)
+    {
+        TradePolicyMode current = GetTradePolicyMode(resourceType);
+        TradePolicyMode[] order = { TradePolicyMode.None, TradePolicyMode.BuyUpTo, TradePolicyMode.SellAbove };
+        int currentIndex = System.Array.IndexOf(order, current);
+        for (int step = 1; step <= order.Length; step++)
+        {
+            TradePolicyMode next = order[(currentIndex + step + order.Length) % order.Length];
+            if (IsTradePolicyModeSupported(resourceType, next))
+            {
+                SessionDebugLogger.Log("TRADE_UI", $"Clicked mode cycle for {resourceType}: {current} -> {next}.");
+                SetTradePolicyMode(resourceType, next);
+                return;
+            }
+        }
     }
 
     private void DrawSelectedBuildingHud(LocationType locationType)

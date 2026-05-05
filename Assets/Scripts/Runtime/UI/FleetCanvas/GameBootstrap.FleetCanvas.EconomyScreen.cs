@@ -77,6 +77,7 @@ public partial class GameBootstrap
             isEconomyScreenDirty = true;
             PlayUiSound(uiSelectClip, 0.8f);
         });
+        tabRow.gameObject.SetActive(false);
 
         RectTransform taxesPanel = CreateUiObject("EconomyTaxesPanel", windowRoot.transform).GetComponent<RectTransform>();
         LayoutElement taxesPanelElement = taxesPanel.gameObject.AddComponent<LayoutElement>();
@@ -465,6 +466,7 @@ public partial class GameBootstrap
         if (!shouldShow) return;
         bool forceLayoutRebuild = isEconomyScreenDirty;
 
+        isEconomyTaxesTabActive = true;
         EnsureTradeHudSelectionValid();
         int taxableBankTotal = GetCurrentTaxableBuildingBankTotal();
         if (economyScreenUi.TaxesPanel != null) economyScreenUi.TaxesPanel.gameObject.SetActive(isEconomyTaxesTabActive);
@@ -600,7 +602,7 @@ public partial class GameBootstrap
             selectedTradeOrderType,
             selectedTradeOrderAmount);
         activeTradeHudOrders.Add(order);
-        NotifyTutorialTradeOrderCreated(order);
+        NotifyTutorialTradePolicyChanged(order.ResourceType);
         isTradeResourceDropdownOpen = false;
         isTradeActionDropdownOpen = false;
         SessionDebugLogger.Log(

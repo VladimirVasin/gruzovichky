@@ -96,7 +96,7 @@ Status: previous documented prototype version.
 
 - The map is larger and denser, with more trees, bushes, forest zones, water, hills, and ambient life.
 - Lighting, fog, water, roads, lanterns, clouds, and ambient details were improved.
-- Added a rebuilt User tutorial flow and the free New Game Clear mode.
+- Added a rebuilt Tutorial flow plus a regular New Game start that skips tutorial gates.
 
 ### Main Menu And Patch Notes
 
@@ -110,7 +110,7 @@ Status: previous documented prototype baseline.
 ### Core Loop
 
 - Runtime-generated logistics town on a grid.
-- Main Menu includes `New Game Debug`; `New Game User` is temporarily disabled and shown as `Work in progress`.
+- Main Menu now uses player-facing Tutorial and New Game starts; legacy debug/clear start modes are no longer player-facing.
 - Top HUD tabs provide access to Fleet, Workers, Shifts, Resources, Economy/Trade, Build, and Regional Map.
 - Debug tooling includes clickable cell/building/truck/worker quick HUDs and `debug.log` diagnostics.
 

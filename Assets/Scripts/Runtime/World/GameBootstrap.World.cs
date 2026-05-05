@@ -23,68 +23,16 @@ public partial class GameBootstrap
 
         GeneratedWorldLayout layout = WorldLayoutGenerator.Generate(GridWidth, GridHeight, waterCells, HasRequiredLayoutRoads);
 
-        if (selectedGameStartMode == GameStartMode.Clear)
-        {
-            CreateLocation(LocationType.IntercityStop, "Intercity Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f), layout.BusStop.RoadAccess);
-            SessionDebugLogger.Log("WORLD", $"Generated clear layout: BusStop {FormatPlacement(layout.BusStop)} (all other locations skipped).");
-            return;
-        }
-
-        if (selectedGameStartMode == GameStartMode.Debug)
-        {
-            CreateLocation(LocationType.Parking, "Parking", layout.Parking.Min, layout.Parking.Max, layout.Parking.Anchor, new Color(0.46f, 0.46f, 0.52f), layout.Parking.RoadAccess);
-            CreateLocation(LocationType.Warehouse, "Warehouse", layout.Warehouse.Min, layout.Warehouse.Max, layout.Warehouse.Anchor, new Color(0.7f, 0.52f, 0.3f), layout.Warehouse.RoadAccess);
-            CreateLocation(LocationType.GasStation, "Gas Station", layout.GasStation.Min, layout.GasStation.Max, layout.GasStation.Anchor, new Color(0.84f, 0.68f, 0.26f), layout.GasStation.RoadAccess);
-            CreateLocation(LocationType.Forest, "Lumberyard", layout.Forest.Min, layout.Forest.Max, layout.Forest.Anchor, new Color(0.58f, 0.42f, 0.24f), layout.Forest.RoadAccess);
-            CreateLocation(LocationType.Sawmill, "Sawmill", layout.Sawmill.Min, layout.Sawmill.Max, layout.Sawmill.Anchor, new Color(0.3f, 0.52f, 0.8f), layout.Sawmill.RoadAccess);
-            CreateLocation(LocationType.Motel, "Motel", layout.Motel.Min, layout.Motel.Max, layout.Motel.Anchor, new Color(0.91f, 0.87f, 0.74f), layout.Motel.RoadAccess);
-        }
-
         CreateLocation(LocationType.IntercityStop, "Intercity Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f), layout.BusStop.RoadAccess);
 
         SessionDebugLogger.Log(
             "WORLD",
-            selectedGameStartMode == GameStartMode.Debug
-                ? $"Generated debug layout: Parking {FormatPlacement(layout.Parking)}, GasStation {FormatPlacement(layout.GasStation)}, Forest {FormatPlacement(layout.Forest)}, Warehouse {FormatPlacement(layout.Warehouse)}, Sawmill {FormatPlacement(layout.Sawmill)}, Motel {FormatPlacement(layout.Motel)}, BusStop {FormatPlacement(layout.BusStop)}."
-                : $"Generated user layout: BusStop {FormatPlacement(layout.BusStop)}. Parking/Warehouse skipped for Build menu; all production/service tutorial buildings skipped.");
+            $"Generated player layout ({selectedGameStartMode}): BusStop {FormatPlacement(layout.BusStop)}. Parking/Warehouse skipped for Build menu; all production/service buildings are player-built.");
     }
 
     private bool HasRequiredLayoutRoads(GeneratedWorldLayout layout)
     {
-        if (selectedGameStartMode == GameStartMode.Clear)
-        {
-            return true;
-        }
-
-        if (selectedGameStartMode == GameStartMode.User)
-        {
-            return true;
-        }
-
-        if (!CanBuildWideRoadPath(layout.Parking.RoadAccess, layout.GasStation.RoadAccess, cell => IsPlacementCell(layout, cell)) ||
-            !CanBuildWideRoadPath(layout.GasStation.RoadAccess, layout.Warehouse.RoadAccess, cell => IsPlacementCell(layout, cell)) ||
-            !CanBuildWideRoadPath(layout.Warehouse.RoadAccess, layout.Forest.RoadAccess, cell => IsPlacementCell(layout, cell)))
-        {
-            return false;
-        }
-
-        return CanBuildWideRoadPath(layout.Forest.RoadAccess, layout.Sawmill.RoadAccess, cell => IsPlacementCell(layout, cell)) &&
-               CanBuildWideRoadPath(layout.Sawmill.RoadAccess, layout.Warehouse.RoadAccess, cell => IsPlacementCell(layout, cell)) &&
-               CanBuildWideRoadPath(layout.Warehouse.RoadAccess, layout.Motel.RoadAccess, cell => IsPlacementCell(layout, cell)) &&
-               CanBuildWideRoadPath(layout.Warehouse.RoadAccess, layout.BusStop.RoadAccess, cell => IsPlacementCell(layout, cell));
-    }
-
-    private static bool IsPlacementCell(GeneratedWorldLayout layout, Vector2Int cell)
-    {
-        foreach (WorldLocationPlacement placement in layout.GetAllPlacements())
-        {
-            if (placement.Anchor == cell || placement.Contains(cell))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return true;
     }
 
     private void GenerateTerrainHeights()

@@ -144,7 +144,7 @@ public partial class GameBootstrap : MonoBehaviour
 
             travelImpulse = idleImpulse;
         }
-        localWaveHeight = along * 0.18f + cross * 0.1f + diagonal * 0.08f + chaotic * 0.12f;
+        localWaveHeight = along * 0.11f + cross * 0.06f + diagonal * 0.05f + chaotic * 0.07f;
     }
 
     private float GetCurrentVisualWaterHeight(Vector2Int cell)
@@ -239,7 +239,7 @@ public partial class GameBootstrap : MonoBehaviour
                 }
 
                 GetWaterWaveState(time, cell, bobSpeed, GetDeterministicWaterPhase(cell), out _, out float localWaveHeight, out float travelImpulse);
-                total += lakeWaterCells.Contains(cell) ? (localWaveHeight * 0.5f + 0.5f) * 0.038f : travelImpulse * 1.8f;
+                total += lakeWaterCells.Contains(cell) ? (localWaveHeight * 0.5f + 0.5f) * 0.026f : travelImpulse * 1.0f;
                 count++;
             }
         }
@@ -280,7 +280,7 @@ public partial class GameBootstrap : MonoBehaviour
             }
 
             GetWaterWaveState(time, waterBody.Cell, 0.98f, waterBody.PhaseOffset, out _, out _, out float travelImpulse);
-            float bodyLift = travelImpulse * 1.8f;
+            float bodyLift = travelImpulse * 1.0f;
             if (waterBody.Mesh != null)
             {
                 UpdateWaterBodyMesh(waterBody, time);
@@ -308,7 +308,7 @@ public partial class GameBootstrap : MonoBehaviour
             }
 
             GetWaterWaveState(time, surfaceTile.Cell, surfaceTile.BobSpeed, surfaceTile.PhaseOffset, out float nearShoreT, out float localWaveHeight, out float travelImpulse);
-            float sharedWaveOffset = travelImpulse * 1.8f;
+            float sharedWaveOffset = travelImpulse * 1.0f;
             if (surfaceTile.Mesh != null)
             {
                 UpdateWaterSurfaceMesh(surfaceTile, time);
@@ -332,32 +332,32 @@ public partial class GameBootstrap : MonoBehaviour
                     shoreColor = new Color(0.64f, 0.90f, 0.96f);
                     deepColor = new Color(0.12f, 0.42f, 0.72f);
                     baseAlpha = Mathf.Lerp(0.16f, 0.09f, nearShoreT);
-                    alphaRange = 0.028f;
-                    highlightBase = 0.12f;
-                    highlightWave = 0.08f;
+                    alphaRange = 0.018f;
+                    highlightBase = 0.08f;
+                    highlightWave = 0.045f;
                     break;
                 case 1:
                     shoreColor = new Color(0.34f, 0.70f, 0.84f);
                     deepColor = new Color(0.08f, 0.28f, 0.56f);
                     baseAlpha = Mathf.Lerp(0.11f, 0.07f, nearShoreT);
-                    alphaRange = 0.024f;
-                    highlightBase = 0.05f;
-                    highlightWave = 0.05f;
+                    alphaRange = 0.016f;
+                    highlightBase = 0.035f;
+                    highlightWave = 0.03f;
                     break;
                 default:
                     shoreColor = new Color(0.16f, 0.44f, 0.64f);
                     deepColor = new Color(0.03f, 0.13f, 0.34f);
                     baseAlpha = Mathf.Lerp(0.15f, 0.09f, nearShoreT);
-                    alphaRange = 0.014f;
-                    highlightBase = 0.02f;
-                    highlightWave = 0.02f;
+                    alphaRange = 0.010f;
+                    highlightBase = 0.015f;
+                    highlightWave = 0.012f;
                     break;
             }
 
             float nightDim = Mathf.Lerp(0.14f, 1f, currentStylizedDaylight);
             Color tileColor = Color.Lerp(shoreColor, deepColor, nearShoreT) * nightDim;
             float whitecap = Mathf.Clamp01(travelImpulse * Mathf.Lerp(1f, 0.28f, nearShoreT));
-            float highlight = highlightBase + (localWaveHeight * 0.5f + 0.5f) * highlightWave + whitecap * 0.08f;
+            float highlight = highlightBase + (localWaveHeight * 0.5f + 0.5f) * highlightWave + whitecap * 0.04f;
             tileColor = Color.Lerp(tileColor, new Color(0.9f, 0.97f, 1f), highlight);
             tileColor.a = Mathf.Clamp01(baseAlpha + localWaveHeight * alphaRange);
             surfaceTile.Material.color = tileColor;
@@ -392,13 +392,13 @@ public partial class GameBootstrap : MonoBehaviour
 
             float alpha = active
                 ? (isWaterEdgeRing
-                    ? 0.08f + waveT * 0.12f
+                    ? 0.05f + waveT * 0.07f
                     : isSecondRing
-                        ? 0.14f + waveT * 0.18f
-                        : 0.2f + waveT * 0.22f) * Mathf.Lerp(0.12f, 1f, currentStylizedDaylight)
+                        ? 0.09f + waveT * 0.11f
+                        : 0.13f + waveT * 0.13f) * Mathf.Lerp(0.12f, 1f, currentStylizedDaylight)
                 : 0f;
-            float zPush = isWaterEdgeRing ? waveT * 0.02f : isSecondRing ? waveT * 0.04f : waveT * 0.07f;
-            float y = patch.BaseY + waveT * (isWaterEdgeRing ? 0.004f : isSecondRing ? 0.006f : 0.01f);
+            float zPush = isWaterEdgeRing ? waveT * 0.012f : isSecondRing ? waveT * 0.024f : waveT * 0.04f;
+            float y = patch.BaseY + waveT * (isWaterEdgeRing ? 0.0025f : isSecondRing ? 0.0035f : 0.006f);
             patch.RootTransform.position = new Vector3(
                 patch.BaseX + Mathf.Sin(time * 0.35f + patch.PhaseOffset * 6f) * 0.08f,
                 y,
@@ -407,10 +407,10 @@ public partial class GameBootstrap : MonoBehaviour
                 patch.Width,
                 0.008f,
                 patch.Depth * (isWaterEdgeRing
-                    ? (0.68f + waveT * 0.2f)
+                    ? (0.68f + waveT * 0.12f)
                     : isSecondRing
-                        ? (0.45f + waveT * 0.55f)
-                        : (0.7f + waveT * 0.3f)));
+                        ? (0.45f + waveT * 0.34f)
+                        : (0.7f + waveT * 0.18f)));
 
             Color washColor = isWaterEdgeRing
                 ? Color.Lerp(new Color(0.34f, 0.52f, 0.62f, 0f), new Color(0.9f, 0.98f, 1f, alpha), 0.4f + waveT * 0.6f)

@@ -1,12 +1,48 @@
 # Work Log
 
-Last updated: 2026-05-04
+Last updated: 2026-05-05
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20 and again on 2026-05-03 to keep agent startup light. Use git history for exact old implementation details.
 
 ## Recent Work
 
-- 2026-05-04: Fixed Docks build-tool availability in User mode. Docks are now included in the default user build unlock set and `IsBuildToolUnlocked` treats `BuildTool.Docks` as always available, so existing sessions can select the Docks card instead of waiting for a full build-tool unlock. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+- 2026-05-05: Fixed the main-menu labels for `Tutorial` and `New Game` after the external Russian localization JSON showed literal `\u041e...` escape text in-game. The two new keys now use direct UTF-8 Cyrillic strings so the current flat localization loader displays them correctly.
+
+- 2026-05-05: Replaced the main-menu start modes with two player-facing choices: `Tutorial` / `Обучение` and `New Game` / `Новая игра`. Removed the selectable Debug/Clear start paths, made both starts use the same empty player-built town layout, and made New Game apply the tutorial-skip state immediately so tutorial windows/goals stay suppressed while build tools and tutorial-gated vacancies unlock.
+
+- 2026-05-05: Added drawn resource icons to the OnGUI Trade policy table. Trade rows now show the same resource visual language used by the Resources menu beside each resource label: logs, boards, cotton, textile, and furniture pictograms.
+
+- 2026-05-05: Made Trade policy mode selection expose buying consistently. The generic trade import/export catalogs now include every current trade resource (`Logs`, `Boards`, `Cotton`, `Textile`, `Furniture`) for both buying and selling, and the OnGUI trade mode cycle now goes `No trade -> Buy up to -> Sell surplus` so purchase is the first visible active option.
+
+- 2026-05-05: Reworked the Trade policy HUD interaction path after the Canvas version still failed to click reliably. Trade now renders as a top-level modal OnGUI screen, so it does not depend on `EventSystem` button routing. Each resource row has a single explicit mode-cycle button (`No trade` -> supported sell/buy modes), target `- / value / +` controls, stock, and status. Added `TRADE_UI` logs for mode and target clicks while keeping `TRADE_POLICY` logs for resulting policy state changes.
+
+- 2026-05-05: Added a current city population card to the top-right HUD. The compact HUD row now includes `Population` / `Население` between time and treasury, counts the current worker population from `driverAgents.Count`, and the new card participates in HUD pointer blocking. Verified runtime build, line-count, diff whitespace, and mojibake scan.
+
+- 2026-05-05: Fixed the new fullscreen Trade screen presentation. Opening Trade now suppresses the legacy OnGUI top HUD/menu/debug overlay so the trade canvas fully covers the current HUD, and the trade canvas uses a higher sorting order. The resource policy table was tightened into compact rows with always-visible segmented policy buttons instead of the broken full-width dropdown area; the duplicated Warehouse title was removed. Verified runtime build, line-count, diff whitespace, and mojibake scan.
+
+- 2026-05-05: Moved city trade out of the Economy order form into a separate fullscreen Trade screen. The top HUD now has a dedicated Trade button, Economy opens directly to Taxes, and the Trade screen shows warehouse stock per resource with policies: `No trade`, `Sell surplus`, and `Buy up to` plus target steppers. Auto-dispatch now creates trade runs from those policies, uses only Warehouse stock for export checks/loading, retries when drivers/trucks/money become available, and keeps tutorial trade goals pointed at the new Textile buy-up-to policy. Added `GameBootstrap.FleetCanvas.TradeScreen.cs` and `GameBootstrap.Trade.Policies.cs`; updated owner map / project includes. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, and touched-file mojibake scan.
+
+- 2026-05-05: Cleaned up the Docks building micro HUD. The Docks quick card now shows only the actual cargo currently stored in the Docks, with readable full resource names and per-resource capacity; export/import order text, ship ETA text, and the `Cycle Dock Orders` action are hidden from the micro HUD. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-05: Improved worker name generation. New workers now prefer unused first names and unused last names separately; once either prepared pool is exhausted, generation falls back to avoiding already-used full first+last combinations before allowing a duplicate. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-05: Simplified the Regional Map city route panel. Removed the old bottom trade-order controls from the city card (`resource`, amount `+/-`, buy/sell, add button) so map route construction is separate from future resource-order placement. The city card now shows a clear route status plus one large readable `Build trade route` / `Проложить торговый маршрут` button; the button is interactable until the route is built, then switches to a built/disabled state. The region HUD status also updates from no route to route built. Verified runtime build, checked the button setup statically (`44f` height, bold white wrapped text, `interactable = !routeBuilt`), and line-count check.
+
+- 2026-05-05: Added explicit Regional Map trade-route state and resource tables. Each map region now has a `worldMapTradeRoutesBuilt` status that defaults to false; creating the first regional trade order marks that region's route as built, and route lines now render only for built routes. Static intercity roads were removed from the generated pixel texture so unconnected cities are not visually linked to the player's town by default. The city detail overlay now shows a short status/description plus separate `Sells` and `Buys` tables with drawn resource icons and labels.
+
+- 2026-05-05: Cleaned up the fullscreen pixel Regional Map after visual review. Region click targets are now transparent hit-boxes instead of old city-icon/label UI markers, so selected regions no longer cover the pixel town art. Map labels are hidden on the map surface; details remain in the side overlay. Pixel terrain was retuned with softer block noise, thinner roads, shore bands around rivers, a bridge near the current town, stronger town/port silhouettes, and added shrub clusters. Verified runtime build and line-count check.
+
+- 2026-05-05: Reworked the Regional Map into a borderless fullscreen pixel-art screen. The old card/frame layout was replaced with a full-screen map surface plus lightweight title/details overlays, city markers were reduced to small pixel-style map labels, and the regional background now uses a generated point-filter pixel texture with roads, rivers, towns, ports, forests, and mountain clusters. Added `GameBootstrap.FleetCanvas.WorldMapScreen.PixelMap.cs` for the pixel map generator. Verified runtime build and line-count check.
+
+- 2026-05-05: Added Docks staffing support and a proper Build menu icon. The Docks build card now draws a pier/water/warehouse/crane pictogram instead of falling back to the `DK` text label. Docks now expose one `Dock Worker` building-staff slot, appear in the production assignments list through the shared slot-cap lookup, and require staffing for the generic production operational state. Increased the logistics slot UI capacity to include the new Docks slot. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-05: Made the Docks trade ship travel through the river instead of popping in at the pier. The ship now has explicit Waiting/Arriving/Docked/Departing phases, spawns beyond the left edge of the map, cruises along the river lane to the Docks, trades only after reaching the dock, waits through the dwell timer, then continues downstream beyond the opposite map edge before scheduling the next visit. The Docks quick HUD now reports arriving/departing states. Verified runtime build and line-count check.
+
+- 2026-05-05: Softened river visuals and moved ambient river boats away from the shoreline. River wave height, shimmer highlights, wash alpha, and shore-wash motion were reduced; the left-to-right ambient river boat lane now uses the second river row instead of the first row closest to land. Verified runtime build.
+
+- 2026-05-05: Adjusted Docks placement to match the intended shoreline footprint rule. Docks are now valid when their 4x3 footprint overlaps the top river by one or two rows and the remaining footprint cells are land/shore cells; lake water and blocked cells still reject placement. Docks now keep a separate dry road-access cell so a two-row river overlap does not require a road on the beach row. Verified runtime build.
+
+- 2026-05-04: Fixed Docks build-tool availability in the build-first start flow. Docks are now included in the default build unlock set and `IsBuildToolUnlocked` treats `BuildTool.Docks` as always available, so existing sessions can select the Docks card instead of waiting for a full build-tool unlock. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
 
 - 2026-05-04: Fixed Docks placement availability at the river shoreline. The Docks build tool now treats clicks on/near the river bank as shoreline placement requests, finds the closest clear river-facing 4x3 footprint on land, allows an already-built road on the dock access cell, and shows the corrected preview footprint/driveway anchor instead of requiring the player to click several cells south of the visible shore. Verified runtime/editor builds, line-count, diff whitespace, and mojibake scan with `./tools/check-all.ps1 -SkipSmokeTests`.
 
@@ -144,7 +180,7 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 - 2026-04-28 to 2026-04-29: Stabilized road-building UX and two-lane behavior. Preview drift, shift-drag continuation offsets, turn-fill preview cells, truck lane targeting, and build-road debug logging were corrected; one-lane road remains available as its own tool.
 
-- 2026-04-27 to 2026-04-28: Reopened `New Game User` as a lean build-first start. User mode now starts without the old central starter-road/building setup, expects the player to build core logistics through tutorial goals, and uses a retuned city-builder camera/zoom curve for the larger map.
+- 2026-04-27 to 2026-04-28: Reopened the old User start as a lean build-first start. That work later became the current Tutorial/New Game empty-town baseline, where tutorial guidance is optional.
 
 - 2026-04-26 to 2026-04-27: Expanded the world to `128x128`, added natural zones, tuned generated roads/building access for two-lane roads, increased vegetation density, and added far-zoom visual LOD while preserving gameplay simulation and important night lights.
 

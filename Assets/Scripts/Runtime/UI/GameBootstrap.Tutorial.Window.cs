@@ -273,16 +273,7 @@ public partial class GameBootstrap
 
         if (tutorialHud.SkipToggle != null && tutorialHud.SkipToggle.isOn)
         {
-            isTutorialSkipped = true;
-            UnlockAllBuildTools();
-            UnlockAllTutorialVacancies();
-            isTutorialCameraFocusActive = false;
-            ResetTutorialGoalsForNewGame();
-            selectedLocation = null;
-            selectedLocalStopIndex = -1;
-            selectedPersonalHouseIndex = -1;
-            RefreshSelectionVisuals();
-            SessionDebugLogger.Log("TUTORIAL", "Tutorial skipped by player.");
+            ApplyTutorialSkippedState("player skip");
         }
 
         isTutorialOpen     = false;
@@ -410,6 +401,24 @@ public partial class GameBootstrap
             UnlockTutorialTruckDriverVacancy();
             BeginBuyTruckTutorialGoals();
         }
+    }
+
+    private void ApplyTutorialSkippedState(string reason)
+    {
+        isTutorialSkipped = true;
+        pendingTutorialTrigger = null;
+        pendingTutorialDelay = 0f;
+        UnlockAllBuildTools();
+        UnlockAllTutorialVacancies();
+        isTutorialCameraFocusActive = false;
+        tutorialCameraFollowTruck = null;
+        tutorialCameraFollowHiringBus = false;
+        ResetTutorialGoalsForNewGame();
+        selectedLocation = null;
+        selectedLocalStopIndex = -1;
+        selectedPersonalHouseIndex = -1;
+        RefreshSelectionVisuals();
+        SessionDebugLogger.Log("TUTORIAL", $"Tutorial skipped: {reason}.");
     }
 
 

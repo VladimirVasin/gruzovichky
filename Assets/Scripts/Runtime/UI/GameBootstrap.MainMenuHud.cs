@@ -31,8 +31,8 @@ public partial class GameBootstrap
         public Text ContinueButtonText;
         public Button NewGameButton;
         public Text NewGameButtonText;
-        public Button NewGameUserButton;
-        public Text NewGameUserButtonText;
+        public Button TutorialButton;
+        public Text TutorialButtonText;
         public Button PatchNotesButton;
         public Text PatchNotesButtonText;
         public Button ExitButton;
@@ -48,12 +48,9 @@ public partial class GameBootstrap
         public RectTransform PatchNotesContentRoot;
         public Button PatchNotesCloseButton;
         public Text PatchNotesCloseButtonText;
-        public Button NewGameClearButton;
-        public Text NewGameClearButtonText;
         public MainMenuButtonFx ContinueButtonFx;
         public MainMenuButtonFx NewGameButtonFx;
-        public MainMenuButtonFx NewGameUserButtonFx;
-        public MainMenuButtonFx NewGameClearButtonFx;
+        public MainMenuButtonFx TutorialButtonFx;
         public MainMenuButtonFx PatchNotesButtonFx;
         public MainMenuButtonFx ExitButtonFx;
         public MainMenuButtonFx EnglishButtonFx;
@@ -73,12 +70,10 @@ public partial class GameBootstrap
     private GameObject loadingOverlayCanvas;
     private Image loadingBarFill;
     private Text loadingStatusText;
-    private static readonly bool IsUserModeTemporarilyDisabled = false;
-    private const string UserModeWorkInProgressLabel = "Work in progress";
     private const string MainMenuVersionLabel = "Lo-fi Delivery Co. v.0.0.3";
     private const string PatchNotesButtonLabel = "Patch Notes";
     private bool isGameStarted;
-    private GameStartMode selectedGameStartMode = GameStartMode.Debug;
+    private GameStartMode selectedGameStartMode = GameStartMode.Tutorial;
     private bool isWorldBuilt;
     private bool isTutorialOpen;
     private bool isTutorialSkipped;
@@ -208,24 +203,15 @@ public partial class GameBootstrap
         mainMenuHud.ContinueButtonFx = SetupMainMenuButtonFx(mainMenuHud.ContinueButton, new Color(0.22f, 0.54f, 0.30f, 1f), new Color(0.30f, 0.72f, 0.40f, 1f));
         mainMenuHud.ContinueButton.onClick.AddListener(ContinueGameFromMainMenu);
 
-        mainMenuHud.NewGameButton = CreateButton("NewGameDebugButton", buttonStack, uiFont, out mainMenuHud.NewGameButtonText, "New Game Debug", 18, FleetPrimaryButtonColor, Color.white);
+        mainMenuHud.TutorialButton = CreateButton("TutorialButton", buttonStack, uiFont, out mainMenuHud.TutorialButtonText, "Tutorial", 18, FleetPrimaryButtonColor, Color.white);
+        mainMenuHud.TutorialButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
+        mainMenuHud.TutorialButtonFx = SetupMainMenuButtonFx(mainMenuHud.TutorialButton, FleetPrimaryButtonColor, new Color(0.90f, 0.65f, 0.20f, 1f));
+        mainMenuHud.TutorialButton.onClick.AddListener(() => StartGameFromMainMenu(GameStartMode.Tutorial));
+
+        mainMenuHud.NewGameButton = CreateButton("NewGameButton", buttonStack, uiFont, out mainMenuHud.NewGameButtonText, "New Game", 18, new Color(0.22f, 0.46f, 0.58f, 1f), Color.white);
         mainMenuHud.NewGameButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
-        mainMenuHud.NewGameButtonFx = SetupMainMenuButtonFx(mainMenuHud.NewGameButton, FleetPrimaryButtonColor, new Color(0.90f, 0.65f, 0.20f, 1f));
-        mainMenuHud.NewGameButton.onClick.AddListener(() => StartGameFromMainMenu(GameStartMode.Debug));
-
-        mainMenuHud.NewGameUserButton = CreateButton("NewGameUserButton", buttonStack, uiFont, out mainMenuHud.NewGameUserButtonText, "New Game User", 18, new Color(0.22f, 0.46f, 0.58f, 1f), Color.white);
-        mainMenuHud.NewGameUserButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
-        mainMenuHud.NewGameUserButton.interactable = !IsUserModeTemporarilyDisabled;
-        mainMenuHud.NewGameUserButtonFx = SetupMainMenuButtonFx(mainMenuHud.NewGameUserButton, new Color(0.22f, 0.46f, 0.58f, 1f), new Color(0.30f, 0.62f, 0.78f, 1f));
-        if (!IsUserModeTemporarilyDisabled)
-        {
-            mainMenuHud.NewGameUserButton.onClick.AddListener(() => StartGameFromMainMenu(GameStartMode.User));
-        }
-
-        mainMenuHud.NewGameClearButton = CreateButton("NewGameClearButton", buttonStack, uiFont, out mainMenuHud.NewGameClearButtonText, "New Game Clear", 18, new Color(0.34f, 0.28f, 0.52f, 1f), Color.white);
-        mainMenuHud.NewGameClearButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
-        mainMenuHud.NewGameClearButtonFx = SetupMainMenuButtonFx(mainMenuHud.NewGameClearButton, new Color(0.34f, 0.28f, 0.52f, 1f), new Color(0.48f, 0.38f, 0.70f, 1f));
-        mainMenuHud.NewGameClearButton.onClick.AddListener(() => StartGameFromMainMenu(GameStartMode.Clear));
+        mainMenuHud.NewGameButtonFx = SetupMainMenuButtonFx(mainMenuHud.NewGameButton, new Color(0.22f, 0.46f, 0.58f, 1f), new Color(0.30f, 0.62f, 0.78f, 1f));
+        mainMenuHud.NewGameButton.onClick.AddListener(() => StartGameFromMainMenu(GameStartMode.NewGame));
 
         mainMenuHud.PatchNotesButton = CreateButton("PatchNotesButton", buttonStack, uiFont, out mainMenuHud.PatchNotesButtonText, PatchNotesButtonLabel, 18, new Color(0.27f, 0.33f, 0.43f, 1f), Color.white);
         mainMenuHud.PatchNotesButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
@@ -314,9 +300,8 @@ public partial class GameBootstrap
             mainMenuHud.ContinueButton.gameObject.SetActive(showContinue);
 
         UpdateMainMenuButtonFx(mainMenuHud.ContinueButtonFx);
+        UpdateMainMenuButtonFx(mainMenuHud.TutorialButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.NewGameButtonFx);
-        UpdateMainMenuButtonFx(mainMenuHud.NewGameUserButtonFx);
-        UpdateMainMenuButtonFx(mainMenuHud.NewGameClearButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.PatchNotesButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.GraphicsButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.ExitButtonFx);
@@ -333,9 +318,8 @@ public partial class GameBootstrap
         }
 
         if (mainMenuHud.ContinueButtonText != null) mainMenuHud.ContinueButtonText.text = L("Continue");
-        if (mainMenuHud.NewGameButtonText != null) mainMenuHud.NewGameButtonText.text = L("New Game Debug");
-        if (mainMenuHud.NewGameUserButtonText != null) mainMenuHud.NewGameUserButtonText.text = IsUserModeTemporarilyDisabled ? UserModeWorkInProgressLabel : L("New Game User");
-        if (mainMenuHud.NewGameClearButtonText != null) mainMenuHud.NewGameClearButtonText.text = L("New Game Clear");
+        if (mainMenuHud.TutorialButtonText != null) mainMenuHud.TutorialButtonText.text = L("Tutorial");
+        if (mainMenuHud.NewGameButtonText != null) mainMenuHud.NewGameButtonText.text = L("New Game");
         if (mainMenuHud.PatchNotesButtonText != null) mainMenuHud.PatchNotesButtonText.text = PatchNotesButtonLabel;
         if (mainMenuHud.GraphicsButtonText != null) mainMenuHud.GraphicsButtonText.text = IsRussianLanguage() ? "Графика" : "Graphics";
         if (mainMenuHud.ExitButtonText != null) mainMenuHud.ExitButtonText.text = L("Exit");
@@ -692,6 +676,10 @@ public partial class GameBootstrap
         InitUnlockedBuildTools();
         ResetTutorialFlowForNewGame();
         ResetTutorialGoalsForNewGame();
+        if (selectedGameStartMode == GameStartMode.NewGame)
+        {
+            ApplyTutorialSkippedState("new game start");
+        }
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;
         AudioListener.pause = false;
@@ -700,17 +688,9 @@ public partial class GameBootstrap
         UpdateDayNightCycle(0f);
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.9f);
-        if (selectedGameStartMode == GameStartMode.User)
+        if (selectedGameStartMode == GameStartMode.Tutorial)
         {
             ScheduleTutorial(TutorialTrigger.UserWelcome, 2f);
-        }
-
-        if (selectedGameStartMode == GameStartMode.Debug)
-        {
-            foreach (TradeResourceType res in System.Enum.GetValues(typeof(TradeResourceType)))
-                AddStoredTradeResource(res, 5);
-            if (locations.TryGetValue(LocationType.Forest, out LocationData debugForest))
-                debugForest.LogsStored += 5;
         }
     }
 

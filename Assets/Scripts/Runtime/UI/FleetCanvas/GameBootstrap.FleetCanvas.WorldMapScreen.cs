@@ -45,58 +45,8 @@ public partial class GameBootstrap
         windowRect.sizeDelta = Vector2.zero;
         worldMapScreenUi.WindowRoot = windowRect;
 
-        VerticalLayoutGroup rootLayout = windowRoot.gameObject.AddComponent<VerticalLayoutGroup>();
-        rootLayout.padding = new RectOffset(28, 28, 28, 28);
-        rootLayout.spacing = 16;
-        rootLayout.childControlWidth = true;
-        rootLayout.childControlHeight = true;
-        rootLayout.childForceExpandWidth = true;
-        rootLayout.childForceExpandHeight = false;
-
-        RectTransform headerRow = CreateLayoutRow("WorldMapHeaderRow", windowRoot.transform, 44f, 0f);
-        worldMapScreenUi.TitleText = CreateHeaderText("WorldMapTitle", headerRow, font, "Regional Map", 24, TextAnchor.MiddleLeft, Color.white);
-        worldMapScreenUi.TitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        worldMapScreenUi.SubtitleText = CreateBodyText("WorldMapSubtitle", headerRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
-
-        RectTransform contentRow = CreateUiObject("WorldMapContentRow", windowRoot.transform).GetComponent<RectTransform>();
-        LayoutElement contentLayout = contentRow.gameObject.AddComponent<LayoutElement>();
-        contentLayout.flexibleHeight = 1f;
-        HorizontalLayoutGroup contentGroup = contentRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-        contentGroup.spacing = 16f;
-        contentGroup.childControlWidth = true;
-        contentGroup.childControlHeight = true;
-        contentGroup.childForceExpandWidth = true;
-        contentGroup.childForceExpandHeight = true;
-
-        RectTransform mapCard = CreateSectionCard(contentRow, font, "Regional World", out RectTransform mapBody);
-        LayoutElement mapCardLayout = mapCard.gameObject.AddComponent<LayoutElement>();
-        mapCardLayout.preferredWidth = 1120f;
-        mapCardLayout.flexibleWidth = 1f;
-        mapCardLayout.flexibleHeight = 1f;
-
-        worldMapScreenUi.SelectionHintText = CreateBodyText(
-            "WorldMapHint",
-            mapBody,
-            font,
-            "Click a city on the regional map to inspect trade options.",
-            13,
-            TextAnchor.MiddleLeft,
-            FleetSecondaryTextColor);
-
-        RectTransform mapFrame = CreateStyledPanel("WorldMapFrame", mapBody, new Color(0.18f, 0.13f, 0.07f, 0.96f));
-        LayoutElement mapFrameLayout = mapFrame.gameObject.AddComponent<LayoutElement>();
-        mapFrameLayout.flexibleHeight = 1f;
-        VerticalLayoutGroup mapFrameLayoutGroup = mapFrame.gameObject.AddComponent<VerticalLayoutGroup>();
-        mapFrameLayoutGroup.padding = new RectOffset(16, 16, 16, 16);
-        mapFrameLayoutGroup.spacing = 10;
-        mapFrameLayoutGroup.childControlWidth = true;
-        mapFrameLayoutGroup.childControlHeight = true;
-        mapFrameLayoutGroup.childForceExpandWidth = true;
-        mapFrameLayoutGroup.childForceExpandHeight = true;
-
-        RectTransform mapSurface = CreateUiObject("WorldMapSurface", mapFrame).GetComponent<RectTransform>();
-        LayoutElement mapSurfaceLayout = mapSurface.gameObject.AddComponent<LayoutElement>();
-        mapSurfaceLayout.flexibleHeight = 1f;
+        RectTransform mapSurface = CreateUiObject("WorldMapSurface", windowRoot.transform).GetComponent<RectTransform>();
+        StretchRect(mapSurface, 0f, 0f, 0f, 0f);
         Image mapSurfaceBackground = mapSurface.gameObject.AddComponent<Image>();
         mapSurfaceBackground.sprite = GetRegionalWorldMapSprite();
         mapSurfaceBackground.type = Image.Type.Simple;
@@ -119,104 +69,148 @@ public partial class GameBootstrap
             worldMapScreenUi.Cells.Add(CreateWorldMapCityMarker(mapRoot, font, regionIndex));
         }
 
-        RectTransform detailsCard = CreateSectionCard(contentRow, font, "Region Preview", out RectTransform detailsBody);
-        worldMapScreenUi.DetailsPanelRoot = detailsCard.gameObject;
-        LayoutElement detailsCardLayout = detailsCard.gameObject.AddComponent<LayoutElement>();
-        detailsCardLayout.preferredWidth = 448f;
-        detailsCardLayout.flexibleWidth = 0f;
-        detailsCardLayout.flexibleHeight = 1f;
+        RectTransform topOverlay = CreateUiObject("WorldMapTopOverlay", windowRoot.transform).GetComponent<RectTransform>();
+        topOverlay.anchorMin = new Vector2(0f, 1f);
+        topOverlay.anchorMax = new Vector2(1f, 1f);
+        topOverlay.pivot = new Vector2(0.5f, 1f);
+        topOverlay.offsetMin = new Vector2(0f, -84f);
+        topOverlay.offsetMax = Vector2.zero;
+        topOverlay.gameObject.AddComponent<Image>().color = new Color(0.04f, 0.06f, 0.08f, 0.48f);
 
-        RectTransform previewContainer = CreateStyledPanel("WorldMapDetailPreviewContainer", detailsBody, new Color(0.12f, 0.15f, 0.20f, 0.98f));
-        LayoutElement previewContainerLayout = previewContainer.gameObject.AddComponent<LayoutElement>();
-        previewContainerLayout.flexibleHeight = 1f;
-        previewContainerLayout.minHeight = 200f;
-        worldMapScreenUi.DetailPreview = CreateWorldMapDetailPreview(previewContainer, font);
+        worldMapScreenUi.TitleText = CreateHeaderText("WorldMapTitle", topOverlay, font, "Regional Map", 24, TextAnchor.MiddleLeft, Color.white);
+        RectTransform titleRect = worldMapScreenUi.TitleText.rectTransform;
+        titleRect.anchorMin = new Vector2(0f, 1f);
+        titleRect.anchorMax = new Vector2(0f, 1f);
+        titleRect.pivot = new Vector2(0f, 1f);
+        titleRect.anchoredPosition = new Vector2(22f, -14f);
+        titleRect.sizeDelta = new Vector2(420f, 30f);
 
-        RectTransform infoPanel = CreateStyledPanel("WorldMapDetailInfoPanel", detailsBody, FleetCardMutedColor);
-        infoPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 230f;
+        worldMapScreenUi.SubtitleText = CreateBodyText("WorldMapSubtitle", topOverlay, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
+        RectTransform subtitleRect = worldMapScreenUi.SubtitleText.rectTransform;
+        subtitleRect.anchorMin = new Vector2(1f, 1f);
+        subtitleRect.anchorMax = new Vector2(1f, 1f);
+        subtitleRect.pivot = new Vector2(1f, 1f);
+        subtitleRect.anchoredPosition = new Vector2(-56f, -36f);
+        subtitleRect.sizeDelta = new Vector2(260f, 22f);
+
+        worldMapScreenUi.SelectionHintText = CreateBodyText(
+            "WorldMapHint",
+            topOverlay,
+            font,
+            "Click a city on the regional map to inspect trade options.",
+            13,
+            TextAnchor.MiddleLeft,
+            FleetSecondaryTextColor);
+        RectTransform hintRect = worldMapScreenUi.SelectionHintText.rectTransform;
+        hintRect.anchorMin = new Vector2(0f, 1f);
+        hintRect.anchorMax = new Vector2(0f, 1f);
+        hintRect.pivot = new Vector2(0f, 1f);
+        hintRect.anchoredPosition = new Vector2(22f, -50f);
+        hintRect.sizeDelta = new Vector2(760f, 22f);
+
+        RectTransform detailsPanel = CreateUiObject("WorldMapDetailsOverlay", windowRoot.transform).GetComponent<RectTransform>();
+        detailsPanel.anchorMin = new Vector2(1f, 0f);
+        detailsPanel.anchorMax = new Vector2(1f, 0f);
+        detailsPanel.pivot = new Vector2(1f, 0f);
+        detailsPanel.anchoredPosition = new Vector2(-24f, 24f);
+        detailsPanel.sizeDelta = new Vector2(470f, 540f);
+        worldMapScreenUi.DetailsPanelRoot = detailsPanel.gameObject;
+        detailsPanel.gameObject.AddComponent<Image>().color = new Color(0.06f, 0.08f, 0.11f, 0.78f);
+
+        VerticalLayoutGroup detailsLayout = detailsPanel.gameObject.AddComponent<VerticalLayoutGroup>();
+        detailsLayout.padding = new RectOffset(16, 16, 14, 14);
+        detailsLayout.spacing = 8f;
+        detailsLayout.childControlWidth = true;
+        detailsLayout.childControlHeight = true;
+        detailsLayout.childForceExpandWidth = true;
+        detailsLayout.childForceExpandHeight = false;
+
+        RectTransform infoPanel = CreateUiObject("WorldMapDetailInfoPanel", detailsPanel).GetComponent<RectTransform>();
         VerticalLayoutGroup infoLayout = infoPanel.gameObject.AddComponent<VerticalLayoutGroup>();
-        infoLayout.padding = new RectOffset(14, 14, 12, 12);
         infoLayout.spacing = 6f;
         infoLayout.childControlWidth = true;
         infoLayout.childControlHeight = true;
         infoLayout.childForceExpandWidth = true;
         infoLayout.childForceExpandHeight = false;
+        infoPanel.gameObject.AddComponent<LayoutElement>().preferredHeight = 180f;
 
         worldMapScreenUi.DetailsNameText = CreateHeaderText("WorldMapDetailsName", infoPanel, font, string.Empty, 22, TextAnchor.MiddleLeft, Color.white);
         worldMapScreenUi.DetailsStatusText = CreateBodyText("WorldMapDetailsStatus", infoPanel, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetMutedTextColor);
-        worldMapScreenUi.DetailsSellsLabelText = CreateHeaderText("WorldMapResourcesLabel", infoPanel, font, "Sells", 11, TextAnchor.MiddleLeft, FleetMutedTextColor);
-        worldMapScreenUi.DetailsResourcesText = CreateHeaderText("WorldMapDetailsResources", infoPanel, font, string.Empty, 17, TextAnchor.MiddleLeft, FleetAccentColor);
-        worldMapScreenUi.DetailsBuysLabelText = CreateHeaderText("WorldMapImportsLabel", infoPanel, font, "Buys", 11, TextAnchor.MiddleLeft, FleetMutedTextColor);
-        worldMapScreenUi.DetailsImportsText = CreateHeaderText("WorldMapDetailsImports", infoPanel, font, string.Empty, 17, TextAnchor.MiddleLeft, FleetAccentColor);
         worldMapScreenUi.DetailsDescriptionText = CreateBodyText("WorldMapDetailsDescription", infoPanel, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
         worldMapScreenUi.DetailsDescriptionText.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
 
-        // Region-scoped trade routes live inside the right region panel.
-        RectTransform routeCard = CreateSectionCard(detailsBody, font, string.Empty, out RectTransform routeBody);
-        routeCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 122f;
-        worldMapScreenUi.RoutePanelRoot = routeCard.gameObject;
+        RectTransform resourceTablesRow = CreateLayoutRow("WorldMapResourceTablesRow", detailsPanel, 170f, 10f);
+        RectTransform sellsTable = CreateWorldMapResourceTable(resourceTablesRow, font, "WorldMapSellsTable", out worldMapScreenUi.DetailsSellsLabelText, out worldMapScreenUi.DetailsSellsListRoot);
+        sellsTable.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        RectTransform buysTable = CreateWorldMapResourceTable(resourceTablesRow, font, "WorldMapBuysTable", out worldMapScreenUi.DetailsBuysLabelText, out worldMapScreenUi.DetailsBuysListRoot);
+        buysTable.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        worldMapScreenUi.DetailsResourcesText = CreateHeaderText("WorldMapDetailsResources", sellsTable, font, string.Empty, 1, TextAnchor.MiddleLeft, Color.clear);
+        worldMapScreenUi.DetailsResourcesText.gameObject.SetActive(false);
+        worldMapScreenUi.DetailsImportsText = CreateHeaderText("WorldMapDetailsImports", buysTable, font, string.Empty, 1, TextAnchor.MiddleLeft, Color.clear);
+        worldMapScreenUi.DetailsImportsText.gameObject.SetActive(false);
 
-        VerticalLayoutGroup routeBodyLayout = routeBody.GetComponent<VerticalLayoutGroup>() ?? routeBody.gameObject.AddComponent<VerticalLayoutGroup>();
-        routeBodyLayout.spacing = 6f;
+        RectTransform routeBody = CreateUiObject("WorldMapRouteOverlay", detailsPanel).GetComponent<RectTransform>();
+        routeBody.gameObject.AddComponent<LayoutElement>().preferredHeight = 96f;
+        worldMapScreenUi.RoutePanelRoot = routeBody.gameObject;
+
+        VerticalLayoutGroup routeBodyLayout = routeBody.gameObject.AddComponent<VerticalLayoutGroup>();
+        routeBodyLayout.spacing = 8f;
         routeBodyLayout.childControlWidth  = true;
         routeBodyLayout.childControlHeight = true;
         routeBodyLayout.childForceExpandWidth  = true;
         routeBodyLayout.childForceExpandHeight = false;
 
-        // title row: label + orders
-        RectTransform routeTitleRow = CreateLayoutRow("RouteTitleRow", routeBody, 22f, 8f);
-        worldMapScreenUi.RoutePanelTitleText = CreateHeaderText("RoutePanelTitle", routeTitleRow, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetMutedTextColor);
-        worldMapScreenUi.RoutePanelTitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        worldMapScreenUi.RoutePanelTitleText = CreateHeaderText("RoutePanelTitle", routeBody, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        worldMapScreenUi.RoutePanelTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
-        // existing order chips row
-        GameObject ordersRowGo = CreateUiObject("RouteOrdersRow", routeBody);
-        RectTransform ordersRow = ordersRowGo.GetComponent<RectTransform>();
-        HorizontalLayoutGroup ordersLayout = ordersRowGo.AddComponent<HorizontalLayoutGroup>();
-        ordersLayout.spacing = 6f;
-        ordersLayout.childAlignment   = TextAnchor.MiddleLeft;
-        ordersLayout.childControlWidth  = false;
-        ordersLayout.childControlHeight = false;
-        ordersLayout.childForceExpandWidth  = false;
-        ordersLayout.childForceExpandHeight = false;
-        ordersRowGo.AddComponent<LayoutElement>().preferredHeight = 28f;
-        worldMapScreenUi.RouteOrdersRow = ordersRow;
+        worldMapScreenUi.RouteStatusText = CreateBodyText("RouteStatusText", routeBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        worldMapScreenUi.RouteStatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
 
-        // add-order form row
-        RectTransform formRow = CreateLayoutRow("RouteFormRow", routeBody, 30f, 6f);
-
-        // resource button
-        Button resBtn = CreateButton("RouteResBtn", formRow, font, out Text resBtnTxt, string.Empty, 12, new Color(0.20f, 0.24f, 0.30f), Color.white);
-        worldMapScreenUi.RouteResourceLabel = resBtnTxt;
-        resBtn.gameObject.AddComponent<LayoutElement>().preferredWidth = 100f;
-        resBtn.onClick.AddListener(CycleWorldMapRouteResource);
-
-        // amount minus
-        Button amtMinus = CreateButton("RouteAmtMinus", formRow, font, out _, "-", 13, new Color(0.20f, 0.24f, 0.30f), Color.white);
-        amtMinus.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
-        amtMinus.onClick.AddListener(() => { worldMapRouteAmount = Mathf.Max(1, worldMapRouteAmount - 1); isWorldMapScreenDirty = true; });
-
-        Text amtLabel = CreateBodyText("RouteAmtLabel", formRow, font, string.Empty, 13, TextAnchor.MiddleCenter, Color.white);
-        amtLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 22f;
-        worldMapScreenUi.RouteAmountLabel = amtLabel;
-
-        // amount plus
-        Button amtPlus = CreateButton("RouteAmtPlus", formRow, font, out _, "+", 13, new Color(0.20f, 0.24f, 0.30f), Color.white);
-        amtPlus.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
-        amtPlus.onClick.AddListener(() => { worldMapRouteAmount = Mathf.Min(5, worldMapRouteAmount + 1); isWorldMapScreenDirty = true; });
-
-        // buy/sell toggle
-        worldMapScreenUi.RouteTypeButton = CreateButton("RouteTypeBtn", formRow, font, out worldMapScreenUi.RouteTypeButtonText, string.Empty, 12, FleetPrimaryButtonColor, Color.white);
-        worldMapScreenUi.RouteTypeButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
-        worldMapScreenUi.RouteTypeButton.onClick.AddListener(ToggleWorldMapRouteOrderType);
-
-        // place order button
-        worldMapScreenUi.RoutePlaceButton = CreateButton("RoutePlaceBtn", formRow, font, out _, "+", 16, new Color(0.18f, 0.42f, 0.22f), Color.white);
-        worldMapScreenUi.RoutePlaceButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 34f;
-        worldMapScreenUi.RoutePlaceButton.onClick.AddListener(PlaceWorldMapRouteOrder);
+        worldMapScreenUi.BuildRouteButton = CreateButton(
+            "BuildRouteButton",
+            routeBody,
+            font,
+            out worldMapScreenUi.BuildRouteButtonText,
+            string.Empty,
+            15,
+            new Color(0.74f, 0.40f, 0.06f),
+            Color.white);
+        worldMapScreenUi.BuildRouteButtonText.fontStyle = FontStyle.Bold;
+        worldMapScreenUi.BuildRouteButtonText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        worldMapScreenUi.BuildRouteButtonText.verticalOverflow = VerticalWrapMode.Truncate;
+        worldMapScreenUi.BuildRouteButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
+        worldMapScreenUi.BuildRouteButton.onClick.AddListener(BuildSelectedWorldMapTradeRoute);
 
         AddOverlayCloseButton(windowRect, font);
         worldMapScreenUi.CanvasRoot.SetActive(false);
         UpdateWorldMapScreenUi();
+    }
+
+    private RectTransform CreateWorldMapResourceTable(RectTransform parent, Font font, string name, out Text titleText, out RectTransform listRoot)
+    {
+        RectTransform table = CreateUiObject(name, parent).GetComponent<RectTransform>();
+        Image bg = table.gameObject.AddComponent<Image>();
+        bg.color = new Color(0.03f, 0.05f, 0.07f, 0.38f);
+        VerticalLayoutGroup layout = table.gameObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(8, 8, 7, 7);
+        layout.spacing = 6f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+
+        titleText = CreateHeaderText($"{name}Title", table, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        titleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+        listRoot = CreateUiObject($"{name}List", table).GetComponent<RectTransform>();
+        VerticalLayoutGroup listLayout = listRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        listLayout.spacing = 5f;
+        listLayout.childControlWidth = true;
+        listLayout.childControlHeight = true;
+        listLayout.childForceExpandWidth = true;
+        listLayout.childForceExpandHeight = false;
+        listRoot.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        return table;
     }
 
     private void SelectWorldMapRegion(int regionIndex)
@@ -284,6 +278,23 @@ public partial class GameBootstrap
             2 or 5 or 6 => "Соседний регион",
             _ => "Пустой слот региона"
         };
+    }
+
+    private string GetWorldMapRegionStatusDisplayLabel(int regionIndex)
+    {
+        string type = GetWorldMapRegionTypeDisplayLabel(regionIndex);
+        if (regionIndex == 4)
+        {
+            return type;
+        }
+
+        bool hasRoute = IsWorldMapTradeRouteBuilt(regionIndex);
+        if (IsRussianLanguage())
+        {
+            return hasRoute ? $"{type} · \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043f\u0440\u043e\u043b\u043e\u0436\u0435\u043d" : $"{type} · \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043d\u0435 \u043f\u0440\u043e\u043b\u043e\u0436\u0435\u043d";
+        }
+
+        return hasRoute ? $"{type} · route built" : $"{type} · no trade route";
     }
 
     private static string GetWorldMapRegionProducedResources(int regionIndex)
@@ -412,13 +423,15 @@ public partial class GameBootstrap
 
             cell.NameText.text = GetWorldMapRegionDisplayName(i);
             cell.TypeText.text = GetWorldMapRegionTypeDisplayLabel(i);
+            cell.NameText.gameObject.SetActive(false);
+            cell.TypeText.gameObject.SetActive(false);
             cell.Background.color = isSelected
-                ? new Color(0.66f, 0.43f, 0.12f, 0.86f)
+                ? new Color(1f, 0.72f, 0.16f, 0.10f)
                 : isCurrent
-                    ? new Color(0.43f, 0.29f, 0.08f, 0.74f)
+                    ? new Color(1f, 0.72f, 0.16f, 0.04f)
                     : isKnown
-                        ? new Color(0.16f, 0.12f, 0.07f, 0.58f)
-                        : new Color(0.10f, 0.08f, 0.06f, 0.34f);
+                        ? new Color(0.16f, 0.12f, 0.07f, 0f)
+                        : new Color(0.10f, 0.08f, 0.06f, 0f);
             cell.NameText.color = isKnown || isCurrent ? new Color(1f, 0.94f, 0.78f, 1f) : new Color(0.78f, 0.70f, 0.55f, 1f);
             cell.TypeText.color = isSelected ? new Color(1f, 0.82f, 0.28f, 1f) : new Color(0.68f, 0.61f, 0.48f, 1f);
             if (cell.PreviewBackground != null)
@@ -428,15 +441,15 @@ public partial class GameBootstrap
             if (cell.Outline != null)
             {
                 cell.Outline.effectColor = isSelected
-                    ? new Color(1f, 0.75f, 0.22f, 0.86f)
-                    : new Color(0f, 0f, 0f, 0.22f);
+                    ? new Color(1f, 0.78f, 0.20f, 0.72f)
+                    : Color.clear;
                 cell.Outline.effectDistance = isSelected ? new Vector2(2f, -2f) : new Vector2(1f, -1f);
             }
 
             if (cell.RouteStatusDot != null)
             {
                 bool isNeighborCell = !isCurrent && isKnown;
-                bool hasRoute = isNeighborCell && HasRegionTradeRoute(i);
+                bool hasRoute = isNeighborCell && IsWorldMapTradeRouteBuilt(i);
                 cell.RouteStatusDot.color = hasRoute
                     ? new Color(0.3f, 0.85f, 0.45f, 1f)
                     : isNeighborCell
@@ -454,35 +467,27 @@ public partial class GameBootstrap
             }
 
             bool routeRegionKnown = IsWorldMapRegionKnown(i);
-            bool hasRoute = routeRegionKnown && HasRegionTradeRoute(i);
-            bool isSelectedRoute = selectedWorldMapRegionIndex >= 0 && routeRegionKnown && i == selectedWorldMapRegionIndex;
-            Color lineColor = hasRoute
-                ? new Color(0.26f, 0.85f, 0.42f, 0.78f)
-                : new Color(FleetAccentColor.r, FleetAccentColor.g, FleetAccentColor.b, 0.38f);
-            UpdateWorldMapRouteLine(worldMapScreenUi.RegionRouteLines[i], worldMapScreenUi.MapRoot, i, hasRoute || isSelectedRoute, lineColor);
+            bool hasRoute = routeRegionKnown && IsWorldMapTradeRouteBuilt(i);
+            Color lineColor = new(0.62f, 0.38f, 0.14f, 0.90f);
+            UpdateWorldMapRouteLine(worldMapScreenUi.RegionRouteLines[i], worldMapScreenUi.MapRoot, i, hasRoute, lineColor);
         }
 
         bool hasSelectedRegion = selectedWorldMapRegionIndex >= 0;
         int selected = hasSelectedRegion ? Mathf.Clamp(selectedWorldMapRegionIndex, 0, 8) : -1;
-        bool detailHasPreview = hasSelectedRegion && IsWorldMapRegionKnown(selected);
 
         if (worldMapScreenUi.DetailsPanelRoot != null)
         {
             worldMapScreenUi.DetailsPanelRoot.SetActive(hasSelectedRegion);
         }
 
-        if (hasSelectedRegion && worldMapScreenUi.DetailPreview != null)
-        {
-            ApplyWorldMapDetailPreview(worldMapScreenUi.DetailPreview, selected, detailHasPreview);
-        }
-
         if (hasSelectedRegion)
         {
             worldMapScreenUi.DetailsNameText.text = GetWorldMapRegionDisplayName(selected);
-            worldMapScreenUi.DetailsStatusText.text = GetWorldMapRegionTypeDisplayLabel(selected);
-            worldMapScreenUi.DetailsResourcesText.text = GetWorldMapRegionProducedResourcesDisplay(selected);
-            worldMapScreenUi.DetailsImportsText.text = GetWorldMapRegionImportedResourcesDisplay(selected);
+            worldMapScreenUi.DetailsStatusText.text = GetWorldMapRegionStatusDisplayLabel(selected);
+            worldMapScreenUi.DetailsResourcesText.text = string.Empty;
+            worldMapScreenUi.DetailsImportsText.text = string.Empty;
             worldMapScreenUi.DetailsDescriptionText.text = GetWorldMapRegionDescriptionDisplay(selected);
+            RefreshWorldMapResourceTables(selected);
         }
 
         // ── Route panel ────────────────────────────────────────────────────
@@ -491,104 +496,111 @@ public partial class GameBootstrap
 
         if (isNeighbor)
         {
-            worldMapScreenUi.RoutePanelTitleText.text = (ru ? "Торговые маршруты: " : "Trade Routes: ") + GetWorldMapRegionDisplayName(selected);
-
-            // Clamp form resource to catalog
-            (TradeResourceType[] buyable, TradeResourceType[] sellable) = GetRegionTradeCatalog(selected);
-            TradeResourceType[] catalog = worldMapRouteOrderType == TradeOrderType.Buy ? buyable : sellable;
-            if (catalog.Length == 0)
-            {
-                worldMapRouteOrderType = worldMapRouteOrderType == TradeOrderType.Buy ? TradeOrderType.Sell : TradeOrderType.Buy;
-                catalog = worldMapRouteOrderType == TradeOrderType.Buy ? buyable : sellable;
-            }
-            if (catalog.Length > 0 && System.Array.IndexOf(catalog, worldMapRouteResource) < 0)
-                worldMapRouteResource = catalog[0];
-
-            worldMapScreenUi.RouteResourceLabel.text = GetTradeResourceShortLabel(worldMapRouteResource);
-            worldMapScreenUi.RouteAmountLabel.text   = worldMapRouteAmount.ToString();
-            worldMapScreenUi.RouteTypeButtonText.text = worldMapRouteOrderType == TradeOrderType.Buy
-                ? (ru ? "КУПИТЬ" : "BUY")
-                : (ru ? "ПРОДАТЬ" : "SELL");
-            worldMapScreenUi.RouteTypeButton.image.color = worldMapRouteOrderType == TradeOrderType.Buy
-                ? new Color(0.15f, 0.38f, 0.20f)
-                : new Color(0.42f, 0.14f, 0.14f);
-            worldMapScreenUi.RoutePlaceButton.interactable = catalog.Length > 0;
-
-            RefreshWorldMapRouteRows(selected);
+            bool routeBuilt = IsWorldMapTradeRouteBuilt(selected);
+            worldMapScreenUi.RoutePanelTitleText.text = ru ? "\u0422\u043e\u0440\u0433\u043e\u0432\u044b\u0439 \u043c\u0430\u0440\u0448\u0440\u0443\u0442" : "Trade route";
+            worldMapScreenUi.RouteStatusText.text = routeBuilt
+                ? (ru ? "\u0421\u0442\u0430\u0442\u0443\u0441: \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043f\u0440\u043e\u043b\u043e\u0436\u0435\u043d" : "Status: route built")
+                : (ru ? "\u0421\u0442\u0430\u0442\u0443\u0441: \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043d\u0435 \u043f\u0440\u043e\u043b\u043e\u0436\u0435\u043d" : "Status: no route");
+            worldMapScreenUi.BuildRouteButtonText.text = routeBuilt
+                ? (ru ? "\u041c\u0430\u0440\u0448\u0440\u0443\u0442 \u043f\u0440\u043e\u043b\u043e\u0436\u0435\u043d" : "Route built")
+                : (ru ? "\u041f\u0440\u043e\u043b\u043e\u0436\u0438\u0442\u044c \u0442\u043e\u0440\u0433\u043e\u0432\u044b\u0439 \u043c\u0430\u0440\u0448\u0440\u0443\u0442" : "Build trade route");
+            worldMapScreenUi.BuildRouteButton.interactable = !routeBuilt;
+            worldMapScreenUi.BuildRouteButton.image.color = routeBuilt
+                ? new Color(0.18f, 0.26f, 0.20f, 0.95f)
+                : new Color(0.74f, 0.40f, 0.06f, 1f);
+            worldMapScreenUi.BuildRouteButtonText.color = Color.white;
         }
-
         LayoutRebuilder.ForceRebuildLayoutImmediate(worldMapScreenUi.WindowRoot);
         LocalizeCanvas(worldMapScreenUi.CanvasRoot);
         isWorldMapScreenDirty = false;
     }
 
-    private void RefreshWorldMapRouteRows(int regionIndex)
+    private bool IsWorldMapTradeRouteBuilt(int regionIndex)
     {
-        // destroy old chips
-        foreach (WorldMapRouteRowUi row in worldMapScreenUi.RouteRows)
+        return regionIndex >= 0 && regionIndex < worldMapTradeRoutesBuilt.Length && worldMapTradeRoutesBuilt[regionIndex];
+    }
+
+    private void RefreshWorldMapResourceTables(int regionIndex)
+    {
+        ClearWorldMapResourceRows(worldMapScreenUi.DetailsSellsRows);
+        ClearWorldMapResourceRows(worldMapScreenUi.DetailsBuysRows);
+
+        (TradeResourceType[] citySells, TradeResourceType[] cityBuys) = GetRegionTradeCatalog(regionIndex);
+        FillWorldMapResourceRows(worldMapScreenUi.DetailsSellsListRoot, worldMapScreenUi.DetailsSellsRows, citySells);
+        FillWorldMapResourceRows(worldMapScreenUi.DetailsBuysListRoot, worldMapScreenUi.DetailsBuysRows, cityBuys);
+    }
+
+    private void ClearWorldMapResourceRows(List<WorldMapResourceRowUi> rows)
+    {
+        for (int i = 0; i < rows.Count; i++)
         {
-            if (row.Root != null) Destroy(row.Root);
+            if (rows[i].Root != null) Destroy(rows[i].Root);
         }
-        worldMapScreenUi.RouteRows.Clear();
+        rows.Clear();
+    }
 
+    private void FillWorldMapResourceRows(RectTransform parent, List<WorldMapResourceRowUi> rows, TradeResourceType[] resources)
+    {
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        bool ru = IsRussianLanguage();
-
-        foreach (TradeHudOrder order in activeTradeHudOrders)
+        if (resources == null || resources.Length == 0)
         {
-            if (order.TargetRegionIndex != regionIndex) continue;
+            RectTransform emptyRow = CreateLayoutRow("WorldMapResourceEmptyRow", parent, 30f, 6f);
+            Text emptyText = CreateBodyText("WorldMapResourceEmptyText", emptyRow, font, IsRussianLanguage() ? "\u2014" : "—", 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+            emptyText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            rows.Add(new WorldMapResourceRowUi { Root = emptyRow.gameObject });
+            return;
+        }
 
-            WorldMapRouteRowUi chip = new WorldMapRouteRowUi { OrderId = order.Id };
+        for (int i = 0; i < resources.Length; i++)
+        {
+            TradeResourceType resource = resources[i];
+            RectTransform row = CreateLayoutRow($"WorldMapResourceRow_{resource}", parent, 34f, 7f);
+            Image rowBg = row.gameObject.AddComponent<Image>();
+            rowBg.color = new Color(1f, 1f, 1f, 0.035f);
 
-            GameObject chipGo = CreateUiObject($"RouteChip_{order.Id}", worldMapScreenUi.RouteOrdersRow);
-            chip.Root = chipGo;
-            RectTransform chipRect = chipGo.GetComponent<RectTransform>();
-            Image chipBg = chipGo.AddComponent<Image>();
-            chipBg.color = new Color(0.16f, 0.20f, 0.26f);
-            HorizontalLayoutGroup chipLayout = chipGo.AddComponent<HorizontalLayoutGroup>();
-            chipLayout.padding  = new RectOffset(6, 4, 2, 2);
-            chipLayout.spacing  = 4f;
-            chipLayout.childAlignment       = TextAnchor.MiddleLeft;
-            chipLayout.childControlWidth    = false;
-            chipLayout.childControlHeight   = false;
-            chipLayout.childForceExpandWidth  = false;
-            chipLayout.childForceExpandHeight = false;
-            chipGo.AddComponent<LayoutElement>().preferredHeight = 26f;
+            RectTransform iconRoot = CreateUiObject($"WorldMapResourceIcon_{resource}", row).GetComponent<RectTransform>();
+            LayoutElement iconLayout = iconRoot.gameObject.AddComponent<LayoutElement>();
+            iconLayout.preferredWidth = 28f;
+            iconLayout.preferredHeight = 28f;
+            Image iconBg = iconRoot.gameObject.AddComponent<Image>();
+            iconBg.color = new Color(1f, 1f, 1f, 0.08f);
+            DrawResourceIcon(iconRoot, GetWorldMapResourceVisualKind(resource));
 
-            // tag
-            string tagStr  = order.OrderType == TradeOrderType.Buy ? (ru ? "КУП" : "BUY") : (ru ? "ПРД" : "SELL");
-            Color tagColor = order.OrderType == TradeOrderType.Buy ? new Color(0.25f, 0.72f, 0.38f) : new Color(0.82f, 0.28f, 0.28f);
-            chip.TagText = CreateBodyText("Tag", chipRect, font, tagStr, 10, TextAnchor.MiddleCenter, tagColor);
-            chip.TagText.fontStyle = FontStyle.Bold;
-            chip.TagText.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
-
-            // label
-            string resLabel = $"{GetTradeResourceShortLabel(order.ResourceType)} ×{order.Amount}";
-            chip.OrderText = CreateBodyText("Label", chipRect, font, resLabel, 11, TextAnchor.MiddleLeft, Color.white);
-            chip.OrderText.gameObject.AddComponent<LayoutElement>().preferredWidth = 80f;
-
-            // remove button
-            int capturedId = order.Id;
-            chip.RemoveButton = CreateButton("Remove", chipRect, font, out Text removeTxt, "×", 12, new Color(0.30f, 0.15f, 0.15f), new Color(0.9f, 0.5f, 0.5f));
-            chip.RemoveButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 20f;
-            chip.RemoveButton.onClick.AddListener(() =>
-            {
-                RemoveTradeHudOrder(capturedId);
-                isWorldMapScreenDirty = true;
-            });
-
-            worldMapScreenUi.RouteRows.Add(chip);
+            Text label = CreateBodyText($"WorldMapResourceLabel_{resource}", row, font, GetTradeResourceDisplayLabel(resource), 12, TextAnchor.MiddleLeft, Color.white);
+            label.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            rows.Add(new WorldMapResourceRowUi { Root = row.gameObject, ResourceType = resource });
         }
     }
 
-    private bool HasRegionTradeRoute(int regionIndex)
+    private static ResourceVisualKind GetWorldMapResourceVisualKind(TradeResourceType resourceType)
     {
-        foreach (TradeHudOrder order in activeTradeHudOrders)
+        return resourceType switch
         {
-            if (order.TargetRegionIndex == regionIndex)
-                return true;
+            TradeResourceType.Logs => ResourceVisualKind.Logs,
+            TradeResourceType.Boards => ResourceVisualKind.Boards,
+            TradeResourceType.Cotton => ResourceVisualKind.Cotton,
+            TradeResourceType.Textile => ResourceVisualKind.Textile,
+            TradeResourceType.Furniture => ResourceVisualKind.Furniture,
+            _ => ResourceVisualKind.Logs
+        };
+    }
+
+    private string GetTradeResourceDisplayLabel(TradeResourceType resourceType)
+    {
+        if (!IsRussianLanguage())
+        {
+            return GetTradeResourceShortLabel(resourceType);
         }
-        return false;
+
+        return resourceType switch
+        {
+            TradeResourceType.Logs => "\u0411\u0440\u0435\u0432\u043d\u0430",
+            TradeResourceType.Boards => "\u0414\u043e\u0441\u043a\u0438",
+            TradeResourceType.Cotton => "\u0425\u043b\u043e\u043f\u043e\u043a",
+            TradeResourceType.Textile => "\u0422\u0435\u043a\u0441\u0442\u0438\u043b\u044c",
+            TradeResourceType.Furniture => "\u041c\u0435\u0431\u0435\u043b\u044c",
+            _ => GetTradeResourceShortLabel(resourceType)
+        };
     }
 
     private string GetTradeOrderRegionTag(int regionIndex)
@@ -608,43 +620,23 @@ public partial class GameBootstrap
         {
             5 => (new[] { TradeResourceType.Cotton, TradeResourceType.Textile }, System.Array.Empty<TradeResourceType>()),
             6 => (System.Array.Empty<TradeResourceType>(), new[] { TradeResourceType.Boards }),
+            2 => (new[] { TradeResourceType.Cotton, TradeResourceType.Textile }, new[] { TradeResourceType.Logs, TradeResourceType.Boards, TradeResourceType.Furniture }),
             _ => (TradeImportCatalog, TradeExportCatalog)
         };
     }
 
-    private void CycleWorldMapRouteResource()
-    {
-        int selected = Mathf.Clamp(selectedWorldMapRegionIndex, 0, 8);
-        (TradeResourceType[] buyable, TradeResourceType[] sellable) = GetRegionTradeCatalog(selected);
-        TradeResourceType[] catalog = worldMapRouteOrderType == TradeOrderType.Buy ? buyable : sellable;
-        if (catalog.Length == 0) return;
-        int idx = System.Array.IndexOf(catalog, worldMapRouteResource);
-        worldMapRouteResource = catalog[(idx + 1) % catalog.Length];
-        isWorldMapScreenDirty = true;
-    }
-
-    private void ToggleWorldMapRouteOrderType()
-    {
-        worldMapRouteOrderType = worldMapRouteOrderType == TradeOrderType.Buy ? TradeOrderType.Sell : TradeOrderType.Buy;
-        isWorldMapScreenDirty = true;
-    }
-
-    private void PlaceWorldMapRouteOrder()
+    private void BuildSelectedWorldMapTradeRoute()
     {
         int regionIndex = Mathf.Clamp(selectedWorldMapRegionIndex, 0, 8);
-        activeTradeHudOrders.Add(TradeOrderQueueService.CreateOrder(
-            nextTradeOrderId++,
-            worldMapRouteResource,
-            worldMapRouteOrderType,
-            worldMapRouteAmount,
-            regionIndex));
+        if (regionIndex == 4 || !IsWorldMapRegionKnown(regionIndex) || IsWorldMapTradeRouteBuilt(regionIndex))
+        {
+            return;
+        }
+
+        worldMapTradeRoutesBuilt[regionIndex] = true;
         isWorldMapScreenDirty = true;
-        isEconomyScreenDirty  = true;
-        SessionDebugLogger.Log(
-            "TRADE_HUD",
-            $"Created regional order #{nextTradeOrderId - 1}: {worldMapRouteOrderType} {worldMapRouteResource} x{worldMapRouteAmount}; region={regionIndex}; queue={activeTradeHudOrders.Count}.");
-        TryAutoDispatchNextHudOrder();
+        SessionDebugLogger.Log("TRADE_HUD", $"Built regional trade route: region={regionIndex}; name={GetWorldMapRegionName(regionIndex)}.");
         PlayUiSound(uiPanelOpenClip, 0.88f);
-        LogUiInput($"Map trade order placed: {worldMapRouteOrderType} {worldMapRouteResource} x{worldMapRouteAmount} -> region {regionIndex}");
+        LogUiInput($"Map trade route built -> region {regionIndex}");
     }
 }

@@ -6,7 +6,7 @@ public partial class GameBootstrap
 {
     private string GetBuildingQuickStatusText(LocationType locationType)
     {
-        if (IsProductionLocation(locationType) && !IsLocationOperational(locationType))
+        if (locationType != LocationType.Docks && IsProductionLocation(locationType) && !IsLocationOperational(locationType))
         {
             return locationType switch
             {
@@ -258,6 +258,7 @@ public partial class GameBootstrap
                locationType != LocationType.CityPark &&
                locationType != LocationType.PersonalHouse &&
                locationType != LocationType.IntercityStop &&
+               locationType != LocationType.Docks &&
                locationType != LocationType.Stop;
     }
 

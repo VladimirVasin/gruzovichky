@@ -93,6 +93,7 @@ public partial class GameBootstrap
                isShiftsPanelOpen ||
                isResourcesPanelOpen ||
                isEconomyPanelOpen ||
+               isTradePanelOpen ||
                isBuildPanelOpen ||
                isWorldMapPanelOpen ||
                isStatesPanelOpen ||
@@ -453,7 +454,9 @@ public partial class GameBootstrap
         }
 
         bool ru = IsRussianLanguage();
-        buildingQuickHud.HeaderText.text = location.Label;
+        buildingQuickHud.HeaderText.text = selectedBuildingType == LocationType.Docks
+            ? GetSelectedLocationDisplayName(selectedBuildingType)
+            : location.Label;
         string categoryTag = IsProductionLocation(selectedBuildingType) ? "  [Production]"
             : selectedBuildingType == LocationType.PersonalHouse ? "  [Housing]"
             : "  [Service]";

@@ -289,5 +289,5 @@ Purpose: describe the real implemented architecture and current hotspots.
 - The project is now in an intermediate refactor state: one runtime owner, several partial scripts.
 - The next healthy seam after this is moving trucks, world generation, and HUD into fully separate classes/services rather than only partial-class slices.
 - `tools/check-all.ps1`, `tools/check-line-count.ps1`, and `.github/workflows/project-sanity.yml` guard builds, line count, whitespace, mojibake, and smoke-test coverage.
-- `Assets/Editor/Tests/WorldGenerationSmokeTests.cs` covers world layout placement validity, two-lane geometry, and required road-access chain feasibility for Debug/User starts.
+- `Assets/Editor/Tests/WorldGenerationSmokeTests.cs` covers world layout placement validity, two-lane geometry, and generated road-access chain feasibility for historical starter-road layouts.
 - `Assets/Editor/Tests/RoadBuildSmokeTests.cs`, `TransportTradeSmokeTests.cs`, and `VacancyTutorialSmokeTests.cs` cover newer road segment, transport/trade, vacancy, and tutorial-goal seams.

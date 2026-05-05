@@ -379,9 +379,9 @@ public partial class GameBootstrap
         StartDriverMotelRest(truckAgent, driver);
         activeTradeRun = null;
         RemoveCompletedTradeDispatchLedgerEntry(completedOrderType, completedResourceType, completedQuantity);
-        TradeOrderQueueService.RemoveFirst(activeTradeHudOrders);
         tradeDispatchStatusText = "Ready to dispatch via edge highway";
         isEconomyScreenDirty = true;
+        isTradeScreenDirty = true;
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isShiftsScreenDirty = true;

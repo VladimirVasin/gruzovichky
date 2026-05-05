@@ -170,7 +170,7 @@ public partial class GameBootstrap
         if (slot.BuildingType == LocationType.Forest)
         {
             MarkTutorialGoalComplete(TutorialGoalKind.AssignLumberjackWorker);
-            if (selectedGameStartMode == GameStartMode.User &&
+            if (selectedGameStartMode == GameStartMode.Tutorial &&
                 !isTutorialSkipped &&
                 isTutorialGoalsActive &&
                 tutorialGoalsMode == TutorialGoalsMode.LumberjackCamp)

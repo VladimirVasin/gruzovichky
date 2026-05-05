@@ -307,7 +307,7 @@ public partial class GameBootstrap
 
     private bool IsVacancyUnlockedForCurrentTutorial(VacancyKind kind, LocationType? buildingType = null)
     {
-        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped || areTutorialVacanciesFullyUnlocked)
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped || areTutorialVacanciesFullyUnlocked)
         {
             return true;
         }

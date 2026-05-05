@@ -22,11 +22,14 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DocksShipIntervalMin = DayNightCycleDuration / 24f * 8f;
     private const float DocksShipIntervalMax = DayNightCycleDuration / 24f * 14f;
     private const float DocksShipDwellDuration = DayNightCycleDuration / 24f * 1.5f;
+    private const float DocksShipCruiseSpeed = 2.35f;
+    private const float DocksShipSpawnX = -4.5f;
+    private const float DocksShipExitX = GridWidth + 4.5f;
     private const float FurnitureFactoryProcessingDuration = 5.5f;
     private const int ProductionMaxWorkersPerBuilding = 2;
     private const int WarehouseMaxWorkers        = 2;
     private const int ServiceMaxWorkersPerBuilding = 1;
-    private const int AssignableBuildingWorkerSlotCapacity = 15;
+    private const int AssignableBuildingWorkerSlotCapacity = 16;
     private const float ForestLogProgressPerChop = 0.08f;
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
@@ -411,6 +414,13 @@ public partial class GameBootstrap : MonoBehaviour
     private int selectedShiftDriverId; // DriverId, 0 = none
     private int intercityDriverId;
     private readonly int[] busDriverShiftIds = new int[3];
+    private enum TradePolicyMode
+    {
+        None,
+        SellAbove,
+        BuyUpTo
+    }
+
     private TradeResourceType selectedTradeResourceType = TradeResourceType.Cotton;
     private TradeOrderType selectedTradeOrderType = TradeOrderType.Buy;
     private int selectedTradeOrderAmount = 5;
@@ -427,16 +437,18 @@ public partial class GameBootstrap : MonoBehaviour
         public int TargetRegionIndex = -1; // -1 = generic (Trade panel), 0-8 = specific region
     }
 
-    private TradeResourceType worldMapRouteResource  = TradeResourceType.Cotton;
-    private int               worldMapRouteAmount    = 1;
-    private TradeOrderType    worldMapRouteOrderType = TradeOrderType.Buy;
+    private readonly bool[] worldMapTradeRoutesBuilt = new bool[9];
 
     private readonly List<TradeHudOrder> activeTradeHudOrders = new();
+    private readonly TradePolicyMode[] tradePolicyModes = new TradePolicyMode[5];
+    private readonly int[] tradePolicyTargets = { 0, 0, 5, 5, 0 };
 
     private string tradeDispatchStatusText = "Assign a Truck Driver shift to unlock trade dispatch.";
     private bool isResourcesPanelOpen;
     private bool isEconomyPanelOpen;
     private bool isEconomyTaxesTabActive = true;
+    private bool isTradePanelOpen;
+    private bool isTradeScreenDirty = true;
     private bool isBuildPanelOpen;
     private bool isWorldMapPanelOpen;
     private bool isWorldMapSimulationPauseActive;

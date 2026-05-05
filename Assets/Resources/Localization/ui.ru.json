@@ -1,7 +1,7 @@
 {
   "Continue": "Продолжить",
-  "New Game Debug": "Новая игра: Debug",
-  "New Game User": "Новая игра",
+  "Tutorial": "Обучение",
+  "New Game": "Новая игра",
   "Exit": "Выход",
   "Language:": "Язык:",
   "Fleet": "Автопарк",
@@ -17,7 +17,6 @@
   "Taxes": "Налоги",
   "Trade": "Торговля",
   "Patch Notes": "Обновления",
-  "New Game Clear": "Новая игра: Clear",
   "Work in progress": "В разработке",
   "Tax rate": "Налоговая ставка",
   "Taxable banks": "Налогооблагаемые кассы",

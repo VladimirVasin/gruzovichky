@@ -7,6 +7,7 @@ public partial class GameBootstrap
         isDriversPanelOpen = false;
         isResourcesPanelOpen = false;
         isEconomyPanelOpen = false;
+        isTradePanelOpen = false;
         isWorldMapPanelOpen = false;
         isBuildPanelOpen = true;
         isBuildScreenDirty = true;

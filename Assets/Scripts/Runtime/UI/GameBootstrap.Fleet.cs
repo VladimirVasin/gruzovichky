@@ -9,7 +9,7 @@ public partial class GameBootstrap
     private const float MenuBtnW = 90f;
     private const float MenuBtnH = 40f;
     private const float MenuBtnGap = 5f;
-    private const int MenuBtnCount = 7;
+    private const int MenuBtnCount = 8;
 
     private Rect GetMenuBarRect()
     {
@@ -69,9 +69,14 @@ public partial class GameBootstrap
         isDriversPanelOpen = false;
         isResourcesPanelOpen = false;
         isEconomyPanelOpen = false;
+        isTradePanelOpen = false;
         isBuildPanelOpen = false;
         isStatesPanelOpen = false;
         target = !wasOpen;
+        if (panelName == "Economy")
+        {
+            isEconomyTaxesTabActive = true;
+        }
         if (panelName == "Workers")
         {
             MarkTutorialGoalComplete(TutorialGoalKind.OpenWorkersCard);
@@ -87,6 +92,7 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
         isShiftsScreenDirty = true;
         isEconomyScreenDirty = true;
+        isTradeScreenDirty = true;
         isBuildScreenDirty = true;
         isWorldMapScreenDirty = true;
         isStatesScreenDirty = true;
@@ -139,7 +145,8 @@ public partial class GameBootstrap
             MenuBtn("Workers", "Workers", ref isDriversPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Vacancies", "Vacancies", ref isShiftsPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Trade", "Economy", ref isEconomyPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Economy", "Economy", ref isEconomyPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Trade", "Trade", ref isTradePanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Stats", "Stats", ref isStatesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Building", "Building", ref isBuildPanelOpen, x); x += MenuBtnW + MenuBtnGap;
             MenuBtn("Map", "Map", ref isWorldMapPanelOpen, x); x += MenuBtnW + MenuBtnGap;
@@ -734,6 +741,7 @@ public partial class GameBootstrap
         Vector2 guiPosition = new Vector2(screenPosition.x, Screen.height - screenPosition.y);
 
         if (GetMoneyHudRect().Contains(guiPosition) ||
+            GetPopulationHudRect().Contains(guiPosition) ||
             GetTimeHudRect().Contains(guiPosition) ||
             GetSpeedHudRect().Contains(guiPosition) ||
             GetWeatherHudRect().Contains(guiPosition) ||
@@ -773,25 +781,30 @@ public partial class GameBootstrap
         return new Rect(Screen.width - 290, RightColY + GetParkingHudHeight() + 8, 278, 170);
     }
 
-    // Top-right compact bar: [Speed 90] [Time 140] [Treasury 150]  (gap 4px, margin 12px)
+    // Top-right compact bar: [Weather 120] [Speed 90] [Time 140] [Population 100] [Treasury 150]
     private Rect GetMoneyHudRect()
     {
         return new Rect(Screen.width - 12f - 150f, TopBarY, 150f, TopBarH);
     }
 
+    private Rect GetPopulationHudRect()
+    {
+        return new Rect(Screen.width - 12f - 150f - 4f - 100f, TopBarY, 100f, TopBarH);
+    }
+
     private Rect GetTimeHudRect()
     {
-        return new Rect(Screen.width - 12f - 150f - 4f - 140f, TopBarY, 140f, TopBarH);
+        return new Rect(Screen.width - 12f - 150f - 4f - 100f - 4f - 140f, TopBarY, 140f, TopBarH);
     }
 
     private Rect GetSpeedHudRect()
     {
-        return new Rect(Screen.width - 12f - 150f - 4f - 140f - 4f - 90f, TopBarY, 90f, TopBarH);
+        return new Rect(Screen.width - 12f - 150f - 4f - 100f - 4f - 140f - 4f - 90f, TopBarY, 90f, TopBarH);
     }
 
     private Rect GetWeatherHudRect()
     {
-        return new Rect(Screen.width - 12f - 150f - 4f - 140f - 4f - 90f - 4f - 120f, TopBarY, 120f, TopBarH);
+        return new Rect(Screen.width - 12f - 150f - 4f - 100f - 4f - 140f - 4f - 90f - 4f - 120f, TopBarY, 120f, TopBarH);
     }
 
     private Rect GetSelectedBuildingHudRect()

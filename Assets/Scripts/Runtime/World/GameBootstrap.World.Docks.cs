@@ -27,13 +27,13 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (!TryGetDocksPlacement(anchorCell, out Vector2Int min, out Vector2Int max, out Vector2Int placementAnchor))
+        if (!TryGetDocksPlacement(anchorCell, out Vector2Int min, out Vector2Int max, out Vector2Int placementAnchor, out Vector2Int roadAccess))
         {
             SessionDebugLogger.Log("BUILD", $"Docks placement rejected at anchor ({anchorCell.x},{anchorCell.y}); needs a clear river bank.");
             return false;
         }
 
-        CreateLocation(LocationType.Docks, "Docks", min, max, placementAnchor, new Color(0.46f, 0.32f, 0.18f));
+        CreateLocation(LocationType.Docks, "Docks", min, max, placementAnchor, new Color(0.46f, 0.32f, 0.18f), roadAccess);
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
@@ -43,16 +43,9 @@ public partial class GameBootstrap
         return true;
     }
 
-    private bool TryGetDocksPlacement(Vector2Int clickedCell, out Vector2Int min, out Vector2Int max, out Vector2Int placementAnchor)
+    private bool TryGetDocksPlacement(Vector2Int clickedCell, out Vector2Int min, out Vector2Int max, out Vector2Int placementAnchor, out Vector2Int roadAccess)
     {
-        if (TryGetRotatedBuildingPlacement(clickedCell, LocationType.Docks, DocksFootprintWidth, DocksFootprintDepth, out min, out max) &&
-            IsDocksOnRiverBank(min, max))
-        {
-            placementAnchor = clickedCell;
-            return true;
-        }
-
-        return TryGetRiverFacingDocksPlacement(clickedCell, out min, out max, out placementAnchor);
+        return TryGetRiverFacingDocksPlacement(clickedCell, out min, out max, out placementAnchor, out roadAccess);
     }
 
     private bool GetDocksPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
@@ -61,10 +54,10 @@ public partial class GameBootstrap
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
         GetRotatedBuildingFootprint(anchorCell, DocksFootprintWidth, DocksFootprintDepth, out Vector2Int min, out Vector2Int max);
         SetBuildFootprintPreviewCells(min, max, anchorCell);
-        bool canPlace = TryGetDocksPlacement(anchorCell, out min, out max, out Vector2Int placementAnchor);
+        bool canPlace = TryGetDocksPlacement(anchorCell, out min, out max, out Vector2Int placementAnchor, out Vector2Int roadAccess);
         if (canPlace)
         {
-            SetBuildFootprintPreviewCells(min, max, placementAnchor);
+            SetBuildFootprintPreviewCells(min, max, roadAccess);
         }
 
         BuildingPlacementPreview preview = BuildingPlacementService.CreatePreview(min, max);
@@ -74,11 +67,11 @@ public partial class GameBootstrap
         return canPlace;
     }
 
-    private bool TryGetRiverFacingDocksPlacement(Vector2Int clickedCell, out Vector2Int min, out Vector2Int max, out Vector2Int placementAnchor)
+    private bool TryGetRiverFacingDocksPlacement(Vector2Int clickedCell, out Vector2Int min, out Vector2Int max, out Vector2Int placementAnchor, out Vector2Int roadAccess)
     {
         int shoreRow = GridHeight - WaterRiverWidth;
-        int anchorY = shoreRow - DocksFootprintDepth - 1;
-        int minShoreClickY = anchorY - 4;
+        int dryRoadAccessY = shoreRow - DocksFootprintDepth;
+        int minShoreClickY = dryRoadAccessY - 4;
         int searchRadius = DocksFootprintWidth + 2;
 
         if (!IsInsideGrid(clickedCell) || clickedCell.y < minShoreClickY)
@@ -86,10 +79,12 @@ public partial class GameBootstrap
             min = clickedCell;
             max = clickedCell;
             placementAnchor = clickedCell;
+            roadAccess = clickedCell;
             return false;
         }
 
-        placementAnchor = new Vector2Int(clickedCell.x, anchorY);
+        placementAnchor = GetDocksAnchorForRiverDepth(clickedCell.x, 1);
+        roadAccess = GetDocksRoadAccessCell(placementAnchor);
         BuildingPlacementService.GetRotatedFootprint(
             placementAnchor,
             DocksFootprintWidth,
@@ -100,6 +95,7 @@ public partial class GameBootstrap
         Vector2Int fallbackMin = min;
         Vector2Int fallbackMax = max;
         Vector2Int fallbackAnchor = placementAnchor;
+        Vector2Int fallbackRoadAccess = roadAccess;
 
         for (int dx = 0; dx <= searchRadius; dx++)
         {
@@ -109,18 +105,22 @@ public partial class GameBootstrap
 
             foreach (int candidateX in candidateXs)
             {
-                placementAnchor = new Vector2Int(candidateX, anchorY);
-                BuildingPlacementService.GetRotatedFootprint(
-                    placementAnchor,
-                    DocksFootprintWidth,
-                    DocksFootprintDepth,
-                    0,
-                    out min,
-                    out max);
-
-                if (IsDocksPlacementClear(placementAnchor, min, max) && IsDocksOnRiverBank(min, max))
+                for (int riverDepth = 1; riverDepth <= 2; riverDepth++)
                 {
-                    return true;
+                    placementAnchor = GetDocksAnchorForRiverDepth(candidateX, riverDepth);
+                    roadAccess = GetDocksRoadAccessCell(placementAnchor);
+                    BuildingPlacementService.GetRotatedFootprint(
+                        placementAnchor,
+                        DocksFootprintWidth,
+                        DocksFootprintDepth,
+                        0,
+                        out min,
+                        out max);
+
+                    if (IsDocksPlacementClear(roadAccess, min, max) && IsDocksShoreOverlapValid(min, max))
+                    {
+                        return true;
+                    }
                 }
             }
         }
@@ -128,20 +128,35 @@ public partial class GameBootstrap
         min = fallbackMin;
         max = fallbackMax;
         placementAnchor = fallbackAnchor;
+        roadAccess = fallbackRoadAccess;
         return false;
     }
 
-    private bool IsDocksPlacementClear(Vector2Int placementAnchor, Vector2Int min, Vector2Int max)
+    private Vector2Int GetDocksAnchorForRiverDepth(int x, int riverDepth)
+    {
+        int shoreRow = GridHeight - WaterRiverWidth;
+        int clampedRiverDepth = Mathf.Clamp(riverDepth, 1, 2);
+        return new Vector2Int(x, shoreRow + clampedRiverDepth - DocksFootprintDepth - 1);
+    }
+
+    private Vector2Int GetDocksRoadAccessCell(Vector2Int placementAnchor)
+    {
+        int shoreRow = GridHeight - WaterRiverWidth;
+        int dryRoadAccessY = shoreRow - DocksFootprintDepth;
+        return new Vector2Int(placementAnchor.x, Mathf.Min(placementAnchor.y, dryRoadAccessY));
+    }
+
+    private bool IsDocksPlacementClear(Vector2Int roadAccess, Vector2Int min, Vector2Int max)
     {
         if (locations.ContainsKey(LocationType.Docks))
         {
             return false;
         }
 
-        if (!IsInsideGrid(placementAnchor) ||
-            edgeHighwayCells.Contains(placementAnchor) ||
-            IsLocationCell(placementAnchor) ||
-            IsWaterOrBeachCell(placementAnchor))
+        if (!IsInsideGrid(roadAccess) ||
+            edgeHighwayCells.Contains(roadAccess) ||
+            IsLocationCell(roadAccess) ||
+            IsWaterOrBeachCell(roadAccess))
         {
             return false;
         }
@@ -154,8 +169,12 @@ public partial class GameBootstrap
                 if (!IsInsideGrid(cell) ||
                     roadCells.Contains(cell) ||
                     edgeHighwayCells.Contains(cell) ||
-                    IsLocationCell(cell) ||
-                    IsWaterOrBeachCell(cell))
+                    IsLocationCell(cell))
+                {
+                    return false;
+                }
+
+                if (waterCells.Contains(cell) && !IsRiverWaterCell(cell))
                 {
                     return false;
                 }
@@ -165,17 +184,35 @@ public partial class GameBootstrap
         return true;
     }
 
-    private bool IsDocksOnRiverBank(Vector2Int min, Vector2Int max)
+    private bool IsDocksShoreOverlapValid(Vector2Int min, Vector2Int max)
     {
+        int shoreRow = GridHeight - WaterRiverWidth;
+        int riverRowsInsideFootprint = max.y >= shoreRow
+            ? max.y - shoreRow + 1
+            : 0;
+
+        if (riverRowsInsideFootprint < 1 || riverRowsInsideFootprint > 2)
+        {
+            return false;
+        }
+
+        if (min.y >= shoreRow)
+        {
+            return false;
+        }
+
         for (int x = min.x; x <= max.x; x++)
         {
-            if (IsRiverWaterCell(new Vector2Int(x, max.y + 1)))
+            for (int y = shoreRow; y <= max.y; y++)
             {
-                return true;
+                if (!IsRiverWaterCell(new Vector2Int(x, y)))
+                {
+                    return false;
+                }
             }
         }
 
-        return false;
+        return true;
     }
 
     private bool IsRiverWaterCell(Vector2Int cell)

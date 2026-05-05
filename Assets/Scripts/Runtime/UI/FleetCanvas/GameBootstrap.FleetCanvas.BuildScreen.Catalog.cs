@@ -287,7 +287,7 @@ public partial class GameBootstrap
         string alreadyBuilt = ru ? "Уже построено на этой карте." : "Already built on this map.";
         return tool switch
         {
-            BuildTool.Parking          => locations.ContainsKey(LocationType.Parking) ? alreadyBuilt : (ru ? "Парковка: база для грузовиков. В User-режиме стартовых грузовиков нет, пока парковка не построена." : "Truck yard: the fleet base. User mode starts with no trucks until this exists."),
+            BuildTool.Parking          => locations.ContainsKey(LocationType.Parking) ? alreadyBuilt : (ru ? "Парковка: база для грузовиков. В новой игре стартовых грузовиков нет, пока парковка не построена." : "Truck yard: the fleet base. New games start with no trucks until this exists."),
             BuildTool.Warehouse        => locations.ContainsKey(LocationType.Warehouse) ? alreadyBuilt : (ru ? "Склад 2x2: центральное хранение ресурсов и точка для производственных цепочек." : "2x2 warehouse: central resource storage for production chains."),
             BuildTool.SingleRoad       => ru ? "Обычная дорога занимает 1 клетку. Удобна для подъездов, узких участков и ручной достройки." : "Build a regular 1-cell road for driveways, narrow links, and manual fixes.",
             BuildTool.Road             => ru ? "Двухполосная дорога строится участками: выбери начало, затем конец. Она занимает 2 клетки шириной, с центральной разметкой и движением по полосам." : "Build two-way road segments: choose a start, then an end. It occupies 2 cells of width with center markings and lane movement.",

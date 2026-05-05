@@ -12,7 +12,7 @@ public partial class GameBootstrap
     private void InitUnlockedBuildTools()
     {
         unlockedBuildTools = new HashSet<BuildTool>();
-        if (selectedGameStartMode == GameStartMode.User)
+        if (selectedGameStartMode == GameStartMode.Tutorial)
         {
             UnlockDefaultRoadBuildTools();
             return;
@@ -623,6 +623,30 @@ public partial class GameBootstrap
                 P(0.48f, 0.14f, 0.52f, 0.50f, stripe); // center divider
                 // Small side window
                 P(0.74f, 0.40f, 0.88f, 0.54f, win);
+                break;
+            }
+
+            case BuildTool.Docks:
+            {
+                Color water = new(0.10f, 0.36f, 0.56f);
+                Color waterHi = new(0.32f, 0.72f, 0.88f, 0.9f);
+                Color pier = new(0.48f, 0.30f, 0.14f);
+                Color pierDark = new(0.26f, 0.16f, 0.08f);
+                Color warehouse = new(0.60f, 0.38f, 0.18f);
+                Color roof = new(0.18f, 0.22f, 0.24f);
+                Color crane = new(0.78f, 0.62f, 0.24f);
+                P(0.05f, 0.08f, 0.95f, 0.46f, water);
+                P(0.10f, 0.34f, 0.42f, 0.39f, waterHi);
+                P(0.56f, 0.18f, 0.90f, 0.23f, waterHi);
+                P(0.10f, 0.44f, 0.90f, 0.56f, pier);
+                P(0.18f, 0.12f, 0.26f, 0.56f, pierDark);
+                P(0.44f, 0.12f, 0.52f, 0.56f, pierDark);
+                P(0.66f, 0.12f, 0.74f, 0.56f, pierDark);
+                P(0.12f, 0.56f, 0.56f, 0.78f, warehouse);
+                P(0.08f, 0.76f, 0.60f, 0.88f, roof);
+                P(0.66f, 0.52f, 0.72f, 0.86f, crane);
+                R(18f, 21f, 6f, 30f, crane, -46f);
+                P(0.80f, 0.36f, 0.86f, 0.52f, crane);
                 break;
             }
 

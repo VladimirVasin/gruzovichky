@@ -123,7 +123,7 @@ public partial class GameBootstrap : MonoBehaviour
         // Two lanes inside the river strip (y=28..31 в†’ Zв‰€28.5 and 30.5)
         int shoreRow = GridHeight - WaterRiverWidth;
         return direction > 0f
-            ? shoreRow + 0.5f   // near-shore lane, left-to-right
+            ? shoreRow + 1.5f   // mid-river lane, left-to-right
             : shoreRow + 2.5f;  // deep lane, right-to-left
     }
 

@@ -16,8 +16,8 @@ public partial class GameBootstrap
     private static readonly Dictionary<string, string> RussianUi = new()
     {
         { "Continue", "Продолжить" },
-        { "New Game Debug", "Новая игра: Debug" },
-        { "New Game User", "Новая игра" },
+        { "Tutorial", "Обучение" },
+        { "New Game", "Новая игра" },
         { "Exit", "Выход" },
         { "Language:", "Язык:" },
         { "Loading...", "Загрузка..." },
@@ -48,7 +48,7 @@ public partial class GameBootstrap
         { "Done!", "Готово!" },
 
         { "Welcome to Lo-Fi Delivery Co.", "Добро пожаловать в Lo-Fi Delivery Co." },
-        { "Welcome to User mode.\n\nYou start with an almost empty map, a highway connection, a bus stop, and a few workers.\n\nBefore building, learn the camera controls: zoom in, zoom out, move the map, and rotate the view.", "Добро пожаловать в User mode.\n\nТы начинаешь почти с пустой картой, подключением к магистрали, автобусной остановкой и несколькими рабочими.\n\nПеред строительством освой управление камерой: приблизь, отдали, сдвинь карту и поверни обзор." },
+        { "Welcome to Tutorial mode.\n\nYou start with an almost empty map, a highway connection, a bus stop, and a few workers.\n\nBefore building, learn the camera controls: zoom in, zoom out, move the map, and rotate the view.", "Добро пожаловать в режим обучения.\n\nТы начинаешь почти с пустой картой, подключением к магистрали, автобусной остановкой и несколькими рабочими.\n\nПеред строительством освой управление камерой: приблизь, отдали, сдвинь карту и поверни обзор." },
         { "Build the first road", "Построй первую дорогу" },
         { "Now build your first road.\n\nOpen the Build menu from the top HUD or press B. Choose a road tool, then left-click a cell to place the road.\n\nYour first road must connect to the Highway. Otherwise the town is cut off from outside traffic.\n\nHold Shift and drag to build a longer road segment. Press R to rotate the road direction before placing.", "Теперь построй первую дорогу.\n\nОткрой меню Стройка сверху или нажми B. Выбери инструмент дороги и нажми левой кнопкой по клетке, чтобы поставить дорогу.\n\nПервая дорога обязательно должна соединяться с Магистралью. Иначе город будет отрезан от внешнего движения.\n\nЗажми Shift и протяни мышью, чтобы построить длинный участок. Нажми R, чтобы повернуть направление дороги перед установкой." },
         { "Build the town core", "Построй основу города" },
@@ -66,7 +66,7 @@ public partial class GameBootstrap
         { "OK", "OK" },
         { "Bees", "Пчёлки" },
         { "Дурачок, не мешай пчёлкам", "Дурачок, не мешай пчёлкам" },
-        { "This is User mode. The town starts with missing buildings, roads, and workers.\n\nYour goal is simple: build the missing pieces, connect them with roads, attract workers, assign jobs, and move resources with trucks.\n\nStart by building a Motel.", "Это пользовательский режим. Город стартует без части зданий, дорог и рабочих.\n\nТвоя цель простая: построить недостающее, соединить здания дорогами, привлечь рабочих, назначить им работу и перевозить ресурсы грузовиками.\n\nНачни со строительства Мотеля." },
+        { "This is Tutorial mode. The town starts with missing buildings, roads, and workers.\n\nYour goal is simple: build the missing pieces, connect them with roads, attract workers, assign jobs, and move resources with trucks.\n\nStart by building a Motel.", "Это режим обучения. Город стартует без части зданий, дорог и рабочих.\n\nТвоя цель простая: построить недостающее, соединить здания дорогами, привлечь рабочих, назначить им работу и перевозить ресурсы грузовиками.\n\nНачни со строительства Мотеля." },
         { "The Motel lets new arrivals check in and gives workers a place to rest.\n\nOpen Building at the top, or press B. Choose Motel and place it near your road plan.\n\nIn Build mode, press R to rotate the building before placing it.", "Мотель принимает новых рабочих и даёт им место для отдыха.\n\nОткрой Стройку сверху или нажми B. Выбери Motel и поставь его рядом с будущими дорогами.\n\nВ режиме строительства нажимай R, чтобы повернуть здание перед установкой." },
         { "The Motel is ready, so workers have somewhere to check in.\n\nOpen the Workers panel at the top of the screen. This is where arrivals and current workers are tracked.", "Мотель готов: новым рабочим есть где заселиться.\n\nОткрой панель Рабочие в верхней части экрана. Здесь отслеживаются приезды и текущие рабочие." },
         { "Workers now arrive automatically by bus. Open vacancies and keep the city livable to attract them.", "Рабочие теперь сами приезжают на автобусе. Открывай вакансии и поддерживай город удобным, чтобы привлечь их." },
@@ -129,6 +129,7 @@ public partial class GameBootstrap
         { "Speed", "Скорость" },
         { "Time", "Время" },
         { "Treasury", "Казна" },
+        { "Population", "Население" },
         { "Morning", "Утро" },
         { "Day", "День" },
         { "Evening", "Вечер" },

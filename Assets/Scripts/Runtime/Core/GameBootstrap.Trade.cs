@@ -35,8 +35,8 @@ public partial class GameBootstrap
     private ActiveTradeRunData activeTradeRun;
     private float tradeAutoDispatchRetryTimer;
     private const float TradeAutoDispatchRetryInterval = 2f;
-    private static readonly TradeResourceType[] TradeImportCatalog = { TradeResourceType.Cotton, TradeResourceType.Textile, TradeResourceType.Furniture };
-    private static readonly TradeResourceType[] TradeExportCatalog = { TradeResourceType.Logs, TradeResourceType.Boards, TradeResourceType.Furniture };
+    private static readonly TradeResourceType[] TradeImportCatalog = { TradeResourceType.Logs, TradeResourceType.Boards, TradeResourceType.Cotton, TradeResourceType.Textile, TradeResourceType.Furniture };
+    private static readonly TradeResourceType[] TradeExportCatalog = { TradeResourceType.Logs, TradeResourceType.Boards, TradeResourceType.Cotton, TradeResourceType.Textile, TradeResourceType.Furniture };
 
     private bool HasActiveTradeRun()
     {
@@ -453,19 +453,6 @@ public partial class GameBootstrap
         };
     }
 
-    private int GetStoredTradeResourceAmount(TradeResourceType resourceType)
-    {
-        return resourceType switch
-        {
-            TradeResourceType.Logs      => GetTotalLogsResourceAmount(),
-            TradeResourceType.Boards    => GetTotalBoardsResourceAmount(),
-            TradeResourceType.Cotton    => cottonStored,
-            TradeResourceType.Textile   => textileStored,
-            TradeResourceType.Furniture => furnitureStored,
-            _ => 0
-        };
-    }
-
     private void AddStoredTradeResource(TradeResourceType resourceType, int amount)
     {
         if (amount <= 0)
@@ -509,9 +496,13 @@ public partial class GameBootstrap
         switch (resourceType)
         {
             case TradeResourceType.Logs:
-                return TryConsumeLogsStored(amount);
+                if (!locations.TryGetValue(LocationType.Warehouse, out LocationData logsWarehouse) || logsWarehouse.LogsStored < amount) return false;
+                logsWarehouse.LogsStored -= amount;
+                return true;
             case TradeResourceType.Boards:
-                return TryConsumeBoardsStored(amount);
+                if (!locations.TryGetValue(LocationType.Warehouse, out LocationData boardsWarehouse) || boardsWarehouse.BoardsStored < amount) return false;
+                boardsWarehouse.BoardsStored -= amount;
+                return true;
             case TradeResourceType.Cotton:
                 if (cottonStored < amount) return false;
                 cottonStored -= amount;
@@ -689,11 +680,11 @@ public partial class GameBootstrap
     {
         if (HasActiveTradeRun())
         {
-            SessionDebugLogger.Log("TRADE_AUTO", $"Auto-dispatch skipped: active run phase={GetTradePhaseLabel(activeTradeRun.Phase)}, queuedOrders={activeTradeHudOrders.Count}.");
+            SessionDebugLogger.Log("TRADE_AUTO", $"Auto-dispatch skipped: active run phase={GetTradePhaseLabel(activeTradeRun.Phase)}, activePolicies={CountActiveTradePolicies()}.");
             return;
         }
 
-        if (!TradeOrderQueueService.TryPeek(activeTradeHudOrders, out TradeHudOrder next))
+        if (!TryBuildTradePolicyDispatchRequest(out TradeHudOrder next))
         {
             return;
         }
@@ -703,16 +694,17 @@ public partial class GameBootstrap
         selectedTradeOrderAmount   = Mathf.Clamp(next.Amount, 1, 5);
         SessionDebugLogger.Log(
             "TRADE_AUTO",
-            $"Trying queued order #{next.Id}: {next.OrderType} {next.ResourceType} x{next.Amount}, targetRegion={next.TargetRegionIndex}, queue={activeTradeHudOrders.Count}.");
+            $"Trying policy dispatch: {next.OrderType} {next.ResourceType} x{next.Amount}, target={GetTradePolicyTarget(next.ResourceType)}, warehouse={GetWarehouseTradeResourceAmount(next.ResourceType)}, activePolicies={CountActiveTradePolicies()}.");
         bool dispatched = BeginTradeRun();
         isEconomyScreenDirty = true;
+        isTradeScreenDirty = true;
         if (dispatched)
         {
             tradeAutoDispatchRetryTimer = 0f;
         }
         else
         {
-            SessionDebugLogger.Log("TRADE_AUTO", $"Queued order #{next.Id} dispatch blocked: {tradeDispatchStatusText}.");
+            SessionDebugLogger.Log("TRADE_AUTO", $"Policy dispatch blocked: {tradeDispatchStatusText}.");
         }
     }
 
@@ -721,7 +713,7 @@ public partial class GameBootstrap
         TradeAutoDispatchTick tick = TradeAutoDispatchService.Tick(
             IsWeekend(),
             HasActiveTradeRun(),
-            activeTradeHudOrders.Count,
+            CountDispatchableTradePolicies(),
             tradeAutoDispatchRetryTimer,
             Time.deltaTime,
             TradeAutoDispatchRetryInterval);
@@ -740,7 +732,7 @@ public partial class GameBootstrap
             tradeDispatchStatusText = blockReason;
             SessionDebugLogger.Log(
                 "TRADE_BLOCK",
-                $"Dispatch blocked for {selectedTradeOrderType} {selectedTradeResourceType} x{selectedTradeOrderAmount}: {blockReason}; treasury=${money}, stored={GetStoredTradeResourceAmount(selectedTradeResourceType)}, queue={activeTradeHudOrders.Count}.");
+                $"Dispatch blocked for {selectedTradeOrderType} {selectedTradeResourceType} x{selectedTradeOrderAmount}: {blockReason}; treasury=${money}, warehouse={GetWarehouseTradeResourceAmount(selectedTradeResourceType)}, activePolicies={CountActiveTradePolicies()}.");
             return false;
         }
 
@@ -801,6 +793,7 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isShiftsScreenDirty = true;
+        isTradeScreenDirty = true;
 
         SessionDebugLogger.Log(
             "TRADE",

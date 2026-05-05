@@ -9,34 +9,54 @@ public partial class GameBootstrap
             return;
         }
 
-        if (docks.DocksShipDocked)
+        float dt = Time.deltaTime * gameSpeedMultiplier;
+        switch (docks.DocksShipPhase)
         {
-            docks.DocksShipDockedTimer -= Time.deltaTime * gameSpeedMultiplier;
-            UpdateDocksShipVisual(docks);
-            if (docks.DocksShipDockedTimer <= 0f)
-            {
-                EndDocksShipVisit(docks);
-            }
-            return;
+            case DocksShipPhase.Arriving:
+                UpdateDocksShipTravel(docks, dt, GetDocksShipDockX(docks), DocksShipPhase.Docked);
+                return;
+            case DocksShipPhase.Docked:
+                docks.DocksShipDockedTimer -= dt;
+                UpdateDocksShipVisual(docks);
+                if (docks.DocksShipDockedTimer <= 0f)
+                {
+                    StartDocksShipDeparture(docks);
+                }
+                return;
+            case DocksShipPhase.Departing:
+                UpdateDocksShipTravel(docks, dt, DocksShipExitX, DocksShipPhase.Waiting);
+                return;
         }
 
-        docks.DocksShipTimer -= Time.deltaTime * gameSpeedMultiplier;
+        docks.DocksShipTimer -= dt;
         if (docks.DocksShipTimer <= 0f)
         {
-            StartDocksShipVisit(docks);
+            StartDocksShipApproach(docks);
         }
     }
 
-    private void StartDocksShipVisit(LocationData docks)
+    private void StartDocksShipApproach(LocationData docks)
     {
-        docks.DocksShipDocked = true;
-        docks.DocksShipDockedTimer = DocksShipDwellDuration;
+        docks.DocksShipPhase = DocksShipPhase.Arriving;
+        docks.DocksShipDocked = false;
+        docks.DocksShipWorldX = DocksShipSpawnX;
         EnsureDocksShipObject(docks);
         if (docks.DocksShipObject != null)
         {
             docks.DocksShipObject.SetActive(true);
         }
 
+        UpdateDocksShipVisual(docks);
+        SessionDebugLogger.Log("DOCKS", $"Ship spawned at river start x={DocksShipSpawnX:0.0}; sailing to Docks at x={GetDocksShipDockX(docks):0.0}.");
+    }
+
+    private void StartDocksShipDocked(LocationData docks)
+    {
+        docks.DocksShipPhase = DocksShipPhase.Docked;
+        docks.DocksShipDocked = true;
+        docks.DocksShipDockedTimer = DocksShipDwellDuration;
+        docks.DocksShipWorldX = GetDocksShipDockX(docks);
+        UpdateDocksShipVisual(docks);
         Vector2Int waterCell = GetDocksWaterCell(docks);
         string tradeSummary = PerformDocksShipTrade(docks);
         SessionDebugLogger.Log("DOCKS", $"Ship docked at ({waterCell.x},{waterCell.y}). {tradeSummary}");
@@ -46,16 +66,49 @@ public partial class GameBootstrap
             FeedEventType.Info);
     }
 
-    private void EndDocksShipVisit(LocationData docks)
+    private void StartDocksShipDeparture(LocationData docks)
     {
+        docks.DocksShipPhase = DocksShipPhase.Departing;
         docks.DocksShipDocked = false;
+        SessionDebugLogger.Log("DOCKS", $"Ship departed Docks and is sailing downstream to x={DocksShipExitX:0.0}.");
+    }
+
+    private void FinishDocksShipDeparture(LocationData docks)
+    {
+        docks.DocksShipPhase = DocksShipPhase.Waiting;
         docks.DocksShipTimer = Random.Range(DocksShipIntervalMin, DocksShipIntervalMax);
+        docks.DocksShipWorldX = DocksShipSpawnX;
         if (docks.DocksShipObject != null)
         {
             docks.DocksShipObject.SetActive(false);
         }
 
-        SessionDebugLogger.Log("DOCKS", $"Ship departed. Next ship in {docks.DocksShipTimer:0.0}s.");
+        SessionDebugLogger.Log("DOCKS", $"Ship left the opposite river edge. Next ship in {docks.DocksShipTimer:0.0}s.");
+    }
+
+    private void UpdateDocksShipTravel(LocationData docks, float dt, float targetX, DocksShipPhase nextPhase)
+    {
+        EnsureDocksShipObject(docks);
+        if (docks.DocksShipObject != null && !docks.DocksShipObject.activeSelf)
+        {
+            docks.DocksShipObject.SetActive(true);
+        }
+
+        docks.DocksShipWorldX = Mathf.MoveTowards(docks.DocksShipWorldX, targetX, DocksShipCruiseSpeed * dt);
+        UpdateDocksShipVisual(docks);
+        if (!Mathf.Approximately(docks.DocksShipWorldX, targetX))
+        {
+            return;
+        }
+
+        if (nextPhase == DocksShipPhase.Docked)
+        {
+            StartDocksShipDocked(docks);
+        }
+        else
+        {
+            FinishDocksShipDeparture(docks);
+        }
     }
 
     private string PerformDocksShipTrade(LocationData docks)
@@ -133,11 +186,24 @@ public partial class GameBootstrap
 
         Vector2Int waterCell = GetDocksWaterCell(docks);
         float bob = Mathf.Sin(Time.time * 1.8f) * 0.035f;
-        Vector3 pos = GetCellCenter(waterCell);
-        pos.y = 0.36f + bob;
-        pos.z += 0.30f;
+        Vector3 waterPos = GetCellCenter(waterCell);
+        float laneZ = Mathf.Clamp(waterPos.z + 0.30f, GridHeight - WaterRiverWidth + 0.55f, GridHeight - 0.45f);
+        Vector3 pos = new(docks.DocksShipWorldX, GetDocksTradeShipWaterY(docks.DocksShipWorldX, laneZ) + 0.14f + bob, laneZ);
         docks.DocksShipObject.transform.position = pos;
-        docks.DocksShipObject.transform.rotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
+        docks.DocksShipObject.transform.rotation = Quaternion.identity;
+    }
+
+    private float GetDocksShipDockX(LocationData docks)
+    {
+        return GetCellCenter(GetDocksWaterCell(docks)).x;
+    }
+
+    private float GetDocksTradeShipWaterY(float worldX, float laneZ)
+    {
+        Vector2Int cell = new(
+            Mathf.Clamp(Mathf.FloorToInt(worldX), 0, GridWidth - 1),
+            Mathf.Clamp(Mathf.FloorToInt(laneZ), GridHeight - WaterRiverWidth, GridHeight - 1));
+        return waterCells.Contains(cell) ? GetCurrentVisualWaterHeight(cell) : 0.22f;
     }
 
     private int GetDocksStoredResource(LocationData docks, TradeResourceType resourceType)
@@ -254,9 +320,9 @@ public partial class GameBootstrap
             return string.Empty;
         }
 
-        return docks.DocksShipDocked
-            ? $"Ship docked - departing in {Mathf.CeilToInt(docks.DocksShipDockedTimer)}s"
-            : $"Waiting for ship - ETA {Mathf.CeilToInt(docks.DocksShipTimer)}s";
+        return IsRussianLanguage()
+            ? "Содержимое склада доков"
+            : "Docks cargo storage";
     }
 
     private string GetDocksQuickResourceText()
@@ -266,10 +332,18 @@ public partial class GameBootstrap
             return string.Empty;
         }
 
-        return $"{FormatValueLine("Export order", GetTradeResourceLabel(docks.DocksExportResource))}\n" +
-               $"{FormatValueLine("Import order", GetTradeResourceLabel(docks.DocksImportResource))}\n" +
-               $"{FormatValueLine("Cargo", GetDocksQuickCargoSummary(docks))}\n" +
-               $"{FormatValueLine("Ship", docks.DocksShipDocked ? "Docked" : $"ETA {Mathf.CeilToInt(docks.DocksShipTimer)}s")}";
+        return GetDocksQuickCargoLines(docks);
+    }
+
+    private string GetDocksShipHudState(LocationData docks)
+    {
+        return docks.DocksShipPhase switch
+        {
+            DocksShipPhase.Arriving => "Arriving",
+            DocksShipPhase.Docked => $"Docked {Mathf.CeilToInt(docks.DocksShipDockedTimer)}s",
+            DocksShipPhase.Departing => "Departing",
+            _ => $"ETA {Mathf.CeilToInt(docks.DocksShipTimer)}s"
+        };
     }
 
     private string GetDocksQuickCargoSummary(LocationData docks)
@@ -279,8 +353,62 @@ public partial class GameBootstrap
             return "-";
         }
 
-        return $"L {docks.LogsStored}/{DocksResourceCapacity}, B {docks.BoardsStored}/{DocksResourceCapacity}, " +
-               $"C {docks.CottonStored}/{DocksResourceCapacity}, T {docks.TextileStored}/{DocksResourceCapacity}, " +
-               $"F {docks.FurnitureStored}/{DocksResourceCapacity}";
+        string text = string.Empty;
+        AppendDocksCargoSummary(ref text, "Logs", docks.LogsStored);
+        AppendDocksCargoSummary(ref text, "Boards", docks.BoardsStored);
+        AppendDocksCargoSummary(ref text, "Cotton", docks.CottonStored);
+        AppendDocksCargoSummary(ref text, "Textile", docks.TextileStored);
+        AppendDocksCargoSummary(ref text, "Furniture", docks.FurnitureStored);
+        return text.Length > 0 ? text : L("Empty");
+    }
+
+    private string GetDocksQuickCargoLines(LocationData docks)
+    {
+        if (docks == null)
+        {
+            return string.Empty;
+        }
+
+        bool ru = IsRussianLanguage();
+        string text = string.Empty;
+        AppendDocksCargoLine(ref text, "Logs", docks.LogsStored);
+        AppendDocksCargoLine(ref text, "Boards", docks.BoardsStored);
+        AppendDocksCargoLine(ref text, "Cotton", docks.CottonStored);
+        AppendDocksCargoLine(ref text, "Textile", docks.TextileStored);
+        AppendDocksCargoLine(ref text, "Furniture", docks.FurnitureStored);
+
+        return text.Length > 0
+            ? text
+            : FormatValueLine(ru ? "Груз" : "Cargo", ru ? "пусто" : "empty");
+    }
+
+    private static void AppendDocksCargoSummary(ref string text, string label, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        if (text.Length > 0)
+        {
+            text += ", ";
+        }
+
+        text += $"{L(label)} {amount}/{DocksResourceCapacity}";
+    }
+
+    private static void AppendDocksCargoLine(ref string text, string label, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        if (text.Length > 0)
+        {
+            text += "\n";
+        }
+
+        text += FormatValueLine(label, $"{amount} / {DocksResourceCapacity}");
     }
 }

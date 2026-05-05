@@ -263,6 +263,7 @@ public partial class GameBootstrap : MonoBehaviour
         LocationType.Forest => ProductionMaxWorkersPerBuilding,
         LocationType.Sawmill => ProductionMaxWorkersPerBuilding,
         LocationType.FurnitureFactory => ProductionMaxWorkersPerBuilding,
+        LocationType.Docks => 1,
         _ when HasServiceWorkerSlot(type) => ServiceMaxWorkersPerBuilding,
         _ => 0
     };
@@ -273,13 +274,13 @@ public partial class GameBootstrap : MonoBehaviour
         LocationType.Sawmill          => "Sawmill Worker",
         LocationType.FurnitureFactory => "Carpenter",
         LocationType.Warehouse        => "Warehouse Loader",
+        LocationType.Docks            => "Dock Worker",
         LocationType.LaborExchange    => "Employment Clerk",
         _ when HasServiceWorkerSlot(type) => "Service Worker",
         _                             => "Worker"
     };
 
     private bool IsLocationOperational(LocationType type) =>
-        type == LocationType.Docks ||
         !IsProductionLocation(type) ||
         (locations.TryGetValue(type, out LocationData d) && d.Workers > 0);
 
@@ -382,9 +383,8 @@ public partial class GameBootstrap : MonoBehaviour
 
     private enum GameStartMode
     {
-        Debug,
-        User,
-        Clear
+        Tutorial,
+        NewGame
     }
 
     public enum TripPhase
@@ -515,6 +515,14 @@ public partial class GameBootstrap : MonoBehaviour
         Sell
     }
 
+    private enum DocksShipPhase
+    {
+        Waiting,
+        Arriving,
+        Docked,
+        Departing
+    }
+
     private sealed class LocationData
     {
         public string Label;
@@ -542,6 +550,8 @@ public partial class GameBootstrap : MonoBehaviour
         public TradeResourceType DocksImportResource = TradeResourceType.Cotton;
         public float DocksShipTimer;
         public float DocksShipDockedTimer;
+        public float DocksShipWorldX = DocksShipSpawnX;
+        public DocksShipPhase DocksShipPhase;
         public bool DocksShipDocked;
         public GameObject DocksShipObject;
 

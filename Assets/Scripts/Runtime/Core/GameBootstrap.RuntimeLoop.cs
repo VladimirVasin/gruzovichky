@@ -258,6 +258,7 @@ public partial class GameBootstrap
         UpdateShiftsScreenUi();
         UpdateResourcesScreenUi();
         UpdateEconomyScreenUi();
+        UpdateTradeScreenUi();
         UpdateBuildScreenUi();
         UpdateWorldMapScreenUi();
         UpdateStatesScreenUi();
@@ -430,9 +431,18 @@ public partial class GameBootstrap
             Color prevColor = GUI.color;
             bool prevEnabled = GUI.enabled;
 
+            if (isTradePanelOpen)
+            {
+                DrawTradePolicyHud();
+                GUI.color = prevColor;
+                GUI.enabled = prevEnabled;
+                return;
+            }
+
             if (!isRacingActive && !isWorldMapPanelOpen)
             {
                 DrawMoneyHud();
+                DrawPopulationHud();
                 DrawTimeHud();
                 DrawSpeedHud();
                 DrawWeatherHud();

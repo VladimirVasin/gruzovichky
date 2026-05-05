@@ -129,7 +129,7 @@ public partial class GameBootstrap
         isTutorialGoalsComplete = false;
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
-        shouldShowRoadTutorialAfterCameraGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowRoadTutorialAfterCameraGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
         shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
@@ -151,7 +151,7 @@ public partial class GameBootstrap
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
         shouldShowRoadTutorialAfterCameraGoals = false;
-        shouldShowCoreBuildingsTutorialAfterRoadGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowCoreBuildingsTutorialAfterRoadGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
         shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
         tutorialGoalsMode = TutorialGoalsMode.RoadBuilding;
@@ -174,7 +174,7 @@ public partial class GameBootstrap
         tutorialGoalsSuccessDuration = 0f;
         shouldShowRoadTutorialAfterCameraGoals = false;
         shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
-        shouldShowLumberjackCampTutorialAfterCoreGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowLumberjackCampTutorialAfterCoreGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
         tutorialGoalsMode = TutorialGoalsMode.CoreBuildings;
         ShowTutorialGoalsHud();
@@ -196,7 +196,7 @@ public partial class GameBootstrap
         shouldShowRoadTutorialAfterCameraGoals = false;
         shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
-        shouldShowWorkerShiftTutorialAfterLumberjackGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowWorkerShiftTutorialAfterLumberjackGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         tutorialGoalsMode = TutorialGoalsMode.LumberjackCamp;
         ShowTutorialGoalsHud();
         SessionDebugLogger.Log("TUTORIAL", "Lumberjack Camp goals started.");
@@ -217,7 +217,7 @@ public partial class GameBootstrap
         shouldShowCoreBuildingsTutorialAfterRoadGoals = false;
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
         shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
-        shouldShowTruckFreightTutorialAfterBuyTruckGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowTruckFreightTutorialAfterBuyTruckGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         tutorialGoalsMode = TutorialGoalsMode.BuyTruck;
         ShowTutorialGoalsHud();
         SessionDebugLogger.Log("TUTORIAL", "Truck logistics goals started.");
@@ -238,7 +238,7 @@ public partial class GameBootstrap
         isTutorialGoalsComplete = false;
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
-        shouldShowWorkersOverviewAfterServiceGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowWorkersOverviewAfterServiceGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         tutorialGoalsMode = TutorialGoalsMode.ServiceBuildings;
         ShowTutorialGoalsHud();
         SessionDebugLogger.Log("TUTORIAL", "Service building goals started.");
@@ -278,7 +278,7 @@ public partial class GameBootstrap
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
         tutorialGoalsMode = TutorialGoalsMode.WarehouseLoaders;
-        shouldShowLocalTransportAfterWarehouseLoadersGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowLocalTransportAfterWarehouseLoadersGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         ShowTutorialGoalsHud();
         CheckTutorialWarehouseLoaderGoal();
         SessionDebugLogger.Log("TUTORIAL", "Warehouse loader goals started.");
@@ -297,7 +297,7 @@ public partial class GameBootstrap
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
         tutorialGoalsMode = TutorialGoalsMode.LocalTransport;
-        shouldShowLocalBusRoutesAfterTransportGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowLocalBusRoutesAfterTransportGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         ShowTutorialGoalsHud();
         CheckTutorialLocalTransportGoals();
         SessionDebugLogger.Log("TUTORIAL", "Local transport goals started.");
@@ -315,7 +315,7 @@ public partial class GameBootstrap
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
         tutorialGoalsMode = TutorialGoalsMode.EconomyTaxes;
-        shouldShowTradeIntroAfterEconomyGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowTradeIntroAfterEconomyGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         ShowTutorialGoalsHud();
         CheckTutorialTaxRateGoal();
         SessionDebugLogger.Log("TUTORIAL", "Economy tax goals started.");
@@ -334,7 +334,7 @@ public partial class GameBootstrap
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
         tutorialGoalsMode = TutorialGoalsMode.TradeSetup;
-        shouldShowTradeRaceInfoAfterTradeGoals = selectedGameStartMode == GameStartMode.User && !isTutorialSkipped;
+        shouldShowTradeRaceInfoAfterTradeGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         ShowTutorialGoalsHud();
         CheckTutorialTradeSetupGoals();
         SessionDebugLogger.Log("TUTORIAL", "Trade setup goals started.");
@@ -585,7 +585,7 @@ public partial class GameBootstrap
             TutorialGoalsMode.WarehouseLoaders => ru ? "Открой Вакансии и заполни три складских слота." : "Open Vacancies and fill three Warehouse slots.",
             TutorialGoalsMode.LocalTransport => ru ? "Открой Стройку для остановок, затем Вакансии для водителей." : "Open Build for stops, then Vacancies for drivers.",
             TutorialGoalsMode.EconomyTaxes => ru ? "Открой Экономика -> Налоги и нажимай + до 15%." : "Open Economy -> Taxes and press + until 15%.",
-            TutorialGoalsMode.TradeSetup => ru ? "Открой Вакансии для межгорода, затем Экономика -> Торговля." : "Open Vacancies for intercity, then Economy -> Trade.",
+            TutorialGoalsMode.TradeSetup => ru ? "Открой Вакансии для водителя, затем Торговлю." : "Open Vacancies for a driver, then Trade.",
             TutorialGoalsMode.JoinRace => ru ? "\u0414\u043e\u0436\u0434\u0438\u0441\u044c \u043a\u043d\u043e\u043f\u043a\u0438 Join the Race \u0438 \u043d\u0430\u0436\u043c\u0438 \u0435\u0451." : "Wait for Join the Race and press it.",
             _ => ru ? "\u041e\u0441\u0432\u043e\u0439 \u043a\u0430\u043c\u0435\u0440\u0443 \u043f\u0435\u0440\u0435\u0434 \u0441\u0442\u0440\u043e\u0439\u043a\u043e\u0439." : "Learn the camera before building."
         };
@@ -647,7 +647,7 @@ public partial class GameBootstrap
             TutorialGoalKind.AssignBusDrivers => ru ? "Вакансии -> Водитель автобуса -> назначь 3 смены" : "Vacancies -> Bus Driver -> assign 3 shifts",
             TutorialGoalKind.SetTaxRate15 => ru ? "Экономика -> Налоги: нажимай + до 15%" : "Economy -> Taxes: press + until 15%",
             TutorialGoalKind.AssignIntercityDriver => ru ? "Вакансии -> Водитель грузовика -> Смена -> Рабочий" : "Vacancies -> Truck Driver -> Shift -> Worker",
-            TutorialGoalKind.CreateBuyTextileOrder => ru ? "\u042d\u043a\u043e\u043d\u043e\u043c\u0438\u043a\u0430 -> \u0422\u043e\u0440\u0433\u043e\u0432\u043b\u044f -> Textile -> \u041a\u0443\u043f\u0438\u0442\u044c -> \u0420\u0430\u0437\u043c\u0435\u0441\u0442\u0438\u0442\u044c \u0437\u0430\u043a\u0430\u0437" : "Economy -> Trade -> Textile -> Buy -> Place Order",
+            TutorialGoalKind.CreateBuyTextileOrder => ru ? "Торговля -> Textile -> Докупить до нормы" : "Trade -> Textile -> Buy up to",
             TutorialGoalKind.JoinRaceParticipation => ru ? "\u0414\u043e\u0436\u0434\u0438\u0441\u044c \u0432\u044b\u0435\u0437\u0434\u0430 \u0437\u0430 \u043a\u0430\u0440\u0442\u0443 \u0438 \u043d\u0430\u0436\u043c\u0438 Join the Race" : "Wait until the truck leaves the map, then press Join the Race",
             _ => string.Empty
         };

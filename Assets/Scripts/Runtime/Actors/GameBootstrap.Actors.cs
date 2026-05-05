@@ -107,27 +107,19 @@ public partial class GameBootstrap
             SessionDebugLogger.Log("TRUCK", "Initial truck skipped: Parking not available in this mode.");
         }
 
-        if (locations.ContainsKey(LocationType.Motel) || selectedGameStartMode == GameStartMode.User)
+        DriverAgent firstStarterWorker = null;
+        bool hasStarterWithHigherEducation = false;
+        for (int i = 0; i < InitialWorkerCount; i++)
         {
-            int spawnCount = selectedGameStartMode == GameStartMode.Debug ? 9 : InitialWorkerCount;
-            DriverAgent firstStarterWorker = null;
-            bool hasStarterWithHigherEducation = false;
-            for (int i = 0; i < spawnCount; i++)
-            {
-                DriverAgent worker = CreateAndRegisterDriverAgent();
-                firstStarterWorker ??= worker;
-                hasStarterWithHigherEducation |= worker.Education == WorkerEducationLevel.Higher;
-                SessionDebugLogger.Log("DRIVER", $"{worker.DriverName} hired (unassigned, idle).");
-            }
-
-            if (!hasStarterWithHigherEducation)
-            {
-                PromoteWorkerToHigherEducation(firstStarterWorker, "starter labor exchange guarantee");
-            }
+            DriverAgent worker = CreateAndRegisterDriverAgent();
+            firstStarterWorker ??= worker;
+            hasStarterWithHigherEducation |= worker.Education == WorkerEducationLevel.Higher;
+            SessionDebugLogger.Log("DRIVER", $"{worker.DriverName} hired (unassigned, idle).");
         }
-        else
+
+        if (!hasStarterWithHigherEducation)
         {
-            SessionDebugLogger.Log("DRIVER", $"Initial workers skipped: no starter idle hub available. Requested starter workers: {InitialWorkerCount}.");
+            PromoteWorkerToHigherEducation(firstStarterWorker, "starter labor exchange guarantee");
         }
     }
 

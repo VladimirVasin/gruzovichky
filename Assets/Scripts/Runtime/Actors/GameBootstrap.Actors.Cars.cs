@@ -8,10 +8,142 @@ public partial class GameBootstrap
 {
     private string GenerateWorkerName(WorkerGender gender)
     {
-        string[] pool = gender == WorkerGender.Female ? WorkerFemaleFirstNames : WorkerMaleFirstNames;
-        string first = pool[Random.Range(0, pool.Length)];
-        string last  = WorkerLastNames[Random.Range(0, WorkerLastNames.Length)];
-        return $"{first} {last}";
+        string[] firstPool = gender == WorkerGender.Female ? WorkerFemaleFirstNames : WorkerMaleFirstNames;
+        HashSet<string> usedFirstNames = new();
+        HashSet<string> usedLastNames = new();
+        HashSet<string> usedFullNames = new();
+
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (TrySplitWorkerFullName(driver?.DriverName, out string firstName, out string lastName))
+            {
+                usedFirstNames.Add(firstName);
+                usedLastNames.Add(lastName);
+                usedFullNames.Add($"{firstName} {lastName}");
+            }
+        }
+
+        bool hasUnusedFirstName = HasUnusedWorkerNamePart(firstPool, usedFirstNames);
+        bool hasUnusedLastName = HasUnusedWorkerNamePart(WorkerLastNames, usedLastNames);
+        string first = PickWorkerNamePart(firstPool, usedFirstNames, hasUnusedFirstName);
+        string last = PickWorkerNamePart(WorkerLastNames, usedLastNames, hasUnusedLastName);
+        string fullName = $"{first} {last}";
+
+        if (!usedFullNames.Contains(fullName))
+        {
+            return fullName;
+        }
+
+        if (TryFindUnusedWorkerNameCombination(firstPool, WorkerLastNames, usedFullNames, out string fallbackName))
+        {
+            return fallbackName;
+        }
+
+        return fullName;
+    }
+
+    private static bool TrySplitWorkerFullName(string fullName, out string firstName, out string lastName)
+    {
+        firstName = string.Empty;
+        lastName = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            return false;
+        }
+
+        string[] parts = fullName.Trim().Split(' ');
+        if (parts.Length < 2)
+        {
+            return false;
+        }
+
+        firstName = parts[0];
+        lastName = parts[parts.Length - 1];
+        return !string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName);
+    }
+
+    private static bool HasUnusedWorkerNamePart(string[] pool, HashSet<string> usedParts)
+    {
+        if (pool == null || pool.Length == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < pool.Length; i++)
+        {
+            if (!usedParts.Contains(pool[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string PickWorkerNamePart(string[] pool, HashSet<string> usedParts, bool preferUnused)
+    {
+        if (pool == null || pool.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        if (!preferUnused)
+        {
+            return pool[Random.Range(0, pool.Length)];
+        }
+
+        int startIndex = Random.Range(0, pool.Length);
+        for (int offset = 0; offset < pool.Length; offset++)
+        {
+            string candidate = pool[(startIndex + offset) % pool.Length];
+            if (!usedParts.Contains(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return pool[Random.Range(0, pool.Length)];
+    }
+
+    private static bool TryFindUnusedWorkerNameCombination(
+        string[] firstPool,
+        string[] lastPool,
+        HashSet<string> usedFullNames,
+        out string fullName)
+    {
+        fullName = string.Empty;
+        if (firstPool == null || firstPool.Length == 0 || lastPool == null || lastPool.Length == 0)
+        {
+            return false;
+        }
+
+        int randomAttempts = Mathf.Min(200, firstPool.Length * lastPool.Length);
+        for (int i = 0; i < randomAttempts; i++)
+        {
+            string candidate = $"{firstPool[Random.Range(0, firstPool.Length)]} {lastPool[Random.Range(0, lastPool.Length)]}";
+            if (!usedFullNames.Contains(candidate))
+            {
+                fullName = candidate;
+                return true;
+            }
+        }
+
+        for (int firstIndex = 0; firstIndex < firstPool.Length; firstIndex++)
+        {
+            for (int lastIndex = 0; lastIndex < lastPool.Length; lastIndex++)
+            {
+                string candidate = $"{firstPool[firstIndex]} {lastPool[lastIndex]}";
+                if (!usedFullNames.Contains(candidate))
+                {
+                    fullName = candidate;
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private GameObject CreateCarModel(int modelIndex, Transform parent)

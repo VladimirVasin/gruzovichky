@@ -84,8 +84,8 @@ public partial class GameBootstrap : MonoBehaviour
                         BaseY = waterSurfaceCenterY,
                         CurrentTopY = waterSurfaceCenterY,
                         Cell = new Vector2Int(x, y),
-                        BobAmplitude = y == shoreRow ? 0.028f : 0.04f,
-                        BobSpeed = y == shoreRow ? 0.78f : 1.02f,
+                        BobAmplitude = y == shoreRow ? 0.016f : 0.024f,
+                        BobSpeed = y == shoreRow ? 0.68f : 0.86f,
                         PhaseOffset = wavePhase,
                         LayerIndex = 0
                     });
@@ -108,8 +108,8 @@ public partial class GameBootstrap : MonoBehaviour
                         BaseY = waterMidSurfaceCenterY,
                         CurrentTopY = waterMidSurfaceCenterY,
                         Cell = new Vector2Int(x, y),
-                        BobAmplitude = y == shoreRow ? 0.022f : 0.03f,
-                        BobSpeed = y == shoreRow ? 0.74f : 0.96f,
+                        BobAmplitude = y == shoreRow ? 0.013f : 0.018f,
+                        BobSpeed = y == shoreRow ? 0.64f : 0.82f,
                         PhaseOffset = wavePhase,
                         LayerIndex = 1
                     });
@@ -132,8 +132,8 @@ public partial class GameBootstrap : MonoBehaviour
                         BaseY = waterLowSurfaceCenterY,
                         CurrentTopY = waterLowSurfaceCenterY,
                         Cell = new Vector2Int(x, y),
-                        BobAmplitude = y == shoreRow ? 0.016f : 0.022f,
-                        BobSpeed = y == shoreRow ? 0.7f : 0.9f,
+                        BobAmplitude = y == shoreRow ? 0.010f : 0.014f,
+                        BobSpeed = y == shoreRow ? 0.6f : 0.76f,
                         PhaseOffset = wavePhase,
                         LayerIndex = 2
                     });

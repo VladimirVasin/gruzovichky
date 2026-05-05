@@ -148,6 +148,7 @@ public partial class GameBootstrap
             !isShiftsPanelOpen &&
             !isResourcesPanelOpen &&
             !isEconomyPanelOpen &&
+            !isTradePanelOpen &&
             !isBuildPanelOpen &&
             !isWorldMapPanelOpen &&
             !isStatesPanelOpen;

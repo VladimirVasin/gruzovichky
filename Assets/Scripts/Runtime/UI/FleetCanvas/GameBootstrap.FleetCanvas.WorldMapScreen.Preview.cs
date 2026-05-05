@@ -8,9 +8,7 @@ public partial class GameBootstrap
 {
     private void CreateWorldMapGeography(RectTransform parent)
     {
-        CreateWorldMapMapShape(parent, "WorldMapRouteWash", new Color(0.78f, 0.56f, 0.22f, 0.12f), new Vector2(0.55f, 0.39f), new Vector2(0.42f, 0.028f), 9f);
-        CreateWorldMapMapShape(parent, "WorldMapCompassPlate", new Color(0.23f, 0.15f, 0.06f, 0.16f), new Vector2(0.11f, 0.13f), new Vector2(0.13f, 0.13f), 0f);
-        CreateWorldMapCompass(parent);
+        // The map surface is now generated directly as pixel art.
     }
 
     private void CreateWorldMapCompass(RectTransform parent)
@@ -52,92 +50,7 @@ public partial class GameBootstrap
             return s_regionalWorldMapSprite;
         }
 
-        const int width = 768;
-        const int height = 480;
-        Texture2D tex = new(width, height, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Bilinear;
-
-        Color parchment = new(0.78f, 0.66f, 0.43f, 1f);
-        Color desert = new(0.86f, 0.74f, 0.50f, 1f);
-        Color shallow = new(0.45f, 0.70f, 0.74f, 1f);
-        Color sea = new(0.27f, 0.56f, 0.67f, 1f);
-        Color river = new(0.18f, 0.48f, 0.62f, 1f);
-        Color forest = new(0.28f, 0.50f, 0.24f, 1f);
-        Color mountain = new(0.55f, 0.50f, 0.42f, 1f);
-
-        Color[] pixels = new Color[width * height];
-        for (int y = 0; y < height; y++)
-        {
-            float ny = y / (float)(height - 1);
-            for (int x = 0; x < width; x++)
-            {
-                float nx = x / (float)(width - 1);
-                float noise = Mathf.PerlinNoise(nx * 18.0f + 2.1f, ny * 18.0f + 8.4f);
-                Color baseColor = Color.Lerp(parchment, desert, 0.35f + noise * 0.25f);
-
-                // A broad northern sea and eastern gulf, with noisy edges so it reads as coast, not rectangle.
-                float northCoast = 0.70f + 0.07f * Mathf.Sin(nx * 11f) + 0.035f * Mathf.PerlinNoise(nx * 7f, 1.2f);
-                float westBay = 0.56f + 0.10f * Mathf.Sin(ny * 7.5f + 1.5f);
-                bool inNorthernSea = ny > northCoast && nx < 0.78f;
-                bool inEasternGulf = nx > 0.78f && ny < 0.48f + 0.07f * Mathf.Sin(nx * 13f + ny * 3f);
-                bool inWestBay = nx < 0.16f && ny > westBay;
-                if (inNorthernSea || inEasternGulf || inWestBay)
-                {
-                    float foam = Mathf.PerlinNoise(nx * 30f, ny * 30f);
-                    baseColor = Color.Lerp(sea, shallow, 0.28f + foam * 0.22f);
-                }
-
-                // Central river corridor.
-                float riverX = 0.50f + 0.045f * Mathf.Sin(ny * 13f + 0.8f) + 0.025f * Mathf.Sin(ny * 31f);
-                float riverWidth = 0.012f + 0.012f * Mathf.SmoothStep(0f, 1f, ny);
-                float riverDist = Mathf.Abs(nx - riverX);
-                if (riverDist < riverWidth && ny > 0.08f && ny < 0.72f)
-                {
-                    baseColor = Color.Lerp(baseColor, river, 0.88f);
-                }
-                else if (riverDist < riverWidth * 3.8f && ny > 0.08f && ny < 0.72f)
-                {
-                    float t = 1f - Mathf.InverseLerp(riverWidth, riverWidth * 3.8f, riverDist);
-                    baseColor = Color.Lerp(baseColor, new Color(0.45f, 0.64f, 0.43f, 1f), t * 0.55f);
-                }
-
-                // Forest and oasis patches.
-                float forestMask = Mathf.PerlinNoise(nx * 8.5f + 4.2f, ny * 8.5f + 1.7f);
-                bool forestBelt = (nx < 0.34f && ny > 0.55f && forestMask > 0.42f) ||
-                                  (nx > 0.18f && nx < 0.52f && ny > 0.30f && ny < 0.52f && forestMask > 0.57f);
-                bool oasis = DistanceToEllipse(nx, ny, 0.25f, 0.25f, 0.16f, 0.08f) < 1f ||
-                             DistanceToEllipse(nx, ny, 0.33f, 0.12f, 0.10f, 0.06f) < 1f;
-                if (forestBelt || oasis)
-                {
-                    baseColor = Color.Lerp(baseColor, forest, forestBelt ? 0.58f : 0.42f);
-                }
-
-                // Mountain/ridge bands.
-                bool ridge = DistanceToEllipse(nx, ny, 0.25f, 0.84f, 0.24f, 0.055f) < 1f ||
-                             DistanceToEllipse(nx, ny, 0.74f, 0.18f, 0.16f, 0.07f) < 1f;
-                if (ridge)
-                {
-                    baseColor = Color.Lerp(baseColor, mountain, 0.55f);
-                }
-
-                // Paper grain.
-                baseColor *= 0.92f + noise * 0.16f;
-                pixels[y * width + x] = baseColor;
-            }
-        }
-
-        DrawMapRiverBranch(pixels, width, height, new Vector2(0.50f, 0.43f), new Vector2(0.70f, 0.34f), river);
-        DrawMapRiverBranch(pixels, width, height, new Vector2(0.49f, 0.58f), new Vector2(0.34f, 0.65f), river);
-        DrawMapTreeCluster(pixels, width, height, new Vector2(0.18f, 0.78f), 34);
-        DrawMapTreeCluster(pixels, width, height, new Vector2(0.25f, 0.25f), 24);
-        DrawMapTreeCluster(pixels, width, height, new Vector2(0.33f, 0.12f), 14);
-        DrawMapMountainCluster(pixels, width, height, new Vector2(0.25f, 0.84f), 10);
-        DrawMapMountainCluster(pixels, width, height, new Vector2(0.74f, 0.18f), 8);
-        DrawMapBorder(pixels, width, height, new Color(0.33f, 0.21f, 0.09f, 1f));
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-        s_regionalWorldMapSprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
+        s_regionalWorldMapSprite = CreateRegionalWorldMapPixelSprite();
         return s_regionalWorldMapSprite;
     }
 
@@ -252,49 +165,30 @@ public partial class GameBootstrap
         markerRect.anchorMin = GetWorldMapRegionPosition(regionIndex);
         markerRect.anchorMax = GetWorldMapRegionPosition(regionIndex);
         markerRect.pivot = new Vector2(0.5f, 0.5f);
-        markerRect.sizeDelta = new Vector2(154f, 44f);
+        markerRect.sizeDelta = new Vector2(70f, 52f);
 
         Image background = markerObject.AddComponent<Image>();
-        background.color = new Color(0.20f, 0.13f, 0.06f, 0.46f);
+        background.color = new Color(0.10f, 0.07f, 0.04f, 0f);
         Button button = markerObject.AddComponent<Button>();
         Outline outline = markerObject.AddComponent<Outline>();
-        outline.effectColor = new Color(0f, 0f, 0f, 0.28f);
-        outline.effectDistance = new Vector2(1f, -1f);
+        outline.effectColor = Color.clear;
+        outline.effectDistance = new Vector2(2f, -2f);
 
-        HorizontalLayoutGroup row = markerObject.AddComponent<HorizontalLayoutGroup>();
-        row.padding = new RectOffset(7, 7, 5, 5);
-        row.spacing = 6f;
-        row.childControlWidth = true;
-        row.childControlHeight = true;
-        row.childForceExpandWidth = false;
-        row.childForceExpandHeight = true;
-
-        RectTransform iconRoot = CreateWorldMapCityIcon(markerRect, regionIndex);
-        LayoutElement iconLayout = iconRoot.gameObject.AddComponent<LayoutElement>();
-        iconLayout.preferredWidth = 30f;
-        iconLayout.preferredHeight = 30f;
-
-        RectTransform textCol = CreateUiObject($"WorldMapCityText_{regionIndex}", markerRect).GetComponent<RectTransform>();
-        VerticalLayoutGroup textLayout = textCol.gameObject.AddComponent<VerticalLayoutGroup>();
-        textLayout.spacing = 1f;
-        textLayout.childControlWidth = true;
-        textLayout.childControlHeight = false;
-        textLayout.childForceExpandWidth = true;
-        textLayout.childForceExpandHeight = false;
-        textCol.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-
-        cell.NameText = CreateHeaderText($"WorldMapCityName_{regionIndex}", textCol, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        cell.TypeText = CreateBodyText($"WorldMapCityType_{regionIndex}", textCol, font, string.Empty, 9, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        cell.NameText = CreateHeaderText($"WorldMapCityName_{regionIndex}", markerRect, font, string.Empty, 1, TextAnchor.MiddleCenter, Color.clear);
+        cell.NameText.gameObject.SetActive(false);
+        cell.TypeText = CreateBodyText($"WorldMapCityType_{regionIndex}", markerRect, font, string.Empty, 1, TextAnchor.MiddleCenter, Color.clear);
+        cell.TypeText.gameObject.SetActive(false);
 
         GameObject dotObj = CreateUiObject($"WorldMapRouteDot_{regionIndex}", markerRect);
         RectTransform dotRect = dotObj.GetComponent<RectTransform>();
-        dotRect.sizeDelta = new Vector2(10f, 10f);
+        dotRect.anchorMin = new Vector2(1f, 1f);
+        dotRect.anchorMax = new Vector2(1f, 1f);
+        dotRect.pivot = new Vector2(1f, 1f);
+        dotRect.anchoredPosition = new Vector2(-6f, -6f);
+        dotRect.sizeDelta = new Vector2(8f, 8f);
         Image dotImage = dotObj.AddComponent<Image>();
         dotImage.color = Color.clear;
         dotImage.raycastTarget = false;
-        LayoutElement dotLayout = dotObj.AddComponent<LayoutElement>();
-        dotLayout.preferredWidth = 10f;
-        dotLayout.preferredHeight = 10f;
 
         cell.Button = button;
         cell.Background = background;

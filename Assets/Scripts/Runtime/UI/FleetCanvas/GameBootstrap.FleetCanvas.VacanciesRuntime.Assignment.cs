@@ -366,7 +366,7 @@ public partial class GameBootstrap
 
         MarkTutorialGoalComplete(TutorialGoalKind.AssignTruckDriverShift);
         NotifyTutorialTradeDriverAssigned();
-        if (selectedGameStartMode == GameStartMode.User &&
+        if (selectedGameStartMode == GameStartMode.Tutorial &&
             !isTutorialSkipped &&
             isTutorialGoalsActive &&
             tutorialGoalsMode == TutorialGoalsMode.BuyTruck)

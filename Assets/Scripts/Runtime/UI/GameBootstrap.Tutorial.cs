@@ -124,7 +124,7 @@ public partial class GameBootstrap
 
     private bool IsTutorialEnabledForCurrentMode()
     {
-        return selectedGameStartMode == GameStartMode.User;
+        return selectedGameStartMode == GameStartMode.Tutorial;
     }
 
     private bool ShouldPauseSimulationForTutorial()
@@ -216,7 +216,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (selectedGameStartMode == GameStartMode.User &&
+        if (selectedGameStartMode == GameStartMode.Tutorial &&
             !IsNewUserTutorialTrigger(trigger) &&
             !isBeeEasterEgg)
         {
@@ -237,7 +237,7 @@ public partial class GameBootstrap
                     TutorialTrigger.UserWelcome,
                     1,
                     "Welcome to Lo-Fi Delivery Co.",
-                    "Welcome to User mode.\n\nYou start with an almost empty map, a highway connection, a bus stop, and a few workers.\n\nBefore building, learn the camera controls: zoom in, zoom out, move the map, and rotate the view.");
+                    "Welcome to Tutorial mode.\n\nYou start with an almost empty map, a highway connection, a bus stop, and a few workers.\n\nBefore building, learn the camera controls: zoom in, zoom out, move the map, and rotate the view.");
                 break;
             case TutorialTrigger.UserBuildRoadPrompt:
                 ShowTutorialWindow(
@@ -581,7 +581,7 @@ public partial class GameBootstrap
 
     private void NotifyTutorialLumberjackCampBuilt()
     {
-        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped)
         {
             return;
         }
@@ -593,7 +593,7 @@ public partial class GameBootstrap
 
     private void NotifyTutorialLumberjackWorkerAssigned()
     {
-        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped)
         {
             return;
         }
@@ -611,7 +611,7 @@ public partial class GameBootstrap
 
     private void NotifyTutorialTruckPurchased(TruckAgent truckAgent)
     {
-        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped)
         {
             return;
         }
@@ -645,7 +645,7 @@ public partial class GameBootstrap
 
     private void NotifyTutorialCoreBuildingBuilt(LocationType type)
     {
-        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped)
         {
             return;
         }
@@ -677,7 +677,7 @@ public partial class GameBootstrap
 
     private void NotifyTutorialServiceBuildingBuilt(LocationType type)
     {
-        if (selectedGameStartMode != GameStartMode.User || isTutorialSkipped)
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped)
         {
             return;
         }

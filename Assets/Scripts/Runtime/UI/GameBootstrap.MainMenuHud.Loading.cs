@@ -154,7 +154,7 @@ public partial class GameBootstrap
         SetupFleetScreenUi(); SetupDriversScreenUi(); SetupShiftsScreenUi();
 
         SetLoadingProgress(++step / (float)totalSteps, "Economy UI..."); yield return null;
-        SetupResourcesScreenUi(); SetupEconomyScreenUi();
+        SetupResourcesScreenUi(); SetupEconomyScreenUi(); SetupTradeScreenUi();
 
         SetLoadingProgress(++step / (float)totalSteps, "Build UI..."); yield return null;
         SetupBuildScreenUi(); SetupWorldMapScreenUi(); SetupStatesScreenUi();
