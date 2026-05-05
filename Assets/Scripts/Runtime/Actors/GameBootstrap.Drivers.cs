@@ -286,6 +286,7 @@ public partial class GameBootstrap : MonoBehaviour
             }
             driver.AssignedBuildingType = null;
             driver.AssignedBuildingInstanceId = 0;
+            driver.AssignedBuildingSlotIndex = -1;
         }
 
         if (dutyMode != DriverDutyMode.Local)
@@ -512,7 +513,27 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
-        return IsProductionWorkHour(GetCurrentHour());
+        int currentHour = GetCurrentHour();
+        if (IsBuildingWorkerWorkHour(driver.AssignedBuildingType.Value, GetLogisticsWorkerSlotIndex(driver), currentHour))
+        {
+            return true;
+        }
+
+        if (!HasServiceWorkerSlot(driver.AssignedBuildingType.Value))
+        {
+            return false;
+        }
+
+        int shiftStart = GetBuildingWorkerShiftStartHour(driver.AssignedBuildingType.Value, GetLogisticsWorkerSlotIndex(driver));
+        if (shiftStart < 0)
+        {
+            return false;
+        }
+
+        int currentMinutes = GetCurrentTotalMinutes();
+        int shiftStartMinutes = shiftStart * 60;
+        int minutesUntilShift = (shiftStartMinutes - currentMinutes + 24 * 60) % (24 * 60);
+        return minutesUntilShift > 0 && minutesUntilShift <= Mathf.RoundToInt(DriverShiftArrivalLeadHours * 60f);
     }
 
     private void UpdateDriverShiftPreparation(DriverAgent driver)
@@ -527,8 +548,7 @@ public partial class GameBootstrap : MonoBehaviour
                 return;
             }
 
-            bool shouldHead = ShouldLogisticsWorkerHeadToBuilding(driver) ||
-                              IsProductionWorkHour(GetCurrentHour());
+            bool shouldHead = ShouldLogisticsWorkerHeadToBuilding(driver);
             if (shouldHead)
             {
                 StartDriverBuildingCommute(driver);
@@ -658,7 +678,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        if (IsProductionWorkHour(GetCurrentHour()))
+        if (IsLogisticsWorkerWorkHour(driver))
         {
             return;
         }

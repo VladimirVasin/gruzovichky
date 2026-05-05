@@ -240,11 +240,6 @@ public partial class GameBootstrap
 
     private bool TryPublishNextLaborExchangePosting()
     {
-        if (laborExchangePostings.Count >= LaborExchangeMaxActivePostings)
-        {
-            return false;
-        }
-
         List<LaborExchangeCandidate> candidates = new();
         AddLaborExchangeShiftCandidates(candidates);
         AddLaborExchangeBuildingCandidates(candidates);
@@ -259,6 +254,12 @@ public partial class GameBootstrap
 
         candidates.Sort((a, b) => a.Priority.CompareTo(b.Priority));
         LaborExchangeCandidate candidate = candidates[0];
+        if (laborExchangePostings.Count >= LaborExchangeMaxActivePostings &&
+            !TryMakeRoomForPriorityLaborExchangePosting(candidate))
+        {
+            return false;
+        }
+
         VacancyOffer offer = CalculateVacancyOffer(candidate.Kind, candidate.BuildingType, candidate.SlotIndex, candidate.ShiftIndex);
         LaborExchangePosting posting = new()
         {
@@ -325,6 +326,8 @@ public partial class GameBootstrap
 
     private void AddLaborExchangeShiftCandidates(List<LaborExchangeCandidate> candidates)
     {
+        int truckPriority = GetLaborExchangeTruckDriverPriority();
+        int busPriority = GetLaborExchangeBusDriverPriority();
         if (IsVacancyUnlockedForCurrentTutorial(VacancyKind.TruckDriver) &&
             locations.ContainsKey(LocationType.Parking) &&
             HasAvailableTruckInParking())
@@ -334,7 +337,7 @@ public partial class GameBootstrap
                 if (!IsAnyTruckDriverAssignedToShift(i) &&
                     !HasLaborExchangePosting(VacancyKind.TruckDriver, LocationType.Parking, 0, -1, i))
                 {
-                    candidates.Add(new LaborExchangeCandidate(VacancyKind.TruckDriver, LocationType.Parking, 0, -1, i, 0, 30));
+                    candidates.Add(new LaborExchangeCandidate(VacancyKind.TruckDriver, LocationType.Parking, 0, -1, i, 0, truckPriority));
                 }
             }
         }
@@ -348,7 +351,7 @@ public partial class GameBootstrap
                 if (GetBusAssignedDriver(i) == null &&
                     !HasLaborExchangePosting(VacancyKind.BusDriver, LocationType.Parking, 0, -1, i))
                 {
-                    candidates.Add(new LaborExchangeCandidate(VacancyKind.BusDriver, LocationType.Parking, 0, -1, i, 0, 50));
+                    candidates.Add(new LaborExchangeCandidate(VacancyKind.BusDriver, LocationType.Parking, 0, -1, i, 0, busPriority));
                 }
             }
         }
@@ -403,8 +406,11 @@ public partial class GameBootstrap
             {
                 for (int slotIndex = 0; slotIndex < maxSlots; slotIndex++)
                 {
+                    int shiftIndex = HasServiceWorkerSlot(buildingType)
+                        ? GetBuildingWorkerShiftPresetIndex(buildingType, slotIndex)
+                        : -1;
                     if (GetNthLogisticsWorker(buildingType, slotIndex, location.InstanceId) != null ||
-                        HasLaborExchangePosting(kind, buildingType, location.InstanceId, slotIndex, -1))
+                        HasLaborExchangePosting(kind, buildingType, location.InstanceId, slotIndex, shiftIndex))
                     {
                         continue;
                     }
@@ -415,7 +421,7 @@ public partial class GameBootstrap
                         priority = 12;
                     }
 
-                    candidates.Add(new LaborExchangeCandidate(kind, buildingType, location.InstanceId, slotIndex, -1, 0, priority));
+                    candidates.Add(new LaborExchangeCandidate(kind, buildingType, location.InstanceId, slotIndex, shiftIndex, 0, priority));
                 }
             }
         }

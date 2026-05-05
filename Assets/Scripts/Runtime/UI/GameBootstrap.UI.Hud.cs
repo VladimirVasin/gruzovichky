@@ -410,8 +410,9 @@ public partial class GameBootstrap
             alignment = TextAnchor.MiddleCenter,
             fontStyle = FontStyle.Bold
         };
+        centeredHudValueStyle.normal.textColor = GetTreasuryDisplayColor();
 
-        GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 26), $"${money}", centeredHudValueStyle);
+        GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 26), FormatTreasuryAmount(), centeredHudValueStyle);
 
         if (moneyPopupTimer <= 0f || moneyPopupAmount <= 0)
         {
@@ -438,6 +439,18 @@ public partial class GameBootstrap
         };
 
         GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 26), driverAgents.Count.ToString(), centeredHudValueStyle);
+    }
+
+    private string FormatTreasuryAmount()
+    {
+        return $"${money}";
+    }
+
+    private Color GetTreasuryDisplayColor()
+    {
+        return money < 0
+            ? new Color(1f, 0.32f, 0.28f, 1f)
+            : Color.white;
     }
 
     private void DrawTimeHud()
@@ -525,7 +538,8 @@ public partial class GameBootstrap
             alignment = TextAnchor.MiddleRight,
             fontStyle = FontStyle.Bold
         };
-        GUI.Label(new Rect(window.xMax - 230f, window.y + 42f, 176f, 22f), $"{L("Treasury")}: ${money}", topRightStyle);
+        topRightStyle.normal.textColor = GetTreasuryDisplayColor();
+        GUI.Label(new Rect(window.xMax - 230f, window.y + 42f, 176f, 22f), $"{L("Treasury")}: {FormatTreasuryAmount()}", topRightStyle);
 
         Rect summary = new Rect(window.x + 18f, window.y + 62f, window.width - 36f, 70f);
         GUI.Box(summary, string.Empty);

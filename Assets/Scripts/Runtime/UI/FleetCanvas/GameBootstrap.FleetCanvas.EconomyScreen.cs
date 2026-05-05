@@ -311,7 +311,7 @@ public partial class GameBootstrap
         economyScreenUi.TradeAmountPlusButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 48f;
         economyScreenUi.TradeAmountPlusButton.onClick.AddListener(() =>
         {
-            selectedTradeOrderAmount = Mathf.Min(selectedTradeOrderAmount + 1, 5);
+            selectedTradeOrderAmount = Mathf.Min(selectedTradeOrderAmount + 1, TruckCargoCapacity);
             isEconomyScreenDirty = true;
             PlayUiSound(uiSelectClip, 0.75f);
         });
@@ -526,7 +526,8 @@ public partial class GameBootstrap
         }
 
         LocalizeCanvas(economyScreenUi.CanvasRoot);
-        economyScreenUi.HeaderCountText.text = $"{L("Treasury")}: ${money}";
+        economyScreenUi.HeaderCountText.text = $"{L("Treasury")}: {FormatTreasuryAmount()}";
+        economyScreenUi.HeaderCountText.color = money < 0 ? GetTreasuryDisplayColor() : FleetSecondaryTextColor;
         economyScreenUi.TaxesRateValueText.text = $"{dailyBuildingTaxPercent}%";
         economyScreenUi.TaxesIncomeSummaryText.text =
             $"{L("Current taxable bank")}: ${taxableBankTotal}\n" +

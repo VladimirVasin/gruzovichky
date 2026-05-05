@@ -372,18 +372,19 @@ public partial class GameBootstrap
         EnhanceMotelModel(parent, center, min, max, anchor);
     }
 
-    private void CreateLocationNightLights(LocationType type, Transform parent, Vector3 center, Vector2Int size)
+    private void CreateLocationNightLights(LocationData owner, LocationType type, Transform parent, Vector3 center, Vector2Int size)
     {
         if (type == LocationType.Forest)
         {
             CreateLocationNightLight(
+                owner,
                 parent,
                 center + new Vector3(0f, 1.15f, -0.95f),
                 new Color(0.28f, 0.24f, 0.18f),
                 new Color(1f, 0.9f, 0.72f),
                 1.15f,
                 3.2f);
-            CreateLocationPerimeterGlow(type, parent, center, size);
+            CreateLocationPerimeterGlow(owner, type, parent, center, size);
             return;
         }
 
@@ -394,6 +395,7 @@ public partial class GameBootstrap
             for (int li = 0; li < 4; li++)
             {
                 CreateLocationNightLight(
+                    owner,
                     parent,
                     center + new Vector3(lx[li], 1.3f, lz[li]),
                     new Color(0.18f, 0.22f, 0.14f),
@@ -401,18 +403,18 @@ public partial class GameBootstrap
                     0.88f,
                     4.0f);
             }
-            CreateLocationPerimeterGlow(type, parent, center, size);
+            CreateLocationPerimeterGlow(owner, type, parent, center, size);
             return;
         }
 
         if (type == LocationType.PersonalHouse)
         {
             // Two porch lanterns flanking the front door
-            CreateLocationNightLight(parent, center + new Vector3(-0.4f, 1.0f, 0f),
+            CreateLocationNightLight(owner, parent, center + new Vector3(-0.4f, 1.0f, 0f),
                 new Color(0.24f, 0.20f, 0.14f), new Color(1f, 0.90f, 0.68f), 0.75f, 3.0f);
-            CreateLocationNightLight(parent, center + new Vector3(0.4f, 1.0f, 0f),
+            CreateLocationNightLight(owner, parent, center + new Vector3(0.4f, 1.0f, 0f),
                 new Color(0.24f, 0.20f, 0.14f), new Color(1f, 0.90f, 0.68f), 0.75f, 3.0f);
-            CreateLocationPerimeterGlow(type, parent, center, size);
+            CreateLocationPerimeterGlow(owner, type, parent, center, size);
             return;
         }
 
@@ -446,17 +448,18 @@ public partial class GameBootstrap
             lightRange = 4.3f;
         }
 
-        CreateLocationNightLight(parent, center + new Vector3(-xOffset, 0.92f, -zOffset), offColor, onColor, maxIntensity, lightRange);
-        CreateLocationNightLight(parent, center + new Vector3(xOffset, 0.92f, -zOffset), offColor, onColor, maxIntensity, lightRange);
+        CreateLocationNightLight(owner, parent, center + new Vector3(-xOffset, 0.92f, -zOffset), offColor, onColor, maxIntensity, lightRange);
+        CreateLocationNightLight(owner, parent, center + new Vector3(xOffset, 0.92f, -zOffset), offColor, onColor, maxIntensity, lightRange);
 
         if (type == LocationType.Sawmill || type == LocationType.FurnitureFactory)
         {
-            CreateLocationNightLight(parent, center + new Vector3(0f, 0.86f, zOffset), offColor, onColor, maxIntensity, lightRange);
+            CreateLocationNightLight(owner, parent, center + new Vector3(0f, 0.86f, zOffset), offColor, onColor, maxIntensity, lightRange);
         }
 
         if (type == LocationType.Bar)
         {
             CreateLocationNightLight(
+                owner,
                 parent,
                 center + new Vector3(0f, 1.06f, -1.02f),
                 new Color(0.34f, 0.18f, 0.08f),
@@ -467,6 +470,7 @@ public partial class GameBootstrap
         else if (type == LocationType.Canteen)
         {
             CreateLocationNightLight(
+                owner,
                 parent,
                 center + new Vector3(0f, 0.82f, -0.96f),
                 new Color(0.24f, 0.28f, 0.26f),
@@ -477,6 +481,7 @@ public partial class GameBootstrap
         else if (type == LocationType.GamblingHall)
         {
             CreateLocationNightLight(
+                owner,
                 parent,
                 center + new Vector3(0f, 1.18f, -1.08f),
                 new Color(0.26f, 0.12f, 0.32f),
@@ -485,10 +490,10 @@ public partial class GameBootstrap
                 4.9f);
         }
 
-        CreateLocationPerimeterGlow(type, parent, center, size);
+        CreateLocationPerimeterGlow(owner, type, parent, center, size);
     }
 
-    private void CreateLocationPerimeterGlow(LocationType type, Transform parent, Vector3 center, Vector2Int size)
+    private void CreateLocationPerimeterGlow(LocationData owner, LocationType type, Transform parent, Vector3 center, Vector2Int size)
     {
         if (type == LocationType.Stop || type == LocationType.IntercityStop)
         {
@@ -535,23 +540,23 @@ public partial class GameBootstrap
 
         foreach (Vector3 pos in positions)
         {
-            CreateLocationNightLight(parent, pos, offColor, onColor, intensity, range);
+            CreateLocationNightLight(owner, parent, pos, offColor, onColor, intensity, range);
         }
 
         if (size.x >= 4)
         {
-            CreateLocationNightLight(parent, center + new Vector3(0f, y, -zOffset), offColor, onColor, intensity * 0.85f, range);
-            CreateLocationNightLight(parent, center + new Vector3(0f, y, zOffset), offColor, onColor, intensity * 0.85f, range);
+            CreateLocationNightLight(owner, parent, center + new Vector3(0f, y, -zOffset), offColor, onColor, intensity * 0.85f, range);
+            CreateLocationNightLight(owner, parent, center + new Vector3(0f, y, zOffset), offColor, onColor, intensity * 0.85f, range);
         }
 
         if (size.y >= 4)
         {
-            CreateLocationNightLight(parent, center + new Vector3(-xOffset, y, 0f), offColor, onColor, intensity * 0.85f, range);
-            CreateLocationNightLight(parent, center + new Vector3(xOffset, y, 0f), offColor, onColor, intensity * 0.85f, range);
+            CreateLocationNightLight(owner, parent, center + new Vector3(-xOffset, y, 0f), offColor, onColor, intensity * 0.85f, range);
+            CreateLocationNightLight(owner, parent, center + new Vector3(xOffset, y, 0f), offColor, onColor, intensity * 0.85f, range);
         }
     }
 
-    private void CreateLocationNightLight(Transform parent, Vector3 localPosition, Color offColor, Color onColor, float maxIntensity, float range)
+    private void CreateLocationNightLight(LocationData owner, Transform parent, Vector3 localPosition, Color offColor, Color onColor, float maxIntensity, float range)
     {
         GameObject lampVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         lampVisual.transform.SetParent(parent, false);
@@ -566,6 +571,7 @@ public partial class GameBootstrap
         locationNightLightOnColors.Add(onColor);
         locationNightLightMaxIntensities.Add(maxIntensity);
         locationNightLightRanges.Add(range);
+        locationNightLightMaterialOwnerInstanceIds.Add(owner?.InstanceId ?? 0);
 
         GameObject lightObject = new("NightLamp");
         lightObject.transform.SetParent(parent, false);
@@ -579,9 +585,13 @@ public partial class GameBootstrap
         lamp.shadows = LightShadows.None;
         lamp.enabled = false;
         locationNightLights.Add(lamp);
+        locationNightLightOwnerInstanceIds.Add(owner?.InstanceId ?? 0);
+        locationNightPointLightOnColors.Add(onColor);
+        locationNightPointLightMaxIntensities.Add(maxIntensity);
+        locationNightPointLightRanges.Add(range);
     }
 
-    private void CreateLocationWindowLanguage(LocationType type, Transform parent, Vector3 center, Vector2Int size)
+    private void CreateLocationWindowLanguage(LocationData owner, LocationType type, Transform parent, Vector3 center, Vector2Int size)
     {
         if (type == LocationType.IntercityStop || type == LocationType.Stop || type == LocationType.CityPark || type == LocationType.PersonalHouse)
         {
@@ -594,55 +604,55 @@ public partial class GameBootstrap
         switch (type)
         {
             case LocationType.Parking:
-                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.84f, -0.56f), new Vector3(size.x * 0.44f, 0.16f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0f, 0.84f, -0.56f), new Vector3(size.x * 0.44f, 0.16f, 0.06f), offColor, onColor);
                 break;
             case LocationType.GasStation:
-                CreateLocationGlowStrip(parent, center + new Vector3(-0.44f, 0.78f, -0.74f), new Vector3(0.38f, 0.14f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0.44f, 0.78f, -0.74f), new Vector3(0.38f, 0.14f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.96f, 0.14f), new Vector3(0.92f, 0.10f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(-0.44f, 0.78f, -0.74f), new Vector3(0.38f, 0.14f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0.44f, 0.78f, -0.74f), new Vector3(0.38f, 0.14f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0f, 0.96f, 0.14f), new Vector3(0.92f, 0.10f, 0.06f), offColor, onColor);
                 break;
             case LocationType.Forest:
                 // Window on the shed front face, to the right of the door, upper wall
-                CreateLocationGlowStrip(parent, center + new Vector3(0.38f, 0.20f, -0.34f), new Vector3(0.24f, 0.16f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0.38f, 0.20f, -0.34f), new Vector3(0.24f, 0.16f, 0.06f), offColor, onColor);
                 break;
             case LocationType.Warehouse:
-                CreateLocationGlowStrip(parent, center + new Vector3(-0.68f, 0.84f, -0.94f), new Vector3(0.34f, 0.18f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.84f, -0.94f), new Vector3(0.34f, 0.18f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0.68f, 0.84f, -0.94f), new Vector3(0.34f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(-0.68f, 0.84f, -0.94f), new Vector3(0.34f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0f, 0.84f, -0.94f), new Vector3(0.34f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0.68f, 0.84f, -0.94f), new Vector3(0.34f, 0.18f, 0.06f), offColor, onColor);
                 break;
             case LocationType.Motel:
-                CreateLocationGlowStrip(parent, center + new Vector3(-0.52f, 0.78f, -0.82f), new Vector3(0.32f, 0.16f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.78f, -0.82f), new Vector3(0.32f, 0.16f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0.52f, 0.78f, -0.82f), new Vector3(0.32f, 0.16f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(-0.52f, 0.78f, -0.82f), new Vector3(0.32f, 0.16f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0f, 0.78f, -0.82f), new Vector3(0.32f, 0.16f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0.52f, 0.78f, -0.82f), new Vector3(0.32f, 0.16f, 0.06f), offColor, onColor);
                 break;
             case LocationType.Sawmill:
-                CreateLocationGlowStrip(parent, center + new Vector3(-0.42f, 0.8f, -0.82f), new Vector3(0.28f, 0.22f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0.42f, 0.8f, -0.82f), new Vector3(0.28f, 0.22f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(-0.42f, 0.8f, -0.82f), new Vector3(0.28f, 0.22f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0.42f, 0.8f, -0.82f), new Vector3(0.28f, 0.22f, 0.06f), offColor, onColor);
                 break;
             case LocationType.FurnitureFactory:
-                CreateLocationGlowStrip(parent, center + new Vector3(-0.72f, 0.84f, -0.9f), new Vector3(0.32f, 0.18f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.84f, -0.9f), new Vector3(0.32f, 0.18f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0.72f, 0.84f, -0.9f), new Vector3(0.32f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(-0.72f, 0.84f, -0.9f), new Vector3(0.32f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0f, 0.84f, -0.9f), new Vector3(0.32f, 0.18f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0.72f, 0.84f, -0.9f), new Vector3(0.32f, 0.18f, 0.06f), offColor, onColor);
                 break;
             case LocationType.Bar:
-                CreateLocationGlowStrip(parent, center + new Vector3(-0.55f, 0.85f, -1.22f), new Vector3(0.28f, 0.24f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0.55f, 0.85f, -1.22f), new Vector3(0.28f, 0.24f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(-0.55f, 0.85f, -1.22f), new Vector3(0.28f, 0.24f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0.55f, 0.85f, -1.22f), new Vector3(0.28f, 0.24f, 0.06f), offColor, onColor);
                 break;
             case LocationType.Canteen:
-                CreateLocationGlowStrip(parent, center + new Vector3(size.x * 0.28f, 0.72f, -1.17f), new Vector3(size.x * 0.58f, 0.38f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(size.x * 0.28f, 0.72f, -1.17f), new Vector3(size.x * 0.58f, 0.38f, 0.06f), offColor, onColor);
                 break;
             case LocationType.GamblingHall:
-                CreateLocationGlowStrip(parent, center + new Vector3(-0.60f, 0.88f, -1.05f), new Vector3(0.30f, 0.22f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.88f, -1.05f), new Vector3(0.34f, 0.26f, 0.06f), offColor, onColor);
-                CreateLocationGlowStrip(parent, center + new Vector3(0.60f, 0.88f, -1.05f), new Vector3(0.30f, 0.22f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(-0.60f, 0.88f, -1.05f), new Vector3(0.30f, 0.22f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0f, 0.88f, -1.05f), new Vector3(0.34f, 0.26f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0.60f, 0.88f, -1.05f), new Vector3(0.30f, 0.22f, 0.06f), offColor, onColor);
                 break;
             default:
-                CreateLocationGlowStrip(parent, center + new Vector3(0f, 0.82f, -0.82f), new Vector3(Mathf.Max(0.4f, size.x * 0.34f), 0.16f, 0.06f), offColor, onColor);
+                CreateLocationGlowStrip(owner, parent, center + new Vector3(0f, 0.82f, -0.82f), new Vector3(Mathf.Max(0.4f, size.x * 0.34f), 0.16f, 0.06f), offColor, onColor);
                 break;
         }
     }
 
-    private void CreateLocationGlowStrip(Transform parent, Vector3 localPosition, Vector3 localScale, Color offColor, Color onColor)
+    private void CreateLocationGlowStrip(LocationData owner, Transform parent, Vector3 localPosition, Vector3 localScale, Color offColor, Color onColor)
     {
         GameObject strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
         strip.transform.SetParent(parent, false);
@@ -662,6 +672,7 @@ public partial class GameBootstrap
             locationNightLightOnColors.Add(onColor);
             locationNightLightMaxIntensities.Add(0f);
             locationNightLightRanges.Add(0f);
+            locationNightLightMaterialOwnerInstanceIds.Add(owner?.InstanceId ?? 0);
         }
 
         if (strip.TryGetComponent(out Collider stripCollider))

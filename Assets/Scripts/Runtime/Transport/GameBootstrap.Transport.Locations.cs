@@ -189,8 +189,8 @@ public partial class GameBootstrap
         }
 
         CreateLocationTrashCans(type, root.transform, center, min, max, anchor);
-        CreateLocationNightLights(type, root.transform, center, size);
-        CreateLocationWindowLanguage(type, root.transform, center, size);
+        CreateLocationNightLights(data, type, root.transform, center, size);
+        CreateLocationWindowLanguage(data, type, root.transform, center, size);
 
         // в”Ђв”Ђ Category indicator stripe в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         // Production (Forest / Sawmill / FurnitureFactory) = amber

@@ -44,8 +44,8 @@ public partial class GameBootstrap
 
             if (slot.WorkHoursText != null)
             {
-                slot.WorkHoursText.text = GetProductionWorkRangeLabel();
-                slot.WorkHoursText.color = IsProductionWorkHour(GetCurrentHour()) ? FleetAccentColor : FleetSecondaryTextColor;
+                slot.WorkHoursText.text = GetBuildingWorkerWorkRangeLabel(slot.BuildingType, slot.SlotIndex);
+                slot.WorkHoursText.color = IsBuildingWorkerWorkHour(slot.BuildingType, slot.SlotIndex, GetCurrentHour()) ? FleetAccentColor : FleetSecondaryTextColor;
             }
 
             if (isWarehouse)
@@ -103,9 +103,22 @@ public partial class GameBootstrap
             DriverAgent d = driverAgents[i];
             if (d.DutyMode == DriverDutyMode.Logistics &&
                 d.AssignedBuildingType == buildingType &&
+                d.AssignedBuildingSlotIndex == slotIndex &&
                 (locationInstanceId <= 0 || d.AssignedBuildingInstanceId == resolvedInstanceId))
             {
-                if (count == slotIndex) return d;
+                return d;
+            }
+
+            if (d.DutyMode == DriverDutyMode.Logistics &&
+                d.AssignedBuildingType == buildingType &&
+                d.AssignedBuildingSlotIndex < 0 &&
+                (locationInstanceId <= 0 || d.AssignedBuildingInstanceId == resolvedInstanceId))
+            {
+                if (count == slotIndex)
+                {
+                    return d;
+                }
+
                 count++;
             }
         }
@@ -169,7 +182,8 @@ public partial class GameBootstrap
         SetDriverDutyMode(driver, DriverDutyMode.Logistics);
         driver.AssignedBuildingType = slot.BuildingType;
         driver.AssignedBuildingInstanceId = ResolveBuildingInstanceId(slot.BuildingType, slot.LocationInstanceId);
-        driver.ShiftStartHour = -1;
+        driver.AssignedBuildingSlotIndex = slot.SlotIndex;
+        driver.ShiftStartHour = GetBuildingWorkerShiftStartHour(slot.BuildingType, slot.SlotIndex);
         if (slot.BuildingType == LocationType.Forest)
         {
             MarkTutorialGoalComplete(TutorialGoalKind.AssignLumberjackWorker);
@@ -193,8 +207,9 @@ public partial class GameBootstrap
 
         string workKind = IsProductionLocation(slot.BuildingType) ? "production" : "service";
         string buildingName = GetBuildingInstanceDisplayName(slot.BuildingType, slot.LocationInstanceId);
-        LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {buildingName} ({GetProductionWorkRangeLabel()})");
-        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType}#{driver.AssignedBuildingInstanceId} {workKind} work ({GetProductionWorkRangeLabel()}).");
+        string workRange = GetBuildingWorkerWorkRangeLabel(slot.BuildingType, slot.SlotIndex);
+        LogUiInput($"Shifts Canvas: assigned {driver.DriverName} to {buildingName} ({workRange})");
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType}#{driver.AssignedBuildingInstanceId} slot={slot.SlotIndex} {workKind} work ({workRange}).");
         PushFeedEvent(
             $"{driver.DriverName} assigned to {buildingName}.",
             $"{driver.DriverName} назначен в {GetSelectedLocationDisplayName(slot.BuildingType)}.",

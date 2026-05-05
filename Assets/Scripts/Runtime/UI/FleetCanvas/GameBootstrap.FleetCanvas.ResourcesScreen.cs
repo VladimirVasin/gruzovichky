@@ -384,13 +384,14 @@ public partial class GameBootstrap
             }
         }
 
-        string treasuryValue = $"${money}";
+        string treasuryValue = FormatTreasuryAmount();
         if (resourcesScreenUi.LastTreasuryValue != treasuryValue)
         {
             resourcesScreenUi.TreasuryValueText.text = treasuryValue;
             resourcesScreenUi.LastTreasuryValue = treasuryValue;
             forceLayoutRebuild = true;
         }
+        resourcesScreenUi.TreasuryValueText.color = money < 0 ? GetTreasuryDisplayColor() : FleetAccentColor;
 
         if (forceLayoutRebuild)
         {

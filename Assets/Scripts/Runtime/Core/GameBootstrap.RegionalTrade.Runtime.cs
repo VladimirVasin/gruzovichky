@@ -3,7 +3,7 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private const float RegionalMerchantTruckSpeed = 2.25f;
+    private const float RegionalMerchantTruckSpeed = 3.05f;
     private const float RegionalMerchantTradeDuration = 2.4f;
 
     private enum RegionalLandTradePhase
@@ -87,15 +87,8 @@ public partial class GameBootstrap
             return false;
         }
 
-        int quantity = Mathf.Clamp(request.Amount, 1, 5);
+        int quantity = Mathf.Clamp(request.Amount, 1, TruckCargoCapacity);
         int price = GetTradeResourceUnitPrice(request.ResourceType, request.OrderType) * quantity;
-        if (request.OrderType == TradeOrderType.Buy && money < price)
-        {
-            tradeDispatchStatusText = $"Need ${price} for land import";
-            SessionDebugLogger.Log("TRADE_LAND", $"Dispatch blocked: treasury=${money}, need=${price} for {request.ResourceType} x{quantity} from {city.NameEn}.");
-            return false;
-        }
-
         if (request.OrderType == TradeOrderType.Sell && GetWarehouseTradeResourceAmount(request.ResourceType) < quantity)
         {
             tradeDispatchStatusText = $"Need {quantity} {GetTradeResourceLabel(request.ResourceType)} to sell";

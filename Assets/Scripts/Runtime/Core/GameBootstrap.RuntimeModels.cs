@@ -247,6 +247,7 @@ public partial class GameBootstrap
         public int PersonalCarWaypointIndex;
         public LocationType? AssignedBuildingType;
         public int AssignedBuildingInstanceId;
+        public int AssignedBuildingSlotIndex = -1;
         public int LogisticsExperienceDays;
         public int ProductionExperienceDays;
         public int ServiceExperienceDays;

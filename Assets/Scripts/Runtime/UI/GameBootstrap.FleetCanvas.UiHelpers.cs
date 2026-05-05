@@ -224,7 +224,7 @@ public partial class GameBootstrap
         return $"<color=#{ColorUtility.ToHtmlStringRGB(FleetMutedTextColor)}>{L(label)}:</color>  <color=#FFFFFF>{L(value)}</color>";
     }
 
-    private static string FormatTruckCargoValue(int amount, CargoType cargoType, int capacity = 5)
+    private static string FormatTruckCargoValue(int amount, CargoType cargoType, int capacity = TruckCargoCapacity)
     {
         if (amount <= 0 || cargoType == CargoType.None)
         {

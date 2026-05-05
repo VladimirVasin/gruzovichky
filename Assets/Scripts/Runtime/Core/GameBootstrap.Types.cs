@@ -575,7 +575,7 @@ public partial class GameBootstrap : MonoBehaviour
         public string Title;
         public string Description;
         public int Reward;
-        public int Priority; // 0=Low, 1=Medium, 2=High
+        public int Priority; // Higher values are selected first by auto logistics.
     }
 
     private enum ForestWorkerState

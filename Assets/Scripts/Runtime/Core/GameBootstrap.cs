@@ -12,7 +12,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const int WaterRiverWidth = 4;
     private const float CellSize = 1f;
     private const float RoadHeight = 0.12f;
-    private const float TruckCruiseSpeed = 1.9f;
+    private const float TruckCruiseSpeed = 2.65f;
+    private const int TruckCargoCapacity = 5;
     private const int ForestMaxLogsStorage = 10;
     private const int FurnitureFactoryMaxBoardsStorage = 6;
     private const int FurnitureFactoryMaxTextileStorage = 6;
@@ -28,8 +29,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const float FurnitureFactoryProcessingDuration = 5.5f;
     private const int ProductionMaxWorkersPerBuilding = 2;
     private const int WarehouseMaxWorkers        = 2;
-    private const int ServiceMaxWorkersPerBuilding = 1;
-    private const int AssignableBuildingWorkerSlotCapacity = 16;
+    private const int ServiceMaxWorkersPerBuilding = 2;
+    private const int AssignableBuildingWorkerSlotCapacity = 32;
     private const float ForestLogProgressPerChop = 0.08f;
     private const float CameraPanSpeed = 9f;
     private const float CameraDragPanMultiplier = 0.035f;
@@ -38,7 +39,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float CameraMaxHeight = 120f;
     private const float CameraMinDistance = 5.2f;
     private const float CameraMaxDistance = 120f;
-    private const float EdgeHighwayBusSpeed = 2.8f;
+    private const float EdgeHighwayBusSpeed = 3.45f;
     private const float EdgeHighwayBusSpawnIntervalMin = 14f;
     private const float EdgeHighwayBusSpawnIntervalMax = 30f;
     private const float EdgeHighwayBusSpawnSpacing = 5.5f;
@@ -47,7 +48,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float EdgeHighwayBusLift = 0.24f;
     private const float EdgeHighwayBusPassbyDistance = 5.5f;
     private const float LocalBusStopDwellGameMinutes = 5f;
-    private const float LocalBusSpeedMultiplier = 0.92f;
+    private const float LocalBusSpeedMultiplier = 1.12f;
     private const int LocalBusMaxPassengers = 5;
     private const int LocalBusFare = 1;
     private const float HiringBusStopDuration = 2.8f;
@@ -77,7 +78,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const int   HousePurchasePrice         = 300;
     private const int   MaxPersonalHouseResidents  = 2;
     private const int   CarPurchasePrice           = 100;
-    private const float PersonalCarSpeed           = 3.45f;
+    private const float PersonalCarSpeed           = 4.55f;
     private const int   WorkerGamblingMinBet       = 5;
     private const int   WorkerGamblingMaxBet       = 10;
     private const float WorkerFreeIdleMinDuration = DayNightCycleDuration / 24f * 1f;
@@ -164,10 +165,15 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<Light> locationNightLights = new();
     private readonly List<Renderer> locationNightLightRenderers = new();
     private readonly List<Material> locationNightLightMaterials = new();
+    private readonly List<int> locationNightLightMaterialOwnerInstanceIds = new();
+    private readonly List<int> locationNightLightOwnerInstanceIds = new();
     private readonly List<Color> locationNightLightOffColors = new();
     private readonly List<Color> locationNightLightOnColors = new();
     private readonly List<float> locationNightLightMaxIntensities = new();
     private readonly List<float> locationNightLightRanges = new();
+    private readonly List<Color> locationNightPointLightOnColors = new();
+    private readonly List<float> locationNightPointLightMaxIntensities = new();
+    private readonly List<float> locationNightPointLightRanges = new();
     private readonly List<Vector3> locationTrashCanMealTargets = new();
     private readonly List<RoadLanternData> roadLanterns = new();
     private readonly Dictionary<Vector2Int, (GameObject Root, RoadLanternData Data)> roadCellLanternMap = new();

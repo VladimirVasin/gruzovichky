@@ -325,6 +325,7 @@ public partial class GameBootstrap
         worker.DutyMode = DriverDutyMode.Local;
         worker.AssignedBuildingType = null;
         worker.AssignedBuildingInstanceId = 0;
+        worker.AssignedBuildingSlotIndex = -1;
         SessionDebugLogger.Log("CONTRACT", $"{worker.DriverName} returned to the free worker pool after contract completion.");
     }
 }

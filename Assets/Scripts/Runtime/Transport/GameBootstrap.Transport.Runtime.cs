@@ -167,9 +167,10 @@ public partial class GameBootstrap
             return;
         }
 
-        truckSegmentProgress += Time.deltaTime / truckSegmentDuration;
-        float easedProgress = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(truckSegmentProgress));
-        Vector3 currentPosition = Vector3.Lerp(truckSegmentStartWorld, truckTargetWorld, easedProgress);
+        float dt = Time.deltaTime * Mathf.Max(0f, gameSpeedMultiplier);
+        truckSegmentProgress += dt / truckSegmentDuration;
+        float segmentProgress = Mathf.Clamp01(truckSegmentProgress);
+        Vector3 currentPosition = Vector3.Lerp(truckSegmentStartWorld, truckTargetWorld, segmentProgress);
         currentPosition = WithRoadVehicleHeight(currentPosition, TruckSegmentStartLift);
         truckObject.transform.position = currentPosition;
 
@@ -178,17 +179,19 @@ public partial class GameBootstrap
         if (desiredForward.sqrMagnitude > 0.0001f)
         {
             desiredForward = desiredForward.normalized;
-            truckSmoothedForward = Vector3.Slerp(truckSmoothedForward, desiredForward, 6f * Time.deltaTime).normalized;
+            float forwardLerp = 1f - Mathf.Exp(-12f * dt);
+            truckSmoothedForward = Vector3.Slerp(truckSmoothedForward, desiredForward, forwardLerp).normalized;
         }
         if (truckSmoothedForward.sqrMagnitude > 0.0001f)
         {
+            float rotationLerp = 1f - Mathf.Exp(-14f * dt);
             truckObject.transform.rotation = Quaternion.Slerp(
                 truckObject.transform.rotation,
                 Quaternion.LookRotation(truckSmoothedForward, Vector3.up),
-                9f * Time.deltaTime);
+                rotationLerp);
         }
 
-        float segmentSpeed = segmentDistance / Mathf.Max(truckSegmentDuration, 0.001f);
+        float segmentSpeed = segmentDistance / Mathf.Max(truckSegmentDuration, 0.001f) * Mathf.Max(0f, gameSpeedMultiplier);
         UpdateTruckVisuals(segmentSpeed, true);
 
         if (truckSegmentProgress < 1f)

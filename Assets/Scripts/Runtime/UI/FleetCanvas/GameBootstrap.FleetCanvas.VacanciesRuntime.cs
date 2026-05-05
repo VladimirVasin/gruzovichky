@@ -446,7 +446,7 @@ public partial class GameBootstrap
                     : slotKind == VacancyKind.Service
                     ? (ru ? "сервис" : "service")
                     : (ru ? "производство" : "production"),
-                Schedule = GetProductionWorkRangeLabel(),
+                Schedule = GetBuildingWorkerWorkRangeLabel(slot.BuildingType, slot.SlotIndex),
                 IsOccupied = assigned != null,
                 AssignedWorker = assigned,
                 BuildingType = slot.BuildingType,
@@ -512,7 +512,7 @@ public partial class GameBootstrap
                             : slotKind == VacancyKind.Service
                                 ? (ru ? "СЃРµСЂРІРёСЃ" : "service")
                                 : (ru ? "РїСЂРѕРёР·РІРѕРґСЃС‚РІРѕ" : "production"),
-                        Schedule = GetProductionWorkRangeLabel(),
+                        Schedule = GetBuildingWorkerWorkRangeLabel(buildingType, slotIndex),
                         IsOccupied = assigned != null,
                         AssignedWorker = assigned,
                         BuildingType = buildingType,

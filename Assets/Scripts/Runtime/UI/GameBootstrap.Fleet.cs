@@ -532,7 +532,7 @@ public partial class GameBootstrap
                 Title = "Deliver Logs: Forest -> Sawmill",
                 Description = "Pick up logs in Forest and deliver them to Sawmill.",
                 Reward = GetTripReward(TripType.ForestToSawmill),
-                Priority = 0
+                Priority = GetTruckTripPriority(TripType.ForestToSawmill)
             });
         }
 
@@ -547,7 +547,7 @@ public partial class GameBootstrap
                 Title = "Deliver Logs: Forest -> Warehouse",
                 Description = "No sawmill route is available, so store logs at the Warehouse.",
                 Reward = GetTripReward(TripType.ForestToWarehouse),
-                Priority = 0
+                Priority = GetTruckTripPriority(TripType.ForestToWarehouse)
             });
         }
 
@@ -562,7 +562,7 @@ public partial class GameBootstrap
                 Title = "Deliver Boards: Sawmill -> Warehouse",
                 Description = "Take processed boards from Sawmill to Warehouse.",
                 Reward = GetTripReward(TripType.SawmillToWarehouse),
-                Priority = 1
+                Priority = GetTruckTripPriority(TripType.SawmillToWarehouse)
             });
         }
 
@@ -587,7 +587,7 @@ public partial class GameBootstrap
                     Title = "Deliver Boards: Warehouse -> Factory",
                     Description = "Take boards from Warehouse to the Furniture Factory.",
                     Reward = GetTripReward(TripType.WarehouseToFurnitureFactoryBoards),
-                    Priority = 1
+                    Priority = GetTruckTripPriority(TripType.WarehouseToFurnitureFactoryBoards)
                 });
             }
 
@@ -601,7 +601,7 @@ public partial class GameBootstrap
                     Title = "Deliver Textile: Warehouse -> Factory",
                     Description = "Take textile stock from Warehouse to the Furniture Factory.",
                     Reward = GetTripReward(TripType.WarehouseToFurnitureFactoryTextile),
-                    Priority = 1
+                    Priority = GetTruckTripPriority(TripType.WarehouseToFurnitureFactoryTextile)
                 });
             }
 
@@ -613,7 +613,7 @@ public partial class GameBootstrap
                     Title = "Deliver Furniture: Factory -> Warehouse",
                     Description = "Pick up finished furniture and return it to Warehouse storage.",
                     Reward = GetTripReward(TripType.FurnitureFactoryToWarehouse),
-                    Priority = 2
+                    Priority = GetTruckTripPriority(TripType.FurnitureFactoryToWarehouse)
                 });
             }
         }
@@ -642,6 +642,7 @@ public partial class GameBootstrap
             }
         }
 
+        trips.Sort((a, b) => b.Priority.CompareTo(a.Priority));
         return trips;
     }
 
@@ -649,8 +650,7 @@ public partial class GameBootstrap
     {
         if (GetTradePolicyMode(resource) != TradePolicyMode.SellAbove ||
             !HasBuiltRegionalTradeRoute(resource, TradeOrderType.Sell, RegionalTradeRouteMode.River) ||
-            GetWarehouseExportResourceAmount(resource) <= 0 ||
-            GetWarehouseExportResourceAmount(resource) <= GetTradePolicyTarget(resource) ||
+            GetDocksExportTripLoadLimit(resource) <= 0 ||
             GetDocksExportStoredResource(docks, resource) >= DocksResourceCapacity)
         {
             return;
@@ -662,7 +662,7 @@ public partial class GameBootstrap
             Title = $"Export {label}: Warehouse -> Docks",
             Description = $"Move assigned export {label} to the Docks before the next ship.",
             Reward = GetTripReward(tripType),
-            Priority = 2
+            Priority = GetTruckTripPriority(tripType)
         });
     }
 
@@ -679,8 +679,36 @@ public partial class GameBootstrap
             Title = $"Import {label}: Docks -> Warehouse",
             Description = $"Move imported {label} from the Docks to town storage.",
             Reward = GetTripReward(tripType),
-            Priority = 2
+            Priority = GetTruckTripPriority(tripType)
         });
+    }
+
+    private int GetTruckTripPriority(TripType tripType)
+    {
+        return tripType switch
+        {
+            TripType.ForestToSawmill => 300,
+            TripType.WarehouseToFurnitureFactoryBoards => 300,
+            TripType.WarehouseToFurnitureFactoryTextile => 300,
+            TripType.DocksToWarehouseTextile when IsTradeResourceNeededByProduction(TradeResourceType.Textile) => 280,
+            TripType.DocksToWarehouseFurniture when IsTradeResourceNeededByProduction(TradeResourceType.Furniture) => 280,
+            TripType.SawmillToWarehouse when IsTradeResourceNeededByProduction(TradeResourceType.Boards) => 260,
+            TripType.FurnitureFactoryToWarehouse => 220,
+            TripType.DocksToWarehouseCotton => 210,
+            TripType.DocksToWarehouseTextile => 210,
+            TripType.DocksToWarehouseFurniture => 210,
+            TripType.SawmillToWarehouse => 170,
+            TripType.ForestToWarehouse => 130,
+            TripType.WarehouseToDocksLogs => 80,
+            TripType.WarehouseToDocksBoards => 80,
+            TripType.WarehouseToDocksFurniture => 80,
+            _ => 0
+        };
+    }
+
+    private bool IsTradeResourceNeededByProduction(TradeResourceType resourceType)
+    {
+        return GetProductionReserveForWarehouseExport(resourceType) > 0;
     }
 
     private void AssignTrip(TripOption trip)

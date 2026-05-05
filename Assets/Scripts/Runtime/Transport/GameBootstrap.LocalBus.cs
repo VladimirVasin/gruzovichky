@@ -600,7 +600,9 @@ public partial class GameBootstrap
         localBusRoute.RootTransform.position = movement.Position;
         if (movement.HasFacingDirection)
         {
-            localBusRoute.RootTransform.rotation = GetLocalBusFacingRotation(movement.FacingDirection);
+            Quaternion targetRotation = GetLocalBusFacingRotation(movement.FacingDirection);
+            float rotationLerp = 1f - Mathf.Exp(-11f * Mathf.Max(0f, dt));
+            localBusRoute.RootTransform.rotation = Quaternion.Slerp(localBusRoute.RootTransform.rotation, targetRotation, rotationLerp);
         }
 
         if (movement.ReachedWaypoint)

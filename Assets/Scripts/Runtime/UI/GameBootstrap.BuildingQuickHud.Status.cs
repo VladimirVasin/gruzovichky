@@ -228,11 +228,6 @@ public partial class GameBootstrap
 
     private int CountWorkersOnShiftAt(LocationType locationType)
     {
-        if (!IsProductionWorkHour(GetCurrentHour()))
-        {
-            return 0;
-        }
-
         int count = 0;
         for (int i = 0; i < driverAgents.Count; i++)
         {
@@ -240,6 +235,7 @@ public partial class GameBootstrap
             if (driver == null ||
                 driver.DutyMode != DriverDutyMode.Logistics ||
                 driver.AssignedBuildingType != locationType ||
+                !IsLogisticsWorkerWorkHour(driver) ||
                 driver.RestPhase != DriverRestPhase.None ||
                 driver.IsArrivingByBus)
             {

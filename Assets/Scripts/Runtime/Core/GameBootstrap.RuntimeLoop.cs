@@ -54,6 +54,65 @@ public partial class GameBootstrap
         return $"{ProductionWorkStartHour:00}:00 - {ProductionWorkEndHour:00}:00";
     }
 
+    private bool IsBuildingWorkerWorkHour(LocationType buildingType, int slotIndex, int hour)
+    {
+        if (!HasServiceWorkerSlot(buildingType))
+        {
+            return IsProductionWorkHour(hour);
+        }
+
+        int shiftStart = GetBuildingWorkerShiftStartHour(buildingType, slotIndex);
+        return shiftStart >= 0 && IsHourInShiftWindow(hour, shiftStart);
+    }
+
+    private bool IsLogisticsWorkerWorkHour(DriverAgent driver)
+    {
+        return driver != null &&
+               driver.DutyMode == DriverDutyMode.Logistics &&
+               driver.AssignedBuildingType.HasValue &&
+               IsBuildingWorkerWorkHour(driver.AssignedBuildingType.Value, GetLogisticsWorkerSlotIndex(driver), GetCurrentHour());
+    }
+
+    private static int GetBuildingWorkerShiftPresetIndex(LocationType buildingType, int slotIndex)
+    {
+        if (!HasServiceWorkerSlot(buildingType))
+        {
+            return -1;
+        }
+
+        int normalizedSlot = Mathf.Clamp(slotIndex, 0, ServiceMaxWorkersPerBuilding - 1);
+        if (buildingType == LocationType.Bar)
+        {
+            return normalizedSlot == 0 ? 1 : 2;
+        }
+
+        return normalizedSlot == 0 ? 0 : 1;
+    }
+
+    private static int GetBuildingWorkerShiftStartHour(LocationType buildingType, int slotIndex)
+    {
+        int shiftIndex = GetBuildingWorkerShiftPresetIndex(buildingType, slotIndex);
+        return shiftIndex >= 0 && shiftIndex < ShiftPresetHours.Length ? ShiftPresetHours[shiftIndex] : -1;
+    }
+
+    private int GetLogisticsWorkerSlotIndex(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return 0;
+        }
+
+        return driver.AssignedBuildingSlotIndex >= 0
+            ? driver.AssignedBuildingSlotIndex
+            : Mathf.Max(0, driver.ContractSlotIndex);
+    }
+
+    private string GetBuildingWorkerWorkRangeLabel(LocationType buildingType, int slotIndex)
+    {
+        int shiftStart = GetBuildingWorkerShiftStartHour(buildingType, slotIndex);
+        return shiftStart >= 0 ? GetShiftRangeLabel(shiftStart) : GetProductionWorkRangeLabel();
+    }
+
     // Shift display string: "06:00 \u2013 14:00"
     private static string GetShiftRangeLabel(int shiftStart)
     {

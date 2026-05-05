@@ -419,7 +419,7 @@ public partial class GameBootstrap
 
     private int GetTradeRunQuantity(TradeResourceType resourceType)
     {
-        return Mathf.Clamp(selectedTradeOrderAmount, 1, 5);
+        return Mathf.Clamp(selectedTradeOrderAmount, 1, TruckCargoCapacity);
     }
 
     private static CargoType TradeResourceTypeToCargoType(TradeResourceType resourceType)
@@ -710,7 +710,7 @@ public partial class GameBootstrap
 
         selectedTradeResourceType  = next.ResourceType;
         selectedTradeOrderType     = next.OrderType;
-        selectedTradeOrderAmount   = Mathf.Clamp(next.Amount, 1, 5);
+        selectedTradeOrderAmount   = Mathf.Clamp(next.Amount, 1, TruckCargoCapacity);
         SessionDebugLogger.Log(
             "TRADE_AUTO",
             $"Trying regional land policy dispatch: {next.OrderType} {next.ResourceType} x{next.Amount}, target={GetTradePolicyTarget(next.ResourceType)}, warehouse={GetWarehouseTradeResourceAmount(next.ResourceType)}, activePolicies={CountActiveTradePolicies()}, targetRegion={next.TargetRegionIndex}.");

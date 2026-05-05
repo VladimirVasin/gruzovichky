@@ -23,7 +23,7 @@ public partial class GameBootstrap
         LogTruckLaneSegment(truckCell, nextCell, laneOffset, laneReason, baseTargetWorld, truckTargetWorld);
         truckSegmentProgress = 0f;
         float distance = Vector3.Distance(truckSegmentStartWorld, truckTargetWorld);
-        truckSegmentDuration = Mathf.Max(0.38f, distance / TruckCruiseSpeed);
+        truckSegmentDuration = Mathf.Max(0.18f, distance / TruckCruiseSpeed);
     }
 
     private Vector3 GetRoadLaneOffset(Vector2Int fromCell, Vector2Int toCell)

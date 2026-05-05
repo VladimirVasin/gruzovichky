@@ -558,7 +558,7 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver == null || driver.Salary <= 0 || !driver.IsShiftSalaryPending) return;
         int treasuryBefore = money;
         driver.Money += driver.Salary;
-        money = Mathf.Max(0, money - driver.Salary);
+        money -= driver.Salary;
         int actualTreasuryDelta = money - treasuryBefore;
         driver.IsShiftSalaryPending = false;
         RecordMoneyMovement(

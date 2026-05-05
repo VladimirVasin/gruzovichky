@@ -79,7 +79,6 @@ public static class TradeDispatchPreconditionService
         if (input.TruckHasOtherDriver) return Block($"{input.TruckDisplayName} is using another driver");
         if (!input.HighwayConnected) return Block("Highway access is not connected");
         if (!input.TruckParkedOrDriverOnboard) return Block($"{input.TruckDisplayName} must be parked first");
-        if (input.IsBuyOrder && input.Treasury < input.Price) return Block($"Need ${input.Price} Treasury for this trade buy");
         if (!input.IsBuyOrder && input.StoredResourceAmount < input.Quantity) return Block($"Need {input.Quantity} {input.ResourceLabel} to sell");
         return new TradeDispatchPreconditionResult(true, string.Empty);
     }

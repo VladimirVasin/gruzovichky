@@ -163,7 +163,7 @@ public partial class GameBootstrap
             }
 
             TryFindBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land, out RegionalCityData city);
-            request = TradeOrderQueueService.CreateOrder(0, resourceType, orderType, Mathf.Clamp(delta, 1, 5), city?.RegionIndex ?? -1);
+            request = TradeOrderQueueService.CreateOrder(0, resourceType, orderType, Mathf.Clamp(delta, 1, TruckCargoCapacity), city?.RegionIndex ?? -1);
             return true;
         }
 

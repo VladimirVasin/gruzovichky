@@ -178,7 +178,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         if (driver.DutyMode == DriverDutyMode.Logistics &&
-            (ShouldLogisticsWorkerHeadToBuilding(driver) || IsProductionWorkHour(GetCurrentHour())))
+            (ShouldLogisticsWorkerHeadToBuilding(driver) || IsLogisticsWorkerWorkHour(driver)))
         {
             LogWorkerDecision(driver, "idle-blocked", "logistics worker should be handled by production/logistics runtime");
             return;

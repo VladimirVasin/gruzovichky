@@ -288,6 +288,11 @@ public partial class GameBootstrap
             case VacancyKind.Service:
                 int slotIndex = IsGroupedWarehouseVacancy(vacancy) ? selectedVacancyShiftIndex : vacancy.SlotIndex;
                 contractSlotIndex = slotIndex;
+                if (HasServiceWorkerSlot(vacancy.BuildingType))
+                {
+                    contractShiftIndex = GetBuildingWorkerShiftPresetIndex(vacancy.BuildingType, slotIndex);
+                }
+
                 AssignWorkerToBuilding(worker, FindLogisticsSlot(vacancy.BuildingType, slotIndex, vacancy.LocationInstanceId));
                 assigned = worker.DutyMode == DriverDutyMode.Logistics &&
                            IsDriverAssignedToBuildingSlot(worker, vacancy.BuildingType, vacancy.LocationInstanceId);

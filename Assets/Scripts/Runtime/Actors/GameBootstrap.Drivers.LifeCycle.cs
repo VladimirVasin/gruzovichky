@@ -125,7 +125,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         int hour = GetCurrentHour();
         if (driver.DutyMode == DriverDutyMode.Logistics &&
-            (ShouldLogisticsWorkerHeadToBuilding(driver) || IsProductionWorkHour(hour)))
+            (ShouldLogisticsWorkerHeadToBuilding(driver) || IsLogisticsWorkerWorkHour(driver)))
         {
             blockedReason = "logistics worker should be handled by production/logistics runtime";
             return false;

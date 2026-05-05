@@ -125,10 +125,9 @@ public partial class GameBootstrap
                     LoadTruckState(truckAgent);
                     List<TripOption> trips = GetAvailableTrips();
                     SaveTruckState(truckAgent);
-                    int tripIndex = TruckAutoPlanner.PickTripIndex(trips.Count);
-                    if (tripIndex >= 0)
+                    TripOption selectedTrip = PickHighestPriorityTrip(trips);
+                    if (selectedTrip != null)
                     {
-                        TripOption selectedTrip = trips[tripIndex];
                         truckAgent.CurrentAssignedTrip = selectedTrip.Type;
                         truckAgent.CurrentTripPhase = TripPhase.ToPickup;
                         truckAgent.CurrentAssignedTripReward = selectedTrip.Reward;

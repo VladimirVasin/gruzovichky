@@ -5,10 +5,11 @@ public partial class GameBootstrap
 {
     private const int WorkerMigrationMinDay = 1;
     private const int WorkerMigrationEvaluationHour = 6;
-    private const int WorkerMigrationMaxAutoArrivals = 2;
-    private const int WorkerMigrationFirstDayMaxAutoArrivals = 1;
-    private const int WorkerMigrationArrivalCooldownHours = 3;
-    private const int WorkerMigrationGuaranteedMissChecks = 3;
+    private const int WorkerMigrationMaxAutoArrivals = 4;
+    private const int WorkerMigrationFirstDayMaxAutoArrivals = 3;
+    private const int WorkerMigrationArrivalCooldownHours = 2;
+    private const int WorkerMigrationVacancyPressureCooldownHours = 1;
+    private const int WorkerMigrationGuaranteedMissChecks = 1;
     private const int WorkerMigrationUnhappyThreshold = 35;
     private const int WorkerMigrationDepartureThreshold = 24;
     private const int WorkerMigrationProtectedHigherDays = 5;
@@ -306,6 +307,7 @@ public partial class GameBootstrap
         driver.AssignedTruckNumber = 0;
         driver.AssignedBuildingType = null;
         driver.AssignedBuildingInstanceId = 0;
+        driver.AssignedBuildingSlotIndex = -1;
         driver.ShiftStartHour = -1;
         driver.DutyMode = DriverDutyMode.Local;
         driver.IsOnActiveShift = false;
@@ -391,7 +393,11 @@ public partial class GameBootstrap
         int attraction = CalculateCityWorkerAttraction(vacancyDemand, freeWorkers);
         float chance = CalculateWorkerArrivalChance(vacancyDemand, freeWorkers, attraction);
         int arrivalCheckKey = currentDay * 24 + GetCurrentHour();
-        int cooldownHoursLeft = Mathf.Max(0, WorkerMigrationArrivalCooldownHours - (arrivalCheckKey - lastWorkerMigrationSuccessfulArrivalKey));
+        int vacancyShortage = Mathf.Max(0, vacancyDemand - freeWorkers);
+        int cooldownHours = vacancyShortage > 0
+            ? WorkerMigrationVacancyPressureCooldownHours
+            : WorkerMigrationArrivalCooldownHours;
+        int cooldownHoursLeft = Mathf.Max(0, cooldownHours - (arrivalCheckKey - lastWorkerMigrationSuccessfulArrivalKey));
         bool guaranteedByOpenVacancies = vacancyDemand > 0 &&
                                          freeWorkers < vacancyDemand &&
                                          workerMigrationVacancyMissChecks >= WorkerMigrationGuaranteedMissChecks;
@@ -399,7 +405,7 @@ public partial class GameBootstrap
         bool shouldArrive = cooldownReady && (guaranteedByOpenVacancies || (chance > 0f && Random.value < chance));
         SessionDebugLogger.Log(
             "MIGRATION",
-            $"city migration check: day={currentDay}, hour={GetCurrentHour()}, vacancyDemand={vacancyDemand}, freeWorkers={freeWorkers}, attraction={attraction}, chance={chance:0.00}, cooldownHoursLeft={cooldownHoursLeft}, missedVacancyChecks={workerMigrationVacancyMissChecks}, guaranteed={(guaranteedByOpenVacancies ? "yes" : "no")}, arrival={(shouldArrive ? "yes" : "no")}.");
+            $"city migration check: day={currentDay}, hour={GetCurrentHour()}, vacancyDemand={vacancyDemand}, freeWorkers={freeWorkers}, shortage={vacancyShortage}, attraction={attraction}, chance={chance:0.00}, cooldownHoursLeft={cooldownHoursLeft}, missedVacancyChecks={workerMigrationVacancyMissChecks}, guaranteed={(guaranteedByOpenVacancies ? "yes" : "no")}, arrival={(shouldArrive ? "yes" : "no")}.");
 
         if (!shouldArrive)
         {
@@ -409,15 +415,23 @@ public partial class GameBootstrap
             return;
         }
 
-        int neededWorkers = Mathf.Max(1, vacancyDemand - freeWorkers);
+        int neededWorkers = Mathf.Max(1, vacancyShortage);
         int maxArrivals = currentDay <= WorkerMigrationMinDay
             ? WorkerMigrationFirstDayMaxAutoArrivals
             : WorkerMigrationMaxAutoArrivals;
+        if (vacancyShortage >= 5 && currentDay > WorkerMigrationMinDay)
+        {
+            maxArrivals++;
+        }
+
         int demandArrivalCap = vacancyDemand > 0
             ? Mathf.Clamp(neededWorkers, 1, maxArrivals)
             : 1;
+        int minimumDemandArrivals = vacancyShortage >= 3
+            ? 2
+            : 1;
         int arrivalCount = vacancyDemand > 0 && demandArrivalCap > 1
-            ? Random.Range(1, demandArrivalCap + 1)
+            ? Random.Range(Mathf.Min(minimumDemandArrivals, demandArrivalCap), demandArrivalCap + 1)
             : 1;
         List<DriverAgent> arrivals = new(arrivalCount);
         for (int i = 0; i < arrivalCount; i++)
@@ -478,14 +492,14 @@ public partial class GameBootstrap
 
     private int CalculateCityWorkerAttraction(int vacancyDemand, int freeWorkers)
     {
-        int score = 40 + vacancyDemand * 8 - freeWorkers * 5 - recentWorkerDeparturesToday * 8;
+        int score = 42 + vacancyDemand * 10 - freeWorkers * 4 - recentWorkerDeparturesToday * 8;
         if (locations.ContainsKey(LocationType.Motel)) score += 12;
         if (locations.ContainsKey(LocationType.Canteen)) score += 7;
         if (locations.ContainsKey(LocationType.CityPark)) score += 5;
         if (locations.ContainsKey(LocationType.Bar) || locations.ContainsKey(LocationType.GamblingHall)) score += 5;
-        if (locations.ContainsKey(LocationType.LaborExchange) && IsLaborExchangeReadyForApplicants(out _)) score += 12;
+        if (locations.ContainsKey(LocationType.LaborExchange) && IsLaborExchangeReadyForApplicants(out _)) score += 14;
         int averageSalary = EstimateAverageOpenVacancySalary();
-        if (averageSalary > 30) score += Mathf.Clamp((averageSalary - 30) / 3, 0, 12);
+        if (averageSalary > 30) score += Mathf.Clamp((averageSalary - 30) / 3, 0, 16);
         return Mathf.Clamp(score, 0, 100);
     }
 
@@ -506,13 +520,24 @@ public partial class GameBootstrap
             return 0f;
         }
 
-        float chance = 0.22f + Mathf.Min(vacancyDemand, 8) * 0.045f + Mathf.Max(0, attraction - 55) * 0.003f;
+        int vacancyShortage = Mathf.Max(0, vacancyDemand - freeWorkers);
+        float chance = 0.42f + Mathf.Min(vacancyDemand, 8) * 0.075f + Mathf.Max(0, attraction - 50) * 0.005f;
         if (freeWorkers > 0)
         {
-            chance -= freeWorkers * 0.10f;
+            chance -= freeWorkers * 0.05f;
         }
 
-        return Mathf.Clamp(chance, 0f, currentDay <= WorkerMigrationMinDay ? 0.48f : 0.68f);
+        if (vacancyShortage >= 2)
+        {
+            chance = Mathf.Max(chance, currentDay <= WorkerMigrationMinDay ? 0.72f : 0.82f);
+        }
+
+        if (vacancyShortage >= 5)
+        {
+            chance = Mathf.Max(chance, currentDay <= WorkerMigrationMinDay ? 0.84f : 0.92f);
+        }
+
+        return Mathf.Clamp(chance, 0f, currentDay <= WorkerMigrationMinDay ? 0.88f : 0.96f);
     }
 
     private bool TryStartWorkerArrivalBus(List<DriverAgent> workers, bool isTutorialWave, string source)

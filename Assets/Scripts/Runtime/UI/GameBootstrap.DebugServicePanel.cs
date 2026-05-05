@@ -186,12 +186,13 @@ public partial class GameBootstrap
                 normal = { textColor = new Color(1f, 0.85f, 0.3f) },
                 alignment = TextAnchor.MiddleLeft
             };
-            GUILayout.Label($"  TREASURY:  ${money}", treasuryLabelStyle, GUILayout.ExpandWidth(false));
+            treasuryLabelStyle.normal.textColor = money < 0 ? GetTreasuryDisplayColor() : treasuryLabelStyle.normal.textColor;
+            GUILayout.Label($"  TREASURY:  {FormatTreasuryAmount()}", treasuryLabelStyle, GUILayout.ExpandWidth(false));
             GUILayout.Space(16f);
             GUI.backgroundColor = new Color(0.6f, 0.15f, 0.15f);
             GUIStyle adjBtn = new GUIStyle(GUI.skin.button) { fontSize = 15, fontStyle = FontStyle.Bold };
             if (GUILayout.Button("  - 50  ", adjBtn, GUILayout.Height(36f), GUILayout.ExpandWidth(false)))
-                money = Mathf.Max(0, money - 50);
+                money -= 50;
             GUILayout.Space(4f);
             GUI.backgroundColor = new Color(0.15f, 0.45f, 0.15f);
             if (GUILayout.Button("  + 50  ", adjBtn, GUILayout.Height(36f), GUILayout.ExpandWidth(false)))
