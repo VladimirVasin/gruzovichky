@@ -383,6 +383,7 @@ public partial class GameBootstrap
             LocationType.Canteen,
             LocationType.GasStation,
             LocationType.GamblingHall,
+            LocationType.Kindergarten,
             LocationType.CarMarket,
             LocationType.LaborExchange
         };

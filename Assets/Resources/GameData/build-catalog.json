@@ -262,6 +262,20 @@
           }
         },
         {
+          "tool": "Kindergarten",
+          "abbrev": "KG",
+          "title": { "en": "Kindergarten", "ru": "\u0414\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434" },
+          "color": "#759E5C",
+          "activeDescription": {
+            "en": "Mode active: place a 4x3 kindergarten from its driveway cell. Multiple kindergartens are allowed. R rotates ({rot}).",
+            "ru": "\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0434\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434 4x3 \u043e\u0442 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u043d\u043e\u0439 \u043a\u043b\u0435\u0442\u043a\u0438. \u041c\u043e\u0436\u043d\u043e \u0441\u0442\u0440\u043e\u0438\u0442\u044c \u043d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u043e. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})."
+          },
+          "description": {
+            "en": "4x3 kindergarten: staffed caregivers create child-care capacity for worker families.",
+            "ru": "\u0414\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434 4x3: \u0432\u043e\u0441\u043f\u0438\u0442\u0430\u0442\u0435\u043b\u0438 \u0441\u043e\u0437\u0434\u0430\u044e\u0442 \u043c\u0435\u0441\u0442\u0430 \u0434\u043b\u044f \u0434\u0435\u0442\u0435\u0439 \u0440\u0430\u0431\u043e\u0447\u0438\u0445 \u0441\u0435\u043c\u0435\u0439."
+          }
+        },
+        {
           "tool": "LaborExchange",
           "abbrev": "LE",
           "title": { "en": "Labor Exchange", "ru": "Биржа труда" },

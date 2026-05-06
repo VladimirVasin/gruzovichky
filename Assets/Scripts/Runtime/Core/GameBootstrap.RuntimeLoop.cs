@@ -267,6 +267,8 @@ public partial class GameBootstrap
             UpdateWorkerNeedsClock(driver);
         }
         UpdateHourlyNeedsEconomyTelemetry();
+        UpdateWorkerSocialDecay();
+        UpdateWorkerFamilyRuntime();
         UpdateWorkerMigrationRuntime();
 
         for (int i = 0; i < truckAgents.Count; i++)

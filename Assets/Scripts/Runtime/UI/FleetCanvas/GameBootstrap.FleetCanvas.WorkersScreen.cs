@@ -324,6 +324,31 @@ public partial class GameBootstrap
         driversScreenUi.DetailBalanceText = CreateHeaderText("BV", balanceRow, font, string.Empty, 14, TextAnchor.MiddleLeft, FleetAccentColor);
         driversScreenUi.DetailBalanceText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
+        RectTransform socialCard = CreateSectionCard(detailRoot.transform, font, string.Empty, out RectTransform socialBody, false);
+        socialCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 112f;
+        socialCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
+        socialCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
+        socialBody.GetComponent<VerticalLayoutGroup>().spacing = 4;
+        driversScreenUi.DetailSocialTitleText = CreateHeaderText("WorkerSocialTitle", socialBody, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailSocialTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+        RectTransform socialHeader = CreateLayoutRow("WorkerSocialHeader", socialBody, 16f, 8f);
+        driversScreenUi.DetailSocialNameHeaderText = CreateBodyText("SocialNameHeader", socialHeader, font, string.Empty, 10, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailSocialNameHeaderText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        driversScreenUi.DetailSocialRelationHeaderText = CreateBodyText("SocialRelationHeader", socialHeader, font, string.Empty, 10, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailSocialRelationHeaderText.gameObject.AddComponent<LayoutElement>().preferredWidth = 86f;
+        driversScreenUi.DetailSocialFamiliarityHeaderText = CreateBodyText("SocialFamiliarityHeader", socialHeader, font, string.Empty, 10, TextAnchor.MiddleRight, FleetMutedTextColor);
+        driversScreenUi.DetailSocialFamiliarityHeaderText.gameObject.AddComponent<LayoutElement>().preferredWidth = 42f;
+        driversScreenUi.DetailSocialContextHeaderText = CreateBodyText("SocialContextHeader", socialHeader, font, string.Empty, 10, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailSocialContextHeaderText.gameObject.AddComponent<LayoutElement>().preferredWidth = 126f;
+
+        driversScreenUi.DetailSocialEmptyText = CreateBodyText("WorkerSocialEmpty", socialBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailSocialEmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        for (int i = 0; i < WorkerSocialHudRowCount; i++)
+        {
+            driversScreenUi.DetailSocialRows.Add(CreateWorkerSocialRow(socialBody, font, i));
+        }
+
         // Focus button
         driversScreenUi.DetailFocusButton = CreateButton("FocusWorkerBtn", detailRoot.transform, font, out driversScreenUi.DetailFocusButtonText, "Focus on Worker", 14, new Color(0.25f, 0.33f, 0.46f, 1f), Color.white);
         driversScreenUi.DetailFocusButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
@@ -362,6 +387,22 @@ public partial class GameBootstrap
             int rowIndex = driversScreenUi.WorkerRows.Count;
             driversScreenUi.WorkerRows.Add(CreateWorkerRow(driversScreenUi.WorkerListContent, font, rowIndex));
         }
+    }
+
+    private WorkerSocialRowUi CreateWorkerSocialRow(RectTransform parent, Font font, int index)
+    {
+        WorkerSocialRowUi row = new();
+        row.Root = CreateLayoutRow($"WorkerSocialRow{index + 1}", parent, 17f, 8f);
+        row.NameText = CreateBodyText("Name", row.Root, font, string.Empty, 11, TextAnchor.MiddleLeft, Color.white);
+        row.NameText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        row.RelationText = CreateBodyText("Relation", row.Root, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        row.RelationText.gameObject.AddComponent<LayoutElement>().preferredWidth = 86f;
+        row.FamiliarityText = CreateHeaderText("Familiarity", row.Root, font, string.Empty, 11, TextAnchor.MiddleRight, FleetAccentColor);
+        row.FamiliarityText.gameObject.AddComponent<LayoutElement>().preferredWidth = 42f;
+        row.ContextText = CreateBodyText("Context", row.Root, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        row.ContextText.gameObject.AddComponent<LayoutElement>().preferredWidth = 126f;
+        row.Root.gameObject.SetActive(false);
+        return row;
     }
 
     private WorkerRowUi CreateWorkerRow(RectTransform parent, Font font, int index)

@@ -210,6 +210,7 @@ public partial class GameBootstrap : MonoBehaviour
         GamblingHall,
         CityPark,
         PersonalHouse,
+        Kindergarten,
         CarMarket,
         LaborExchange,
         Docks
@@ -238,6 +239,7 @@ public partial class GameBootstrap : MonoBehaviour
         LocationType.Bar           => true,
         LocationType.Canteen       => true,
         LocationType.GamblingHall  => true,
+        LocationType.Kindergarten   => true,
         LocationType.CarMarket     => true,
         LocationType.LaborExchange => true,
         _                          => false
@@ -252,6 +254,7 @@ public partial class GameBootstrap : MonoBehaviour
         LocationType.FurnitureFactory => "Carpenter",
         LocationType.Warehouse        => "Warehouse Loader",
         LocationType.Docks            => "Dock Worker",
+        LocationType.Kindergarten     => "Childcare Worker",
         LocationType.LaborExchange    => "Employment Clerk",
         _ when HasServiceWorkerSlot(type) => "Service Worker",
         _                             => "Worker"
@@ -353,6 +356,7 @@ public partial class GameBootstrap : MonoBehaviour
         GamblingHall,
         CityPark,
         PersonalHouse,
+        Kindergarten,
         CarMarket,
         LaborExchange,
         Docks

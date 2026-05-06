@@ -301,6 +301,7 @@ public partial class GameBootstrap
                tool == BuildTool.GamblingHall ||
                tool == BuildTool.CityPark ||
                tool == BuildTool.PersonalHouse ||
+               tool == BuildTool.Kindergarten ||
                tool == BuildTool.CarMarket ||
                tool == BuildTool.LaborExchange ||
                tool == BuildTool.Docks;

@@ -169,7 +169,7 @@ public partial class GameBootstrap
             if (driversScreenUi.DetailHomeText != null)
             {
                 bool hasHome = sel.AssignedPersonalHouseIndex >= 0 && sel.AssignedPersonalHouseIndex < personalHouses.Count;
-                driversScreenUi.DetailHomeText.text = hasHome ? personalHouses[sel.AssignedPersonalHouseIndex].Label : "\u2014";
+                driversScreenUi.DetailHomeText.text = hasHome ? FormatWorkerHomeLabel(sel, ru) : "\u2014";
                 driversScreenUi.DetailHomeText.color = hasHome ? Color.white : FleetMutedTextColor;
             }
 
@@ -196,6 +196,7 @@ public partial class GameBootstrap
 
             driversScreenUi.DetailSalaryText.text  = FormatWorkerSalaryContract(sel, ru);
             driversScreenUi.DetailBalanceText.text = $"${sel.Money}";
+            UpdateWorkerSocialUi(sel, ru);
 
             bool canFocus = sel.DriverObject != null && sel.DriverObject.activeSelf;
             driversScreenUi.DetailFocusButton.interactable = canFocus;

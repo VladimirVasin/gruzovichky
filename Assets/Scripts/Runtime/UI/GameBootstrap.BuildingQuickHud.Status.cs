@@ -41,6 +41,7 @@ public partial class GameBootstrap
             LocationType.GamblingHall => "Gambling Hall - free leisure for workers.",
             LocationType.CityPark     => IsRussianLanguage() ? "Городской парк — рабочие гуляют и сидят на лавочках." : "City Park — workers stroll and sit on benches.",
             LocationType.PersonalHouse => IsRussianLanguage() ? "Жилой дом — пригородный коттедж." : "Personal House — suburban residential home.",
+            LocationType.Kindergarten  => IsRussianLanguage() ? "\u0414\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434: \u0432\u043e\u0441\u043f\u0438\u0442\u0430\u0442\u0435\u043b\u0438 \u0434\u0430\u044e\u0442 \u043c\u0435\u0441\u0442\u0430 \u0434\u043b\u044f \u0434\u0435\u0442\u0435\u0439 \u0438 \u0441\u043d\u0438\u0436\u0430\u044e\u0442 \u0441\u0442\u0440\u0435\u0441\u0441 \u0441\u0435\u043c\u0435\u0439." : "Kindergarten - caregivers create child-care capacity for families.",
             LocationType.CarMarket     => IsRussianLanguage() ? "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 \u043b\u0438\u0447\u043d\u044b\u0435 \u0430\u0432\u0442\u043e." : "Car Market - workers buy personal cars here.",
             LocationType.LaborExchange => IsRussianLanguage() ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u043a\u043b\u0435\u0440\u043a \u043f\u0443\u0431\u043b\u0438\u043a\u0443\u0435\u0442 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438, \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0445\u043e\u0434\u044f\u0442 \u0437\u0430 \u0440\u0430\u0431\u043e\u0442\u043e\u0439." : "Labor Exchange - a clerk posts vacancies and workers apply here.",
             _                         => string.Empty
@@ -67,6 +68,7 @@ public partial class GameBootstrap
             LocationType.Canteen      => GetCanteenQuickResourceText(),
             LocationType.GamblingHall => GetGamblingHallQuickResourceText(),
             LocationType.CityPark     => GetServiceBuildingQuickResourceText(locationType),
+            LocationType.Kindergarten  => GetKindergartenQuickResourceText(),
             LocationType.CarMarket    => GetServiceBuildingQuickResourceText(locationType),
             LocationType.LaborExchange => GetLaborExchangeQuickResourceText(),
             _ => string.Empty
@@ -111,7 +113,19 @@ public partial class GameBootstrap
             if (d.AssignedPersonalHouseIndex == selectedPersonalHouseIndex)
                 residentCount++;
         }
+        residentCount += CountWorkerChildrenInHouse(selectedPersonalHouseIndex);
         bool ru = IsRussianLanguage();
+        WorkerFamily family = GetWorkerFamilyForHouse(selectedPersonalHouseIndex);
+        if (family != null)
+        {
+            int childCount = CountWorkerFamilyChildren(family.Id);
+            return FormatValueLine(ru ? "\u0416\u0438\u043b\u044c\u0446\u043e\u0432" : "Residents", residentCount.ToString()) + "\n" +
+                   FormatValueLine(ru ? "\u0414\u0435\u0442\u0435\u0439" : "Children", childCount.ToString()) + "\n" +
+                   FormatValueLine(ru ? "\u0414\u0435\u0442\u0441\u0430\u0434" : "Child care", FormatWorkerFamilyChildCareLabel(family, ru)) + "\n" +
+                   FormatValueLine(ru ? "\u0421\u0447\u0430\u0441\u0442\u044c\u0435 \u0441\u0435\u043c\u044c\u0438" : "Family happiness", FormatWorkerFamilyHappinessLabel(family, ru)) + "\n" +
+                   FormatValueLine(ru ? "\u041e\u0431\u0449\u0438\u0435 \u0434\u0435\u043d\u044c\u0433\u0438" : "Household money", $"${family.LastAdultMoneyTotal}") + "\n" +
+                   FormatValueLine(ru ? "\u0420\u0430\u0441\u0445\u043e\u0434\u044b" : "Upkeep", FormatWorkerFamilyUpkeepLabel(family, ru));
+        }
         return FormatValueLine(ru ? "Жильцов" : "Residents", residentCount.ToString());
     }
 
@@ -131,23 +145,43 @@ public partial class GameBootstrap
             }
         }
 
+        List<WorkerChild> children = new();
+        foreach (WorkerChild child in workerChildren)
+        {
+            if (child != null && child.HouseIndex == selectedPersonalHouseIndex)
+            {
+                children.Add(child);
+            }
+        }
+
         for (int i = 0; i < buildingQuickHud.ResidentRows.Length; i++)
         {
             PersonalHouseResidentRowUi row = buildingQuickHud.ResidentRows[i];
-            if (i >= assigned.Count)
+            if (i >= assigned.Count + children.Count)
             {
                 row.Root.gameObject.SetActive(false);
                 row.CurrentDriverId = -1;
                 continue;
             }
 
-            DriverAgent d = assigned[i];
-            row.CurrentDriverId = d.DriverId;
             row.Root.gameObject.SetActive(true);
-            row.NameText.text = d.DriverName;
-            row.NameText.color = Color.white;
-            row.ActionButton.gameObject.SetActive(true);
-            row.ActionButtonText.text = IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c" : "View";
+            if (i < assigned.Count)
+            {
+                DriverAgent d = assigned[i];
+                row.CurrentDriverId = d.DriverId;
+                row.NameText.text = d.DriverName;
+                row.NameText.color = Color.white;
+                row.ActionButton.gameObject.SetActive(true);
+                row.ActionButtonText.text = IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c" : "View";
+            }
+            else
+            {
+                WorkerChild child = children[i - assigned.Count];
+                row.CurrentDriverId = -1;
+                row.NameText.text = ru ? $"{child.Name} (\u0440\u0435\u0431\u0435\u043d\u043e\u043a)" : $"{child.Name} (child)";
+                row.NameText.color = FleetAccentColor;
+                row.ActionButton.gameObject.SetActive(false);
+            }
         }
     }
 
@@ -160,7 +194,13 @@ public partial class GameBootstrap
             return;
         }
 
-        FocusWorkerFromQuickHud(buildingQuickHud.ResidentRows[rowIndex].CurrentDriverId, "personal house HUD");
+        int driverId = buildingQuickHud.ResidentRows[rowIndex].CurrentDriverId;
+        if (driverId <= 0)
+        {
+            return;
+        }
+
+        FocusWorkerFromQuickHud(driverId, "personal house HUD");
     }
 
     private string GetServiceBuildingQuickResourceText(LocationType locationType)
@@ -206,6 +246,16 @@ public partial class GameBootstrap
         text += "\n" + FormatValueLine("Staff on shift", $"{CountWorkersOnShiftAt(LocationType.GamblingHall)} / {GetMaxBuildingWorkerSlots(LocationType.GamblingHall)}");
         text += "\n" + FormatValueLine("Workers inside", gh != null ? gh.Workers.ToString() : "0");
         text += "\n" + FormatValueLine("Building Bank", $"${(gh != null ? gh.BuildingBank : 0)}");
+        return text;
+    }
+
+    private string GetKindergartenQuickResourceText()
+    {
+        bool ru = IsRussianLanguage();
+        string text = FormatValueLine(ru ? "\u0414\u0435\u0442\u0438" : "Children covered", FormatKindergartenCoverageLabel(ru));
+        text += "\n" + FormatValueLine(ru ? "\u041c\u0435\u0441\u0442" : "Capacity", GetKindergartenChildCapacity().ToString());
+        text += "\n" + FormatValueLine(ru ? "\u041f\u0435\u0440\u0441\u043e\u043d\u0430\u043b" : "Staff assigned", $"{CountKindergartenAssignedStaff()} / {GetKindergartenTotalStaffSlots()}");
+        text += "\n" + FormatValueLine(ru ? "\u041d\u0430 \u0441\u043c\u0435\u043d\u0435" : "Staff on shift", $"{CountWorkersOnShiftAt(LocationType.Kindergarten)} / {GetKindergartenTotalStaffSlots()}");
         return text;
     }
 

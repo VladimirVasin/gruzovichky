@@ -142,6 +142,7 @@ public partial class GameBootstrap
                 (BuildTool.GamblingHall, "GH", "Gambling Hall",  new Color(0.52f, 0.38f, 0.08f)),
                 (BuildTool.CityPark,     "CP", "City Park",      new Color(0.22f, 0.48f, 0.22f)),
                 (BuildTool.PersonalHouse,"PH", "Personal House", new Color(0.55f, 0.42f, 0.30f)),
+                (BuildTool.Kindergarten, "KG", "Kindergarten",    new Color(0.46f, 0.62f, 0.36f)),
                 (BuildTool.CarMarket,    "CM", "Car Market",     new Color(0.64f, 0.52f, 0.38f)),
                 (BuildTool.LaborExchange,"LE", "Labor Exchange", new Color(0.34f, 0.47f, 0.56f))),
         };
@@ -528,7 +529,27 @@ public partial class GameBootstrap
                 break;
             }
 
-            // ── Car Market ────────────────────────────────────────────────────
+            // Kindergarten
+            case BuildTool.Kindergarten:
+            {
+                Color wall = new(0.88f, 0.82f, 0.54f);
+                Color roof = new(0.30f, 0.52f, 0.46f);
+                Color mat = new(0.34f, 0.62f, 0.36f);
+                Color slide = new(0.28f, 0.58f, 0.90f);
+                Color trim = new(0.96f, 0.58f, 0.30f);
+                P(0.10f, 0.18f, 0.90f, 0.56f, wall);
+                P(0.06f, 0.54f, 0.94f, 0.66f, roof);
+                P(0.42f, 0.18f, 0.58f, 0.46f, new Color(0.20f, 0.30f, 0.34f));
+                P(0.16f, 0.36f, 0.34f, 0.50f, new Color(0.58f, 0.82f, 0.94f));
+                P(0.66f, 0.36f, 0.84f, 0.50f, new Color(0.58f, 0.82f, 0.94f));
+                P(0.12f, 0.08f, 0.88f, 0.16f, mat);
+                P(0.18f, 0.12f, 0.34f, 0.28f, trim);
+                R(17f, -16f, 7f, 28f, slide, -28f);
+                P(0.62f, 0.10f, 0.76f, 0.24f, new Color(0.88f, 0.32f, 0.32f));
+                break;
+            }
+
+            // Car Market
             case BuildTool.CarMarket:
             {
                 Color car  = new(0.22f, 0.38f, 0.70f);

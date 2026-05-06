@@ -232,7 +232,10 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         driver.IsInsideBuilding = true;
+        driver.InsideBuildingType = locationType;
+        driver.InsideBuildingInstanceId = locations.TryGetValue(locationType, out LocationData location) ? location.InstanceId : 0;
         driver.DriverObject.SetActive(false);
+        RecordWorkerServiceCoPresence(driver, locationType);
         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered {locationType} interior.");
     }
 
@@ -251,6 +254,8 @@ public partial class GameBootstrap : MonoBehaviour
                 ? GetDriverStandPointNearPersonalHouse(houseIndex)
                 : driver.DriverObject.transform.position;
             driver.IsInsideBuilding = false;
+            driver.InsideBuildingType = null;
+            driver.InsideBuildingInstanceId = 0;
             driver.DriverObject.transform.position = homeMealExitPosition;
             driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
             driver.DriverObject.SetActive(true);
@@ -276,6 +281,8 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         driver.IsInsideBuilding = false;
+        driver.InsideBuildingType = null;
+        driver.InsideBuildingInstanceId = 0;
         driver.DriverObject.transform.position = exitPosition;
         driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         driver.DriverObject.SetActive(true);

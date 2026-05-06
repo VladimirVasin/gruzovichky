@@ -143,6 +143,13 @@ public partial class GameBootstrap
             reasons.Add("services unaffordable");
         }
 
+        int familyDelta = GetWorkerFamilySatisfactionDelta(driver, out string familyReason);
+        if (familyDelta != 0)
+        {
+            delta += familyDelta;
+            reasons.Add(familyReason);
+        }
+
         if (!anyCritical && employed && driver.Money >= 30)
         {
             delta += 4;
@@ -308,6 +315,7 @@ public partial class GameBootstrap
             SetDriverDutyMode(driver, DriverDutyMode.Local);
         }
 
+        CleanupWorkerFamilyForDeparture(driver);
         driver.AssignedTruckNumber = 0;
         driver.AssignedBuildingType = null;
         driver.AssignedBuildingInstanceId = 0;
@@ -655,6 +663,7 @@ public partial class GameBootstrap
             Phase = HiringDriverArrivalPhase.WaitingLaneClear
         };
         hiringDriverArrival.Drivers.AddRange(workers);
+        RecordWorkerArrivalWaveSocial(workers);
         SessionDebugLogger.Log("MIGRATION", $"{workers.Count} worker(s) started arrival bus flow; source={source}, tutorialWave={(isTutorialWave ? "yes" : "no")}.");
         return true;
     }

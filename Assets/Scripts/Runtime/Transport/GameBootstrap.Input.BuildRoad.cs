@@ -147,6 +147,7 @@ public partial class GameBootstrap
             BuildTool.GamblingHall => TryPlaceGamblingHallAtAnchor(cell),
             BuildTool.CityPark        => TryPlaceCityParkAtAnchor(cell),
             BuildTool.PersonalHouse   => TryPlacePersonalHouseAtAnchor(cell),
+            BuildTool.Kindergarten    => TryPlaceKindergartenAtAnchor(cell),
             BuildTool.CarMarket       => TryPlaceCarMarketAtAnchor(cell),
             BuildTool.LaborExchange   => TryPlaceLaborExchangeAtAnchor(cell),
             BuildTool.Docks           => TryPlaceDocksAtAnchor(cell),
@@ -658,6 +659,11 @@ public partial class GameBootstrap
         if (activeBuildTool == BuildTool.PersonalHouse)
         {
             return GetPersonalHousePlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
+        if (activeBuildTool == BuildTool.Kindergarten)
+        {
+            return GetKindergartenPlacementPreview(cell, out previewPosition, out previewScale);
         }
 
         if (activeBuildTool == BuildTool.CarMarket)

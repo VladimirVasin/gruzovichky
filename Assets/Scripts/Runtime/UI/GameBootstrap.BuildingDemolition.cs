@@ -340,6 +340,8 @@ public partial class GameBootstrap
                 driver.AssignedPersonalHouseIndex--;
             }
         }
+
+        HandleWorkerFamiliesAfterHouseDemolished(removedHouseIndex);
     }
 
     private void MarkRuntimeScreensDirtyAfterDemolition()

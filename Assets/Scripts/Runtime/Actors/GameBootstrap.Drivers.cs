@@ -279,6 +279,8 @@ public partial class GameBootstrap : MonoBehaviour
             {
                 bd.Workers = Mathf.Max(0, bd.Workers - 1);
                 driver.IsInsideBuilding = false;
+                driver.InsideBuildingType = null;
+                driver.InsideBuildingInstanceId = 0;
                 driver.DriverObject?.SetActive(true);
                 driver.DriverObject.transform.position = driver.MotelIdlePosition;
             }
@@ -750,7 +752,10 @@ public partial class GameBootstrap : MonoBehaviour
         driver.WalkAnimationTime = 0f;
         driver.IsOnActiveShift = true;
         driver.IsInsideBuilding = true;
+        driver.InsideBuildingType = building.Type;
+        driver.InsideBuildingInstanceId = building.InstanceId;
         driver.IsShiftSalaryPending = true;
+        RecordWorkerCoworkerShiftSocial(driver, building);
         if (driver.DriverObject != null)
         {
             driver.DriverObject.SetActive(false);
@@ -781,6 +786,8 @@ public partial class GameBootstrap : MonoBehaviour
             // Normal exit: worker is invisible inside the building
             building.Workers = Mathf.Max(0, building.Workers - 1);
             driver.IsInsideBuilding = false;
+            driver.InsideBuildingType = null;
+            driver.InsideBuildingInstanceId = 0;
             driver.IsOnActiveShift = false;
             driver.IsShiftSalaryPending = true;
             PayDriverSalary(driver);
@@ -803,6 +810,8 @@ public partial class GameBootstrap : MonoBehaviour
                 CancelForestFieldWork(driver);
                 driver.IsOnActiveShift = false;
                 driver.IsInsideBuilding = false;
+                driver.InsideBuildingType = null;
+                driver.InsideBuildingInstanceId = 0;
                 driver.IsShiftSalaryPending = true;
                 PayDriverSalary(driver);
                 StartWorkerLifeCycleAfterWork(driver, driver.DriverObject.transform.position, "Lumberyard field work");

@@ -104,6 +104,13 @@ public partial class GameBootstrap
         public Text  DetailBalanceLabel;
         public Text  DetailBalanceText;
         public Text  DetailContractTitleText;
+        public Text  DetailSocialTitleText;
+        public Text  DetailSocialEmptyText;
+        public Text  DetailSocialNameHeaderText;
+        public Text  DetailSocialRelationHeaderText;
+        public Text  DetailSocialFamiliarityHeaderText;
+        public Text  DetailSocialContextHeaderText;
+        public readonly List<WorkerSocialRowUi> DetailSocialRows = new();
         public Button DetailFocusButton;
         public Text   DetailFocusButtonText;
     }
@@ -122,6 +129,15 @@ public partial class GameBootstrap
         public RectTransform NeedsMealBarFill;
         public RectTransform NeedsSleepBarFill;
         public RectTransform NeedsLeisureBarFill;
+    }
+
+    private sealed class WorkerSocialRowUi
+    {
+        public RectTransform Root;
+        public Text NameText;
+        public Text RelationText;
+        public Text FamiliarityText;
+        public Text ContextText;
     }
 
     private sealed class ShiftsScreenUiRefs

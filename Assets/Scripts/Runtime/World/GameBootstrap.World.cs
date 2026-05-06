@@ -21,6 +21,11 @@ public partial class GameBootstrap
         hasShownLocalBusStopMinimumHint = false;
         personalHouses.Clear();
         personalHouseSelectionHighlights.Clear();
+        workerFamilies.Clear();
+        pendingWorkerFamilyFormations.Clear();
+        workerChildren.Clear();
+        nextWorkerFamilyId = 1;
+        nextWorkerChildId = 1;
         selectedPersonalHouseIndex = -1;
 
         GeneratedWorldLayout layout = WorldLayoutGenerator.Generate(GridWidth, GridHeight, waterCells, HasRequiredLayoutRoads);

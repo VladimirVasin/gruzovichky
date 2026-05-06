@@ -235,6 +235,7 @@ public partial class GameBootstrap
         public string BusTravelReason = string.Empty;
         public bool BusRideFareExempt;
         public int AssignedPersonalHouseIndex = -1;
+        public int FamilyId = -1;
         public int IdleCatPetTargetIndex = -1;
         public int Age;
         public int DaysOnMap;
@@ -259,6 +260,9 @@ public partial class GameBootstrap
         public int ReservedLaborExchangePostingId;
         public float LaborExchangeInterviewTimer;
         public bool IsInsideBuilding;
+        public LocationType? InsideBuildingType;
+        public int InsideBuildingInstanceId;
+        public readonly List<WorkerSocialMemory> SocialMemories = new();
         public int Satisfaction = 70;
         public int UnhappyDays;
         public bool DepartureIntent;
@@ -270,6 +274,79 @@ public partial class GameBootstrap
         public float LastThrottledWorkerDecisionDebugTime = -999f;
         public string LastLocalBusSkipDebugKey;
         public float LastLocalBusSkipDebugTime = -999f;
+    }
+
+    private sealed class WorkerSocialMemory
+    {
+        public int OtherWorkerId;
+        public int Familiarity;
+        public int Relationship;
+        public int InteractionCount;
+        public int LastInteractionDay;
+        public float LastInteractionWorldHour;
+        public float NextFamiliarityDecayWorldHour;
+        public WorkerSocialInteractionKind LastKind;
+        public LocationType? LastLocationType;
+    }
+
+    private enum WorkerSocialInteractionKind
+    {
+        IdleConversation,
+        ServiceCoPresence,
+        CoworkerShift,
+        ArrivalWave,
+        FamilyFormation
+    }
+
+    private sealed class WorkerFamily
+    {
+        public int Id;
+        public int HouseIndex;
+        public int CreatedDay;
+        public float CreatedWorldHour;
+        public float NextChildBirthWorldHour;
+        public int Happiness = 70;
+        public int BirthJoyUntilDay;
+        public int LastDailyUpdateDay;
+        public int LastHappinessDelta;
+        public string LastHappinessReason = "New household";
+        public int LastDailyUpkeepDay;
+        public int LastDailyUpkeepAmount;
+        public int LastDailyUpkeepPaidAmount;
+        public int LastDailyUpkeepShortfall;
+        public int LastAdultMoneyTotal;
+        public readonly List<int> MemberWorkerIds = new();
+        public readonly List<int> ChildIds = new();
+    }
+
+    private sealed class WorkerFamilyPendingFormation
+    {
+        public int WorkerId;
+        public int HouseIndex;
+        public float CreatedWorldHour;
+        public float DueWorldHour;
+    }
+
+    private sealed class WorkerChild
+    {
+        public int Id;
+        public int FamilyId;
+        public int HouseIndex;
+        public string Name;
+        public WorkerGender Gender;
+        public int BornDay;
+        public float BornWorldHour;
+        public float YardLateralOffset;
+        public float YardDepthOffset;
+        public float AnimationPhase;
+        public GameObject RootObject;
+        public Transform VisualRoot;
+        public Transform HeadTransform;
+        public Transform BodyTransform;
+        public Transform LeftArmTransform;
+        public Transform RightArmTransform;
+        public Transform LeftLegTransform;
+        public Transform RightLegTransform;
     }
 
     private sealed class LaborExchangePosting

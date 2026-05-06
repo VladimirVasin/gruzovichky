@@ -68,7 +68,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         for (int i = 0; i < personalHouses.Count; i++)
         {
-            if (CountPersonalHouseResidents(i) < MaxPersonalHouseResidents)
+            if (CountPersonalHouseResidents(i) == 0)
             {
                 houseIndex = i;
                 unavailableReason = string.Empty;
@@ -76,7 +76,7 @@ public partial class GameBootstrap : MonoBehaviour
             }
         }
 
-        unavailableReason = $"all Personal Houses full (capacity={MaxPersonalHouseResidents})";
+        unavailableReason = "no empty Personal House available";
         return false;
     }
 

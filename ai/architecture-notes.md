@@ -110,7 +110,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 ### `Assets/Scripts/Runtime/Actors/GameBootstrap.Drivers.*.cs`
 
-- Driver/worker behavior is split into general movement/logistics, warehouse delivery, life cycle and needs, idle wander, and hiring/shift orchestration.
+- Driver/worker behavior is split into general movement/logistics, warehouse delivery, life cycle and needs, idle wander, hiring/shift orchestration, the MVP worker social-memory layer in `GameBootstrap.WorkerSocial.cs`, the MVP family/home pairing layer in `GameBootstrap.WorkerFamilies.cs`, the child-birth/child-visual layer in `GameBootstrap.WorkerChildren.cs`, and the household upkeep/family happiness layer in `GameBootstrap.WorkerHouseholds.cs`.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
 

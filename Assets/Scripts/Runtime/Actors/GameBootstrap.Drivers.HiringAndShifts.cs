@@ -364,6 +364,7 @@ public partial class GameBootstrap : MonoBehaviour
         bestPartner.IdleWanderPauseTimer = 0f;
         driver.WalkAnimationTime = 0f;
         bestPartner.WalkAnimationTime = 0f;
+        RecordWorkerSocialInteraction(driver, bestPartner, WorkerSocialInteractionKind.IdleConversation);
         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} and {bestPartner.DriverName} started an idle conversation.");
         return true;
     }

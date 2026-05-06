@@ -77,6 +77,9 @@ public partial class GameBootstrap : MonoBehaviour
     private const int   WorkerGamblingMinBalance   = 5;
     private const int   HousePurchasePrice         = 300;
     private const int   MaxPersonalHouseResidents  = 2;
+    private const float WorkerChildBirthMinHours   = 96f;
+    private const float WorkerChildBirthMaxHours   = 168f;
+    private const float WorkerChildBirthRetryHours = 12f;
     private const int   CarPurchasePrice           = 100;
     private const float PersonalCarSpeed           = 4.55f;
     private const int   WorkerGamblingMinBet       = 5;
@@ -184,6 +187,9 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<TruckAgent> truckAgents = new();
     private readonly List<BusAgent> busAgents = new();
     private readonly List<DriverAgent> driverAgents = new();
+    private readonly List<WorkerFamily> workerFamilies = new();
+    private readonly List<WorkerFamilyPendingFormation> pendingWorkerFamilyFormations = new();
+    private readonly List<WorkerChild> workerChildren = new();
     private readonly List<LaborExchangePosting> laborExchangePostings = new();
     private readonly List<ForestWorkerAmbient> forestWorkers = new();
     private readonly List<Vector3> forestWorkPoints = new();
@@ -229,6 +235,8 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<NaturalZoneData> forestZones = new();
     private readonly List<NaturalZoneData> hillZones = new();
     private readonly List<NaturalZoneData> lakeZones = new();
+    private int nextWorkerFamilyId = 1;
+    private int nextWorkerChildId = 1;
     private int nextLaborExchangePostingId = 1;
     private int nextLocationInstanceId = 1;
     private float laborExchangePostingTimer;

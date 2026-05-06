@@ -744,6 +744,7 @@ public partial class GameBootstrap
             LocationType.Stop => "Local bus stop",
             LocationType.Bar => "Service fee: $10",
             LocationType.Canteen => "Service fee: $10",
+            LocationType.Kindergarten => $"Child care: {FormatKindergartenCoverageLabel(false)}",
             LocationType.LaborExchange => $"Vacancies: {CountAvailableLaborExchangePostings()}",
             _ => string.Empty
         };
@@ -768,6 +769,7 @@ public partial class GameBootstrap
             LocationType.GamblingHall  => L("Gambling Hall"),
             LocationType.CityPark      => IsRussianLanguage() ? "Городской парк" : "City Park",
             LocationType.PersonalHouse => IsRussianLanguage() ? "Жилой дом" : "Personal House",
+            LocationType.Kindergarten  => IsRussianLanguage() ? "\u0414\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434" : "Kindergarten",
             LocationType.CarMarket     => IsRussianLanguage() ? "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a" : "Car Market",
             LocationType.LaborExchange => IsRussianLanguage() ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430" : "Labor Exchange",
             _ => L("Location")

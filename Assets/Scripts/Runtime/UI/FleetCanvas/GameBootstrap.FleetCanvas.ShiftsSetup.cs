@@ -778,7 +778,7 @@ public partial class GameBootstrap
         CreateHeaderText("AssignmentsServiceSectionTitle", serviceIntroBody, font, "Services", 16, TextAnchor.MiddleLeft, Color.white);
         CreateBodyText("AssignmentsServiceSectionSummary", serviceIntroBody, font, "Most services run daily morning and evening shifts. Higher-education posts use one weekday 08:00-18:00 workday.", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
 
-        LocationType[] serviceTypes = { LocationType.Motel, LocationType.Bar, LocationType.Canteen, LocationType.GasStation, LocationType.GamblingHall, LocationType.CarMarket, LocationType.LaborExchange };
+        LocationType[] serviceTypes = { LocationType.Motel, LocationType.Bar, LocationType.Canteen, LocationType.GasStation, LocationType.GamblingHall, LocationType.Kindergarten, LocationType.CarMarket, LocationType.LaborExchange };
         for (int si = 0; si < serviceTypes.Length; si++)
         {
             int maxWorkerSlots = GetMaxBuildingWorkerSlots(serviceTypes[si]);

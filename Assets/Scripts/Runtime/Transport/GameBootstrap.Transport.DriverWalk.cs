@@ -163,6 +163,7 @@ public partial class GameBootstrap
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
                 bool boughtHouse = false;
+                int boughtHouseIndex = -1;
                 {
                     int hIdx = driver.AssignedPersonalHouseIndex;
                     if (hIdx >= 0 && hIdx < personalHouses.Count && driver.Money >= HousePurchasePrice)
@@ -175,6 +176,7 @@ public partial class GameBootstrap
                         LogBuildingBankTransaction(house, driver, HousePurchasePrice, "Personal house purchase", mb, bb);
                         SessionDebugLogger.Log("LIFE", $"{driver.DriverName} bought house #{hIdx} for ${HousePurchasePrice} (balance: ${driver.Money}).");
                         boughtHouse = true;
+                        boughtHouseIndex = hIdx;
                     }
                     else
                     {
@@ -186,6 +188,7 @@ public partial class GameBootstrap
                 isDriversScreenDirty = true;
                 if (boughtHouse)
                 {
+                    OnWorkerMovedIntoPersonalHouse(driver, boughtHouseIndex);
                     ContinueWorkerLifeCycle(driver, currentPosition);
                 }
                 return;
@@ -246,6 +249,8 @@ public partial class GameBootstrap
                 driver.WalkAnimationTime = 0f;
                 driver.DriverObject.SetActive(false);
                 driver.IsInsideBuilding = true;
+                driver.InsideBuildingType = LocationType.PersonalHouse;
+                driver.InsideBuildingInstanceId = 0;
                 driver.IdleActivityTimer = Mathf.Max(1f, driver.IdleActivityTimer);
                 SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} started home meal at PersonalHouse #{driver.AssignedPersonalHouseIndex}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
                 return;

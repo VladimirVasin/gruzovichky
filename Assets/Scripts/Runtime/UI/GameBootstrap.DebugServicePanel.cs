@@ -145,6 +145,7 @@ public partial class GameBootstrap
                 DrawDebugServiceBuildingStatusRow(LocationType.Bar,          "Bar",            bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugServiceBuildingStatusRow(LocationType.Canteen,      "Canteen",        bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugServiceBuildingStatusRow(LocationType.GamblingHall, "Gambling Hall",  bodyStyle, valueStyle, subHeaderStyle);
+                DrawDebugServiceBuildingStatusRow(LocationType.Kindergarten, "Kindergarten",   bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugServiceBuildingStatusRow(LocationType.LaborExchange,"Labor Exchange", bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugServiceBuildingStatusRow(LocationType.CityPark,     "City Park",      bodyStyle, valueStyle, subHeaderStyle);
                 DrawDebugServiceBuildingStatusRow(LocationType.Motel,        "Motel (Sleep)",  bodyStyle, valueStyle, subHeaderStyle);

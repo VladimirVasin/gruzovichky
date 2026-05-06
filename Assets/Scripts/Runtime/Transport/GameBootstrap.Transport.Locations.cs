@@ -171,6 +171,10 @@ public partial class GameBootstrap
         {
             CreatePersonalHouseDecoration(root.transform, center, min, max, anchor);
         }
+        else if (type == LocationType.Kindergarten)
+        {
+            CreateKindergartenDecoration(root.transform, center, min, max, anchor);
+        }
         else if (type == LocationType.CarMarket)
         {
             CreateCarMarketDecoration(root.transform, center, min, max, anchor);
@@ -278,6 +282,7 @@ public partial class GameBootstrap
         LocationType.GamblingHall => true,
         LocationType.GasStation   => true,
         LocationType.CityPark     => true,
+        LocationType.Kindergarten => true,
         _                         => false
     };
 
@@ -292,6 +297,7 @@ public partial class GameBootstrap
         {
             LocationType.CityPark      => 4,
             LocationType.CarMarket     => 3,
+            LocationType.Kindergarten  => 2,
             LocationType.Parking       => 3,
             LocationType.Warehouse     => 2,
             LocationType.GasStation    => 2,

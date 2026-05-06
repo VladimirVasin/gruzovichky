@@ -87,6 +87,23 @@ the agent must:
 - `ai/work-log.md` is the frequently updated file.
 - Stable memory files should only be updated when project reality actually changes.
 
+## C# Project File Rules
+
+- When adding, moving, or deleting `.cs` files, update the relevant `.csproj` files used by local `dotnet build`.
+- For runtime scripts, keep `Assembly-CSharp.csproj` in sync with exactly one `<Compile Include="...">` entry for each compiled `.cs` file.
+- For editor or test scripts, update `Assembly-CSharp-Editor.csproj` when the file is compiled there.
+- If `.csproj` files are generated or ignored locally, still keep the shared workspace copy current so local verification remains reliable.
+- After editing project files, run `dotnet build Assembly-CSharp.csproj -v:minimal`; also run `dotnet build Assembly-CSharp-Editor.csproj -v:minimal` when editor/test code may be affected.
+- If a build reports duplicate compile items, remove the duplicate `.csproj` entry before finishing.
+
+## Build And Verification Rules
+
+- Do not run multiple `dotnet build`, `dotnet test`, Unity smoke tests, or `./tools/check-all.ps1` checks in parallel.
+- Start one build/test/check command at a time and wait for it to finish before starting another command that may touch `bin/`, `obj/`, generated `.csproj` files, or Unity assemblies.
+- Prefer one consolidated verification pass over several overlapping checks.
+- If a failure mentions locked DLLs, sharing violations, `MSB3021`, `MSB3026`, `MSB3027`, or files in use, stop starting new checks and first look for already-running `dotnet`, `MSBuild`, `VBCSCompiler`, Unity, or test processes.
+- Do not delete `bin/` or `obj/` while any build/test/Unity process is still running.
+
 ## Encoding Safety Rules
 
 - Treat all `.cs`, `.md`, `.json`, `.txt`, and other project text files as `UTF-8`.
