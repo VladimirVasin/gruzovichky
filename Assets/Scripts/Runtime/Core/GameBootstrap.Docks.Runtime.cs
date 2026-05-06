@@ -162,100 +162,43 @@ public partial class GameBootstrap
 
     private bool TryFindDocksShipTrade(LocationData docks, TradeOrderType orderType, out TradeResourceType resourceType, out int quantity)
     {
-        for (int i = 0; i < TradeHudResources.Length; i++)
-        {
-            TradeResourceType candidate = TradeHudResources[i];
-            TradePolicyMode mode = GetTradePolicyMode(candidate);
-            if (orderType == TradeOrderType.Buy && mode != TradePolicyMode.BuyUpTo ||
-                orderType == TradeOrderType.Sell && mode != TradePolicyMode.SellAbove ||
-                !HasBuiltRegionalTradeRoute(candidate, orderType, RegionalTradeRouteMode.River))
-            {
-                continue;
-            }
-
-            int target = GetTradePolicyTarget(candidate);
-            if (orderType == TradeOrderType.Buy)
-            {
-                int stock = GetWarehouseTradeResourceAmount(candidate) + GetDocksImportStoredResource(docks, candidate);
-                int room = DocksResourceCapacity - GetDocksImportStoredResource(docks, candidate);
-                quantity = Mathf.Min(DocksShipTradeBatch, Mathf.Min(Mathf.Max(0, target - stock), Mathf.Max(0, room)));
-                if (quantity > 0)
-                {
-                    resourceType = candidate;
-                    return true;
-                }
-            }
-            else
-            {
-                int dockStock = GetDocksExportStoredResource(docks, candidate);
-                int totalStock = GetWarehouseTradeResourceAmount(candidate) + dockStock;
-                quantity = Mathf.Min(DocksShipTradeBatch, Mathf.Min(dockStock, Mathf.Max(0, totalStock - target)));
-                if (quantity > 0)
-                {
-                    resourceType = candidate;
-                    return true;
-                }
-            }
-        }
-
-        resourceType = TradeResourceType.Logs;
-        quantity = 0;
-        return false;
+        DocksTradePolicyDecision decision = DocksTradePolicyRuntime.FindTrade(
+            orderType,
+            BuildDocksTradePolicyResourceStates(docks, orderType),
+            DocksShipTradeBatch,
+            DocksResourceCapacity);
+        resourceType = decision.ResourceType;
+        quantity = decision.Quantity;
+        return decision.CanTrade;
     }
 
     private string GetDocksTradeSkipReason(LocationData docks, TradeOrderType orderType)
     {
+        return DocksTradePolicyRuntime.GetSkipReason(
+            orderType,
+            BuildDocksTradePolicyResourceStates(docks, orderType),
+            DocksResourceCapacity);
+    }
+
+    private DocksTradePolicyResourceState[] BuildDocksTradePolicyResourceStates(LocationData docks, TradeOrderType orderType)
+    {
+        DocksTradePolicyResourceState[] states = new DocksTradePolicyResourceState[TradeHudResources.Length];
         for (int i = 0; i < TradeHudResources.Length; i++)
         {
             TradeResourceType candidate = TradeHudResources[i];
-            TradePolicyMode mode = GetTradePolicyMode(candidate);
-            TradePolicyMode requiredMode = orderType == TradeOrderType.Buy
-                ? TradePolicyMode.BuyUpTo
-                : TradePolicyMode.SellAbove;
-            if (mode != requiredMode)
-            {
-                continue;
-            }
-
-            if (!HasBuiltRegionalTradeRoute(candidate, orderType, RegionalTradeRouteMode.River))
-            {
-                return $"{orderType} {candidate}: {DescribeRegionalTradeRouteAvailability(candidate, orderType, RegionalTradeRouteMode.River)}";
-            }
-
-            int target = GetTradePolicyTarget(candidate);
-            if (orderType == TradeOrderType.Buy)
-            {
-                int stock = GetWarehouseTradeResourceAmount(candidate) + GetDocksImportStoredResource(docks, candidate);
-                int room = DocksResourceCapacity - GetDocksImportStoredResource(docks, candidate);
-                if (stock >= target)
-                {
-                    return $"{candidate} stock {stock} already meets target {target}";
-                }
-
-                if (room <= 0)
-                {
-                    return $"{candidate} import storage full";
-                }
-            }
-            else
-            {
-                int dockStock = GetDocksExportStoredResource(docks, candidate);
-                int totalStock = GetWarehouseTradeResourceAmount(candidate) + dockStock;
-                if (dockStock <= 0)
-                {
-                    return $"{candidate} has no export cargo at Docks";
-                }
-
-                if (totalStock <= target)
-                {
-                    return $"{candidate} total stock {totalStock} is not above target {target}";
-                }
-            }
+            bool hasRiverRoute = HasBuiltRegionalTradeRoute(candidate, orderType, RegionalTradeRouteMode.River);
+            states[i] = new DocksTradePolicyResourceState(
+                candidate,
+                GetTradePolicyMode(candidate),
+                GetTradePolicyTarget(candidate),
+                hasRiverRoute,
+                hasRiverRoute ? string.Empty : DescribeRegionalTradeRouteAvailability(candidate, orderType, RegionalTradeRouteMode.River),
+                GetWarehouseTradeResourceAmount(candidate),
+                GetDocksExportStoredResource(docks, candidate),
+                GetDocksImportStoredResource(docks, candidate));
         }
 
-        return orderType == TradeOrderType.Buy
-            ? "no Buy up to policy with an eligible river route"
-            : "no Sell surplus policy with an eligible river route";
+        return states;
     }
 
     private void EnsureDocksShipObject(LocationData docks)
@@ -324,53 +267,6 @@ public partial class GameBootstrap
                HasBuiltTradeRouteForOrder(resourceType, TradeOrderType.Buy);
     }
 
-    private int GetDocksExportStoredResource(LocationData docks, TradeResourceType resourceType)
-    {
-        if (docks == null)
-        {
-            return 0;
-        }
-
-        return resourceType switch
-        {
-            TradeResourceType.Logs => docks.LogsStored,
-            TradeResourceType.Boards => docks.BoardsStored,
-            TradeResourceType.Cotton => docks.CottonStored,
-            TradeResourceType.Textile => docks.TextileStored,
-            TradeResourceType.Furniture => docks.FurnitureStored,
-            _ => 0
-        };
-    }
-
-    private int GetDocksImportStoredResource(LocationData docks, TradeResourceType resourceType)
-    {
-        if (docks == null)
-        {
-            return 0;
-        }
-
-        return resourceType switch
-        {
-            TradeResourceType.Logs => docks.DocksImportLogsStored,
-            TradeResourceType.Boards => docks.DocksImportBoardsStored,
-            TradeResourceType.Cotton => docks.DocksImportCottonStored,
-            TradeResourceType.Textile => docks.DocksImportTextileStored,
-            TradeResourceType.Furniture => docks.DocksImportFurnitureStored,
-            _ => 0
-        };
-    }
-
-    private int GetWarehouseExportResourceAmount(TradeResourceType resourceType)
-    {
-        return resourceType switch
-        {
-            TradeResourceType.Logs => locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse) ? warehouse.LogsStored : 0,
-            TradeResourceType.Boards => locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse) ? warehouse.BoardsStored : 0,
-            TradeResourceType.Furniture => furnitureStored,
-            _ => 0
-        };
-    }
-
     private static TradeResourceType CargoTypeToTradeResourceType(CargoType cargoType)
     {
         return cargoType switch
@@ -393,90 +289,6 @@ public partial class GameBootstrap
             TripType.DocksToWarehouseFurniture => TradeResourceType.Furniture,
             _ => TradeResourceType.Logs
         };
-    }
-
-    private void AddDocksExportStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
-    {
-        if (docks == null || amount <= 0)
-        {
-            return;
-        }
-
-        int capped = Mathf.Min(amount, DocksResourceCapacity - GetDocksExportStoredResource(docks, resourceType));
-        if (capped <= 0)
-        {
-            return;
-        }
-
-        switch (resourceType)
-        {
-            case TradeResourceType.Logs: docks.LogsStored += capped; break;
-            case TradeResourceType.Boards: docks.BoardsStored += capped; break;
-            case TradeResourceType.Cotton: docks.CottonStored += capped; break;
-            case TradeResourceType.Textile: docks.TextileStored += capped; break;
-            case TradeResourceType.Furniture: docks.FurnitureStored += capped; break;
-        }
-    }
-
-    private void AddDocksImportStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
-    {
-        if (docks == null || amount <= 0)
-        {
-            return;
-        }
-
-        int capped = Mathf.Min(amount, DocksResourceCapacity - GetDocksImportStoredResource(docks, resourceType));
-        if (capped <= 0)
-        {
-            return;
-        }
-
-        switch (resourceType)
-        {
-            case TradeResourceType.Logs: docks.DocksImportLogsStored += capped; break;
-            case TradeResourceType.Boards: docks.DocksImportBoardsStored += capped; break;
-            case TradeResourceType.Cotton: docks.DocksImportCottonStored += capped; break;
-            case TradeResourceType.Textile: docks.DocksImportTextileStored += capped; break;
-            case TradeResourceType.Furniture: docks.DocksImportFurnitureStored += capped; break;
-        }
-    }
-
-    private bool TryConsumeDocksExportStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
-    {
-        if (docks == null || amount <= 0 || GetDocksExportStoredResource(docks, resourceType) < amount)
-        {
-            return false;
-        }
-
-        switch (resourceType)
-        {
-            case TradeResourceType.Logs: docks.LogsStored -= amount; break;
-            case TradeResourceType.Boards: docks.BoardsStored -= amount; break;
-            case TradeResourceType.Cotton: docks.CottonStored -= amount; break;
-            case TradeResourceType.Textile: docks.TextileStored -= amount; break;
-            case TradeResourceType.Furniture: docks.FurnitureStored -= amount; break;
-        }
-
-        return true;
-    }
-
-    private bool TryConsumeDocksImportStoredResource(LocationData docks, TradeResourceType resourceType, int amount)
-    {
-        if (docks == null || amount <= 0 || GetDocksImportStoredResource(docks, resourceType) < amount)
-        {
-            return false;
-        }
-
-        switch (resourceType)
-        {
-            case TradeResourceType.Logs: docks.DocksImportLogsStored -= amount; break;
-            case TradeResourceType.Boards: docks.DocksImportBoardsStored -= amount; break;
-            case TradeResourceType.Cotton: docks.DocksImportCottonStored -= amount; break;
-            case TradeResourceType.Textile: docks.DocksImportTextileStored -= amount; break;
-            case TradeResourceType.Furniture: docks.DocksImportFurnitureStored -= amount; break;
-        }
-
-        return true;
     }
 
     private int GetDocksSellPrice(TradeResourceType resourceType) => resourceType switch

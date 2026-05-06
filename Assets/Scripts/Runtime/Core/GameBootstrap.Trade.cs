@@ -460,73 +460,6 @@ public partial class GameBootstrap
         };
     }
 
-    private void AddStoredTradeResource(TradeResourceType resourceType, int amount)
-    {
-        if (amount <= 0)
-        {
-            return;
-        }
-
-        switch (resourceType)
-        {
-            case TradeResourceType.Logs:
-                if (locations.TryGetValue(LocationType.Warehouse, out LocationData logsWarehouse))
-                {
-                    logsWarehouse.LogsStored += amount;
-                }
-                break;
-            case TradeResourceType.Boards:
-                if (locations.TryGetValue(LocationType.Warehouse, out LocationData boardsWarehouse))
-                {
-                    boardsWarehouse.BoardsStored += amount;
-                }
-                break;
-            case TradeResourceType.Cotton:
-                cottonStored += amount;
-                break;
-            case TradeResourceType.Textile:
-                textileStored += amount;
-                break;
-            case TradeResourceType.Furniture:
-                furnitureStored += amount;
-                break;
-        }
-    }
-
-    private bool TryConsumeStoredTradeResource(TradeResourceType resourceType, int amount)
-    {
-        if (amount <= 0)
-        {
-            return true;
-        }
-
-        switch (resourceType)
-        {
-            case TradeResourceType.Logs:
-                if (!locations.TryGetValue(LocationType.Warehouse, out LocationData logsWarehouse) || logsWarehouse.LogsStored < amount) return false;
-                logsWarehouse.LogsStored -= amount;
-                return true;
-            case TradeResourceType.Boards:
-                if (!locations.TryGetValue(LocationType.Warehouse, out LocationData boardsWarehouse) || boardsWarehouse.BoardsStored < amount) return false;
-                boardsWarehouse.BoardsStored -= amount;
-                return true;
-            case TradeResourceType.Cotton:
-                if (cottonStored < amount) return false;
-                cottonStored -= amount;
-                return true;
-            case TradeResourceType.Textile:
-                if (textileStored < amount) return false;
-                textileStored -= amount;
-                return true;
-            case TradeResourceType.Furniture:
-                if (furnitureStored < amount) return false;
-                furnitureStored -= amount;
-                return true;
-            default:
-                return false;
-        }
-    }
-
     private bool TryConsumeLogsStored(int amount)
     {
         if (GetTotalLogsResourceAmount() < amount)
@@ -727,17 +660,25 @@ public partial class GameBootstrap
         }
     }
 
+    private void UpdateTradeSimulation()
+    {
+        UpdateActiveTradeRun();
+        UpdateTradeAutoDispatch();
+        UpdateDocksRuntime();
+        UpdateRegionalTradeRuntime();
+    }
+
     private void UpdateTradeAutoDispatch()
     {
-        TradeAutoDispatchTick tick = TradeAutoDispatchService.Tick(
+        TradeSimulationTickResult tick = tradeSimulation.Tick(new TradeSimulationTickInput(
             IsWeekend(),
             HasActiveTradeRun() || HasActiveRegionalLandTrade(),
             CountDispatchableTradePolicies(),
             tradeAutoDispatchRetryTimer,
             Time.deltaTime,
-            TradeAutoDispatchRetryInterval);
-        tradeAutoDispatchRetryTimer = tick.RetryTimer;
-        if (tick.ShouldDispatch)
+            TradeAutoDispatchRetryInterval));
+        tradeAutoDispatchRetryTimer = tick.AutoDispatchRetryTimer;
+        if (tick.ShouldAutoDispatch)
         {
             TryAutoDispatchNextHudOrder();
         }

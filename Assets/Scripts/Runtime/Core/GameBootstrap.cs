@@ -405,6 +405,7 @@ public partial class GameBootstrap : MonoBehaviour
     private int selectedTruckNumber = 1;
     private int money;
     private readonly TradeState tradeState = new();
+    private readonly TradeSimulation tradeSimulation = new();
     private int cottonStored { get => tradeState.CottonStored; set => tradeState.CottonStored = value; }
     private int textileStored { get => tradeState.TextileStored; set => tradeState.TextileStored = value; }
     private int furnitureStored { get => tradeState.FurnitureStored; set => tradeState.FurnitureStored = value; }

@@ -1,21 +1,5 @@
-using UnityEngine;
-
 public partial class GameBootstrap
 {
-    private int GetStoredTradeResourceAmount(TradeResourceType resourceType)
-    {
-        return GetWarehouseTradeResourceAmount(resourceType);
-    }
-
-    private int GetWarehouseTradeResourceAmount(TradeResourceType resourceType)
-    {
-        locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse);
-        return tradeState.GetStoredResourceAmount(
-            resourceType,
-            warehouse?.LogsStored ?? 0,
-            warehouse?.BoardsStored ?? 0);
-    }
-
     private int GetTradePolicyIndex(TradeResourceType resourceType)
     {
         return tradeState.GetPolicyIndex(resourceType, TradeHudResources);

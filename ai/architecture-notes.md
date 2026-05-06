@@ -133,6 +133,11 @@ Purpose: describe the real implemented architecture and current hotspots.
 - Owns external merchant-truck land-route visits to Warehouse and bridges active Trade policies with generated built regional routes.
 - River trading is handled through Docks runtime and uses the same active-policy/built-route requirement.
 
+### `Assets/Scripts/Runtime/Core/GameBootstrap.Trade.Resources.cs`
+
+- Runtime bridge between private `LocationData` storage and extracted trade resource helpers.
+- Warehouse stock and Docks export/import stock mutations should go through this partial before touching `GameBootstrap.Trade.cs`, `GameBootstrap.Docks.Runtime.cs`, or `GameBootstrap.RegionalTrade.Runtime.cs`.
+
 ### `Assets/Scripts/Runtime/Transport/Services/TruckRuntimeGuardService.cs`
 
 - Pure guard seam for deciding whether assigned-trip and refuel update loops should run.
@@ -153,6 +158,11 @@ Purpose: describe the real implemented architecture and current hotspots.
 - Pure timing/gating seam for trade auto-dispatch retry intervals and weekend blocking.
 - `GameBootstrap.Trade.cs` still owns concrete order lookup and dispatch execution.
 
+### `Assets/Scripts/Runtime/Core/Services/TradeSimulation.cs`
+
+- First trade tick coordinator seam.
+- `GameBootstrap.RuntimeLoop.cs` now calls `UpdateTradeSimulation()`, which keeps Unity-side active trade runs, Docks ship runtime, and regional merchant trucks in `GameBootstrap` while delegating auto-dispatch timer decisions through this service.
+
 ### `Assets/Scripts/Runtime/Core/Services/TradeDispatchPreconditionService.cs`
 
 - Pure precondition helper for trade dispatch blocking reasons.
@@ -162,6 +172,21 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 - Pure helper for active trade-order creation, queue peek, first-order completion, and cancel-by-id removal.
 - Economy and World Map still own UI and dispatch side effects, but queue lifecycle rules are now covered by editor smoke tests.
+
+### `Assets/Scripts/Runtime/Core/Services/TradeResourceLedger.cs`
+
+- Shared stock snapshot and mutation helper for Warehouse and Docks resource amounts.
+- Keeps resource `Get/Add/TryConsume` arithmetic testable while `GameBootstrap.Trade.Resources.cs` owns applying results back to private runtime locations.
+
+### `Assets/Scripts/Runtime/Core/Services/DocksTradePolicyRuntime.cs`
+
+- Pure river-trade policy seam for Docks ship buy/sell quantities and skip reasons.
+- Docks runtime still owns ship movement, money ledger entries, feed events, and concrete Docks/Warehouse resource mutation.
+
+### `Assets/Scripts/Runtime/Core/Services/TradeScreenModel.cs`
+
+- View-model seam for Trade policy rows.
+- `GameBootstrap.FleetCanvas.TradeScreen.cs` builds row models from runtime facts, then only applies text/button states to Unity UI controls.
 
 ### `Assets/Scripts/Runtime/Core/Services/TradeRunRuntimeService.cs`
 

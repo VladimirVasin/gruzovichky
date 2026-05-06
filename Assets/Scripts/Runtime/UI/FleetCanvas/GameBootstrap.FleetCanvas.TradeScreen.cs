@@ -160,41 +160,55 @@ public partial class GameBootstrap
 
     private void UpdateTradePolicyRow(TradePolicyRowUi row, int rowIndex)
     {
-        int policyIndex = GetTradePolicyIndex(row.ResourceType);
-        TradePolicyMode mode = GetTradePolicyMode(row.ResourceType);
-        int target = GetTradePolicyTarget(row.ResourceType);
-        int warehouseAmount = GetWarehouseTradeResourceAmount(row.ResourceType);
+        TradePolicyRowModel model = BuildTradePolicyRowModel(row.ResourceType);
 
-        row.ResourceText.text = L(GetTradeResourceShortLabel(row.ResourceType));
-        row.WarehouseText.text = warehouseAmount.ToString();
-        row.TargetText.text = target.ToString();
-        row.StatusText.text = GetTradePolicyStatusText(row.ResourceType);
-        row.NoTradeButtonText.text = GetTradePolicyModeLabel(TradePolicyMode.None);
-        row.SellAboveButtonText.text = GetTradePolicyModeLabel(TradePolicyMode.SellAbove);
-        row.BuyUpToButtonText.text = GetTradePolicyModeLabel(TradePolicyMode.BuyUpTo);
+        row.ResourceText.text = model.ResourceLabel;
+        row.WarehouseText.text = model.WarehouseAmountText;
+        row.TargetText.text = model.TargetText;
+        row.StatusText.text = model.StatusText;
+        row.NoTradeButtonText.text = model.NoTradeButton.Label;
+        row.SellAboveButtonText.text = model.SellAboveButton.Label;
+        row.BuyUpToButtonText.text = model.BuyUpToButton.Label;
         row.Root.gameObject.GetComponent<LayoutElement>().preferredHeight = 60f;
 
-        row.TargetMinusButton.interactable = target > 0;
-        row.TargetPlusButton.interactable = target < 99;
+        row.TargetMinusButton.interactable = model.CanDecreaseTarget;
+        row.TargetPlusButton.interactable = model.CanIncreaseTarget;
 
-        UpdateTradeModeOptionButton(row.NoTradeButton, row.ResourceType, policyIndex, TradePolicyMode.None);
-        UpdateTradeModeOptionButton(row.SellAboveButton, row.ResourceType, policyIndex, TradePolicyMode.SellAbove);
-        UpdateTradeModeOptionButton(row.BuyUpToButton, row.ResourceType, policyIndex, TradePolicyMode.BuyUpTo);
+        UpdateTradeModeOptionButton(row.NoTradeButton, model.NoTradeButton);
+        UpdateTradeModeOptionButton(row.SellAboveButton, model.SellAboveButton);
+        UpdateTradeModeOptionButton(row.BuyUpToButton, model.BuyUpToButton);
     }
 
-    private void UpdateTradeModeOptionButton(Button button, TradeResourceType resourceType, int policyIndex, TradePolicyMode mode)
+    private TradePolicyRowModel BuildTradePolicyRowModel(TradeResourceType resourceType)
     {
-        if (button == null || policyIndex < 0)
+        TradePolicyMode mode = GetTradePolicyMode(resourceType);
+        int target = GetTradePolicyTarget(resourceType);
+        return TradeScreenModel.CreatePolicyRow(
+            resourceType,
+            L(GetTradeResourceShortLabel(resourceType)),
+            GetWarehouseTradeResourceAmount(resourceType),
+            mode,
+            target,
+            GetTradePolicyStatusText(resourceType),
+            GetTradePolicyModeLabel(TradePolicyMode.None),
+            GetTradePolicyModeLabel(TradePolicyMode.SellAbove),
+            GetTradePolicyModeLabel(TradePolicyMode.BuyUpTo),
+            IsTradePolicyModeSupported(resourceType, TradePolicyMode.None),
+            IsTradePolicyModeSupported(resourceType, TradePolicyMode.SellAbove),
+            IsTradePolicyModeSupported(resourceType, TradePolicyMode.BuyUpTo));
+    }
+
+    private void UpdateTradeModeOptionButton(Button button, TradePolicyModeButtonModel model)
+    {
+        if (button == null)
         {
             return;
         }
 
-        bool supported = IsTradePolicyModeSupported(resourceType, mode);
-        bool selected = GetTradePolicyMode(resourceType) == mode;
-        button.interactable = supported;
-        button.image.color = !supported
+        button.interactable = model.Supported;
+        button.image.color = !model.Supported
             ? new Color(0.08f, 0.10f, 0.13f, 0.86f)
-            : selected ? FleetPrimaryButtonColor : new Color(0.13f, 0.17f, 0.23f, 1f);
+            : model.Selected ? FleetPrimaryButtonColor : new Color(0.13f, 0.17f, 0.23f, 1f);
     }
 
     private string BuildTradePoliciesSummaryText()

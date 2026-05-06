@@ -17,15 +17,12 @@ public sealed class TradeState
 
     public int GetStoredResourceAmount(GameBootstrap.TradeResourceType resourceType, int warehouseLogs, int warehouseBoards)
     {
-        return resourceType switch
-        {
-            GameBootstrap.TradeResourceType.Logs => warehouseLogs,
-            GameBootstrap.TradeResourceType.Boards => warehouseBoards,
-            GameBootstrap.TradeResourceType.Cotton => CottonStored,
-            GameBootstrap.TradeResourceType.Textile => TextileStored,
-            GameBootstrap.TradeResourceType.Furniture => FurnitureStored,
-            _ => 0
-        };
+        return TradeResourceLedger.GetAmount(GetStoredResourceStock(warehouseLogs, warehouseBoards), resourceType);
+    }
+
+    public TradeResourceStock GetStoredResourceStock(int warehouseLogs, int warehouseBoards)
+    {
+        return new TradeResourceStock(warehouseLogs, warehouseBoards, CottonStored, TextileStored, FurnitureStored);
     }
 
     public int GetPolicyIndex(GameBootstrap.TradeResourceType resourceType, GameBootstrap.TradeResourceType[] resources)

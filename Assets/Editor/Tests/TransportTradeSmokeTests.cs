@@ -215,4 +215,135 @@ public sealed class TransportTradeSmokeTests
 
         Assert.That(missing.Kind, Is.EqualTo(TradePolicyDispatchDecisionKind.MissingRoute));
     }
+
+    [Test]
+    public void TradeResourceLedger_AddsConsumesAndCapsStock()
+    {
+        TradeResourceStock stock = new(logs: 2, boards: 0, cotton: 1, textile: 0, furniture: 0);
+
+        Assert.That(TradeResourceLedger.Add(ref stock, GameBootstrap.TradeResourceType.Logs, 10, capacity: 8), Is.EqualTo(6));
+        Assert.That(stock.Logs, Is.EqualTo(8));
+        Assert.That(TradeResourceLedger.TryConsume(ref stock, GameBootstrap.TradeResourceType.Logs, 3), Is.True);
+        Assert.That(stock.Logs, Is.EqualTo(5));
+        Assert.That(TradeResourceLedger.TryConsume(ref stock, GameBootstrap.TradeResourceType.Cotton, 2), Is.False);
+        Assert.That(stock.Cotton, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void DocksTradePolicyRuntime_SelectsRiverBuySellAndReportsSkips()
+    {
+        DocksTradePolicyResourceState[] buyStates =
+        {
+            new(
+                GameBootstrap.TradeResourceType.Textile,
+                GameBootstrap.TradePolicyMode.BuyUpTo,
+                targetAmount: 5,
+                hasRiverRoute: true,
+                missingRiverRouteReason: string.Empty,
+                warehouseAmount: 1,
+                dockExportAmount: 0,
+                dockImportAmount: 1)
+        };
+
+        DocksTradePolicyDecision buy = DocksTradePolicyRuntime.FindTrade(
+            GameBootstrap.TradeOrderType.Buy,
+            buyStates,
+            batchSize: 3,
+            storageCapacity: 8);
+
+        Assert.That(buy.CanTrade, Is.True);
+        Assert.That(buy.ResourceType, Is.EqualTo(GameBootstrap.TradeResourceType.Textile));
+        Assert.That(buy.Quantity, Is.EqualTo(3));
+
+        DocksTradePolicyResourceState[] sellStates =
+        {
+            new(
+                GameBootstrap.TradeResourceType.Boards,
+                GameBootstrap.TradePolicyMode.SellAbove,
+                targetAmount: 4,
+                hasRiverRoute: true,
+                missingRiverRouteReason: string.Empty,
+                warehouseAmount: 3,
+                dockExportAmount: 5,
+                dockImportAmount: 0)
+        };
+
+        DocksTradePolicyDecision sell = DocksTradePolicyRuntime.FindTrade(
+            GameBootstrap.TradeOrderType.Sell,
+            sellStates,
+            batchSize: 3,
+            storageCapacity: 8);
+
+        Assert.That(sell.CanTrade, Is.True);
+        Assert.That(sell.Quantity, Is.EqualTo(3));
+
+        DocksTradePolicyResourceState[] missingRoute =
+        {
+            new(
+                GameBootstrap.TradeResourceType.Cotton,
+                GameBootstrap.TradePolicyMode.BuyUpTo,
+                targetAmount: 5,
+                hasRiverRoute: false,
+                missingRiverRouteReason: "route missing",
+                warehouseAmount: 0,
+                dockExportAmount: 0,
+                dockImportAmount: 0)
+        };
+
+        Assert.That(
+            DocksTradePolicyRuntime.GetSkipReason(GameBootstrap.TradeOrderType.Buy, missingRoute, storageCapacity: 8),
+            Is.EqualTo("Buy Cotton: route missing"));
+    }
+
+    [Test]
+    public void TradeScreenModel_ProjectsPolicyRowButtonStates()
+    {
+        TradePolicyRowModel row = TradeScreenModel.CreatePolicyRow(
+            GameBootstrap.TradeResourceType.Furniture,
+            resourceLabel: "Furniture",
+            warehouseAmount: 2,
+            selectedMode: GameBootstrap.TradePolicyMode.SellAbove,
+            target: 4,
+            statusText: "no surplus",
+            noTradeLabel: "No trade",
+            sellAboveLabel: "Sell surplus",
+            buyUpToLabel: "Buy up to",
+            noTradeSupported: true,
+            sellAboveSupported: true,
+            buyUpToSupported: false);
+
+        Assert.That(row.WarehouseAmountText, Is.EqualTo("2"));
+        Assert.That(row.TargetText, Is.EqualTo("4"));
+        Assert.That(row.SellAboveButton.Selected, Is.True);
+        Assert.That(row.BuyUpToButton.Supported, Is.False);
+        Assert.That(row.CanDecreaseTarget, Is.True);
+        Assert.That(row.CanIncreaseTarget, Is.True);
+    }
+
+    [Test]
+    public void TradeSimulation_TicksAutoDispatchThroughCoordinator()
+    {
+        TradeSimulation simulation = new();
+        TradeSimulationTickResult waiting = simulation.Tick(new TradeSimulationTickInput(
+            isWeekend: false,
+            hasActiveTradeRuntime: false,
+            dispatchablePolicyCount: 1,
+            autoDispatchRetryTimer: 0f,
+            deltaTime: 0.5f,
+            retryInterval: 2f));
+
+        Assert.That(waiting.ShouldAutoDispatch, Is.False);
+        Assert.That(waiting.AutoDispatchRetryTimer, Is.EqualTo(0.5f));
+
+        TradeSimulationTickResult ready = simulation.Tick(new TradeSimulationTickInput(
+            isWeekend: false,
+            hasActiveTradeRuntime: false,
+            dispatchablePolicyCount: 1,
+            autoDispatchRetryTimer: 1.8f,
+            deltaTime: 0.3f,
+            retryInterval: 2f));
+
+        Assert.That(ready.ShouldAutoDispatch, Is.True);
+        Assert.That(ready.AutoDispatchRetryTimer, Is.EqualTo(0f));
+    }
 }

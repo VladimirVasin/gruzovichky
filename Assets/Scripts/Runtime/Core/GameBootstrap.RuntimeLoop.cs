@@ -260,10 +260,7 @@ public partial class GameBootstrap
         }
         UpdateMoneyPopups();
         UpdateForestWorkers();
-        UpdateActiveTradeRun();
-        UpdateTradeAutoDispatch();
-        UpdateDocksRuntime();
-        UpdateRegionalTradeRuntime();
+        UpdateTradeSimulation();
         UpdateLaborExchangeRuntime();
         foreach (DriverAgent driver in driverAgents)
         {
