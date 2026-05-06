@@ -6,6 +6,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-06: Refreshed AI memory and player-facing JSON content after reviewing `ai/`. `ai/release-notes.md` and `Assets/Resources/GameData/patch-notes.json` now describe the current v.0.0.3 reality: disabled two-way road tool, pixel Regional Map, Labor Exchange/Docks/Trade tutorial path, dedicated Trade policies, local bus route skipping, sound options, compact Event Feed, demolition, and population HUD. `ai/project-overview.md` / `ai/architecture-notes.md` now include runtime audio, schedules, demolition/event feed, regional trade, and local-bus route skipping. Fixed stale Russian build-catalog descriptions that repeated the Motel copy across unrelated build cards.
+
 - 2026-05-06: Added worker grass footstep audio. Five `Footsteps - Essentials` grass walk WAVs are mirrored into `Assets/Resources/Audio/Footsteps/GrassWalk/` for runtime loading, registered as one `Worker Grass Footsteps` Sound menu control, and played from per-worker spatial AudioSources when `WalkAnimationTime` crosses footstep phases during real walking. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and line-count check.
 
 - 2026-05-06: Cut the generated SFX set down to the only sounds kept after listening review. Runtime now keeps only HUD/menu interaction sounds plus truck and boat motor loops; gambling, money, route, cargo, forest chop, ambient, river, and edge-bus passby SFX playback/clip registration were removed. The Python generator now outputs only 7 WAVs under `Assets/Resources/GeneratedAudio/Relaxed/`, and stale generated WAV/meta files are deleted on regeneration. Verified `./tools/check-all.ps1 -SkipSmokeTests`.

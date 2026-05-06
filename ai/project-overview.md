@@ -1,6 +1,6 @@
 # Project Overview
 
-Last updated: 2026-05-04
+Last updated: 2026-05-06
 
 ## Purpose
 
@@ -15,7 +15,7 @@ Stable high-level map of the current playable prototype. Code remains the source
   - workers with portraits, education, needs, perks, money, jobs, shifts, and life routines
   - trucks, local buses, warehouse storage/logistics, and intercity trade
   - taxes, building banks, event feed, regional map, tutorial/onboarding, and racing mode
-  - procedural terrain, natural zones, water, ambient life, weather/lighting, and low-poly visuals
+  - procedural terrain, natural zones, water, ambient life, weather/lighting, low-poly visuals, and runtime audio/options
 
 ## Main Project Areas
 
@@ -46,6 +46,8 @@ ai/                    Shared AI memory
   Testable transport helpers for grid pathing, two-lane road geometry, road placement, markings, bus routing/passengers, truck runtime phases, and rewards.
 - `Assets/Scripts/Runtime/Actors/`
   Trucks, buses, worker/driver visuals, worker life cycle, hiring, shifts, and truck-state synchronization.
+- `Assets/Scripts/Runtime/Audio/`
+  Runtime audio helpers, generated/curated clip catalog, music, ambience, footsteps, and sound-option volume controls.
 - `Assets/Scripts/Runtime/UI/`
   HUDs, quick HUDs, main menu, localization, tutorial, fleet/management screens, map, debug service panel, event feed, and money popups.
 - `Assets/Scripts/Runtime/UI/FleetCanvas/`
@@ -66,7 +68,7 @@ ai/                    Shared AI memory
 - During play:
   - the player builds roads/buildings/stops and manages workers through HUD panels
   - workers resolve shifts and needs through services, production, transit, walking, and fallback activities
-  - trucks and buses use grid roads while intercity trade uses the edge highway/off-map flow
+  - trucks and buses use grid roads while regional land/river trade uses built routes, Warehouse/Docks, and off-map merchant flows
   - production, warehouse delivery, taxes, service banks, event feed, and regional trade evolve over time
   - racing can be launched from eligible trade-truck flow
 

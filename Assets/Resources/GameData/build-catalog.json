@@ -33,7 +33,7 @@
           },
           "description": {
             "en": "2x2 warehouse: central resource storage for production chains.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Склад 2x2: центральное хранилище ресурсов для производственных цепочек."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -129,7 +129,7 @@
           },
           "description": {
             "en": "3x3 lumberjack camp: workers chop trees, carry logs, and replant saplings.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Лагерь лесорубов 3x3: рабочие рубят деревья, переносят брёвна и высаживают саженцы."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -144,7 +144,7 @@
           },
           "description": {
             "en": "Place a 2x2 production building that turns logs into boards.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Лесопилка 2x2: производственное здание, которое перерабатывает Logs в Boards."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -159,7 +159,7 @@
           },
           "description": {
             "en": "Place a 3x2 factory that turns 1 Board + 1 Textile into 1 Furniture.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Мебельная фабрика 3x2: превращает 1 Board + 1 Textile в 1 Furniture."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         }
@@ -183,7 +183,7 @@
           },
           "description": {
             "en": "Social hub: idle drivers gather here to rest.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Бар: место отдыха, куда свободные рабочие приходят за досугом."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -198,7 +198,7 @@
           },
           "description": {
             "en": "Service building: visiting drivers/workers pay $10 for a quick meal.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Столовая 3x2: рабочие платят $10 за быстрый приём пищи."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -213,7 +213,7 @@
           },
           "description": {
             "en": "2x2 fuel service: trucks refuel here when routes get too long.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Заправка 2x2: грузовики заправляются здесь, когда маршруты становятся слишком длинными."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -228,7 +228,7 @@
           },
           "description": {
             "en": "Leisure: free entry; workers unwind here.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Игровой зал 3x3: бесплатный досуг, где рабочие снимают напряжение."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -243,7 +243,7 @@
           },
           "description": {
             "en": "8x8 park: workers stroll and sit on benches. Free entry, boosts leisure need.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Городской парк 8x8: рабочие гуляют и сидят на лавочках. Вход бесплатный, помогает закрыть досуг."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -272,7 +272,7 @@
           },
           "description": {
             "en": "3x2 labor exchange: a higher-educated clerk posts vacancies and workers apply here.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Биржа труда 3x2: клерк с высшим образованием публикует вакансии, а рабочие приходят на собеседования."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -287,7 +287,7 @@
           },
           "description": {
             "en": "5x5 car market: workers with $100 can buy personal cars here.",
-            "ru": "\u041c\u043e\u0442\u0435\u043b\u044c 2x2: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0441\u0435\u043b\u044f\u044e\u0442\u0441\u044f \u0438 \u0436\u0434\u0443\u0442 \u0437\u0434\u0435\u0441\u044c."
+            "ru": "Авторынок 5x5: рабочие с $100 могут купить здесь личный автомобиль."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         }

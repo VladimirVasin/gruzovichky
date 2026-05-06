@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-05-04
+Last updated: 2026-05-06
 
 Purpose: describe the real implemented architecture and current hotspots.
 
@@ -23,6 +23,8 @@ Purpose: describe the real implemented architecture and current hotspots.
 - It still couples presentation and simulation, but the runtime is now split into concern-based partial scripts under `Assets/Scripts/Runtime/`.
 - Runtime C# files are kept under the 900-line cleanup target by splitting feature clusters into focused partials such as `Runtime/Racing/`, `Runtime/UI/FleetCanvas/`, `GameBootstrap.Types*.cs`, `GameBootstrap.WorldVisuals.*.cs`, `GameBootstrap.MainMenuHud*.cs`, and `GameBootstrap.Drivers.*.cs`.
 - Numeric worker skills and temporary worker effects have been removed; `GameBootstrap.WorkerPerks*` owns perk assignment/display, while `GameBootstrap.WorkerEducation.cs` keeps the small Basic/Vocational/Higher gate needed by Labor Exchange staffing.
+- Building work schedules now route through `GameBootstrap.RuntimeSchedules.cs`; use that partial before editing staff slot counts, service shifts, higher-education office hours, or transport weekend behavior.
+- Runtime audio has a dedicated partial/catalog layer for generated SFX, curated ambience, music, worker footsteps, and Main Menu Sound options.
 - Navigation now starts from `ai/systems-map.md` -> `System Owner Map`; owner cards are maintained when paths, ownership, or responsibilities change.
 - `tools/check-all.ps1` is the preferred project sanity runner, with `-SkipSmokeTests` for fast checks while Unity is already open.
 - `tools/check-line-count.ps1` and CI default to the 900-line limit.
@@ -33,7 +35,12 @@ Purpose: describe the real implemented architecture and current hotspots.
 ### `Assets/Scripts/Runtime/Core/GameBootstrap.cs`
 
 - Central runtime entrypoint and owner of shared state.
-- Nested runtime data/state types are split into `GameBootstrap.Types.cs` and `GameBootstrap.Types.AmbientWater.cs`.
+- Nested runtime data/state types are split into `GameBootstrap.Types.cs`, `GameBootstrap.Types.AmbientWater.cs`, `GameBootstrap.LocationInstances.cs`, `GameBootstrap.RuntimeSchedules.cs`, and `GameBootstrap.RegionalMap.cs`.
+
+### `Assets/Scripts/Runtime/Core/GameBootstrap.RuntimeSchedules.cs`
+
+- Central owner for building slot counts, staff work-hour checks, service shift presets, higher-education office slots, and UI schedule labels.
+- Transport shifts intentionally run daily, while production and higher-education office work remain weekday `08:00-18:00`.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs`
 
@@ -73,8 +80,23 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 ### `Assets/Scripts/Runtime/UI/GameBootstrap.MainMenuHud*.cs`
 
-- Main Menu HUD is now split into focused partials for the core menu, loading/world-build progress, and graphics options.
+- Main Menu HUD is now split into focused partials for the core menu, loading/world-build progress, graphics options, and sound options.
 - Patch Notes content still lives behind the JSON-backed catalog path first, with the old hardcoded fallback kept in the core main-menu partial.
+
+### `Assets/Scripts/Runtime/Audio/GameBootstrap.Audio*.cs`
+
+- Runtime audio is split across generated/curated clip loading, music playback, ambience, worker footsteps, and sound-option volume application.
+- `GameBootstrap.AudioCatalog.cs` loads the kept generated SFX plus curated nature/footstep assets from `Resources`; stale or removed generated SFX should not be reintroduced without updating the Sound options catalog.
+
+### `Assets/Scripts/Runtime/UI/GameBootstrap.BuildingDemolition.cs`
+
+- Owns selectable-building demolition, confirmation modal behavior, repeated-service-instance targeting, and cleanup for building-owned runtime objects.
+- Core/non-removable buildings should stay protected here when expanding demolition behavior.
+
+### `Assets/Scripts/Runtime/UI/GameBootstrap.EventFeed.cs`
+
+- Owns compact top-right event toasts and important player-facing warnings.
+- Keep noisy diagnostics in `SessionDebugLogger`; event feed entries should remain short and actionable.
 
 ### `Assets/Scripts/Runtime/Core/GameBootstrap.WorldVisuals*.cs`
 
@@ -100,6 +122,16 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 - Owns Parking-provided truck and bus slot capacity plus automatic vehicle provisioning helpers.
 - Vacancies, Labor Exchange, tutorial freight setup, and bus-shift assignment should ask this partial for available/provisionable vehicles instead of creating or buying trucks/buses directly.
+
+### `Assets/Scripts/Runtime/Core/GameBootstrap.RegionalMap.cs`
+
+- Owns generated regional state for the current town, visible external cities, route type/availability, resource buy/sell tables, and built-route state.
+- UI lives in the FleetCanvas world-map partials; land/river trade runtime consumes the generated route data.
+
+### `Assets/Scripts/Runtime/Core/GameBootstrap.RegionalTrade.Runtime.cs`
+
+- Owns external merchant-truck land-route visits to Warehouse and bridges active Trade policies with generated built regional routes.
+- River trading is handled through Docks runtime and uses the same active-policy/built-route requirement.
 
 ### `Assets/Scripts/Runtime/Transport/Services/TruckRuntimeGuardService.cs`
 
@@ -180,6 +212,11 @@ Purpose: describe the real implemented architecture and current hotspots.
 - First extracted local-bus route-state helper.
 - Owns pure stop-index/direction decisions for the local route bus out-and-back cycle while `GameBootstrap.LocalBus.cs` still owns runtime objects, passengers, and movement.
 
+### `Assets/Scripts/Runtime/Transport/GameBootstrap.LocalBus.RouteSkipping.cs`
+
+- Runtime helper partial for reachable-stop search and skipped-stop tracking when local bus networks are partially disconnected.
+- Keeps bus routes from collapsing entirely when one stop is unreachable from Parking or from the current route segment.
+
 ### `Assets/Scripts/Runtime/Transport/Services/LocalBusRuntimeService.cs`
 
 - Pure-ish local bus runtime seam for dwell countdown and waypoint movement stepping.
@@ -195,7 +232,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 - Pure helper for validating whether required generated-world road-access pairs can support a wide two-lane road.
 - `GameBootstrap.Transport.Roads.cs` delegates its layout road feasibility check here, while runtime road creation still owns actual cell mutation/visual rebuilding.
 - Also exposes a smoke-test path-appending helper so tests can build a generated starter road network and verify actual connectivity across required destinations.
-- Editor smoke tests use this service to validate Debug and User world-layout route chains across deterministic seeds.
+- Editor smoke tests use this service to validate generated world-layout route chains across deterministic seeds.
 
 ### `Assets/Scripts/Runtime/World/BuildingPlacementService.cs`
 
@@ -282,7 +319,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 - `WorkerSimulation`
   needs, shifts, service visits, fallback activities, and life-cycle decisions
 - `ManagementUI`
-  FleetCanvas screens, vacancies, tutorial goals, localization, and regional map
+  FleetCanvas screens, vacancies, tutorial goals, localization, regional map, event feed, and main-menu options
 
 ## Cleanup Reality
 

@@ -7,7 +7,8 @@ Rules:
 - Keep entries grouped by version.
 - Record shipped/implemented player-facing features, not every internal fix.
 - When preparing a new version, compare this baseline against current code and recent `ai/work-log.md`.
-- Update the in-game Patch Notes text in `Assets/Scripts/Runtime/UI/GameBootstrap.MainMenuHud.cs`.
+- Update the in-game Patch Notes text in `Assets/Resources/GameData/patch-notes.json`.
+- `Assets/Scripts/Runtime/UI/GameBootstrap.MainMenuHud.cs` keeps a hardcoded fallback only for missing/invalid JSON.
 
 ## Lo-fi Delivery Co. v.0.0.3
 
@@ -23,8 +24,9 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 
 #### Build And Roads
 
-- Two-way road building now uses a click-start/click-finish segment flow, with Shift constraining segments to one dominant axis.
-- Build-mode previews are clearer at night thanks to a warm cursor light and ground glow; blocked placement is tinted red.
+- The regular one-cell road remains the active player road tool, while the two-way road segment tool is visible as temporarily under rework.
+- Two-way road segment work still exists behind the disabled tool: click-start/click-finish, Shift axis constraint, lane footprints, and center markings.
+- Build-mode previews are clearer at night thanks to a warm cursor light with blocked-placement tint.
 - New buildings automatically create valid driveway/access road cells when possible, reducing manual cleanup around entrances.
 - Road visuals and markings now follow uneven terrain more smoothly instead of appearing buried, floating, or stair-stepped.
 
@@ -34,25 +36,34 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 - Workers resolve Food, Sleep, and Leisure by urgency and can handle due needs during free/off-shift time instead of waiting for evening.
 - Workers who cannot afford Canteen food or Motel sleep can use fallback activities such as trash meals or bench sleep and receive the temporary `I Have Fallen` effect.
 - Idle workers choose a wider range of city interest points, so the town feels less clustered around one building.
+- Workers now have Basic/Vocational/Higher education, profession levels, dynamic vacancy salaries, and fixed-term contracts.
+- Labor Exchange can post vacancies, receive applicants, and auto-staff its higher-education clerk slot when possible.
 
 #### Transport And Services
 
 - Trade dispatch now uses the regular Truck Driver shift pool and automatically reserves an available parked truck from Parking.
 - Local bus service now requires at least two local stops before it becomes active; one-stop networks show clearer warnings and no longer trap passengers in dead-wait loops.
-- Bought city buses now arrive from the edge highway and drive into Parking before becoming operational.
+- Parking now provides truck and bus slots automatically; separate vehicle purchases are no longer required for the current fleet flow.
+- Local buses now tolerate disconnected stops by starting from reachable stops and skipping unreachable route targets.
+- Trade moved to a dedicated Trade screen with per-resource `No trade`, `Buy up to`, and `Sell surplus` policies.
+- Docks and generated regional routes now drive river/land trading; ships and merchant trucks only act on active policies with built routes.
 - Fuel, Food, and Alcohol were removed as trade/storage resources; services now operate directly through worker needs, fees, and truck refuel orders.
 
 #### Regional Map
 
-- The Regional Map is now a fullscreen parchment-style map that pauses simulation while open.
-- Known regions use schematic mini-map previews, settlement-style markers, route lines, and a hidden detail panel that appears after selecting a city.
+- The Regional Map is now a borderless fullscreen pixel-art map that pauses simulation while open.
+- The map currently shows the player's town plus two visible external cities with resource buy/sell tables.
+- Trade-route lines appear only after the player builds a route, and built city cards can open the Trade screen directly.
 - Regional labels/descriptions use localized display strings where available.
 
 #### User Experience And Presentation
 
 - Main Menu graphics settings now expose live `0..100` controls, effect toggles, and a reset-to-defaults action for post-processing.
-- The rebuilt User tutorial has been tightened around freight, services, buses, taxes, trade, racing, and a final Demo Complete step.
-- Service/town visuals received more atmosphere: smoother roads, stronger building/perimeter night glow, warmer lights, richer regional map presentation, and small city-life details.
+- Main Menu sound options expose music, curated ambience, worker footsteps, and the kept generated SFX with preview/reset/volume controls.
+- The rebuilt Tutorial now follows the current empty-town flow through roads, core buildings, Labor Exchange, services, warehouse loaders, local buses, taxes, Regional Map, Docks, and Trade policy setup.
+- Service/town visuals received more atmosphere: smoother roads, building/perimeter night lighting, warmer lights, richer regional map presentation, and small city-life details.
+- Building demolition now has a confirmation modal, and Event Feed notifications render as compact top-right toasts.
+- The HUD now includes current population beside time and treasury.
 - Debug/User tooling is less intrusive for players: noisy debug traces are verbose-only, while important F9 tools remain available for testing.
 
 ## Lo-fi Delivery Co. v.0.0.2
