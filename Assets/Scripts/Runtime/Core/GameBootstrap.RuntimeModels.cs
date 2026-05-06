@@ -177,6 +177,8 @@ public partial class GameBootstrap
         public bool WaitingForShiftAtParking;
         public bool NeedsShiftEndReturn;
         public bool IsShiftSalaryPending;
+        public int LastSalaryPaidShiftDay = -1;
+        public int LastSalaryPaidShiftStartHour = -999;
         public DriverRescuePhase WalkPhase = DriverRescuePhase.None;
         public Vector3 WalkTargetWorld;
         public readonly List<Vector3> WalkPath = new();

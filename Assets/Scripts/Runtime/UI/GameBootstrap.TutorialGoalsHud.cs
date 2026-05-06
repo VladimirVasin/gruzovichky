@@ -19,20 +19,25 @@ public partial class GameBootstrap
         AssignLumberjackWorker,
         BuyFirstTruck,
         AssignTruckDriverShift,
+        BuildLaborExchange,
+        StaffLaborExchange,
         BuildBar,
         BuildGamblingHall,
         BuildCanteen,
         BuildGasStation,
         BuildCityPark,
         OpenWorkersCard,
-        HireNewWorker,
+        WaitForWorkerArrival,
         AssignWarehouseLoaders,
         BuildLocalBusStops,
         AssignBusDrivers,
         SetTaxRate15,
-        AssignIntercityDriver,
+        OpenRegionalMap,
+        BuildTradeRoute,
+        BuildDocks,
+        AssignDocksWorker,
         CreateBuyTextileOrder,
-        JoinRaceParticipation
+        ReceiveImportedCargo
     }
 
     private enum TutorialGoalsMode
@@ -42,13 +47,15 @@ public partial class GameBootstrap
         CoreBuildings,
         LumberjackCamp,
         BuyTruck,
+        LaborExchange,
         ServiceBuildings,
         WorkerCard,
         WarehouseLoaders,
         LocalTransport,
         EconomyTaxes,
-        TradeSetup,
-        JoinRace
+        RegionalMap,
+        Docks,
+        TradeSetup
     }
 
     private sealed class TutorialGoalRowUi
@@ -83,11 +90,15 @@ public partial class GameBootstrap
     private bool shouldShowLumberjackCampTutorialAfterCoreGoals;
     private bool shouldShowWorkerShiftTutorialAfterLumberjackGoals;
     private bool shouldShowTruckFreightTutorialAfterBuyTruckGoals;
+    private bool shouldShowMigrationAfterLaborExchangeGoals;
+    private bool shouldShowServiceBuildingsAfterWorkerArrivalGoals;
     private bool shouldShowWorkersOverviewAfterServiceGoals;
     private bool shouldShowLocalTransportAfterWarehouseLoadersGoals;
     private bool shouldShowLocalBusRoutesAfterTransportGoals;
-    private bool shouldShowTradeIntroAfterEconomyGoals;
-    private bool shouldShowTradeRaceInfoAfterTradeGoals;
+    private bool shouldShowRegionalMapAfterEconomyGoals;
+    private bool shouldShowDocksAfterRouteGoals;
+    private bool shouldShowTradePolicyAfterDocksGoals;
+    private bool shouldShowDemoCompleteAfterTradeGoals;
     private TutorialGoalsMode tutorialGoalsMode;
 
     private void ResetTutorialGoalsForNewGame()
@@ -103,11 +114,15 @@ public partial class GameBootstrap
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
         shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
         shouldShowTruckFreightTutorialAfterBuyTruckGoals = false;
+        shouldShowMigrationAfterLaborExchangeGoals = false;
+        shouldShowServiceBuildingsAfterWorkerArrivalGoals = false;
         shouldShowWorkersOverviewAfterServiceGoals = false;
         shouldShowLocalTransportAfterWarehouseLoadersGoals = false;
         shouldShowLocalBusRoutesAfterTransportGoals = false;
-        shouldShowTradeIntroAfterEconomyGoals = false;
-        shouldShowTradeRaceInfoAfterTradeGoals = false;
+        shouldShowRegionalMapAfterEconomyGoals = false;
+        shouldShowDocksAfterRouteGoals = false;
+        shouldShowTradePolicyAfterDocksGoals = false;
+        shouldShowDemoCompleteAfterTradeGoals = false;
         tutorialGoalsMode = TutorialGoalsMode.CameraControls;
         if (tutorialGoalsHud?.CanvasRoot != null)
         {
@@ -223,6 +238,25 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("TUTORIAL", "Truck logistics goals started.");
     }
 
+    private void BeginLaborExchangeTutorialGoals()
+    {
+        EnsureTutorialGoalsHud();
+        completedTutorialGoals.Clear();
+        activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
+        activeTutorialGoals.Add(TutorialGoalKind.BuildLaborExchange);
+        activeTutorialGoals.Add(TutorialGoalKind.StaffLaborExchange);
+        isTutorialGoalsActive = true;
+        isTutorialGoalsComplete = false;
+        tutorialGoalsSuccessTimer = 0f;
+        tutorialGoalsSuccessDuration = 0f;
+        tutorialGoalsMode = TutorialGoalsMode.LaborExchange;
+        shouldShowMigrationAfterLaborExchangeGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
+        ShowTutorialGoalsHud();
+        CheckTutorialLaborExchangeGoal();
+        SessionDebugLogger.Log("TUTORIAL", "Labor Exchange goals started.");
+    }
+
     private void BeginServiceBuildingsTutorialGoals()
     {
         EnsureTutorialGoalsHud();
@@ -251,12 +285,13 @@ public partial class GameBootstrap
         activeTutorialGoals.Clear();
         ClearTutorialGoalContinuationFlags();
         activeTutorialGoals.Add(TutorialGoalKind.OpenWorkersCard);
-        activeTutorialGoals.Add(TutorialGoalKind.HireNewWorker);
+        activeTutorialGoals.Add(TutorialGoalKind.WaitForWorkerArrival);
         isTutorialGoalsActive = true;
         isTutorialGoalsComplete = false;
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
         tutorialGoalsMode = TutorialGoalsMode.WorkerCard;
+        shouldShowServiceBuildingsAfterWorkerArrivalGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         ShowTutorialGoalsHud();
         if (isDriversPanelOpen)
         {
@@ -315,7 +350,7 @@ public partial class GameBootstrap
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
         tutorialGoalsMode = TutorialGoalsMode.EconomyTaxes;
-        shouldShowTradeIntroAfterEconomyGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
+        shouldShowRegionalMapAfterEconomyGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         ShowTutorialGoalsHud();
         CheckTutorialTaxRateGoal();
         SessionDebugLogger.Log("TUTORIAL", "Economy tax goals started.");
@@ -327,33 +362,54 @@ public partial class GameBootstrap
         completedTutorialGoals.Clear();
         activeTutorialGoals.Clear();
         ClearTutorialGoalContinuationFlags();
-        activeTutorialGoals.Add(TutorialGoalKind.AssignIntercityDriver);
         activeTutorialGoals.Add(TutorialGoalKind.CreateBuyTextileOrder);
         isTutorialGoalsActive = true;
         isTutorialGoalsComplete = false;
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
         tutorialGoalsMode = TutorialGoalsMode.TradeSetup;
-        shouldShowTradeRaceInfoAfterTradeGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
+        shouldShowDemoCompleteAfterTradeGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         ShowTutorialGoalsHud();
         CheckTutorialTradeSetupGoals();
         SessionDebugLogger.Log("TUTORIAL", "Trade setup goals started.");
     }
 
-    private void BeginJoinRaceTutorialGoals()
+    private void BeginRegionalMapTutorialGoals()
     {
         EnsureTutorialGoalsHud();
         completedTutorialGoals.Clear();
         activeTutorialGoals.Clear();
         ClearTutorialGoalContinuationFlags();
-        activeTutorialGoals.Add(TutorialGoalKind.JoinRaceParticipation);
+        activeTutorialGoals.Add(TutorialGoalKind.OpenRegionalMap);
+        activeTutorialGoals.Add(TutorialGoalKind.BuildTradeRoute);
         isTutorialGoalsActive = true;
         isTutorialGoalsComplete = false;
         tutorialGoalsSuccessTimer = 0f;
         tutorialGoalsSuccessDuration = 0f;
-        tutorialGoalsMode = TutorialGoalsMode.JoinRace;
+        tutorialGoalsMode = TutorialGoalsMode.RegionalMap;
+        shouldShowDocksAfterRouteGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
         ShowTutorialGoalsHud();
-        SessionDebugLogger.Log("TUTORIAL", "Join Race goal started.");
+        CheckTutorialRegionalMapGoal();
+        SessionDebugLogger.Log("TUTORIAL", "Regional map goals started.");
+    }
+
+    private void BeginDocksTutorialGoals()
+    {
+        EnsureTutorialGoalsHud();
+        completedTutorialGoals.Clear();
+        activeTutorialGoals.Clear();
+        ClearTutorialGoalContinuationFlags();
+        activeTutorialGoals.Add(TutorialGoalKind.BuildDocks);
+        activeTutorialGoals.Add(TutorialGoalKind.AssignDocksWorker);
+        isTutorialGoalsActive = true;
+        isTutorialGoalsComplete = false;
+        tutorialGoalsSuccessTimer = 0f;
+        tutorialGoalsSuccessDuration = 0f;
+        tutorialGoalsMode = TutorialGoalsMode.Docks;
+        shouldShowTradePolicyAfterDocksGoals = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
+        ShowTutorialGoalsHud();
+        CheckTutorialDocksGoal();
+        SessionDebugLogger.Log("TUTORIAL", "Docks goals started.");
     }
 
     private void ClearTutorialGoalContinuationFlags()
@@ -363,11 +419,15 @@ public partial class GameBootstrap
         shouldShowLumberjackCampTutorialAfterCoreGoals = false;
         shouldShowWorkerShiftTutorialAfterLumberjackGoals = false;
         shouldShowTruckFreightTutorialAfterBuyTruckGoals = false;
+        shouldShowMigrationAfterLaborExchangeGoals = false;
+        shouldShowServiceBuildingsAfterWorkerArrivalGoals = false;
         shouldShowWorkersOverviewAfterServiceGoals = false;
         shouldShowLocalTransportAfterWarehouseLoadersGoals = false;
         shouldShowLocalBusRoutesAfterTransportGoals = false;
-        shouldShowTradeIntroAfterEconomyGoals = false;
-        shouldShowTradeRaceInfoAfterTradeGoals = false;
+        shouldShowRegionalMapAfterEconomyGoals = false;
+        shouldShowDocksAfterRouteGoals = false;
+        shouldShowTradePolicyAfterDocksGoals = false;
+        shouldShowDemoCompleteAfterTradeGoals = false;
     }
 
     private void ShowTutorialGoalsHud()
@@ -480,20 +540,25 @@ public partial class GameBootstrap
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignLumberjackWorker);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuyFirstTruck);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignTruckDriverShift);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildLaborExchange);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.StaffLaborExchange);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildBar);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildGamblingHall);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildCanteen);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildGasStation);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildCityPark);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.OpenWorkersCard);
-        CreateTutorialGoalRow(panel, font, TutorialGoalKind.HireNewWorker);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.WaitForWorkerArrival);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignWarehouseLoaders);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildLocalBusStops);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignBusDrivers);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.SetTaxRate15);
-        CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignIntercityDriver);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.OpenRegionalMap);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildTradeRoute);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildDocks);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.AssignDocksWorker);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.CreateBuyTextileOrder);
-        CreateTutorialGoalRow(panel, font, TutorialGoalKind.JoinRaceParticipation);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.ReceiveImportedCargo);
 
         RectTransform flash = FleetCanvasUiFactory.CreateUiObject("SuccessFlash", panel).GetComponent<RectTransform>();
         flash.anchorMin = Vector2.zero;
@@ -585,8 +650,9 @@ public partial class GameBootstrap
             TutorialGoalsMode.WarehouseLoaders => ru ? "Открой Вакансии и заполни три складских слота." : "Open Vacancies and fill three Warehouse slots.",
             TutorialGoalsMode.LocalTransport => ru ? "Открой Стройку для остановок, затем Вакансии для водителей." : "Open Build for stops, then Vacancies for drivers.",
             TutorialGoalsMode.EconomyTaxes => ru ? "Открой Экономика -> Налоги и нажимай + до 15%." : "Open Economy -> Taxes and press + until 15%.",
-            TutorialGoalsMode.TradeSetup => ru ? "Открой Вакансии для водителя, затем Торговлю." : "Open Vacancies for a driver, then Trade.",
-            TutorialGoalsMode.JoinRace => ru ? "\u0414\u043e\u0436\u0434\u0438\u0441\u044c \u043a\u043d\u043e\u043f\u043a\u0438 Join the Race \u0438 \u043d\u0430\u0436\u043c\u0438 \u0435\u0451." : "Wait for Join the Race and press it.",
+            TutorialGoalsMode.TradeSetup => ru ? "Открой Торговлю и выставь политику покупки ткани." : "Open Trade and set a Textile buy policy.",
+            TutorialGoalsMode.RegionalMap => ru ? "\u041e\u0442\u043a\u0440\u043e\u0439 \u041a\u0430\u0440\u0442\u0443 \u0438 \u043f\u0440\u043e\u043b\u043e\u0436\u0438 \u0440\u0435\u0447\u043d\u043e\u0439 \u043c\u0430\u0440\u0448\u0440\u0443\u0442." : "Open the Map and build a river trade route.",
+            TutorialGoalsMode.Docks => ru ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0414\u043e\u043a\u0438 \u0438 \u043d\u0430\u0437\u043d\u0430\u0447\u044c \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e." : "Build Docks and assign a worker.",
             _ => ru ? "\u041e\u0441\u0432\u043e\u0439 \u043a\u0430\u043c\u0435\u0440\u0443 \u043f\u0435\u0440\u0435\u0434 \u0441\u0442\u0440\u043e\u0439\u043a\u043e\u0439." : "Learn the camera before building."
         };
 
@@ -597,27 +663,6 @@ public partial class GameBootstrap
         }
     }
 
-    private static string GetTutorialGoalLabel(TutorialGoalKind kind, bool ru)
-    {
-        return kind switch
-        {
-            TutorialGoalKind.CameraZoomIn => ru ? "Zoom In: приблизь камеру" : "Zoom In: move camera closer",
-            TutorialGoalKind.CameraZoomOut => ru ? "Zoom Out: отдали камеру" : "Zoom Out: move camera away",
-            TutorialGoalKind.CameraPan => ru ? "Scroll карты: сдвинь обзор" : "Map scroll: pan the view",
-            TutorialGoalKind.CameraRotate => ru ? "Поворот карты: Q / E" : "Rotate map: Q / E",
-            TutorialGoalKind.RoadSingleCell => ru ? "Поставь одну клетку дороги: ЛКМ" : "Place one road cell: left click",
-            TutorialGoalKind.RoadShiftPath => ru ? "Протяни участок дороги: Shift + ЛКМ" : "Build a road segment: Shift + left click",
-            TutorialGoalKind.BuildWarehouse => ru ? "Построй Склад" : "Build Warehouse",
-            TutorialGoalKind.BuildMotel => ru ? "Построй Мотель" : "Build Motel",
-            TutorialGoalKind.BuildParking => ru ? "Построй Парковку" : "Build Parking",
-            TutorialGoalKind.BuildLumberjackCamp => ru ? "Построй Лагерь лесорубов" : "Build Lumberjack Camp",
-            TutorialGoalKind.AssignLumberjackWorker => ru ? "Назначь рабочего в Лагерь лесорубов" : "Assign a worker to Lumberjack Camp",
-            TutorialGoalKind.BuyFirstTruck => ru ? "Parking выдаст грузовик автоматически" : "Parking provides the truck automatically",
-            TutorialGoalKind.AssignTruckDriverShift => ru ? "Назначь водителя грузовика на смену" : "Assign a truck driver to a shift",
-            _ => string.Empty
-        };
-    }
-
     private static string GetTutorialGoalLabelSafe(TutorialGoalKind kind, bool ru)
     {
         return kind switch
@@ -626,29 +671,34 @@ public partial class GameBootstrap
             TutorialGoalKind.CameraZoomOut => ru ? "Zoom Out: \u043e\u0442\u0434\u0430\u043b\u0438 \u043a\u0430\u043c\u0435\u0440\u0443" : "Zoom Out: move camera away",
             TutorialGoalKind.CameraPan => ru ? "Scroll \u043a\u0430\u0440\u0442\u044b: \u0441\u0434\u0432\u0438\u043d\u044c \u043e\u0431\u0437\u043e\u0440" : "Map scroll: pan the view",
             TutorialGoalKind.CameraRotate => ru ? "\u041f\u043e\u0432\u043e\u0440\u043e\u0442 \u043a\u0430\u0440\u0442\u044b: Q / E" : "Rotate map: Q / E",
-            TutorialGoalKind.RoadSingleCell => ru ? "Стройка (B) -> Дорога: поставь 1 клетку ЛКМ" : "Build (B) -> Road: place 1 cell with left click",
-            TutorialGoalKind.RoadShiftPath => ru ? "Стройка (B) -> Дорога: протяни Shift + ЛКМ" : "Build (B) -> Road: drag with Shift + left click",
-            TutorialGoalKind.BuildWarehouse => ru ? "Стройка (B) -> Склад: выбери и поставь" : "Build (B) -> Warehouse: select and place",
-            TutorialGoalKind.BuildMotel => ru ? "Стройка (B) -> Мотель: выбери и поставь" : "Build (B) -> Motel: select and place",
-            TutorialGoalKind.BuildParking => ru ? "Стройка (B) -> Парковка: выбери и поставь" : "Build (B) -> Parking: select and place",
-            TutorialGoalKind.BuildLumberjackCamp => ru ? "Стройка (B) -> Лагерь лесорубов: поставь у леса" : "Build (B) -> Lumberjack Camp: place near forest",
-            TutorialGoalKind.AssignLumberjackWorker => ru ? "Вакансии -> Лесозаготовка -> Смена -> Рабочий" : "Vacancies -> Logging -> Shift -> Worker",
-            TutorialGoalKind.BuyFirstTruck => ru ? "Parking -> свободный слот автопарка" : "Parking -> free fleet slot",
-            TutorialGoalKind.AssignTruckDriverShift => ru ? "Вакансии -> Водитель грузовика -> Смена -> Рабочий" : "Vacancies -> Truck Driver -> Shift -> Worker",
-            TutorialGoalKind.BuildBar => ru ? "Стройка (B) -> Бар: выбери и поставь" : "Build (B) -> Bar: select and place",
-            TutorialGoalKind.BuildGamblingHall => ru ? "Стройка (B) -> Игровые автоматы: выбери и поставь" : "Build (B) -> Gambling Hall: select and place",
-            TutorialGoalKind.BuildCanteen => ru ? "Стройка (B) -> Столовая: выбери и поставь" : "Build (B) -> Canteen: select and place",
-            TutorialGoalKind.BuildGasStation => ru ? "Стройка (B) -> Заправка: выбери и поставь" : "Build (B) -> Gas Station: select and place",
-            TutorialGoalKind.BuildCityPark => ru ? "Стройка (B) -> City Park: выбери и поставь" : "Build (B) -> City Park: select and place",
-            TutorialGoalKind.OpenWorkersCard => ru ? "Верхнее меню -> Рабочие: открой карточку рабочего" : "Top menu -> Workers: open a worker card",
-            TutorialGoalKind.HireNewWorker => ru ? "\u0420\u0430\u0431\u043e\u0447\u0438\u0435 -> \u0434\u043e\u0436\u0434\u0438\u0441\u044c \u0430\u0432\u0442\u043e-\u043f\u0440\u0438\u0435\u0437\u0434\u0430" : "Workers -> wait for auto-arrival",
-            TutorialGoalKind.AssignWarehouseLoaders => ru ? "Вакансии -> Складской слот 1-3 -> Смена -> Рабочий" : "Vacancies -> Warehouse slots 1-3 -> Shift -> Worker",
-            TutorialGoalKind.BuildLocalBusStops => ru ? "Стройка (B) -> Остановка: поставь ровно 2" : "Build (B) -> Bus Stop: place exactly 2",
-            TutorialGoalKind.AssignBusDrivers => ru ? "Вакансии -> Водитель автобуса -> назначь 3 смены" : "Vacancies -> Bus Driver -> assign 3 shifts",
-            TutorialGoalKind.SetTaxRate15 => ru ? "Экономика -> Налоги: нажимай + до 15%" : "Economy -> Taxes: press + until 15%",
-            TutorialGoalKind.AssignIntercityDriver => ru ? "Вакансии -> Водитель грузовика -> Смена -> Рабочий" : "Vacancies -> Truck Driver -> Shift -> Worker",
-            TutorialGoalKind.CreateBuyTextileOrder => ru ? "Торговля -> Textile -> Докупить до нормы" : "Trade -> Textile -> Buy up to",
-            TutorialGoalKind.JoinRaceParticipation => ru ? "\u0414\u043e\u0436\u0434\u0438\u0441\u044c \u0432\u044b\u0435\u0437\u0434\u0430 \u0437\u0430 \u043a\u0430\u0440\u0442\u0443 \u0438 \u043d\u0430\u0436\u043c\u0438 Join the Race" : "Wait until the truck leaves the map, then press Join the Race",
+            TutorialGoalKind.RoadSingleCell => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0414\u043e\u0440\u043e\u0433\u0430: \u043f\u043e\u0441\u0442\u0430\u0432\u044c 1 \u043a\u043b\u0435\u0442\u043a\u0443 \u041b\u041a\u041c" : "Build (B) -> Road: place 1 cell with left click",
+            TutorialGoalKind.RoadShiftPath => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0414\u043e\u0440\u043e\u0433\u0430: \u043f\u0440\u043e\u0442\u044f\u043d\u0438 Shift + \u041b\u041a\u041c" : "Build (B) -> Road: drag with Shift + left click",
+            TutorialGoalKind.BuildWarehouse => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0421\u043a\u043b\u0430\u0434: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Warehouse: select and place",
+            TutorialGoalKind.BuildMotel => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u041c\u043e\u0442\u0435\u043b\u044c: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Motel: select and place",
+            TutorialGoalKind.BuildParking => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u041f\u0430\u0440\u043a\u043e\u0432\u043a\u0430: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Parking: select and place",
+            TutorialGoalKind.BuildLumberjackCamp => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u041b\u0430\u0433\u0435\u0440\u044c \u043b\u0435\u0441\u043e\u0440\u0443\u0431\u043e\u0432: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0443 \u043b\u0435\u0441\u0430" : "Build (B) -> Lumberjack Camp: place near forest",
+            TutorialGoalKind.AssignLumberjackWorker => ru ? "\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u0438 -> \u041b\u0435\u0441\u043e\u0437\u0430\u0433\u043e\u0442\u043e\u0432\u043a\u0430 -> \u0421\u043c\u0435\u043d\u0430 -> \u0420\u0430\u0431\u043e\u0447\u0438\u0439" : "Vacancies -> Logging -> Shift -> Worker",
+            TutorialGoalKind.BuyFirstTruck => ru ? "Parking -> \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439 \u0441\u043b\u043e\u0442 \u0430\u0432\u0442\u043e\u043f\u0430\u0440\u043a\u0430" : "Parking -> free fleet slot",
+            TutorialGoalKind.AssignTruckDriverShift => ru ? "\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u0438 -> \u0412\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0430 -> \u0421\u043c\u0435\u043d\u0430 -> \u0420\u0430\u0431\u043e\u0447\u0438\u0439" : "Vacancies -> Truck Driver -> Shift -> Worker",
+            TutorialGoalKind.BuildLaborExchange => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Labor Exchange: select and place",
+            TutorialGoalKind.StaffLaborExchange => ru ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u043a\u043b\u0435\u0440\u043a \u043d\u0430 \u0441\u043c\u0435\u043d\u0435" : "Labor Exchange: clerk on shift",
+            TutorialGoalKind.BuildBar => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0411\u0430\u0440: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Bar: select and place",
+            TutorialGoalKind.BuildGamblingHall => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0418\u0433\u0440\u043e\u0432\u044b\u0435 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u044b: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Gambling Hall: select and place",
+            TutorialGoalKind.BuildCanteen => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0421\u0442\u043e\u043b\u043e\u0432\u0430\u044f: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Canteen: select and place",
+            TutorialGoalKind.BuildGasStation => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0417\u0430\u043f\u0440\u0430\u0432\u043a\u0430: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Gas Station: select and place",
+            TutorialGoalKind.BuildCityPark => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> City Park: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> City Park: select and place",
+            TutorialGoalKind.OpenWorkersCard => ru ? "\u0412\u0435\u0440\u0445\u043d\u0435\u0435 \u043c\u0435\u043d\u044e -> \u0420\u0430\u0431\u043e\u0447\u0438\u0435: \u043e\u0442\u043a\u0440\u043e\u0439 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443 \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e" : "Top menu -> Workers: open a worker card",
+            TutorialGoalKind.WaitForWorkerArrival => ru ? "\u0420\u0430\u0431\u043e\u0447\u0438\u0435 -> \u0434\u043e\u0436\u0434\u0438\u0441\u044c \u0430\u0432\u0442\u043e-\u043f\u0440\u0438\u0435\u0437\u0434\u0430" : "Workers -> wait for auto-arrival",
+            TutorialGoalKind.AssignWarehouseLoaders => ru ? "\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u0438 -> \u0421\u043a\u043b\u0430\u0434\u0441\u043a\u0438\u0435 \u0441\u043b\u043e\u0442\u044b -> \u0421\u043c\u0435\u043d\u0430 -> \u0420\u0430\u0431\u043e\u0447\u0438\u0439" : "Vacancies -> Warehouse slots -> Shift -> Worker",
+            TutorialGoalKind.BuildLocalBusStops => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u041e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430: \u043f\u043e\u0441\u0442\u0430\u0432\u044c 2" : "Build (B) -> Bus Stop: place 2",
+            TutorialGoalKind.AssignBusDrivers => ru ? "\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u0438 -> \u0412\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0430 -> \u043d\u0430\u0437\u043d\u0430\u0447\u044c \u0441\u043c\u0435\u043d\u044b" : "Vacancies -> Bus Driver -> assign shifts",
+            TutorialGoalKind.SetTaxRate15 => ru ? "\u042d\u043a\u043e\u043d\u043e\u043c\u0438\u043a\u0430 -> \u041d\u0430\u043b\u043e\u0433\u0438: \u043d\u0430\u0436\u0438\u043c\u0430\u0439 + \u0434\u043e 15%" : "Economy -> Taxes: press + until 15%",
+            TutorialGoalKind.OpenRegionalMap => ru ? "\u041a\u0430\u0440\u0442\u0430: \u043e\u0442\u043a\u0440\u043e\u0439 \u044d\u043a\u0440\u0430\u043d \u0440\u0435\u0433\u0438\u043e\u043d\u043e\u0432" : "Map: open the regional screen",
+            TutorialGoalKind.BuildTradeRoute => ru ? "\u041a\u0430\u0440\u0442\u0430 -> \u0420\u0435\u0447\u043d\u043e\u0439 \u0433\u043e\u0440\u043e\u0434 -> \u041f\u0440\u043e\u043b\u043e\u0436\u0438\u0442\u044c \u043c\u0430\u0440\u0448\u0440\u0443\u0442" : "Map -> river city -> Build trade route",
+            TutorialGoalKind.BuildDocks => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> Docks: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u043d\u0430 \u0431\u0435\u0440\u0435\u0433\u0443" : "Build (B) -> Docks: place on the river bank",
+            TutorialGoalKind.AssignDocksWorker => ru ? "\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u0438 -> Docks -> \u0421\u043c\u0435\u043d\u0430 -> \u0420\u0430\u0431\u043e\u0447\u0438\u0439" : "Vacancies -> Docks -> Shift -> Worker",
+            TutorialGoalKind.CreateBuyTextileOrder => ru ? "\u0422\u043e\u0440\u0433\u043e\u0432\u043b\u044f -> \u0422\u0435\u043a\u0441\u0442\u0438\u043b\u044c -> \u0414\u043e\u043a\u0443\u043f\u0438\u0442\u044c \u0434\u043e \u043d\u043e\u0440\u043c\u044b" : "Trade -> Textile -> Buy up to",
+            TutorialGoalKind.ReceiveImportedCargo => ru ? "\u0414\u043e\u043a\u0438 -> \u0442\u043e\u0432\u0430\u0440 \u043a\u0443\u043f\u043b\u0435\u043d \u0438\u043b\u0438 \u043e\u0436\u0438\u0434\u0430\u0435\u0442 \u043a\u043e\u0440\u0430\u0431\u043b\u044c" : "Docks -> cargo bought or ship waiting",
             _ => string.Empty
         };
     }
@@ -675,13 +725,15 @@ public partial class GameBootstrap
             TutorialGoalsMode.CoreBuildings => kind is TutorialGoalKind.BuildWarehouse or TutorialGoalKind.BuildMotel or TutorialGoalKind.BuildParking,
             TutorialGoalsMode.LumberjackCamp => kind is TutorialGoalKind.BuildLumberjackCamp or TutorialGoalKind.AssignLumberjackWorker,
             TutorialGoalsMode.BuyTruck => kind is TutorialGoalKind.AssignTruckDriverShift,
+            TutorialGoalsMode.LaborExchange => kind is TutorialGoalKind.BuildLaborExchange or TutorialGoalKind.StaffLaborExchange,
             TutorialGoalsMode.ServiceBuildings => kind is TutorialGoalKind.BuildBar or TutorialGoalKind.BuildGamblingHall or TutorialGoalKind.BuildCanteen or TutorialGoalKind.BuildGasStation or TutorialGoalKind.BuildCityPark,
-            TutorialGoalsMode.WorkerCard => kind is TutorialGoalKind.OpenWorkersCard or TutorialGoalKind.HireNewWorker,
+            TutorialGoalsMode.WorkerCard => kind is TutorialGoalKind.OpenWorkersCard or TutorialGoalKind.WaitForWorkerArrival,
             TutorialGoalsMode.WarehouseLoaders => kind is TutorialGoalKind.AssignWarehouseLoaders,
             TutorialGoalsMode.LocalTransport => kind is TutorialGoalKind.BuildLocalBusStops or TutorialGoalKind.AssignBusDrivers,
             TutorialGoalsMode.EconomyTaxes => kind is TutorialGoalKind.SetTaxRate15,
-            TutorialGoalsMode.TradeSetup => kind is TutorialGoalKind.AssignIntercityDriver or TutorialGoalKind.CreateBuyTextileOrder,
-            TutorialGoalsMode.JoinRace => kind is TutorialGoalKind.JoinRaceParticipation,
+            TutorialGoalsMode.RegionalMap => kind is TutorialGoalKind.OpenRegionalMap or TutorialGoalKind.BuildTradeRoute,
+            TutorialGoalsMode.Docks => kind is TutorialGoalKind.BuildDocks or TutorialGoalKind.AssignDocksWorker,
+            TutorialGoalsMode.TradeSetup => kind is TutorialGoalKind.CreateBuyTextileOrder,
             _ => kind is TutorialGoalKind.CameraZoomIn or TutorialGoalKind.CameraZoomOut or TutorialGoalKind.CameraPan or TutorialGoalKind.CameraRotate
         };
     }
@@ -758,6 +810,16 @@ public partial class GameBootstrap
                 shouldShowTruckFreightTutorialAfterBuyTruckGoals = false;
                 ScheduleTutorial(TutorialTrigger.UserTruckAssignedFreightInfo, 0.35f);
             }
+            else if (shouldShowMigrationAfterLaborExchangeGoals && !isTutorialSkipped)
+            {
+                shouldShowMigrationAfterLaborExchangeGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserMigrationInfo, 0.8f);
+            }
+            else if (shouldShowServiceBuildingsAfterWorkerArrivalGoals && !isTutorialSkipped)
+            {
+                shouldShowServiceBuildingsAfterWorkerArrivalGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserWorkersLeisureInfo, 0.8f);
+            }
             else if (shouldShowWorkersOverviewAfterServiceGoals && !isTutorialSkipped)
             {
                 shouldShowWorkersOverviewAfterServiceGoals = false;
@@ -773,15 +835,25 @@ public partial class GameBootstrap
                 shouldShowLocalBusRoutesAfterTransportGoals = false;
                 ScheduleTutorial(TutorialTrigger.UserLocalBusRoutesInfo, 0.8f);
             }
-            else if (shouldShowTradeIntroAfterEconomyGoals && !isTutorialSkipped)
+            else if (shouldShowRegionalMapAfterEconomyGoals && !isTutorialSkipped)
             {
-                shouldShowTradeIntroAfterEconomyGoals = false;
+                shouldShowRegionalMapAfterEconomyGoals = false;
                 ScheduleTutorial(TutorialTrigger.UserTradeIntroInfo, 0.8f);
             }
-            else if (shouldShowTradeRaceInfoAfterTradeGoals && !isTutorialSkipped)
+            else if (shouldShowDocksAfterRouteGoals && !isTutorialSkipped)
             {
-                shouldShowTradeRaceInfoAfterTradeGoals = false;
-                ScheduleTutorial(TutorialTrigger.UserTradeRaceInfo, 0.8f);
+                shouldShowDocksAfterRouteGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserDocksPrompt, 0.8f);
+            }
+            else if (shouldShowTradePolicyAfterDocksGoals && !isTutorialSkipped)
+            {
+                shouldShowTradePolicyAfterDocksGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserTradePolicyInfo, 0.8f);
+            }
+            else if (shouldShowDemoCompleteAfterTradeGoals && !isTutorialSkipped)
+            {
+                shouldShowDemoCompleteAfterTradeGoals = false;
+                ScheduleTutorial(TutorialTrigger.UserDemoCompleteInfo, 0.8f);
             }
         }
     }

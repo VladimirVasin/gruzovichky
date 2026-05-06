@@ -15,8 +15,10 @@ public partial class GameBootstrap
             return;
         }
 
-        if (!activeTutorialGoals.Contains(TutorialGoalKind.HireNewWorker) ||
-            completedTutorialGoals.Contains(TutorialGoalKind.HireNewWorker))
+        MarkTutorialGoalComplete(TutorialGoalKind.OpenWorkersCard);
+
+        if (!activeTutorialGoals.Contains(TutorialGoalKind.WaitForWorkerArrival) ||
+            completedTutorialGoals.Contains(TutorialGoalKind.WaitForWorkerArrival))
         {
             return;
         }
@@ -41,7 +43,6 @@ public partial class GameBootstrap
             return;
         }
 
-        MarkTutorialGoalComplete(TutorialGoalKind.HireNewWorker);
         isDriversPanelOpen = false;
         if (driversScreenUi?.CanvasRoot != null)
         {
@@ -60,8 +61,8 @@ public partial class GameBootstrap
             return;
         }
 
-        ScheduleTutorial(TutorialTrigger.UserWarehouseLoadersInfo, 0.5f);
-        SessionDebugLogger.Log("TUTORIAL", "Tutorial worker wave disembarked; scheduled warehouse loaders explanation.");
+        CheckTutorialWorkerArrivalGoal();
+        SessionDebugLogger.Log("TUTORIAL", "Tutorial worker wave disembarked; worker arrival goal checked.");
     }
 
     private void ShowUserLocalTransportTutorial()
@@ -76,7 +77,7 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         ShowTutorialWindow(
             TutorialTrigger.UserLocalTransportInfo,
-            23,
+            26,
             ru ? "\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u043e\u0439 \u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442" : "Local Transport",
             ru
                 ? "\u0413\u043e\u0440\u043e\u0434 \u0440\u0430\u0441\u0442\u0451\u0442, \u0438 \u0445\u043e\u0434\u0438\u0442\u044c \u043f\u0435\u0448\u043a\u043e\u043c \u0432\u0435\u0437\u0434\u0435 \u0441\u0442\u0430\u043d\u0435\u0442 \u043d\u0435\u0443\u0434\u043e\u0431\u043d\u043e.\n\n\u041d\u0430\u0441\u0442\u0440\u043e\u0439 \u043e\u0441\u043d\u043e\u0432\u0443 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043d\u043e\u0439 \u0441\u0438\u0441\u0442\u0435\u043c\u044b: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0440\u043e\u0432\u043d\u043e 2 \u0433\u043e\u0440\u043e\u0434\u0441\u043a\u0438\u0435 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438 \u0438 \u043d\u0430\u0437\u043d\u0430\u0447\u044c 3 \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u0435\u0439 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0430 \u0432 \u0412\u0430\u043a\u0430\u043d\u0441\u0438\u044f\u0445."
@@ -94,7 +95,7 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         ShowTutorialWindow(
             TutorialTrigger.UserLocalBusRoutesInfo,
-            24,
+            27,
             ru ? "\u041a\u0430\u043a \u0435\u0437\u0434\u044f\u0442 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u044b" : "How Buses Run",
             ru
                 ? "\u041a\u0430\u0436\u0434\u0430\u044f \u0433\u043e\u0440\u043e\u0434\u0441\u043a\u0430\u044f \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430 \u0438\u043c\u0435\u0435\u0442 \u043d\u043e\u043c\u0435\u0440. \u0410\u0432\u0442\u043e\u0431\u0443\u0441\u044b \u0435\u0434\u0443\u0442 \u043f\u043e \u043d\u0438\u043c \u043f\u043e \u043f\u043e\u0440\u044f\u0434\u043a\u0443: \u043e\u0442 \u043f\u0435\u0440\u0432\u043e\u0439 \u043a \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u0435\u0439 \u0438 \u043e\u0431\u0440\u0430\u0442\u043d\u043e.\n\n\u0420\u0430\u0431\u043e\u0447\u0438\u0435 \u043c\u043e\u0433\u0443\u0442 \u0435\u0445\u0430\u0442\u044c \u043d\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435, \u0435\u0441\u043b\u0438 \u0446\u0435\u043b\u044c \u0434\u0430\u043b\u0435\u043a\u043e. \u041f\u043e\u0435\u0437\u0434\u043a\u0430 \u0441\u0442\u043e\u0438\u0442 $1, \u0430 \u0432 \u043a\u043e\u043d\u0446\u0435 \u0440\u0435\u0439\u0441\u0430 \u0434\u0435\u043d\u044c\u0433\u0438 \u0438\u0437 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0430 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u044f\u0442 \u0432 \u043a\u0430\u0441\u0441\u0443 Parking."
@@ -112,7 +113,7 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         ShowTutorialWindow(
             TutorialTrigger.UserEconomyTaxesInfo,
-            25,
+            28,
             ru ? "\u042d\u043a\u043e\u043d\u043e\u043c\u0438\u043a\u0430 \u0438 \u043d\u0430\u043b\u043e\u0433\u0438" : "Economy and Taxes",
             ru
                 ? "\u0421\u0435\u0440\u0432\u0438\u0441\u043d\u044b\u0435 \u0437\u0434\u0430\u043d\u0438\u044f \u043a\u043e\u043f\u044f\u0442 \u0434\u0435\u043d\u044c\u0433\u0438 \u0432 \u0441\u0432\u043e\u0438\u0445 \u043a\u0430\u0441\u0441\u0430\u0445: \u0437\u0430 \u0435\u0434\u0443, \u0434\u043e\u0441\u0443\u0433, \u043f\u043e\u0435\u0437\u0434\u043a\u0438 \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0433\u043e\u0440\u043e\u0434\u0441\u043a\u0438\u0435 \u043f\u0440\u0438\u0432\u044b\u0447\u043a\u0438.\n\n\u041a\u0430\u0436\u0434\u044b\u0439 \u0434\u0435\u043d\u044c \u0432 00:00 \u0433\u043e\u0440\u043e\u0434 \u0441\u043e\u0431\u0438\u0440\u0430\u0435\u0442 \u043d\u0430\u043b\u043e\u0433: \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u044b\u0439 \u043f\u0440\u043e\u0446\u0435\u043d\u0442 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0438\u0442 \u0438\u0437 \u043a\u0430\u0441\u0441 \u0437\u0434\u0430\u043d\u0438\u0439 \u0432 \u043e\u0431\u0449\u0443\u044e \u041a\u0430\u0437\u043d\u0443.\n\n\u041e\u0442\u043a\u0440\u043e\u0439 \u042d\u043a\u043e\u043d\u043e\u043c\u0438\u043a\u0443, \u0432\u043a\u043b\u0430\u0434\u043a\u0443 \u041d\u0430\u043b\u043e\u0433\u0438, \u0438 \u043a\u043d\u043e\u043f\u043a\u0430\u043c\u0438 + / - \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u0438 \u0441\u0442\u0430\u0432\u043a\u0443 15%."
@@ -127,35 +128,87 @@ public partial class GameBootstrap
         }
 
         hasShownUserTradeIntroTutorial = true;
-        EnsureTutorialIntercityTruckAvailable();
         bool ru = IsRussianLanguage();
         ShowTutorialWindow(
             TutorialTrigger.UserTradeIntroInfo,
-            26,
-            ru ? "\u0422\u043e\u0440\u0433\u043e\u0432\u043b\u044f" : "Trade",
+            29,
+            ru ? "\u041a\u0430\u0440\u0442\u0430 \u0440\u0435\u0433\u0438\u043e\u043d\u043e\u0432" : "Regional Map",
             ru
-                ? "\u041d\u0435 \u0432\u0441\u0451 \u043d\u0443\u0436\u043d\u043e\u0435 \u043f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0438\u0442\u0441\u044f \u0432 \u0433\u043e\u0440\u043e\u0434\u0435. \u0427\u0430\u0441\u0442\u044c \u0440\u0435\u0441\u0443\u0440\u0441\u043e\u0432 \u043f\u0440\u0438\u0434\u0451\u0442\u0441\u044f \u043f\u043e\u043a\u0443\u043f\u0430\u0442\u044c \u0437\u0430 \u043f\u0440\u0435\u0434\u0435\u043b\u0430\u043c\u0438 \u043a\u0430\u0440\u0442\u044b.\n\n\u0422\u043e\u0440\u0433\u043e\u0432\u043b\u044f \u0442\u0435\u043f\u0435\u0440\u044c \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u0447\u0435\u0440\u0435\u0437 \u043f\u043e\u043b\u0438\u0442\u0438\u043a\u0438 \u0441\u043a\u043b\u0430\u0434\u0430: \u043e\u0442\u043a\u0440\u043e\u0439 \u0422\u043e\u0440\u0433\u043e\u0432\u043b\u044e, \u0432\u044b\u0431\u0435\u0440\u0438 \u0440\u0435\u0441\u0443\u0440\u0441, \u0440\u0435\u0436\u0438\u043c \u0438 \u0446\u0435\u043b\u0435\u0432\u043e\u0439 \u043e\u0441\u0442\u0430\u0442\u043e\u043a. \u0414\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0439 \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0430 \u043d\u0430 \u0441\u043c\u0435\u043d\u0435 \u0441\u0430\u043c \u0437\u0430\u0431\u0435\u0440\u0451\u0442 \u0440\u0435\u0439\u0441, \u0432\u043e\u0437\u044c\u043c\u0451\u0442 \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439 Truck \u043d\u0430 Parking \u0438 \u0432\u0435\u0440\u043d\u0451\u0442\u0441\u044f \u0441 \u0442\u043e\u0432\u0430\u0440\u043e\u043c.\n\n\u0414\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u0448\u0430\u0433\u0430 \u043d\u0430 Parking \u0434\u043e\u0431\u0430\u0432\u043b\u0435\u043d \u0443\u0447\u0435\u0431\u043d\u044b\u0439 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a. \u0421\u0435\u0439\u0447\u0430\u0441 \u043d\u0430\u0437\u043d\u0430\u0447\u044c \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044f \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0430 \u043d\u0430 \u0441\u043c\u0435\u043d\u0443 \u0438 \u0432 \u0422\u043e\u0440\u0433\u043e\u0432\u043b\u0435 \u043f\u043e\u0441\u0442\u0430\u0432\u044c Textile \u0432 \u0440\u0435\u0436\u0438\u043c \u0414\u043e\u043a\u0443\u043f\u0438\u0442\u044c \u0434\u043e \u043d\u043e\u0440\u043c\u044b."
-                : "Not everything your town needs is produced locally. Some resources must be bought outside the map.\n\nTrade now works through warehouse policies: open Trade, pick a resource, mode, and target stock. An available truck driver on shift automatically takes a run, grabs a free truck from Parking, and returns with cargo.\n\nFor this step, an extra tutorial truck has been added to Parking. Now assign a truck driver to a shift and set Textile to Buy up to in Trade.");
+                ? "\u041d\u0435 \u0432\u0441\u0451 \u043d\u0443\u0436\u043d\u043e\u0435 \u043f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0438\u0442\u0441\u044f \u0432 \u0433\u043e\u0440\u043e\u0434\u0435. \u0412\u043d\u0435\u0448\u043d\u0438\u0435 \u0433\u043e\u0440\u043e\u0434\u0430 \u0432\u0438\u0434\u043d\u044b \u043d\u0430 \u041a\u0430\u0440\u0442\u0435.\n\n\u0423 \u043a\u0430\u0436\u0434\u043e\u0433\u043e \u0433\u043e\u0440\u043e\u0434\u0430 \u0435\u0441\u0442\u044c \u0441\u0442\u0430\u0442\u0443\u0441 \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430, \u0441\u043f\u0438\u0441\u043a\u0438 \u041f\u0440\u043e\u0434\u0430\u0451\u0442 / \u041f\u043e\u043a\u0443\u043f\u0430\u0435\u0442 \u0438 \u0442\u0438\u043f \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430. \u0421\u0435\u0439\u0447\u0430\u0441 \u043e\u0442\u043a\u0440\u043e\u0439 \u043a\u0430\u0440\u0442\u0443 \u0438 \u043f\u0440\u043e\u043b\u043e\u0436\u0438 \u043c\u0430\u0440\u0448\u0440\u0443\u0442 \u043a \u0440\u0435\u0447\u043d\u043e\u043c\u0443 \u0433\u043e\u0440\u043e\u0434\u0443, \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u043f\u0440\u043e\u0434\u0430\u0451\u0442 \u0422\u0435\u043a\u0441\u0442\u0438\u043b\u044c."
+                : "Not everything your town needs is produced locally. Outside cities are shown on the Map.\n\nEach city has a route status, Sells / Buys tables, and a route type. Now open the map and build a route to the river city that sells Textile.");
     }
 
-    private void ShowUserTradeRaceTutorial()
+    private void ShowUserTradeRouteTutorial()
     {
-        if (hasShownUserTradeRaceTutorial)
+        if (hasShownUserTradeRouteTutorial)
         {
             return;
         }
 
-        hasShownUserTradeRaceTutorial = true;
-        TryAutoDispatchNextHudOrder();
-        FocusCameraOnActiveTradeTutorialTruck();
+        hasShownUserTradeRouteTutorial = true;
         bool ru = IsRussianLanguage();
         ShowTutorialWindow(
-            TutorialTrigger.UserTradeRaceInfo,
-            27,
-            ru ? "\u041b\u0438\u0447\u043d\u044b\u0439 \u0440\u0435\u0439\u0441" : "Join the Run",
+            TutorialTrigger.UserTradeRouteInfo,
+            30,
+            ru ? "\u041c\u0430\u0440\u0448\u0440\u0443\u0442 \u043e\u0442\u043a\u0440\u044b\u0442" : "Route Opened",
             ru
-                ? "\u0422\u043e\u0440\u0433\u043e\u0432\u044b\u0439 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a \u0432\u044b\u0435\u0434\u0435\u0442 \u0437\u0430 \u043f\u0440\u0435\u0434\u0435\u043b\u044b \u043a\u0430\u0440\u0442\u044b. \u041a\u043e\u0433\u0434\u0430 \u043e\u043d \u0443\u0435\u0434\u0435\u0442 \u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e \u0434\u0430\u043b\u0435\u043a\u043e, \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u043a\u043d\u043e\u043f\u043a\u0430 Join the Race.\n\n\u042d\u0442\u043e \u0448\u0430\u043d\u0441 \u043b\u0438\u0447\u043d\u043e \u043f\u043e\u0443\u0447\u0430\u0441\u0442\u0432\u043e\u0432\u0430\u0442\u044c \u0432 \u0440\u0435\u0439\u0441\u0435: \u0442\u044b \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u043f\u0435\u0440\u0435\u0439\u0434\u0451\u0448\u044c \u0432 \u0433\u043e\u043d\u043e\u0447\u043d\u044b\u0439 \u0440\u0435\u0436\u0438\u043c \u0438 \u043f\u043e\u0432\u0435\u0434\u0451\u0448\u044c \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a \u0441\u0430\u043c. \u0414\u043e\u0436\u0434\u0438\u0441\u044c \u043c\u043e\u043c\u0435\u043d\u0442\u0430 \u0438 \u043d\u0430\u0436\u043c\u0438 Join the Race."
-                : "The trade truck will leave the map. Once it is far enough away, the Join the Race button appears.\n\nThat is your chance to take part in the run personally: the game switches into racing mode and you drive the truck yourself. Wait for the moment, then press Join the Race.");
+                ? "\u0422\u0435\u043f\u0435\u0440\u044c \u0433\u043e\u0440\u043e\u0434 \u0437\u043d\u0430\u0435\u0442 \u0440\u0435\u0447\u043d\u043e\u0439 \u0442\u043e\u0440\u0433\u043e\u0432\u044b\u0439 \u043c\u0430\u0440\u0448\u0440\u0443\u0442.\n\n\u0420\u0435\u0447\u043d\u0430\u044f \u0442\u043e\u0440\u0433\u043e\u0432\u043b\u044f \u0438\u0434\u0451\u0442 \u0447\u0435\u0440\u0435\u0437 \u0414\u043e\u043a\u0438: \u0442\u0443\u0434\u0430 \u043f\u0440\u0438\u043f\u043b\u044b\u0432\u0430\u0435\u0442 \u043a\u043e\u0440\u0430\u0431\u043b\u044c, \u043f\u043e\u043a\u0443\u043f\u0430\u0435\u0442 \u0438 \u043f\u0440\u043e\u0434\u0430\u0451\u0442 \u0442\u043e\u0432\u0430\u0440\u044b, \u0430 \u043c\u0435\u0441\u0442\u043d\u044b\u0435 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0438 \u0440\u0430\u0437\u0432\u043e\u0437\u044f\u0442 \u0433\u0440\u0443\u0437 \u043c\u0435\u0436\u0434\u0443 \u0414\u043e\u043a\u0430\u043c\u0438 \u0438 \u0421\u043a\u043b\u0430\u0434\u043e\u043c."
+                : "The town now knows a river trade route.\n\nRiver trade uses Docks: ships arrive there to buy and sell goods, while local trucks move cargo between Docks and Warehouse.");
+    }
+
+    private void ShowUserDocksTutorial()
+    {
+        if (hasShownUserDocksTutorial)
+        {
+            return;
+        }
+
+        hasShownUserDocksTutorial = true;
+        UnlockBuildTool(BuildTool.Docks);
+        bool ru = IsRussianLanguage();
+        ShowTutorialWindow(
+            TutorialTrigger.UserDocksPrompt,
+            31,
+            ru ? "\u0414\u043e\u043a\u0438" : "Docks",
+            ru
+                ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0414\u043e\u043a\u0438 \u043d\u0430 \u0431\u0435\u0440\u0435\u0433\u0443 \u0440\u0435\u043a\u0438: \u0447\u0430\u0441\u0442\u044c \u0437\u0434\u0430\u043d\u0438\u044f \u0434\u043e\u043b\u0436\u043d\u0430 \u0441\u0442\u043e\u044f\u0442\u044c \u043d\u0430 \u0432\u043e\u0434\u0435, \u0447\u0430\u0441\u0442\u044c \u043d\u0430 \u0441\u0443\u0448\u0435.\n\n\u041f\u043e\u0441\u043b\u0435 \u044d\u0442\u043e\u0433\u043e \u043e\u0442\u043a\u0440\u043e\u0439 \u0412\u0430\u043a\u0430\u043d\u0441\u0438\u0438 \u0438 \u043d\u0430\u0437\u043d\u0430\u0447\u044c \u043e\u0434\u043d\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u0432 \u0414\u043e\u043a\u0438."
+                : "Build Docks on the river bank: part of the building must sit on water, part on land.\n\nThen open Vacancies and assign one worker to Docks.");
+    }
+
+    private void ShowUserDocksBuiltTutorial()
+    {
+        if (hasShownUserDocksBuiltTutorial)
+        {
+            return;
+        }
+
+        hasShownUserDocksBuiltTutorial = true;
+        bool ru = IsRussianLanguage();
+        ShowTutorialWindow(
+            TutorialTrigger.UserDocksBuiltInfo,
+            32,
+            ru ? "\u0414\u043e\u043a\u0438 \u043f\u043e\u0441\u0442\u0440\u043e\u0435\u043d\u044b" : "Docks Built",
+            ru
+                ? "\u0414\u043e\u043a\u0438 \u043f\u0440\u0438\u043d\u0438\u043c\u0430\u044e\u0442 \u043a\u0443\u043f\u043b\u0435\u043d\u043d\u044b\u0435 \u0442\u043e\u0432\u0430\u0440\u044b \u0441 \u043a\u043e\u0440\u0430\u0431\u043b\u0435\u0439 \u0438 \u0433\u0440\u0443\u0437\u044b \u043d\u0430 \u043f\u0440\u043e\u0434\u0430\u0436\u0443 \u0441\u043e \u0421\u043a\u043b\u0430\u0434\u0430.\n\n\u041a\u0443\u043f\u043b\u0435\u043d\u043d\u043e\u0435 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0438 \u0432\u0435\u0437\u0443\u0442 \u0438\u0437 \u0414\u043e\u043a\u043e\u0432 \u043d\u0430 \u0421\u043a\u043b\u0430\u0434, \u0430 \u0442\u043e\u0432\u0430\u0440\u044b \u043d\u0430 \u043f\u0440\u043e\u0434\u0430\u0436\u0443 - \u0441\u043e \u0421\u043a\u043b\u0430\u0434\u0430 \u0432 \u0414\u043e\u043a\u0438."
+                : "Docks receive imported goods from ships and export cargo from Warehouse.\n\nTrucks move bought goods from Docks to Warehouse, and sale goods from Warehouse to Docks.");
+    }
+
+    private void ShowUserTradePolicyTutorial()
+    {
+        if (hasShownUserTradePolicyTutorial)
+        {
+            return;
+        }
+
+        hasShownUserTradePolicyTutorial = true;
+        bool ru = IsRussianLanguage();
+        ShowTutorialWindow(
+            TutorialTrigger.UserTradePolicyInfo,
+            33,
+            ru ? "\u041f\u043e\u043b\u0438\u0442\u0438\u043a\u0430 \u0442\u043e\u0440\u0433\u043e\u0432\u043b\u0438" : "Trade Policy",
+            ru
+                ? "\u0412 \u043c\u0435\u043d\u044e \u0422\u043e\u0440\u0433\u043e\u0432\u043b\u044f \u0432\u044b\u0431\u0435\u0440\u0438 \u0422\u0435\u043a\u0441\u0442\u0438\u043b\u044c \u0438 \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0438 \u0440\u0435\u0436\u0438\u043c \u043d\u0430 \"\u0414\u043e\u043a\u0443\u043f\u0438\u0442\u044c \u0434\u043e \u043d\u043e\u0440\u043c\u044b\".\n\n\u041f\u043e\u0441\u043b\u0435 \u044d\u0442\u043e\u0433\u043e \u0440\u0435\u0447\u043d\u043e\u0439 \u043a\u043e\u0440\u0430\u0431\u043b\u044c \u0441\u043c\u043e\u0436\u0435\u0442 \u043f\u0440\u0438\u0432\u0435\u0437\u0442\u0438 \u0442\u043a\u0430\u043d\u044c, \u0430 \u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a\u0438 \u0434\u043e\u0432\u0435\u0437\u0443\u0442 \u0435\u0451 \u0434\u043e \u0421\u043a\u043b\u0430\u0434\u0430."
+                : "In Trade, select Textile and switch the mode to Buy up to.\n\nAfter that, river ships can bring fabric and trucks will move it to Warehouse.");
     }
 
     private void ShowUserDemoCompleteTutorial()
@@ -169,7 +222,7 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         ShowTutorialWindow(
             TutorialTrigger.UserDemoCompleteInfo,
-            28,
+            34,
             ru ? "\u0414\u0435\u043c\u043e \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u043e" : "Demo Complete",
             ru
                 ? "\u041d\u0430 \u044d\u0442\u043e\u043c \u0442\u0435\u043a\u0443\u0449\u0430\u044f \u043e\u0431\u0443\u0447\u0430\u044e\u0449\u0430\u044f \u0434\u0435\u043c\u043e\u043d\u0441\u0442\u0440\u0430\u0446\u0438\u044f \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0430.\n\n\u0414\u0430\u043b\u044c\u0448\u0435 \u043c\u043e\u0436\u043d\u043e \u0438\u0433\u0440\u0430\u0442\u044c \u0447\u0435\u0440\u0435\u0437 \u043e\u0431\u044b\u0447\u043d\u0443\u044e \u041d\u043e\u0432\u0443\u044e \u0438\u0433\u0440\u0443: \u0431\u0435\u0437 \u0443\u0447\u0435\u0431\u043d\u044b\u0445 \u043e\u043a\u043e\u043d \u0438 \u0441 \u0441\u0440\u0430\u0437\u0443 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u043c\u0438 \u0438\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442\u0430\u043c\u0438.\n\n\u0421\u043f\u0430\u0441\u0438\u0431\u043e, \u0447\u0442\u043e \u0434\u043e\u0448\u0451\u043b \u0434\u043e \u043a\u043e\u043d\u0446\u0430. \u0414\u0430\u043b\u044c\u0448\u0435 \u0433\u043e\u0440\u043e\u0434 \u0431\u0443\u0434\u0435\u0442 \u0440\u0430\u0441\u0442\u0438 \u0443\u0436\u0435 \u0432 \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u043e\u043c \u0442\u0435\u043c\u043f\u0435."
@@ -185,8 +238,7 @@ public partial class GameBootstrap
             return;
         }
 
-        ScheduleTutorial(TutorialTrigger.UserDemoCompleteInfo, 0.35f);
-        SessionDebugLogger.Log("TUTORIAL", "Race completed; scheduled final demo-complete tutorial.");
+        SessionDebugLogger.Log("TUTORIAL", "Race finished outside current tutorial goals.");
     }
 
     private void NotifyTutorialIntercityDriverAssigned()
@@ -225,13 +277,12 @@ public partial class GameBootstrap
             isTutorialSkipped ||
             !isTutorialGoalsActive ||
             isTutorialGoalsComplete ||
-            tutorialGoalsMode != TutorialGoalsMode.JoinRace)
+            tutorialGoalsMode != TutorialGoalsMode.TradeSetup)
         {
             return;
         }
 
-        MarkTutorialGoalComplete(TutorialGoalKind.JoinRaceParticipation);
-        SessionDebugLogger.Log("TUTORIAL", "Join Race tutorial goal completed by race start.");
+        SessionDebugLogger.Log("TUTORIAL", "Race started outside current tutorial goals.");
     }
 
     private void CheckTutorialTradeSetupGoals()
@@ -245,22 +296,12 @@ public partial class GameBootstrap
             return;
         }
 
-        bool hasTradeDriver = HasTutorialTruckDriverShift();
         bool hasBuyTextileOrder = HasTutorialBuyTextileOrder();
-        SessionDebugLogger.Log("TUTORIAL", $"Trade setup goal progress: truckDriverShift={hasTradeDriver}, buyTextile={hasBuyTextileOrder}.");
-
-        if (hasTradeDriver)
-        {
-            MarkTutorialGoalComplete(TutorialGoalKind.AssignIntercityDriver);
-        }
+        SessionDebugLogger.Log("TUTORIAL", $"Trade setup goal progress: buyTextile={hasBuyTextileOrder}.");
 
         if (hasBuyTextileOrder)
         {
             MarkTutorialGoalComplete(TutorialGoalKind.CreateBuyTextileOrder);
-        }
-
-        if (hasTradeDriver && hasBuyTextileOrder)
-        {
             TryAutoDispatchNextHudOrder();
         }
     }
@@ -289,6 +330,177 @@ public partial class GameBootstrap
                (HasActiveTradeRun() &&
                activeTradeRun.OrderType == TradeOrderType.Buy &&
                activeTradeRun.ResourceType == TradeResourceType.Textile);
+    }
+
+    private int GetTutorialRiverTradeRegionIndex()
+    {
+        for (int i = 0; i < 9; i++)
+        {
+            if (i == 4)
+            {
+                continue;
+            }
+
+            RegionalCityData city = GetRegionalCity(i);
+            if (city != null &&
+                city.IsKnown &&
+                city.RouteMode == RegionalTradeRouteMode.River &&
+                System.Array.IndexOf(city.Sells, TradeResourceType.Textile) >= 0)
+            {
+                return i;
+            }
+        }
+
+        return 5;
+    }
+
+    private void NotifyTutorialBuildingWorkerAssigned(LocationType buildingType)
+    {
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped)
+        {
+            return;
+        }
+
+        if (buildingType == LocationType.LaborExchange)
+        {
+            CheckTutorialLaborExchangeGoal();
+        }
+        else if (buildingType == LocationType.Docks)
+        {
+            CheckTutorialDocksGoal();
+        }
+    }
+
+    private void CheckTutorialLaborExchangeGoal()
+    {
+        if (selectedGameStartMode != GameStartMode.Tutorial ||
+            isTutorialSkipped ||
+            !isTutorialGoalsActive ||
+            isTutorialGoalsComplete ||
+            tutorialGoalsMode != TutorialGoalsMode.LaborExchange)
+        {
+            return;
+        }
+
+        bool hasLaborExchange = locations.ContainsKey(LocationType.LaborExchange);
+        int assignedWorkers = CountLogisticsWorkers(LocationType.LaborExchange);
+        SessionDebugLogger.Log("TUTORIAL", $"Labor Exchange goal progress: built={hasLaborExchange}, workers={assignedWorkers}/1.");
+
+        if (hasLaborExchange)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.BuildLaborExchange);
+        }
+
+        if (assignedWorkers >= 1)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.StaffLaborExchange);
+        }
+    }
+
+    private void CheckTutorialWorkerArrivalGoal()
+    {
+        if (selectedGameStartMode != GameStartMode.Tutorial ||
+            isTutorialSkipped ||
+            !isTutorialGoalsActive ||
+            isTutorialGoalsComplete ||
+            tutorialGoalsMode != TutorialGoalsMode.WorkerCard)
+        {
+            return;
+        }
+
+        MarkTutorialGoalComplete(TutorialGoalKind.WaitForWorkerArrival);
+    }
+
+    private void NotifyTutorialWorldMapOpened()
+    {
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped)
+        {
+            return;
+        }
+
+        CheckTutorialRegionalMapGoal();
+    }
+
+    private void NotifyTutorialTradeRouteBuilt(int regionIndex)
+    {
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped)
+        {
+            return;
+        }
+
+        CheckTutorialRegionalMapGoal();
+
+        int riverRegionIndex = GetTutorialRiverTradeRegionIndex();
+        if (regionIndex == riverRegionIndex)
+        {
+            SessionDebugLogger.Log("TUTORIAL", $"Tutorial river trade route built at region {regionIndex}.");
+        }
+    }
+
+    private void CheckTutorialRegionalMapGoal()
+    {
+        if (selectedGameStartMode != GameStartMode.Tutorial ||
+            isTutorialSkipped ||
+            !isTutorialGoalsActive ||
+            isTutorialGoalsComplete ||
+            tutorialGoalsMode != TutorialGoalsMode.RegionalMap)
+        {
+            return;
+        }
+
+        int riverRegionIndex = GetTutorialRiverTradeRegionIndex();
+        bool routeBuilt = IsWorldMapTradeRouteBuilt(riverRegionIndex);
+        SessionDebugLogger.Log("TUTORIAL", $"Regional map goal progress: open={isWorldMapPanelOpen}, riverRoute={routeBuilt} region={riverRegionIndex}.");
+
+        if (isWorldMapPanelOpen)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.OpenRegionalMap);
+        }
+
+        if (routeBuilt)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.BuildTradeRoute);
+        }
+    }
+
+    private void NotifyTutorialDocksBuilt()
+    {
+        if (selectedGameStartMode != GameStartMode.Tutorial || isTutorialSkipped)
+        {
+            return;
+        }
+
+        CheckTutorialDocksGoal();
+        if (!hasShownUserDocksBuiltTutorial)
+        {
+            ScheduleTutorial(TutorialTrigger.UserDocksBuiltInfo, 0.35f);
+        }
+    }
+
+    private void CheckTutorialDocksGoal()
+    {
+        if (selectedGameStartMode != GameStartMode.Tutorial ||
+            isTutorialSkipped ||
+            !isTutorialGoalsActive ||
+            isTutorialGoalsComplete ||
+            tutorialGoalsMode != TutorialGoalsMode.Docks)
+        {
+            return;
+        }
+
+        bool hasDocks = locations.ContainsKey(LocationType.Docks);
+        int assignedWorkers = CountLogisticsWorkers(LocationType.Docks);
+        SessionDebugLogger.Log("TUTORIAL", $"Docks goal progress: built={hasDocks}, workers={assignedWorkers}/1.");
+
+        if (hasDocks)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.BuildDocks);
+        }
+
+        if (assignedWorkers >= 1)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.AssignDocksWorker);
+        }
     }
 
     private void EnsureTutorialIntercityTruckAvailable()

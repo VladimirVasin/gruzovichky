@@ -36,11 +36,15 @@ public partial class GameBootstrap
 
     private bool IsWeekend() => (currentDay - 1) % 7 >= 5;
 
-    // Returns true if 'hour' falls within the 8-hour window starting at 'shiftStart'
+    // Returns true if 'hour' falls within the 8-hour transport/service window starting at 'shiftStart'.
     private bool IsHourInShiftWindow(int hour, int shiftStart)
     {
-        if (IsWeekend()) return false;
         return (hour - shiftStart + 24) % 24 < 8;
+    }
+
+    private bool IsShiftWindowActive(int hour, int shiftStart, bool worksWeekends)
+    {
+        return (worksWeekends || !IsWeekend()) && IsHourInShiftWindow(hour, shiftStart);
     }
 
     private bool IsProductionWorkHour(int hour)
@@ -56,13 +60,26 @@ public partial class GameBootstrap
 
     private bool IsBuildingWorkerWorkHour(LocationType buildingType, int slotIndex, int hour)
     {
-        if (!HasServiceWorkerSlot(buildingType))
+        BuildingWorkScheduleKind scheduleKind = GetBuildingWorkScheduleKind(buildingType);
+        if (slotIndex < 0 || slotIndex >= GetBuildingWorkerScheduleSlotCount(buildingType))
+        {
+            return false;
+        }
+
+        if (IsDayWorkSchedule(scheduleKind))
         {
             return IsProductionWorkHour(hour);
         }
 
         int shiftStart = GetBuildingWorkerShiftStartHour(buildingType, slotIndex);
-        return shiftStart >= 0 && IsHourInShiftWindow(hour, shiftStart);
+        return shiftStart >= 0 &&
+               IsShiftWindowActive(hour, shiftStart, DoesBuildingScheduleUseWeekends(scheduleKind));
+    }
+
+    private bool CanBuildingWorkerWorkToday(LocationType buildingType)
+    {
+        BuildingWorkScheduleKind scheduleKind = GetBuildingWorkScheduleKind(buildingType);
+        return DoesBuildingScheduleUseWeekends(scheduleKind) || !IsWeekend();
     }
 
     private bool IsLogisticsWorkerWorkHour(DriverAgent driver)
@@ -75,22 +92,29 @@ public partial class GameBootstrap
 
     private static int GetBuildingWorkerShiftPresetIndex(LocationType buildingType, int slotIndex)
     {
-        if (!HasServiceWorkerSlot(buildingType))
-        {
-            return -1;
-        }
-
-        int normalizedSlot = Mathf.Clamp(slotIndex, 0, ServiceMaxWorkersPerBuilding - 1);
-        if (buildingType == LocationType.Bar)
+        BuildingWorkScheduleKind scheduleKind = GetBuildingWorkScheduleKind(buildingType);
+        int normalizedSlot = Mathf.Clamp(slotIndex, 0, Mathf.Max(0, GetBuildingWorkerScheduleSlotCount(buildingType) - 1));
+        if (scheduleKind == BuildingWorkScheduleKind.ServiceEveningNight)
         {
             return normalizedSlot == 0 ? 1 : 2;
         }
 
-        return normalizedSlot == 0 ? 0 : 1;
+        if (scheduleKind == BuildingWorkScheduleKind.ServiceDayEvening)
+        {
+            return normalizedSlot == 0 ? 0 : 1;
+        }
+
+        return -1;
     }
 
     private static int GetBuildingWorkerShiftStartHour(LocationType buildingType, int slotIndex)
     {
+        BuildingWorkScheduleKind scheduleKind = GetBuildingWorkScheduleKind(buildingType);
+        if (IsDayWorkSchedule(scheduleKind))
+        {
+            return ProductionWorkStartHour;
+        }
+
         int shiftIndex = GetBuildingWorkerShiftPresetIndex(buildingType, slotIndex);
         return shiftIndex >= 0 && shiftIndex < ShiftPresetHours.Length ? ShiftPresetHours[shiftIndex] : -1;
     }
@@ -109,6 +133,11 @@ public partial class GameBootstrap
 
     private string GetBuildingWorkerWorkRangeLabel(LocationType buildingType, int slotIndex)
     {
+        if (IsDayWorkSchedule(GetBuildingWorkScheduleKind(buildingType)))
+        {
+            return GetProductionWorkRangeLabel();
+        }
+
         int shiftStart = GetBuildingWorkerShiftStartHour(buildingType, slotIndex);
         return shiftStart >= 0 ? GetShiftRangeLabel(shiftStart) : GetProductionWorkRangeLabel();
     }

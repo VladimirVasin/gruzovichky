@@ -93,6 +93,9 @@ public partial class GameBootstrap
     private bool hasShownUserBuyTruckTutorial;
     private bool hasShownUserTruckArrivalTutorial;
     private bool hasShownUserTruckFreightTutorial;
+    private bool hasShownUserBuildLaborExchangeTutorial;
+    private bool hasShownUserLaborExchangeBuiltTutorial;
+    private bool hasShownUserMigrationInfoTutorial;
     private bool hasShownUserWorkersLeisureTutorial;
     private bool hasShownUserBuildServiceBuildingsTutorial;
     private bool hasShownUserBarBuiltTutorial;
@@ -107,9 +110,12 @@ public partial class GameBootstrap
     private bool hasShownUserLocalBusRoutesTutorial;
     private bool hasShownUserEconomyTaxesTutorial;
     private bool hasShownUserTradeIntroTutorial;
-    private bool hasShownUserTradeRaceTutorial;
+    private bool hasShownUserTradeRouteTutorial;
+    private bool hasShownUserDocksTutorial;
+    private bool hasShownUserDocksBuiltTutorial;
+    private bool hasShownUserTradePolicyTutorial;
     private bool hasShownUserDemoCompleteTutorial;
-    private int nextUserServiceBuildingInfoTutorialStep = 15;
+    private int nextUserServiceBuildingInfoTutorialStep = 19;
     private bool isLoadingWorld;
     private static GameStartMode? pendingAutoStartMode;
     // mainMenuMusicLoadCoroutine removed (music disabled)

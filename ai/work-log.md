@@ -1,10 +1,24 @@
 # Work Log
 
-Last updated: 2026-05-05
+Last updated: 2026-05-06
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20 and again on 2026-05-03 to keep agent startup light. Use git history for exact old implementation details.
 
 ## Recent Work
+
+- 2026-05-06: Centralized building work schedules into `GameBootstrap.RuntimeSchedules.cs`. Building slot counts, staff work-hour checks, service shift presets, higher-education office slots, and UI schedule labels now share the same rules. Transport shift windows no longer inherit the global weekend block, so truck/bus shifts can run daily, while production and higher-education office work remain weekday `08:00-18:00`; service buildings run their configured daily shifts. Building workers now also skip pre-shift commutes on non-working days. Updated owner map for the new schedule partial.
+
+- 2026-05-06: Changed higher-education building jobs to a dedicated single workday slot. Any building that requires higher education now exposes one staff slot and works `08:00-18:00` using the same weekday-only work-hour rule as production; Labor Exchange currently uses this rule, so it no longer has separate morning/evening clerk slots. Updated assignment UI summary copy accordingly.
+
+- 2026-05-06: Fixed stale worker interior state when a shift commute interrupts an idle activity. Workers now exit service/interview/home-meal interiors and clear idle timers/goals before heading to assigned buildings, Parking, or local-bus shifts, preventing Labor Exchange and other microHUDs/debug snapshots from showing off-shift workers as inside a building because of a previous Canteen/Bar/Gambling Hall/Labor Exchange visit.
+
+- 2026-05-06: Tuned automatic worker migration after debug-log review. Vacancies still raise arrival odds, but automatic arrivals now respect a daily cap, current treasury pressure, city-wide worker need pressure, and softer guaranteed-arrival rules so a high-vacancy city does not jump population too aggressively in one day. Trade/Docks diagnostics now explain whether a skipped policy lacks a built route, has the wrong route mode, or points at a city that does not buy/sell the requested resource. Verified runtime/editor `dotnet build`, `git diff --check`, and line-count check.
+
+- 2026-05-05: Rebuilt the active Tutorial path around current systems instead of legacy intercity/race trade. The flow now moves through Labor Exchange construction/staffing, automatic worker arrivals, services, warehouse loaders, local buses, economy/taxes, Regional Map route building, Docks construction/staffing, and Trade policy setup. Added tutorial goal tracking for Labor Exchange, Regional Map, Docks, and Textile buy policy, wired map/docks/assignment events into goal completion, and made tutorial panel transitions close the paused world map before auto-opening Build/Trade panels. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `dotnet build Assembly-CSharp-Editor.csproj -v:minimal`, `dotnet test Assembly-CSharp-Editor.csproj --no-build -v:minimal`, touched file line counts, and a touched tutorial/UI mojibake scan.
+
+- 2026-05-05: Fixed follow-ups from the latest `debug.log` except treasury-negative behavior. Labor Exchange postings now store/compare resolved building instance ids so reserved/active postings block duplicate target-slot ads. Service workers who arrive early now wait at the building road access until their shift window starts instead of entering and triggering premature salary payouts; salary payout also has a per-worker shift-day guard. Worker migration was softened after the new two-shift service staffing inflated vacancy pressure. Service visits now path to service road-access cells instead of blocked building centers, reducing Gambling Hall reroutes. Docks/Trade logging now gives clearer river import/export skip reasons and avoids noisy land-dispatch warnings for river-routed policies. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, and `./tools/check-line-count.ps1`.
+
+- 2026-05-05: Adjusted service staffing schedules so `GamblingHall` matches Bar with Evening and Night worker slots. Other service buildings still use Morning and Evening. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
 
 - 2026-05-05: Added two-shift staffing for service buildings. Service buildings now expose two building-worker slots instead of one: most service buildings use Morning and Evening, while Bar uses Evening and Night. Building staff assignments now store the exact building slot index, vacancies/Labor Exchange postings use the slot's concrete schedule, active-shift checks use those service windows instead of production hours, and the Shifts UI lists service slot titles with their shift labels. Split building-slot UI setup into `GameBootstrap.FleetCanvas.ShiftsSetup.BuildingSlots.cs` to keep `ShiftsSetup.cs` under the 900-line limit. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
 

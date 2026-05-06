@@ -384,6 +384,50 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase == DriverRescuePhase.IdlePettingCat;
     }
 
+    private void InterruptDriverIdleActivityForShift(DriverAgent driver, string destinationLabel)
+    {
+        if (driver == null || !IsDriverInIdleActivity(driver))
+        {
+            return;
+        }
+
+        DriverRescuePhase interruptedPhase = driver.WalkPhase;
+        if (driver.IsInsideBuilding)
+        {
+            ExitWorkerServiceInterior(driver, interruptedPhase);
+        }
+
+        if (interruptedPhase == DriverRescuePhase.IdleSittingOnBench ||
+            interruptedPhase == DriverRescuePhase.IdleAtCityPark ||
+            interruptedPhase == DriverRescuePhase.IdleExitCityPark)
+        {
+            ReleaseBench(driver);
+        }
+
+        if (interruptedPhase == DriverRescuePhase.IdleSmoking)
+        {
+            StopDriverSmokingParticles(driver);
+        }
+
+        if (interruptedPhase == DriverRescuePhase.IdlePettingCat ||
+            interruptedPhase == DriverRescuePhase.IdleWalkToCat)
+        {
+            ReleaseCatInteraction(driver);
+        }
+
+        driver.WalkPhase = DriverRescuePhase.None;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        driver.WalkAnimationTime = 0f;
+        driver.IdleActivityTimer = 0f;
+        driver.IdleWanderPauseTimer = 0f;
+        driver.IdleWanderPointIndex = -1;
+        driver.IdleConversationTimer = 0f;
+        driver.IdleConversationPartnerId = -1;
+        driver.LifeGoal = WorkerLifeGoal.None;
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} interrupted {interruptedPhase} to commute to {destinationLabel}.");
+    }
+
     private bool ShouldDriverHeadToShift(DriverAgent driver)
     {
         if (driver == null || IsDriverIntercity(driver) || driver.DutyMode == DriverDutyMode.Logistics || driver.ShiftStartHour < 0)
@@ -449,6 +493,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        InterruptDriverIdleActivityForShift(driver, "Parking");
         if (driver.DriverObject.activeSelf == false)
         {
             driver.DriverObject.SetActive(true);
@@ -513,6 +558,11 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
+        if (!CanBuildingWorkerWorkToday(driver.AssignedBuildingType.Value))
+        {
+            return false;
+        }
+
         int currentHour = GetCurrentHour();
         if (IsBuildingWorkerWorkHour(driver.AssignedBuildingType.Value, GetLogisticsWorkerSlotIndex(driver), currentHour))
         {
@@ -545,6 +595,15 @@ public partial class GameBootstrap : MonoBehaviour
                 driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) ||
                 !driver.AssignedBuildingType.HasValue)
             {
+                return;
+            }
+
+            if (driver.WaitingForShiftAtParking)
+            {
+                if (IsLogisticsWorkerWorkHour(driver))
+                {
+                    StartLogisticsWorkerShiftAtBuilding(driver);
+                }
                 return;
             }
 
@@ -624,6 +683,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        InterruptDriverIdleActivityForShift(driver, building.Label);
         if (!driver.DriverObject.activeSelf)
         {
             driver.DriverObject.SetActive(true);
@@ -636,11 +696,12 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IdleConversationTimer = 0f;
         driver.IdleConversationPartnerId = -1;
         driver.WalkAnimationTime = 0f;
+        driver.WaitingForShiftAtParking = false;
         ReleaseBench(driver);
         ApplyDriverPose(driver, 0f, 0f);
 
-        Vector3 target = GetCellCenter(building.Anchor);
-        target.y += 0.05f;
+        Vector3 target = GetCellCenter(building.RoadAccess == default ? building.Anchor : building.RoadAccess);
+        target.y = SampleTerrainHeight(target.x, target.z);
         ResetWorkerLocalBusTripState(driver);
         if (TryStartWorkerPersonalCarTrip(driver, driver.DriverObject.transform.position, target, DriverRescuePhase.ToBuildingForShift, $"{building.Label} shift"))
         {
@@ -668,6 +729,39 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} started commute to {building.Label}.");
+    }
+
+    private void StartLogisticsWorkerShiftAtBuilding(DriverAgent driver)
+    {
+        if (driver == null || driver.IsOnActiveShift || !driver.AssignedBuildingType.HasValue)
+        {
+            return;
+        }
+
+        LocationData building = GetAssignedBuildingLocation(driver);
+        if (building == null)
+        {
+            driver.WaitingForShiftAtParking = false;
+            return;
+        }
+
+        driver.WaitingForShiftAtParking = false;
+        driver.WalkPhase = DriverRescuePhase.None;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        driver.WalkAnimationTime = 0f;
+        driver.IsOnActiveShift = true;
+        driver.IsInsideBuilding = true;
+        driver.IsShiftSalaryPending = true;
+        if (driver.DriverObject != null)
+        {
+            driver.DriverObject.SetActive(false);
+        }
+
+        building.Workers = Mathf.Min(
+            building.Workers + 1,
+            GetMaxBuildingWorkerSlots(driver.AssignedBuildingType.Value));
+        SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} entered {building.Label} - building operational.");
     }
 
     private void UpdateLogisticsShiftEnd(DriverAgent driver)

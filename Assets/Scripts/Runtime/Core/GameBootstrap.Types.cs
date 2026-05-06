@@ -257,16 +257,7 @@ public partial class GameBootstrap : MonoBehaviour
         _                          => false
     };
 
-    private static int GetMaxBuildingWorkerSlots(LocationType type) => type switch
-    {
-        LocationType.Warehouse => WarehouseMaxWorkers,
-        LocationType.Forest => ProductionMaxWorkersPerBuilding,
-        LocationType.Sawmill => ProductionMaxWorkersPerBuilding,
-        LocationType.FurnitureFactory => ProductionMaxWorkersPerBuilding,
-        LocationType.Docks => 1,
-        _ when HasServiceWorkerSlot(type) => ServiceMaxWorkersPerBuilding,
-        _ => 0
-    };
+    private static int GetMaxBuildingWorkerSlots(LocationType type) => GetBuildingWorkerScheduleSlotCount(type);
 
     private static string GetBuildingWorkerRoleLabel(LocationType type) => type switch
     {

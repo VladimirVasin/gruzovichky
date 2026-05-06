@@ -175,6 +175,7 @@ public partial class GameBootstrap
             return;
         }
 
+        InterruptDriverIdleActivityForShift(driver, "Parking");
         if (!driver.DriverObject.activeSelf)
         {
             driver.DriverObject.SetActive(true);

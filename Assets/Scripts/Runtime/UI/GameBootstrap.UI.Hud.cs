@@ -113,8 +113,8 @@ public partial class GameBootstrap
                !isTutorialSkipped &&
                isTutorialGoalsActive &&
                tutorialGoalsMode == TutorialGoalsMode.WorkerCard &&
-               activeTutorialGoals.Contains(TutorialGoalKind.HireNewWorker) &&
-               !completedTutorialGoals.Contains(TutorialGoalKind.HireNewWorker);
+               activeTutorialGoals.Contains(TutorialGoalKind.WaitForWorkerArrival) &&
+               !completedTutorialGoals.Contains(TutorialGoalKind.WaitForWorkerArrival);
     }
     private void DrawAvailableTripsHud()
     {

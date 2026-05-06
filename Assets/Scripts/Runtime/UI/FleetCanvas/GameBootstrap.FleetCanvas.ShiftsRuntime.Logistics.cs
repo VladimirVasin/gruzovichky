@@ -204,6 +204,10 @@ public partial class GameBootstrap
         {
             NotifyTutorialWarehouseLoaderAssigned();
         }
+        else
+        {
+            NotifyTutorialBuildingWorkerAssigned(slot.BuildingType);
+        }
 
         string workKind = IsProductionLocation(slot.BuildingType) ? "production" : "service";
         string buildingName = GetBuildingInstanceDisplayName(slot.BuildingType, slot.LocationInstanceId);
@@ -212,7 +216,7 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} assigned to {slot.BuildingType}#{driver.AssignedBuildingInstanceId} slot={slot.SlotIndex} {workKind} work ({workRange}).");
         PushFeedEvent(
             $"{driver.DriverName} assigned to {buildingName}.",
-            $"{driver.DriverName} назначен в {GetSelectedLocationDisplayName(slot.BuildingType)}.",
+            $"{driver.DriverName} \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d \u0432 {GetSelectedLocationDisplayName(slot.BuildingType)}.",
             FeedEventType.Info);
         isShiftsScreenDirty = true;
         isDriversScreenDirty = true;

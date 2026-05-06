@@ -685,6 +685,7 @@ public partial class GameBootstrap
         city.TradeRouteBuilt = true;
         isWorldMapScreenDirty = true;
         SessionDebugLogger.Log("TRADE_ROUTE", $"Built regional trade route: region={regionIndex}; name={city.NameEn}; mode={city.RouteMode}.");
+        NotifyTutorialTradeRouteBuilt(regionIndex);
         PlayUiSound(uiPanelOpenClip, 0.88f);
         LogUiInput($"Map trade route built -> region {regionIndex}");
     }

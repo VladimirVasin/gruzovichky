@@ -33,7 +33,7 @@ public partial class GameBootstrap
             TutorialTrigger.BeeEasterEgg,
             0,
             "Bees",
-            "Дурачок, не мешай пчёлкам");
+            "\u0414\u0443\u0440\u0430\u0447\u043e\u043a, \u043d\u0435 \u043c\u0435\u0448\u0430\u0439 \u043f\u0447\u0435\u043b\u043a\u0430\u043c");
         if (tutorialHud?.WindowRect != null)
         {
             tutorialHud.WindowRect.sizeDelta = new Vector2(500f, 260f);
@@ -327,9 +327,19 @@ public partial class GameBootstrap
             tutorialCameraFollowHiringBus = false;
             isTutorialCameraFocusActive = false;
             isCameraReturningToDiorama = true;
-            UnlockAllBuildTools();
             UnlockAllTutorialVacancies();
-            SessionDebugLogger.Log("TUTORIAL", "Unlocked all build tools and vacancies after tutorial hiring bus info.");
+            SessionDebugLogger.Log("TUTORIAL", "Unlocked all vacancies after tutorial hiring bus info.");
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserBuildLaborExchangePrompt)
+        {
+            BeginLaborExchangeTutorialGoals();
+            OpenBuildPanelFromTutorial();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserMigrationInfo)
+        {
+            BeginWorkerCardTutorialGoals();
         }
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserWarehouseLoadersInfo)
@@ -354,12 +364,8 @@ public partial class GameBootstrap
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserTradeIntroInfo)
         {
-            BeginTradeSetupTutorialGoals();
-        }
-
-        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserTradeRaceInfo)
-        {
-            BeginJoinRaceTutorialGoals();
+            BeginRegionalMapTutorialGoals();
+            OpenWorldMapPanelFromTutorial();
         }
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserTruckAssignedFreightInfo)
@@ -367,7 +373,7 @@ public partial class GameBootstrap
             tutorialCameraFollowTruck = null;
             isTutorialCameraFocusActive = false;
             isCameraReturningToDiorama = true;
-            ScheduleTutorial(TutorialTrigger.UserWorkersLeisureInfo, 0.35f);
+            ScheduleTutorial(TutorialTrigger.UserBuildLaborExchangePrompt, 0.35f);
         }
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserWorkersLeisureInfo)
@@ -383,7 +389,19 @@ public partial class GameBootstrap
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserWorkersOverviewInfo)
         {
-            BeginWorkerCardTutorialGoals();
+            ScheduleTutorial(TutorialTrigger.UserWarehouseLoadersInfo, 0.35f);
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserDocksPrompt)
+        {
+            BeginDocksTutorialGoals();
+            OpenBuildPanelFromTutorial();
+        }
+
+        if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserTradePolicyInfo)
+        {
+            BeginTradeSetupTutorialGoals();
+            OpenTradePanelFromTutorial();
         }
 
         if (!isTutorialSkipped && activeTutorialTrigger == TutorialTrigger.UserLumberjackWorkerAssignedInfo)

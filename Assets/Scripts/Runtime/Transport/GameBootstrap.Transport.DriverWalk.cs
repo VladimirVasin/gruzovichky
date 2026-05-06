@@ -535,22 +535,19 @@ public partial class GameBootstrap
                 return;
 
             case DriverRescuePhase.ToBuildingForShift:
-                driver.WalkPhase        = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
-                driver.IsOnActiveShift   = true;
-                driver.IsInsideBuilding  = true;
-                driver.IsShiftSalaryPending = true;
-                driver.DriverObject.SetActive(false);
-                LocationData enteredBuilding = GetAssignedBuildingLocation(driver);
-                if (driver.AssignedBuildingType.HasValue && enteredBuilding != null)
+                if (!IsLogisticsWorkerWorkHour(driver))
                 {
-                    enteredBuilding.Workers = Mathf.Min(
-                        enteredBuilding.Workers + 1,
-                        GetMaxBuildingWorkerSlots(driver.AssignedBuildingType.Value));
-                    SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} entered {enteredBuilding.Label} - building operational.");
+                    driver.WalkPhase = DriverRescuePhase.None;
+                    driver.WaitingForShiftAtParking = true;
+                    LocationData waitingBuilding = GetAssignedBuildingLocation(driver);
+                    SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} reached {waitingBuilding?.Label ?? "assigned building"} early and is waiting for shift start.");
+                    return;
                 }
+
+                StartLogisticsWorkerShiftAtBuilding(driver);
                 return;
 
             case DriverRescuePhase.LumberToTree:

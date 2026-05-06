@@ -122,9 +122,10 @@ public partial class GameBootstrap : MonoBehaviour
         }
         else
         {
-            float x = (service.Min.x + service.Max.x + 1) * 0.5f;
-            float z = (service.Min.y + service.Max.y + 1) * 0.5f;
-            target = new(x + Random.Range(-0.2f, 0.2f), 0f, z + Random.Range(-0.2f, 0.2f));
+            target = GetCellCenter(service.RoadAccess == default ? service.Anchor : service.RoadAccess);
+            target.x += Random.Range(-0.18f, 0.18f);
+            target.z += Random.Range(-0.18f, 0.18f);
+            target.y = SampleTerrainHeight(target.x, target.z);
         }
         driver.LifeGoal = goal;
         driver.IdleActivityTimer = duration;

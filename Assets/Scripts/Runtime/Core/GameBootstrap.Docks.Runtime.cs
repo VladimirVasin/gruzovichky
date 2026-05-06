@@ -126,6 +126,7 @@ public partial class GameBootstrap
         bool canBuy = TryFindDocksShipTrade(docks, TradeOrderType.Buy, out TradeResourceType buyResource, out int buyQuantity);
         int bought = canBuy ? buyQuantity : 0;
         int buyMoney = 0;
+        string buySkipReason = string.Empty;
         if (bought > 0)
         {
             int unitPrice = GetDocksBuyPrice(buyResource);
@@ -140,6 +141,7 @@ public partial class GameBootstrap
             }
             else
             {
+                buySkipReason = $"treasury ${money} cannot afford {GetTradeResourceLabel(buyResource)} at ${unitPrice}/unit";
                 bought = 0;
             }
         }
@@ -152,8 +154,8 @@ public partial class GameBootstrap
         string boughtText = bought > 0
             ? $"bought {GetTradeResourceLabel(buyResource)} x{bought} for ${buyMoney}"
             : canBuy
-                ? $"no {GetTradeResourceLabel(buyResource)} bought"
-                : "no river import policy ready";
+                ? $"no {GetTradeResourceLabel(buyResource)} bought ({buySkipReason})"
+                : $"no river import policy ready ({GetDocksTradeSkipReason(docks, TradeOrderType.Buy)})";
         SessionDebugLogger.Log("TRADE_RIVER", $"Ship trade at Docks: {soldText}; {boughtText}; treasury=${money}.");
         return $"{soldText}; {boughtText}.";
     }
@@ -199,6 +201,61 @@ public partial class GameBootstrap
         resourceType = TradeResourceType.Logs;
         quantity = 0;
         return false;
+    }
+
+    private string GetDocksTradeSkipReason(LocationData docks, TradeOrderType orderType)
+    {
+        for (int i = 0; i < TradeHudResources.Length; i++)
+        {
+            TradeResourceType candidate = TradeHudResources[i];
+            TradePolicyMode mode = GetTradePolicyMode(candidate);
+            TradePolicyMode requiredMode = orderType == TradeOrderType.Buy
+                ? TradePolicyMode.BuyUpTo
+                : TradePolicyMode.SellAbove;
+            if (mode != requiredMode)
+            {
+                continue;
+            }
+
+            if (!HasBuiltRegionalTradeRoute(candidate, orderType, RegionalTradeRouteMode.River))
+            {
+                return $"{orderType} {candidate}: {DescribeRegionalTradeRouteAvailability(candidate, orderType, RegionalTradeRouteMode.River)}";
+            }
+
+            int target = GetTradePolicyTarget(candidate);
+            if (orderType == TradeOrderType.Buy)
+            {
+                int stock = GetWarehouseTradeResourceAmount(candidate) + GetDocksImportStoredResource(docks, candidate);
+                int room = DocksResourceCapacity - GetDocksImportStoredResource(docks, candidate);
+                if (stock >= target)
+                {
+                    return $"{candidate} stock {stock} already meets target {target}";
+                }
+
+                if (room <= 0)
+                {
+                    return $"{candidate} import storage full";
+                }
+            }
+            else
+            {
+                int dockStock = GetDocksExportStoredResource(docks, candidate);
+                int totalStock = GetWarehouseTradeResourceAmount(candidate) + dockStock;
+                if (dockStock <= 0)
+                {
+                    return $"{candidate} has no export cargo at Docks";
+                }
+
+                if (totalStock <= target)
+                {
+                    return $"{candidate} total stock {totalStock} is not above target {target}";
+                }
+            }
+        }
+
+        return orderType == TradeOrderType.Buy
+            ? "no Buy up to policy with an eligible river route"
+            : "no Sell surplus policy with an eligible river route";
     }
 
     private void EnsureDocksShipObject(LocationData docks)

@@ -158,7 +158,16 @@ public partial class GameBootstrap
             TradeOrderType orderType = mode == TradePolicyMode.SellAbove ? TradeOrderType.Sell : TradeOrderType.Buy;
             if (!HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land))
             {
-                SessionDebugLogger.Log("TRADE_AUTO", $"Policy skipped for land dispatch: {orderType} {resourceType} has no built land route.");
+                if (HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.River))
+                {
+                    SessionDebugLogger.LogVerbose("TRADE_AUTO", $"Policy skipped for land dispatch: {orderType} {resourceType} uses a built river route and will be handled by Docks.");
+                }
+                else
+                {
+                    SessionDebugLogger.Log(
+                        "TRADE_AUTO",
+                        $"Policy skipped for land dispatch: {orderType} {resourceType}: {DescribeRegionalTradeRouteAvailability(resourceType, orderType, RegionalTradeRouteMode.Land)}.");
+                }
                 continue;
             }
 

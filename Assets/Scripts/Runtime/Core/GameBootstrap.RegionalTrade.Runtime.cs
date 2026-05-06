@@ -73,8 +73,9 @@ public partial class GameBootstrap
             city.RouteMode != RegionalTradeRouteMode.Land ||
             !TryFindBuiltRegionalTradeRoute(request.ResourceType, request.OrderType, RegionalTradeRouteMode.Land, out city))
         {
-            tradeDispatchStatusText = "No land trade route";
-            SessionDebugLogger.Log("TRADE_LAND", $"Dispatch blocked: no built land route for {request.OrderType} {request.ResourceType}.");
+            string reason = DescribeRegionalTradeRouteAvailability(request.ResourceType, request.OrderType, RegionalTradeRouteMode.Land);
+            tradeDispatchStatusText = reason;
+            SessionDebugLogger.Log("TRADE_LAND", $"Dispatch blocked for {request.OrderType} {request.ResourceType}: {reason}.");
             return false;
         }
 

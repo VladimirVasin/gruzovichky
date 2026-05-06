@@ -266,7 +266,7 @@ public partial class GameBootstrap
             Id = nextLaborExchangePostingId++,
             Kind = candidate.Kind,
             BuildingType = candidate.BuildingType,
-            BuildingInstanceId = candidate.BuildingInstanceId,
+            BuildingInstanceId = ResolveBuildingInstanceId(candidate.BuildingType, candidate.BuildingInstanceId),
             SlotIndex = candidate.SlotIndex,
             ShiftIndex = candidate.ShiftIndex,
             TruckNumber = candidate.TruckNumber,
@@ -435,7 +435,7 @@ public partial class GameBootstrap
             LaborExchangePosting posting = laborExchangePostings[i];
             if (posting.Kind == kind &&
                 posting.BuildingType == buildingType &&
-                posting.BuildingInstanceId == resolvedInstanceId &&
+                ResolveBuildingInstanceId(posting.BuildingType, posting.BuildingInstanceId) == resolvedInstanceId &&
                 posting.SlotIndex == slotIndex &&
                 posting.ShiftIndex == shiftIndex)
             {

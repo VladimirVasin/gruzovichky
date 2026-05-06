@@ -556,11 +556,23 @@ public partial class GameBootstrap : MonoBehaviour
     private void PayDriverSalary(DriverAgent driver)
     {
         if (driver == null || driver.Salary <= 0 || !driver.IsShiftSalaryPending) return;
+        int salaryShiftStart = GetSalaryShiftStartHour(driver);
+        int salaryShiftDay = GetSalaryShiftDay(driver, salaryShiftStart);
+        if (driver.LastSalaryPaidShiftDay == salaryShiftDay &&
+            driver.LastSalaryPaidShiftStartHour == salaryShiftStart)
+        {
+            driver.IsShiftSalaryPending = false;
+            SessionDebugLogger.Log("PAY", $"{driver.DriverName} salary payout skipped: already paid for shiftDay={salaryShiftDay}, shiftStart={salaryShiftStart}.");
+            return;
+        }
+
         int treasuryBefore = money;
         driver.Money += driver.Salary;
         money -= driver.Salary;
         int actualTreasuryDelta = money - treasuryBefore;
         driver.IsShiftSalaryPending = false;
+        driver.LastSalaryPaidShiftDay = salaryShiftDay;
+        driver.LastSalaryPaidShiftStartHour = salaryShiftStart;
         RecordMoneyMovement(
             actualTreasuryDelta,
             "Treasury",
@@ -574,6 +586,38 @@ public partial class GameBootstrap : MonoBehaviour
         isDriversScreenDirty = true;
         SessionDebugLogger.Log("PAY", $"{driver.DriverName} paid ${driver.Salary}. Personal balance: ${driver.Money}. Treasury: ${money}.");
         AdvanceWorkerContractAfterPaidShift(driver);
+    }
+
+    private int GetSalaryShiftStartHour(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return -1;
+        }
+
+        if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
+        {
+            int shiftStart = GetBuildingWorkerShiftStartHour(driver.AssignedBuildingType.Value, GetLogisticsWorkerSlotIndex(driver));
+            return shiftStart >= 0 ? shiftStart : ProductionWorkStartHour;
+        }
+
+        return driver.ShiftStartHour >= 0 ? driver.ShiftStartHour : ProductionWorkStartHour;
+    }
+
+    private int GetSalaryShiftDay(DriverAgent driver, int shiftStartHour)
+    {
+        int hour = GetCurrentHour();
+        if (shiftStartHour >= 0 && shiftStartHour != ProductionWorkStartHour && hour < shiftStartHour)
+        {
+            return currentDay - 1;
+        }
+
+        if (shiftStartHour == ProductionWorkStartHour && hour < ProductionWorkStartHour)
+        {
+            return currentDay - 1;
+        }
+
+        return currentDay;
     }
 
     private void EnsurePendingShiftSalaryPaid(DriverAgent driver)

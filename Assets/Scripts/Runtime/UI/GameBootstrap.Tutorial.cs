@@ -20,6 +20,9 @@ public partial class GameBootstrap
         UserBuyTruckPrompt,
         UserTruckPurchasedArrivalInfo,
         UserTruckAssignedFreightInfo,
+        UserBuildLaborExchangePrompt,
+        UserLaborExchangeBuiltInfo,
+        UserMigrationInfo,
         UserWorkersLeisureInfo,
         UserBuildServiceBuildingsPrompt,
         UserBarBuiltInfo,
@@ -34,7 +37,10 @@ public partial class GameBootstrap
         UserLocalBusRoutesInfo,
         UserEconomyTaxesInfo,
         UserTradeIntroInfo,
-        UserTradeRaceInfo,
+        UserTradeRouteInfo,
+        UserDocksPrompt,
+        UserDocksBuiltInfo,
+        UserTradePolicyInfo,
         UserDemoCompleteInfo,
         BeeEasterEgg
     }
@@ -71,7 +77,7 @@ public partial class GameBootstrap
 
     private TutorialHudRefs tutorialHud;
     private TutorialTrigger activeTutorialTrigger;
-    private const int NewUserTutorialStepCount = 28;
+    private const int NewUserTutorialStepCount = 34;
     private static readonly Vector3 UserWelcomeCameraOffset = new(-13f, 14f, -13f);
 
     private static bool IsNewUserTutorialTrigger(TutorialTrigger trigger)
@@ -90,6 +96,9 @@ public partial class GameBootstrap
             or TutorialTrigger.UserBuyTruckPrompt
             or TutorialTrigger.UserTruckPurchasedArrivalInfo
             or TutorialTrigger.UserTruckAssignedFreightInfo
+            or TutorialTrigger.UserBuildLaborExchangePrompt
+            or TutorialTrigger.UserLaborExchangeBuiltInfo
+            or TutorialTrigger.UserMigrationInfo
             or TutorialTrigger.UserWorkersLeisureInfo
             or TutorialTrigger.UserBuildServiceBuildingsPrompt
             or TutorialTrigger.UserBarBuiltInfo
@@ -104,7 +113,10 @@ public partial class GameBootstrap
             or TutorialTrigger.UserLocalBusRoutesInfo
             or TutorialTrigger.UserEconomyTaxesInfo
             or TutorialTrigger.UserTradeIntroInfo
-            or TutorialTrigger.UserTradeRaceInfo
+            or TutorialTrigger.UserTradeRouteInfo
+            or TutorialTrigger.UserDocksPrompt
+            or TutorialTrigger.UserDocksBuiltInfo
+            or TutorialTrigger.UserTradePolicyInfo
             or TutorialTrigger.UserDemoCompleteInfo;
     }
 
@@ -117,8 +129,8 @@ public partial class GameBootstrap
 
     private int GetNextUserServiceBuildingInfoTutorialStep()
     {
-        int step = Mathf.Clamp(nextUserServiceBuildingInfoTutorialStep, 15, 19);
-        nextUserServiceBuildingInfoTutorialStep = Mathf.Clamp(nextUserServiceBuildingInfoTutorialStep + 1, 15, 19);
+        int step = Mathf.Clamp(nextUserServiceBuildingInfoTutorialStep, 19, 23);
+        nextUserServiceBuildingInfoTutorialStep = Mathf.Clamp(nextUserServiceBuildingInfoTutorialStep + 1, 19, 23);
         return step;
     }
 
@@ -136,6 +148,9 @@ public partial class GameBootstrap
     {
         return trigger is TutorialTrigger.UserTruckPurchasedArrivalInfo
             or TutorialTrigger.UserTruckAssignedFreightInfo
+            or TutorialTrigger.UserBuildLaborExchangePrompt
+            or TutorialTrigger.UserLaborExchangeBuiltInfo
+            or TutorialTrigger.UserMigrationInfo
             or TutorialTrigger.UserWorkersLeisureInfo
             or TutorialTrigger.UserBuildServiceBuildingsPrompt
             or TutorialTrigger.UserBarBuiltInfo
@@ -150,7 +165,10 @@ public partial class GameBootstrap
             or TutorialTrigger.UserLocalBusRoutesInfo
             or TutorialTrigger.UserEconomyTaxesInfo
             or TutorialTrigger.UserTradeIntroInfo
-            or TutorialTrigger.UserTradeRaceInfo
+            or TutorialTrigger.UserTradeRouteInfo
+            or TutorialTrigger.UserDocksPrompt
+            or TutorialTrigger.UserDocksBuiltInfo
+            or TutorialTrigger.UserTradePolicyInfo
             or TutorialTrigger.UserDemoCompleteInfo;
     }
 
@@ -178,6 +196,9 @@ public partial class GameBootstrap
         hasShownUserBuyTruckTutorial = false;
         hasShownUserTruckArrivalTutorial = false;
         hasShownUserTruckFreightTutorial = false;
+        hasShownUserBuildLaborExchangeTutorial = false;
+        hasShownUserLaborExchangeBuiltTutorial = false;
+        hasShownUserMigrationInfoTutorial = false;
         hasShownUserWorkersLeisureTutorial = false;
         hasShownUserBuildServiceBuildingsTutorial = false;
         hasShownUserBarBuiltTutorial = false;
@@ -192,9 +213,12 @@ public partial class GameBootstrap
         hasShownUserLocalBusRoutesTutorial = false;
         hasShownUserEconomyTaxesTutorial = false;
         hasShownUserTradeIntroTutorial = false;
-        hasShownUserTradeRaceTutorial = false;
+        hasShownUserTradeRouteTutorial = false;
+        hasShownUserDocksTutorial = false;
+        hasShownUserDocksBuiltTutorial = false;
+        hasShownUserTradePolicyTutorial = false;
         hasShownUserDemoCompleteTutorial = false;
-        nextUserServiceBuildingInfoTutorialStep = 15;
+        nextUserServiceBuildingInfoTutorialStep = 19;
         pendingTutorialTrigger = null;
         pendingTutorialDelay = 0f;
         areTutorialVacanciesFullyUnlocked = false;
@@ -423,6 +447,55 @@ public partial class GameBootstrap
                         ? "\u0413\u0440\u0443\u0437\u043e\u0432\u0438\u043a \u0441 \u0432\u043e\u0434\u0438\u0442\u0435\u043b\u0435\u043c \u0438\u0449\u0435\u0442 \u043f\u043e\u043b\u0435\u0437\u043d\u044b\u0435 \u0440\u0435\u0439\u0441\u044b: \u0437\u0430\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0435\u0441\u0443\u0440\u0441\u044b \u0438\u0437 \u0437\u0434\u0430\u043d\u0438\u0439 \u0438 \u0432\u0435\u0437\u0435\u0442 \u0438\u0445 \u0442\u0443\u0434\u0430, \u0433\u0434\u0435 \u043e\u043d\u0438 \u043d\u0443\u0436\u043d\u044b.\n\n\u0415\u0441\u043b\u0438 \u0431\u043e\u043b\u0435\u0435 \u0432\u0430\u0436\u043d\u043e\u0433\u043e \u0437\u0430\u0434\u0430\u043d\u0438\u044f \u043d\u0435\u0442, \u043e\u043d \u0441\u043c\u043e\u0436\u0435\u0442 \u0432\u043e\u0437\u0438\u0442\u044c \u0411\u0440\u0451\u0432\u043d\u0430 \u0438\u0437 \u041b\u0430\u0433\u0435\u0440\u044f \u043b\u0435\u0441\u043e\u0440\u0443\u0431\u043e\u0432 \u043d\u0430 \u0421\u043a\u043b\u0430\u0434."
                         : "A truck with an assigned driver looks for useful freight runs: it picks up resources from buildings and moves them where they are needed.\n\nIf no higher-priority route exists, it can move Logs from the Lumberjack Camp to the Warehouse.");
                 break;
+            case TutorialTrigger.UserBuildLaborExchangePrompt:
+                if (hasShownUserBuildLaborExchangeTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserBuildLaborExchangeTutorial = true;
+                UnlockBuildTool(BuildTool.LaborExchange);
+                bool laborBuildRu = IsRussianLanguage();
+                ShowTutorialWindow(
+                    TutorialTrigger.UserBuildLaborExchangePrompt,
+                    13,
+                    laborBuildRu ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430" : "Labor Exchange",
+                    laborBuildRu
+                        ? "\u0420\u0443\u0447\u043d\u043e\u0439 \u043d\u0430\u0439\u043c \u043d\u0443\u0436\u0435\u043d \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u043f\u0435\u0440\u0432\u044b\u0445 \u0448\u0430\u0433\u043e\u0432.\n\n\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0411\u0438\u0440\u0436\u0443 \u0442\u0440\u0443\u0434\u0430. \u0415\u0451 \u043a\u043b\u0435\u0440\u043a \u0441 \u0432\u044b\u0441\u0448\u0438\u043c \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435\u043c \u0431\u0443\u0434\u0435\u0442 \u043f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u0442\u044c \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438, \u0430 \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0441\u0430\u043c\u0438 \u0431\u0443\u0434\u0443\u0442 \u043f\u0440\u0438\u0445\u043e\u0434\u0438\u0442\u044c \u0441\u044e\u0434\u0430 \u0437\u0430 \u0440\u0430\u0431\u043e\u0442\u043e\u0439."
+                        : "Manual assignment is only for the first steps.\n\nBuild a Labor Exchange. Its higher-educated clerk publishes vacancies, and free workers will come here to apply for jobs automatically.");
+                break;
+            case TutorialTrigger.UserLaborExchangeBuiltInfo:
+                if (hasShownUserLaborExchangeBuiltTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserLaborExchangeBuiltTutorial = true;
+                bool laborBuiltRu = IsRussianLanguage();
+                ShowTutorialWindow(
+                    TutorialTrigger.UserLaborExchangeBuiltInfo,
+                    14,
+                    laborBuiltRu ? "\u0412\u0430\u043a\u0430\u043d\u0441\u0438\u0438 \u043e\u0436\u0438\u0432\u0430\u044e\u0442" : "Vacancies Come Alive",
+                    laborBuiltRu
+                        ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430 \u0438\u0449\u0435\u0442 \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0435 \u0441\u043b\u043e\u0442\u044b \u0432 \u0437\u0434\u0430\u043d\u0438\u044f\u0445 \u0438 \u043f\u043e\u0441\u0442\u0435\u043f\u0435\u043d\u043d\u043e \u0432\u044b\u0432\u0435\u0448\u0438\u0432\u0430\u0435\u0442 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438.\n\n\u0415\u0441\u043b\u0438 \u0441\u0440\u0435\u0434\u0438 \u0441\u0442\u0430\u0440\u0442\u043e\u0432\u044b\u0445 \u0440\u0430\u0431\u043e\u0447\u0438\u0445 \u0435\u0441\u0442\u044c \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0449\u0438\u0439 \u0447\u0435\u043b\u043e\u0432\u0435\u043a \u0441 \u0432\u044b\u0441\u0448\u0438\u043c \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435\u043c, \u043e\u043d \u043d\u0430\u0437\u043d\u0430\u0447\u0430\u0435\u0442\u0441\u044f \u0441\u044e\u0434\u0430 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438."
+                        : "The Labor Exchange scans open building slots and gradually posts vacancies.\n\nIf a suitable higher-educated starting worker is available, they are assigned here automatically.");
+                break;
+            case TutorialTrigger.UserMigrationInfo:
+                if (hasShownUserMigrationInfoTutorial)
+                {
+                    return;
+                }
+
+                hasShownUserMigrationInfoTutorial = true;
+                bool migrationRu = IsRussianLanguage();
+                ShowTutorialWindow(
+                    TutorialTrigger.UserMigrationInfo,
+                    15,
+                    migrationRu ? "\u041f\u0440\u0438\u0435\u0437\u0434 \u0440\u0430\u0431\u043e\u0447\u0438\u0445" : "Worker Arrivals",
+                    migrationRu
+                        ? "\u041a\u043e\u0433\u0434\u0430 \u0432 \u0433\u043e\u0440\u043e\u0434\u0435 \u0435\u0441\u0442\u044c \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438, \u0441\u044e\u0434\u0430 \u0447\u0430\u0449\u0435 \u043f\u0440\u0438\u0435\u0437\u0436\u0430\u044e\u0442 \u043d\u043e\u0432\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435.\n\n\u041e\u0442\u043a\u0440\u043e\u0439 \u0420\u0430\u0431\u043e\u0447\u0438\u0445: \u0442\u044b \u0443\u0432\u0438\u0434\u0438\u0448\u044c \u0438\u0445 \u0434\u0435\u043d\u044c\u0433\u0438, \u043d\u0443\u0436\u0434\u044b, \u043f\u0435\u0440\u043a\u0438, \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435, \u0440\u0430\u0431\u043e\u0442\u0443 \u0438 \u0440\u0430\u0441\u043f\u043e\u0440\u044f\u0434\u043e\u043a."
+                        : "When the town has vacancies, new workers are more likely to arrive.\n\nOpen Workers: each card shows money, needs, perks, education, job, and daily routine.");
+                break;
             case TutorialTrigger.UserWorkersLeisureInfo:
                 if (hasShownUserWorkersLeisureTutorial)
                 {
@@ -433,7 +506,7 @@ public partial class GameBootstrap
                 bool leisureRu = IsRussianLanguage();
                 ShowTutorialWindow(
                     TutorialTrigger.UserWorkersLeisureInfo,
-                    13,
+                    17,
                     leisureRu ? "\u0416\u0438\u0437\u043d\u044c \u043f\u043e\u0441\u043b\u0435 \u0441\u043c\u0435\u043d\u044b" : "Life After Work",
                     leisureRu
                         ? "\u0420\u0430\u0431\u043e\u0447\u0438\u0435 \u0437\u0430\u0440\u0430\u0431\u0430\u0442\u044b\u0432\u0430\u044e\u0442 \u0434\u0435\u043d\u044c\u0433\u0438, \u043d\u043e \u0438\u043c \u043d\u0443\u0436\u043d\u043e \u043d\u0435 \u0442\u043e\u043b\u044c\u043a\u043e \u0441\u043f\u0430\u0442\u044c \u0438 \u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c.\n\n\u041e\u043d\u0438 \u0431\u0443\u0434\u0443\u0442 \u0435\u0441\u0442\u044c, \u043e\u0442\u0434\u044b\u0445\u0430\u0442\u044c, \u0438\u0441\u043a\u0430\u0442\u044c \u0434\u043e\u0441\u0443\u0433 \u0438 \u0442\u0440\u0430\u0442\u0438\u0442\u044c \u043d\u0430 \u044d\u0442\u043e \u0441\u0432\u043e\u044e \u0437\u0430\u0440\u043f\u043b\u0430\u0442\u0443. \u0413\u043e\u0440\u043e\u0434 \u0441\u0442\u0430\u043d\u0435\u0442 \u0436\u0438\u0432\u0435\u0435, \u0435\u0441\u043b\u0438 \u0438\u043c \u0435\u0441\u0442\u044c \u043a\u0443\u0434\u0430 \u043f\u043e\u0439\u0442\u0438."
@@ -451,11 +524,10 @@ public partial class GameBootstrap
                 UnlockBuildTool(BuildTool.Canteen);
                 UnlockBuildTool(BuildTool.GasStation);
                 UnlockBuildTool(BuildTool.CityPark);
-                UnlockBuildTool(BuildTool.LaborExchange);
                 bool servicesRu = IsRussianLanguage();
                 ShowTutorialWindow(
                     TutorialTrigger.UserBuildServiceBuildingsPrompt,
-                    14,
+                    18,
                     servicesRu ? "\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0441\u0435\u0440\u0432\u0438\u0441\u044b" : "Build Services",
                     servicesRu
                         ? "\u0422\u0435\u043f\u0435\u0440\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044b \u0441\u0435\u0440\u0432\u0438\u0441\u044b: \u0411\u0430\u0440, \u0418\u0433\u0440\u043e\u0432\u044b\u0435 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u044b, \u0421\u0442\u043e\u043b\u043e\u0432\u0430\u044f, \u0417\u0430\u043f\u0440\u0430\u0432\u043a\u0430 \u0438 City Park.\n\n\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0438\u0445 \u0447\u0435\u0440\u0435\u0437 \u043c\u0435\u043d\u044e \u0421\u0442\u0440\u043e\u0439\u043a\u0430. \u041a \u0437\u0434\u0430\u043d\u0438\u044f\u043c \u0441\u043d\u043e\u0432\u0430 \u043d\u0443\u0436\u043d\u0430 \u0434\u043e\u0440\u043e\u0433\u0430, \u0430 \u043f\u0430\u0440\u043a\u0443 \u043d\u0443\u0436\u043d\u043e \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u043e\u0435 \u043c\u0435\u0441\u0442\u043e."
@@ -527,7 +599,7 @@ public partial class GameBootstrap
                 bool overviewRu = IsRussianLanguage();
                 ShowTutorialWindow(
                     TutorialTrigger.UserWorkersOverviewInfo,
-                    20,
+                    24,
                     overviewRu ? "\u0420\u0430\u0431\u043e\u0447\u0438\u0435" : "Workers",
                     overviewRu
                         ? "\u0423 \u043a\u0430\u0436\u0434\u043e\u0433\u043e \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u0435\u0441\u0442\u044c \u0434\u0435\u043d\u044c\u0433\u0438, \u043d\u0443\u0436\u0434\u044b, \u043f\u0435\u0440\u043a\u0438, \u0440\u0430\u0431\u043e\u0442\u0430 \u0438 \u0434\u043d\u0435\u0432\u043d\u043e\u0439 \u0440\u0430\u0441\u043f\u043e\u0440\u044f\u0434\u043e\u043a.\n\n\u041d\u0443\u0436\u0434\u044b \u043f\u043e\u0434\u0441\u043a\u0430\u0436\u0443\u0442, \u0447\u0442\u043e \u0447\u0435\u043b\u043e\u0432\u0435\u043a\u0443 \u0441\u0435\u0439\u0447\u0430\u0441 \u043d\u0443\u0436\u043d\u043e: \u0435\u0434\u0430, \u0441\u043e\u043d \u0438\u043b\u0438 \u0434\u043e\u0441\u0443\u0433.\n\n\u041e\u0442\u043a\u0440\u043e\u0439 \u0420\u0430\u0431\u043e\u0447\u0438\u0445 \u0438 \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0438 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0443: \u043d\u043e\u0432\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0442\u0435\u043f\u0435\u0440\u044c \u043f\u0440\u0438\u0435\u0437\u0436\u0430\u044e\u0442 \u0441\u0430\u043c\u0438."
@@ -540,7 +612,7 @@ public partial class GameBootstrap
                 bool hireBusRu = IsRussianLanguage();
                 ShowTutorialWindow(
                     TutorialTrigger.UserWorkerHiringBusInfo,
-                    21,
+                    16,
                     hireBusRu ? "\u041d\u043e\u0432\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0432 \u043f\u0443\u0442\u0438" : "New Workers En Route",
                     hireBusRu
                         ? "\u041d\u043e\u0432\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0435\u0437\u0436\u0430\u044e\u0442 \u0438\u0437\u0432\u043d\u0435 \u043d\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435. \u041e\u043d\u0438 \u0432\u044b\u0439\u0434\u0443\u0442 \u0443 \u043c\u0435\u0436\u0434\u0443\u0433\u043e\u0440\u043e\u0434\u043d\u0435\u0439 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438 \u0438 \u043f\u043e\u0439\u0434\u0443\u0442 \u043a \u041c\u043e\u0442\u0435\u043b\u044e.\n\n\u0412 \u044d\u0442\u043e\u043c \u043e\u0431\u0443\u0447\u0430\u044e\u0449\u0435\u043c \u0437\u0430\u0435\u0437\u0434\u0435 \u0430\u0432\u0442\u043e\u0431\u0443\u0441 \u043f\u0440\u0438\u0432\u0435\u0437\u0451\u0442 \u0441\u0440\u0430\u0437\u0443 7 \u0440\u0430\u0431\u043e\u0447\u0438\u0445, \u0447\u0442\u043e\u0431\u044b \u0433\u043e\u0440\u043e\u0434 \u0431\u044b\u0441\u0442\u0440\u0435\u0435 \u043e\u0436\u0438\u043b."
@@ -552,7 +624,7 @@ public partial class GameBootstrap
                 bool warehouseLoadersRu = IsRussianLanguage();
                 ShowTutorialWindow(
                     TutorialTrigger.UserWarehouseLoadersInfo,
-                    22,
+                    25,
                     warehouseLoadersRu ? "\u0420\u0435\u0441\u0443\u0440\u0441\u044b \u0438 \u0433\u0440\u0443\u0437\u0447\u0438\u043a\u0438" : "Resources and Loaders",
                     warehouseLoadersRu
                         ? "\u041c\u0435\u043d\u044e \u0420\u0435\u0441\u0443\u0440\u0441\u044b \u043f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u0442, \u0447\u0442\u043e \u043d\u0430\u043a\u043e\u043f\u043b\u0435\u043d\u043e \u0432 \u0433\u043e\u0440\u043e\u0434\u0435 \u0438 \u043d\u0430 \u0421\u043a\u043b\u0430\u0434\u0435.\n\n\u0421\u043a\u043b\u0430\u0434 \u043d\u0435 \u0442\u043e\u043b\u044c\u043a\u043e \u0445\u0440\u0430\u043d\u0438\u0442 \u0442\u043e\u0432\u0430\u0440\u044b. \u0421\u043a\u043b\u0430\u0434\u0441\u043a\u0438\u0435 \u0433\u0440\u0443\u0437\u0447\u0438\u043a\u0438 \u0440\u0430\u0437\u043d\u043e\u0441\u044f\u0442 \u0437\u0430\u043f\u0430\u0441\u044b \u043f\u043e \u0441\u0435\u0440\u0432\u0438\u0441\u043d\u044b\u043c \u0437\u0434\u0430\u043d\u0438\u044f\u043c: \u0435\u0434\u0443, \u0430\u043b\u043a\u043e\u0433\u043e\u043b\u044c \u0438 \u0442\u043e\u043f\u043b\u0438\u0432\u043e.\n\n\u041e\u0442\u043a\u0440\u043e\u0439 \u0412\u0430\u043a\u0430\u043d\u0441\u0438\u0438 \u0438 \u043d\u0430\u0437\u043d\u0430\u0447\u044c 3 \u0433\u0440\u0443\u0437\u0447\u0438\u043a\u043e\u0432 \u043d\u0430 \u0421\u043a\u043b\u0430\u0434."
@@ -570,8 +642,17 @@ public partial class GameBootstrap
             case TutorialTrigger.UserTradeIntroInfo:
                 ShowUserTradeIntroTutorial();
                 break;
-            case TutorialTrigger.UserTradeRaceInfo:
-                ShowUserTradeRaceTutorial();
+            case TutorialTrigger.UserTradeRouteInfo:
+                ShowUserTradeRouteTutorial();
+                break;
+            case TutorialTrigger.UserDocksPrompt:
+                ShowUserDocksTutorial();
+                break;
+            case TutorialTrigger.UserDocksBuiltInfo:
+                ShowUserDocksBuiltTutorial();
+                break;
+            case TutorialTrigger.UserTradePolicyInfo:
+                ShowUserTradePolicyTutorial();
                 break;
             case TutorialTrigger.UserDemoCompleteInfo:
                 ShowUserDemoCompleteTutorial();
@@ -705,6 +786,10 @@ public partial class GameBootstrap
             case LocationType.CityPark:
                 goal = TutorialGoalKind.BuildCityPark;
                 trigger = TutorialTrigger.UserCityParkBuiltInfo;
+                break;
+            case LocationType.LaborExchange:
+                goal = TutorialGoalKind.BuildLaborExchange;
+                trigger = TutorialTrigger.UserLaborExchangeBuiltInfo;
                 break;
             default:
                 return;

@@ -227,6 +227,7 @@ public partial class GameBootstrap
         isWorldMapScreenDirty = true;
         isFleetScreenDirty = true;
         isBuildScreenDirty = true;
+        NotifyTutorialWorldMapOpened();
     }
 
     private void CloseWorldMapPanel()

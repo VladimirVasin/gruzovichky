@@ -40,6 +40,7 @@ public partial class GameBootstrap
         RebuildRoadsideBenches();
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Docks at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = placementAnchor })}.");
+        NotifyTutorialDocksBuilt();
         return true;
     }
 

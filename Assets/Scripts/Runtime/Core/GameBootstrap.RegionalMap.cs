@@ -276,4 +276,128 @@ public partial class GameBootstrap
     {
         return TryFindBuiltRegionalTradeRoute(resourceType, orderType, modeFilter, out _);
     }
+
+    private string DescribeRegionalTradeRouteAvailability(
+        TradeResourceType resourceType,
+        TradeOrderType orderType,
+        RegionalTradeRouteMode? modeFilter)
+    {
+        EnsureRegionalMapState();
+        string resourceLabel = GetTradeResourceShortLabel(resourceType);
+        string modeLabel = modeFilter.HasValue ? GetRegionalRouteModeDebugLabel(modeFilter.Value) : "any";
+        string cityVerb = orderType == TradeOrderType.Buy ? "sells" : "buys";
+        string partnerLabel = orderType == TradeOrderType.Buy ? "seller" : "buyer";
+        RegionalCityData compatibleUnbuilt = null;
+        RegionalCityData compatibleWrongModeBuilt = null;
+        RegionalCityData compatibleWrongModeUnbuilt = null;
+        RegionalCityData builtModeWithoutResource = null;
+        RegionalCityData knownModeWithoutResource = null;
+
+        for (int i = 0; i < regionalMapData.Cities.Length; i++)
+        {
+            RegionalCityData candidate = regionalMapData.Cities[i];
+            if (candidate == null || candidate.IsCurrentCity || !candidate.IsKnown)
+            {
+                continue;
+            }
+
+            bool modeMatches = !modeFilter.HasValue || candidate.RouteMode == modeFilter.Value;
+            bool resourceMatches = RegionalCityHandlesTradeResource(candidate, resourceType, orderType);
+            if (modeMatches && resourceMatches)
+            {
+                if (candidate.TradeRouteBuilt)
+                {
+                    return $"built {modeLabel} route to {candidate.NameEn} exists and that city {cityVerb} {resourceLabel}";
+                }
+
+                compatibleUnbuilt ??= candidate;
+                continue;
+            }
+
+            if (!modeMatches && resourceMatches)
+            {
+                if (candidate.TradeRouteBuilt)
+                {
+                    compatibleWrongModeBuilt ??= candidate;
+                }
+                else
+                {
+                    compatibleWrongModeUnbuilt ??= candidate;
+                }
+
+                continue;
+            }
+
+            if (modeMatches && !resourceMatches)
+            {
+                if (candidate.TradeRouteBuilt)
+                {
+                    builtModeWithoutResource ??= candidate;
+                }
+                else
+                {
+                    knownModeWithoutResource ??= candidate;
+                }
+            }
+        }
+
+        if (compatibleUnbuilt != null)
+        {
+            return $"{modeLabel} route to {compatibleUnbuilt.NameEn} is not built; that city {cityVerb} {resourceLabel}";
+        }
+
+        if (compatibleWrongModeBuilt != null)
+        {
+            return $"built route to {compatibleWrongModeBuilt.NameEn} is {GetRegionalRouteModeDebugLabel(compatibleWrongModeBuilt.RouteMode)}, not {modeLabel}; that city {cityVerb} {resourceLabel}";
+        }
+
+        if (compatibleWrongModeUnbuilt != null)
+        {
+            return $"known route to {compatibleWrongModeUnbuilt.NameEn} is {GetRegionalRouteModeDebugLabel(compatibleWrongModeUnbuilt.RouteMode)}, not {modeLabel}; that city {cityVerb} {resourceLabel}";
+        }
+
+        if (builtModeWithoutResource != null)
+        {
+            return $"built {modeLabel} route to {builtModeWithoutResource.NameEn} exists, but that city does not {cityVerb} {resourceLabel}";
+        }
+
+        if (knownModeWithoutResource != null)
+        {
+            return $"known {modeLabel} city {knownModeWithoutResource.NameEn} does not {cityVerb} {resourceLabel}";
+        }
+
+        return $"no known {modeLabel} regional {partnerLabel} for {resourceLabel}";
+    }
+
+    private static bool RegionalCityHandlesTradeResource(
+        RegionalCityData city,
+        TradeResourceType resourceType,
+        TradeOrderType orderType)
+    {
+        if (city == null)
+        {
+            return false;
+        }
+
+        TradeResourceType[] catalog = orderType == TradeOrderType.Buy ? city.Sells : city.Buys;
+        for (int i = 0; i < catalog.Length; i++)
+        {
+            if (catalog[i] == resourceType)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string GetRegionalRouteModeDebugLabel(RegionalTradeRouteMode mode)
+    {
+        return mode switch
+        {
+            RegionalTradeRouteMode.River => "river",
+            RegionalTradeRouteMode.Land => "land",
+            _ => "local"
+        };
+    }
 }
