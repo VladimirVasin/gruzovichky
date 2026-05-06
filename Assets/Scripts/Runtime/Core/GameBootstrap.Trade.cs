@@ -224,10 +224,10 @@ public partial class GameBootstrap
         List<Vector2Int> pathToLane = FindPath(pathStartCell, cityRoadCell);
         if (pathToLane == null || pathToLane.Count == 0)
         {
-            Vector2Int parkingAnchor = locations[LocationType.Parking].Anchor;
-            if (parkingAnchor != pathStartCell)
+            if (locations.TryGetValue(LocationType.Parking, out LocationData parking) &&
+                parking.Anchor != pathStartCell)
             {
-                pathStartCell = parkingAnchor;
+                pathStartCell = parking.Anchor;
                 usedParkingAnchorFallback = true;
                 pathToLane = FindPath(pathStartCell, cityRoadCell);
             }
@@ -354,6 +354,12 @@ public partial class GameBootstrap
         TruckAgent assignedTruck = GetAssignedTruckForDriver(driver);
         if (driver == null || assignedTruck == null || driver.DriverObject == null)
         {
+            return;
+        }
+
+        if (!locations.ContainsKey(LocationType.Parking))
+        {
+            SessionDebugLogger.Log("TRADE", $"{driver.DriverName} cannot start Intercity trade commute: Parking is not built.");
             return;
         }
 

@@ -722,23 +722,29 @@ public partial class GameBootstrap
 
     private void DrawSelectedBuildingHud(LocationType locationType)
     {
+        if (!locations.TryGetValue(locationType, out LocationData location))
+        {
+            return;
+        }
+
         Rect panelRect = GetSelectedBuildingHudRect();
-        GUI.Box(panelRect, $"{L(locations[locationType].Label)} HUD");
-        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 32, 220, 22), $"{L("Selected building")}: {L(locations[locationType].Label)}");
+        GUI.Box(panelRect, $"{L(location.Label)} HUD");
+        GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 32, 220, 22), $"{L("Selected building")}: {L(location.Label)}");
         GUI.Label(new Rect(panelRect.x + 12, panelRect.y + 58, 220, 22), L(GetBuildingResourceLabel(locationType)));
     }
 
     private string GetBuildingResourceLabel(LocationType locationType)
     {
+        locations.TryGetValue(locationType, out LocationData location);
         return locationType switch
         {
             LocationType.Parking => $"Truck slots: {GetOwnedTruckCount()}/{GetTruckParkingCapacity()} | Bus slots: {GetOwnedBusCount()}/{GetBusParkingCapacity()}",
             LocationType.GasStation => "Fuel service: Ready",
-            LocationType.Forest => $"Logs stored: {locations[LocationType.Forest].LogsStored}/{ForestMaxLogsStorage}",
-            LocationType.Warehouse => $"Boards stored: {locations[LocationType.Warehouse].BoardsStored}",
-            LocationType.Docks => $"Dock cargo: {GetDocksQuickCargoSummary(locations[LocationType.Docks])}",
-            LocationType.Sawmill => $"Logs: {locations[LocationType.Sawmill].LogsStored} | Boards: {locations[LocationType.Sawmill].BoardsStored}",
-            LocationType.FurnitureFactory => $"Boards: {locations[LocationType.FurnitureFactory].BoardsStored} | Textile: {locations[LocationType.FurnitureFactory].TextileStored} | Furniture: {locations[LocationType.FurnitureFactory].FurnitureStored}",
+            LocationType.Forest => $"Logs stored: {location?.LogsStored ?? 0}/{ForestMaxLogsStorage}",
+            LocationType.Warehouse => $"Boards stored: {location?.BoardsStored ?? 0}",
+            LocationType.Docks => location != null ? $"Dock cargo: {GetDocksQuickCargoSummary(location)}" : "Dock cargo: none",
+            LocationType.Sawmill => $"Logs: {location?.LogsStored ?? 0} | Boards: {location?.BoardsStored ?? 0}",
+            LocationType.FurnitureFactory => $"Boards: {location?.BoardsStored ?? 0} | Textile: {location?.TextileStored ?? 0} | Furniture: {location?.FurnitureStored ?? 0}",
             LocationType.Motel => "Roadside stop",
             LocationType.IntercityStop => "Intercity stop by the highway",
             LocationType.Stop => "Local bus stop",

@@ -6,6 +6,16 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-07: Fixed the worker microHUD `Open in Workers` button layout so its `HorizontalLayoutGroup` child has `flexibleWidth = 1`, making the full action row reliably clickable while keeping the existing `OpenDriversPanelForDriver(selectedDriverId)` route.
+
+- 2026-05-06: Raised Furniture trade value from `$78` to `$220` per unit, strengthened worker decision log throttling with compact normalized keys plus a 30s / 1 in-game-hour repeat gate, and raised the local auto-logistics priority for `FurnitureFactoryToWarehouse` so finished Furniture leaves the factory before input refill trips.
+
+- 2026-05-06: Fixed worker microHUD -> Workers screen selection. `OpenDriversPanelForDriver` now selects the target worker detail row instead of only the legacy shift selection id, scrolls the Workers list to that resident/worker once, marks the screen dirty, and the worker quick HUD button is labeled `Open in Workers` / `Открыть в Рабочие`.
+
+- 2026-05-06: Split the Workers detail panel into explicit `Profile` and `Social Links` tabs. The old social-links block no longer sits at the bottom of the profile view, and the social tab now has room for up to 8 visible contacts.
+
+- 2026-05-06: Added the missing early-game bootstrap balance change: starting treasury is now `$5000`, and building the Motel queues a one-time 10-worker arrival bus using the regular worker migration bus flow. The tutorial hiring wave uses the same 10-worker count and avoids duplicating the Motel bootstrap wave.
+
 - 2026-05-06: Added build/verification workflow rules to avoid parallel `dotnet`, Unity, and `check-all` runs that can lock DLLs or race over `bin/`, `obj/`, generated project files, and Unity assemblies.
 
 - 2026-05-06: Added a development workflow rule requiring new, moved, or deleted C# files to be reflected in the relevant `.csproj` files, with runtime/editor build verification and duplicate compile item cleanup.
@@ -249,6 +259,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 - 2026-04-30: Bumped the manual main-menu version label to `Lo-fi Delivery Co. v.0.0.3` and added the in-development `v.0.0.3` tracking section to `ai/release-notes.md`.
 
 ## Recent Summary
+
+- 2026-05-06: Expanded Delete demolition to all buildings except Intercity Stop. Demolition now clears dependent truck, trade, local-bus, worker-inside-building, and lumberyard runtime state before removing a building, and key HUD/runtime paths tolerate missing Parking/Warehouse/Forest/Sawmill/Furniture Factory/Docks after demolition.
 
 - 2026-05-06: Hardened local bus routing against disconnected stops. Route start now searches for the first reachable stop from Parking, route continuation skips unreachable stops instead of collapsing the whole route, and skipped stops are logged for debugging. Split the reachability scan into `GameBootstrap.LocalBus.RouteSkipping.cs` to keep `GameBootstrap.LocalBus.cs` under the 900-line limit. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
 

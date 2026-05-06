@@ -95,7 +95,7 @@ public partial class GameBootstrap
         {
             localBusRoute.Bus.Driver = null;
             localBusRoute.Bus.PassengerCount = 0;
-            if (localBusRoute.Bus.BusObject != null)
+            if (localBusRoute.Bus.BusObject != null && locations.ContainsKey(LocationType.Parking))
             {
                 localBusRoute.Bus.BusObject.transform.position = GetBusParkingSlotWorldPosition(localBusRoute.Bus.ParkingSlotIndex);
                 localBusRoute.Bus.BusObject.transform.rotation = Quaternion.identity;
@@ -121,7 +121,9 @@ public partial class GameBootstrap
 
     private Vector3 GetLocalBusParkingWorldPosition()
     {
-        return GetBusRoadWorldPosition(locations[LocationType.Parking].Anchor);
+        return locations.TryGetValue(LocationType.Parking, out LocationData parking)
+            ? GetBusRoadWorldPosition(parking.Anchor)
+            : Vector3.zero;
     }
 
     private Vector3 GetBusRoadWorldPosition(Vector2Int cell)
@@ -172,6 +174,12 @@ public partial class GameBootstrap
         if (IsBusDriverOnActiveRoute(driver))
         {
             SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} commute to Parking skipped because the worker already controls the active local bus route.");
+            return;
+        }
+
+        if (!locations.ContainsKey(LocationType.Parking))
+        {
+            SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} cannot start local bus shift: Parking is not built.");
             return;
         }
 
@@ -841,12 +849,13 @@ public partial class GameBootstrap
             SessionDebugLogger.Log("BUS_ECON", $"{driver.DriverName} delivered ${transferredBank} from the local bus bank to Parking treasury. Parking treasury=${parking.BuildingBank}.");
         }
 
+        bool hasParking = locations.ContainsKey(LocationType.Parking);
         if (localBusRoute?.Bus != null)
         {
             localBusRoute.Bus.Bank = localBusRoute?.Bank ?? 0;
             localBusRoute.Bus.PassengerCount = 0;
             localBusRoute.Bus.Driver = null;
-            if (localBusRoute.Bus.BusObject != null)
+            if (localBusRoute.Bus.BusObject != null && hasParking)
             {
                 localBusRoute.Bus.BusObject.transform.position = GetBusParkingSlotWorldPosition(localBusRoute.Bus.ParkingSlotIndex);
                 localBusRoute.Bus.BusObject.transform.rotation = Quaternion.identity;
@@ -860,7 +869,9 @@ public partial class GameBootstrap
         driver.WaitingForShiftAtParking = false;
         driver.NeedsShiftEndReturn = false;
         driver.DriverObject.SetActive(true);
-        driver.DriverObject.transform.position = GetDriverStandPointNearLocation(LocationType.Parking);
+        driver.DriverObject.transform.position = hasParking
+            ? GetDriverStandPointNearLocation(LocationType.Parking)
+            : driver.DriverObject.transform.position;
         driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         driver.WalkAnimationTime = 0f;
         ApplyDriverPose(driver, 0f, 0f);

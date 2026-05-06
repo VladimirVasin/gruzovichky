@@ -26,6 +26,12 @@ public partial class GameBootstrap
 
         LocationType pickupLocation = GetPickupLocation(currentAssignedTrip);
         LocationType dropoffLocation = GetDropoffLocation(currentAssignedTrip);
+        if (!TryGetTripLocations(currentAssignedTrip, out LocationData pickup, out LocationData dropoff, out LocationData parking))
+        {
+            CancelLoadedTruckRuntimeOrder($"trip {GetTripTitle(currentAssignedTrip)} cannot continue because a required building is missing");
+            return;
+        }
+
         bool queuedInteractionResumed = false;
         if ((currentTripPhase == TripPhase.Loading || currentTripPhase == TripPhase.Unloading) &&
             !isTruckInteracting)
@@ -36,9 +42,9 @@ public partial class GameBootstrap
         TruckTripRuntimeAction action = TruckTripRuntimeService.Evaluate(
             currentTripPhase,
             truckCell,
-            locations[pickupLocation].Anchor,
-            locations[dropoffLocation].Anchor,
-            locations[LocationType.Parking].Anchor,
+            pickup.Anchor,
+            dropoff.Anchor,
+            parking.Anchor,
             isTruckInteracting,
             queuedInteractionResumed);
 

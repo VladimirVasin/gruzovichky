@@ -246,43 +246,58 @@ public partial class GameBootstrap
         {
             case TruckInteractionType.LoadAtForest:
             {
-                int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Logs, locations[LocationType.Forest].LogsStored);
-                locations[LocationType.Forest].LogsStored = Mathf.Max(0, locations[LocationType.Forest].LogsStored - amount);
-                RefreshForestStoredLogsVisual();
-                SetTruckCargo(CargoType.Logs, amount);
+                if (locations.TryGetValue(LocationType.Forest, out LocationData forest))
+                {
+                    int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Logs, forest.LogsStored);
+                    forest.LogsStored = Mathf.Max(0, forest.LogsStored - amount);
+                    RefreshForestStoredLogsVisual();
+                    SetTruckCargo(CargoType.Logs, amount);
+                }
                 break;
             }
 
             case TruckInteractionType.UnloadAtSawmill:
-                locations[LocationType.Sawmill].LogsStored += truckCargoAmount;
+                if (locations.TryGetValue(LocationType.Sawmill, out LocationData sawmillUnload))
+                {
+                    sawmillUnload.LogsStored += truckCargoAmount;
+                }
                 ClearTruckCargo();
                 break;
 
             case TruckInteractionType.LoadAtSawmill:
             {
-                int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Boards, locations[LocationType.Sawmill].BoardsStored);
-                locations[LocationType.Sawmill].BoardsStored = Mathf.Max(0, locations[LocationType.Sawmill].BoardsStored - amount);
-                SetTruckCargo(CargoType.Boards, amount);
+                if (locations.TryGetValue(LocationType.Sawmill, out LocationData sawmillLoad))
+                {
+                    int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Boards, sawmillLoad.BoardsStored);
+                    sawmillLoad.BoardsStored = Mathf.Max(0, sawmillLoad.BoardsStored - amount);
+                    SetTruckCargo(CargoType.Boards, amount);
+                }
                 break;
             }
 
             case TruckInteractionType.UnloadAtWarehouse:
-                if (truckCargoType == CargoType.Logs)
+                if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouseUnload))
                 {
-                    locations[LocationType.Warehouse].LogsStored += truckCargoAmount;
-                }
-                else
-                {
-                    locations[LocationType.Warehouse].BoardsStored += truckCargoAmount;
+                    if (truckCargoType == CargoType.Logs)
+                    {
+                        warehouseUnload.LogsStored += truckCargoAmount;
+                    }
+                    else
+                    {
+                        warehouseUnload.BoardsStored += truckCargoAmount;
+                    }
                 }
                 ClearTruckCargo();
                 break;
 
             case TruckInteractionType.LoadBoardsAtWarehouse:
             {
-                int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Boards, locations[LocationType.Warehouse].BoardsStored);
-                locations[LocationType.Warehouse].BoardsStored = Mathf.Max(0, locations[LocationType.Warehouse].BoardsStored - amount);
-                SetTruckCargo(CargoType.Boards, amount);
+                if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouseBoards))
+                {
+                    int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Boards, warehouseBoards.BoardsStored);
+                    warehouseBoards.BoardsStored = Mathf.Max(0, warehouseBoards.BoardsStored - amount);
+                    SetTruckCargo(CargoType.Boards, amount);
+                }
                 break;
             }
 
@@ -296,9 +311,12 @@ public partial class GameBootstrap
 
             case TruckInteractionType.LoadLogsAtWarehouse:
             {
-                int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Logs, locations[LocationType.Warehouse].LogsStored);
-                locations[LocationType.Warehouse].LogsStored = Mathf.Max(0, locations[LocationType.Warehouse].LogsStored - amount);
-                SetTruckCargo(CargoType.Logs, amount);
+                if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouseLogs))
+                {
+                    int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Logs, warehouseLogs.LogsStored);
+                    warehouseLogs.LogsStored = Mathf.Max(0, warehouseLogs.LogsStored - amount);
+                    SetTruckCargo(CargoType.Logs, amount);
+                }
                 break;
             }
 
@@ -311,20 +329,29 @@ public partial class GameBootstrap
             }
 
             case TruckInteractionType.UnloadBoardsAtFurnitureFactory:
-                locations[LocationType.FurnitureFactory].BoardsStored += truckCargoAmount;
+                if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData factoryBoards))
+                {
+                    factoryBoards.BoardsStored += truckCargoAmount;
+                }
                 ClearTruckCargo();
                 break;
 
             case TruckInteractionType.UnloadTextileAtFurnitureFactory:
-                locations[LocationType.FurnitureFactory].TextileStored += truckCargoAmount;
+                if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData factoryTextile))
+                {
+                    factoryTextile.TextileStored += truckCargoAmount;
+                }
                 ClearTruckCargo();
                 break;
 
             case TruckInteractionType.LoadAtFurnitureFactory:
             {
-                int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Furniture, locations[LocationType.FurnitureFactory].FurnitureStored);
-                locations[LocationType.FurnitureFactory].FurnitureStored = Mathf.Max(0, locations[LocationType.FurnitureFactory].FurnitureStored - amount);
-                SetTruckCargo(CargoType.Furniture, amount);
+                if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData factoryLoad))
+                {
+                    int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Furniture, factoryLoad.FurnitureStored);
+                    factoryLoad.FurnitureStored = Mathf.Max(0, factoryLoad.FurnitureStored - amount);
+                    SetTruckCargo(CargoType.Furniture, amount);
+                }
                 break;
             }
 

@@ -152,7 +152,9 @@ public partial class GameBootstrap
 
         RectTransform actionRow = CreateLayoutRow("DriverQuickHudActions", root, 34f, 0f);
         driverQuickHud.OpenDriversButton = CreateButton("OpenDriversBtn", actionRow, uiFont, out driverQuickHud.OpenDriversButtonText, "Open Drivers", 13, FleetPrimaryButtonColor, Color.white);
-        driverQuickHud.OpenDriversButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
+        LayoutElement openDriversLayout = driverQuickHud.OpenDriversButton.gameObject.AddComponent<LayoutElement>();
+        openDriversLayout.preferredHeight = 34f;
+        openDriversLayout.flexibleWidth = 1f;
         driverQuickHud.OpenDriversButton.onClick.AddListener(() =>
         {
             if (selectedDriverId <= 0) return;
@@ -221,6 +223,10 @@ public partial class GameBootstrap
             $"{FormatValueLine(ru ? "\u041f\u0440\u043e\u0444." : "Prof.", FormatWorkerProfessionalSummary(driver, ru))}\n" +
             $"{FormatValueLine(ru ? "\u041f\u0435\u0440\u043a\u0438" : "Perks", FormatWorkerPerksInline(driver, ru, 4))}";
         driverQuickHud.NeedsText.text = GetWorkerQuickHudNeedsLine(driver, ru);
+        if (driverQuickHud.OpenDriversButtonText != null)
+        {
+            driverQuickHud.OpenDriversButtonText.text = ru ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0432 \u0420\u0430\u0431\u043e\u0447\u0438\u0435" : "Open in Workers";
+        }
 
         if (driverQuickHud.NeedsMealBarFill != null)
         {

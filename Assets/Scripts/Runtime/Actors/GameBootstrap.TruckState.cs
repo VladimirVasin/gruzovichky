@@ -153,6 +153,43 @@ public partial class GameBootstrap
         return WithRoadVehicleHeight(parkingSlots[slotIndex], TruckSegmentStartLift);
     }
 
+    private void CancelLoadedTruckRuntimeOrder(string reason, bool stopMovement = true)
+    {
+        currentAssignedTrip = TripType.None;
+        currentTripPhase = TripPhase.None;
+        currentAssignedTripReward = 0;
+        currentRefuelPhase = RefuelPhase.None;
+        activeTruckInteraction = TruckInteractionType.None;
+        queuedTruckInteraction = TruckInteractionType.None;
+        activeServiceLocation = null;
+        queuedServiceLocation = null;
+        truckInteractionTimer = 0f;
+        isTruckInteracting = false;
+        isTruckWaitingForService = false;
+        isDriverRescueActive = false;
+        isTruckAutoModeEnabled = false;
+        activePath.Clear();
+
+        if (stopMovement)
+        {
+            isTruckMoving = false;
+            truckSegmentProgress = 0f;
+            truckSegmentDuration = 0f;
+            if (truckObject != null)
+            {
+                truckTargetWorld = WithRoadVehicleHeight(truckObject.transform.position, TruckSegmentStartLift);
+                truckSegmentStartWorld = truckTargetWorld;
+                truckObject.transform.position = truckTargetWorld;
+                truckCell = WorldToCell(truckTargetWorld);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(reason))
+        {
+            SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} cancelled runtime order: {reason}.");
+        }
+    }
+
     private Vector3 GetDriverIdleMotelPosition(int driverIndex)
     {
         Vector3 position = GetDriverIdleMotelWanderPosition(driverIndex, driverIndex);

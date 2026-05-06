@@ -587,10 +587,15 @@ public partial class GameBootstrap
                 break;
             case LocationType.Docks:
                 LogUiInput("Quick HUD: cycled Dock orders");
-                CycleDocksOrders(locations[LocationType.Docks]);
+                if (locations.TryGetValue(LocationType.Docks, out LocationData docks))
+                {
+                    CycleDocksOrders(docks);
+                }
                 break;
             default:
-                LogUiInput($"Quick HUD: opened Resources from {locations[locationType].Label}");
+                LogUiInput(locations.TryGetValue(locationType, out LocationData location)
+                    ? $"Quick HUD: opened Resources from {location.Label}"
+                    : $"Quick HUD: opened Resources from {locationType}");
                 isResourcesPanelOpen = true;
                 isFleetPanelOpen = false;
                 isDriversPanelOpen = false;

@@ -225,12 +225,15 @@ public partial class GameBootstrap
             return 0;
         }
 
-        LocationType pickup = GetPickupLocation(tripType);
-        LocationType dropoff = GetDropoffLocation(tripType);
+        if (!TryGetTripLocations(tripType, out LocationData pickupLocation, out LocationData dropoffLocation, out LocationData parkingLocation))
+        {
+            return 0;
+        }
+
         int totalSteps =
-            GetPathStepCount(locations[LocationType.Parking].Anchor, locations[pickup].Anchor) +
-            GetPathStepCount(locations[pickup].Anchor, locations[dropoff].Anchor) +
-            GetPathStepCount(locations[dropoff].Anchor, locations[LocationType.Parking].Anchor);
+            GetPathStepCount(parkingLocation.Anchor, pickupLocation.Anchor) +
+            GetPathStepCount(pickupLocation.Anchor, dropoffLocation.Anchor) +
+            GetPathStepCount(dropoffLocation.Anchor, parkingLocation.Anchor);
 
         int handlingBonus = 12;
         int locationBonus = tripType switch
@@ -249,6 +252,29 @@ public partial class GameBootstrap
             _ => 6
         };
         return TripRewardCalculator.Calculate(totalSteps, handlingBonus, locationBonus);
+    }
+
+    private bool TryGetTripLocations(TripType tripType, out LocationData pickup, out LocationData dropoff, out LocationData parking)
+    {
+        pickup = null;
+        dropoff = null;
+        parking = null;
+        if (tripType == TripType.None)
+        {
+            return false;
+        }
+
+        return locations.TryGetValue(LocationType.Parking, out parking) &&
+               locations.TryGetValue(GetPickupLocation(tripType), out pickup) &&
+               locations.TryGetValue(GetDropoffLocation(tripType), out dropoff);
+    }
+
+    private bool DoesTripUseLocation(TripType tripType, LocationType locationType)
+    {
+        return tripType != TripType.None &&
+               (locationType == LocationType.Parking ||
+                GetPickupLocation(tripType) == locationType ||
+                GetDropoffLocation(tripType) == locationType);
     }
 
     private int GetPathStepCount(Vector2Int start, Vector2Int goal)

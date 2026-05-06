@@ -298,6 +298,11 @@ public partial class GameBootstrap
             MarkTutorialGoalComplete(TutorialGoalKind.OpenWorkersCard);
         }
 
+        if (hasMotelBootstrapWorkerWaveDisembarked)
+        {
+            MarkTutorialGoalComplete(TutorialGoalKind.WaitForWorkerArrival);
+        }
+
         SessionDebugLogger.Log("TUTORIAL", "Worker card and hiring goals started.");
     }
 

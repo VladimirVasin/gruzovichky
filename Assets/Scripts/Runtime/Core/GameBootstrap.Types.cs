@@ -108,6 +108,7 @@ public partial class GameBootstrap : MonoBehaviour
         public DriverAgent Driver;
         public readonly List<DriverAgent> Drivers = new();
         public bool IsTutorialWave;
+        public bool IsMotelBootstrapWave;
         public bool HasNotifiedDisembark;
         public Transform BusRootTransform;
         public Renderer HeadlightLeftRenderer;

@@ -297,7 +297,7 @@ public partial class GameBootstrap
         TradeResourceType.Boards => 38,
         TradeResourceType.Cotton => 32,
         TradeResourceType.Textile => 50,
-        TradeResourceType.Furniture => 78,
+        TradeResourceType.Furniture => 220,
         TradeResourceType.Alcohol => 46,
         _ => 40
     };

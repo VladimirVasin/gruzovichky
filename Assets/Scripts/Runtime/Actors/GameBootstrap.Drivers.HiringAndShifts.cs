@@ -202,12 +202,18 @@ public partial class GameBootstrap : MonoBehaviour
             hiringDriverArrival.DisembarkTimer += HiringBusDisembarkInterval;
         }
 
-        if (HasFinishedHiringBusDisembark() &&
-            hiringDriverArrival.IsTutorialWave &&
-            !hiringDriverArrival.HasNotifiedDisembark)
+        if (HasFinishedHiringBusDisembark() && !hiringDriverArrival.HasNotifiedDisembark)
         {
             hiringDriverArrival.HasNotifiedDisembark = true;
-            NotifyTutorialHiringWaveDisembarked();
+            if (hiringDriverArrival.IsTutorialWave)
+            {
+                NotifyTutorialHiringWaveDisembarked();
+            }
+
+            if (hiringDriverArrival.IsMotelBootstrapWave)
+            {
+                NotifyMotelBootstrapWorkerWaveDisembarked();
+            }
         }
     }
 
@@ -475,9 +481,19 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            driver.IsOnActiveShift = false;
+            driver.NeedsShiftEndReturn = false;
+            driver.IsShiftSalaryPending = false;
+            truckAgent.IsTruckAutoModeEnabled = false;
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} shift return cancelled: Parking is not built.");
+            return;
+        }
+
         if (driver.NeedsShiftEndReturn)
         {
-            if (truckCell == locations[LocationType.Parking].Anchor &&
+            if (truckCell == parking.Anchor &&
                 !isTruckMoving &&
                 !isTruckInteracting &&
                 !isDriverRescueActive &&
@@ -502,9 +518,9 @@ public partial class GameBootstrap : MonoBehaviour
             !isTruckInteracting &&
             !isDriverRescueActive)
         {
-            if (truckCell != locations[LocationType.Parking].Anchor)
+            if (truckCell != parking.Anchor)
             {
-                StartMoveTo(locations[LocationType.Parking].Anchor);
+                StartMoveTo(parking.Anchor);
             }
             else
             {
@@ -672,7 +688,21 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver.ShiftStartHour >= 0) return;
         if (driver.RestPhase != DriverRestPhase.None) return;
         if (isDriverRescueActive) return;
-        if (truckCell == locations[LocationType.Parking].Anchor)
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            currentAssignedTrip = TripType.None;
+            currentTripPhase = TripPhase.None;
+            currentRefuelPhase = RefuelPhase.None;
+            isTruckAutoModeEnabled = false;
+            currentAssignedTripReward = 0;
+            if (GetCurrentTruckForDriver(driver) is TruckAgent currentTruck)
+            {
+                StartDriverMotelRest(currentTruck, driver);
+            }
+            return;
+        }
+
+        if (truckCell == parking.Anchor)
         {
             if (GetCurrentTruckForDriver(driver) is TruckAgent currentTruck)
             {
@@ -688,7 +718,7 @@ public partial class GameBootstrap : MonoBehaviour
         currentRefuelPhase = RefuelPhase.None;
         isTruckAutoModeEnabled = false;
         currentAssignedTripReward = 0;
-        StartMoveTo(locations[LocationType.Parking].Anchor);
+        StartMoveTo(parking.Anchor);
         SessionDebugLogger.Log("IDLE", $"{GetLoadedTruckDisplayName()} returning to parking - driver is idle.");
 }
 

@@ -65,14 +65,6 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (locationType is LocationType.Parking or LocationType.Warehouse or LocationType.Forest or
-            LocationType.Sawmill or LocationType.FurnitureFactory or LocationType.Docks)
-        {
-            enReason = "This core logistics building cannot be demolished yet.";
-            ruReason = "\u042d\u0442\u043e \u043a\u043b\u044e\u0447\u0435\u0432\u043e\u0435 \u043b\u043e\u0433\u0438\u0441\u0442\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u0437\u0434\u0430\u043d\u0438\u0435 \u043f\u043e\u043a\u0430 \u043d\u0435\u043b\u044c\u0437\u044f \u0441\u043d\u0435\u0441\u0442\u0438.";
-            return false;
-        }
-
         return true;
     }
 
@@ -174,6 +166,7 @@ public partial class GameBootstrap
 
         string displayName = GetBuildingInstanceDisplayName(locationType, location.InstanceId);
         ClearAssignmentsForDemolishedLocation(location);
+        ClearRuntimeStateForDemolishedLocation(location, locationType);
         RemoveLocationFromRuntimeCollections(location, locationType);
 
         if (location.RootObject != null)
@@ -235,6 +228,214 @@ public partial class GameBootstrap
         }
 
         location.Workers = 0;
+    }
+
+    private void ClearRuntimeStateForDemolishedLocation(LocationData location, LocationType locationType)
+    {
+        ReleaseWorkersFromDemolishedBuilding(location);
+        CancelTradeRunForDemolishedLocation(locationType);
+        CancelTruckRuntimeForDemolishedLocation(locationType);
+        CancelLocalBusForDemolishedLocation(location, locationType);
+
+        if (locationType == LocationType.Forest)
+        {
+            ResetLumberyardWorldState();
+        }
+    }
+
+    private void ReleaseWorkersFromDemolishedBuilding(LocationData location)
+    {
+        if (location == null)
+        {
+            return;
+        }
+
+        Vector3 releasePosition = GetLocationCenter(location);
+        releasePosition.y = SampleTerrainHeight(releasePosition.x, releasePosition.z);
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (driver?.DriverObject == null ||
+                !driver.IsInsideBuilding ||
+                driver.InsideBuildingType != location.Type ||
+                ResolveBuildingInstanceId(location.Type, driver.InsideBuildingInstanceId) != location.InstanceId)
+            {
+                continue;
+            }
+
+            driver.DriverObject.SetActive(true);
+            driver.DriverObject.transform.position = releasePosition;
+            driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            driver.IsInsideBuilding = false;
+            driver.InsideBuildingType = null;
+            driver.InsideBuildingInstanceId = 0;
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.WalkPath.Clear();
+            driver.WalkWaypointIndex = 0;
+            driver.WalkAnimationTime = 0f;
+            driver.LifeGoal = WorkerLifeGoal.Idle;
+            ApplyDriverPose(driver, 0f, 0f);
+        }
+    }
+
+    private void CancelTradeRunForDemolishedLocation(LocationType locationType)
+    {
+        if (!HasActiveTradeRun() ||
+            locationType != LocationType.Parking &&
+            locationType != LocationType.Warehouse)
+        {
+            return;
+        }
+
+        DriverAgent driver = GetDriverAgentById(activeTradeRun.DriverId);
+        TruckAgent truckAgent = GetTruckAgent(activeTradeRun.TruckNumber);
+        AbortActiveTradeRun($"Trade run aborted: {locationType} demolished", driver, truckAgent);
+    }
+
+    private void CancelTruckRuntimeForDemolishedLocation(LocationType locationType)
+    {
+        for (int i = 0; i < truckAgents.Count; i++)
+        {
+            TruckAgent truckAgent = truckAgents[i];
+            if (truckAgent == null)
+            {
+                continue;
+            }
+
+            bool shouldCancel =
+                locationType == LocationType.Parking && (truckAgent.Driver != null || truckAgent.IsTruckMoving || truckAgent.IsTruckInteracting) ||
+                DoesTripUseLocation(truckAgent.CurrentAssignedTrip, locationType) ||
+                DoesRefuelUseLocation(truckAgent.CurrentRefuelPhase, locationType) ||
+                DoesTruckInteractionUseLocation(truckAgent.ActiveTruckInteraction, locationType) ||
+                DoesTruckInteractionUseLocation(truckAgent.QueuedTruckInteraction, locationType) ||
+                truckAgent.ActiveServiceLocation == locationType ||
+                truckAgent.QueuedServiceLocation == locationType;
+
+            if (!shouldCancel)
+            {
+                if (locationType == LocationType.Parking)
+                {
+                    truckAgent.IsTruckAutoModeEnabled = false;
+                }
+                continue;
+            }
+
+            LoadTruckState(truckAgent);
+            DriverAgent driver = truckAgent.Driver;
+            CancelLoadedTruckRuntimeOrder($"{locationType} demolished");
+            ClearTruckCargo();
+            if (driver != null)
+            {
+                driver.IsShiftSalaryPending = false;
+                driver.NeedsShiftEndReturn = false;
+                StartDriverMotelRest(truckAgent, driver);
+            }
+            SaveTruckState(truckAgent);
+        }
+    }
+
+    private bool DoesRefuelUseLocation(RefuelPhase refuelPhase, LocationType locationType)
+    {
+        return refuelPhase != RefuelPhase.None &&
+               (locationType == LocationType.Parking || locationType == LocationType.GasStation);
+    }
+
+    private bool DoesTruckInteractionUseLocation(TruckInteractionType interactionType, LocationType locationType)
+    {
+        return interactionType switch
+        {
+            TruckInteractionType.LoadAtForest => locationType == LocationType.Forest,
+            TruckInteractionType.UnloadAtSawmill => locationType == LocationType.Sawmill,
+            TruckInteractionType.LoadAtSawmill => locationType == LocationType.Sawmill,
+            TruckInteractionType.UnloadAtWarehouse => locationType == LocationType.Warehouse,
+            TruckInteractionType.LoadBoardsAtWarehouse => locationType == LocationType.Warehouse,
+            TruckInteractionType.LoadTextileAtWarehouse => locationType == LocationType.Warehouse,
+            TruckInteractionType.LoadLogsAtWarehouse => locationType == LocationType.Warehouse,
+            TruckInteractionType.LoadFurnitureAtWarehouse => locationType == LocationType.Warehouse,
+            TruckInteractionType.TradeUnloadAtWarehouse => locationType == LocationType.Warehouse,
+            TruckInteractionType.TradeLoadAtWarehouse => locationType == LocationType.Warehouse,
+            TruckInteractionType.UnloadBoardsAtFurnitureFactory => locationType == LocationType.FurnitureFactory,
+            TruckInteractionType.UnloadTextileAtFurnitureFactory => locationType == LocationType.FurnitureFactory,
+            TruckInteractionType.LoadAtFurnitureFactory => locationType == LocationType.FurnitureFactory,
+            TruckInteractionType.UnloadFurnitureAtWarehouse => locationType == LocationType.Warehouse,
+            TruckInteractionType.UnloadAtDocks => locationType == LocationType.Docks,
+            TruckInteractionType.LoadAtDocks => locationType == LocationType.Docks,
+            TruckInteractionType.UnloadDocksImportAtWarehouse => locationType == LocationType.Warehouse,
+            TruckInteractionType.RefuelAtGasStation => locationType == LocationType.GasStation,
+            _ => false
+        };
+    }
+
+    private void CancelLocalBusForDemolishedLocation(LocationData location, LocationType locationType)
+    {
+        if (locationType != LocationType.Parking && locationType != LocationType.Stop)
+        {
+            return;
+        }
+
+        Vector3 releasePosition = localBusRoute?.RootTransform != null
+            ? localBusRoute.RootTransform.position
+            : location != null
+                ? GetLocationCenter(location)
+                : Vector3.zero;
+        releasePosition.y = SampleTerrainHeight(releasePosition.x, releasePosition.z);
+
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent passenger = driverAgents[i];
+            if (passenger == null ||
+                passenger.WalkPhase != DriverRescuePhase.RidingLocalBus &&
+                passenger.WalkPhase != DriverRescuePhase.WaitingAtLocalBusStop)
+            {
+                continue;
+            }
+
+            ResumeLocalBusPassengerAfterRouteDemolition(passenger, releasePosition);
+        }
+
+        if (localBusRoute != null)
+        {
+            SessionDebugLogger.Log("BUS", $"Local bus route cancelled: {locationType} demolished.");
+            CleanupLocalBusRuntime();
+        }
+    }
+
+    private void ResumeLocalBusPassengerAfterRouteDemolition(DriverAgent passenger, Vector3 releasePosition)
+    {
+        if (passenger?.DriverObject == null)
+        {
+            return;
+        }
+
+        bool wasRiding = passenger.WalkPhase == DriverRescuePhase.RidingLocalBus || !passenger.DriverObject.activeSelf;
+        Vector3 startPosition = wasRiding ? releasePosition : passenger.DriverObject.transform.position;
+        DriverRescuePhase finalWalkPhase = passenger.BusFinalWalkPhase;
+        Vector3 finalTarget = passenger.BusFinalTargetWorld;
+        string travelReason = string.IsNullOrEmpty(passenger.BusTravelReason)
+            ? "local bus trip"
+            : passenger.BusTravelReason;
+
+        passenger.DriverObject.SetActive(true);
+        passenger.DriverObject.transform.position = startPosition;
+        passenger.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        passenger.WalkAnimationTime = 0f;
+        ApplyDriverPose(passenger, 0f, 0f);
+        ResetWorkerLocalBusTripState(passenger);
+
+        if (finalWalkPhase == DriverRescuePhase.None)
+        {
+            passenger.WalkPhase = DriverRescuePhase.None;
+            passenger.WalkTargetWorld = startPosition;
+            passenger.LifeGoal = WorkerLifeGoal.Idle;
+            return;
+        }
+
+        passenger.WalkPhase = finalWalkPhase;
+        passenger.WalkTargetWorld = finalTarget;
+        if (!BuildDriverWalkPath(passenger, startPosition, finalTarget))
+        {
+            HandleFailedLocalBusFinalWalk(passenger, finalWalkPhase, travelReason);
+        }
     }
 
     private void RemoveLocationFromRuntimeCollections(LocationData location, LocationType locationType)

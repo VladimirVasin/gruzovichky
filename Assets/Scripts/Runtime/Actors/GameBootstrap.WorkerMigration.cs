@@ -23,6 +23,9 @@ public partial class GameBootstrap
     private int recentWorkerDeparturesToday;
     private int workerMigrationVacancyMissChecks;
     private int workerMigrationArrivalsToday;
+    private bool isMotelBootstrapWorkerWavePending;
+    private bool hasMotelBootstrapWorkerWaveStarted;
+    private bool hasMotelBootstrapWorkerWaveDisembarked;
 
     private void UpdateWorkerMigrationRuntime()
     {
@@ -34,6 +37,8 @@ public partial class GameBootstrap
             recentWorkerDeparturesToday = 0;
             workerMigrationArrivalsToday = 0;
         }
+
+        TryStartPendingMotelBootstrapWorkerWave("pending motel bootstrap");
 
         int currentHour = GetCurrentHour();
         if (currentDay < WorkerMigrationMinDay || currentHour < WorkerMigrationEvaluationHour)
@@ -649,7 +654,63 @@ public partial class GameBootstrap
         return 1f;
     }
 
-    private bool TryStartWorkerArrivalBus(List<DriverAgent> workers, bool isTutorialWave, string source)
+    private void QueueMotelBootstrapWorkerWave()
+    {
+        if (hasMotelBootstrapWorkerWaveStarted)
+        {
+            return;
+        }
+
+        isMotelBootstrapWorkerWavePending = true;
+        TryStartPendingMotelBootstrapWorkerWave("motel built");
+    }
+
+    private void TryStartPendingMotelBootstrapWorkerWave(string source)
+    {
+        if (!isMotelBootstrapWorkerWavePending ||
+            hasMotelBootstrapWorkerWaveStarted ||
+            hiringDriverArrival != null ||
+            !locations.ContainsKey(LocationType.Motel) ||
+            !locations.ContainsKey(LocationType.IntercityStop))
+        {
+            return;
+        }
+
+        List<DriverAgent> arrivals = new(MotelBootstrapWorkerWaveCount);
+        for (int i = 0; i < MotelBootstrapWorkerWaveCount; i++)
+        {
+            DriverAgent worker = CreateAndRegisterDriverAgent(spawnInMotel: false);
+            arrivals.Add(worker);
+            LogDriverReaction(worker, "motel bootstrap arrival");
+        }
+
+        bool isTutorialWave = selectedGameStartMode == GameStartMode.Tutorial && !isTutorialSkipped;
+        if (!TryStartWorkerArrivalBus(arrivals, isTutorialWave, source, isMotelBootstrapWave: true))
+        {
+            return;
+        }
+
+        isMotelBootstrapWorkerWavePending = false;
+        hasMotelBootstrapWorkerWaveStarted = true;
+        workerMigrationVacancyMissChecks = 0;
+        workerMigrationArrivalsToday += arrivals.Count;
+        lastWorkerMigrationSuccessfulArrivalKey = currentDay * 24 + GetCurrentHour();
+        isDriversScreenDirty = true;
+        isShiftsScreenDirty = true;
+        SessionDebugLogger.Log("MIGRATION", $"Motel bootstrap worker wave started: count={arrivals.Count}, source={source}.");
+        PushFeedEvent(
+            $"{arrivals.Count} workers are arriving after the Motel opened.",
+            $"\u041f\u043e\u0441\u043b\u0435 \u043e\u0442\u043a\u0440\u044b\u0442\u0438\u044f \u041c\u043e\u0442\u0435\u043b\u044f \u0435\u0434\u0443\u0442 \u0440\u0430\u0431\u043e\u0447\u0438\u0435: {arrivals.Count}.",
+            FeedEventType.Info);
+    }
+
+    private void NotifyMotelBootstrapWorkerWaveDisembarked()
+    {
+        hasMotelBootstrapWorkerWaveDisembarked = true;
+        CheckTutorialWorkerArrivalGoal();
+    }
+
+    private bool TryStartWorkerArrivalBus(List<DriverAgent> workers, bool isTutorialWave, string source, bool isMotelBootstrapWave = false)
     {
         if (workers == null || workers.Count == 0 || hiringDriverArrival != null)
         {
@@ -660,6 +721,7 @@ public partial class GameBootstrap
         {
             Driver = workers[0],
             IsTutorialWave = isTutorialWave,
+            IsMotelBootstrapWave = isMotelBootstrapWave,
             Phase = HiringDriverArrivalPhase.WaitingLaneClear
         };
         hiringDriverArrival.Drivers.AddRange(workers);

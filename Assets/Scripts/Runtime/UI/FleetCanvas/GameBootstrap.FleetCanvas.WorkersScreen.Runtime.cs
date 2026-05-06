@@ -109,6 +109,7 @@ public partial class GameBootstrap
         driversScreenUi.HireStatusText.color = canAutoArrive ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WorkerListContent);
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WindowRoot);
+        ScrollWorkersListToSelectedIfRequested();
 
         // Localize static texts first — BEFORE setting detail panel strings so they aren't re-processed
         LocalizeCanvas(driversScreenUi.CanvasRoot);
@@ -120,6 +121,7 @@ public partial class GameBootstrap
             TruckAgent truck = GetAssignedTruckForDriver(sel);
             bool isLogistics = sel.DutyMode == DriverDutyMode.Logistics;
 
+            ApplyWorkerDetailTabUi(ru);
             driversScreenUi.DetailNameText.text = sel.DriverName;
             if (driversScreenUi.DetailProfileTitleText != null)
                 driversScreenUi.DetailProfileTitleText.text = ru ? "Профиль" : "Profile";
@@ -206,6 +208,60 @@ public partial class GameBootstrap
         }
 
         isDriversScreenDirty = false;
+    }
+
+    private void ScrollWorkersListToSelectedIfRequested()
+    {
+        if (!shouldScrollWorkersListToSelected ||
+            driversScreenUi?.WorkerListScrollRect == null ||
+            selectedWorkerPanelDriverId <= 0)
+        {
+            return;
+        }
+
+        int selectedIndex = driverAgents.FindIndex(d => d.DriverId == selectedWorkerPanelDriverId);
+        if (selectedIndex < 0)
+        {
+            shouldScrollWorkersListToSelected = false;
+            return;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        int maxIndex = Mathf.Max(1, driverAgents.Count - 1);
+        float normalized = 1f - Mathf.Clamp01(selectedIndex / (float)maxIndex);
+        driversScreenUi.WorkerListScrollRect.verticalNormalizedPosition = normalized;
+        shouldScrollWorkersListToSelected = false;
+    }
+
+    private void ApplyWorkerDetailTabUi(bool ru)
+    {
+        if (driversScreenUi == null)
+        {
+            return;
+        }
+
+        if (driversScreenUi.DetailProfileTabText != null)
+        {
+            driversScreenUi.DetailProfileTabText.text = ru ? "\u041f\u0440\u043e\u0444\u0438\u043b\u044c" : "Profile";
+        }
+
+        if (driversScreenUi.DetailSocialTabText != null)
+        {
+            driversScreenUi.DetailSocialTabText.text = ru ? "\u0421\u043e\u0446\u0438\u0430\u043b\u044c\u043d\u044b\u0435 \u0441\u0432\u044f\u0437\u0438" : "Social Links";
+        }
+
+        if (driversScreenUi.DetailProfileTabRoot != null)
+        {
+            driversScreenUi.DetailProfileTabRoot.SetActive(!isWorkerSocialTabActive);
+        }
+
+        if (driversScreenUi.DetailSocialTabRoot != null)
+        {
+            driversScreenUi.DetailSocialTabRoot.SetActive(isWorkerSocialTabActive);
+        }
+
+        ApplyShiftsTabVisual(driversScreenUi.DetailProfileTabButton, driversScreenUi.DetailProfileTabText, !isWorkerSocialTabActive);
+        ApplyShiftsTabVisual(driversScreenUi.DetailSocialTabButton, driversScreenUi.DetailSocialTabText, isWorkerSocialTabActive);
     }
 
 }

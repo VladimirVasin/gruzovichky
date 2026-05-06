@@ -2,7 +2,8 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private const float WorkerDecisionRepeatThrottleSeconds = 8f;
+    private const float WorkerDecisionRepeatThrottleSeconds = 30f;
+    private const float WorkerDecisionRepeatThrottleWorldHours = 1f;
     private const float LocalBusPassengerSkipRepeatThrottleSeconds = 20f;
 
     private void LogWorkerDecision(
@@ -20,11 +21,15 @@ public partial class GameBootstrap
 
         WorkerLifeGoal goalBefore = selectedGoalBefore ?? driver.LifeGoal;
         WorkerLifeGoal goalAfter = selectedGoalAfter ?? driver.LifeGoal;
-        string key = $"{decision}|{reason}|before={goalBefore}|after={goalAfter}|{driver.WalkPhase}|{driver.RestPhase}|{driver.LifeGoal}|{driver.DutyMode}|{driver.ShiftStartHour}|{driver.AssignedBuildingType}|{driver.AssignedTruckNumber}|{driver.IsOnActiveShift}|{driver.IsInsideBuilding}";
         bool shouldThrottleRepeats = ShouldThrottleWorkerDecisionRepeats(decision);
+        string key = shouldThrottleRepeats
+            ? BuildWorkerDecisionThrottleKey(driver, decision, reason, goalBefore, goalAfter)
+            : BuildWorkerDecisionDebugKey(driver, decision, reason, goalBefore, goalAfter);
+        float worldHour = shouldThrottleRepeats ? GetCurrentWorldHour() : 0f;
         if (shouldThrottleRepeats &&
             driver.LastThrottledWorkerDecisionDebugKey == key &&
-            Time.unscaledTime - driver.LastThrottledWorkerDecisionDebugTime < WorkerDecisionRepeatThrottleSeconds)
+            (Time.unscaledTime - driver.LastThrottledWorkerDecisionDebugTime < WorkerDecisionRepeatThrottleSeconds ||
+             worldHour - driver.LastThrottledWorkerDecisionWorldHour < WorkerDecisionRepeatThrottleWorldHours))
         {
             return;
         }
@@ -39,6 +44,7 @@ public partial class GameBootstrap
         {
             driver.LastThrottledWorkerDecisionDebugKey = key;
             driver.LastThrottledWorkerDecisionDebugTime = Time.unscaledTime;
+            driver.LastThrottledWorkerDecisionWorldHour = worldHour;
         }
 
         SessionDebugLogger.Log(
@@ -46,19 +52,96 @@ public partial class GameBootstrap
             $"{driver.DriverName}: {decision}; reason={reason}; selectedGoalBefore={goalBefore}; selectedGoalAfter={goalAfter}; {FormatWorkerDecisionSnapshot(driver)}.");
     }
 
+    private static string BuildWorkerDecisionDebugKey(
+        DriverAgent driver,
+        string decision,
+        string reason,
+        WorkerLifeGoal goalBefore,
+        WorkerLifeGoal goalAfter)
+    {
+        return $"{decision}|{reason}|before={goalBefore}|after={goalAfter}|{driver.WalkPhase}|{driver.RestPhase}|{driver.LifeGoal}|{driver.DutyMode}|{driver.ShiftStartHour}|{driver.AssignedBuildingType}|{driver.AssignedTruckNumber}|{driver.IsOnActiveShift}|{driver.IsInsideBuilding}";
+    }
+
+    private static string BuildWorkerDecisionThrottleKey(
+        DriverAgent driver,
+        string decision,
+        string reason,
+        WorkerLifeGoal goalBefore,
+        WorkerLifeGoal goalAfter)
+    {
+        return $"{decision}|{NormalizeWorkerDecisionThrottleReason(reason)}|before={goalBefore}|after={goalAfter}|{driver.RestPhase}|{driver.DutyMode}|{driver.ShiftStartHour}|{GetWorkerDecisionAssignmentDebugKey(driver)}|inside={driver.IsInsideBuilding}";
+    }
+
+    private static string GetWorkerDecisionAssignmentDebugKey(DriverAgent driver)
+    {
+        if (driver.AssignedBuildingType.HasValue)
+        {
+            return $"{driver.AssignedBuildingType.Value}#{driver.AssignedBuildingInstanceId}:slot={driver.AssignedBuildingSlotIndex}";
+        }
+
+        return driver.AssignedTruckNumber > 0 ? $"Truck#{driver.AssignedTruckNumber}" : "none";
+    }
+
+    private static string NormalizeWorkerDecisionThrottleReason(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return string.Empty;
+        }
+
+        return CollapseVolatileNumberRuns(reason.Trim());
+    }
+
+    private static string CollapseVolatileNumberRuns(string value)
+    {
+        System.Text.StringBuilder builder = new(value.Length);
+        bool inNumberRun = false;
+
+        for (int i = 0; i < value.Length; i++)
+        {
+            char c = value[i];
+            bool numberLike = char.IsDigit(c) || c == '.' || c == ',';
+            if (numberLike)
+            {
+                if (!inNumberRun)
+                {
+                    if (builder.Length == 0 || builder[builder.Length - 1] != '#')
+                    {
+                        builder.Append('#');
+                    }
+
+                    inNumberRun = true;
+                }
+
+                continue;
+            }
+
+            inNumberRun = false;
+            builder.Append(c);
+        }
+
+        return builder.ToString();
+    }
+
     private static bool ShouldThrottleWorkerDecisionRepeats(string decision)
     {
         return decision == "idle-blocked" ||
                decision == "idle-activity" ||
+               decision == "idle-activity-blocked" ||
                decision == "life-goal-selected" ||
+               decision == "start-life-cycle" ||
                decision == "service-unavailable" ||
                decision == "skip-meal-service" ||
                decision == "skip-sleep-service" ||
+               decision == "skip-canteen-home-owner" ||
                decision == "buy-house-skip" ||
                decision == "skip-due-life-cycle" ||
                decision == "skip-labor-exchange" ||
                decision == "leisure-no-candidates" ||
+               decision == "sleep-unavailable" ||
                decision == "need-fallback-walk" ||
+               decision == "need-fallback" ||
+               decision == "trash-meal-unavailable" ||
                decision == "need-retry-cooldown";
     }
 

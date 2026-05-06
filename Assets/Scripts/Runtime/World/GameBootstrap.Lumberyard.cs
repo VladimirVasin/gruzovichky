@@ -617,8 +617,14 @@ public partial class GameBootstrap
             log.RootObject.SetActive(false);
         }
 
+        if (!locations.TryGetValue(LocationType.Forest, out LocationData forestLocation))
+        {
+            ReturnForestWorkerInside(driver, "forest building no longer exists");
+            return;
+        }
+
         EnsureForestCarryVisual(driver);
-        Vector3 target = GetCellCenter(locations[LocationType.Forest].Anchor) + new Vector3(0f, 0.05f, 0f);
+        Vector3 target = GetCellCenter(forestLocation.Anchor) + new Vector3(0f, 0.05f, 0f);
         driver.WalkTargetWorld = target;
         driver.WalkPhase = DriverRescuePhase.LumberCarryLogToBuilding;
         BuildDriverWalkPath(driver, driver.DriverObject.transform.position, target);
@@ -793,12 +799,18 @@ public partial class GameBootstrap
             return;
         }
 
-        if (HasUncollectedGroundLogs(tree) && locations[LocationType.Forest].LogsStored < ForestMaxLogsStorage)
+        if (!locations.TryGetValue(LocationType.Forest, out forestLocation))
+        {
+            ReturnForestWorkerInside(driver, "forest building no longer exists after delivery");
+            return;
+        }
+
+        if (HasUncollectedGroundLogs(tree) && forestLocation.LogsStored < ForestMaxLogsStorage)
         {
             Vector3 target = GetLumberTreeWorkPoint(tree);
             driver.WalkTargetWorld = target;
             driver.WalkPhase = DriverRescuePhase.LumberToTree;
-            BuildDriverWalkPath(driver, GetCellCenter(locations[LocationType.Forest].Anchor) + new Vector3(0f, 0.05f, 0f), target);
+            BuildDriverWalkPath(driver, GetCellCenter(forestLocation.Anchor) + new Vector3(0f, 0.05f, 0f), target);
             return;
         }
 
@@ -808,7 +820,7 @@ public partial class GameBootstrap
             Vector3 target = GetLumberTreeWorkPoint(tree);
             driver.WalkTargetWorld = target;
             driver.WalkPhase = DriverRescuePhase.LumberReturnToTreeForPlanting;
-            BuildDriverWalkPath(driver, GetCellCenter(locations[LocationType.Forest].Anchor) + new Vector3(0f, 0.05f, 0f), target);
+            BuildDriverWalkPath(driver, GetCellCenter(forestLocation.Anchor) + new Vector3(0f, 0.05f, 0f), target);
             return;
         }
 

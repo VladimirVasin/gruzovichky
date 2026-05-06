@@ -493,6 +493,12 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        if (!locations.ContainsKey(LocationType.Parking))
+        {
+            SessionDebugLogger.Log("SHIFT", $"{driver.DriverName} cannot start commute to Parking for {assignedTruck.DisplayName}: Parking is not built.");
+            return;
+        }
+
         InterruptDriverIdleActivityForShift(driver, "Parking");
         if (driver.DriverObject.activeSelf == false)
         {

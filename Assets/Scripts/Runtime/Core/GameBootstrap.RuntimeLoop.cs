@@ -304,7 +304,8 @@ public partial class GameBootstrap
                 !isTruckInteracting &&
                 !isDriverRescueActive &&
                 (da == null || da.RestPhase == DriverRestPhase.None) &&
-                truckCell == locations[LocationType.Parking].Anchor)
+                locations.TryGetValue(LocationType.Parking, out LocationData parking) &&
+                truckCell == parking.Anchor)
             {
                 Vector3 parkedPosition = GetParkingSlotWorldPosition(ta.ParkingSlotIndex);
                 truckObject.transform.position = parkedPosition;

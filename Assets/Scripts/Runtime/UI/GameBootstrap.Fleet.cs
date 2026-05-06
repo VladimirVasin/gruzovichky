@@ -451,23 +451,29 @@ public partial class GameBootstrap
 
         float y = panelRect.y + 34f;
 
-        DrawResourceRow(ref y, panelRect, LocationType.Forest,
-            $"Logs ready: {locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}", labelName, labelVal);
-
-        if (locations.ContainsKey(LocationType.Sawmill))
+        if (locations.TryGetValue(LocationType.Forest, out LocationData forest))
         {
-            DrawResourceRow(ref y, panelRect, LocationType.Sawmill,
-                $"Boards ready: {locations[LocationType.Sawmill].BoardsStored}", labelName, labelVal);
+            DrawResourceRow(ref y, panelRect, forest,
+                $"Logs ready: {forest.LogsStored} / {ForestMaxLogsStorage}", labelName, labelVal);
         }
 
-        DrawResourceRow(ref y, panelRect, LocationType.Warehouse,
-            $"Boards stored: {locations[LocationType.Warehouse].BoardsStored}", labelName, labelVal);
+        if (locations.TryGetValue(LocationType.Sawmill, out LocationData sawmill))
+        {
+            DrawResourceRow(ref y, panelRect, sawmill,
+                $"Boards ready: {sawmill.BoardsStored}", labelName, labelVal);
+        }
+
+        if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse))
+        {
+            DrawResourceRow(ref y, panelRect, warehouse,
+                $"Boards stored: {warehouse.BoardsStored}", labelName, labelVal);
+        }
     }
 
-    private void DrawResourceRow(ref float y, Rect panelRect, LocationType loc, string resourceText, GUIStyle nameStyle, GUIStyle valStyle)
+    private void DrawResourceRow(ref float y, Rect panelRect, LocationData location, string resourceText, GUIStyle nameStyle, GUIStyle valStyle)
     {
         GUI.Box(new Rect(panelRect.x + 8f, y, panelRect.width - 16f, 52f), string.Empty);
-        GUI.Label(new Rect(panelRect.x + 12f, y + 6f,  panelRect.width - 24f, 20f), locations[loc].Label, nameStyle);
+        GUI.Label(new Rect(panelRect.x + 12f, y + 6f,  panelRect.width - 24f, 20f), location.Label, nameStyle);
         GUI.Label(new Rect(panelRect.x + 12f, y + 28f, panelRect.width - 24f, 18f), resourceText, valStyle);
         y += 58f;
     }
@@ -700,7 +706,7 @@ public partial class GameBootstrap
             TripType.DocksToWarehouseTextile when IsTradeResourceNeededByProduction(TradeResourceType.Textile) => 280,
             TripType.DocksToWarehouseFurniture when IsTradeResourceNeededByProduction(TradeResourceType.Furniture) => 280,
             TripType.SawmillToWarehouse when IsTradeResourceNeededByProduction(TradeResourceType.Boards) => 260,
-            TripType.FurnitureFactoryToWarehouse => 220,
+            TripType.FurnitureFactoryToWarehouse => 360,
             TripType.DocksToWarehouseCotton => 210,
             TripType.DocksToWarehouseTextile => 210,
             TripType.DocksToWarehouseFurniture => 210,

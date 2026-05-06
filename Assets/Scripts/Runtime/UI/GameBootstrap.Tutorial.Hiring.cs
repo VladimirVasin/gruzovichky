@@ -23,6 +23,22 @@ public partial class GameBootstrap
             return;
         }
 
+        if (hasMotelBootstrapWorkerWaveDisembarked)
+        {
+            CheckTutorialWorkerArrivalGoal();
+            return;
+        }
+
+        if (hasMotelBootstrapWorkerWaveStarted)
+        {
+            if (hiringDriverArrival != null)
+            {
+                ScheduleTutorial(TutorialTrigger.UserWorkerHiringBusInfo, 0.25f);
+            }
+
+            return;
+        }
+
         if (!locations.ContainsKey(LocationType.Motel) ||
             !locations.ContainsKey(LocationType.IntercityStop) ||
             hiringDriverArrival != null)

@@ -95,7 +95,13 @@ public partial class GameBootstrap
 
     private void UpdateTradeRunDrivingToWarehouse(DriverAgent driver, TruckAgent truckAgent)
     {
-        Vector2Int warehouseAnchor = locations[LocationType.Warehouse].Anchor;
+        if (!locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse))
+        {
+            AbortActiveTradeRun("Trade run aborted: Warehouse missing", driver, truckAgent);
+            return;
+        }
+
+        Vector2Int warehouseAnchor = warehouse.Anchor;
         TradeRunTruckTargetAction action = TradeRunRuntimeService.EvaluateTruckTarget(
             truckAgent.TruckCell,
             warehouseAnchor,
@@ -275,7 +281,13 @@ public partial class GameBootstrap
 
     private void UpdateTradeRunReturningToWarehouse(DriverAgent driver, TruckAgent truckAgent)
     {
-        Vector2Int warehouseAnchor = locations[LocationType.Warehouse].Anchor;
+        if (!locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse))
+        {
+            AbortActiveTradeRun("Trade run aborted: Warehouse missing", driver, truckAgent);
+            return;
+        }
+
+        Vector2Int warehouseAnchor = warehouse.Anchor;
         TradeRunTruckTargetAction action = TradeRunRuntimeService.EvaluateTruckTarget(
             truckAgent.TruckCell,
             warehouseAnchor,
@@ -322,7 +334,13 @@ public partial class GameBootstrap
 
     private void UpdateTradeRunReturning(DriverAgent driver, TruckAgent truckAgent)
     {
-        Vector2Int parkingAnchor = locations[LocationType.Parking].Anchor;
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            AbortActiveTradeRun("Trade run aborted: Parking missing", driver, truckAgent);
+            return;
+        }
+
+        Vector2Int parkingAnchor = parking.Anchor;
         TradeRunTruckTargetAction action = TradeRunRuntimeService.EvaluateTruckTarget(
             truckAgent.TruckCell,
             parkingAnchor,
@@ -388,5 +406,82 @@ public partial class GameBootstrap
         TryAutoDispatchNextHudOrder();
     }
 
+    private void AbortActiveTradeRun(string statusText, DriverAgent driver = null, TruckAgent truckAgent = null)
+    {
+        if (!HasActiveTradeRun())
+        {
+            return;
+        }
+
+        bool releasedDriverFromTruck = false;
+        if (truckAgent != null)
+        {
+            LoadTruckState(truckAgent);
+            if (truckObject != null && !truckObject.activeSelf)
+            {
+                Vector2Int returnCell = GetTradeHighwayReturnCell();
+                Vector3 returnPosition = GetTruckWorldPosition(returnCell);
+                truckObject.SetActive(true);
+                truckObject.transform.position = returnPosition;
+                truckObject.transform.rotation = Quaternion.LookRotation(Vector3.left, Vector3.up);
+                truckCell = returnCell;
+                truckTargetWorld = returnPosition;
+                truckSegmentStartWorld = returnPosition;
+                truckSmoothedForward = Vector3.left;
+            }
+
+            CancelLoadedTruckRuntimeOrder(statusText);
+            ClearTruckCargo();
+            if (driver != null && truckAgent.Driver == driver)
+            {
+                driver.IsShiftSalaryPending = false;
+                driver.NeedsShiftEndReturn = false;
+                StartDriverMotelRest(truckAgent, driver);
+                releasedDriverFromTruck = true;
+            }
+            SaveTruckState(truckAgent);
+        }
+
+        if (driver != null)
+        {
+            if (!releasedDriverFromTruck && driver.DriverObject != null)
+            {
+                if (!driver.DriverObject.activeSelf)
+                {
+                    Vector3 driverPosition = truckAgent?.TruckObject != null
+                        ? truckAgent.TruckObject.transform.position + new Vector3(0.35f, 0f, -0.35f)
+                        : driver.MotelIdlePosition;
+                    driverPosition.y = SampleTerrainHeight(driverPosition.x, driverPosition.z);
+                    driver.DriverObject.SetActive(true);
+                    driver.DriverObject.transform.position = driverPosition;
+                }
+
+                driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+                ApplyDriverPose(driver, 0f, 0f);
+            }
+
+            driver.WaitingForShiftAtParking = false;
+            driver.IsOnActiveShift = false;
+            driver.NeedsShiftEndReturn = false;
+            driver.IsShiftSalaryPending = false;
+            if (!releasedDriverFromTruck)
+            {
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                driver.LifeGoal = WorkerLifeGoal.Idle;
+            }
+        }
+
+        tradeDispatchStatusText = statusText;
+        SessionDebugLogger.Log("TRADE", statusText);
+        activeTradeRun = null;
+        isEconomyScreenDirty = true;
+        isTradeScreenDirty = true;
+        isFleetScreenDirty = true;
+        isDriversScreenDirty = true;
+        isShiftsScreenDirty = true;
+    }
 
 }

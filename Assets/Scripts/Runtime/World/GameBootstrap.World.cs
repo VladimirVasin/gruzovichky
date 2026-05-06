@@ -506,6 +506,7 @@ public partial class GameBootstrap
         NotifyTutorialCoreBuildingBuilt(LocationType.Motel);
         MoveStarterIdleWorkersToMotel();
         MoveAmbientCatsToCurrentHome();
+        QueueMotelBootstrapWorkerWave();
         SessionDebugLogger.Log("BUILD", $"Placed Motel at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         return true;
     }

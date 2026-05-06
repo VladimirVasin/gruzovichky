@@ -152,8 +152,55 @@ public partial class GameBootstrap
         driversScreenUi.DetailStatusText = CreateBodyText("DetailStatus", statusBadge, font, string.Empty, 12, TextAnchor.MiddleCenter, Color.white);
         driversScreenUi.DetailStatusText.fontStyle = FontStyle.Bold;
 
+        RectTransform detailTabRow = CreateTabRow("WorkerDetailTabRow", detailRoot.transform, 36f, 8f);
+        driversScreenUi.DetailProfileTabButton = CreateButton("WorkerProfileTabBtn", detailTabRow, font, out driversScreenUi.DetailProfileTabText, "Profile", 13, FleetPrimaryButtonColor, Color.white);
+        driversScreenUi.DetailProfileTabText.fontStyle = FontStyle.Bold;
+        driversScreenUi.DetailProfileTabButton.transition = Selectable.Transition.None;
+        LayoutElement profileTabLayout = driversScreenUi.DetailProfileTabButton.gameObject.AddComponent<LayoutElement>();
+        profileTabLayout.preferredHeight = 36f;
+        profileTabLayout.flexibleWidth = 1f;
+        driversScreenUi.DetailProfileTabButton.onClick.AddListener(() =>
+        {
+            isWorkerSocialTabActive = false;
+            isDriversScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.7f);
+        });
+
+        driversScreenUi.DetailSocialTabButton = CreateButton("WorkerSocialTabBtn", detailTabRow, font, out driversScreenUi.DetailSocialTabText, "Social Links", 13, new Color(0.08f, 0.10f, 0.14f, 1f), Color.white);
+        driversScreenUi.DetailSocialTabText.fontStyle = FontStyle.Bold;
+        driversScreenUi.DetailSocialTabButton.transition = Selectable.Transition.None;
+        LayoutElement socialTabLayout = driversScreenUi.DetailSocialTabButton.gameObject.AddComponent<LayoutElement>();
+        socialTabLayout.preferredHeight = 36f;
+        socialTabLayout.flexibleWidth = 1f;
+        driversScreenUi.DetailSocialTabButton.onClick.AddListener(() =>
+        {
+            isWorkerSocialTabActive = true;
+            isDriversScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.7f);
+        });
+
+        RectTransform profileTabRoot = CreateUiObject("WorkerProfileTabRoot", detailRoot.transform).GetComponent<RectTransform>();
+        driversScreenUi.DetailProfileTabRoot = profileTabRoot.gameObject;
+        VerticalLayoutGroup profileTabLayoutGroup = profileTabRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        profileTabLayoutGroup.spacing = 14f;
+        profileTabLayoutGroup.childControlWidth = true;
+        profileTabLayoutGroup.childControlHeight = true;
+        profileTabLayoutGroup.childForceExpandWidth = true;
+        profileTabLayoutGroup.childForceExpandHeight = false;
+
+        RectTransform socialTabRoot = CreateUiObject("WorkerSocialTabRoot", detailRoot.transform).GetComponent<RectTransform>();
+        driversScreenUi.DetailSocialTabRoot = socialTabRoot.gameObject;
+        socialTabRoot.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        VerticalLayoutGroup socialTabLayoutGroup = socialTabRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        socialTabLayoutGroup.spacing = 14f;
+        socialTabLayoutGroup.childControlWidth = true;
+        socialTabLayoutGroup.childControlHeight = true;
+        socialTabLayoutGroup.childForceExpandWidth = true;
+        socialTabLayoutGroup.childForceExpandHeight = false;
+        driversScreenUi.DetailSocialTabRoot.SetActive(false);
+
         // Profile card
-        RectTransform profileCard = CreateStyledPanel("WorkerProfileCard", detailRoot.transform, FleetInsetColor);
+        RectTransform profileCard = CreateStyledPanel("WorkerProfileCard", profileTabRoot, FleetInsetColor);
         profileCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 104f;
         HorizontalLayoutGroup profileLayout = profileCard.gameObject.AddComponent<HorizontalLayoutGroup>();
         profileLayout.padding = new RectOffset(16, 16, 10, 10);
@@ -186,7 +233,7 @@ public partial class GameBootstrap
         driversScreenUi.DetailRoleText = CreateHeaderText("WorkerRole", profileInfoColumn, font, string.Empty, 16, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailRoleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
-        RectTransform conditionRow = CreateLayoutRow("WorkerConditionRow", detailRoot.transform, 142f, 14f);
+        RectTransform conditionRow = CreateLayoutRow("WorkerConditionRow", profileTabRoot, 142f, 14f);
 
         RectTransform needsCard = CreateStyledPanel("WorkerNeedsCard", conditionRow, FleetInsetColor);
         needsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -246,7 +293,7 @@ public partial class GameBootstrap
         }
 
         // Assignment info card — compact rows, label refs stored for post-localization update
-        RectTransform assignCard = CreateSectionCard(detailRoot.transform, font, string.Empty, out RectTransform assignBody, false);
+        RectTransform assignCard = CreateSectionCard(profileTabRoot, font, string.Empty, out RectTransform assignBody, false);
         assignCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
         assignCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
         assignBody.GetComponent<VerticalLayoutGroup>().spacing = 4;
@@ -290,7 +337,7 @@ public partial class GameBootstrap
         driversScreenUi.DetailAgeText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
         // Contract card (salary, balance) — compact
-        RectTransform statsCard = CreateSectionCard(detailRoot.transform, font, string.Empty, out RectTransform statsBody, false);
+        RectTransform statsCard = CreateSectionCard(profileTabRoot, font, string.Empty, out RectTransform statsBody, false);
         statsCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
         statsCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
         statsBody.GetComponent<VerticalLayoutGroup>().spacing = 6;
@@ -324,8 +371,10 @@ public partial class GameBootstrap
         driversScreenUi.DetailBalanceText = CreateHeaderText("BV", balanceRow, font, string.Empty, 14, TextAnchor.MiddleLeft, FleetAccentColor);
         driversScreenUi.DetailBalanceText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        RectTransform socialCard = CreateSectionCard(detailRoot.transform, font, string.Empty, out RectTransform socialBody, false);
-        socialCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 112f;
+        RectTransform socialCard = CreateSectionCard(socialTabRoot, font, string.Empty, out RectTransform socialBody, false);
+        LayoutElement socialCardLayout = socialCard.gameObject.AddComponent<LayoutElement>();
+        socialCardLayout.preferredHeight = 260f;
+        socialCardLayout.flexibleHeight = 1f;
         socialCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
         socialCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
         socialBody.GetComponent<VerticalLayoutGroup>().spacing = 4;

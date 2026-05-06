@@ -5,7 +5,7 @@ using UnityEngine.UI;
 public partial class GameBootstrap
 {
     private const int WorkerSocialMemoryCap = 16;
-    private const int WorkerSocialHudRowCount = 3;
+    private const int WorkerSocialHudRowCount = 8;
     private const float WorkerSocialRepeatCooldownHours = 1.5f;
     private const float WorkerSocialDecayCheckIntervalHours = 1f;
     private const float WorkerSocialFamiliarityDecayGraceHours = 24f;

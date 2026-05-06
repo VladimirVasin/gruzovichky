@@ -12,7 +12,9 @@ public partial class GameBootstrap
 
     private DriversScreenUiRefs driversScreenUi;
     private bool isDriversScreenDirty = true;
+    private bool isWorkerSocialTabActive;
     private int  selectedWorkerPanelDriverId = 0;
+    private bool shouldScrollWorkersListToSelected;
     private bool isEconomyScreenDirty = true;
     private const int InitialWorkerRowSlots = 8;
     private const int MaxShiftDriverSlots = 32;
@@ -68,6 +70,12 @@ public partial class GameBootstrap
         // Right panel — detail view
         public GameObject DetailPlaceholderCard;
         public GameObject DetailContentRoot;
+        public Button DetailProfileTabButton;
+        public Text DetailProfileTabText;
+        public Button DetailSocialTabButton;
+        public Text DetailSocialTabText;
+        public GameObject DetailProfileTabRoot;
+        public GameObject DetailSocialTabRoot;
         public Text  DetailNameText;
         public Text  DetailProfileTitleText;
         public Text  DetailRoleText;

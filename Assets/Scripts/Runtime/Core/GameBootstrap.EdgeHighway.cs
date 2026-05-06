@@ -32,6 +32,9 @@ public partial class GameBootstrap : MonoBehaviour
     {
         edgeHighwayBuses.Clear();
         hiringDriverArrival = null;
+        isMotelBootstrapWorkerWavePending = false;
+        hasMotelBootstrapWorkerWaveStarted = false;
+        hasMotelBootstrapWorkerWaveDisembarked = false;
         if (edgeHighwayBusRoot != null)
         {
             Destroy(edgeHighwayBusRoot.gameObject);

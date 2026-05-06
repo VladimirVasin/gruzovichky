@@ -50,12 +50,13 @@ public partial class GameBootstrap
 
     private string GetBuildingQuickResourceText(LocationType locationType)
     {
+        locations.TryGetValue(locationType, out LocationData location);
         return locationType switch
         {
-            LocationType.Parking => $"{FormatValueLine("Truck Slots", $"{GetOwnedTruckCount()} / {GetTruckParkingCapacity()}")}\n{FormatValueLine("Bus Slots", $"{GetOwnedBusCount()} / {GetBusParkingCapacity()}")}\n{FormatValueLine(IsRussianLanguage() ? "Казна парковки" : "Parking Treasury", $"${locations[LocationType.Parking].BuildingBank}")}",
-            LocationType.Forest => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Forest)} / {GetMaxBuildingWorkerSlots(LocationType.Forest)}")}\n{FormatValueLine("Logs", $"{locations[LocationType.Forest].LogsStored} / {ForestMaxLogsStorage}")}",
-            LocationType.Sawmill => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Sawmill)} / {GetMaxBuildingWorkerSlots(LocationType.Sawmill)}")}\n{FormatValueLine("Logs", locations[LocationType.Sawmill].LogsStored.ToString())}\n{FormatValueLine("Boards", locations[LocationType.Sawmill].BoardsStored.ToString())}",
-            LocationType.FurnitureFactory => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.FurnitureFactory)} / {GetMaxBuildingWorkerSlots(LocationType.FurnitureFactory)}")}\n{FormatValueLine("Boards", $"{locations[LocationType.FurnitureFactory].BoardsStored} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{locations[LocationType.FurnitureFactory].TextileStored} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{locations[LocationType.FurnitureFactory].FurnitureStored} / {FurnitureFactoryMaxFurnitureStorage}")}",
+            LocationType.Parking => $"{FormatValueLine("Truck Slots", $"{GetOwnedTruckCount()} / {GetTruckParkingCapacity()}")}\n{FormatValueLine("Bus Slots", $"{GetOwnedBusCount()} / {GetBusParkingCapacity()}")}\n{FormatValueLine(IsRussianLanguage() ? "Казна парковки" : "Parking Treasury", $"${location?.BuildingBank ?? 0}")}",
+            LocationType.Forest => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Forest)} / {GetMaxBuildingWorkerSlots(LocationType.Forest)}")}\n{FormatValueLine("Logs", $"{location?.LogsStored ?? 0} / {ForestMaxLogsStorage}")}",
+            LocationType.Sawmill => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Sawmill)} / {GetMaxBuildingWorkerSlots(LocationType.Sawmill)}")}\n{FormatValueLine("Logs", (location?.LogsStored ?? 0).ToString())}\n{FormatValueLine("Boards", (location?.BoardsStored ?? 0).ToString())}",
+            LocationType.FurnitureFactory => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.FurnitureFactory)} / {GetMaxBuildingWorkerSlots(LocationType.FurnitureFactory)}")}\n{FormatValueLine("Boards", $"{location?.BoardsStored ?? 0} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{location?.TextileStored ?? 0} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{location?.FurnitureStored ?? 0} / {FurnitureFactoryMaxFurnitureStorage}")}",
             LocationType.Warehouse => GetWarehouseQuickResourceText(),
             LocationType.Docks => GetDocksQuickResourceText(),
             LocationType.GasStation => GetGasStationQuickResourceText(),

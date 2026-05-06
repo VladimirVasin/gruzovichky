@@ -123,7 +123,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float ExhaustEmitInterval = 0.28f;
     private const float TruckDirtDustEmitInterval = 0.13f;
     private const float BuildingSmokeEmitInterval = 0.38f;
-    private const int StartingTreasury = 1000;
+    private const int StartingTreasury = 5000;
     private const int DefaultDailyBuildingTaxPercent = 10;
     private const int MinDailyBuildingTaxPercent = 0;
     private const int MaxDailyBuildingTaxPercent = 50;
@@ -134,7 +134,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const int HireDriverCost = 50;
     private const int WorkerStartingMoneyMin = 50;
     private const int WorkerStartingMoneyMax = 100;
-    private const int TutorialHireWorkerWaveCount = 7;
+    private const int MotelBootstrapWorkerWaveCount = 10;
+    private const int TutorialHireWorkerWaveCount = MotelBootstrapWorkerWaveCount;
     private const int DebugHireWorkerWaveCount = 10;
     private const float HiringBusDisembarkInterval = 0.22f;
     private const int TutorialWarehouseLoaderGoalCount = 3;

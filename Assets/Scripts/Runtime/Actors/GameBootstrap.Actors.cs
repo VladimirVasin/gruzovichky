@@ -125,8 +125,9 @@ public partial class GameBootstrap
 
     private TruckAgent CreateAndRegisterTruckAgent(int truckNumber, int parkingSlotIndex)
     {
-        truckCell = locations[LocationType.Parking].Anchor;
-        truckTargetWorld = GetParkingSlotWorldPosition(parkingSlotIndex);
+        locations.TryGetValue(LocationType.Parking, out LocationData parking);
+        truckCell = parking?.Anchor ?? Vector2Int.zero;
+        truckTargetWorld = parking != null ? GetParkingSlotWorldPosition(parkingSlotIndex) : Vector3.zero;
         truckSegmentStartWorld = truckTargetWorld;
         truckSmoothedForward = Vector3.forward;
         truckFuel = TruckFuelCapacity;
