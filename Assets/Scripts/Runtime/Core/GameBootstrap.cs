@@ -404,9 +404,10 @@ public partial class GameBootstrap : MonoBehaviour
     private int racingBonusEarned;
     private int selectedTruckNumber = 1;
     private int money;
-    private int cottonStored = 0;
-    private int textileStored = 0;
-    private int furnitureStored = 0;
+    private readonly TradeState tradeState = new();
+    private int cottonStored { get => tradeState.CottonStored; set => tradeState.CottonStored = value; }
+    private int textileStored { get => tradeState.TextileStored; set => tradeState.TextileStored = value; }
+    private int furnitureStored { get => tradeState.FurnitureStored; set => tradeState.FurnitureStored = value; }
     private int currentAssignedTripReward;
     private bool isFleetPanelOpen;
     private bool isShiftsPanelOpen;
@@ -414,19 +415,19 @@ public partial class GameBootstrap : MonoBehaviour
     private int selectedShiftDriverId; // DriverId, 0 = none
     private int intercityDriverId;
     private readonly int[] busDriverShiftIds = new int[3];
-    private enum TradePolicyMode
+    public enum TradePolicyMode
     {
         None,
         SellAbove,
         BuyUpTo
     }
 
-    private TradeResourceType selectedTradeResourceType = TradeResourceType.Cotton;
-    private TradeOrderType selectedTradeOrderType = TradeOrderType.Buy;
-    private int selectedTradeOrderAmount = 5;
+    private TradeResourceType selectedTradeResourceType { get => tradeState.SelectedResourceType; set => tradeState.SelectedResourceType = value; }
+    private TradeOrderType selectedTradeOrderType { get => tradeState.SelectedOrderType; set => tradeState.SelectedOrderType = value; }
+    private int selectedTradeOrderAmount { get => tradeState.SelectedOrderAmount; set => tradeState.SelectedOrderAmount = value; }
     private bool isTradeResourceDropdownOpen;
     private bool isTradeActionDropdownOpen;
-    private int nextTradeOrderId = 1;
+    private int nextTradeOrderId { get => tradeState.NextOrderId; set => tradeState.NextOrderId = value; }
 
     public sealed class TradeHudOrder
     {
@@ -439,9 +440,9 @@ public partial class GameBootstrap : MonoBehaviour
 
     private readonly bool[] worldMapTradeRoutesBuilt = new bool[9];
 
-    private readonly List<TradeHudOrder> activeTradeHudOrders = new();
-    private readonly TradePolicyMode[] tradePolicyModes = new TradePolicyMode[5];
-    private readonly int[] tradePolicyTargets = { 0, 0, 5, 5, 0 };
+    private List<TradeHudOrder> activeTradeHudOrders => tradeState.ActiveHudOrders;
+    private TradePolicyMode[] tradePolicyModes => tradeState.PolicyModes;
+    private int[] tradePolicyTargets => tradeState.PolicyTargets;
 
     private string tradeDispatchStatusText = "Assign a Truck Driver shift to unlock trade dispatch.";
     private bool isResourcesPanelOpen;

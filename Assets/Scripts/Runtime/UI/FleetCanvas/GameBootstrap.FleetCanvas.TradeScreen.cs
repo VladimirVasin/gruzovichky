@@ -190,7 +190,7 @@ public partial class GameBootstrap
         }
 
         bool supported = IsTradePolicyModeSupported(resourceType, mode);
-        bool selected = tradePolicyModes[policyIndex] == mode;
+        bool selected = GetTradePolicyMode(resourceType) == mode;
         button.interactable = supported;
         button.image.color = !supported
             ? new Color(0.08f, 0.10f, 0.13f, 0.86f)
@@ -229,14 +229,18 @@ public partial class GameBootstrap
             return;
         }
 
-        tradePolicyModes[index] = mode;
-        isTradeScreenDirty = true;
-        if (mode != TradePolicyMode.None && tradePolicyTargets[index] <= 0)
+        if (!tradeState.TrySetPolicyMode(resourceType, mode, TradeHudResources))
         {
-            tradePolicyTargets[index] = 5;
+            return;
         }
 
-        SessionDebugLogger.Log("TRADE_POLICY", $"{resourceType} policy set to {mode}, target={tradePolicyTargets[index]}.");
+        isTradeScreenDirty = true;
+        if (mode != TradePolicyMode.None)
+        {
+            tradeState.EnsurePolicyTargetAtLeast(resourceType, TradeHudResources, 5);
+        }
+
+        SessionDebugLogger.Log("TRADE_POLICY", $"{resourceType} policy set to {mode}, target={GetTradePolicyTarget(resourceType)}.");
         NotifyTutorialTradePolicyChanged(resourceType);
         TryAutoDispatchNextHudOrder();
         PlayUiSound(uiSelectClip, 0.82f);
@@ -250,9 +254,9 @@ public partial class GameBootstrap
             return;
         }
 
-        tradePolicyTargets[index] = Mathf.Clamp(GetTradePolicyTarget(resourceType) + delta, 0, 99);
+        tradeState.AdjustPolicyTarget(resourceType, delta, 0, 99, TradeHudResources);
         isTradeScreenDirty = true;
-        SessionDebugLogger.Log("TRADE_POLICY", $"{resourceType} target set to {tradePolicyTargets[index]}.");
+        SessionDebugLogger.Log("TRADE_POLICY", $"{resourceType} target set to {GetTradePolicyTarget(resourceType)}.");
         NotifyTutorialTradePolicyChanged(resourceType);
         TryAutoDispatchNextHudOrder();
         PlayUiSound(uiSelectClip, 0.7f);

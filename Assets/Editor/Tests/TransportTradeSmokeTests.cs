@@ -126,4 +126,93 @@ public sealed class TransportTradeSmokeTests
         Assert.That(orders[0].Id, Is.EqualTo(10));
         Assert.That(orders[1].Id, Is.EqualTo(12));
     }
+
+    [Test]
+    public void TradeState_StoresPoliciesAndWarehouseProjection()
+    {
+        TradeState state = new();
+        GameBootstrap.TradeResourceType[] resources =
+        {
+            GameBootstrap.TradeResourceType.Logs,
+            GameBootstrap.TradeResourceType.Boards,
+            GameBootstrap.TradeResourceType.Cotton,
+            GameBootstrap.TradeResourceType.Textile,
+            GameBootstrap.TradeResourceType.Furniture
+        };
+
+        Assert.That(state.GetStoredResourceAmount(GameBootstrap.TradeResourceType.Logs, warehouseLogs: 7, warehouseBoards: 2), Is.EqualTo(7));
+        state.CottonStored = 4;
+        Assert.That(state.GetStoredResourceAmount(GameBootstrap.TradeResourceType.Cotton, warehouseLogs: 0, warehouseBoards: 0), Is.EqualTo(4));
+
+        Assert.That(state.TrySetPolicyMode(GameBootstrap.TradeResourceType.Textile, GameBootstrap.TradePolicyMode.BuyUpTo, resources), Is.True);
+        Assert.That(state.GetPolicyMode(GameBootstrap.TradeResourceType.Textile, resources), Is.EqualTo(GameBootstrap.TradePolicyMode.BuyUpTo));
+        Assert.That(state.AdjustPolicyTarget(GameBootstrap.TradeResourceType.Textile, 3, 0, 99, resources), Is.EqualTo(8));
+    }
+
+    [Test]
+    public void TradePolicyRuntime_BuildsSellAndBuyDispatchDecisions()
+    {
+        TradePolicyDispatchDecision sell = TradePolicyRuntime.EvaluateDispatch(
+            GameBootstrap.TradeResourceType.Boards,
+            GameBootstrap.TradePolicyMode.SellAbove,
+            storedAmount: 12,
+            targetAmount: 4,
+            modeSupported: true,
+            hasLandRoute: true,
+            hasRiverRoute: false,
+            targetRegionIndex: 6,
+            cargoCapacity: 5);
+
+        Assert.That(sell.ShouldDispatch, Is.True);
+        Assert.That(sell.OrderType, Is.EqualTo(GameBootstrap.TradeOrderType.Sell));
+        Assert.That(sell.Amount, Is.EqualTo(5));
+        Assert.That(sell.TargetRegionIndex, Is.EqualTo(6));
+
+        TradePolicyDispatchDecision buy = TradePolicyRuntime.EvaluateDispatch(
+            GameBootstrap.TradeResourceType.Textile,
+            GameBootstrap.TradePolicyMode.BuyUpTo,
+            storedAmount: 1,
+            targetAmount: 4,
+            modeSupported: true,
+            hasLandRoute: true,
+            hasRiverRoute: false,
+            targetRegionIndex: 5,
+            cargoCapacity: 5);
+
+        Assert.That(buy.ShouldDispatch, Is.True);
+        Assert.That(buy.OrderType, Is.EqualTo(GameBootstrap.TradeOrderType.Buy));
+        Assert.That(buy.Amount, Is.EqualTo(3));
+        Assert.That(buy.TargetRegionIndex, Is.EqualTo(5));
+    }
+
+    [Test]
+    public void TradePolicyRuntime_DistinguishesRiverAndMissingLandRoutes()
+    {
+        TradePolicyDispatchDecision river = TradePolicyRuntime.EvaluateDispatch(
+            GameBootstrap.TradeResourceType.Textile,
+            GameBootstrap.TradePolicyMode.BuyUpTo,
+            storedAmount: 0,
+            targetAmount: 5,
+            modeSupported: true,
+            hasLandRoute: false,
+            hasRiverRoute: true,
+            targetRegionIndex: -1,
+            cargoCapacity: 5);
+
+        Assert.That(river.Kind, Is.EqualTo(TradePolicyDispatchDecisionKind.RiverRoute));
+        Assert.That(river.ShouldDispatch, Is.False);
+
+        TradePolicyDispatchDecision missing = TradePolicyRuntime.EvaluateDispatch(
+            GameBootstrap.TradeResourceType.Textile,
+            GameBootstrap.TradePolicyMode.BuyUpTo,
+            storedAmount: 0,
+            targetAmount: 5,
+            modeSupported: true,
+            hasLandRoute: false,
+            hasRiverRoute: false,
+            targetRegionIndex: -1,
+            cargoCapacity: 5);
+
+        Assert.That(missing.Kind, Is.EqualTo(TradePolicyDispatchDecisionKind.MissingRoute));
+    }
 }

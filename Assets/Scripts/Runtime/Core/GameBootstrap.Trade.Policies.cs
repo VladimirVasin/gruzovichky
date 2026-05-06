@@ -9,40 +9,26 @@ public partial class GameBootstrap
 
     private int GetWarehouseTradeResourceAmount(TradeResourceType resourceType)
     {
-        return resourceType switch
-        {
-            TradeResourceType.Logs => locations.TryGetValue(LocationType.Warehouse, out LocationData logsWarehouse) ? logsWarehouse.LogsStored : 0,
-            TradeResourceType.Boards => locations.TryGetValue(LocationType.Warehouse, out LocationData boardsWarehouse) ? boardsWarehouse.BoardsStored : 0,
-            TradeResourceType.Cotton => cottonStored,
-            TradeResourceType.Textile => textileStored,
-            TradeResourceType.Furniture => furnitureStored,
-            _ => 0
-        };
+        locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse);
+        return tradeState.GetStoredResourceAmount(
+            resourceType,
+            warehouse?.LogsStored ?? 0,
+            warehouse?.BoardsStored ?? 0);
     }
 
     private int GetTradePolicyIndex(TradeResourceType resourceType)
     {
-        for (int i = 0; i < TradeHudResources.Length; i++)
-        {
-            if (TradeHudResources[i] == resourceType)
-            {
-                return i;
-            }
-        }
-
-        return -1;
+        return tradeState.GetPolicyIndex(resourceType, TradeHudResources);
     }
 
     private TradePolicyMode GetTradePolicyMode(TradeResourceType resourceType)
     {
-        int index = GetTradePolicyIndex(resourceType);
-        return index >= 0 ? tradePolicyModes[index] : TradePolicyMode.None;
+        return tradeState.GetPolicyMode(resourceType, TradeHudResources);
     }
 
     private int GetTradePolicyTarget(TradeResourceType resourceType)
     {
-        int index = GetTradePolicyIndex(resourceType);
-        return index >= 0 ? Mathf.Max(0, tradePolicyTargets[index]) : 0;
+        return tradeState.GetPolicyTarget(resourceType, TradeHudResources);
     }
 
     private string GetTradePolicyModeLabel(TradePolicyMode mode)
@@ -63,16 +49,7 @@ public partial class GameBootstrap
             return true;
         }
 
-        TradeResourceType[] catalog = mode == TradePolicyMode.BuyUpTo ? TradeImportCatalog : TradeExportCatalog;
-        for (int i = 0; i < catalog.Length; i++)
-        {
-            if (catalog[i] == resourceType)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return TradePolicyRuntime.IsModeSupported(resourceType, mode, TradeImportCatalog, TradeExportCatalog);
     }
 
     private bool HasBuiltTradeRouteForOrder(TradeResourceType resourceType, TradeOrderType orderType)
@@ -93,16 +70,7 @@ public partial class GameBootstrap
 
     private int CountActiveTradePolicies()
     {
-        int count = 0;
-        for (int i = 0; i < tradePolicyModes.Length; i++)
-        {
-            if (tradePolicyModes[i] != TradePolicyMode.None)
-            {
-                count++;
-            }
-        }
-
-        return count;
+        return tradeState.CountActivePolicies();
     }
 
     private int CountDispatchableTradePolicies()
@@ -117,16 +85,18 @@ public partial class GameBootstrap
                 continue;
             }
 
-            int amount = GetWarehouseTradeResourceAmount(resourceType);
-            int target = GetTradePolicyTarget(resourceType);
             TradeOrderType orderType = mode == TradePolicyMode.SellAbove ? TradeOrderType.Sell : TradeOrderType.Buy;
-            if (!HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land))
-            {
-                continue;
-            }
-
-            if ((mode == TradePolicyMode.SellAbove && amount > target) ||
-                (mode == TradePolicyMode.BuyUpTo && amount < target))
+            TradePolicyDispatchDecision decision = TradePolicyRuntime.EvaluateDispatch(
+                resourceType,
+                mode,
+                GetWarehouseTradeResourceAmount(resourceType),
+                GetTradePolicyTarget(resourceType),
+                IsTradePolicyModeSupported(resourceType, mode),
+                HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land),
+                HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.River),
+                -1,
+                TruckCargoCapacity);
+            if (decision.ShouldDispatch)
             {
                 count++;
             }
@@ -147,32 +117,44 @@ public partial class GameBootstrap
                 continue;
             }
 
-            int amount = GetWarehouseTradeResourceAmount(resourceType);
-            int target = GetTradePolicyTarget(resourceType);
-            int delta = mode == TradePolicyMode.SellAbove ? amount - target : target - amount;
-            if (delta <= 0)
-            {
-                continue;
-            }
-
             TradeOrderType orderType = mode == TradePolicyMode.SellAbove ? TradeOrderType.Sell : TradeOrderType.Buy;
-            if (!HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land))
+            bool hasLandRoute = TryFindBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land, out RegionalCityData city);
+            bool hasRiverRoute = HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.River);
+            TradePolicyDispatchDecision decision = TradePolicyRuntime.EvaluateDispatch(
+                resourceType,
+                mode,
+                GetWarehouseTradeResourceAmount(resourceType),
+                GetTradePolicyTarget(resourceType),
+                IsTradePolicyModeSupported(resourceType, mode),
+                hasLandRoute,
+                hasRiverRoute,
+                city?.RegionIndex ?? -1,
+                TruckCargoCapacity);
+            if (decision.Kind == TradePolicyDispatchDecisionKind.None)
             {
-                if (HasBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.River))
-                {
-                    SessionDebugLogger.LogVerbose("TRADE_AUTO", $"Policy skipped for land dispatch: {orderType} {resourceType} uses a built river route and will be handled by Docks.");
-                }
-                else
-                {
-                    SessionDebugLogger.Log(
-                        "TRADE_AUTO",
-                        $"Policy skipped for land dispatch: {orderType} {resourceType}: {DescribeRegionalTradeRouteAvailability(resourceType, orderType, RegionalTradeRouteMode.Land)}.");
-                }
                 continue;
             }
 
-            TryFindBuiltRegionalTradeRoute(resourceType, orderType, RegionalTradeRouteMode.Land, out RegionalCityData city);
-            request = TradeOrderQueueService.CreateOrder(0, resourceType, orderType, Mathf.Clamp(delta, 1, TruckCargoCapacity), city?.RegionIndex ?? -1);
+            if (decision.Kind == TradePolicyDispatchDecisionKind.RiverRoute)
+            {
+                SessionDebugLogger.LogVerbose("TRADE_AUTO", $"Policy skipped for land dispatch: {orderType} {resourceType} uses a built river route and will be handled by Docks.");
+                continue;
+            }
+
+            if (decision.Kind == TradePolicyDispatchDecisionKind.MissingRoute)
+            {
+                SessionDebugLogger.Log(
+                    "TRADE_AUTO",
+                    $"Policy skipped for land dispatch: {orderType} {resourceType}: {DescribeRegionalTradeRouteAvailability(resourceType, orderType, RegionalTradeRouteMode.Land)}.");
+                continue;
+            }
+
+            request = TradeOrderQueueService.CreateOrder(
+                0,
+                decision.ResourceType,
+                decision.OrderType,
+                decision.Amount,
+                decision.TargetRegionIndex);
             return true;
         }
 
