@@ -14,10 +14,11 @@ public partial class GameBootstrap
 
     private void SetupDayNightMusic()
     {
-        AudioClip morningClip = Resources.Load<AudioClip>("MusicMorning");
-        AudioClip dayClip     = Resources.Load<AudioClip>("MusicDay");
-        AudioClip eveningClip = Resources.Load<AudioClip>("MusicEvening");
-        AudioClip nightClip   = Resources.Load<AudioClip>("MusicNight");
+        EnsureGeneratedAudioClipsCreated();
+        AudioClip morningClip = musicMorningClip;
+        AudioClip dayClip     = musicDayClip;
+        AudioClip eveningClip = musicEveningClip;
+        AudioClip nightClip   = musicNightClip;
 
         if (morningClip == null || dayClip == null || eveningClip == null || nightClip == null)
             return;
@@ -36,10 +37,10 @@ public partial class GameBootstrap
         int band = GetDayNightBand();
         musicActiveBand = band;
 
-        musicMorningSource.volume = band == 1 ? MusicLayerMaxVolume : 0f;
-        musicDaySource.volume     = band == 2 ? MusicLayerMaxVolume : 0f;
-        musicEveningSource.volume = band == 3 ? MusicLayerMaxVolume : 0f;
-        musicNightSource.volume   = band == 0 ? MusicLayerMaxVolume : 0f;
+        musicMorningSource.volume = band == 1 ? MusicLayerMaxVolume * GetSoundOptionVolumeById("music_morning") : 0f;
+        musicDaySource.volume     = band == 2 ? MusicLayerMaxVolume * GetSoundOptionVolumeById("music_day") : 0f;
+        musicEveningSource.volume = band == 3 ? MusicLayerMaxVolume * GetSoundOptionVolumeById("music_evening") : 0f;
+        musicNightSource.volume   = band == 0 ? MusicLayerMaxVolume * GetSoundOptionVolumeById("music_night") : 0f;
 
         musicMorningSource.Play();
         musicDaySource.Play();
@@ -94,10 +95,10 @@ public partial class GameBootstrap
             activeSource.UnPause();
         }
 
-        float vm = band == 1 ? MusicLayerMaxVolume : 0f;
-        float vd = band == 2 ? MusicLayerMaxVolume : 0f;
-        float ve = band == 3 ? MusicLayerMaxVolume : 0f;
-        float vn = band == 0 ? MusicLayerMaxVolume : 0f;
+        float vm = band == 1 ? MusicLayerMaxVolume * GetSoundOptionVolumeById("music_morning") : 0f;
+        float vd = band == 2 ? MusicLayerMaxVolume * GetSoundOptionVolumeById("music_day") : 0f;
+        float ve = band == 3 ? MusicLayerMaxVolume * GetSoundOptionVolumeById("music_evening") : 0f;
+        float vn = band == 0 ? MusicLayerMaxVolume * GetSoundOptionVolumeById("music_night") : 0f;
 
         float dt = Time.unscaledDeltaTime * MusicLayerFadeSpeed;
         musicMorningSource.volume = Mathf.MoveTowards(musicMorningSource.volume, vm, dt);

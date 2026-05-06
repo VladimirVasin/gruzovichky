@@ -709,9 +709,7 @@ public partial class GameBootstrap
         }
 
         localBusRoute.TravelDirection = 1;
-        localBusRoute.CurrentStopIndex = 0;
-        SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute.Driver?.DriverName ?? "Bus driver"} started local bus route cycle. Stops={orderedStops.Count}, firstStop=#{orderedStops[0].StopNumber}.");
-        return TryBeginLocalBusDriveSegment(parking.Anchor, orderedStops[0].Anchor, LocalBusPhase.DrivingRoute);
+        return TryBeginFirstReachableLocalBusStop(orderedStops, parking);
     }
 
     private bool TryBeginNextLocalBusStopSegment()
@@ -729,23 +727,7 @@ public partial class GameBootstrap
             return true;
         }
 
-        int currentIndex = Mathf.Clamp(localBusRoute.CurrentStopIndex, 0, orderedStops.Count - 1);
-        LocalBusNextStopDecision decision = LocalBusRoutePlanner.GetNextStop(
-            orderedStops.Count,
-            currentIndex,
-            localBusRoute.TravelDirection);
-        if (!decision.HasNextStop)
-        {
-            BeginLocalBusReturnToParking();
-            return true;
-        }
-
-        Vector2Int startAnchor = orderedStops[currentIndex].Anchor;
-        Vector2Int nextAnchor = orderedStops[decision.NextStopIndex].Anchor;
-        localBusRoute.TravelDirection = decision.TravelDirection;
-        localBusRoute.CurrentStopIndex = decision.NextStopIndex;
-        SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute.Driver?.DriverName ?? "Bus driver"} heading to next stop #{orderedStops[decision.NextStopIndex].StopNumber} ({(localBusRoute.TravelDirection > 0 ? "ascending" : "descending")} leg).");
-        return TryBeginLocalBusDriveSegment(startAnchor, nextAnchor, LocalBusPhase.DrivingRoute);
+        return TryBeginNextReachableLocalBusStop(orderedStops);
     }
 
     private void BeginLocalBusReturnToParking()

@@ -24,7 +24,6 @@ public partial class GameBootstrap
         public readonly List<DriverAgent> AssignedDrivers = new();
         public DriverAgent Driver;
         public AudioSource TruckLoopAudioSource;
-        public AudioSource TruckFxAudioSource;
         public float EngineAudioPhaseOffset;
         public float EngineAudioWobbleSpeed = 1f;
         public float EngineAudioPitchBias = 1f;
@@ -184,6 +183,10 @@ public partial class GameBootstrap
         public readonly List<Vector3> WalkPath = new();
         public int WalkWaypointIndex;
         public float WalkAnimationTime;
+        public AudioSource FootstepAudioSource;
+        public int FootstepPhaseIndex;
+        public float FootstepCooldown;
+        public int FootstepClipCursor;
         public bool HasLastSafeWalkPosition;
         public Vector3 LastSafeWalkPosition;
         public int IdleWanderPointIndex = -1;

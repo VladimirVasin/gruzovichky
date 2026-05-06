@@ -219,6 +219,11 @@ public partial class GameBootstrap
         mainMenuHud.GraphicsOptionsRoot.SetActive(show);
         if (show)
         {
+            if (mainMenuHud.SoundOptionsRoot != null)
+            {
+                mainMenuHud.SoundOptionsRoot.SetActive(false);
+                StopSoundPreviewLoop();
+            }
             mainMenuHud.GraphicsOptionsRoot.transform.SetAsLastSibling();
             RefreshGraphicsOptionsPanelUI();
         }

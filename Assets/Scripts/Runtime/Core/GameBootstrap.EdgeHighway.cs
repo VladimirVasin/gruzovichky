@@ -221,7 +221,6 @@ public partial class GameBootstrap : MonoBehaviour
                 audioDelta.y = 0f;
                 if (audioDelta.sqrMagnitude <= EdgeHighwayBusPassbyDistance * EdgeHighwayBusPassbyDistance)
                 {
-                    PlayAmbientFx(edgeHighwayBusPassbyClip, bus.RootTransform.position, 0.34f);
                     bus.HasPlayedPassbyAudio = true;
                 }
             }

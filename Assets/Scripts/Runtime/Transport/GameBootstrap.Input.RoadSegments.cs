@@ -32,6 +32,10 @@ public partial class GameBootstrap
         bool built = TryBuildRoadPath(roadPathStart.Value, cell);
         if (built)
         {
+            if (IsRoadSegmentAxisLocked())
+            {
+                PlayUiSound(roadDragClip, 0.84f);
+            }
             MarkTutorialGoalComplete(TutorialGoalKind.RoadSingleCell);
             MarkTutorialGoalComplete(TutorialGoalKind.RoadShiftPath);
         }

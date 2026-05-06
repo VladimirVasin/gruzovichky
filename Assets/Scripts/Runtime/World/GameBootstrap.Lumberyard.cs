@@ -463,7 +463,6 @@ public partial class GameBootstrap
         tree.ChopTimer = 0f;
         tree.ChopHitsCompleted++;
         SpawnLumberWoodChips(driver.DriverObject.transform.position + driver.DriverObject.transform.forward * 0.24f);
-        PlayForestWorkerFx(forestChopClip, driver.DriverObject.transform.position, Random.Range(0.55f, 0.82f));
 
         if (tree.RootTransform != null)
         {

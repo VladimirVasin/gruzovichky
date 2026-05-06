@@ -40,7 +40,6 @@ public partial class GameBootstrap
             TotalTime = 1.6f
         });
 
-        PlayUiSound(moneySpendClip, 0.85f);
     }
 
     private void SpawnMoneyEarnPopup(Vector3 worldPos, int amount)
@@ -68,7 +67,6 @@ public partial class GameBootstrap
             TotalTime = 1.6f
         });
 
-        PlayUiSound(moneySpendClip, 0.85f);
     }
 
     private void UpdateMoneyPopups()

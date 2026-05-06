@@ -72,7 +72,6 @@ public partial class GameBootstrap
                 return;
 
             case TruckTripRuntimeActionKind.Complete:
-                PlayTruckFx(parkingReturnCueClip, 0.64f);
                 SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} completed trip {GetTripTitle(currentAssignedTrip)}.");
                 PushFeedEvent(
                     $"{GetLoadedTruckDisplayName()} completed {GetTripTitle(currentAssignedTrip)}.",
@@ -159,7 +158,6 @@ public partial class GameBootstrap
                 return;
 
             case TruckRefuelRuntimeActionKind.Complete:
-                PlayTruckFx(parkingReturnCueClip, 0.58f);
                 SessionDebugLogger.Log("FUEL", $"{GetLoadedTruckDisplayName()} finished refuel order and returned to parking.");
                 currentRefuelPhase = RefuelPhase.None;
                 if (driver.NeedsShiftEndReturn && GetCurrentTruckForDriver(driver) is TruckAgent truckAgent)

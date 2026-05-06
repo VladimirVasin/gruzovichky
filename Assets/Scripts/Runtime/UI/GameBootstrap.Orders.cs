@@ -21,6 +21,11 @@ public partial class GameBootstrap
             return;
         }
 
+        if (isTruckAutoModeEnabled && !locations.ContainsKey(LocationType.Warehouse))
+        {
+            PushMissingWarehouseFeedEvent();
+        }
+
         TruckAutoDecisionKind decision = TruckAutoPlanner.Decide(
             isTruckAutoModeEnabled,
             currentAssignedTrip != TripType.None,
@@ -90,6 +95,11 @@ public partial class GameBootstrap
         LogTruckReaction(truckAgent, $"auto mode set to {(enabled ? "ON" : "OFF")}");
         if (enabled)
         {
+            if (!locations.ContainsKey(LocationType.Warehouse))
+            {
+                PushMissingWarehouseFeedEvent();
+            }
+
             if (truckAgent.Driver == null)
             {
                 LogTruckReaction(truckAgent, "auto mode enabled but no current driver is boarded");
@@ -143,6 +153,20 @@ public partial class GameBootstrap
         }
     }
 
+    private void PushMissingWarehouseFeedEvent()
+    {
+        if (Time.unscaledTime < nextMissingWarehouseFeedTime)
+        {
+            return;
+        }
+
+        nextMissingWarehouseFeedTime = Time.unscaledTime + 8f;
+        PushFeedEvent(
+            "No Warehouse: freight automation cannot store or distribute cargo yet.",
+            "\u041d\u0435\u0442 \u0441\u043a\u043b\u0430\u0434\u0430: \u0430\u0432\u0442\u043e\u043b\u043e\u0433\u0438\u0441\u0442\u0438\u043a\u0430 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043c\u043e\u0436\u0435\u0442 \u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0438 \u0440\u0430\u0437\u0432\u043e\u0437\u0438\u0442\u044c \u0433\u0440\u0443\u0437\u044b.",
+            FeedEventType.Warning);
+    }
+
     private void StartRefuelOrderForTruck(TruckAgent truckAgent)
     {
         LogCommand($"StartRefuelOrder({truckAgent?.DisplayName ?? "null"})");
@@ -162,7 +186,7 @@ public partial class GameBootstrap
         }
 
         truckAgent.CurrentRefuelPhase = RefuelPhase.ToGasStation;
-        PlayUiSound(routeAssignRefuelClip, 0.94f);
+        PlayUiSound(uiSelectClip, 0.82f);
         SessionDebugLogger.Log("ORDER", $"{truckAgent.DisplayName} received manual refuel order.");
         LogTruckReaction(truckAgent, "accepted manual refuel order");
     }
@@ -189,7 +213,7 @@ public partial class GameBootstrap
         truckAgent.CurrentAssignedTrip = trip.Type;
         truckAgent.CurrentTripPhase = TripPhase.ToPickup;
         truckAgent.CurrentAssignedTripReward = trip.Reward;
-        PlayAssignedTripCue(trip.Type, 0.94f);
+        PlayUiSound(uiSelectClip, 0.82f);
         SessionDebugLogger.Log("ORDER", $"{truckAgent.DisplayName} assigned trip '{trip.Title}' with reward ${trip.Reward}.");
         LogTruckReaction(truckAgent, $"accepted trip '{trip.Title}' with reward ${trip.Reward}");
     }

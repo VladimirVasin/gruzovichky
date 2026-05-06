@@ -478,8 +478,7 @@ public partial class GameBootstrap
         {
             tutorialGoalsHud.FlashOverlay.gameObject.SetActive(true);
         }
-
-        PlayUiSound(slotWinClip, 0.7f);
+        PlayUiSound(tutorialGoalSuccessClip, 0.7f);
         SessionDebugLogger.Log("TUTORIAL", $"Tutorial goals completed. mode={tutorialGoalsMode}.");
     }
 

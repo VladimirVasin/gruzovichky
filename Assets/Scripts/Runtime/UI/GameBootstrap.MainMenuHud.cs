@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using UnityEngine;
@@ -59,11 +60,32 @@ public partial class GameBootstrap
         public Text             GraphicsButtonText;
         public MainMenuButtonFx GraphicsButtonFx;
         public GameObject       GraphicsOptionsRoot;
+        public Button           SoundButton;
+        public Text             SoundButtonText;
+        public MainMenuButtonFx SoundButtonFx;
+        public GameObject       SoundOptionsRoot;
+        public RectTransform    SoundOptionsContentRoot;
+        public Text             SoundOptionsTitleText;
+        public Text             SoundOptionsHintText;
+        public Text             SoundOptionsCountText;
+        public Text             SoundOptionsCloseText;
+        public Text             SoundOptionsResetAllText;
+        public readonly Dictionary<string, SoundOptionRowRefs> SoundOptionRows = new();
         public Button[]         GfxToggleButtons = new Button[4];
         public Text[]           GfxToggleTexts   = new Text[4];
         public Button[]         GfxMinusButtons  = new Button[9];
         public Button[]         GfxPlusButtons   = new Button[9];
         public InputField[]     GfxValueFields   = new InputField[9];
+    }
+
+    private sealed class SoundOptionRowRefs
+    {
+        public Text NameText;
+        public Text MetaText;
+        public Text VolumeText;
+        public Text PlayText;
+        public Text ResetText;
+        public Slider VolumeSlider;
     }
 
     private MainMenuHudRefs mainMenuHud;
@@ -128,6 +150,8 @@ public partial class GameBootstrap
         }
 
         EnsureFleetEventSystem(); // buttons require an EventSystem - create it eagerly
+        EnsureGeneratedAudioClipsCreated();
+        EnsureUiAudioSource();
         Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         mainMenuHud = new MainMenuHudRefs();
 
@@ -184,7 +208,7 @@ public partial class GameBootstrap
         window.anchorMax = new Vector2(0f, 0f);
         window.pivot = new Vector2(0f, 0f);
         window.anchoredPosition = new Vector2(48f, 58f);
-        window.sizeDelta = new Vector2(360f, 436f);
+        window.sizeDelta = new Vector2(360f, 488f);
         mainMenuHud.WindowRoot = window;
 
         VerticalLayoutGroup windowLayout = window.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -202,7 +226,7 @@ public partial class GameBootstrap
         buttonLayout.childControlHeight = true;
         buttonLayout.childForceExpandWidth = true;
         buttonLayout.childForceExpandHeight = false;
-        buttonStack.gameObject.AddComponent<LayoutElement>().preferredHeight = 318f;
+        buttonStack.gameObject.AddComponent<LayoutElement>().preferredHeight = 370f;
 
         mainMenuHud.ContinueButton = CreateButton("ContinueButton", buttonStack, uiFont, out mainMenuHud.ContinueButtonText, "Continue", 18, new Color(0.22f, 0.54f, 0.30f, 1f), Color.white);
         mainMenuHud.ContinueButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 46f;
@@ -232,6 +256,13 @@ public partial class GameBootstrap
             new Color(0.20f, 0.30f, 0.42f, 1f), new Color(0.30f, 0.44f, 0.60f, 1f));
         mainMenuHud.GraphicsButton.onClick.AddListener(ToggleGraphicsOptionsPanel);
 
+        mainMenuHud.SoundButton = CreateButton("SoundButton", buttonStack, uiFont, out mainMenuHud.SoundButtonText,
+            ru ? "\u0417\u0432\u0443\u043a" : "Sound", 18, new Color(0.24f, 0.27f, 0.40f, 1f), Color.white);
+        mainMenuHud.SoundButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
+        mainMenuHud.SoundButtonFx = SetupMainMenuButtonFx(mainMenuHud.SoundButton,
+            new Color(0.24f, 0.27f, 0.40f, 1f), new Color(0.38f, 0.42f, 0.62f, 1f));
+        mainMenuHud.SoundButton.onClick.AddListener(ToggleSoundOptionsPanel);
+
         mainMenuHud.ExitButton = CreateButton("ExitButton", buttonStack, uiFont, out mainMenuHud.ExitButtonText, "Exit", 18, new Color(0.31f, 0.35f, 0.43f, 1f), Color.white);
         mainMenuHud.ExitButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
         mainMenuHud.ExitButtonFx = SetupMainMenuButtonFx(mainMenuHud.ExitButton, new Color(0.31f, 0.35f, 0.43f, 1f), new Color(0.42f, 0.47f, 0.57f, 1f));
@@ -260,6 +291,7 @@ public partial class GameBootstrap
         SetupMainMenuPatchNotesWindow(screenTint, uiFont);
         LoadGraphicsPrefs();
         CreateGraphicsOptionsPanel(screenTint, uiFont);
+        CreateSoundOptionsPanel(screenTint, uiFont);
         UpdateMainMenuHud();
     }
 
@@ -310,6 +342,7 @@ public partial class GameBootstrap
         UpdateMainMenuButtonFx(mainMenuHud.NewGameButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.PatchNotesButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.GraphicsButtonFx);
+        UpdateMainMenuButtonFx(mainMenuHud.SoundButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.ExitButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.EnglishButtonFx);
         UpdateMainMenuButtonFx(mainMenuHud.RussianButtonFx);
@@ -328,6 +361,7 @@ public partial class GameBootstrap
         if (mainMenuHud.NewGameButtonText != null) mainMenuHud.NewGameButtonText.text = L("New Game");
         if (mainMenuHud.PatchNotesButtonText != null) mainMenuHud.PatchNotesButtonText.text = PatchNotesButtonLabel;
         if (mainMenuHud.GraphicsButtonText != null) mainMenuHud.GraphicsButtonText.text = IsRussianLanguage() ? "Графика" : "Graphics";
+        if (mainMenuHud.SoundButtonText != null) mainMenuHud.SoundButtonText.text = IsRussianLanguage() ? "\u0417\u0432\u0443\u043a" : "Sound";
         if (mainMenuHud.ExitButtonText != null) mainMenuHud.ExitButtonText.text = L("Exit");
         if (mainMenuHud.LanguageLabelText != null) mainMenuHud.LanguageLabelText.text = L("Language:");
         if (mainMenuHud.EnglishButtonText != null) mainMenuHud.EnglishButtonText.text = selectedLanguage == GameLanguage.English ? "[Eng]" : "Eng";
@@ -336,6 +370,7 @@ public partial class GameBootstrap
         if (mainMenuHud.PatchNotesTitleText != null) mainMenuHud.PatchNotesTitleText.text = IsRussianLanguage() ? "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f" : "Patch Notes";
         RebuildMainMenuPatchNotesContent();
         if (mainMenuHud.PatchNotesCloseButtonText != null) mainMenuHud.PatchNotesCloseButtonText.text = L("Close");
+        RefreshSoundOptionsPanelUI();
     }
 
     private void SetupMainMenuPatchNotesWindow(RectTransform parent, Font uiFont)
@@ -573,14 +608,17 @@ public partial class GameBootstrap
         {
             if (!cityMusicSource.isPlaying) cityMusicSource.UnPause();
             ResumeDayNightMusic();
+            ApplyMusicOptionVolumes();
             return;
         }
-        AudioClip clip = Resources.Load<AudioClip>("City1");
+        EnsureGeneratedAudioClipsCreated();
+        AudioClip clip = cityMusicClip;
         if (clip != null)
         {
             cityMusicSource = CreateAudioSource("CityMusic", null, true, 0f, 0f, false);
             cityMusicSource.clip = clip;
             cityMusicSource.Play();
+            ApplyMusicOptionVolumes();
         }
         SetupDayNightMusic();
     }
@@ -589,9 +627,10 @@ public partial class GameBootstrap
     {
         if (mainMenuMusicSource == null)
         {
-            AudioClip clip = Resources.Load<AudioClip>("MainMenu1");
+            EnsureGeneratedAudioClipsCreated();
+            AudioClip clip = mainMenuMusicClip;
             if (clip == null) return;
-            mainMenuMusicSource = CreateAudioSource("MainMenuMusic", null, true, 0.20f, 0f, false);
+            mainMenuMusicSource = CreateAudioSource("MainMenuMusic", null, true, 0.20f * GetSoundOptionVolumeById("music_main_menu"), 0f, false);
             mainMenuMusicSource.ignoreListenerPause = true;
             mainMenuMusicSource.clip = clip;
             mainMenuMusicSource.Play();
@@ -600,6 +639,7 @@ public partial class GameBootstrap
         {
             mainMenuMusicSource.UnPause();
         }
+        ApplyMusicOptionVolumes();
     }
 
     private void StartGameFromMainMenu(GameStartMode mode)

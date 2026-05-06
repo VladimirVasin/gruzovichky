@@ -176,6 +176,7 @@ public partial class GameBootstrap
         DisableTruckCameraFocus();
         if (IsBuildingBuildTool(placementTool))
         {
+            PlayUiSound(buildingCompleteClip, 0.86f);
             CompleteBuildingPlacementFlow(placementTool, cell);
             return;
         }
@@ -235,6 +236,7 @@ public partial class GameBootstrap
         bool built = TryBuildRoadPath(roadPathStart.Value, cell);
         if (built)
         {
+            PlayUiSound(roadDragClip, 0.84f);
             MarkTutorialGoalComplete(TutorialGoalKind.RoadShiftPath);
         }
         roadPathStart = null; // clear before CancelRoadPathMode so it doesn't log a spurious path-cancel

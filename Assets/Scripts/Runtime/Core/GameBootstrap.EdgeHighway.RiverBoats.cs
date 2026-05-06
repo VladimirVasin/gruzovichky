@@ -111,7 +111,7 @@ public partial class GameBootstrap : MonoBehaviour
             {
                 float margin = 2f;
                 float edgeFade = Mathf.Clamp01(Mathf.Min(boat.WorldX / margin, (GridWidth - boat.WorldX) / margin));
-                float targetVol = boat.HasEnteredRiver ? 0.28f * edgeFade : 0f;
+                float targetVol = boat.HasEnteredRiver ? 0.28f * edgeFade * GetAudioClipVolumeMultiplier(boatMotorClip) : 0f;
                 boat.BoatAudioSource.volume = Mathf.MoveTowards(
                     boat.BoatAudioSource.volume, targetVol, 0.6f * Time.deltaTime);
             }

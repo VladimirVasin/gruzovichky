@@ -6,6 +6,20 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-06: Added worker grass footstep audio. Five `Footsteps - Essentials` grass walk WAVs are mirrored into `Assets/Resources/Audio/Footsteps/GrassWalk/` for runtime loading, registered as one `Worker Grass Footsteps` Sound menu control, and played from per-worker spatial AudioSources when `WalkAnimationTime` crosses footstep phases during real walking. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and line-count check.
+
+- 2026-05-06: Cut the generated SFX set down to the only sounds kept after listening review. Runtime now keeps only HUD/menu interaction sounds plus truck and boat motor loops; gambling, money, route, cargo, forest chop, ambient, river, and edge-bus passby SFX playback/clip registration were removed. The Python generator now outputs only 7 WAVs under `Assets/Resources/GeneratedAudio/Relaxed/`, and stale generated WAV/meta files are deleted on regeneration. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-06: Retuned generated non-music sound design toward a softer relaxed palette. SFX PlayerPrefs moved to a relaxed v2 key so the Sound menu immediately shows quieter defaults, while music entries remain at full authored volume. UI pulses, route motifs, cargo thunks, truck loops, ambient beds, and ambient one-shots were softened with lower frequencies/less high shimmer/lower default volume; noisy ambient events now occur less often and more quietly.
+
+- 2026-05-06: Added the missing explicit Main Menu music rows to the Sound options catalog. The active `MainMenu1` runtime theme is now labeled as `Main Menu Theme (active)`, and the editor-visible legacy/imported `Assets/MenuMusic.mp3` asset is also listed for preview/debugging when available.
+
+- 2026-05-06: Fixed the Sound options panel follow-up. Sound rows now use fixed-width visible Play/Reset action buttons with their own raycast-enabled backgrounds instead of text-like controls that could be covered by the slider/layout area. The catalog also includes music clips (`MainMenu1`, `City1`, and day/night music themes), with volume settings applied to main-menu and day/night music playback.
+
+- 2026-05-06: Added a Main Menu Sound options/debug panel. Generated SFX clips are now registered in a per-sound catalog with PlayerPrefs-backed volume multipliers, the main menu has a Sound button that opens a scrollable list with Play/Reset controls and sliders for every generated SFX, and existing UI/truck/ambient playback helpers apply individual clip volume settings. Runtime/editor builds pass; static UI routing check confirms the menu uses the existing EventSystem/GraphicRaycaster, active Buttons, raycast-enabled slider backgrounds/handles, and non-blocking text labels.
+
+- 2026-05-06: Disabled the spammy money popup sound effect. Worker spending/earning world popups still display visually, but `SpawnMoneySpendPopup` / `SpawnMoneyEarnPopup` no longer play the frequent `Money_Spend` UI sound.
+
 - 2026-05-06: Centralized building work schedules into `GameBootstrap.RuntimeSchedules.cs`. Building slot counts, staff work-hour checks, service shift presets, higher-education office slots, and UI schedule labels now share the same rules. Transport shift windows no longer inherit the global weekend block, so truck/bus shifts can run daily, while production and higher-education office work remain weekday `08:00-18:00`; service buildings run their configured daily shifts. Building workers now also skip pre-shift commutes on non-working days. Updated owner map for the new schedule partial.
 
 - 2026-05-06: Changed higher-education building jobs to a dedicated single workday slot. Any building that requires higher education now exposes one staff slot and works `08:00-18:00` using the same weekday-only work-hour rule as production; Labor Exchange currently uses this rule, so it no longer has separate morning/evening clerk slots. Updated assignment UI summary copy accordingly.
@@ -211,6 +225,20 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 - 2026-04-30: Bumped the manual main-menu version label to `Lo-fi Delivery Co. v.0.0.3` and added the in-development `v.0.0.3` tracking section to `ai/release-notes.md`.
 
 ## Recent Summary
+
+- 2026-05-06: Hardened local bus routing against disconnected stops. Route start now searches for the first reachable stop from Parking, route continuation skips unreachable stops instead of collapsing the whole route, and skipped stops are logged for debugging. Split the reachability scan into `GameBootstrap.LocalBus.RouteSkipping.cs` to keep `GameBootstrap.LocalBus.cs` under the 900-line limit. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-06: Fixed the demolition/event-feed/lighting follow-up. Event Feed rows are now narrow compact toasts without the oversized colored badge, the demolition confirm modal uses an explicit fixed button layer with EventSystem setup so Yes/No can receive clicks, and building night lights stay on at night regardless of staffing. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-06: Added building demolition UX and build feedback audio. HUD/menu clicks were regenerated with the older warmer click shape, new generated SFX cover building completion, Shift-road drag completion, and demolition, and Delete now opens a confirm modal before demolishing selectable non-core buildings. Repeated service-building instances can now be selected by instance id so quick HUD/demolition target the clicked copy. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-06: Reworked Event Feed into compact one-line toast rows under the top-right HUD indicators and removed the old large right-side event cards/debug position spam. Truck auto route discovery now tolerates missing Parking/Forest/Warehouse keys instead of throwing `KeyNotFoundException`, and auto logistics shows a throttled warning feed event when Warehouse is absent. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-06: Restored the small generated cues intentionally kept for feedback. The relaxed SFX generator now emits Slot Reel Tick, Slot Win, Slot Lose, and Tutorial Goal Success WAVs again; `GameBootstrap.AudioCatalog` registers them in Gambling/Tutorial sound settings, Gambling Hall quick HUD plays tick/win/lose cues again, and tutorial goal completion plays its success cue. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-06: Connected the curated `Assets/Nature - Essentials` ambience loops to runtime audio. Nature WAVs are mirrored under `Assets/Resources/Audio/Nature/`, registered in the Sound menu as individual Nature sliders/previews, and mixed at runtime as quiet day/night/wind/rain/river layers with smooth fades. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
+
+- 2026-05-06: Replaced the first-pass runtime-generated SFX direction with a deterministic Python/numpy WAV pipeline. `tools/audio/generate_relaxed_sfx.py` now creates the non-music SFX set under `Assets/Resources/GeneratedAudio/Relaxed/`, and `GameBootstrap.AudioCatalog` loads those WAVs first with the older runtime clips kept only as fallback. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and line-count check.
 
 - 2026-04-29: Removed superseded legacy tutorial mode and completed the rebuilt User tutorial chain through workers, production, freight, service buildings, local bus, economy/taxes, trade, Join-the-Race, and final Demo Complete. Tutorial camera focus, panel actions, goals HUD, copy, and gating were repeatedly tuned and split into focused partials.
 

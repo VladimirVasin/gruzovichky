@@ -519,12 +519,18 @@ public partial class GameBootstrap
     {
         List<TripOption> trips = new();
 
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking) ||
+            !locations.TryGetValue(LocationType.Forest, out LocationData forest))
+        {
+            return trips;
+        }
+
         bool hasSawmill = locations.TryGetValue(LocationType.Sawmill, out LocationData sawmill);
         bool hasWarehouse = locations.TryGetValue(LocationType.Warehouse, out LocationData warehouse);
         bool canReachForestTrip = hasSawmill &&
-            HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Forest].Anchor) &&
-            HasPath(locations[LocationType.Forest].Anchor, sawmill.Anchor);
-        if (hasSawmill && locations[LocationType.Forest].LogsStored > 0 && canReachForestTrip)
+            HasPath(parking.Anchor, forest.Anchor) &&
+            HasPath(forest.Anchor, sawmill.Anchor);
+        if (hasSawmill && forest.LogsStored > 0 && canReachForestTrip)
         {
             trips.Add(new TripOption
             {
@@ -537,9 +543,9 @@ public partial class GameBootstrap
         }
 
         bool canReachForestWarehouseFallback = hasWarehouse &&
-            HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Forest].Anchor) &&
-            HasPath(locations[LocationType.Forest].Anchor, warehouse.Anchor);
-        if (!canReachForestTrip && hasWarehouse && locations[LocationType.Forest].LogsStored > 0 && canReachForestWarehouseFallback)
+            HasPath(parking.Anchor, forest.Anchor) &&
+            HasPath(forest.Anchor, warehouse.Anchor);
+        if (!canReachForestTrip && hasWarehouse && forest.LogsStored > 0 && canReachForestWarehouseFallback)
         {
             trips.Add(new TripOption
             {
@@ -552,7 +558,7 @@ public partial class GameBootstrap
         }
 
         bool canReachWarehouseTrip = hasSawmill && hasWarehouse &&
-            HasPath(locations[LocationType.Parking].Anchor, sawmill.Anchor) &&
+            HasPath(parking.Anchor, sawmill.Anchor) &&
             HasPath(sawmill.Anchor, warehouse.Anchor);
         if (hasSawmill && sawmill.BoardsStored > 0 && canReachWarehouseTrip)
         {
@@ -570,14 +576,15 @@ public partial class GameBootstrap
         {
             bool canReachFactoryFromWarehouse =
                 hasWarehouse &&
-                HasPath(locations[LocationType.Parking].Anchor, locations[LocationType.Warehouse].Anchor) &&
-                HasPath(locations[LocationType.Warehouse].Anchor, furnitureFactory.Anchor);
+                HasPath(parking.Anchor, warehouse.Anchor) &&
+                HasPath(warehouse.Anchor, furnitureFactory.Anchor);
             bool canReachWarehouseFromFactory =
                 hasWarehouse &&
-                HasPath(locations[LocationType.Parking].Anchor, furnitureFactory.Anchor) &&
+                HasPath(parking.Anchor, furnitureFactory.Anchor) &&
                 HasPath(furnitureFactory.Anchor, warehouse.Anchor);
 
-            if (locations[LocationType.Warehouse].BoardsStored > 0 &&
+            if (hasWarehouse &&
+                warehouse.BoardsStored > 0 &&
                 furnitureFactory.BoardsStored < FurnitureFactoryMaxBoardsStorage &&
                 canReachFactoryFromWarehouse)
             {
@@ -621,10 +628,10 @@ public partial class GameBootstrap
         if (hasWarehouse && locations.TryGetValue(LocationType.Docks, out LocationData docks))
         {
             bool canReachDocksFromWarehouse =
-                HasPath(locations[LocationType.Parking].Anchor, warehouse.Anchor) &&
+                HasPath(parking.Anchor, warehouse.Anchor) &&
                 HasPath(warehouse.Anchor, docks.Anchor);
             bool canReachWarehouseFromDocks =
-                HasPath(locations[LocationType.Parking].Anchor, docks.Anchor) &&
+                HasPath(parking.Anchor, docks.Anchor) &&
                 HasPath(docks.Anchor, warehouse.Anchor);
 
             if (canReachDocksFromWarehouse)
@@ -721,7 +728,7 @@ public partial class GameBootstrap
         currentAssignedTrip = trip.Type;
         currentTripPhase = TripPhase.ToPickup;
         currentAssignedTripReward = trip.Reward;
-        PlayAssignedTripCue(trip.Type, 0.92f);
+        PlayUiSound(uiSelectClip, 0.82f);
     }
 
     private void StartRefuelOrder()
@@ -738,7 +745,7 @@ public partial class GameBootstrap
         }
 
         currentRefuelPhase = RefuelPhase.ToGasStation;
-        PlayUiSound(routeAssignRefuelClip, 0.94f);
+        PlayUiSound(uiSelectClip, 0.82f);
     }
 
     private string GetTripTitle(TripType tripType)
@@ -870,19 +877,5 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         isEconomyScreenDirty = true;
-        PlayUiSound(moneyRewardClip, 0.95f);
-    }
-
-    private void PlayAssignedTripCue(TripType tripType, float volumeScale = 0.94f)
-    {
-        AudioClip clip = tripType switch
-        {
-            TripType.ForestToSawmill => routeAssignForestSawmillClip,
-            TripType.ForestToWarehouse => routeAssignSawmillWarehouseClip,
-            TripType.SawmillToWarehouse => routeAssignSawmillWarehouseClip,
-            _ => null
-        };
-
-        PlayUiSound(clip, volumeScale);
     }
 }

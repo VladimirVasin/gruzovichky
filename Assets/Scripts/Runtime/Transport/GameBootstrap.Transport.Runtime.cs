@@ -297,6 +297,7 @@ public partial class GameBootstrap
         {
             driver.WalkAnimationTime += Time.deltaTime * (isConversing ? 3.1f : 4.2f);
         }
+        UpdateDriverFootsteps(driver, isWalking);
 
         if (!isWalking && isConversing)
         {

@@ -13,6 +13,12 @@ public partial class GameBootstrap
             return;
         }
 
+        if (Keyboard.current.escapeKey.wasPressedThisFrame && IsDemolishConfirmOpen())
+        {
+            CloseDemolishConfirm(false);
+            return;
+        }
+
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             bool anyMenuOpen =
@@ -28,6 +34,11 @@ public partial class GameBootstrap
             {
                 OpenPauseMenu();
             }
+            return;
+        }
+
+        if (Keyboard.current.deleteKey.wasPressedThisFrame && TryOpenSelectedBuildingDemolishConfirm())
+        {
             return;
         }
 

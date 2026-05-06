@@ -19,8 +19,7 @@ public partial class GameBootstrap
             float maxIntensity = i < locationNightPointLightMaxIntensities.Count ? locationNightPointLightMaxIntensities[i] : 1.15f;
             float range = i < locationNightPointLightRanges.Count ? locationNightPointLightRanges[i] : 3.2f;
             Color onColor = i < locationNightPointLightOnColors.Count ? locationNightPointLightOnColors[i] : new Color(1f, 0.9f, 0.72f);
-            int ownerInstanceId = i < locationNightLightOwnerInstanceIds.Count ? locationNightLightOwnerInstanceIds[i] : 0;
-            bool realLightOn = lightsOn && IsLocationNightLightStaffed(ownerInstanceId);
+            bool realLightOn = lightsOn;
             lightComponent.enabled = realLightOn;
             lightComponent.intensity = realLightOn ? Mathf.Lerp(0.18f, maxIntensity, nightT) : 0f;
             lightComponent.color = onColor;
@@ -37,9 +36,7 @@ public partial class GameBootstrap
 
             Color offColor = i < locationNightLightOffColors.Count ? locationNightLightOffColors[i] : new Color(0.28f, 0.24f, 0.18f);
             Color onColor = i < locationNightLightOnColors.Count ? locationNightLightOnColors[i] : new Color(1f, 0.9f, 0.72f);
-            int ownerInstanceId = i < locationNightLightMaterialOwnerInstanceIds.Count ? locationNightLightMaterialOwnerInstanceIds[i] : 0;
-            float staffNightT = IsLocationNightLightStaffed(ownerInstanceId) ? nightT : 0f;
-            Color lampColor = Color.Lerp(offColor, onColor, staffNightT);
+            Color lampColor = Color.Lerp(offColor, onColor, nightT);
             material.color = lampColor;
         }
 

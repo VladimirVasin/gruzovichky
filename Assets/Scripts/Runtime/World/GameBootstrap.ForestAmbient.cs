@@ -5,12 +5,10 @@ public partial class GameBootstrap
     private void SetupForestWorkers()
     {
         forestWorkers.Clear();
-        StopForestWorkerAudio();
     }
 
     private void UpdateForestWorkers()
     {
-        StopForestWorkerAudio();
     }
 
     private void UpdateForestWorkerWalking(ForestWorkerAmbient worker)
@@ -66,7 +64,6 @@ public partial class GameBootstrap
         if (worker.ChopSoundCooldown <= 0f && chopPhase > 0.92f)
         {
             worker.ChopSoundCooldown = Random.Range(0.58f, 1.02f);
-            PlayForestWorkerFx(forestChopClip, worker.RootObject.transform.position, Random.Range(0.55f, 0.82f));
             SpawnForestWoodChips(worker);
             TriggerForestTreeWobble(worker.WorkPointIndex, worker.RootObject.transform.position);
             TryAddForestLogFromChop();
@@ -495,14 +492,6 @@ public partial class GameBootstrap
         ApplyColor(limb, color);
         ConfigureShadowVisual(limb);
         return limb.transform;
-    }
-
-    private void StopForestWorkerAudio()
-    {
-        if (forestWorkerAudioSource != null && forestWorkerAudioSource.isPlaying)
-        {
-            forestWorkerAudioSource.Stop();
-        }
     }
 
     private void UpdateForestWorkerFlashlight(ForestWorkerAmbient worker)

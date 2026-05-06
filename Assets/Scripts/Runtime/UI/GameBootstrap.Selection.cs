@@ -61,6 +61,26 @@ public partial class GameBootstrap
             }
 
             selectedLocation = pair.Key;
+            selectedLocationInstanceId = pair.Value.InstanceId;
+            selectedLocalStopIndex = -1;
+            selectedPersonalHouseIndex = -1;
+            isTruckDetailsOpen = false;
+            isLocalBusDetailsOpen = false;
+            RefreshSelectionVisuals();
+            PlayUiSound(uiSelectClip, 0.9f);
+            return true;
+        }
+
+        for (int i = 0; i < extraServiceLocations.Count; i++)
+        {
+            LocationData extraLocation = extraServiceLocations[i];
+            if (extraLocation == null || (!extraLocation.Contains(cell) && extraLocation.Anchor != cell))
+            {
+                continue;
+            }
+
+            selectedLocation = extraLocation.Type;
+            selectedLocationInstanceId = extraLocation.InstanceId;
             selectedLocalStopIndex = -1;
             selectedPersonalHouseIndex = -1;
             isTruckDetailsOpen = false;
@@ -79,6 +99,7 @@ public partial class GameBootstrap
             }
 
             selectedLocation = null;
+            selectedLocationInstanceId = 0;
             selectedLocalStopIndex = i;
             selectedPersonalHouseIndex = -1;
             isTruckDetailsOpen = false;
@@ -97,6 +118,7 @@ public partial class GameBootstrap
             }
 
             selectedLocation = null;
+            selectedLocationInstanceId = 0;
             selectedLocalStopIndex = -1;
             selectedPersonalHouseIndex = i;
             isTruckDetailsOpen = false;
@@ -206,11 +228,26 @@ public partial class GameBootstrap
             return true;
         }
 
-        if (selectedLocation.HasValue && locations.TryGetValue(selectedLocation.Value, out location))
+        if (selectedLocation.HasValue)
         {
-            locationType = selectedLocation.Value;
-            center = GetLocationCenter(locationType);
-            return true;
+            if (selectedLocationInstanceId > 0)
+            {
+                LocationData instance = FindLocationByInstanceId(selectedLocationInstanceId);
+                if (instance != null && instance.Type == selectedLocation.Value)
+                {
+                    location = instance;
+                    locationType = selectedLocation.Value;
+                    center = GetLocationCenter(location);
+                    return true;
+                }
+            }
+
+            if (locations.TryGetValue(selectedLocation.Value, out location))
+            {
+                locationType = selectedLocation.Value;
+                center = GetLocationCenter(locationType);
+                return true;
+            }
         }
 
         location = null;
@@ -219,5 +256,3 @@ public partial class GameBootstrap
         return false;
     }
 }
-
-

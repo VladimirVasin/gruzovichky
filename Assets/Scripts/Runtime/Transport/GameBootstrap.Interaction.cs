@@ -110,24 +110,7 @@ public partial class GameBootstrap
             cargoTransferCrate.SetActive(isCargoTransfer);
         }
 
-        bool loading =
-            interactionType == TruckInteractionType.LoadAtForest ||
-            interactionType == TruckInteractionType.LoadAtSawmill ||
-            interactionType == TruckInteractionType.LoadBoardsAtWarehouse ||
-            interactionType == TruckInteractionType.LoadTextileAtWarehouse ||
-            interactionType == TruckInteractionType.LoadAtFurnitureFactory ||
-            interactionType == TruckInteractionType.TradeLoadAtWarehouse ||
-            interactionType == TruckInteractionType.LoadLogsAtWarehouse ||
-            interactionType == TruckInteractionType.LoadFurnitureAtWarehouse ||
-            interactionType == TruckInteractionType.LoadAtDocks;
-        if (isCargoTransfer)
-        {
-            PlayTruckFx(loading ? cargoPickupClip : cargoDropClip, 0.8f);
-        }
-        else
-        {
-            PlayTruckFx(truckIdleClip, 0.55f);
-        }
+        _ = isCargoTransfer;
     }
 
     private int GetTruckLoadAmountForCurrentTrip(CargoType cargoType, int availableAtPickup)
@@ -409,49 +392,8 @@ public partial class GameBootstrap
             activeServiceLocation = null;
         }
 
-        if (completedInteraction == TruckInteractionType.RefuelAtGasStation)
-        {
-            PlayTruckFx(gasStationRefuelCueClip, 0.72f);
-        }
-        else
-        {
-            PlayTruckFx(completedLoad ? cargoDropClip : cargoPickupClip, 0.55f);
-            switch (completedInteraction)
-            {
-                case TruckInteractionType.LoadAtForest:
-                    PlayTruckFx(forestLoadCueClip, 0.68f);
-                    break;
-                case TruckInteractionType.UnloadAtSawmill:
-                    PlayTruckFx(sawmillUnloadCueClip, 0.72f);
-                    break;
-                case TruckInteractionType.LoadAtSawmill:
-                    PlayTruckFx(sawmillLoadCueClip, 0.68f);
-                    break;
-                case TruckInteractionType.UnloadAtWarehouse:
-                    PlayTruckFx(warehouseUnloadBoardsCueClip, 0.78f);
-                    break;
-                case TruckInteractionType.LoadBoardsAtWarehouse:
-                case TruckInteractionType.LoadTextileAtWarehouse:
-                case TruckInteractionType.LoadLogsAtWarehouse:
-                case TruckInteractionType.LoadFurnitureAtWarehouse:
-                case TruckInteractionType.LoadAtFurnitureFactory:
-                case TruckInteractionType.LoadAtDocks:
-                    PlayTruckFx(sawmillLoadCueClip, 0.68f);
-                    break;
-                case TruckInteractionType.UnloadBoardsAtFurnitureFactory:
-                case TruckInteractionType.UnloadTextileAtFurnitureFactory:
-                    PlayTruckFx(sawmillUnloadCueClip, 0.72f);
-                    break;
-                case TruckInteractionType.UnloadFurnitureAtWarehouse:
-                case TruckInteractionType.UnloadAtDocks:
-                case TruckInteractionType.UnloadDocksImportAtWarehouse:
-                    PlayTruckFx(warehouseUnloadBoardsCueClip, 0.78f);
-                    break;
-                case TruckInteractionType.TradeUnloadAtWarehouse:
-                    PlayTruckFx(warehouseUnloadBoardsCueClip, 0.74f);
-                    break;
-            }
-        }
+        _ = completedInteraction;
+        _ = completedLoad;
     }
 }
 

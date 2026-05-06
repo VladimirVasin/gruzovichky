@@ -285,21 +285,17 @@ public partial class GameBootstrap : MonoBehaviour
     private Transform lakeFishRoot;
     private bool isFarZoomVisualLodActive;
     private AudioSource uiAudioSource;
-    private AudioSource ambientAudioSource;
-    private AudioSource forestAudioSource;
-    private AudioSource forestWorkerAudioSource;
-    private AudioSource dayBirdsAudioSource;
-    private AudioSource nightWindAudioSource;
-    private AudioSource nightCricketsAudioSource;
-    private AudioSource gasStationAudioSource;
-    private AudioSource warehouseAudioSource;
-    private AudioSource ambienceFxAudioSource;
-    private AudioSource townAudioSource;
     private AudioSource truckLoopAudioSource;
     private AudioSource cityMusicSource;      // looping main theme for city mode
     private AudioSource mainMenuMusicSource;  // looping music for main menu / pause screen
-    private AudioSource truckFxAudioSource;
-    private AudioSource riverAmbientAudioSource;
+    private AudioSource natureCicadasAudioSource;
+    private AudioSource natureForestBirdsAudioSource;
+    private AudioSource natureNightAudioSource;
+    private AudioSource natureRainCalmAudioSource;
+    private AudioSource natureRainStrongAudioSource;
+    private AudioSource natureRiverAudioSource;
+    private AudioSource natureWindCalmAudioSource;
+    private AudioSource natureWindForestAudioSource;
     private Material groundSurfaceMaterial;
     private Material grassSurfaceMaterial;
     private Material waterShallowMaterial;
@@ -379,6 +375,7 @@ public partial class GameBootstrap : MonoBehaviour
     private float truckSteerAngle;
     private float truckInteractionTimer;
     private float moneyPopupTimer;
+    private float nextMissingWarehouseFeedTime;
     private float truckFuel = TruckFuelCapacity;
     private float dayNightCycleTimer = DayNightCycleDuration * 0.25f; // start at 06:00 - morning
     private int   currentDay = 1;
@@ -390,11 +387,6 @@ public partial class GameBootstrap : MonoBehaviour
     private float forestProductionProgress;
     private float sawmillProcessingTimer;
     private float furnitureFactoryProcessingTimer;
-    private float dayBirdTimer;
-    private float nightOwlTimer;
-    private float lanternBuzzTimer;
-    private float warehouseCreakTimer;
-    private float riverSplashTimer;
     private float terrainNoiseOffsetX;
     private float terrainNoiseOffsetY;
     private LocationType? selectedLocation;
