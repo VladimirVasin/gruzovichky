@@ -3,6 +3,7 @@ using UnityEngine;
 public partial class GameBootstrap
 {
     private const float WorkerDecisionRepeatThrottleSeconds = 8f;
+    private const float LocalBusPassengerSkipRepeatThrottleSeconds = 20f;
 
     private void LogWorkerDecision(
         DriverAgent driver,
@@ -55,8 +56,30 @@ public partial class GameBootstrap
                decision == "skip-sleep-service" ||
                decision == "buy-house-skip" ||
                decision == "skip-due-life-cycle" ||
+               decision == "skip-labor-exchange" ||
+               decision == "leisure-no-candidates" ||
                decision == "need-fallback-walk" ||
                decision == "need-retry-cooldown";
+    }
+
+    private void LogLocalBusPassengerSkip(DriverAgent driver, string travelReason, string skipReason)
+    {
+        if (driver == null)
+        {
+            return;
+        }
+
+        string reason = string.IsNullOrEmpty(travelReason) ? "trip" : travelReason;
+        string key = $"{reason}|{skipReason}|{driver.WalkPhase}|{driver.RestPhase}|{driver.LifeGoal}|{driver.DutyMode}|{driver.ShiftStartHour}|{driver.AssignedBuildingType}|{driver.AssignedTruckNumber}|{driver.BusOriginStopNumber}|{driver.BusDestinationStopNumber}";
+        if (driver.LastLocalBusSkipDebugKey == key &&
+            Time.unscaledTime - driver.LastLocalBusSkipDebugTime < LocalBusPassengerSkipRepeatThrottleSeconds)
+        {
+            return;
+        }
+
+        driver.LastLocalBusSkipDebugKey = key;
+        driver.LastLocalBusSkipDebugTime = Time.unscaledTime;
+        SessionDebugLogger.Log("BUS_PASSENGER", $"{driver.DriverName} skipped local bus for {reason}: {skipReason}.");
     }
 
     private string FormatWorkerDecisionSnapshot(DriverAgent driver)

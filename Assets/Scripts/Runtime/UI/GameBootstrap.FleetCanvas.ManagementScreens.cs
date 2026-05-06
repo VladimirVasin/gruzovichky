@@ -117,6 +117,7 @@ public partial class GameBootstrap
         public Text          NameText;
         public Text          StatusText;
         public Text          SubText;
+        public Text          BalanceText;
         public Button        SelectButton;
         public RectTransform NeedsMealBarFill;
         public RectTransform NeedsSleepBarFill;

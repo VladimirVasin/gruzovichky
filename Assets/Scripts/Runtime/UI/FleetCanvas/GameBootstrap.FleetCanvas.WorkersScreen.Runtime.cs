@@ -59,6 +59,11 @@ public partial class GameBootstrap
                 : isLogistics && d.AssignedBuildingType.HasValue ? GetSelectedLocationDisplayName(d.AssignedBuildingType.Value)
                 : truck != null                                   ? truck.DisplayName
                 : L(GetWorkerOccupationLabel(d));
+            if (row.BalanceText != null)
+            {
+                row.BalanceText.text = $"${d.Money}";
+                row.BalanceText.color = d.Money < 15 ? new Color(0.96f, 0.72f, 0.42f, 1f) : FleetAccentColor;
+            }
 
             if (row.NeedsMealBarFill != null)
             {

@@ -6,6 +6,10 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-06: Added worker personal balance display to the left Workers HUD list. Each worker row now shows `$money` beside the current role/assignment summary, with a warning tint for very low balances. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and `./tools/check-line-count.ps1`.
+
+- 2026-05-06: Throttled repeated worker/bus diagnostic logs after `debug.log` review. Worker decisions now suppress repeated Labor Exchange skip and leisure-no-candidate spam, and local-bus passenger skip logs use per-worker repeat throttling while preserving route/boarding event logs. Verified `dotnet build Assembly-CSharp.csproj -v:minimal` and `./tools/check-line-count.ps1`.
+
 - 2026-05-06: Continued TradeSimulation extraction. Added `TradeResourceLedger` plus `GameBootstrap.Trade.Resources.cs` for Warehouse/Docks stock mutation, `DocksTradePolicyRuntime` for river ship buy/sell decisions and skip reasons, `TradeScreenModel` for Trade policy row view models, and `TradeSimulation` as the first trade tick coordinator from `RuntimeLoop`. Added focused editor tests for ledger math, Docks river policies, Trade row models, and trade tick auto-dispatch. Updated systems map and architecture notes for the new path layout. Verified runtime/editor `dotnet build`, `git diff --check`, and line-count check.
 
 - 2026-05-06: Started TradeSimulation extraction stage 1. Added `TradeState` for trade HUD selection, warehouse-facing stock projection, policy modes/targets, and active order queue ownership; added `TradePolicyRuntime` for near-pure policy indexing/support checks and land dispatch decisions. `GameBootstrap` now routes trade stock/policy/order state through the container while keeping merchant truck Unity runtime and debug logging in place. Added editor smoke tests for warehouse projection plus buy/sell, river-route, and missing-route policy decisions. Verified `./tools/check-all.ps1 -SkipSmokeTests`.

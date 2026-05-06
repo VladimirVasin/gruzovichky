@@ -227,9 +227,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         if (!IsLocalBusServiceAvailableForPassengers())
         {
-            SessionDebugLogger.Log(
-                "BUS_PASSENGER",
-                $"{driver.DriverName} skipped local bus for {reason}: no bus driver assigned to the current shift or no bus available.");
+            LogLocalBusPassengerSkip(driver, reason, "no bus driver assigned to the current shift or no bus available");
             return false;
         }
 
@@ -252,7 +250,7 @@ public partial class GameBootstrap : MonoBehaviour
         {
             ResetWorkerLocalBusTripState(driver);
             driver.WalkPhase = DriverRescuePhase.None;
-            SessionDebugLogger.Log("BUS_PASSENGER", $"{driver.DriverName} skipped local bus for {reason}: no safe walk path to Stop #{originStop.StopNumber}.");
+            LogLocalBusPassengerSkip(driver, reason, $"no safe walk path to Stop #{originStop.StopNumber}");
             return false;
         }
         SessionDebugLogger.Log(

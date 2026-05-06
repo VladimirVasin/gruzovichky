@@ -268,6 +268,8 @@ public partial class GameBootstrap
         public string LastWorkerDecisionDebugKey;
         public string LastThrottledWorkerDecisionDebugKey;
         public float LastThrottledWorkerDecisionDebugTime = -999f;
+        public string LastLocalBusSkipDebugKey;
+        public float LastLocalBusSkipDebugTime = -999f;
     }
 
     private sealed class LaborExchangePosting

@@ -392,8 +392,11 @@ public partial class GameBootstrap
         row.StatusText = CreateBodyText("Status", badge, font, string.Empty, 10, TextAnchor.MiddleCenter, Color.white);
         row.StatusText.fontStyle = FontStyle.Bold;
 
-        row.SubText = CreateBodyText("SubText", rowObj.transform, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        row.SubText.gameObject.AddComponent<LayoutElement>().preferredHeight = 16f;
+        RectTransform subRow = CreateLayoutRow($"WorkerSubRow{index}", rowObj.transform, 18f, 6f);
+        row.SubText = CreateBodyText("SubText", subRow, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        row.SubText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        row.BalanceText = CreateHeaderText("Balance", subRow, font, string.Empty, 12, TextAnchor.MiddleRight, FleetAccentColor);
+        row.BalanceText.gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
 
         RectTransform needsRow = CreateUiObject($"NeedsRow{index}", rowObj.transform).GetComponent<RectTransform>();
         HorizontalLayoutGroup needsLayout = needsRow.gameObject.AddComponent<HorizontalLayoutGroup>();
