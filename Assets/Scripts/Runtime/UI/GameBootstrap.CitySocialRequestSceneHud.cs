@@ -122,6 +122,7 @@ public partial class GameBootstrap
         citySocialRequestSceneHud.ResultPanel.gameObject.SetActive(false);
         citySocialRequestSceneHud.ResultGroup.alpha = 0f;
         citySocialRequestSceneHud.ResultPanel.localScale = Vector3.one * 0.78f;
+        ResetCitySocialVoice();
 
         DriverAgent requester = GetDriverAgentById(request.RequesterId);
         DriverAgent target = GetDriverAgentById(request.TargetId);
@@ -450,6 +451,7 @@ public partial class GameBootstrap
         citySocialRequestScenePhase = CitySocialRequestScenePhase.Closed;
         citySocialSpeakingSide = -1;
         CompleteCitySocialTypewriter();
+        ResetCitySocialVoice();
         ResumeCitySocialRequestSceneSimulation();
     }
 
@@ -673,6 +675,7 @@ public partial class GameBootstrap
         citySocialTypewriterWordPulse = citySocialTypewriterVisibleWords > 0 ? 1f : 0f;
         citySocialTypewriterActive = !instant && citySocialTypewriterVisibleWords < citySocialTypewriterWordCount;
         UpdateCitySocialTypedBodyText();
+        if (!instant && citySocialTypewriterVisibleWords > 0) PlayCitySocialVoiceWord(citySocialTypewriterVisibleWords);
     }
 
     private void UpdateCitySocialTypewriter(float dt)
@@ -691,6 +694,7 @@ public partial class GameBootstrap
             citySocialTypewriterVisibleWords++;
             citySocialTypewriterWordPulse = 1f;
             UpdateCitySocialTypedBodyText();
+            PlayCitySocialVoiceWord(citySocialTypewriterVisibleWords);
         }
 
         if (citySocialTypewriterVisibleWords >= citySocialTypewriterWordCount)
