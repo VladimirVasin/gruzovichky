@@ -6,9 +6,9 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
-    private static readonly Color DriversScreenTint   = new(0.06f, 0.08f, 0.11f, 0.76f);
-    private static readonly Color DriversCardColor    = new(0.13f, 0.16f, 0.21f, 0.98f);
-    private static readonly Color DriversCardSelected = new(0.29f, 0.25f, 0.13f, 0.98f);
+    private static readonly Color DriversScreenTint   = new(0.035f, 0.075f, 0.12f, 0.88f);
+    private static readonly Color DriversCardColor    = new(0.055f, 0.115f, 0.18f, 0.98f);
+    private static readonly Color DriversCardSelected = new(0.22f, 0.17f, 0.075f, 0.98f);
 
     private DriversScreenUiRefs driversScreenUi;
     private bool isDriversScreenDirty = true;
@@ -72,7 +72,7 @@ public partial class GameBootstrap
         public ScrollRect WorkerListScrollRect;
         public readonly List<WorkerRowUi> WorkerRows = new();
         public Text   HeaderCountText;
-        // Right panel — detail view
+        // Right panel detail view.
         public GameObject DetailPlaceholderCard;
         public GameObject DetailContentRoot;
         public Button DetailProfileTabButton;
@@ -89,12 +89,23 @@ public partial class GameBootstrap
         public GameObject DetailInventoryTabRoot;
         public Text  DetailNameText;
         public Text  DetailProfileTitleText;
-        public Text  DetailRoleText;
         public RectTransform DetailPortraitRoot;
+        public ResidentInfoTileUi DetailGenderTile;
+        public ResidentInfoTileUi DetailAgeTile;
+        public ResidentInfoTileUi DetailEducationTile;
+        public ResidentInfoTileUi DetailMoneyTile;
+        public ResidentInfoTileUi DetailHomeTile;
+        public ResidentInfoTileUi DetailCarTile;
+        public Text DetailSkillsTitleText;
+        public WorkerSkillTileUi DetailLogisticsSkillTile;
+        public WorkerSkillTileUi DetailProductionSkillTile;
+        public WorkerSkillTileUi DetailServiceSkillTile;
         public Text  DetailNeedsTitleText;
-        public Text  DetailMealNeedText;
-        public Text  DetailSleepNeedText;
-        public Text  DetailLeisureNeedText;
+        public WorkerNeedRowUi DetailMealNeedRow;
+        public WorkerNeedRowUi DetailSleepNeedRow;
+        public WorkerNeedRowUi DetailLeisureNeedRow;
+        public Text DetailOverallNeedsLabelText;
+        public Text DetailOverallNeedsValueText;
         public Text  DetailPerksTitleText;
         public Text  DetailPerksEmptyText;
         public readonly List<Text> DetailPerkTexts = new();
@@ -103,28 +114,20 @@ public partial class GameBootstrap
         public Text DetailTraitTooltipBodyText;
         public Image DetailStatusBadge;
         public Text  DetailStatusText;
+        public RectTransform DetailAssignmentRow;
         public Text  DetailAssignmentLabel;
         public Text  DetailAssignmentValue;
+        public RectTransform DetailShiftRow;
         public Text  DetailShiftLabel;
         public Text  DetailShiftText;
+        public RectTransform DetailDutyRow;
         public Text  DetailDutyLabel;
         public Text  DetailDutyStateText;
-        public Text  DetailHomeLabel;
-        public Text  DetailHomeText;
-        public Text  DetailCarLabel;
-        public Text  DetailCarText;
-        public Text  DetailAgeLabel;
-        public Text  DetailAgeText;
+        public LayoutElement DetailWorkCardLayout;
         public Text  DetailWorkTitleText;
-        public Text  DetailBalanceLabel;
-        public Text  DetailBalanceText;
         public Text  DetailSocialTitleText;
+        public RectTransform DetailSocialGraphCanvas;
         public Text  DetailSocialEmptyText;
-        public Text  DetailSocialNameHeaderText;
-        public Text  DetailSocialRelationHeaderText;
-        public Text  DetailSocialFamiliarityHeaderText;
-        public Text  DetailSocialContextHeaderText;
-        public readonly List<WorkerSocialRowUi> DetailSocialRows = new();
         public Text  DetailThoughtsTitleText;
         public Text  DetailThoughtsEmptyText;
         public readonly List<Text> DetailOpinionChipTexts = new();
@@ -144,22 +147,32 @@ public partial class GameBootstrap
     {
         public int           DriverId;
         public RectTransform Root;
+        public RectTransform PortraitRoot;
         public Image         Background;
-        public Image         StatusBadgeBg;
+        public Outline       Outline;
         public Text          NameText;
-        public Text          StatusText;
         public Text          SubText;
         public Text          BalanceText;
         public Button        SelectButton;
     }
 
-    private sealed class WorkerSocialRowUi
+    private sealed class ResidentInfoTileUi
     {
-        public RectTransform Root;
-        public Text NameText;
-        public Text RelationText;
-        public Text FamiliarityText;
-        public Text ContextText;
+        public Text LabelText;
+        public Text ValueText;
+    }
+
+    private sealed class WorkerSkillTileUi
+    {
+        public Text LabelText;
+        public Text ValueText;
+    }
+
+    private sealed class WorkerNeedRowUi
+    {
+        public Text LabelText;
+        public readonly List<Image> SegmentImages = new();
+        public Text StatusText;
     }
 
     private sealed class WorkerThoughtRowUi

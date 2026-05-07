@@ -135,8 +135,9 @@ public partial class GameBootstrap
             WorkerPerkKind perk = driver.Perks[i];
             rowText.gameObject.SetActive(true);
             rowText.color = FleetSecondaryTextColor;
-            rowText.fontSize = 10;
-            rowText.text = $"<color=#{ColorUtility.ToHtmlStringRGB(GetWorkerPerkTypeColor(GetWorkerPerkType(perk)))}>{GetWorkerPerkDisplayName(perk, ru)}</color>: {GetWorkerPerkShortDescription(perk, ru)}";
+            rowText.fontSize = 12;
+            string perkColor = ColorUtility.ToHtmlStringRGB(GetWorkerPerkTypeColor(GetWorkerPerkType(perk)));
+            rowText.text = $"<color=#{perkColor}>\u25cf  {GetWorkerPerkDisplayName(perk, ru)}</color>: {GetWorkerPerkShortDescription(perk, ru)}";
             ConfigureWorkerPerkTooltip(rowText, perk);
         }
     }

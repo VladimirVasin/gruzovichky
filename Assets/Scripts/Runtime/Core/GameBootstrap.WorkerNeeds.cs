@@ -247,7 +247,6 @@ public partial class GameBootstrap
                driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal ||
                driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan ||
                driver.WalkPhase == DriverRescuePhase.IdleAtKiosk ||
-               driver.WalkPhase == DriverRescuePhase.IdleAtCoffeeShop ||
                driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
                driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCityPark ||
@@ -261,7 +260,6 @@ public partial class GameBootstrap
         int missing = 0;
         if (!locations.ContainsKey(LocationType.Canteen)) missing++;
         if (!locations.ContainsKey(LocationType.Kiosk)) missing++;
-        if (!locations.ContainsKey(LocationType.CoffeeShop)) missing++;
         if (!locations.ContainsKey(LocationType.Motel)) missing++;
         if (!locations.ContainsKey(LocationType.Bar)) missing++;
         if (!locations.ContainsKey(LocationType.GamblingHall)) missing++;
@@ -534,22 +532,115 @@ public partial class GameBootstrap
             driversScreenUi.DetailNeedsTitleText.text = ru ? "\u041f\u043e\u0442\u0440\u0435\u0431\u043d\u043e\u0441\u0442\u0438" : "Needs";
         }
 
-        SetWorkerNeedText(
-            driversScreenUi.DetailMealNeedText,
-            FormatWorkerNeedLine(ru ? "\u0415\u0434\u0430" : "Food", driver.HoursSinceMeal, driver.LastMealNeedStatus, ru),
-            driver.LastMealNeedStatus);
+        SetWorkerNeedRow(
+            driversScreenUi.DetailMealNeedRow,
+            null,
+            ru ? "\u0415\u0434\u0430" : "Food",
+            WorkerNeedKind.Meal,
+            driver.HoursSinceMeal,
+            driver.LastMealNeedStatus,
+            ru);
 
-        SetWorkerNeedText(
-            driversScreenUi.DetailSleepNeedText,
-            FormatWorkerNeedLine(ru ? "\u0421\u043e\u043d" : "Sleep", driver.HoursSinceSleep, driver.LastSleepNeedStatus, ru),
-            driver.LastSleepNeedStatus);
+        SetWorkerNeedRow(
+            driversScreenUi.DetailSleepNeedRow,
+            null,
+            ru ? "\u0421\u043e\u043d" : "Sleep",
+            WorkerNeedKind.Sleep,
+            driver.HoursSinceSleep,
+            driver.LastSleepNeedStatus,
+            ru);
 
-        SetWorkerNeedText(
-            driversScreenUi.DetailLeisureNeedText,
-            FormatWorkerNeedLine(ru ? "\u0420\u0430\u0437\u0432\u043b\u0435\u0447\u0435\u043d\u0438\u0435" : "Leisure", driver.HoursSinceLeisure, driver.LastLeisureNeedStatus, ru),
-            driver.LastLeisureNeedStatus);
+        SetWorkerNeedRow(
+            driversScreenUi.DetailLeisureNeedRow,
+            null,
+            ru ? "\u0420\u0430\u0437\u0432\u043b\u0435\u0447\u0435\u043d\u0438\u0435" : "Leisure",
+            WorkerNeedKind.Leisure,
+            driver.HoursSinceLeisure,
+            driver.LastLeisureNeedStatus,
+            ru);
+
+        UpdateWorkerNeedsOverallUi(driver, ru);
 
         UpdateWorkerPerksUi(driver, ru);
+    }
+
+    private void SetWorkerNeedRow(WorkerNeedRowUi row, Text fallbackText, string label, WorkerNeedKind need, float hours, WorkerNeedStatus status, bool ru)
+    {
+        if (row == null)
+        {
+            SetWorkerNeedText(fallbackText, FormatWorkerNeedLine(label, hours, status, ru), status);
+            return;
+        }
+
+        if (row.LabelText != null)
+        {
+            row.LabelText.text = label;
+        }
+
+        float criticalHours = GetWorkerNeedCriticalHours(need);
+        float satisfaction = criticalHours > 0f ? Mathf.Clamp01(1f - hours / criticalHours) : 1f;
+        int activeSegments = Mathf.Clamp(Mathf.CeilToInt(satisfaction * row.SegmentImages.Count), 0, row.SegmentImages.Count);
+        Color activeColor = GetWorkerNeedStatusColor(status);
+        Color inactiveColor = new(0.19f, 0.23f, 0.28f, 1f);
+        for (int i = 0; i < row.SegmentImages.Count; i++)
+        {
+            if (row.SegmentImages[i] != null)
+            {
+                row.SegmentImages[i].color = i < activeSegments ? activeColor : inactiveColor;
+            }
+        }
+
+        if (row.StatusText != null)
+        {
+            row.StatusText.text = FormatWorkerNeedStatus(status, ru);
+            row.StatusText.color = activeColor;
+        }
+    }
+
+    private float GetWorkerNeedCriticalHours(WorkerNeedKind need)
+    {
+        return need switch
+        {
+            WorkerNeedKind.Meal => WorkerMealCriticalHours,
+            WorkerNeedKind.Sleep => WorkerSleepCriticalHours,
+            WorkerNeedKind.Leisure => WorkerLeisureCriticalHours,
+            _ => 1f
+        };
+    }
+
+    private void UpdateWorkerNeedsOverallUi(DriverAgent driver, bool ru)
+    {
+        if (driver == null || driversScreenUi == null)
+        {
+            return;
+        }
+
+        if (driversScreenUi.DetailOverallNeedsLabelText != null)
+        {
+            driversScreenUi.DetailOverallNeedsLabelText.text = ru ? "\u041e\u0431\u0449\u0435\u0435 \u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435" : "Overall condition";
+        }
+
+        WorkerNeedStatus overall =
+            driver.LastMealNeedStatus == WorkerNeedStatus.Critical ||
+            driver.LastSleepNeedStatus == WorkerNeedStatus.Critical ||
+            driver.LastLeisureNeedStatus == WorkerNeedStatus.Critical
+                ? WorkerNeedStatus.Critical
+                : driver.LastMealNeedStatus == WorkerNeedStatus.Warning ||
+                  driver.LastSleepNeedStatus == WorkerNeedStatus.Warning ||
+                  driver.LastLeisureNeedStatus == WorkerNeedStatus.Warning
+                    ? WorkerNeedStatus.Warning
+                    : WorkerNeedStatus.Ok;
+
+        if (driversScreenUi.DetailOverallNeedsValueText != null)
+        {
+            driversScreenUi.DetailOverallNeedsValueText.text = overall switch
+            {
+                WorkerNeedStatus.Critical => ru ? "\u041f\u043b\u043e\u0445\u043e\u0435" : "Bad",
+                WorkerNeedStatus.Warning => ru ? "\u0421\u0440\u0435\u0434\u043d\u0435\u0435" : "Fair",
+                _ => ru ? "\u0425\u043e\u0440\u043e\u0448\u0435\u0435" : "Good"
+            };
+            driversScreenUi.DetailOverallNeedsValueText.color = GetWorkerNeedStatusColor(overall);
+        }
     }
 
     private void SetWorkerNeedText(Text text, string value, WorkerNeedStatus status)

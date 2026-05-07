@@ -42,6 +42,7 @@ public partial class GameBootstrap : MonoBehaviour
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.PendingVendorLocationInstanceId = 0;
+                driver.PendingVendorItemId = string.Empty;
             }
 
             driver.IdleConversationTimer = 0f;
@@ -93,7 +94,6 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
             driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
             driver.WalkPhase == DriverRescuePhase.IdleAtKiosk ||
-            driver.WalkPhase == DriverRescuePhase.IdleAtCoffeeShop ||
             driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal ||
             driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan ||
             driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
@@ -140,8 +140,7 @@ public partial class GameBootstrap : MonoBehaviour
                     return;
                 }
 
-                if (completedPhase == DriverRescuePhase.IdleAtKiosk ||
-                    completedPhase == DriverRescuePhase.IdleAtCoffeeShop)
+                if (completedPhase == DriverRescuePhase.IdleAtKiosk)
                 {
                     driver.WalkPhase = DriverRescuePhase.None;
                     CompleteWorkerVendorPurchase(driver, completedPhase, completionPosition);
@@ -509,7 +508,6 @@ public partial class GameBootstrap : MonoBehaviour
 
         return driver.WalkPhase == DriverRescuePhase.IdleSittingOnBench ||
                driver.WalkPhase == DriverRescuePhase.IdleAtKiosk ||
-               driver.WalkPhase == DriverRescuePhase.IdleAtCoffeeShop ||
                driver.WalkPhase == DriverRescuePhase.IdleSmoking ||
                driver.WalkPhase == DriverRescuePhase.IdlePhoneCall ||
                driver.WalkPhase == DriverRescuePhase.IdlePettingCat;
@@ -534,6 +532,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IdleActivityTimer = 0f;
         driver.LifeGoal = WorkerLifeGoal.None;
         driver.PendingVendorLocationInstanceId = 0;
+        driver.PendingVendorItemId = string.Empty;
         driver.WalkPath.Clear();
         driver.WalkWaypointIndex = 0;
         LogWorkerDecision(driver, "idle-interrupted-critical-need", $"phase={interruptedPhase}; needs={FormatWorkerNeedsDebug(driver)}", true);
@@ -552,7 +551,6 @@ public partial class GameBootstrap : MonoBehaviour
         {
             LocationType.CityPark,
             LocationType.Kiosk,
-            LocationType.CoffeeShop,
             LocationType.Canteen,
             LocationType.Bar,
             LocationType.GamblingHall,

@@ -146,7 +146,6 @@ public partial class GameBootstrap
             CreateBuildCategory(cardList, font, "Services & Leisure", "Сервисы и досуг", false,
                 (BuildTool.Canteen,          "CT", "Canteen",       new Color(0.20f, 0.42f, 0.50f)),
                 (BuildTool.Kiosk,            "KS", "Kiosk",         new Color(0.86f, 0.58f, 0.24f)),
-                (BuildTool.CoffeeShop,       "CF", "Coffee Shop",   new Color(0.48f, 0.32f, 0.22f)),
                 (BuildTool.Bar,              "BR", "Bar",           new Color(0.52f, 0.20f, 0.20f)),
                 (BuildTool.GamblingHall,     "GH", "Gambling Hall", new Color(0.52f, 0.38f, 0.08f)),
                 (BuildTool.CityPark,         "CP", "City Park",     new Color(0.22f, 0.48f, 0.22f)),
@@ -476,6 +475,27 @@ public partial class GameBootstrap
             }
 
             // ── Gambling Hall ─────────────────────────────────────────────────
+            case BuildTool.Kiosk:
+            {
+                Color wall = new(0.86f, 0.56f, 0.24f);
+                Color roof = new(0.96f, 0.82f, 0.24f);
+                Color counter = new(0.34f, 0.20f, 0.10f);
+                Color sign = new(0.98f, 0.92f, 0.58f);
+                Color snack = new(0.95f, 0.34f, 0.20f);
+                Color coffee = new(0.96f, 0.92f, 0.84f);
+                Color steamKiosk = new(0.88f, 0.86f, 0.78f, 0.85f);
+                P(0.12f, 0.20f, 0.88f, 0.58f, wall);
+                P(0.08f, 0.58f, 0.92f, 0.70f, roof);
+                P(0.16f, 0.16f, 0.84f, 0.28f, counter);
+                P(0.30f, 0.42f, 0.70f, 0.54f, sign);
+                P(0.20f, 0.30f, 0.36f, 0.44f, snack);
+                P(0.42f, 0.30f, 0.56f, 0.44f, new Color(0.96f, 0.72f, 0.25f));
+                P(0.66f, 0.30f, 0.78f, 0.48f, coffee);
+                P(0.70f, 0.45f, 0.74f, 0.62f, steamKiosk);
+                P(0.12f, 0.10f, 0.88f, 0.16f, new Color(0.60f, 0.52f, 0.38f));
+                break;
+            }
+
             case BuildTool.GamblingHall:
             {
                 Color face = new(0.96f, 0.96f, 0.96f); Color pip = new(0.14f, 0.12f, 0.10f);

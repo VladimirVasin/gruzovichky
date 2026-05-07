@@ -207,14 +207,13 @@ public partial class GameBootstrap
 
     private void CreateVendorStandDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor, LocationType type)
     {
-        bool coffee = type == LocationType.CoffeeShop;
         float scale = BuildingDecorScale;
         float width = max.x - min.x + 1;
-        Color wall = coffee ? new Color(0.46f, 0.30f, 0.20f) : new Color(0.86f, 0.56f, 0.24f);
-        Color awning = coffee ? new Color(0.86f, 0.72f, 0.50f) : new Color(0.95f, 0.82f, 0.26f);
-        Color counter = coffee ? new Color(0.30f, 0.18f, 0.12f) : new Color(0.42f, 0.28f, 0.14f);
+        Color wall = new(0.86f, 0.56f, 0.24f);
+        Color awning = new(0.95f, 0.82f, 0.26f);
+        Color counter = new(0.42f, 0.28f, 0.14f);
 
-        Transform stand = CreateAnchorOrientedBuildingRoot(parent, coffee ? "CoffeeWalkUpStand" : "KioskWalkUpStand", center, min, max, anchor, scale);
+        Transform stand = CreateAnchorOrientedBuildingRoot(parent, "KioskWalkUpStand", center, min, max, anchor, scale);
 
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
         body.transform.SetParent(stand, false);
@@ -241,46 +240,41 @@ public partial class GameBootstrap
         sign.transform.SetParent(stand, false);
         sign.transform.localPosition = new Vector3(0f, 0.61f, 0.49f);
         sign.transform.localScale = new Vector3(0.82f, 0.20f, 0.04f);
-        ApplyColor(sign, coffee ? new Color(0.95f, 0.86f, 0.68f) : new Color(0.98f, 0.92f, 0.58f), VisualSmoothnessVehicleMetal);
+        ApplyColor(sign, new Color(0.98f, 0.92f, 0.58f), VisualSmoothnessVehicleMetal);
         ConfigureStaticVisual(sign, VisualSmoothnessVehicleMetal);
 
-        if (coffee)
+        for (int i = 0; i < 3; i++)
         {
-            GameObject cup = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            cup.transform.SetParent(stand, false);
-            cup.transform.localPosition = new Vector3(-0.18f, 0.48f, 0.48f);
-            cup.transform.localScale = new Vector3(0.09f, 0.12f, 0.09f);
-            ApplyColor(cup, new Color(0.96f, 0.92f, 0.84f), VisualSmoothnessVehicleMetal);
-            ConfigureStaticVisual(cup, VisualSmoothnessVehicleMetal);
+            GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            box.transform.SetParent(stand, false);
+            box.transform.localPosition = new Vector3(-0.36f + i * 0.23f, 0.45f, 0.48f);
+            box.transform.localScale = new Vector3(0.15f, 0.12f, 0.14f);
+            ApplyColor(box, i == 1 ? new Color(0.95f, 0.34f, 0.20f) : new Color(0.96f, 0.72f, 0.25f), VisualSmoothnessVehicleMetal);
+            ConfigureStaticVisual(box, VisualSmoothnessVehicleMetal);
+        }
 
-            GameObject steam = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            steam.transform.SetParent(stand, false);
-            steam.transform.localPosition = new Vector3(0.02f, 0.66f, 0.48f);
-            steam.transform.localScale = new Vector3(0.04f, 0.22f, 0.035f);
-            ApplyColor(steam, new Color(0.88f, 0.86f, 0.78f, 0.75f), VisualSmoothnessVehicleMetal);
-            ConfigureStaticVisual(steam, VisualSmoothnessVehicleMetal);
-        }
-        else
-        {
-            for (int i = 0; i < 3; i++)
-            {
-                GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                box.transform.SetParent(stand, false);
-                box.transform.localPosition = new Vector3(-0.28f + i * 0.28f, 0.45f, 0.48f);
-                box.transform.localScale = new Vector3(0.18f, 0.12f, 0.14f);
-                ApplyColor(box, i == 1 ? new Color(0.95f, 0.34f, 0.20f) : new Color(0.96f, 0.72f, 0.25f), VisualSmoothnessVehicleMetal);
-                ConfigureStaticVisual(box, VisualSmoothnessVehicleMetal);
-            }
-        }
+        GameObject cup = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        cup.transform.SetParent(stand, false);
+        cup.transform.localPosition = new Vector3(0.38f, 0.48f, 0.48f);
+        cup.transform.localScale = new Vector3(0.09f, 0.12f, 0.09f);
+        ApplyColor(cup, new Color(0.96f, 0.92f, 0.84f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(cup, VisualSmoothnessVehicleMetal);
+
+        GameObject steam = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        steam.transform.SetParent(stand, false);
+        steam.transform.localPosition = new Vector3(0.50f, 0.66f, 0.48f);
+        steam.transform.localScale = new Vector3(0.04f, 0.22f, 0.035f);
+        ApplyColor(steam, new Color(0.88f, 0.86f, 0.78f, 0.75f), VisualSmoothnessVehicleMetal);
+        ConfigureStaticVisual(steam, VisualSmoothnessVehicleMetal);
 
         CreateDrivewayToAnchor(parent, min, max, anchor, 0.42f);
 
-        GameObject lightObj = new(coffee ? "CoffeeShopLight" : "KioskLight");
+        GameObject lightObj = new("KioskLight");
         lightObj.transform.SetParent(parent, false);
         lightObj.transform.position = GetCellCenter(anchor) + new Vector3(0f, 1.0f * scale, 0f);
         Light light = lightObj.AddComponent<Light>();
         light.type = LightType.Point;
-        light.color = coffee ? new Color(1f, 0.72f, 0.46f) : new Color(1f, 0.84f, 0.42f);
+        light.color = new Color(1f, 0.84f, 0.42f);
         light.intensity = 0.55f;
         light.range = 4.0f;
         light.shadows = LightShadows.None;

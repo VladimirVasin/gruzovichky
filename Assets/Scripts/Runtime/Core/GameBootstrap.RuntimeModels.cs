@@ -241,6 +241,7 @@ public partial class GameBootstrap
         public bool AteToday;
         public bool HadLeisureToday;
         public int PendingVendorLocationInstanceId;
+        public string PendingVendorItemId = string.Empty;
         public int GamblingBet;
         public int GamblingPayout;
         public int GamblingMultiplier;

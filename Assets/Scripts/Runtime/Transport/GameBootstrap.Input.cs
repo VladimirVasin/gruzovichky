@@ -304,7 +304,6 @@ public partial class GameBootstrap
                tool == BuildTool.Bar ||
                tool == BuildTool.Canteen ||
                tool == BuildTool.Kiosk ||
-               tool == BuildTool.CoffeeShop ||
                tool == BuildTool.GasStation ||
                tool == BuildTool.GamblingHall ||
                tool == BuildTool.CityPark ||
@@ -319,8 +318,7 @@ public partial class GameBootstrap
     private static bool IsRoadlessBuildTool(BuildTool tool)
     {
         return tool == BuildTool.CityPark ||
-               tool == BuildTool.Kiosk ||
-               tool == BuildTool.CoffeeShop;
+               tool == BuildTool.Kiosk;
     }
 
     private static bool IsRoadBuildTool(BuildTool tool)

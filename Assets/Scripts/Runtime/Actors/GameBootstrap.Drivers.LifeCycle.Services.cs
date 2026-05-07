@@ -111,15 +111,15 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
-        List<(LocationType Type, string ItemId, DriverRescuePhase WalkPhase, DriverRescuePhase AtPhase)> choices = new();
+        List<(LocationType Type, string ItemId, DriverRescuePhase WalkPhase)> choices = new();
         if (CanWorkerConsiderVendorPurchase(driver, LocationType.Kiosk, WorkerSnackItemId))
         {
-            choices.Add((LocationType.Kiosk, WorkerSnackItemId, DriverRescuePhase.IdleWalkToKiosk, DriverRescuePhase.IdleAtKiosk));
+            choices.Add((LocationType.Kiosk, WorkerSnackItemId, DriverRescuePhase.IdleWalkToKiosk));
         }
 
-        if (CanWorkerConsiderVendorPurchase(driver, LocationType.CoffeeShop, WorkerCoffeeItemId))
+        if (CanWorkerConsiderVendorPurchase(driver, LocationType.Kiosk, WorkerCoffeeItemId))
         {
-            choices.Add((LocationType.CoffeeShop, WorkerCoffeeItemId, DriverRescuePhase.IdleWalkToCoffeeShop, DriverRescuePhase.IdleAtCoffeeShop));
+            choices.Add((LocationType.Kiosk, WorkerCoffeeItemId, DriverRescuePhase.IdleWalkToKiosk));
         }
 
         if (choices.Count == 0)
@@ -171,6 +171,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.LifeGoal = WorkerLifeGoal.Idle;
         driver.IdleActivityTimer = WorkerVendorPurchaseDuration;
         driver.PendingVendorLocationInstanceId = vendor.InstanceId;
+        driver.PendingVendorItemId = itemId;
         driver.WalkTargetWorld = target;
         driver.WalkPhase = walkPhase;
         driver.WalkAnimationTime = 0f;
@@ -181,6 +182,7 @@ public partial class GameBootstrap : MonoBehaviour
             driver.LifeGoal = WorkerLifeGoal.None;
             driver.IdleActivityTimer = 0f;
             driver.PendingVendorLocationInstanceId = 0;
+            driver.PendingVendorItemId = string.Empty;
             LogWorkerDecision(driver, "vendor-purchase-path-blocked", $"{vendorType}: no safe walk path for {itemId}", true);
             return false;
         }
@@ -250,22 +252,17 @@ public partial class GameBootstrap : MonoBehaviour
         return target;
     }
 
-    private static bool TryGetVendorPurchaseForPhase(DriverRescuePhase phase, out LocationType vendorType, out string itemId, out DriverRescuePhase atPhase)
+    private static bool TryGetVendorPurchaseForPhase(DriverAgent driver, DriverRescuePhase phase, out LocationType vendorType, out string itemId, out DriverRescuePhase atPhase)
     {
         switch (phase)
         {
             case DriverRescuePhase.IdleWalkToKiosk:
             case DriverRescuePhase.IdleAtKiosk:
                 vendorType = LocationType.Kiosk;
-                itemId = WorkerSnackItemId;
+                itemId = IsWorkerVendorInventoryItem(driver?.PendingVendorItemId)
+                    ? driver.PendingVendorItemId
+                    : WorkerSnackItemId;
                 atPhase = DriverRescuePhase.IdleAtKiosk;
-                return true;
-
-            case DriverRescuePhase.IdleWalkToCoffeeShop:
-            case DriverRescuePhase.IdleAtCoffeeShop:
-                vendorType = LocationType.CoffeeShop;
-                itemId = WorkerCoffeeItemId;
-                atPhase = DriverRescuePhase.IdleAtCoffeeShop;
                 return true;
         }
 
@@ -278,13 +275,14 @@ public partial class GameBootstrap : MonoBehaviour
     private bool CompleteWorkerVendorPurchase(DriverAgent driver, DriverRescuePhase completedPhase, Vector3 purchasePosition)
     {
         if (driver == null ||
-            !TryGetVendorPurchaseForPhase(completedPhase, out LocationType vendorType, out string itemId, out _))
+            !TryGetVendorPurchaseForPhase(driver, completedPhase, out LocationType vendorType, out string itemId, out _))
         {
             return false;
         }
 
         LocationData vendor = FindLocationByInstanceId(driver.PendingVendorLocationInstanceId);
         driver.PendingVendorLocationInstanceId = 0;
+        driver.PendingVendorItemId = string.Empty;
         if (vendor == null || vendor.Type != vendorType)
         {
             locations.TryGetValue(vendorType, out vendor);

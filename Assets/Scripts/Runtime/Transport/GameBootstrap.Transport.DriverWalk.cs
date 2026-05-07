@@ -532,11 +532,10 @@ public partial class GameBootstrap
                 return;
 
             case DriverRescuePhase.IdleWalkToKiosk:
-            case DriverRescuePhase.IdleWalkToCoffeeShop:
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
-                if (TryGetVendorPurchaseForPhase(driver.WalkPhase, out LocationType vendorType, out string itemId, out DriverRescuePhase atPhase))
+                if (TryGetVendorPurchaseForPhase(driver, driver.WalkPhase, out LocationType vendorType, out string itemId, out DriverRescuePhase atPhase))
                 {
                     LocationData vendor = FindLocationByInstanceId(driver.PendingVendorLocationInstanceId);
                     if (vendor != null && vendor.Type == vendorType && CanWorkerReceiveVendorInventoryItem(driver, itemId))
@@ -549,6 +548,7 @@ public partial class GameBootstrap
                 }
 
                 driver.PendingVendorLocationInstanceId = 0;
+                driver.PendingVendorItemId = string.Empty;
                 driver.WalkPhase = DriverRescuePhase.None;
                 driver.IdleWanderPauseTimer = Random.Range(0.5f, 1.5f);
                 SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived for vendor purchase, but the stand/item is no longer available.");
@@ -702,7 +702,6 @@ public partial class GameBootstrap
             DriverRescuePhase.IdleWalkToBar or
             DriverRescuePhase.IdleWalkToCanteen or
             DriverRescuePhase.IdleWalkToKiosk or
-            DriverRescuePhase.IdleWalkToCoffeeShop or
             DriverRescuePhase.IdleWalkToTrashCan or
             DriverRescuePhase.IdleWalkToGamblingHall or
             DriverRescuePhase.IdleWalkToCityPark or

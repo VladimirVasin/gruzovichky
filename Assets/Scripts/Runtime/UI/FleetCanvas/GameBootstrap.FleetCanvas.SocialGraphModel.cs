@@ -413,15 +413,22 @@ public partial class GameBootstrap
         for (int i = 0; i < visibleRelations.Count; i++)
         {
             SocialRelationViewModel relation = visibleRelations[i];
-            Vector2 direction = GetSocialGraphCategoryDirection(relation.Category);
-            Vector2 tangent = new(-direction.y, direction.x);
             int categoryCount = CountSocialGraphCategory(visibleRelations, relation.Category);
             int categoryIndex = GetSocialGraphCategoryIndex(visibleRelations, relation, i);
             float centeredIndex = categoryIndex - (categoryCount - 1) * 0.5f;
+            float categoryShare = categoryCount / (float)Mathf.Max(1, visibleRelations.Count);
+            bool dominantCategory = categoryCount >= 5 && categoryShare >= 0.62f;
+            float fanAngle = dominantCategory
+                ? Mathf.Lerp(112f, 158f, Mathf.InverseLerp(5f, SocialGraphFocusedRelationLimit, categoryCount))
+                : Mathf.Min(58f, 14f + categoryCount * 8f);
+            float angleOffset = GetSocialGraphCategoryFanAngle(categoryIndex, categoryCount, fanAngle);
+            Vector2 direction = RotateSocialGraphDirection(GetSocialGraphCategoryDirection(relation.Category), angleOffset);
+            Vector2 tangent = new(-direction.y, direction.x);
             float minRadius = Mathf.Min(canvasSize.x * 0.18f, canvasSize.y * 0.18f);
             float maxRadius = Mathf.Min(canvasSize.x * 0.38f, canvasSize.y * 0.36f);
-            float distance = Mathf.Lerp(maxRadius, minRadius, relation.Importance);
-            float tangentOffset = centeredIndex * 76f;
+            float distance = Mathf.Lerp(maxRadius, minRadius, relation.Importance) +
+                             (dominantCategory ? Mathf.Abs(centeredIndex) * 8f : Mathf.Abs(centeredIndex) * 4f);
+            float tangentOffset = dominantCategory ? centeredIndex * 8f : centeredIndex * 46f;
             Vector2 position = direction * distance + tangent * tangentOffset;
             positions[relation.OtherWorkerId] = ClampSocialGraphPosition(position, canvasSize, 78f);
         }
@@ -580,6 +587,33 @@ public partial class GameBootstrap
             RelationCategory.Conflict => Vector2.down,
             _ => new Vector2(0.78f, -0.62f).normalized
         };
+    }
+
+    private static float GetSocialGraphCategoryFanAngle(int categoryIndex, int categoryCount, float maxAngle)
+    {
+        if (categoryCount <= 1)
+        {
+            return 0f;
+        }
+
+        int ring = (categoryIndex + 1) / 2;
+        if (ring <= 0)
+        {
+            return 0f;
+        }
+
+        float side = categoryIndex % 2 == 0 ? 1f : -1f;
+        float maxRing = Mathf.Max(1f, Mathf.Ceil((categoryCount - 1) * 0.5f));
+        return side * Mathf.Clamp(maxAngle * (ring / maxRing), 0f, maxAngle);
+    }
+
+    private static Vector2 RotateSocialGraphDirection(Vector2 direction, float angleDegrees)
+    {
+        float radians = angleDegrees * Mathf.Deg2Rad;
+        float sin = Mathf.Sin(radians);
+        float cos = Mathf.Cos(radians);
+        Vector2 result = new(direction.x * cos - direction.y * sin, direction.x * sin + direction.y * cos);
+        return result.sqrMagnitude > 0.0001f ? result.normalized : Vector2.right;
     }
 
     private static Vector2 ClampSocialGraphPosition(Vector2 position, Vector2 canvasSize, float inset)

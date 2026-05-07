@@ -28,7 +28,6 @@ public partial class GameBootstrap
                 LocationType.Bar     => 10,
                 LocationType.Canteen => 10,
                 LocationType.Kiosk   => 5,
-                LocationType.CoffeeShop => 5,
                 _                    => 0
             },
             BuildingBank  = type == LocationType.GamblingHall ? 50 : 0,
@@ -103,7 +102,7 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.10f, size.y * 0.99f);
             ApplyColor(baseBlock, new Color(0.42f, 0.44f, 0.48f), VisualSmoothnessAsphalt);
         }
-        else if (type == LocationType.Kiosk || type == LocationType.CoffeeShop)
+        else if (type == LocationType.Kiosk)
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
             baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
@@ -177,10 +176,6 @@ public partial class GameBootstrap
         {
             CreateVendorStandDecoration(root.transform, center, min, max, anchor, LocationType.Kiosk);
         }
-        else if (type == LocationType.CoffeeShop)
-        {
-            CreateVendorStandDecoration(root.transform, center, min, max, anchor, LocationType.CoffeeShop);
-        }
         else if (type == LocationType.GamblingHall)
         {
             CreateGamblingHallDecoration(root.transform, center, min, max, anchor);
@@ -226,7 +221,7 @@ public partial class GameBootstrap
         // Production (Forest / Sawmill / FurnitureFactory) = amber
         // Service (everything else) = slate blue
         // Forest and BusStop have no upright base block - skip.
-        if (type != LocationType.Forest && type != LocationType.IntercityStop && type != LocationType.Stop && type != LocationType.CityPark && type != LocationType.PersonalHouse && type != LocationType.CarMarket && type != LocationType.Kiosk && type != LocationType.CoffeeShop)
+        if (type != LocationType.Forest && type != LocationType.IntercityStop && type != LocationType.Stop && type != LocationType.CityPark && type != LocationType.PersonalHouse && type != LocationType.CarMarket && type != LocationType.Kiosk)
         {
             bool isProduction = IsProductionLocation(type);
             Color stripeColor = isProduction
@@ -304,8 +299,7 @@ public partial class GameBootstrap
     private static bool DoesLocationRequireRoadAccess(LocationType type)
     {
         return type != LocationType.CityPark &&
-               type != LocationType.Kiosk &&
-               type != LocationType.CoffeeShop;
+               type != LocationType.Kiosk;
     }
 
     private static bool IsMultiInstanceServiceBuildType(LocationType type) => type switch
@@ -313,7 +307,6 @@ public partial class GameBootstrap
         LocationType.Bar          => true,
         LocationType.Canteen      => true,
         LocationType.Kiosk        => true,
-        LocationType.CoffeeShop   => true,
         LocationType.GamblingHall => true,
         LocationType.GasStation   => true,
         LocationType.CityPark     => true,

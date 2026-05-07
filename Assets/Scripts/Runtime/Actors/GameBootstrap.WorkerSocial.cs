@@ -387,64 +387,7 @@ public partial class GameBootstrap
 
     private void UpdateWorkerSocialUi(DriverAgent worker, bool ru)
     {
-        if (driversScreenUi == null)
-        {
-            return;
-        }
-
-        if (driversScreenUi.DetailSocialTitleText != null)
-        {
-            driversScreenUi.DetailSocialTitleText.text = ru ? "\u0421\u043e\u0446\u0438\u0430\u043b\u044c\u043d\u044b\u0435 \u0441\u0432\u044f\u0437\u0438" : "Social Links";
-        }
-
-        if (driversScreenUi.DetailSocialNameHeaderText != null)
-        {
-            driversScreenUi.DetailSocialNameHeaderText.text = ru ? "\u0418\u043c\u044f" : "Name";
-        }
-
-        if (driversScreenUi.DetailSocialRelationHeaderText != null)
-        {
-            driversScreenUi.DetailSocialRelationHeaderText.text = ru ? "\u0421\u0432\u044f\u0437\u044c" : "Relation";
-        }
-
-        if (driversScreenUi.DetailSocialFamiliarityHeaderText != null)
-        {
-            driversScreenUi.DetailSocialFamiliarityHeaderText.text = ru ? "\u0417\u043d\u0430\u043a." : "Know";
-        }
-
-        if (driversScreenUi.DetailSocialContextHeaderText != null)
-        {
-            driversScreenUi.DetailSocialContextHeaderText.text = ru ? "\u0413\u0434\u0435" : "Last";
-        }
-
-        List<WorkerSocialMemory> memories = GetWorkerSocialMemoriesSorted(worker);
-        bool hasRows = memories.Count > 0;
-        if (driversScreenUi.DetailSocialEmptyText != null)
-        {
-            driversScreenUi.DetailSocialEmptyText.gameObject.SetActive(!hasRows);
-            driversScreenUi.DetailSocialEmptyText.text = ru
-                ? "\u041f\u043e\u043a\u0430 \u043d\u0438 \u0441 \u043a\u0435\u043c \u043d\u0435 \u0437\u043d\u0430\u043a\u043e\u043c"
-                : "No social memories yet";
-        }
-
-        for (int i = 0; i < driversScreenUi.DetailSocialRows.Count; i++)
-        {
-            WorkerSocialRowUi row = driversScreenUi.DetailSocialRows[i];
-            bool active = i < memories.Count;
-            row.Root.gameObject.SetActive(active);
-            if (!active)
-            {
-                continue;
-            }
-
-            WorkerSocialMemory memory = memories[i];
-            DriverAgent other = GetDriverAgentById(memory.OtherWorkerId);
-            row.NameText.text = other != null ? other.DriverName : (ru ? "\u041d\u0435\u0442 \u0434\u0430\u043d\u043d\u044b\u0445" : "Unknown");
-            row.RelationText.text = GetWorkerSocialRelationshipLabel(memory.Relationship, ru);
-            row.RelationText.color = GetWorkerSocialRelationshipColor(memory.Relationship);
-            row.FamiliarityText.text = memory.Familiarity.ToString();
-            row.ContextText.text = FormatWorkerSocialContext(memory, ru);
-        }
+        UpdateWorkerSocialGraphUi(worker, ru);
     }
 
     private static string GetWorkerSocialRelationshipLabel(int relationship, bool ru)
