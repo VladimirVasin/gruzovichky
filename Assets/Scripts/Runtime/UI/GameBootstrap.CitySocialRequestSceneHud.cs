@@ -91,10 +91,12 @@ public partial class GameBootstrap
         citySocialRequestDialogueIndex = 0;
         citySocialRequestTopic = string.Empty;
         citySocialPortraitAnimTime = 0f;
+        ResetCitySocialTopicInputFeedback();
         citySocialSpeakingSide = -1;
         citySocialConversationOutcome = Random.value <= CitySocialConversationGoodChance
             ? CitySocialConversationOutcome.Success
             : CitySocialConversationOutcome.Failure;
+        SelectCitySocialDialogueVariant();
         citySocialRequestScenePausedSimulation = false;
         citySocialRequestScenePreviousSpeed = Mathf.Max(1, gameSpeedMultiplier);
 
@@ -333,6 +335,7 @@ public partial class GameBootstrap
 
         float dt = Time.unscaledDeltaTime;
         UpdateCitySocialTypewriter(dt);
+        UpdateCitySocialTopicRejectShake(dt);
         switch (citySocialRequestScenePhase)
         {
             case CitySocialRequestScenePhase.Opening:
@@ -509,69 +512,13 @@ public partial class GameBootstrap
         }
 
         citySocialRequestDialogueIndex++;
-        if (citySocialRequestDialogueIndex >= 3)
+        if (citySocialRequestDialogueIndex >= GetCitySocialDialogueLineCount())
         {
             ShowCitySocialConversationResult();
             return;
         }
 
         ShowCitySocialDialogueLine();
-    }
-
-    private void SubmitCitySocialTopic()
-    {
-        citySocialRequestTopic = SanitizeCitySocialTopic(citySocialRequestSceneHud.TopicInput.text);
-        citySocialRequestSceneHud.TopicInput.DeactivateInputField();
-        citySocialRequestSceneHud.TopicInput.gameObject.SetActive(false);
-        citySocialRequestSceneHud.TargetCard.gameObject.SetActive(true);
-        citySocialRequestSceneHud.TargetGroup.alpha = 0f;
-        citySocialRequestSceneHud.TargetCard.anchoredPosition = new Vector2(360f, 92f);
-        citySocialRequestSceneHud.TargetCard.localScale = Vector3.one * 0.74f;
-        citySocialRequestSceneHud.TitleText.text = "Разговор начинается";
-        citySocialSpeakingSide = -1;
-        SetCitySocialBodyText("Второй участник уже здесь. Сейчас город попробует сделать вид, что это случайная беседа, а не маленькая операция Ратуши.");
-        citySocialRequestSceneHud.ActionButtonText.text = "Дальше";
-        citySocialRequestScenePhase = CitySocialRequestScenePhase.TargetReveal;
-        citySocialRequestSceneTimer = 0f;
-        PlayUiSound(uiSelectClip, 0.78f);
-    }
-
-    private void ShowCitySocialDialogueLine()
-    {
-        CitySocialIntroductionRequest request = activeCitySocialIntroductionRequest;
-        string requester = request?.RequesterName ?? "Житель";
-        string target = request?.TargetName ?? "Житель";
-        string topic = string.IsNullOrWhiteSpace(citySocialRequestTopic)
-            ? SanitizeCitySocialTopic(string.Empty)
-            : citySocialRequestTopic;
-
-        switch (citySocialRequestDialogueIndex)
-        {
-            case 0:
-                citySocialRequestSceneHud.TitleText.text = requester;
-                citySocialSpeakingSide = 0;
-                SetCitySocialBodyText(citySocialConversationOutcome == CitySocialConversationOutcome.Success
-                    ? $"Привет. Мне тут в голову пришла тема: «{topic}». Звучит достаточно безобидно, чтобы не прятаться за ближайший столб?"
-                    : $"Привет. Как ты относишься к «{topic}»? Я задал вопрос и уже слышу, как он падает со стула.");
-                citySocialRequestSceneHud.ActionButtonText.text = "Дальше";
-                break;
-            case 1:
-                citySocialRequestSceneHud.TitleText.text = target;
-                citySocialSpeakingSide = 1;
-                SetCitySocialBodyText(citySocialConversationOutcome == CitySocialConversationOutcome.Success
-                    ? $"Вообще да. В «{topic}» есть что-то человеческое: можно спорить, кивать и делать вид, что мы давно так разговариваем."
-                    : "Честно? Не понял, куда это положить. На полку странного, в ящик тревожного или сразу вернуть отправителю.");
-                citySocialRequestSceneHud.ActionButtonText.text = "Дальше";
-                break;
-            default:
-                citySocialRequestSceneHud.TitleText.text = requester;
-                citySocialSpeakingSide = 0;
-                SetCitySocialBodyText(citySocialConversationOutcome == CitySocialConversationOutcome.Success
-                    ? "Тогда считаем, что лед треснул. Не красиво, зато честно."
-                    : "Понял. Значит, тему пока оставим в карантине. Но спасибо, что разговор хотя бы не вызвал пожарных.");
-                citySocialRequestSceneHud.ActionButtonText.text = "К итогу";
-                break;
-        }
     }
 
     private void ShowCitySocialConversationResult()
@@ -634,9 +581,13 @@ public partial class GameBootstrap
         }
 
         string relationshipDelta = FormatCitySocialSignedDelta(relationshipDeltaValue);
-        string resultText = success
-            ? $"{requester} и {target} нашли общий край темы «{topic}».\nОтношения: знакомство +{familiarityDelta}, симпатия {relationshipDelta}. Теперь между ними есть разговор, за который можно держаться."
-            : $"{requester} и {target} задели тему «{topic}», но беседа ушла в неловкость.\nОтношения: знакомство +{familiarityDelta}, симпатия {relationshipDelta}. Но ты попытался.";
+        string resultText = BuildCitySocialConversationResultText(
+            requester,
+            target,
+            topic,
+            familiarityDelta,
+            relationshipDelta,
+            success);
         SetCitySocialTypedText(citySocialRequestSceneHud.ResultBodyText, resultText);
         PlayUiSound(success ? (slotWinClip != null ? slotWinClip : uiSelectClip) : (slotLoseClip != null ? slotLoseClip : uiSelectClip), success ? 0.76f : 0.70f);
     }

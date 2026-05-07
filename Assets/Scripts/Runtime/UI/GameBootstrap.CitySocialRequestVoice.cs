@@ -6,6 +6,7 @@ public partial class GameBootstrap
     private const float CitySocialVoiceBaseVolume = 0.18f;
     private readonly Dictionary<int, AudioClip[]> citySocialVoiceClipCache = new();
     private AudioSource citySocialVoiceAudioSource;
+    private AudioClip citySocialTopicRejectClip;
 
     private readonly struct CitySocialVoiceProfile
     {
@@ -71,6 +72,16 @@ public partial class GameBootstrap
         citySocialVoiceAudioSource.PlayOneShot(clip, volume);
     }
 
+    private void PlayCitySocialTopicRejectSound()
+    {
+        if (citySocialTopicRejectClip == null)
+        {
+            citySocialTopicRejectClip = CreateCitySocialTopicRejectClip();
+        }
+
+        PlayUiSound(citySocialTopicRejectClip, 0.64f);
+    }
+
     private void EnsureCitySocialVoiceAudioSource()
     {
         if (citySocialVoiceAudioSource != null)
@@ -125,6 +136,28 @@ public partial class GameBootstrap
         float formant = 620f + (seed % 9) * 55f;
         float roughness = 0.08f + (seed % 11) / 100f;
         return new CitySocialVoiceProfile(speakerId, baseFrequency, brightness, formant, roughness);
+    }
+
+    private AudioClip CreateCitySocialTopicRejectClip()
+    {
+        float duration = 0.16f;
+        int sampleCount = Mathf.CeilToInt(duration * AudioSampleRate);
+        float[] samples = new float[sampleCount];
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)AudioSampleRate;
+            float p = t / duration;
+            float envelope = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.05f, p)) *
+                             (1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.62f, 1f, p)));
+            float sweep = Mathf.Lerp(430f, 155f, p);
+            float buzz = Mathf.Sign(Mathf.Sin(2f * Mathf.PI * sweep * t)) * 0.28f;
+            float scrape = Mathf.Sin(2f * Mathf.PI * (sweep * 1.87f) * t + Mathf.Sin(t * 120f)) * 0.18f;
+            samples[i] = Mathf.Clamp((buzz + scrape) * envelope * 0.72f, -1f, 1f);
+        }
+
+        AudioClip clip = AudioClip.Create("CitySocialTopicReject", samples.Length, 1, AudioSampleRate, false);
+        clip.SetData(samples, 0);
+        return clip;
     }
 
     private AudioClip[] GetCitySocialVoiceClips(CitySocialVoiceProfile profile)
