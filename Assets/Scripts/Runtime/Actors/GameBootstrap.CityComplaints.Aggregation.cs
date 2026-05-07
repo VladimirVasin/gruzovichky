@@ -37,7 +37,7 @@ public partial class GameBootstrap
         }
 
         string groupKey = GetCityComplaintGroupKey(category, linkedNeed, linkedLocationType);
-        CityComplaint openComplaint = FindOpenCityComplaintByGroupKey(groupKey);
+        CityComplaint openComplaint = FindActiveCityComplaintByGroupKey(groupKey);
         if (openComplaint != null)
         {
             bool changed = AddCityComplaintSigner(openComplaint, worker);
@@ -210,7 +210,7 @@ public partial class GameBootstrap
         {
             CityComplaint complaint = cityComplaints[i];
             if (complaint == null ||
-                complaint.State != CityComplaintState.Open ||
+                complaint.State != CityComplaintState.Accepted ||
                 complaint.DueWorldHour <= 0f ||
                 now < complaint.DueWorldHour)
             {
@@ -221,13 +221,21 @@ public partial class GameBootstrap
             complaint.ResolvedWorldHour = now;
             complaint.ResolvedDay = currentDay;
             complaint.ResolveReason = "deadline expired";
+            complaint.IsUnread = false;
             cityComplaintCooldownByKey[GetCityComplaintGroupKey(complaint.Category, complaint.LinkedNeed, complaint.LinkedLocationType)] =
                 now + CityComplaintCooldownWorldHours;
+            if (!complaint.TrustPenaltyApplied)
+            {
+                complaint.TrustPenaltyApplied = true;
+                ApplyCityTrustDelta(CityTrustComplaintExpiredPenalty, $"citizen request #{complaint.Id} expired");
+            }
+
+            StartCityRequestGoalFeedback(success: false, complaint);
             changed = true;
-            SessionDebugLogger.Log("CITY_HALL", $"Complaint #{complaint.Id} expired after 24h: key={complaint.GroupKey}.");
+            SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} expired after 24h: key={complaint.GroupKey}.");
             PushFeedEvent(
-                "A City Hall complaint expired.",
-                "\u0416\u0430\u043b\u043e\u0431\u0430 \u0432 \u0440\u0430\u0442\u0443\u0448\u0435 \u043f\u0440\u043e\u0441\u0440\u043e\u0447\u0435\u043d\u0430.",
+                "A City Hall request expired.",
+                "Обращение в Ратуше просрочено.",
                 FeedEventType.Warning);
         }
 
@@ -321,13 +329,13 @@ public partial class GameBootstrap
         }
     }
 
-    private CityComplaint FindOpenCityComplaintByGroupKey(string groupKey)
+    private CityComplaint FindActiveCityComplaintByGroupKey(string groupKey)
     {
         for (int i = 0; i < cityComplaints.Count; i++)
         {
             CityComplaint complaint = cityComplaints[i];
             if (complaint != null &&
-                complaint.State == CityComplaintState.Open &&
+                IsCityComplaintActive(complaint) &&
                 string.Equals(complaint.GroupKey, groupKey, System.StringComparison.Ordinal))
             {
                 return complaint;
@@ -347,9 +355,18 @@ public partial class GameBootstrap
         return state switch
         {
             CityComplaintState.Open => 0,
-            CityComplaintState.Expired => 1,
-            _ => 2
+            CityComplaintState.Accepted => 1,
+            CityComplaintState.Expired => 2,
+            CityComplaintState.Rejected => 3,
+            _ => 4
         };
+    }
+
+    private static bool IsCityComplaintActive(CityComplaint complaint)
+    {
+        return complaint != null &&
+               (complaint.State == CityComplaintState.Open ||
+                complaint.State == CityComplaintState.Accepted);
     }
 
     private int CountExpiredCityComplaints()
@@ -428,16 +445,18 @@ public partial class GameBootstrap
     {
         return state switch
         {
-            CityComplaintState.Open => ru ? "\u043e\u0442\u043a\u0440\u044b\u0442\u0430" : "open",
-            CityComplaintState.Expired => ru ? "\u043f\u0440\u043e\u0441\u0440\u043e\u0447\u0435\u043d\u0430" : "expired",
-            CityComplaintState.Resolved => ru ? "\u0440\u0435\u0448\u0435\u043d\u0430" : "resolved",
+            CityComplaintState.Open => ru ? "ожидает решения" : "pending",
+            CityComplaintState.Accepted => ru ? "принято" : "accepted",
+            CityComplaintState.Rejected => ru ? "отклонено" : "rejected",
+            CityComplaintState.Expired => ru ? "просрочено" : "expired",
+            CityComplaintState.Resolved => ru ? "выполнено" : "resolved",
             _ => ru ? "\u2014" : "-"
         };
     }
 
     private string FormatCityComplaintTimeLeft(CityComplaint complaint, bool ru)
     {
-        if (complaint == null || complaint.State != CityComplaintState.Open || complaint.DueWorldHour <= 0f)
+        if (complaint == null || complaint.State != CityComplaintState.Accepted || complaint.DueWorldHour <= 0f)
         {
             return string.Empty;
         }

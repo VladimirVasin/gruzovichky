@@ -5,15 +5,20 @@ using UnityEngine.UI;
 public partial class GameBootstrap
 {
     private const int CityHallComplaintRowCount = 10;
+    private const float CityHallRejectedRowDismissSeconds = 0.32f;
 
     private bool isCityHallPanelOpen;
     private bool isCityHallScreenDirty = true;
     private int selectedCityComplaintId;
+    private int cityHallDismissingRejectedComplaintId;
+    private float cityHallRejectedRowDismissTimer;
     private CityHallScreenUiRefs cityHallScreenUi;
 
     private sealed class CityHallComplaintRowUi
     {
         public Button Button;
+        public CanvasGroup CanvasGroup;
+        public LayoutElement LayoutElement;
         public Image Background;
         public Image Accent;
         public Text TitleText;
@@ -32,12 +37,11 @@ public partial class GameBootstrap
         public Text DetailTitleText;
         public Text DetailMetaText;
         public Text DetailBodyText;
-        public Button FocusWorkerButton;
-        public Text FocusWorkerButtonText;
-        public Button FocusTargetButton;
-        public Text FocusTargetButtonText;
-        public Button ResolveButton;
-        public Text ResolveButtonText;
+        public RectTransform DecisionRow;
+        public Button AcceptButton;
+        public Text AcceptButtonText;
+        public Button RejectButton;
+        public Text RejectButtonText;
     }
 
     private void SetupCityHallScreenUi()
@@ -103,7 +107,7 @@ public partial class GameBootstrap
         listGroup.childForceExpandHeight = false;
 
         Text listTitle = CreateHeaderText("CityHallListTitle", listPanel, font, string.Empty, 16, TextAnchor.MiddleLeft, Color.white);
-        listTitle.text = IsRussianLanguage() ? "\u0416\u0430\u043b\u043e\u0431\u044b \u0433\u043e\u0440\u043e\u0436\u0430\u043d" : "Citizen complaints";
+        listTitle.text = IsRussianLanguage() ? "Обращения граждан" : "Citizen requests";
         listTitle.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
         cityHallScreenUi.EmptyText = CreateBodyText("CityHallEmpty", listPanel, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetMutedTextColor);
@@ -134,20 +138,18 @@ public partial class GameBootstrap
         cityHallScreenUi.DetailBodyText = CreateBodyText("CityHallDetailBody", detailPanel, font, string.Empty, 13, TextAnchor.UpperLeft, FleetSecondaryTextColor);
         cityHallScreenUi.DetailBodyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 250f;
 
-        RectTransform actionRow = CreateLayoutRow("CityHallActions", detailPanel, 38f, 8f);
-        cityHallScreenUi.FocusWorkerButton = CreateButton("CityHallFocusWorker", actionRow, font, out cityHallScreenUi.FocusWorkerButtonText, string.Empty, 12, new Color(0.25f, 0.33f, 0.46f, 1f), Color.white);
-        cityHallScreenUi.FocusWorkerButton.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        cityHallScreenUi.FocusWorkerButton.onClick.AddListener(FocusSelectedCityComplaintWorker);
+        RectTransform decisionRow = CreateLayoutRow("CityHallDecisionActions", detailPanel, 42f, 10f);
+        cityHallScreenUi.DecisionRow = decisionRow;
+        cityHallScreenUi.AcceptButton = CreateButton("CityHallAccept", decisionRow, font, out cityHallScreenUi.AcceptButtonText, string.Empty, 14, new Color(0.24f, 0.50f, 0.28f, 1f), Color.white);
+        ConfigureCityHallDecisionButton(cityHallScreenUi.AcceptButton, cityHallScreenUi.AcceptButtonText);
+        cityHallScreenUi.AcceptButton.onClick.AddListener(AcceptSelectedCityComplaint);
 
-        cityHallScreenUi.FocusTargetButton = CreateButton("CityHallFocusTarget", actionRow, font, out cityHallScreenUi.FocusTargetButtonText, string.Empty, 12, new Color(0.24f, 0.38f, 0.24f, 1f), Color.white);
-        cityHallScreenUi.FocusTargetButton.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        cityHallScreenUi.FocusTargetButton.onClick.AddListener(FocusSelectedCityComplaintTarget);
-
-        cityHallScreenUi.ResolveButton = CreateButton("CityHallResolve", detailPanel, font, out cityHallScreenUi.ResolveButtonText, string.Empty, 13, FleetPrimaryButtonColor, Color.white);
-        cityHallScreenUi.ResolveButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
-        cityHallScreenUi.ResolveButton.onClick.AddListener(ResolveSelectedCityComplaint);
+        cityHallScreenUi.RejectButton = CreateButton("CityHallReject", decisionRow, font, out cityHallScreenUi.RejectButtonText, string.Empty, 14, new Color(0.50f, 0.18f, 0.14f, 1f), Color.white);
+        ConfigureCityHallDecisionButton(cityHallScreenUi.RejectButton, cityHallScreenUi.RejectButtonText);
+        cityHallScreenUi.RejectButton.onClick.AddListener(RejectSelectedCityComplaint);
 
         AddOverlayCloseButton(window, font);
+        EnsureCityHallDecisionButtonsClickable();
         ValidateCityHallScreenClickTargets();
         cityHallScreenUi.CanvasRoot.SetActive(false);
         UpdateCityHallScreenUi();
@@ -161,9 +163,8 @@ public partial class GameBootstrap
         }
 
         bool ok = cityHallScreenUi.CanvasRoot.GetComponent<GraphicRaycaster>() != null &&
-                  IsButtonClickTargetReady(cityHallScreenUi.FocusWorkerButton) &&
-                  IsButtonClickTargetReady(cityHallScreenUi.FocusTargetButton) &&
-                  IsButtonClickTargetReady(cityHallScreenUi.ResolveButton);
+                  IsButtonClickTargetReady(cityHallScreenUi.AcceptButton) &&
+                  IsButtonClickTargetReady(cityHallScreenUi.RejectButton);
 
         if (cityHallScreenUi.Rows != null)
         {
@@ -175,7 +176,7 @@ public partial class GameBootstrap
 
         if (!ok)
         {
-            SessionDebugLogger.Log("UI_INPUT", "City Hall click-target validation failed: check GraphicRaycaster, Button targetGraphic, and row buttons.");
+            SessionDebugLogger.Log("UI_INPUT", "City Hall click-target validation failed: check GraphicRaycaster, decision buttons, and row buttons.");
         }
     }
 
@@ -183,7 +184,72 @@ public partial class GameBootstrap
     {
         return button != null &&
                button.targetGraphic != null &&
+               button.targetGraphic.raycastTarget &&
                button.onClick != null;
+    }
+
+    private void EnsureCityHallDecisionButtonsClickable()
+    {
+        if (cityHallScreenUi == null)
+        {
+            return;
+        }
+
+        ConfigureCityHallDecisionButton(cityHallScreenUi.AcceptButton, cityHallScreenUi.AcceptButtonText);
+        ConfigureCityHallDecisionButton(cityHallScreenUi.RejectButton, cityHallScreenUi.RejectButtonText);
+        if (cityHallScreenUi.DecisionRow != null)
+        {
+            cityHallScreenUi.DecisionRow.SetAsLastSibling();
+            LayoutElement layout = cityHallScreenUi.DecisionRow.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.minHeight = 42f;
+                layout.preferredHeight = 42f;
+                layout.flexibleHeight = 0f;
+            }
+        }
+    }
+
+    private static void ConfigureCityHallDecisionButton(Button button, Text label)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Image image = button.targetGraphic as Image;
+        if (image == null)
+        {
+            image = button.GetComponent<Image>();
+        }
+
+        if (image != null)
+        {
+            image.raycastTarget = true;
+            button.targetGraphic = image;
+        }
+
+        if (label != null)
+        {
+            label.raycastTarget = false;
+        }
+
+        LayoutElement layout = button.GetComponent<LayoutElement>();
+        if (layout == null)
+        {
+            layout = button.gameObject.AddComponent<LayoutElement>();
+        }
+
+        layout.minWidth = 170f;
+        layout.preferredWidth = 220f;
+        layout.flexibleWidth = 1f;
+        layout.minHeight = 38f;
+        layout.preferredHeight = 42f;
+        layout.flexibleHeight = 0f;
+
+        Navigation navigation = button.navigation;
+        navigation.mode = Navigation.Mode.None;
+        button.navigation = navigation;
     }
 
     private CityHallComplaintRowUi CreateCityHallComplaintRow(RectTransform parent, Font font, int rowIndex)
@@ -200,6 +266,8 @@ public partial class GameBootstrap
             addOutline: false);
 
         Image bg = rowRoot.GetComponent<Image>();
+        CanvasGroup canvasGroup = rowRoot.gameObject.AddComponent<CanvasGroup>();
+        LayoutElement rowLayout = rowRoot.GetComponent<LayoutElement>();
         Button button = rowRoot.gameObject.AddComponent<Button>();
         button.targetGraphic = bg;
         int capturedIndex = rowIndex;
@@ -221,6 +289,8 @@ public partial class GameBootstrap
         return new CityHallComplaintRowUi
         {
             Button = button,
+            CanvasGroup = canvasGroup,
+            LayoutElement = rowLayout,
             Background = bg,
             Accent = accentImage,
             TitleText = title,
@@ -247,9 +317,12 @@ public partial class GameBootstrap
             cityHallScreenUi.CanvasRoot.SetActive(shouldShow);
             if (shouldShow)
             {
+                ClearUnreadCityHallRequests();
                 isCityHallScreenDirty = true;
             }
         }
+
+        UpdateCityHallRejectedRowDismissAnimation();
 
         if (!shouldShow || !isCityHallScreenDirty)
         {
@@ -263,21 +336,23 @@ public partial class GameBootstrap
     private void RebuildCityHallScreen()
     {
         bool ru = IsRussianLanguage();
+        ClearUnreadCityHallRequests();
         List<CityComplaintRowViewModel> rows = BuildCityHallComplaintRows(ru);
-        if (selectedCityComplaintId <= 0 || GetCityComplaintById(selectedCityComplaintId) == null)
+        if (selectedCityComplaintId <= 0 || !DoesCityHallRowsContain(rows, selectedCityComplaintId))
         {
             selectedCityComplaintId = rows.Count > 0 ? rows[0].Id : 0;
         }
 
         cityHallScreenUi.TitleText.text = ru ? "\u0420\u0430\u0442\u0443\u0448\u0430" : "City Hall";
         cityHallScreenUi.SummaryText.text = ru
-            ? $"\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u0438\u0435 \u0436\u0430\u043b\u043e\u0431\u044b: \u043e\u0442\u043a\u0440\u044b\u0442\u043e {CountOpenCityComplaints()}, \u043a\u0440\u0438\u0442\u0438\u0447\u043d\u044b\u0445 {CountCriticalCityComplaints()}, \u043f\u0440\u043e\u0441\u0440\u043e\u0447\u0435\u043d\u043e {CountExpiredCityComplaints()}, \u0440\u0435\u0448\u0435\u043d\u043e \u0441\u0435\u0433\u043e\u0434\u043d\u044f {CountResolvedCityComplaintsToday()}.\n\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u044b \u0441\u043d\u0430\u0447\u0430\u043b\u0430 \u043a\u043e\u043f\u044f\u0442\u0441\u044f, \u0437\u0430\u0442\u0435\u043c \u043f\u043e\u0434\u0430\u044e\u0442\u0441\u044f \u043a\u0430\u043a \u043e\u0434\u043d\u0430 \u0436\u0430\u043b\u043e\u0431\u0430 \u0441\u043e \u0441\u043f\u0438\u0441\u043a\u043e\u043c \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u0432\u0448\u0438\u0445."
-            : $"City complaints: open {CountOpenCityComplaints()}, critical {CountCriticalCityComplaints()}, expired {CountExpiredCityComplaints()}, resolved today {CountResolvedCityComplaintsToday()}.\nProblems accumulate first, then become one complaint with a signer list.";
+            ? $"{FormatCityTrustSummary(ru)}.\nОбращения: активно {CountOpenCityComplaints()}, срочных {CountCriticalCityComplaints()}, просрочено {CountExpiredCityComplaints()}, выполнено сегодня {CountResolvedCityComplaintsToday()}.\nПринятое обращение становится городской целью на 24 часа. Отклонение или просрочка снижает доверие на 25."
+            : $"{FormatCityTrustSummary(ru)}.\nCitizen requests: active {CountOpenCityComplaints()}, urgent {CountCriticalCityComplaints()}, expired {CountExpiredCityComplaints()}, resolved today {CountResolvedCityComplaintsToday()}.\nAccepted requests become 24h city goals. Rejection or expiry costs 25 trust.";
+        cityHallScreenUi.SummaryText.color = cityTrust <= -20 ? GetCityTrustColor() : FleetSecondaryTextColor;
 
         cityHallScreenUi.EmptyText.gameObject.SetActive(rows.Count == 0);
         cityHallScreenUi.EmptyText.text = ru
-            ? "\u041f\u043e\u043a\u0430 \u0436\u0430\u043b\u043e\u0431 \u043d\u0435\u0442. \u0413\u043e\u0440\u043e\u0436\u0430\u043d\u0435 \u043d\u0430\u0447\u043d\u0443\u0442 \u043f\u043e\u0434\u0430\u0432\u0430\u0442\u044c \u0438\u0445, \u043a\u043e\u0433\u0434\u0430 \u0438\u0445 \u043d\u0443\u0436\u0434\u044b \u0441\u0442\u0430\u043d\u0443\u0442 \u0437\u0430\u043c\u0435\u0442\u043d\u044b\u043c\u0438."
-            : "No complaints yet. Citizens will file them when their needs become visible.";
+            ? "Пока обращений нет. Ратуша молчит так уверенно, будто это тоже вид управления."
+            : "No requests yet. City Hall is quiet.";
 
         for (int i = 0; i < cityHallScreenUi.Rows.Length; i++)
         {
@@ -287,24 +362,57 @@ public partial class GameBootstrap
             if (!active)
             {
                 row.ComplaintId = 0;
+                if (row.CanvasGroup != null)
+                {
+                    row.CanvasGroup.alpha = 1f;
+                    row.CanvasGroup.interactable = true;
+                    row.CanvasGroup.blocksRaycasts = true;
+                }
+
+                if (row.LayoutElement != null)
+                {
+                    row.LayoutElement.preferredHeight = 52f;
+                    row.LayoutElement.minHeight = 0f;
+                }
+
                 continue;
             }
 
             CityComplaintRowViewModel data = rows[i];
+            CityComplaint complaint = GetCityComplaintById(data.Id);
+            bool isDismissingRejected = IsCityHallRejectedComplaintDismissing(complaint);
+            float dismissT = isDismissingRejected
+                ? Mathf.Clamp01(cityHallRejectedRowDismissTimer / CityHallRejectedRowDismissSeconds)
+                : 1f;
+
             row.ComplaintId = data.Id;
             row.TitleText.text = data.Title;
             row.MetaText.text = data.Meta;
             row.Accent.color = data.AccentColor;
             row.Background.color = data.Id == selectedCityComplaintId
                 ? new Color(0.24f, 0.30f, 0.40f, 1f)
-                : data.State == CityComplaintState.Resolved
+                : !IsCityComplaintActive(complaint)
                     ? new Color(0.12f, 0.17f, 0.15f, 1f)
                     : FleetCardMutedColor;
-            row.TitleText.color = data.State == CityComplaintState.Resolved ? FleetSecondaryTextColor : Color.white;
+            row.TitleText.color = !IsCityComplaintActive(complaint) ? FleetSecondaryTextColor : Color.white;
+            row.Button.interactable = !isDismissingRejected;
+            if (row.CanvasGroup != null)
+            {
+                row.CanvasGroup.alpha = dismissT;
+                row.CanvasGroup.interactable = !isDismissingRejected;
+                row.CanvasGroup.blocksRaycasts = !isDismissingRejected;
+            }
+
+            if (row.LayoutElement != null)
+            {
+                row.LayoutElement.preferredHeight = Mathf.Lerp(0f, 52f, dismissT);
+                row.LayoutElement.minHeight = 0f;
+            }
         }
 
         UpdateCityHallComplaintDetail(rows, ru);
         LocalizeCanvas(cityHallScreenUi.CanvasRoot);
+        EnsureCityHallDecisionButtonsClickable();
         LayoutRebuilder.ForceRebuildLayoutImmediate(cityHallScreenUi.WindowRoot);
     }
 
@@ -323,11 +431,11 @@ public partial class GameBootstrap
 
         if (complaint == null || row == null)
         {
-            cityHallScreenUi.DetailTitleText.text = ru ? "\u041d\u0435\u0442 \u0436\u0430\u043b\u043e\u0431" : "No complaint selected";
+            cityHallScreenUi.DetailTitleText.text = ru ? "Нет обращений" : "No request selected";
             cityHallScreenUi.DetailMetaText.text = string.Empty;
             cityHallScreenUi.DetailBodyText.text = ru
-                ? "\u0412\u044b\u0431\u0435\u0440\u0438 \u0436\u0430\u043b\u043e\u0431\u0443 \u0441\u043b\u0435\u0432\u0430, \u0447\u0442\u043e\u0431\u044b \u0443\u0432\u0438\u0434\u0435\u0442\u044c \u043f\u0440\u0438\u0447\u0438\u043d\u0443."
-                : "Select a complaint on the left to see the reason.";
+                ? "Выбери обращение слева: там обычно спрятана маленькая катастрофа с официальной шапкой."
+                : "Select a request on the left to see the reason.";
             SetCityHallDetailButtons(null, ru);
             return;
         }
@@ -341,18 +449,13 @@ public partial class GameBootstrap
     private void SetCityHallDetailButtons(CityComplaint complaint, bool ru)
     {
         bool hasComplaint = complaint != null;
-        bool isOpen = hasComplaint && complaint.State == CityComplaintState.Open;
-        DriverAgent worker = hasComplaint ? GetDriverAgentById(complaint.WorkerId) : null;
-        bool canFocusTarget = hasComplaint &&
-                              ((complaint.LinkedLocationType.HasValue && locations.ContainsKey(complaint.LinkedLocationType.Value)) ||
-                               locations.ContainsKey(LocationType.CityHall));
+        bool isPendingDecision = hasComplaint && complaint.State == CityComplaintState.Open;
 
-        cityHallScreenUi.FocusWorkerButtonText.text = ru ? "\u041a \u043f\u043e\u0434\u043f\u0438\u0441\u0430\u043d\u0442\u0443" : "Focus signer";
-        cityHallScreenUi.FocusWorkerButton.interactable = worker != null;
-        cityHallScreenUi.FocusTargetButtonText.text = ru ? "\u041a \u0446\u0435\u043b\u0438" : "Focus target";
-        cityHallScreenUi.FocusTargetButton.interactable = canFocusTarget;
-        cityHallScreenUi.ResolveButtonText.text = ru ? "\u041e\u0442\u043c\u0435\u0442\u0438\u0442\u044c \u0440\u0430\u0437\u043e\u0431\u0440\u0430\u043d\u043d\u043e\u0439" : "Mark reviewed";
-        cityHallScreenUi.ResolveButton.interactable = isOpen;
+        cityHallScreenUi.AcceptButtonText.text = ru ? "Принять" : "Accept";
+        cityHallScreenUi.AcceptButton.interactable = isPendingDecision;
+        cityHallScreenUi.RejectButtonText.text = ru ? "Отклонить" : "Reject";
+        cityHallScreenUi.RejectButton.interactable = isPendingDecision;
+        EnsureCityHallDecisionButtonsClickable();
     }
 
     private void SelectCityHallComplaintRow(int rowIndex)
@@ -373,54 +476,80 @@ public partial class GameBootstrap
         PlayUiSound(uiSelectClip, 0.72f);
     }
 
-    private void FocusSelectedCityComplaintWorker()
+    private void AcceptSelectedCityComplaint()
     {
-        CityComplaint complaint = GetCityComplaintById(selectedCityComplaintId);
-        if (complaint == null)
-        {
-            return;
-        }
-
-        isCityHallPanelOpen = false;
-        isCityHallScreenDirty = true;
-        FocusWorkerFromQuickHud(complaint.WorkerId, "city hall complaint");
-    }
-
-    private void FocusSelectedCityComplaintTarget()
-    {
-        CityComplaint complaint = GetCityComplaintById(selectedCityComplaintId);
-        if (complaint == null)
-        {
-            return;
-        }
-
-        LocationType target = complaint.LinkedLocationType.HasValue && locations.ContainsKey(complaint.LinkedLocationType.Value)
-            ? complaint.LinkedLocationType.Value
-            : LocationType.CityHall;
-        if (!locations.ContainsKey(target))
-        {
-            return;
-        }
-
-        isCityHallPanelOpen = false;
-        isCityHallScreenDirty = true;
-        selectedLocation = target;
-        selectedLocalStopIndex = -1;
-        selectedPersonalHouseIndex = -1;
-        isTruckDetailsOpen = false;
-        isLocalBusDetailsOpen = false;
-        isDriverDetailsOpen = false;
-        FocusCameraOnWorldPosition(GetLocationCenter(locations[target]));
-        RefreshSelectionVisuals();
-        PlayUiSound(uiSelectClip, 0.75f);
-    }
-
-    private void ResolveSelectedCityComplaint()
-    {
-        if (ResolveCityComplaintManually(selectedCityComplaintId))
+        if (AcceptCityComplaint(selectedCityComplaintId))
         {
             PlayUiSound(uiSelectClip, 0.75f);
-            RebuildCityHallScreen();
+            isCityHallPanelOpen = false;
+            isCityHallScreenDirty = true;
+            cityHallScreenUi.CanvasRoot.SetActive(false);
         }
+    }
+
+    private void RejectSelectedCityComplaint()
+    {
+        int rejectedComplaintId = selectedCityComplaintId;
+        if (RejectCityComplaint(selectedCityComplaintId))
+        {
+            PlayUiSound(slotLoseClip != null ? slotLoseClip : uiSelectClip, 0.62f);
+            BeginCityHallRejectedRowDismiss(rejectedComplaintId);
+            CityComplaint next = GetHighestPriorityOpenCityComplaint();
+            selectedCityComplaintId = next?.Id ?? 0;
+            isCityHallScreenDirty = true;
+        }
+    }
+
+    private static bool DoesCityHallRowsContain(List<CityComplaintRowViewModel> rows, int complaintId)
+    {
+        if (rows == null || complaintId <= 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (rows[i].Id == complaintId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void BeginCityHallRejectedRowDismiss(int complaintId)
+    {
+        if (complaintId <= 0)
+        {
+            return;
+        }
+
+        cityHallDismissingRejectedComplaintId = complaintId;
+        cityHallRejectedRowDismissTimer = CityHallRejectedRowDismissSeconds;
+    }
+
+    private void UpdateCityHallRejectedRowDismissAnimation()
+    {
+        if (cityHallRejectedRowDismissTimer <= 0f)
+        {
+            return;
+        }
+
+        cityHallRejectedRowDismissTimer = Mathf.Max(0f, cityHallRejectedRowDismissTimer - Time.unscaledDeltaTime);
+        if (cityHallRejectedRowDismissTimer <= 0f)
+        {
+            cityHallDismissingRejectedComplaintId = 0;
+        }
+
+        isCityHallScreenDirty = true;
+    }
+
+    private bool IsCityHallRejectedComplaintDismissing(CityComplaint complaint)
+    {
+        return complaint != null &&
+               complaint.Id == cityHallDismissingRejectedComplaintId &&
+               complaint.State == CityComplaintState.Rejected &&
+               cityHallRejectedRowDismissTimer > 0f;
     }
 }

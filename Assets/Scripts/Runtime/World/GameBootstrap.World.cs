@@ -326,6 +326,7 @@ public partial class GameBootstrap
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Bar at anchor ({anchorCell.x},{anchorCell.y}).");
         NotifyTutorialServiceBuildingBuilt(LocationType.Bar);
+        NotifyCityComplaintServiceBuilt(LocationType.Bar);
         return true;
     }
 
@@ -365,6 +366,7 @@ public partial class GameBootstrap
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Canteen at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         NotifyTutorialServiceBuildingBuilt(LocationType.Canteen);
+        NotifyCityComplaintServiceBuilt(LocationType.Canteen);
         return true;
     }
 
@@ -383,6 +385,7 @@ public partial class GameBootstrap
         RebuildRoadsideBenches();
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Kiosk at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        NotifyCityComplaintServiceBuilt(LocationType.Kiosk);
         return true;
     }
 
@@ -402,6 +405,7 @@ public partial class GameBootstrap
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed Gambling Hall at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         NotifyTutorialServiceBuildingBuilt(LocationType.GamblingHall);
+        NotifyCityComplaintServiceBuilt(LocationType.GamblingHall);
         return true;
     }
 
@@ -421,6 +425,7 @@ public partial class GameBootstrap
         RebuildRoadSigns();
         SessionDebugLogger.Log("BUILD", $"Placed City Park at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
         NotifyTutorialServiceBuildingBuilt(LocationType.CityPark);
+        NotifyCityComplaintServiceBuilt(LocationType.CityPark);
         return true;
     }
 
@@ -526,6 +531,7 @@ public partial class GameBootstrap
         MoveAmbientCatsToCurrentHome();
         QueueMotelBootstrapWorkerWave();
         SessionDebugLogger.Log("BUILD", $"Placed Motel at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        NotifyCityComplaintServiceBuilt(LocationType.Motel);
         return true;
     }
 

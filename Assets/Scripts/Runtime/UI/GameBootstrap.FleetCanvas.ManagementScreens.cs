@@ -143,6 +143,8 @@ public partial class GameBootstrap
         public Text  DetailLifeOpinionsTitleText;
         public readonly List<WorkerLifeOpinionRowUi> DetailLifeOpinionRows = new();
         public Text  DetailInventoryTitleText;
+        public GameObject DetailInventoryCardRowRoot;
+        public Text  DetailInventoryEmptyText;
         public WorkerAutoConsumableCardUi DetailSnackCard;
         public WorkerAutoConsumableCardUi DetailCoffeeCard;
         public Button DetailFocusButton;

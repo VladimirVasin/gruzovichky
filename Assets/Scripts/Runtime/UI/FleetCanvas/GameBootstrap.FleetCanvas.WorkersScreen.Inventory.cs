@@ -30,6 +30,7 @@ public partial class GameBootstrap
         driversScreenUi.DetailInventoryTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         RectTransform cardRow = CreateLayoutRow("WorkerInventoryAutoConsumableRow", inventoryContent, 292f, 38f);
+        driversScreenUi.DetailInventoryCardRowRoot = cardRow.gameObject;
         HorizontalLayoutGroup rowLayout = cardRow.GetComponent<HorizontalLayoutGroup>();
         rowLayout.childAlignment = TextAnchor.UpperLeft;
         rowLayout.childForceExpandWidth = false;
@@ -49,6 +50,17 @@ public partial class GameBootstrap
             WorkerCoffeeItemId,
             GetWorkerInventoryCoffeeIcon(),
             GetWorkerInventoryEnergyIcon());
+
+        driversScreenUi.DetailInventoryEmptyText = CreateBodyText(
+            "WorkerInventoryEmpty",
+            inventoryContent,
+            font,
+            string.Empty,
+            15,
+            TextAnchor.UpperLeft,
+            FleetMutedTextColor);
+        driversScreenUi.DetailInventoryEmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 64f;
+        driversScreenUi.DetailInventoryEmptyText.gameObject.SetActive(false);
     }
 
     private WorkerAutoConsumableCardUi CreateWorkerAutoConsumableCard(
@@ -213,12 +225,38 @@ public partial class GameBootstrap
         int snackQuantity = GetWorkerInventoryItemQuantity(worker, WorkerSnackItemId);
         int coffeeQuantity = GetWorkerInventoryItemQuantity(worker, WorkerCoffeeItemId);
         int visibleQuantity = Mathf.Max(0, snackQuantity) + Mathf.Max(0, coffeeQuantity);
+        bool hasSnack = snackQuantity > 0;
+        bool hasCoffee = coffeeQuantity > 0;
+        bool hasVisibleItems = hasSnack || hasCoffee;
 
         if (driversScreenUi.DetailInventoryTitleText != null)
         {
             driversScreenUi.DetailInventoryTitleText.text = ru
                 ? $"\u0418\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c ({visibleQuantity}/{WorkerInventoryMaxStacks})"
                 : $"Inventory ({visibleQuantity}/{WorkerInventoryMaxStacks})";
+        }
+
+        if (driversScreenUi.DetailInventoryCardRowRoot != null)
+        {
+            driversScreenUi.DetailInventoryCardRowRoot.SetActive(hasVisibleItems);
+        }
+
+        if (driversScreenUi.DetailInventoryEmptyText != null)
+        {
+            driversScreenUi.DetailInventoryEmptyText.gameObject.SetActive(!hasVisibleItems);
+            driversScreenUi.DetailInventoryEmptyText.text = ru
+                ? "\u0421\u0435\u0439\u0447\u0430\u0441 \u0432 \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u0435 \u043d\u0435\u0442 \u0430\u0432\u0442\u043e\u0440\u0430\u0441\u0445\u043e\u0434\u043d\u0438\u043a\u043e\u0432."
+                : "There are no auto-consumables in stock right now.";
+        }
+
+        if (driversScreenUi.DetailSnackCard?.Root != null)
+        {
+            driversScreenUi.DetailSnackCard.Root.gameObject.SetActive(hasSnack);
+        }
+
+        if (driversScreenUi.DetailCoffeeCard?.Root != null)
+        {
+            driversScreenUi.DetailCoffeeCard.Root.gameObject.SetActive(hasCoffee);
         }
 
         UpdateWorkerAutoConsumableCard(

@@ -753,7 +753,7 @@ public partial class GameBootstrap
             LocationType.Kiosk => "Snack / Coffee: $4",
             LocationType.Kindergarten => $"Child care: {FormatKindergartenCoverageLabel(false)}",
             LocationType.LaborExchange => $"Vacancies: {CountAvailableLaborExchangePostings()}",
-            LocationType.CityHall => $"Complaints: {CountOpenCityComplaints()}",
+            LocationType.CityHall => $"Requests: {CountOpenCityComplaints()}",
             _ => string.Empty
         };
     }

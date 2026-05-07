@@ -343,6 +343,7 @@ public partial class GameBootstrap
 
         SeparateOverlappingDrivers();
         UpdateCityHallRuntime();
+        UpdateCityHallRequestMarkerRuntime();
         UpdateMoneyPopup();
         UpdateFleetScreenUi();
         UpdateDriversScreenUi();
@@ -357,6 +358,7 @@ public partial class GameBootstrap
         UpdateCityHallScreenUi();
         UpdateEventFeedUi();
         UpdateTutorialGoalsRuntime();
+        UpdateCityRequestGoalHudRuntime();
         CloseQuickHudsWhenBlockingHudIsOpen();
         UpdateTruckQuickHud();
         UpdateLocalBusQuickHud();

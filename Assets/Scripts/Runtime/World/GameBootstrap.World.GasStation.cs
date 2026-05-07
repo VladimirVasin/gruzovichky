@@ -18,6 +18,7 @@ public partial class GameBootstrap
         RebuildRoadSigns();
         NotifyTutorialServiceBuildingBuilt(LocationType.GasStation);
         SessionDebugLogger.Log("BUILD", $"Placed Gas Station at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        NotifyCityComplaintServiceBuilt(LocationType.GasStation);
         return true;
     }
 

@@ -6,6 +6,9 @@ public partial class GameBootstrap
     private const float CityComplaintScanIntervalSeconds = 4.5f;
     private const float CityComplaintCooldownWorldHours = 8f;
     private const int CityComplaintMaxStoredResolved = 24;
+    private const float CityServiceRequestInitialDelayWorldHours = 8f;
+    private const float CityServiceRequestSpacingWorldHours = 12f;
+    private const float CityServiceRequestCooldownWorldHours = 18f;
 
     private enum CityComplaintCategory
     {
@@ -19,8 +22,18 @@ public partial class GameBootstrap
     private enum CityComplaintState
     {
         Open,
+        Accepted,
+        Rejected,
         Expired,
         Resolved
+    }
+
+    private sealed class CityServiceRequestCandidate
+    {
+        public LocationType Target;
+        public WorkerNeedKind? LinkedNeed;
+        public int Severity;
+        public int Weight;
     }
 
     private sealed class CityComplaint
@@ -41,6 +54,10 @@ public partial class GameBootstrap
         public int ResolvedDay;
         public string ResolveReason = string.Empty;
         public bool ManuallyResolved;
+        public float AcceptedWorldHour;
+        public float RejectedWorldHour;
+        public bool TrustPenaltyApplied;
+        public bool IsUnread;
         public readonly List<int> SignerIds = new();
         public readonly List<string> SignerNames = new();
     }
@@ -63,6 +80,8 @@ public partial class GameBootstrap
     private int nextCityComplaintId = 1;
     private float cityComplaintScanTimer;
     private bool wasCityHallBuiltLastTick;
+    private float cityHallRuntimeStartedWorldHour = -1f;
+    private float nextCityServiceRequestAllowedWorldHour;
 
     private void UpdateCityHallRuntime()
     {
@@ -73,6 +92,8 @@ public partial class GameBootstrap
             isCityHallScreenDirty = true;
             if (cityHallBuilt)
             {
+                cityHallRuntimeStartedWorldHour = GetCurrentWorldHour();
+                nextCityServiceRequestAllowedWorldHour = cityHallRuntimeStartedWorldHour + CityServiceRequestInitialDelayWorldHours;
                 SessionDebugLogger.Log("CITY_HALL", "City Hall runtime enabled.");
             }
         }
@@ -98,22 +119,7 @@ public partial class GameBootstrap
     private void ScanCityComplaints()
     {
         int createdThisScan = 0;
-        for (int i = 0; i < driverAgents.Count; i++)
-        {
-            DriverAgent worker = driverAgents[i];
-            if (!CanWorkerFileCityComplaint(worker))
-            {
-                continue;
-            }
-
-            TryCreateNeedComplaint(worker, WorkerNeedKind.Meal, ref createdThisScan);
-            TryCreateNeedComplaint(worker, WorkerNeedKind.Sleep, ref createdThisScan);
-            TryCreateNeedComplaint(worker, WorkerNeedKind.Leisure, ref createdThisScan);
-            TryCreateLowMoneyComplaint(worker, ref createdThisScan);
-            TryCreateNoJobComplaint(worker, ref createdThisScan);
-            TryCreateServiceMissingComplaint(worker, ref createdThisScan);
-            TryCreateFamilyStressComplaint(worker, ref createdThisScan);
-        }
+        TryCreateMissingServiceBuildingRequest(ref createdThisScan);
 
         PruneStaleCityComplaintPendingGroups();
 
@@ -121,6 +127,156 @@ public partial class GameBootstrap
         {
             isCityHallScreenDirty = true;
         }
+    }
+
+    private void TryCreateMissingServiceBuildingRequest(ref int createdThisScan)
+    {
+        if (cityHallRuntimeStartedWorldHour < 0f)
+        {
+            cityHallRuntimeStartedWorldHour = GetCurrentWorldHour();
+        }
+
+        float now = GetCurrentWorldHour();
+        if (now < nextCityServiceRequestAllowedWorldHour ||
+            now - cityHallRuntimeStartedWorldHour < CityServiceRequestInitialDelayWorldHours)
+        {
+            return;
+        }
+
+        List<CityServiceRequestCandidate> candidates = BuildMissingServiceRequestCandidates();
+        if (candidates.Count == 0 || !TryPickRandomCityRequestSigner(out DriverAgent signer))
+        {
+            return;
+        }
+
+        int totalWeight = 0;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            totalWeight += Mathf.Max(1, candidates[i].Weight);
+        }
+
+        int roll = Random.Range(0, Mathf.Max(1, totalWeight));
+        CityServiceRequestCandidate selected = candidates[0];
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            roll -= Mathf.Max(1, candidates[i].Weight);
+            if (roll < 0)
+            {
+                selected = candidates[i];
+                break;
+            }
+        }
+
+        if (CreateServiceBuildingRequest(signer, selected))
+        {
+            createdThisScan++;
+            nextCityServiceRequestAllowedWorldHour = now + CityServiceRequestSpacingWorldHours;
+        }
+    }
+
+    private List<CityServiceRequestCandidate> BuildMissingServiceRequestCandidates()
+    {
+        List<CityServiceRequestCandidate> candidates = new();
+        AddMissingServiceRequestCandidate(candidates, LocationType.Kiosk, WorkerNeedKind.Meal, 3, 8);
+        AddMissingServiceRequestCandidate(candidates, LocationType.Motel, WorkerNeedKind.Sleep, 3, 7);
+        AddMissingServiceRequestCandidate(candidates, LocationType.Canteen, WorkerNeedKind.Meal, 2, 5);
+        AddMissingServiceRequestCandidate(candidates, LocationType.Bar, WorkerNeedKind.Leisure, 2, 4);
+        AddMissingServiceRequestCandidate(candidates, LocationType.CityPark, WorkerNeedKind.Leisure, 2, 3);
+        AddMissingServiceRequestCandidate(candidates, LocationType.GamblingHall, WorkerNeedKind.Leisure, 2, 3);
+        AddMissingServiceRequestCandidate(candidates, LocationType.GasStation, null, 2, 2);
+        return candidates;
+    }
+
+    private void AddMissingServiceRequestCandidate(
+        List<CityServiceRequestCandidate> candidates,
+        LocationType target,
+        WorkerNeedKind? linkedNeed,
+        int severity,
+        int weight)
+    {
+        if (locations.ContainsKey(target))
+        {
+            return;
+        }
+
+        string groupKey = GetCityComplaintGroupKey(CityComplaintCategory.ServiceMissing, linkedNeed, target);
+        if (FindActiveCityComplaintByGroupKey(groupKey) != null)
+        {
+            return;
+        }
+
+        float now = GetCurrentWorldHour();
+        if (cityComplaintCooldownByKey.TryGetValue(groupKey, out float nextAllowedWorldHour) && now < nextAllowedWorldHour)
+        {
+            return;
+        }
+
+        candidates.Add(new CityServiceRequestCandidate
+        {
+            Target = target,
+            LinkedNeed = linkedNeed,
+            Severity = Mathf.Clamp(severity, 1, 4),
+            Weight = Mathf.Max(1, weight)
+        });
+    }
+
+    private bool TryPickRandomCityRequestSigner(out DriverAgent signer)
+    {
+        signer = null;
+        List<DriverAgent> candidates = new();
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent worker = driverAgents[i];
+            if (CanWorkerFileCityComplaint(worker))
+            {
+                candidates.Add(worker);
+            }
+        }
+
+        if (candidates.Count == 0)
+        {
+            return false;
+        }
+
+        signer = candidates[Random.Range(0, candidates.Count)];
+        return signer != null;
+    }
+
+    private bool CreateServiceBuildingRequest(DriverAgent signer, CityServiceRequestCandidate candidate)
+    {
+        if (signer == null || candidate == null)
+        {
+            return false;
+        }
+
+        float now = GetCurrentWorldHour();
+        string groupKey = GetCityComplaintGroupKey(CityComplaintCategory.ServiceMissing, candidate.LinkedNeed, candidate.Target);
+        CityComplaint complaint = new()
+        {
+            Id = nextCityComplaintId++,
+            WorkerId = signer.DriverId,
+            WorkerName = string.IsNullOrWhiteSpace(signer.DriverName) ? $"#{signer.DriverId}" : signer.DriverName,
+            GroupKey = groupKey,
+            Category = CityComplaintCategory.ServiceMissing,
+            State = CityComplaintState.Open,
+            Severity = Mathf.Clamp(candidate.Severity, 1, 4),
+            LinkedNeed = candidate.LinkedNeed,
+            LinkedLocationType = candidate.Target,
+            CreatedWorldHour = now,
+            CreatedDay = currentDay,
+            DueWorldHour = 0f,
+            IsUnread = true
+        };
+        complaint.SignerIds.Add(signer.DriverId);
+        complaint.SignerNames.Add(complaint.WorkerName);
+
+        cityComplaints.Add(complaint);
+        cityComplaintCooldownByKey[groupKey] = now + CityServiceRequestCooldownWorldHours;
+        NotifyCityHallNewRequest(complaint);
+        SessionDebugLogger.Log(
+            "CITY_HALL",
+            $"Citizen request #{complaint.Id} filed: target={candidate.Target}, signer={complaint.WorkerName}, severity={complaint.Severity}.");
+        return true;
     }
 
     private bool CanWorkerFileCityComplaint(DriverAgent worker)
@@ -216,7 +372,7 @@ public partial class GameBootstrap
         for (int i = 0; i < cityComplaints.Count; i++)
         {
             CityComplaint complaint = cityComplaints[i];
-            if (complaint == null || complaint.State != CityComplaintState.Open)
+            if (!IsCityComplaintActive(complaint))
             {
                 continue;
             }
@@ -232,6 +388,43 @@ public partial class GameBootstrap
         if (changed)
         {
             isCityHallScreenDirty = true;
+        }
+    }
+
+    private void NotifyCityComplaintServiceBuilt(LocationType locationType)
+    {
+        if (cityComplaints.Count == 0)
+        {
+            return;
+        }
+
+        bool changed = false;
+        for (int i = 0; i < cityComplaints.Count; i++)
+        {
+            CityComplaint complaint = cityComplaints[i];
+            if (!IsCityComplaintActive(complaint) ||
+                complaint.Category != CityComplaintCategory.ServiceMissing ||
+                !complaint.LinkedLocationType.HasValue ||
+                complaint.LinkedLocationType.Value != locationType)
+            {
+                continue;
+            }
+
+            DriverAgent worker = GetDriverAgentById(complaint.WorkerId);
+            if (ShouldResolveCityComplaint(complaint, worker, out string reason))
+            {
+                ResolveCityComplaint(
+                    complaint,
+                    string.IsNullOrWhiteSpace(reason) ? "requested service exists" : reason,
+                    manually: false);
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            isCityHallScreenDirty = true;
+            SessionDebugLogger.Log("CITY_HALL", $"Resolved service request after building {locationType}.");
         }
     }
 
@@ -304,7 +497,7 @@ public partial class GameBootstrap
     private bool ResolveCityComplaintManually(int complaintId)
     {
         CityComplaint complaint = GetCityComplaintById(complaintId);
-        if (complaint == null || complaint.State != CityComplaintState.Open)
+        if (!IsCityComplaintActive(complaint))
         {
             return false;
         }
@@ -314,22 +507,90 @@ public partial class GameBootstrap
         return true;
     }
 
+    private bool AcceptCityComplaint(int complaintId)
+    {
+        CityComplaint complaint = GetCityComplaintById(complaintId);
+        if (complaint == null || complaint.State != CityComplaintState.Open)
+        {
+            return false;
+        }
+
+        if (ShouldResolveCityComplaint(complaint, GetDriverAgentById(complaint.WorkerId), out string reason))
+        {
+            ResolveCityComplaint(complaint, string.IsNullOrWhiteSpace(reason) ? "already satisfied" : reason, manually: false);
+            return true;
+        }
+
+        float now = GetCurrentWorldHour();
+        complaint.State = CityComplaintState.Accepted;
+        complaint.AcceptedWorldHour = now;
+        complaint.DueWorldHour = now + CityComplaintDueWorldHours;
+        complaint.IsUnread = false;
+        isCityHallScreenDirty = true;
+        StartCityRequestGoalFeedback(success: false, complaint, previewOnly: true);
+        PushFeedEvent(
+            "Citizen request accepted.",
+            $"Обращение принято: построить {FormatCityComplaintTargetName(complaint)} за 24 часа.",
+            FeedEventType.Info);
+        SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} accepted: due={complaint.DueWorldHour:0.0}.");
+        return true;
+    }
+
+    private bool RejectCityComplaint(int complaintId)
+    {
+        CityComplaint complaint = GetCityComplaintById(complaintId);
+        if (complaint == null || complaint.State != CityComplaintState.Open)
+        {
+            return false;
+        }
+
+        float now = GetCurrentWorldHour();
+        complaint.State = CityComplaintState.Rejected;
+        complaint.RejectedWorldHour = now;
+        complaint.ResolvedWorldHour = now;
+        complaint.ResolvedDay = currentDay;
+        complaint.ResolveReason = "rejected by player";
+        complaint.IsUnread = false;
+        complaint.TrustPenaltyApplied = true;
+        cityComplaintCooldownByKey[GetCityComplaintGroupKey(complaint.Category, complaint.LinkedNeed, complaint.LinkedLocationType)] =
+            now + CityServiceRequestCooldownWorldHours;
+
+        ApplyCityTrustDelta(CityTrustCitizenRequestRejectedPenalty, $"citizen request #{complaint.Id} rejected");
+        isCityHallScreenDirty = true;
+        PushFeedEvent(
+            "Citizen request rejected.",
+            $"Обращение отклонено: доверие {CityTrustCitizenRequestRejectedPenalty}.",
+            FeedEventType.Warning);
+        SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} rejected.");
+        return true;
+    }
+
     private void ResolveCityComplaint(CityComplaint complaint, string reason, bool manually)
     {
-        if (complaint == null || complaint.State != CityComplaintState.Open)
+        if (!IsCityComplaintActive(complaint))
         {
             return;
         }
 
+        bool wasAccepted = complaint.State == CityComplaintState.Accepted;
         complaint.State = CityComplaintState.Resolved;
         complaint.ResolvedWorldHour = GetCurrentWorldHour();
         complaint.ResolvedDay = currentDay;
         complaint.ResolveReason = reason ?? string.Empty;
         complaint.ManuallyResolved = manually;
+        complaint.IsUnread = false;
         cityComplaintCooldownByKey[GetCityComplaintGroupKey(complaint.Category, complaint.LinkedNeed, complaint.LinkedLocationType)] =
             complaint.ResolvedWorldHour + CityComplaintCooldownWorldHours;
 
         ApplyCityComplaintSatisfactionDelta(complaint, manually ? 1 : Mathf.Clamp(complaint.Severity, 1, 4));
+        bool completedAcceptedServiceGoal = wasAccepted &&
+                                            !manually &&
+                                            complaint.Category == CityComplaintCategory.ServiceMissing;
+        if (completedAcceptedServiceGoal)
+        {
+            ApplyCityTrustDelta(CityTrustCitizenRequestCompletedReward, $"citizen request #{complaint.Id} completed");
+            StartCityRequestGoalFeedback(success: true, complaint);
+        }
 
         SessionDebugLogger.Log("CITY_HALL", $"Complaint #{complaint.Id} resolved: manual={manually}, reason={complaint.ResolveReason}.");
     }
@@ -339,7 +600,7 @@ public partial class GameBootstrap
         int resolvedCount = 0;
         for (int i = 0; i < cityComplaints.Count; i++)
         {
-            if (cityComplaints[i] != null && cityComplaints[i].State != CityComplaintState.Open)
+            if (cityComplaints[i] != null && !IsCityComplaintActive(cityComplaints[i]))
             {
                 resolvedCount++;
             }
@@ -353,7 +614,7 @@ public partial class GameBootstrap
         cityComplaints.Sort(CompareCityComplaintsForStorage);
         for (int i = cityComplaints.Count - 1; i >= 0 && resolvedCount > CityComplaintMaxStoredResolved; i--)
         {
-            if (cityComplaints[i] == null || cityComplaints[i].State == CityComplaintState.Open)
+            if (cityComplaints[i] == null || IsCityComplaintActive(cityComplaints[i]))
             {
                 continue;
             }
@@ -378,7 +639,7 @@ public partial class GameBootstrap
         int count = 0;
         for (int i = 0; i < cityComplaints.Count; i++)
         {
-            if (cityComplaints[i]?.State == CityComplaintState.Open)
+            if (IsCityComplaintActive(cityComplaints[i]))
             {
                 count++;
             }
@@ -393,7 +654,7 @@ public partial class GameBootstrap
         for (int i = 0; i < cityComplaints.Count; i++)
         {
             CityComplaint complaint = cityComplaints[i];
-            if (complaint != null && complaint.State == CityComplaintState.Open && complaint.Severity >= 4)
+            if (IsCityComplaintActive(complaint) && complaint.Severity >= 4)
             {
                 count++;
             }
@@ -423,7 +684,7 @@ public partial class GameBootstrap
         for (int i = 0; i < cityComplaints.Count; i++)
         {
             CityComplaint complaint = cityComplaints[i];
-            if (complaint != null && complaint.State == CityComplaintState.Open && complaint.WorkerId == workerId)
+            if (IsCityComplaintActive(complaint) && complaint.WorkerId == workerId)
             {
                 count++;
             }
@@ -438,7 +699,7 @@ public partial class GameBootstrap
         {
             CityComplaint complaint = cityComplaints[i];
             if (complaint != null &&
-                complaint.State == CityComplaintState.Open &&
+                IsCityComplaintActive(complaint) &&
                 complaint.WorkerId == workerId &&
                 complaint.Category == category &&
                 complaint.LinkedNeed == need &&
@@ -470,7 +731,7 @@ public partial class GameBootstrap
         for (int i = 0; i < cityComplaints.Count; i++)
         {
             CityComplaint complaint = cityComplaints[i];
-            if (complaint == null || complaint.State != CityComplaintState.Open)
+            if (!IsCityComplaintActive(complaint))
             {
                 continue;
             }
@@ -499,6 +760,11 @@ public partial class GameBootstrap
                 continue;
             }
 
+            if (!IsCityComplaintActive(complaint) && !IsCityHallRejectedComplaintDismissing(complaint))
+            {
+                continue;
+            }
+
             rows.Add(new CityComplaintRowViewModel
             {
                 Id = complaint.Id,
@@ -516,150 +782,4 @@ public partial class GameBootstrap
         return rows;
     }
 
-    private static int CompareCityComplaintsForDisplay(CityComplaint a, CityComplaint b)
-    {
-        if (a == null && b == null) return 0;
-        if (a == null) return 1;
-        if (b == null) return -1;
-        int stateCompare = GetCityComplaintDisplayStateRank(a.State).CompareTo(GetCityComplaintDisplayStateRank(b.State));
-        if (stateCompare != 0) return stateCompare;
-        int severityCompare = b.Severity.CompareTo(a.Severity);
-        if (severityCompare != 0) return severityCompare;
-        return b.CreatedWorldHour.CompareTo(a.CreatedWorldHour);
-    }
-
-    private string GetCityHallQuickResourceText()
-    {
-        bool ru = IsRussianLanguage();
-        CityComplaint top = GetHighestPriorityOpenCityComplaint();
-        string topLine = top != null
-            ? FormatCityComplaintTitle(top, ru)
-            : (ru ? "\u041d\u0435\u0442 \u043e\u0442\u043a\u0440\u044b\u0442\u044b\u0445 \u0436\u0430\u043b\u043e\u0431" : "No open complaints");
-
-        return FormatValueLine(ru ? "\u041e\u0442\u043a\u0440\u044b\u0442\u043e" : "Open", CountOpenCityComplaints().ToString()) + "\n" +
-               FormatValueLine(ru ? "\u041a\u0440\u0438\u0442\u0438\u0447\u043d\u044b\u0445" : "Critical", CountCriticalCityComplaints().ToString()) + "\n" +
-               FormatValueLine(ru ? "\u041f\u0440\u043e\u0441\u0440\u043e\u0447\u0435\u043d\u043e" : "Expired", CountExpiredCityComplaints().ToString()) + "\n" +
-               FormatValueLine(ru ? "\u0420\u0435\u0448\u0435\u043d\u043e \u0441\u0435\u0433\u043e\u0434\u043d\u044f" : "Resolved today", CountResolvedCityComplaintsToday().ToString()) + "\n" +
-               FormatValueLine(ru ? "\u0413\u043b\u0430\u0432\u043d\u0430\u044f" : "Top issue", topLine);
-    }
-
-    private string FormatCityComplaintTitle(CityComplaint complaint, bool ru)
-    {
-        if (complaint == null)
-        {
-            return ru ? "\u0416\u0430\u043b\u043e\u0431\u0430" : "Complaint";
-        }
-
-        int signerCount = GetCityComplaintSignerCount(complaint);
-        string countSuffix = signerCount > 1 ? $" ({signerCount})" : string.Empty;
-        return complaint.Category switch
-        {
-            CityComplaintCategory.NeedPressure => $"{GetCityComplaintIssueTitle(complaint, ru)}{countSuffix}",
-            CityComplaintCategory.NoJob => ru ? $"\u041d\u0443\u0436\u043d\u0430 \u0440\u0430\u0431\u043e\u0442\u0430{countSuffix}" : $"Need jobs{countSuffix}",
-            CityComplaintCategory.LowMoney => ru ? $"\u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0434\u0435\u043d\u0435\u0433{countSuffix}" : $"Low money{countSuffix}",
-            CityComplaintCategory.ServiceMissing => ru ? $"\u041d\u0443\u0436\u0435\u043d \u0441\u0435\u0440\u0432\u0438\u0441{countSuffix}" : $"Missing service{countSuffix}",
-            CityComplaintCategory.FamilyStress => ru ? $"\u0421\u0435\u043c\u0435\u0439\u043d\u044b\u0439 \u0441\u0442\u0440\u0435\u0441\u0441{countSuffix}" : $"Family stress{countSuffix}",
-            _ => ru ? $"\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u0430\u044f \u0436\u0430\u043b\u043e\u0431\u0430{countSuffix}" : $"City complaint{countSuffix}"
-        };
-    }
-
-    private string FormatCityComplaintDetail(CityComplaint complaint, bool ru)
-    {
-        if (complaint == null)
-        {
-            return string.Empty;
-        }
-
-        string target = complaint.LinkedLocationType.HasValue ? GetSelectedLocationDisplayName(complaint.LinkedLocationType.Value) : string.Empty;
-        string state = GetCityComplaintStateLabel(complaint.State, ru);
-        string signers = FormatCityComplaintSignerNames(complaint, ru);
-        string timer = complaint.State == CityComplaintState.Open
-            ? FormatCityComplaintTimeLeft(complaint, ru)
-            : string.Empty;
-
-        string reason = complaint.Category switch
-        {
-            CityComplaintCategory.NeedPressure => complaint.LinkedNeed.HasValue
-                ? (ru
-                    ? $"Проблема: {GetCityComplaintNeedLabel(complaint.LinkedNeed.Value, ru)} повторяется у подписавших жителей."
-                    : $"Problem: repeated {GetCityComplaintNeedLabel(complaint.LinkedNeed.Value, ru)} pressure among signed citizens.")
-                : (ru ? "Повторяющаяся проблема с нуждами." : "Repeated needs pressure."),
-            CityComplaintCategory.NoJob => ru ? "Подписавшие жители долго остаются без назначения." : "Signed citizens have remained without assignments.",
-            CityComplaintCategory.LowMoney => ru ? "У подписавших жителей мало денег, а нужды уже давят." : "Signed citizens have very low money while needs are pressing.",
-            CityComplaintCategory.ServiceMissing => ru ? $"Рекомендуемая постройка: {target}." : $"Suggested building: {target}.",
-            CityComplaintCategory.FamilyStress => ru ? "Низкое довольство и критические нужды давят на семьи подписавших жителей." : "Low satisfaction and critical needs are stressing signed families.",
-            _ => string.Empty
-        };
-
-        if (complaint.State != CityComplaintState.Open && !string.IsNullOrWhiteSpace(complaint.ResolveReason))
-        {
-            reason += ru ? $"\n\u0418\u0442\u043e\u0433: {complaint.ResolveReason}." : $"\nResult: {complaint.ResolveReason}.";
-        }
-
-        string timerLine = string.IsNullOrWhiteSpace(timer)
-            ? string.Empty
-            : $"\n{timer}";
-
-        return ru
-            ? $"\u0421\u0442\u0430\u0442\u0443\u0441: {state}\n\u041f\u043e\u0434\u043f\u0438\u0441\u0430\u043b\u0438: {signers}\n{reason}{timerLine}"
-            : $"State: {state}\nSigned: {signers}\n{reason}{timerLine}";
-    }
-
-    private string FormatCityComplaintMeta(CityComplaint complaint, bool ru)
-    {
-        if (complaint == null)
-        {
-            return string.Empty;
-        }
-
-        int hour = Mathf.FloorToInt(Mathf.Repeat(complaint.CreatedWorldHour, 24f));
-        string created = ru ? $"\u0414{complaint.CreatedDay} {hour:00}:00" : $"D{complaint.CreatedDay} {hour:00}:00";
-        string severity = ru ? $"\u0441\u0440\u043e\u0447\u043d\u043e\u0441\u0442\u044c {complaint.Severity}" : $"severity {complaint.Severity}";
-        if (complaint.State == CityComplaintState.Open)
-        {
-            return $"{created} | {severity} | {FormatCityComplaintTimeLeft(complaint, ru)}";
-        }
-
-        return $"{created} | {GetCityComplaintStateLabel(complaint.State, ru)}";
-    }
-
-    private static string GetCityComplaintNeedLabel(WorkerNeedKind need, bool ru)
-    {
-        return need switch
-        {
-            WorkerNeedKind.Meal => ru ? "\u0433\u043e\u043b\u043e\u0434" : "food",
-            WorkerNeedKind.Sleep => ru ? "\u0441\u043e\u043d" : "sleep",
-            WorkerNeedKind.Leisure => ru ? "\u0434\u043e\u0441\u0443\u0433" : "leisure",
-            _ => ru ? "\u043d\u0443\u0436\u0434\u0430" : "need"
-        };
-    }
-
-    private static Color GetCityComplaintAccentColor(CityComplaint complaint)
-    {
-        if (complaint == null)
-        {
-            return new Color(0.45f, 0.52f, 0.62f, 1f);
-        }
-
-        if (complaint.State == CityComplaintState.Resolved)
-        {
-            return new Color(0.32f, 0.56f, 0.38f, 1f);
-        }
-
-        if (complaint.State == CityComplaintState.Expired)
-        {
-            return new Color(0.76f, 0.22f, 0.18f, 1f);
-        }
-
-        return complaint.Severity >= 4
-            ? new Color(0.84f, 0.24f, 0.18f, 1f)
-            : complaint.Severity >= 3
-                ? new Color(0.90f, 0.58f, 0.20f, 1f)
-                : new Color(0.46f, 0.58f, 0.78f, 1f);
-    }
-
-    private static string GetCityComplaintKey(int workerId, CityComplaintCategory category, WorkerNeedKind? need, LocationType? target)
-    {
-        return $"{workerId}:{category}:{(need.HasValue ? need.Value.ToString() : "none")}:{(target.HasValue ? target.Value.ToString() : "none")}";
-    }
 }
