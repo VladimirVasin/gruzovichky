@@ -5,6 +5,9 @@ using UnityEngine;
 public partial class GameBootstrap
 {
     private const int WorkerInventoryMaxStacks = 24;
+    private const string WorkerSnackItemId = "snack";
+    private const string WorkerCoffeeItemId = "coffee";
+    private const int WorkerVendorItemMaxQuantity = 1;
 
     private bool TryAddWorkerInventoryItem(
         DriverAgent worker,
@@ -27,6 +30,19 @@ public partial class GameBootstrap
         }
 
         NormalizeWorkerInventory(worker);
+        if (IsWorkerVendorInventoryItem(itemData.id))
+        {
+            int availableRoom = WorkerVendorItemMaxQuantity - GetWorkerInventoryItemQuantity(worker, itemData.id);
+            if (availableRoom <= 0)
+            {
+                SessionDebugLogger.Log("WORKER_INVENTORY", $"{worker.DriverName} already has max {itemData.id}; item could not fit.");
+                isDriversScreenDirty = true;
+                return false;
+            }
+
+            quantity = Mathf.Min(quantity, availableRoom);
+        }
+
         int maxStack = Mathf.Max(1, itemData.maxStack);
         bool stackable = itemData.stackable && instanceId <= 0;
         if (stackable)
@@ -113,6 +129,19 @@ public partial class GameBootstrap
     private bool HasWorkerInventoryItem(DriverAgent worker, string itemId, int quantity = 1)
     {
         return GetWorkerInventoryItemQuantity(worker, itemId) >= Mathf.Max(1, quantity);
+    }
+
+    private bool CanWorkerReceiveVendorInventoryItem(DriverAgent worker, string itemId)
+    {
+        return worker != null &&
+               !string.IsNullOrWhiteSpace(itemId) &&
+               GetWorkerInventoryItemQuantity(worker, itemId) < WorkerVendorItemMaxQuantity;
+    }
+
+    private static bool IsWorkerVendorInventoryItem(string itemId)
+    {
+        return string.Equals(itemId, WorkerSnackItemId, StringComparison.Ordinal) ||
+               string.Equals(itemId, WorkerCoffeeItemId, StringComparison.Ordinal);
     }
 
     private int GetWorkerInventoryItemQuantity(DriverAgent worker, string itemId)

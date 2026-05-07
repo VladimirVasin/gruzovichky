@@ -531,6 +531,29 @@ public partial class GameBootstrap
                 }
                 return;
 
+            case DriverRescuePhase.IdleWalkToKiosk:
+            case DriverRescuePhase.IdleWalkToCoffeeShop:
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                if (TryGetVendorPurchaseForPhase(driver.WalkPhase, out LocationType vendorType, out string itemId, out DriverRescuePhase atPhase))
+                {
+                    LocationData vendor = FindLocationByInstanceId(driver.PendingVendorLocationInstanceId);
+                    if (vendor != null && vendor.Type == vendorType && CanWorkerReceiveVendorInventoryItem(driver, itemId))
+                    {
+                        driver.WalkPhase = atPhase;
+                        driver.IdleActivityTimer = Mathf.Max(0.6f, driver.IdleActivityTimer);
+                        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} reached {vendor.Label}#{vendor.InstanceId} counter for {itemId}.");
+                        return;
+                    }
+                }
+
+                driver.PendingVendorLocationInstanceId = 0;
+                driver.WalkPhase = DriverRescuePhase.None;
+                driver.IdleWanderPauseTimer = Random.Range(0.5f, 1.5f);
+                SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived for vendor purchase, but the stand/item is no longer available.");
+                return;
+
             case DriverRescuePhase.IdleWalkToTrashCan:
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
@@ -678,6 +701,8 @@ public partial class GameBootstrap
             DriverRescuePhase.IdleWalkToCat or
             DriverRescuePhase.IdleWalkToBar or
             DriverRescuePhase.IdleWalkToCanteen or
+            DriverRescuePhase.IdleWalkToKiosk or
+            DriverRescuePhase.IdleWalkToCoffeeShop or
             DriverRescuePhase.IdleWalkToTrashCan or
             DriverRescuePhase.IdleWalkToGamblingHall or
             DriverRescuePhase.IdleWalkToCityPark or

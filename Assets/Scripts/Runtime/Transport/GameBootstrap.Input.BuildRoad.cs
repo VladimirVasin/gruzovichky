@@ -143,6 +143,8 @@ public partial class GameBootstrap
             BuildTool.Motel => TryPlaceMotelAtAnchor(cell),
             BuildTool.Bar => TryPlaceBarAtAnchor(cell),
             BuildTool.Canteen => TryPlaceCanteenAtAnchor(cell),
+            BuildTool.Kiosk => TryPlaceKioskAtAnchor(cell),
+            BuildTool.CoffeeShop => TryPlaceCoffeeShopAtAnchor(cell),
             BuildTool.GasStation => TryPlaceGasStationAtAnchor(cell),
             BuildTool.GamblingHall => TryPlaceGamblingHallAtAnchor(cell),
             BuildTool.CityPark        => TryPlaceCityParkAtAnchor(cell),
@@ -512,7 +514,7 @@ public partial class GameBootstrap
 
     private void CompleteBuildingPlacementFlow(BuildTool placedTool, Vector2Int anchorCell)
     {
-        if (placedTool == BuildTool.CityPark)
+        if (IsRoadlessBuildTool(placedTool))
         {
             activeBuildTool = BuildTool.None;
             hoveredBuildCell = null;
@@ -641,6 +643,16 @@ public partial class GameBootstrap
         if (activeBuildTool == BuildTool.Canteen)
         {
             return GetCanteenPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
+        if (activeBuildTool == BuildTool.Kiosk)
+        {
+            return GetKioskPlacementPreview(cell, out previewPosition, out previewScale);
+        }
+
+        if (activeBuildTool == BuildTool.CoffeeShop)
+        {
+            return GetCoffeeShopPlacementPreview(cell, out previewPosition, out previewScale);
         }
 
         if (activeBuildTool == BuildTool.GasStation)

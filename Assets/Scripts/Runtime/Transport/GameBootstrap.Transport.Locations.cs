@@ -27,6 +27,8 @@ public partial class GameBootstrap
                 LocationType.Motel   => 10,
                 LocationType.Bar     => 10,
                 LocationType.Canteen => 10,
+                LocationType.Kiosk   => 5,
+                LocationType.CoffeeShop => 5,
                 _                    => 0
             },
             BuildingBank  = type == LocationType.GamblingHall ? 50 : 0,
@@ -95,6 +97,12 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
             ApplyColor(baseBlock, new Color(0.18f, 0.19f, 0.20f), VisualSmoothnessAsphalt);
         }
+        else if (type == LocationType.Kiosk || type == LocationType.CoffeeShop)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
+            ApplyColor(baseBlock, new Color(0.62f, 0.56f, 0.44f), VisualSmoothnessAsphalt);
+        }
         else if (type == LocationType.Docks)
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.23f, 0f);
@@ -159,6 +167,14 @@ public partial class GameBootstrap
         {
             CreateCanteenDecoration(root.transform, center, min, max, anchor);
         }
+        else if (type == LocationType.Kiosk)
+        {
+            CreateVendorStandDecoration(root.transform, center, min, max, anchor, LocationType.Kiosk);
+        }
+        else if (type == LocationType.CoffeeShop)
+        {
+            CreateVendorStandDecoration(root.transform, center, min, max, anchor, LocationType.CoffeeShop);
+        }
         else if (type == LocationType.GamblingHall)
         {
             CreateGamblingHallDecoration(root.transform, center, min, max, anchor);
@@ -200,7 +216,7 @@ public partial class GameBootstrap
         // Production (Forest / Sawmill / FurnitureFactory) = amber
         // Service (everything else) = slate blue
         // Forest and BusStop have no upright base block - skip.
-        if (type != LocationType.Forest && type != LocationType.IntercityStop && type != LocationType.Stop && type != LocationType.CityPark && type != LocationType.PersonalHouse && type != LocationType.CarMarket)
+        if (type != LocationType.Forest && type != LocationType.IntercityStop && type != LocationType.Stop && type != LocationType.CityPark && type != LocationType.PersonalHouse && type != LocationType.CarMarket && type != LocationType.Kiosk && type != LocationType.CoffeeShop)
         {
             bool isProduction = IsProductionLocation(type);
             Color stripeColor = isProduction
@@ -269,16 +285,25 @@ public partial class GameBootstrap
             }
         }
 
-        if (type != LocationType.CityPark)
+        if (DoesLocationRequireRoadAccess(type))
         {
             EnsureLocationRoadAccessRoadCell(data, type.ToString());
         }
+    }
+
+    private static bool DoesLocationRequireRoadAccess(LocationType type)
+    {
+        return type != LocationType.CityPark &&
+               type != LocationType.Kiosk &&
+               type != LocationType.CoffeeShop;
     }
 
     private static bool IsMultiInstanceServiceBuildType(LocationType type) => type switch
     {
         LocationType.Bar          => true,
         LocationType.Canteen      => true,
+        LocationType.Kiosk        => true,
+        LocationType.CoffeeShop   => true,
         LocationType.GamblingHall => true,
         LocationType.GasStation   => true,
         LocationType.CityPark     => true,

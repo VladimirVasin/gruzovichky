@@ -143,6 +143,8 @@ public partial class GameBootstrap
                 (BuildTool.LaborExchange,    "LE", "Labor Exchange", new Color(0.34f, 0.47f, 0.56f))),
             CreateBuildCategory(cardList, font, "Services & Leisure", "Сервисы и досуг", false,
                 (BuildTool.Canteen,          "CT", "Canteen",       new Color(0.20f, 0.42f, 0.50f)),
+                (BuildTool.Kiosk,            "KS", "Kiosk",         new Color(0.86f, 0.58f, 0.24f)),
+                (BuildTool.CoffeeShop,       "CF", "Coffee Shop",   new Color(0.48f, 0.32f, 0.22f)),
                 (BuildTool.Bar,              "BR", "Bar",           new Color(0.52f, 0.20f, 0.20f)),
                 (BuildTool.GamblingHall,     "GH", "Gambling Hall", new Color(0.52f, 0.38f, 0.08f)),
                 (BuildTool.CityPark,         "CP", "City Park",     new Color(0.22f, 0.48f, 0.22f)),

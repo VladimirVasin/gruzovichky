@@ -19,6 +19,7 @@ public partial class GameBootstrap
     private const float WorkerNeedRetryCooldownHours = 1.25f;
     private const float WorkerNeedMoneyRetryCooldownHours = 3.5f;
     private const float WorkerShiftNeedGrowthMultiplier = 0.25f;
+    private const float WorkerConsumableNeedReliefRatio = 0.25f;
 
     private static bool IsWorkerActivelySleeping(DriverAgent driver)
     {
@@ -68,6 +69,8 @@ public partial class GameBootstrap
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Meal, oldMeal, driver.LastMealNeedStatus, driver.HoursSinceMeal);
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Sleep, oldSleep, driver.LastSleepNeedStatus, driver.HoursSinceSleep);
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Leisure, oldLeisure, driver.LastLeisureNeedStatus, driver.HoursSinceLeisure);
+
+        TryAutoUseCriticalNeedConsumables(driver);
 
         if (isDriversPanelOpen && selectedWorkerPanelDriverId == driver.DriverId)
         {
@@ -243,6 +246,8 @@ public partial class GameBootstrap
                driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
                driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal ||
                driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan ||
+               driver.WalkPhase == DriverRescuePhase.IdleAtKiosk ||
+               driver.WalkPhase == DriverRescuePhase.IdleAtCoffeeShop ||
                driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
                driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCityPark ||
@@ -255,6 +260,8 @@ public partial class GameBootstrap
     {
         int missing = 0;
         if (!locations.ContainsKey(LocationType.Canteen)) missing++;
+        if (!locations.ContainsKey(LocationType.Kiosk)) missing++;
+        if (!locations.ContainsKey(LocationType.CoffeeShop)) missing++;
         if (!locations.ContainsKey(LocationType.Motel)) missing++;
         if (!locations.ContainsKey(LocationType.Bar)) missing++;
         if (!locations.ContainsKey(LocationType.GamblingHall)) missing++;
@@ -312,6 +319,71 @@ public partial class GameBootstrap
         }
 
         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} satisfied {need}; before={oldHours:0.0}h/{oldStatus}; after={FormatWorkerNeedsDebug(driver)}.");
+    }
+
+    private void TryAutoUseCriticalNeedConsumables(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return;
+        }
+
+        if (driver.LastMealNeedStatus == WorkerNeedStatus.Critical &&
+            HasWorkerInventoryItem(driver, WorkerSnackItemId))
+        {
+            TryUseWorkerNeedConsumable(driver, WorkerSnackItemId, WorkerNeedKind.Meal, WorkerMealCriticalHours * WorkerConsumableNeedReliefRatio);
+        }
+
+        if (driver.LastSleepNeedStatus == WorkerNeedStatus.Critical &&
+            HasWorkerInventoryItem(driver, WorkerCoffeeItemId))
+        {
+            TryUseWorkerNeedConsumable(driver, WorkerCoffeeItemId, WorkerNeedKind.Sleep, WorkerSleepCriticalHours * WorkerConsumableNeedReliefRatio);
+        }
+    }
+
+    private bool TryUseWorkerNeedConsumable(DriverAgent driver, string itemId, WorkerNeedKind need, float reliefHours)
+    {
+        if (driver == null || !TryRemoveWorkerInventoryItem(driver, itemId, 1, $"critical {need} relief"))
+        {
+            return false;
+        }
+
+        float oldHours = GetWorkerNeedHours(driver, need);
+        WorkerNeedStatus oldStatus = GetWorkerNeedLastStatus(driver, need);
+        ApplyWorkerNeedRelief(driver, need, reliefHours);
+        SessionDebugLogger.Log(
+            "NEEDS",
+            $"{driver.DriverName} auto-used {itemId} for critical {need}; relief={reliefHours:0.0}h, before={oldHours:0.0}h/{oldStatus}, after={FormatWorkerNeedDebug(driver, need)}, inventoryLeft={GetWorkerInventoryItemQuantity(driver, itemId)}.");
+        return true;
+    }
+
+    private void ApplyWorkerNeedRelief(DriverAgent driver, WorkerNeedKind need, float reliefHours)
+    {
+        if (driver == null || reliefHours <= 0f)
+        {
+            return;
+        }
+
+        switch (need)
+        {
+            case WorkerNeedKind.Meal:
+                driver.HoursSinceMeal = Mathf.Max(0f, driver.HoursSinceMeal - reliefHours);
+                driver.LastMealNeedStatus = GetWorkerNeedStatus(WorkerNeedKind.Meal, driver.HoursSinceMeal);
+                if (driver.LastMealNeedStatus == WorkerNeedStatus.Critical)
+                {
+                    driver.AteToday = false;
+                }
+                break;
+
+            case WorkerNeedKind.Sleep:
+                driver.HoursSinceSleep = Mathf.Max(0f, driver.HoursSinceSleep - reliefHours);
+                driver.LastSleepNeedStatus = GetWorkerNeedStatus(WorkerNeedKind.Sleep, driver.HoursSinceSleep);
+                if (driver.LastSleepNeedStatus == WorkerNeedStatus.Critical)
+                {
+                    driver.SleptToday = false;
+                }
+                break;
+        }
     }
 
     private bool ShouldWorkerSeekMeal(DriverAgent driver)

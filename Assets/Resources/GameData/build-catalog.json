@@ -264,6 +264,36 @@
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
         {
+          "tool": "Kiosk",
+          "abbrev": "KS",
+          "title": { "en": "Kiosk", "ru": "\u041a\u0438\u043e\u0441\u043a" },
+          "color": "#DB943D",
+          "activeDescription": {
+            "en": "Mode active: place one 2x1 walk-up kiosk. No road driveway required. R rotates ({rot}).",
+            "ru": "\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u043a\u0438\u043e\u0441\u043a 2x1 \u0431\u0435\u0437 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u0430 \u043a \u0434\u043e\u0440\u043e\u0433\u0435. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})."
+          },
+          "description": {
+            "en": "Walk-up kiosk: workers can buy a $5 Snack for their inventory.",
+            "ru": "\u041a\u0438\u043e\u0441\u043a: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0442 \u043a \u0441\u0442\u043e\u0439\u043a\u0435 \u0438 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 Snack \u0437\u0430 $5 \u0432 \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "\u0423\u0436\u0435 \u043f\u043e\u0441\u0442\u0440\u043e\u0435\u043d\u043e \u043d\u0430 \u044d\u0442\u043e\u0439 \u043a\u0430\u0440\u0442\u0435." }
+        },
+        {
+          "tool": "CoffeeShop",
+          "abbrev": "CF",
+          "title": { "en": "Coffee Shop", "ru": "\u041a\u043e\u0444\u0435\u0439\u043d\u044f" },
+          "color": "#7A5238",
+          "activeDescription": {
+            "en": "Mode active: place one 2x2 walk-up coffee shop. No road driveway required. R rotates ({rot}).",
+            "ru": "\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u043a\u043e\u0444\u0435\u0439\u043d\u044e 2x2 \u0431\u0435\u0437 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u0430 \u043a \u0434\u043e\u0440\u043e\u0433\u0435. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})."
+          },
+          "description": {
+            "en": "Walk-up coffee shop: workers can buy a $5 Coffee for their inventory.",
+            "ru": "\u041a\u043e\u0444\u0435\u0439\u043d\u044f: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0442 \u043a \u0441\u0442\u043e\u0439\u043a\u0435 \u0438 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 Coffee \u0437\u0430 $5 \u0432 \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c."
+          },
+          "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "\u0423\u0436\u0435 \u043f\u043e\u0441\u0442\u0440\u043e\u0435\u043d\u043e \u043d\u0430 \u044d\u0442\u043e\u0439 \u043a\u0430\u0440\u0442\u0435." }
+        },
+        {
           "tool": "Bar",
           "abbrev": "BR",
           "title": { "en": "Bar", "ru": "Бар" },

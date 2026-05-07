@@ -301,6 +301,8 @@ public partial class GameBootstrap
                tool == BuildTool.Motel ||
                tool == BuildTool.Bar ||
                tool == BuildTool.Canteen ||
+               tool == BuildTool.Kiosk ||
+               tool == BuildTool.CoffeeShop ||
                tool == BuildTool.GasStation ||
                tool == BuildTool.GamblingHall ||
                tool == BuildTool.CityPark ||
@@ -309,6 +311,13 @@ public partial class GameBootstrap
                tool == BuildTool.CarMarket ||
                tool == BuildTool.LaborExchange ||
                tool == BuildTool.Docks;
+    }
+
+    private static bool IsRoadlessBuildTool(BuildTool tool)
+    {
+        return tool == BuildTool.CityPark ||
+               tool == BuildTool.Kiosk ||
+               tool == BuildTool.CoffeeShop;
     }
 
     private static bool IsRoadBuildTool(BuildTool tool)

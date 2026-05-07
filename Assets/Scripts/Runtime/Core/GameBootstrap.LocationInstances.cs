@@ -81,7 +81,15 @@ public partial class GameBootstrap
 
     private IEnumerable<LocationData> EnumerateAssignableBuildingLocations(LocationType buildingType)
     {
-        if (locations.TryGetValue(buildingType, out LocationData primary))
+        foreach (LocationData location in EnumerateLocationsOfType(buildingType))
+        {
+            yield return location;
+        }
+    }
+
+    private IEnumerable<LocationData> EnumerateLocationsOfType(LocationType locationType)
+    {
+        if (locations.TryGetValue(locationType, out LocationData primary))
         {
             yield return primary;
         }
@@ -89,7 +97,7 @@ public partial class GameBootstrap
         for (int i = 0; i < extraServiceLocations.Count; i++)
         {
             LocationData location = extraServiceLocations[i];
-            if (location != null && location.Type == buildingType)
+            if (location != null && location.Type == locationType)
             {
                 yield return location;
             }

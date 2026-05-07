@@ -383,6 +383,8 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase != DriverRescuePhase.IdleSittingOnBench &&
                driver.WalkPhase != DriverRescuePhase.IdleAtBar &&
                driver.WalkPhase != DriverRescuePhase.IdleAtCanteen &&
+               driver.WalkPhase != DriverRescuePhase.IdleAtKiosk &&
+               driver.WalkPhase != DriverRescuePhase.IdleAtCoffeeShop &&
                driver.WalkPhase != DriverRescuePhase.IdleAtPersonalHouseMeal &&
                driver.WalkPhase != DriverRescuePhase.IdleAtTrashCan &&
                driver.WalkPhase != DriverRescuePhase.IdleAtGamblingHall &&
@@ -419,6 +421,10 @@ public partial class GameBootstrap : MonoBehaviour
                driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen ||
                driver.WalkPhase == DriverRescuePhase.IdleAtCanteen ||
+               driver.WalkPhase == DriverRescuePhase.IdleWalkToKiosk ||
+               driver.WalkPhase == DriverRescuePhase.IdleAtKiosk ||
+               driver.WalkPhase == DriverRescuePhase.IdleWalkToCoffeeShop ||
+               driver.WalkPhase == DriverRescuePhase.IdleAtCoffeeShop ||
                driver.WalkPhase == DriverRescuePhase.ToPersonalHouseMeal ||
                driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal ||
                driver.WalkPhase == DriverRescuePhase.IdleWalkToTrashCan ||
@@ -473,6 +479,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IdleActivityTimer = 0f;
         driver.IdleWanderPauseTimer = 0f;
         driver.IdleWanderPointIndex = -1;
+        driver.PendingVendorLocationInstanceId = 0;
         driver.IdleConversationTimer = 0f;
         driver.IdleConversationPartnerId = -1;
         driver.LifeGoal = WorkerLifeGoal.None;

@@ -240,6 +240,7 @@ public partial class GameBootstrap
         public bool WorkedToday;
         public bool AteToday;
         public bool HadLeisureToday;
+        public int PendingVendorLocationInstanceId;
         public int GamblingBet;
         public int GamblingPayout;
         public int GamblingMultiplier;

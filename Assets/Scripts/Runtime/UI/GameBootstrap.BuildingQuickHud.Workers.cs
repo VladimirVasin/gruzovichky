@@ -638,6 +638,8 @@ public partial class GameBootstrap
         {
             DriverRescuePhase.IdleAtBar => LocationType.Bar,
             DriverRescuePhase.IdleAtCanteen => LocationType.Canteen,
+            DriverRescuePhase.IdleAtKiosk => LocationType.Kiosk,
+            DriverRescuePhase.IdleAtCoffeeShop => LocationType.CoffeeShop,
             DriverRescuePhase.IdleAtGamblingHall => LocationType.GamblingHall,
             DriverRescuePhase.IdleAtCityPark => LocationType.CityPark,
             DriverRescuePhase.AtLaborExchange => LocationType.LaborExchange,
@@ -651,6 +653,8 @@ public partial class GameBootstrap
         {
             LocationType.Bar => WorkerLeisureDuration,
             LocationType.Canteen => WorkerCanteenDuration,
+            LocationType.Kiosk => WorkerVendorPurchaseDuration,
+            LocationType.CoffeeShop => WorkerVendorPurchaseDuration,
             LocationType.GamblingHall => WorkerGamblingHallDuration,
             LocationType.CityPark => WorkerCityParkDuration,
             LocationType.Motel => DriverSleepDuration,
@@ -665,6 +669,8 @@ public partial class GameBootstrap
         {
             LocationType.Bar => ru ? "\u041f\u044c\u0435\u0442" : "Drinking",
             LocationType.Canteen => ru ? "\u0415\u0441\u0442" : "Eating",
+            LocationType.Kiosk => ru ? "\u041f\u043e\u043a\u0443\u043f\u0430\u0435\u0442 \u0441\u043d\u044d\u043a" : "Buying snack",
+            LocationType.CoffeeShop => ru ? "\u041f\u043e\u043a\u0443\u043f\u0430\u0435\u0442 \u043a\u043e\u0444\u0435" : "Buying coffee",
             LocationType.GamblingHall => ru ? "\u0418\u0433\u0440\u0430\u0435\u0442 \u0432 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u044b" : "Playing slots",
             LocationType.CityPark => ru ? "\u0413\u0443\u043b\u044f\u0435\u0442 \u0432 \u043f\u0430\u0440\u043a\u0435" : "Strolling in park",
             LocationType.Motel => ru ? "\u0421\u043f\u0438\u0442" : "Sleeping",

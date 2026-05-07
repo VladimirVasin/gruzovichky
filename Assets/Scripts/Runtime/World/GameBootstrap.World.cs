@@ -368,6 +368,42 @@ public partial class GameBootstrap
         return true;
     }
 
+    private bool TryPlaceKioskAtAnchor(Vector2Int anchorCell)
+    {
+        if (!TryGetKioskPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Kiosk placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.Kiosk, "Kiosk", min, max, anchorCell, new Color(0.86f, 0.58f, 0.24f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        RebuildRoadSigns();
+        SessionDebugLogger.Log("BUILD", $"Placed Kiosk at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
+    private bool TryPlaceCoffeeShopAtAnchor(Vector2Int anchorCell)
+    {
+        if (!TryGetCoffeeShopPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
+        {
+            SessionDebugLogger.Log("BUILD", $"Coffee Shop placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
+            return false;
+        }
+
+        CreateLocation(LocationType.CoffeeShop, "Coffee Shop", min, max, anchorCell, new Color(0.48f, 0.32f, 0.22f));
+        isBuildScreenDirty = true;
+        isFleetScreenDirty = true;
+        RebuildRoadLanterns();
+        RebuildRoadsideBenches();
+        RebuildRoadSigns();
+        SessionDebugLogger.Log("BUILD", $"Placed Coffee Shop at {FormatPlacement(new WorldLocationPlacement { Min = min, Max = max, Anchor = anchorCell })}.");
+        return true;
+    }
+
     private bool TryPlaceGamblingHallAtAnchor(Vector2Int anchorCell)
     {
         if (!TryGetGamblingHallPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
@@ -526,6 +562,16 @@ public partial class GameBootstrap
         return TryGetRotatedBuildingPlacement(anchorCell, LocationType.Canteen, 3, 2, out min, out max);
     }
 
+    private bool TryGetKioskPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
+    {
+        return TryGetRotatedBuildingPlacement(anchorCell, LocationType.Kiosk, 2, 1, out min, out max);
+    }
+
+    private bool TryGetCoffeeShopPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
+    {
+        return TryGetRotatedBuildingPlacement(anchorCell, LocationType.CoffeeShop, 2, 2, out min, out max);
+    }
+
     private bool TryGetGamblingHallPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)
     {
         return TryGetRotatedBuildingPlacement(anchorCell, LocationType.GamblingHall, 3, 3, out min, out max);
@@ -653,6 +699,16 @@ public partial class GameBootstrap
         return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.Canteen, 3, 2, out previewPosition, out previewScale);
     }
 
+    private bool GetKioskPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.Kiosk, 2, 1, out previewPosition, out previewScale);
+    }
+
+    private bool GetCoffeeShopPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
+    {
+        return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.CoffeeShop, out previewPosition, out previewScale);
+    }
+
     private bool GetGamblingHallPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
     {
         return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.GamblingHall, 3, 3, out previewPosition, out previewScale);
@@ -668,7 +724,7 @@ public partial class GameBootstrap
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
         GetRotatedBuildingFootprint(anchorCell, width, depth, out Vector2Int previewMin, out Vector2Int previewMax);
-        SetBuildFootprintPreviewCells(previewMin, previewMax, anchorCell);
+        SetBuildFootprintPreviewCells(previewMin, previewMax, DoesLocationRequireRoadAccess(type) ? anchorCell : null);
         if (!TryGetRotatedBuildingPlacement(anchorCell, type, width, depth, out Vector2Int min, out Vector2Int max))
         {
             return false;

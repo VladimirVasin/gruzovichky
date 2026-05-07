@@ -3,6 +3,9 @@ using UnityEngine;
 
 public partial class GameBootstrap : MonoBehaviour
 {
+    private const int WorkerVendorPurchasePrice = 5;
+    private const float WorkerVendorPurchaseDuration = 2.4f;
+
     private bool TryStartWeightedLeisureGoal(DriverAgent driver, Vector3 startPosition)
     {
         bool isAlcoholic = HasWorkerPerk(driver, WorkerPerkKind.Alcoholism);
@@ -99,6 +102,229 @@ public partial class GameBootstrap : MonoBehaviour
             LocationType.CityPark => TryStartWorkerServiceVisit(driver, LocationType.CityPark, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToCityPark, WorkerCityParkDuration, startPosition),
             _ => false
         };
+    }
+
+    private bool TryStartWorkerIdleVendorPurchase(DriverAgent driver, Vector3 startPosition)
+    {
+        if (driver == null || driver.Money < WorkerVendorPurchasePrice)
+        {
+            return false;
+        }
+
+        List<(LocationType Type, string ItemId, DriverRescuePhase WalkPhase, DriverRescuePhase AtPhase)> choices = new();
+        if (CanWorkerConsiderVendorPurchase(driver, LocationType.Kiosk, WorkerSnackItemId))
+        {
+            choices.Add((LocationType.Kiosk, WorkerSnackItemId, DriverRescuePhase.IdleWalkToKiosk, DriverRescuePhase.IdleAtKiosk));
+        }
+
+        if (CanWorkerConsiderVendorPurchase(driver, LocationType.CoffeeShop, WorkerCoffeeItemId))
+        {
+            choices.Add((LocationType.CoffeeShop, WorkerCoffeeItemId, DriverRescuePhase.IdleWalkToCoffeeShop, DriverRescuePhase.IdleAtCoffeeShop));
+        }
+
+        if (choices.Count == 0)
+        {
+            return false;
+        }
+
+        int startIndex = Random.Range(0, choices.Count);
+        for (int i = 0; i < choices.Count; i++)
+        {
+            var choice = choices[(startIndex + i) % choices.Count];
+            if (TryStartWorkerVendorPurchase(driver, choice.Type, choice.ItemId, choice.WalkPhase, startPosition))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool CanWorkerConsiderVendorPurchase(DriverAgent driver, LocationType vendorType, string itemId)
+    {
+        if (driver == null ||
+            driver.Money < WorkerVendorPurchasePrice ||
+            !CanWorkerReceiveVendorInventoryItem(driver, itemId))
+        {
+            return false;
+        }
+
+        foreach (LocationData vendor in EnumerateLocationsOfType(vendorType))
+        {
+            if (vendor != null && driver.Money >= Mathf.Max(WorkerVendorPurchasePrice, vendor.ServiceFee))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryStartWorkerVendorPurchase(DriverAgent driver, LocationType vendorType, string itemId, DriverRescuePhase walkPhase, Vector3 startPosition)
+    {
+        if (!TryGetNearestVendorPurchaseTarget(driver, vendorType, walkPhase, startPosition, out LocationData vendor, out Vector3 target))
+        {
+            LogWorkerDecision(driver, "vendor-purchase-blocked", $"{vendorType}: no reachable stand for {itemId}", true);
+            return false;
+        }
+
+        driver.LifeGoal = WorkerLifeGoal.Idle;
+        driver.IdleActivityTimer = WorkerVendorPurchaseDuration;
+        driver.PendingVendorLocationInstanceId = vendor.InstanceId;
+        driver.WalkTargetWorld = target;
+        driver.WalkPhase = walkPhase;
+        driver.WalkAnimationTime = 0f;
+        ResetWorkerLocalBusTripState(driver);
+        if (!BuildDriverWalkPath(driver, startPosition, target))
+        {
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.LifeGoal = WorkerLifeGoal.None;
+            driver.IdleActivityTimer = 0f;
+            driver.PendingVendorLocationInstanceId = 0;
+            LogWorkerDecision(driver, "vendor-purchase-path-blocked", $"{vendorType}: no safe walk path for {itemId}", true);
+            return false;
+        }
+
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} heading to {vendor.Label}#{vendor.InstanceId} to buy {itemId}.");
+        LogWorkerDecision(driver, "vendor-purchase-walk", $"{vendorType}#{vendor.InstanceId}; item={itemId}; price=${WorkerVendorPurchasePrice}", true);
+        return true;
+    }
+
+    private bool TryGetNearestVendorPurchaseTarget(DriverAgent driver, LocationType vendorType, DriverRescuePhase walkPhase, Vector3 startPosition, out LocationData vendor, out Vector3 target)
+    {
+        vendor = null;
+        target = Vector3.zero;
+        if (driver == null)
+        {
+            return false;
+        }
+
+        float bestScore = float.PositiveInfinity;
+        Vector2Int startCell = WorldToCell(startPosition);
+        foreach (LocationData candidate in EnumerateLocationsOfType(vendorType))
+        {
+            if (candidate == null || driver.Money < Mathf.Max(WorkerVendorPurchasePrice, candidate.ServiceFee))
+            {
+                continue;
+            }
+
+            Vector3 candidateTarget = GetVendorStandPoint(candidate);
+            Vector2Int goalCell = WorldToCell(candidateTarget);
+            List<Vector2Int> path = FindDriverWalkPath(startCell, goalCell, walkPhase);
+            if (path == null || path.Count == 0)
+            {
+                continue;
+            }
+
+            float score = path.Count + (candidateTarget - startPosition).sqrMagnitude * 0.01f;
+            if (score < bestScore)
+            {
+                bestScore = score;
+                vendor = candidate;
+                target = candidateTarget;
+            }
+        }
+
+        return vendor != null;
+    }
+
+    private Vector3 GetVendorStandPoint(LocationData vendor)
+    {
+        if (vendor == null)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 target = GetCellCenter(vendor.Anchor);
+        Vector3 center = GetLocationCenter(vendor);
+        Vector3 facing = target - center;
+        facing.y = 0f;
+        if (facing.sqrMagnitude > 0.001f)
+        {
+            target -= facing.normalized * 0.08f;
+        }
+
+        target.x += Random.Range(-0.08f, 0.08f);
+        target.z += Random.Range(-0.08f, 0.08f);
+        target.y = SampleTerrainHeight(target.x, target.z);
+        return target;
+    }
+
+    private static bool TryGetVendorPurchaseForPhase(DriverRescuePhase phase, out LocationType vendorType, out string itemId, out DriverRescuePhase atPhase)
+    {
+        switch (phase)
+        {
+            case DriverRescuePhase.IdleWalkToKiosk:
+            case DriverRescuePhase.IdleAtKiosk:
+                vendorType = LocationType.Kiosk;
+                itemId = WorkerSnackItemId;
+                atPhase = DriverRescuePhase.IdleAtKiosk;
+                return true;
+
+            case DriverRescuePhase.IdleWalkToCoffeeShop:
+            case DriverRescuePhase.IdleAtCoffeeShop:
+                vendorType = LocationType.CoffeeShop;
+                itemId = WorkerCoffeeItemId;
+                atPhase = DriverRescuePhase.IdleAtCoffeeShop;
+                return true;
+        }
+
+        vendorType = default;
+        itemId = string.Empty;
+        atPhase = DriverRescuePhase.None;
+        return false;
+    }
+
+    private bool CompleteWorkerVendorPurchase(DriverAgent driver, DriverRescuePhase completedPhase, Vector3 purchasePosition)
+    {
+        if (driver == null ||
+            !TryGetVendorPurchaseForPhase(completedPhase, out LocationType vendorType, out string itemId, out _))
+        {
+            return false;
+        }
+
+        LocationData vendor = FindLocationByInstanceId(driver.PendingVendorLocationInstanceId);
+        driver.PendingVendorLocationInstanceId = 0;
+        if (vendor == null || vendor.Type != vendorType)
+        {
+            locations.TryGetValue(vendorType, out vendor);
+        }
+
+        if (vendor == null)
+        {
+            SessionDebugLogger.Log("LIFE", $"{driver.DriverName} could not complete {itemId} purchase: {vendorType} was removed.");
+            return false;
+        }
+
+        int price = Mathf.Max(WorkerVendorPurchasePrice, vendor.ServiceFee);
+        if (driver.Money < price)
+        {
+            LogWorkerDecision(driver, "vendor-purchase-unaffordable", $"{vendorType}: ${driver.Money}/${price} for {itemId}", true);
+            SessionDebugLogger.Log("LIFE", $"{driver.DriverName} could not afford {itemId} at {vendor.Label}; balance=${driver.Money}, price=${price}.");
+            return false;
+        }
+
+        if (!CanWorkerReceiveVendorInventoryItem(driver, itemId))
+        {
+            LogWorkerDecision(driver, "vendor-purchase-skipped", $"{vendorType}: already has max {itemId}", true);
+            return false;
+        }
+
+        int moneyBefore = driver.Money;
+        int bankBefore = vendor.BuildingBank;
+        if (!TryAddWorkerInventoryItem(driver, itemId, 1, $"vendor:{vendor.Type}:{vendor.InstanceId}"))
+        {
+            LogWorkerDecision(driver, "vendor-purchase-failed", $"{vendorType}: inventory rejected {itemId}", true);
+            return false;
+        }
+
+        driver.Money -= price;
+        vendor.BuildingBank += price;
+        SpawnMoneySpendPopup(purchasePosition, price);
+        LogBuildingBankTransaction(vendor, driver, price, $"{GetWorkerInventoryItemTitle(itemId, false)} purchase", moneyBefore, bankBefore);
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} bought {itemId} at {vendor.Label}#{vendor.InstanceId} for ${price}; balance=${driver.Money}.");
+        isDriversScreenDirty = true;
+        return true;
     }
 
     private bool TryStartWorkerServiceVisit(DriverAgent driver, LocationType type, WorkerLifeGoal goal, DriverRescuePhase walkPhase, float duration, Vector3 startPosition)
