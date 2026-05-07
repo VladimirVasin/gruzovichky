@@ -16,7 +16,8 @@ public partial class GameBootstrap
         NoJob,
         LowMoney,
         ServiceMissing,
-        FamilyStress
+        FamilyStress,
+        SocialIntroduction
     }
 
     private enum CityComplaintState
@@ -58,6 +59,8 @@ public partial class GameBootstrap
         public float RejectedWorldHour;
         public bool TrustPenaltyApplied;
         public bool IsUnread;
+        public int SocialTargetWorkerId;
+        public string SocialTargetWorkerName = string.Empty;
         public readonly List<int> SignerIds = new();
         public readonly List<string> SignerNames = new();
     }
@@ -490,6 +493,12 @@ public partial class GameBootstrap
                     return true;
                 }
                 break;
+            case CityComplaintCategory.SocialIntroduction:
+                if (!DoesCitySocialIntroductionConditionRemain(complaint, out reason))
+                {
+                    return true;
+                }
+                break;
         }
 
         return false;
@@ -525,15 +534,28 @@ public partial class GameBootstrap
         float now = GetCurrentWorldHour();
         complaint.State = CityComplaintState.Accepted;
         complaint.AcceptedWorldHour = now;
-        complaint.DueWorldHour = now + CityComplaintDueWorldHours;
+        complaint.DueWorldHour = complaint.Category == CityComplaintCategory.SocialIntroduction
+            ? 0f
+            : now + CityComplaintDueWorldHours;
         complaint.IsUnread = false;
         isCityHallScreenDirty = true;
-        StartCityRequestGoalFeedback(success: false, complaint, previewOnly: true);
-        PushFeedEvent(
-            "Citizen request accepted.",
-            $"Обращение принято: построить {FormatCityComplaintTargetName(complaint)} за 24 часа.",
-            FeedEventType.Info);
-        SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} accepted: due={complaint.DueWorldHour:0.0}.");
+        if (complaint.Category == CityComplaintCategory.SocialIntroduction)
+        {
+            PushFeedEvent(
+                "Citizen request accepted.",
+                $"Обращение принято: помочь разговору {complaint.WorkerName} и {FormatCityComplaintTargetName(complaint)}.",
+                FeedEventType.Info);
+            SessionDebugLogger.Log("CITY_HALL", $"Citizen social request #{complaint.Id} accepted.");
+        }
+        else
+        {
+            StartCityRequestGoalFeedback(success: false, complaint, previewOnly: true);
+            PushFeedEvent(
+                "Citizen request accepted.",
+                $"Обращение принято: построить {FormatCityComplaintTargetName(complaint)} за 24 часа.",
+                FeedEventType.Info);
+            SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} accepted: due={complaint.DueWorldHour:0.0}.");
+        }
         return true;
     }
 
@@ -553,7 +575,7 @@ public partial class GameBootstrap
         complaint.ResolveReason = "rejected by player";
         complaint.IsUnread = false;
         complaint.TrustPenaltyApplied = true;
-        cityComplaintCooldownByKey[GetCityComplaintGroupKey(complaint.Category, complaint.LinkedNeed, complaint.LinkedLocationType)] =
+        cityComplaintCooldownByKey[GetCityComplaintCooldownKey(complaint)] =
             now + CityServiceRequestCooldownWorldHours;
 
         ApplyCityTrustDelta(CityTrustCitizenRequestRejectedPenalty, $"citizen request #{complaint.Id} rejected");
@@ -580,7 +602,7 @@ public partial class GameBootstrap
         complaint.ResolveReason = reason ?? string.Empty;
         complaint.ManuallyResolved = manually;
         complaint.IsUnread = false;
-        cityComplaintCooldownByKey[GetCityComplaintGroupKey(complaint.Category, complaint.LinkedNeed, complaint.LinkedLocationType)] =
+        cityComplaintCooldownByKey[GetCityComplaintCooldownKey(complaint)] =
             complaint.ResolvedWorldHour + CityComplaintCooldownWorldHours;
 
         ApplyCityComplaintSatisfactionDelta(complaint, manually ? 1 : Mathf.Clamp(complaint.Severity, 1, 4));

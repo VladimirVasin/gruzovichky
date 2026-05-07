@@ -222,7 +222,7 @@ public partial class GameBootstrap
             complaint.ResolvedDay = currentDay;
             complaint.ResolveReason = "deadline expired";
             complaint.IsUnread = false;
-            cityComplaintCooldownByKey[GetCityComplaintGroupKey(complaint.Category, complaint.LinkedNeed, complaint.LinkedLocationType)] =
+            cityComplaintCooldownByKey[GetCityComplaintCooldownKey(complaint)] =
                 now + CityComplaintCooldownWorldHours;
             if (!complaint.TrustPenaltyApplied)
             {
@@ -261,6 +261,11 @@ public partial class GameBootstrap
             return targetMissing;
         }
 
+        if (complaint.Category == CityComplaintCategory.SocialIntroduction)
+        {
+            return DoesCitySocialIntroductionConditionRemain(complaint, out reason);
+        }
+
         bool sawAvailableSigner = false;
         for (int i = 0; i < complaint.SignerIds.Count; i++)
         {
@@ -297,6 +302,7 @@ public partial class GameBootstrap
             CityComplaintCategory.FamilyStress => worker.FamilyId > 0 &&
                                                   worker.Satisfaction < 60 &&
                                                   HasCriticalWorkerNeed(worker),
+            CityComplaintCategory.SocialIntroduction => DoesCitySocialIntroductionConditionRemain(complaint, out _),
             _ => false
         };
     }
@@ -348,6 +354,18 @@ public partial class GameBootstrap
     private static string GetCityComplaintGroupKey(CityComplaintCategory category, WorkerNeedKind? need, LocationType? target)
     {
         return $"{category}:{(need.HasValue ? need.Value.ToString() : "none")}:{(target.HasValue ? target.Value.ToString() : "none")}";
+    }
+
+    private static string GetCityComplaintCooldownKey(CityComplaint complaint)
+    {
+        if (!string.IsNullOrWhiteSpace(complaint?.GroupKey))
+        {
+            return complaint.GroupKey;
+        }
+
+        return complaint == null
+            ? "unknown"
+            : GetCityComplaintGroupKey(complaint.Category, complaint.LinkedNeed, complaint.LinkedLocationType);
     }
 
     private static int GetCityComplaintDisplayStateRank(CityComplaintState state)

@@ -32,6 +32,13 @@ public partial class GameBootstrap
 
     private string FormatCityComplaintTargetName(CityComplaint complaint)
     {
+        if (complaint != null && complaint.Category == CityComplaintCategory.SocialIntroduction)
+        {
+            return string.IsNullOrWhiteSpace(complaint.SocialTargetWorkerName)
+                ? (IsRussianLanguage() ? "житель" : "resident")
+                : complaint.SocialTargetWorkerName;
+        }
+
         return complaint != null && complaint.LinkedLocationType.HasValue
             ? GetSelectedLocationDisplayName(complaint.LinkedLocationType.Value)
             : (IsRussianLanguage() ? "сервис" : "service");
@@ -53,6 +60,7 @@ public partial class GameBootstrap
             CityComplaintCategory.LowMoney => ru ? $"Не хватает денег{countSuffix}" : $"Low money{countSuffix}",
             CityComplaintCategory.ServiceMissing => ru ? $"Нужен: {FormatCityComplaintTargetName(complaint)}{countSuffix}" : $"Build: {FormatCityComplaintTargetName(complaint)}{countSuffix}",
             CityComplaintCategory.FamilyStress => ru ? $"Семейный стресс{countSuffix}" : $"Family stress{countSuffix}",
+            CityComplaintCategory.SocialIntroduction => ru ? $"Тема для разговора{countSuffix}" : $"Conversation topic{countSuffix}",
             _ => ru ? $"Городское обращение{countSuffix}" : $"City request{countSuffix}"
         };
     }
@@ -84,6 +92,9 @@ public partial class GameBootstrap
                 ? $"{GetCityServiceRequestLiteraryBody(complaint.LinkedLocationType)}\n\nПросьба простая, почти официальная: построить {target}."
                 : $"Suggested building: {target}.",
             CityComplaintCategory.FamilyStress => ru ? "Низкое довольство и критические нужды давят на семьи подписавших жителей." : "Low satisfaction and critical needs are stressing signed families.",
+            CityComplaintCategory.SocialIntroduction => ru
+                ? $"{complaint.WorkerName} хочет поговорить с {FormatCityComplaintTargetName(complaint)}, но разговор, как и всякое городское дело, требует бумажки, печати и человека, который скажет первую странную фразу.\n\nЕсли принять обращение, Ратуша попросит вас подсказать тему."
+                : $"{complaint.WorkerName} wants to talk to {FormatCityComplaintTargetName(complaint)} and needs a topic. Accepting will open the conversation scene.",
             _ => string.Empty
         };
 
@@ -131,7 +142,7 @@ public partial class GameBootstrap
         int hour = Mathf.FloorToInt(Mathf.Repeat(complaint.CreatedWorldHour, 24f));
         string created = ru ? $"Д{complaint.CreatedDay} {hour:00}:00" : $"D{complaint.CreatedDay} {hour:00}:00";
         string severity = ru ? $"важность {complaint.Severity}" : $"severity {complaint.Severity}";
-        if (complaint.State == CityComplaintState.Accepted)
+        if (complaint.State == CityComplaintState.Accepted && complaint.DueWorldHour > 0f)
         {
             return $"{created} | {severity} | {FormatCityComplaintTimeLeft(complaint, ru)}";
         }
@@ -187,6 +198,8 @@ public partial class GameBootstrap
             "rejected by player" => ru ? "отклонено" : "rejected",
             "requested service exists" => ru ? "здание построено" : "requested service exists",
             "already satisfied" => ru ? "уже выполнено" : "already satisfied",
+            "social introduction completed" => ru ? "разговор состоялся" : "conversation happened",
+            "social participant unavailable" => ru ? "участник недоступен" : "participant unavailable",
             _ => string.IsNullOrWhiteSpace(reason) ? (ru ? "без заметки" : "no note") : reason
         };
     }

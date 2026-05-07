@@ -478,12 +478,20 @@ public partial class GameBootstrap
 
     private void AcceptSelectedCityComplaint()
     {
-        if (AcceptCityComplaint(selectedCityComplaintId))
+        int acceptedComplaintId = selectedCityComplaintId;
+        CityComplaint selectedComplaint = GetCityComplaintById(acceptedComplaintId);
+        bool startsSocialScene = selectedComplaint != null &&
+                                 selectedComplaint.Category == CityComplaintCategory.SocialIntroduction;
+        if (AcceptCityComplaint(acceptedComplaintId))
         {
             PlayUiSound(uiSelectClip, 0.75f);
             isCityHallPanelOpen = false;
             isCityHallScreenDirty = true;
             cityHallScreenUi.CanvasRoot.SetActive(false);
+            if (startsSocialScene)
+            {
+                StartAcceptedCitySocialIntroductionRequest(acceptedComplaintId);
+            }
         }
     }
 

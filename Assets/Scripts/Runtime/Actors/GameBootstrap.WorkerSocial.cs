@@ -80,7 +80,8 @@ public partial class GameBootstrap
             (kind == WorkerSocialInteractionKind.IdleConversation ||
              kind == WorkerSocialInteractionKind.ServiceCoPresence ||
              kind == WorkerSocialInteractionKind.CoworkerShift ||
-             kind == WorkerSocialInteractionKind.PlayerPromptedConversation))
+             kind == WorkerSocialInteractionKind.PlayerPromptedConversation ||
+             kind == WorkerSocialInteractionKind.PlayerPromptedConversationFailed))
         {
             string context = locationType.HasValue ? locationType.Value.ToString() : kind.ToString();
             WorkerSocialMemory firstUpdated = FindWorkerSocialMemory(first, second.DriverId);
@@ -431,8 +432,12 @@ public partial class GameBootstrap
                 relationshipDelta = 0;
                 break;
             case WorkerSocialInteractionKind.PlayerPromptedConversation:
-                familiarityDelta = 22;
-                relationshipDelta = 13;
+                familiarityDelta = CitySocialIntroSuccessFamiliarityDelta;
+                relationshipDelta = CitySocialIntroSuccessRelationshipDelta;
+                break;
+            case WorkerSocialInteractionKind.PlayerPromptedConversationFailed:
+                familiarityDelta = CitySocialIntroFailureFamiliarityDelta;
+                relationshipDelta = CitySocialIntroFailureRelationshipDelta;
                 break;
             default:
                 familiarityDelta = 1;
@@ -668,6 +673,7 @@ public partial class GameBootstrap
             WorkerSocialInteractionKind.ArrivalWave => ru ? "\u041e\u0434\u0438\u043d \u0430\u0432\u0442\u043e\u0431\u0443\u0441" : "Same bus",
             WorkerSocialInteractionKind.FamilyFormation => ru ? "\u0421\u0435\u043c\u044c\u044f" : "Family",
             WorkerSocialInteractionKind.PlayerPromptedConversation => ru ? "\u0422\u0435\u043c\u0430 \u043e\u0442 \u0438\u0433\u0440\u043e\u043a\u0430" : "Player topic",
+            WorkerSocialInteractionKind.PlayerPromptedConversationFailed => ru ? "\u041d\u0435\u0443\u0434\u0430\u0447\u043d\u0430\u044f \u0442\u0435\u043c\u0430" : "Awkward topic",
             _ => ru ? "\u041a\u043e\u043d\u0442\u0430\u043a\u0442" : "Contact"
         };
 

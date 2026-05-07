@@ -411,7 +411,8 @@ public partial class GameBootstrap
         CoworkerShift,
         ArrivalWave,
         FamilyFormation,
-        PlayerPromptedConversation
+        PlayerPromptedConversation,
+        PlayerPromptedConversationFailed
     }
 
     private sealed class WorkerFamily

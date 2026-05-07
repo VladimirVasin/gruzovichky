@@ -296,6 +296,7 @@ public partial class GameBootstrap
         float value = memory.LastKind switch
         {
             WorkerSocialInteractionKind.PlayerPromptedConversation => 0.78f,
+            WorkerSocialInteractionKind.PlayerPromptedConversationFailed => 0.70f,
             WorkerSocialInteractionKind.CoworkerShift => 0.65f,
             WorkerSocialInteractionKind.IdleConversation => 0.55f,
             WorkerSocialInteractionKind.ServiceCoPresence => 0.45f,
@@ -734,6 +735,7 @@ public partial class GameBootstrap
         return relation.LastKind switch
         {
             WorkerSocialInteractionKind.PlayerPromptedConversation => ru ? "\u0442\u0435\u043c\u0430 \u043e\u0442 \u0438\u0433\u0440\u043e\u043a\u0430 \u043f\u043e\u043c\u043e\u0433\u043b\u0430 \u043d\u0430\u0447\u0430\u0442\u044c \u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440" : "player topic helped them talk",
+            WorkerSocialInteractionKind.PlayerPromptedConversationFailed => ru ? "\u0442\u0435\u043c\u0430 \u043e\u0442 \u0438\u0433\u0440\u043e\u043a\u0430 \u043e\u0431\u0435\u0440\u043d\u0443\u043b\u0430\u0441\u044c \u043d\u0435\u043b\u043e\u0432\u043a\u043e\u0441\u0442\u044c\u044e" : "player topic turned awkward",
             WorkerSocialInteractionKind.IdleConversation => ru ? "\u0447\u0430\u0441\u0442\u043e \u043e\u0431\u0449\u0430\u043b\u0438\u0441\u044c" : "talked during idle time",
             WorkerSocialInteractionKind.ServiceCoPresence => ru ? "\u0432\u0441\u0442\u0440\u0435\u0447\u0430\u043b\u0438\u0441\u044c \u0432 \u0441\u0435\u0440\u0432\u0438\u0441\u0435" : "met at a service building",
             WorkerSocialInteractionKind.ArrivalWave => ru ? "\u043f\u0440\u0438\u0435\u0445\u0430\u043b\u0438 \u043e\u0434\u043d\u0438\u043c \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043e\u043c" : "arrived on the same bus",

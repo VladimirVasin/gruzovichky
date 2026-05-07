@@ -8,10 +8,15 @@ public partial class GameBootstrap
     private const float CitySocialRequestSpacingMaxWorldHours = 24f;
     private const int CitySocialRequestMaxTargetFamiliarity = 29;
     private const int CitySocialRequestMaxTargetRelationship = 19;
+    private const int CitySocialIntroSuccessFamiliarityDelta = 22;
+    private const int CitySocialIntroSuccessRelationshipDelta = 13;
+    private const int CitySocialIntroFailureFamiliarityDelta = 10;
+    private const int CitySocialIntroFailureRelationshipDelta = -7;
 
     private sealed class CitySocialIntroductionRequest
     {
         public int Id;
+        public int ComplaintId;
         public int RequesterId;
         public int TargetId;
         public string RequesterName = string.Empty;
@@ -51,6 +56,7 @@ public partial class GameBootstrap
         }
 
         if (activeCitySocialIntroductionRequest != null ||
+            HasActiveCitySocialIntroductionComplaint() ||
             now < nextCitySocialIntroductionRequestAllowedWorldHour ||
             IsCitySocialIntroductionBlockedByUi())
         {
@@ -63,7 +69,7 @@ public partial class GameBootstrap
             return;
         }
 
-        BeginCitySocialIntroductionRequest(request, manualDebug: false);
+        FileCitySocialIntroductionComplaint(request);
     }
 
     private bool TryStartDebugCitySocialIntroductionRequest(out string result)
@@ -94,6 +100,42 @@ public partial class GameBootstrap
         return true;
     }
 
+    private void FileCitySocialIntroductionComplaint(CitySocialIntroductionRequest request)
+    {
+        if (request == null)
+        {
+            return;
+        }
+
+        float now = GetCurrentWorldHour();
+        CityComplaint complaint = new()
+        {
+            Id = nextCityComplaintId++,
+            WorkerId = request.RequesterId,
+            WorkerName = request.RequesterName,
+            GroupKey = GetCitySocialIntroductionGroupKey(request.RequesterId, request.TargetId),
+            Category = CityComplaintCategory.SocialIntroduction,
+            State = CityComplaintState.Open,
+            Severity = 2,
+            CreatedWorldHour = now,
+            CreatedDay = currentDay,
+            DueWorldHour = 0f,
+            IsUnread = true,
+            SocialTargetWorkerId = request.TargetId,
+            SocialTargetWorkerName = request.TargetName
+        };
+        complaint.SignerIds.Add(request.RequesterId);
+        complaint.SignerNames.Add(request.RequesterName);
+        cityComplaints.Add(complaint);
+        cityComplaintCooldownByKey[complaint.GroupKey] = now + CitySocialRequestSpacingMinWorldHours;
+        nextCitySocialIntroductionRequestAllowedWorldHour =
+            now + Random.Range(CitySocialRequestSpacingMinWorldHours, CitySocialRequestSpacingMaxWorldHours);
+        NotifyCityHallNewRequest(complaint);
+        SessionDebugLogger.Log(
+            "CITY_SOCIAL_REQUEST",
+            $"Social introduction request #{complaint.Id} filed in City Hall: requester={request.RequesterName}, target={request.TargetName}, nextAllowed={nextCitySocialIntroductionRequestAllowedWorldHour:0.0}.");
+    }
+
     private void BeginCitySocialIntroductionRequest(CitySocialIntroductionRequest request, bool manualDebug)
     {
         if (request == null)
@@ -113,6 +155,25 @@ public partial class GameBootstrap
         SessionDebugLogger.Log(
             "CITY_SOCIAL_REQUEST",
             $"Social introduction request #{request.Id}: requester={request.RequesterName}, target={request.TargetName}, manualDebug={(manualDebug ? "yes" : "no")}, nextAllowed={nextCitySocialIntroductionRequestAllowedWorldHour:0.0}.");
+    }
+
+    private void StartAcceptedCitySocialIntroductionRequest(int complaintId)
+    {
+        CityComplaint complaint = GetCityComplaintById(complaintId);
+        if (complaint == null ||
+            complaint.Category != CityComplaintCategory.SocialIntroduction ||
+            complaint.State != CityComplaintState.Accepted)
+        {
+            return;
+        }
+
+        if (!TryCreateCitySocialIntroductionRequestFromComplaint(complaint, out CitySocialIntroductionRequest request))
+        {
+            ResolveCityComplaint(complaint, "social participant unavailable", manually: false);
+            return;
+        }
+
+        BeginCitySocialIntroductionRequest(request, manualDebug: false);
     }
 
     private bool IsCitySocialIntroductionBlockedByUi()
@@ -307,6 +368,69 @@ public partial class GameBootstrap
         };
     }
 
+    private bool TryCreateCitySocialIntroductionRequestFromComplaint(CityComplaint complaint, out CitySocialIntroductionRequest request)
+    {
+        request = null;
+        if (complaint == null)
+        {
+            return false;
+        }
+
+        DriverAgent requester = GetDriverAgentById(complaint.WorkerId);
+        DriverAgent target = GetDriverAgentById(complaint.SocialTargetWorkerId);
+        if (!CanWorkerParticipateInCitySocialIntroduction(requester) ||
+            !CanWorkerParticipateInCitySocialIntroduction(target))
+        {
+            return false;
+        }
+
+        request = CreateCitySocialIntroductionRequest(requester, target);
+        request.Id = complaint.Id;
+        request.ComplaintId = complaint.Id;
+        return true;
+    }
+
+    private bool HasActiveCitySocialIntroductionComplaint()
+    {
+        for (int i = 0; i < cityComplaints.Count; i++)
+        {
+            CityComplaint complaint = cityComplaints[i];
+            if (IsCityComplaintActive(complaint) &&
+                complaint.Category == CityComplaintCategory.SocialIntroduction)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool DoesCitySocialIntroductionConditionRemain(CityComplaint complaint, out string reason)
+    {
+        reason = string.Empty;
+        if (complaint == null || complaint.Category != CityComplaintCategory.SocialIntroduction)
+        {
+            reason = "not a social introduction";
+            return false;
+        }
+
+        DriverAgent requester = GetDriverAgentById(complaint.WorkerId);
+        DriverAgent target = GetDriverAgentById(complaint.SocialTargetWorkerId);
+        bool valid = CanWorkerParticipateInCitySocialIntroduction(requester) &&
+                     CanWorkerParticipateInCitySocialIntroduction(target);
+        if (!valid)
+        {
+            reason = "social participant unavailable";
+        }
+
+        return valid;
+    }
+
+    private static string GetCitySocialIntroductionGroupKey(int requesterId, int targetId)
+    {
+        return $"SocialIntroduction:{requesterId}:{targetId}";
+    }
+
     private int ScoreCitySocialIntroductionTarget(DriverAgent requester, DriverAgent candidate)
     {
         if (!CanWorkerParticipateInCitySocialIntroduction(candidate) ||
@@ -376,7 +500,7 @@ public partial class GameBootstrap
         return string.IsNullOrWhiteSpace(worker.DriverName) ? $"#{worker.DriverId}" : worker.DriverName;
     }
 
-    private void CompleteCitySocialIntroductionRequest(string topic)
+    private void CompleteCitySocialIntroductionRequest(string topic, bool success)
     {
         CitySocialIntroductionRequest request = activeCitySocialIntroductionRequest;
         activeCitySocialIntroductionRequest = null;
@@ -394,18 +518,32 @@ public partial class GameBootstrap
             return;
         }
 
-        RecordWorkerSocialInteraction(requester, target, WorkerSocialInteractionKind.PlayerPromptedConversation);
+        WorkerSocialInteractionKind kind = success
+            ? WorkerSocialInteractionKind.PlayerPromptedConversation
+            : WorkerSocialInteractionKind.PlayerPromptedConversationFailed;
+        RecordWorkerSocialInteraction(requester, target, kind);
         WorkerSocialMemory requesterMemory = FindWorkerSocialMemory(requester, target.DriverId);
         WorkerSocialMemory targetMemory = FindWorkerSocialMemory(target, requester.DriverId);
         int familiarity = GetWorkerSocialPairAverageFamiliarity(requesterMemory, targetMemory);
         int relationship = GetWorkerSocialPairAverageRelationship(requesterMemory, targetMemory);
         PushFeedEvent(
-            "A conversation landed.",
-            $"{GetWorkerDisplayNameSafe(requester)} и {GetWorkerDisplayNameSafe(target)} обсудили «{request.Topic}». Город стал на один неловкий мостик человечнее.",
+            success ? "Разговор состоялся." : "Разговор не сложился.",
+            success
+                ? $"{GetWorkerDisplayNameSafe(requester)} и {GetWorkerDisplayNameSafe(target)} обсудили «{request.Topic}». Тема сработала: знакомство крепнет, симпатия растет."
+                : $"{GetWorkerDisplayNameSafe(requester)} и {GetWorkerDisplayNameSafe(target)} попробовали обсудить «{request.Topic}». Тема пошла боком: знакомство все же появилось, но симпатии стало меньше.",
             FeedEventType.Info);
+        if (request.ComplaintId > 0)
+        {
+            CityComplaint complaint = GetCityComplaintById(request.ComplaintId);
+            if (complaint != null && complaint.State == CityComplaintState.Accepted)
+            {
+                ResolveCityComplaint(complaint, success ? "social introduction completed" : "social introduction failed", manually: false);
+            }
+        }
+
         SessionDebugLogger.Log(
             "CITY_SOCIAL_REQUEST",
-            $"Social introduction request #{request.Id} completed: requester={request.RequesterName}, target={request.TargetName}, topic='{request.Topic}', familiarity={familiarity}, relationship={relationship}.");
+            $"Social introduction request #{request.Id} completed: requester={request.RequesterName}, target={request.TargetName}, topic='{request.Topic}', outcome={(success ? "success" : "failure")}, familiarity={familiarity}, relationship={relationship}.");
     }
 
     private static string SanitizeCitySocialTopic(string rawTopic)
