@@ -200,6 +200,7 @@ public partial class GameBootstrap
             driversScreenUi.DetailBalanceText.text = $"${sel.Money}";
             UpdateWorkerSocialUi(sel, ru);
             UpdateWorkerThoughtsUi(sel, ru);
+            UpdateWorkerInventoryUi(sel, ru);
 
             bool canFocus = CanFocusDriver(sel);
             driversScreenUi.DetailFocusButton.interactable = canFocus;
@@ -256,6 +257,11 @@ public partial class GameBootstrap
             driversScreenUi.DetailThoughtsTabText.text = ru ? "\u041c\u044b\u0441\u043b\u0438" : "Thoughts";
         }
 
+        if (driversScreenUi.DetailInventoryTabText != null)
+        {
+            driversScreenUi.DetailInventoryTabText.text = ru ? "\u0418\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c" : "Inventory";
+        }
+
         if (driversScreenUi.DetailProfileTabRoot != null)
         {
             driversScreenUi.DetailProfileTabRoot.SetActive(activeWorkerDetailTab == WorkerDetailTab.Profile);
@@ -271,9 +277,15 @@ public partial class GameBootstrap
             driversScreenUi.DetailThoughtsTabRoot.SetActive(activeWorkerDetailTab == WorkerDetailTab.Thoughts);
         }
 
+        if (driversScreenUi.DetailInventoryTabRoot != null)
+        {
+            driversScreenUi.DetailInventoryTabRoot.SetActive(activeWorkerDetailTab == WorkerDetailTab.Inventory);
+        }
+
         ApplyShiftsTabVisual(driversScreenUi.DetailProfileTabButton, driversScreenUi.DetailProfileTabText, activeWorkerDetailTab == WorkerDetailTab.Profile);
         ApplyShiftsTabVisual(driversScreenUi.DetailSocialTabButton, driversScreenUi.DetailSocialTabText, activeWorkerDetailTab == WorkerDetailTab.Social);
         ApplyShiftsTabVisual(driversScreenUi.DetailThoughtsTabButton, driversScreenUi.DetailThoughtsTabText, activeWorkerDetailTab == WorkerDetailTab.Thoughts);
+        ApplyShiftsTabVisual(driversScreenUi.DetailInventoryTabButton, driversScreenUi.DetailInventoryTabText, activeWorkerDetailTab == WorkerDetailTab.Inventory);
     }
 
 }

@@ -1,0 +1,64 @@
+{
+  "items": [
+    {
+      "id": "work_gloves",
+      "category": "Tool",
+      "stackable": false,
+      "maxStack": 1,
+      "baseValue": 12,
+      "title": {
+        "en": "Work Gloves",
+        "ru": "\u0420\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0435\u0440\u0447\u0430\u0442\u043a\u0438"
+      },
+      "description": {
+        "en": "A personal tool item reserved for future worker equipment rules.",
+        "ru": "\u041b\u0438\u0447\u043d\u044b\u0439 \u0438\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442 \u0434\u043b\u044f \u0431\u0443\u0434\u0443\u0449\u0438\u0445 \u043f\u0440\u0430\u0432\u0438\u043b \u044d\u043a\u0438\u043f\u0438\u0440\u043e\u0432\u043a\u0438."
+      }
+    },
+    {
+      "id": "lunch_box",
+      "category": "Personal",
+      "stackable": false,
+      "maxStack": 1,
+      "baseValue": 8,
+      "title": {
+        "en": "Lunch Box",
+        "ru": "\u041b\u0430\u043d\u0447\u0431\u043e\u043a\u0441"
+      },
+      "description": {
+        "en": "A personal possession reserved for future food and routine interactions.",
+        "ru": "\u041b\u0438\u0447\u043d\u0430\u044f \u0432\u0435\u0449\u044c \u0434\u043b\u044f \u0431\u0443\u0434\u0443\u0449\u0438\u0445 \u0441\u0432\u044f\u0437\u0435\u0439 \u0441 \u0435\u0434\u043e\u0439 \u0438 \u0440\u0430\u0441\u043f\u043e\u0440\u044f\u0434\u043a\u043e\u043c."
+      }
+    },
+    {
+      "id": "bus_pass",
+      "category": "Document",
+      "stackable": false,
+      "maxStack": 1,
+      "baseValue": 20,
+      "title": {
+        "en": "Bus Pass",
+        "ru": "\u041f\u0440\u043e\u0435\u0437\u0434\u043d\u043e\u0439"
+      },
+      "description": {
+        "en": "A document item reserved for future transit ownership rules.",
+        "ru": "\u0414\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u0434\u043b\u044f \u0431\u0443\u0434\u0443\u0449\u0438\u0445 \u043f\u0440\u0430\u0432\u0438\u043b \u043f\u0440\u043e\u0435\u0437\u0434\u0430."
+      }
+    },
+    {
+      "id": "flowers",
+      "category": "Gift",
+      "stackable": true,
+      "maxStack": 5,
+      "baseValue": 6,
+      "title": {
+        "en": "Flowers",
+        "ru": "\u0426\u0432\u0435\u0442\u044b"
+      },
+      "description": {
+        "en": "A small gift item reserved for future social interactions.",
+        "ru": "\u041d\u0435\u0431\u043e\u043b\u044c\u0448\u043e\u0439 \u043f\u043e\u0434\u0430\u0440\u043e\u043a \u0434\u043b\u044f \u0431\u0443\u0434\u0443\u0449\u0438\u0445 \u0441\u043e\u0446\u0438\u0430\u043b\u044c\u043d\u044b\u0445 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439."
+      }
+    }
+  ]
+}

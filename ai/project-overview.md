@@ -1,6 +1,6 @@
 # Project Overview
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Stable high-level map of the current playable prototype. Code remains the source
 - Runtime is still scene-local and generated from `Assets/Scenes/SampleScene.unity`.
 - The main playable slice now combines:
   - buildable roads, service buildings, production buildings, and local bus stops
-  - workers with portraits, education, needs, perks, money, jobs, shifts, and life routines
+  - workers with portraits, education, needs, perks, money, owned-item inventory, jobs, shifts, and life routines
   - trucks, local buses, warehouse storage/logistics, and intercity trade
   - taxes, building banks, event feed, regional map, tutorial/onboarding, and racing mode
   - procedural terrain, natural zones, water, ambient life, weather/lighting, low-poly visuals, and runtime audio/options

@@ -58,7 +58,8 @@ public partial class GameBootstrap
     {
         Profile,
         Social,
-        Thoughts
+        Thoughts,
+        Inventory
     }
 
     private sealed class DriversScreenUiRefs
@@ -83,9 +84,12 @@ public partial class GameBootstrap
         public Text DetailSocialTabText;
         public Button DetailThoughtsTabButton;
         public Text DetailThoughtsTabText;
+        public Button DetailInventoryTabButton;
+        public Text DetailInventoryTabText;
         public GameObject DetailProfileTabRoot;
         public GameObject DetailSocialTabRoot;
         public GameObject DetailThoughtsTabRoot;
+        public GameObject DetailInventoryTabRoot;
         public Text  DetailNameText;
         public Text  DetailProfileTitleText;
         public Text  DetailRoleText;
@@ -133,6 +137,13 @@ public partial class GameBootstrap
         public Text  DetailThoughtsEmptyText;
         public readonly List<Text> DetailOpinionChipTexts = new();
         public readonly List<WorkerThoughtRowUi> DetailThoughtRows = new();
+        public Text  DetailInventoryTitleText;
+        public Text  DetailInventoryEmptyText;
+        public Text  DetailInventoryNameHeaderText;
+        public Text  DetailInventoryCategoryHeaderText;
+        public Text  DetailInventoryQuantityHeaderText;
+        public Text  DetailInventoryMetaHeaderText;
+        public readonly List<WorkerInventoryRowUi> DetailInventoryRows = new();
         public Button DetailFocusButton;
         public Text   DetailFocusButtonText;
     }
@@ -168,6 +179,15 @@ public partial class GameBootstrap
         public Text TimeText;
         public Text ToneText;
         public Text BodyText;
+    }
+
+    private sealed class WorkerInventoryRowUi
+    {
+        public RectTransform Root;
+        public Text NameText;
+        public Text CategoryText;
+        public Text QuantityText;
+        public Text MetaText;
     }
 
     private sealed class ShiftsScreenUiRefs

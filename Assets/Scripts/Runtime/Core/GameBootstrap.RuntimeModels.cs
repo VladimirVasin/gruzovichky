@@ -294,6 +294,7 @@ public partial class GameBootstrap
         public readonly List<WorkerSocialMemory> SocialMemories = new();
         public readonly List<WorkerThought> Thoughts = new();
         public readonly List<WorkerOpinion> Opinions = new();
+        public readonly List<WorkerInventoryEntry> Inventory = new();
         public readonly Dictionary<string, float> WorkerThoughtCooldownWorldHours = new();
         public int Satisfaction = 70;
         public int UnhappyDays;
@@ -304,6 +305,16 @@ public partial class GameBootstrap
         public string LastWorkerDecisionDebugKey;
         public readonly Dictionary<string, DebugThrottleStamp> WorkerDecisionDebugThrottle = new();
         public readonly Dictionary<string, DebugThrottleStamp> LocalBusSkipDebugThrottle = new();
+    }
+
+    private sealed class WorkerInventoryEntry
+    {
+        public string ItemId = string.Empty;
+        public int Quantity;
+        public float Condition01 = 1f;
+        public int AcquiredDay;
+        public string SourceKey = string.Empty;
+        public int InstanceId;
     }
 
     private sealed class DebugThrottleStamp

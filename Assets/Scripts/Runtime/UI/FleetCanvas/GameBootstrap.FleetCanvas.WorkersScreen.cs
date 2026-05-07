@@ -192,6 +192,19 @@ public partial class GameBootstrap
             PlayUiSound(uiSelectClip, 0.7f);
         });
 
+        driversScreenUi.DetailInventoryTabButton = CreateButton("WorkerInventoryTabBtn", detailTabRow, font, out driversScreenUi.DetailInventoryTabText, "Inventory", 13, new Color(0.08f, 0.10f, 0.14f, 1f), Color.white);
+        driversScreenUi.DetailInventoryTabText.fontStyle = FontStyle.Bold;
+        driversScreenUi.DetailInventoryTabButton.transition = Selectable.Transition.None;
+        LayoutElement inventoryTabLayout = driversScreenUi.DetailInventoryTabButton.gameObject.AddComponent<LayoutElement>();
+        inventoryTabLayout.preferredHeight = 36f;
+        inventoryTabLayout.flexibleWidth = 1f;
+        driversScreenUi.DetailInventoryTabButton.onClick.AddListener(() =>
+        {
+            activeWorkerDetailTab = WorkerDetailTab.Inventory;
+            isDriversScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.7f);
+        });
+
         RectTransform profileTabRoot = CreateUiObject("WorkerProfileTabRoot", detailRoot.transform).GetComponent<RectTransform>();
         driversScreenUi.DetailProfileTabRoot = profileTabRoot.gameObject;
         VerticalLayoutGroup profileTabLayoutGroup = profileTabRoot.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -222,6 +235,17 @@ public partial class GameBootstrap
         thoughtsTabLayoutGroup.childForceExpandWidth = true;
         thoughtsTabLayoutGroup.childForceExpandHeight = false;
         driversScreenUi.DetailThoughtsTabRoot.SetActive(false);
+
+        RectTransform inventoryTabRoot = CreateUiObject("WorkerInventoryTabRoot", detailRoot.transform).GetComponent<RectTransform>();
+        driversScreenUi.DetailInventoryTabRoot = inventoryTabRoot.gameObject;
+        inventoryTabRoot.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        VerticalLayoutGroup inventoryTabLayoutGroup = inventoryTabRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        inventoryTabLayoutGroup.spacing = 14f;
+        inventoryTabLayoutGroup.childControlWidth = true;
+        inventoryTabLayoutGroup.childControlHeight = true;
+        inventoryTabLayoutGroup.childForceExpandWidth = true;
+        inventoryTabLayoutGroup.childForceExpandHeight = false;
+        driversScreenUi.DetailInventoryTabRoot.SetActive(false);
 
         // Profile card
         RectTransform profileCard = CreateStyledPanel("WorkerProfileCard", profileTabRoot, FleetInsetColor);
@@ -447,6 +471,8 @@ public partial class GameBootstrap
         {
             driversScreenUi.DetailThoughtRows.Add(CreateWorkerThoughtRow(thoughtsBody, font, i));
         }
+
+        SetupWorkerInventoryUi(inventoryTabRoot, font);
 
         // Focus button
         driversScreenUi.DetailFocusButton = CreateButton("FocusWorkerBtn", detailRoot.transform, font, out driversScreenUi.DetailFocusButtonText, "Focus on Worker", 14, new Color(0.25f, 0.33f, 0.46f, 1f), Color.white);
