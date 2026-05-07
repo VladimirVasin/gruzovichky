@@ -232,9 +232,12 @@ public partial class GameBootstrap
         CancelPendingWorkerFamilyFormation(first.DriverId);
         CancelPendingWorkerFamilyFormation(second.DriverId);
         EnsureFamilySocialMemory(first, second);
+        RecordWorkerFamilyFormedThought(first, second, family);
+        RecordWorkerFamilyFormedThought(second, first, family);
 
         isDriversScreenDirty = true;
         isFleetScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         SessionDebugLogger.Log(
             "FAMILY",
             $"{first.DriverName} and {second.DriverName} formed family #{family.Id} in house #{houseIndex}; reason={reason}.");
@@ -242,6 +245,29 @@ public partial class GameBootstrap
             $"{first.DriverName} and {second.DriverName} formed a family.",
             $"{first.DriverName} \u0438 {second.DriverName} \u0441\u0442\u0430\u043b\u0438 \u0441\u0435\u043c\u044c\u0435\u0439.",
             FeedEventType.Success);
+    }
+
+    private void RecordWorkerFamilyFormedThought(DriverAgent worker, DriverAgent partner, WorkerFamily family)
+    {
+        RecordWorkerThought(
+            worker,
+            WorkerThoughtKind.Family,
+            WorkerThoughtTone.Positive,
+            82,
+            "family_formed",
+            new[]
+            {
+                ThoughtWorker("otherWorker", partner),
+                ThoughtBuilding("home", LocationType.PersonalHouse),
+                ThoughtFamily("family", family)
+            },
+            WorkerThoughtSubjectType.Worker,
+            partner?.DriverId ?? 0,
+            null,
+            partner?.DriverName,
+            12,
+            $"family_formed|{family?.Id ?? -1}|{partner?.DriverId ?? 0}",
+            48f);
     }
 
     private void AssignWorkerToFamilyHouse(DriverAgent worker, WorkerFamily family)

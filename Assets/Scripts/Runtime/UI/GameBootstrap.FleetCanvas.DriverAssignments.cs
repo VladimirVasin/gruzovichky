@@ -311,11 +311,13 @@ public partial class GameBootstrap
         isShiftsPanelOpen = false;
         isResourcesPanelOpen = false;
         isBuildPanelOpen = false;
+        isSocialGraphPanelOpen = false;
         selectedWorkerPanelDriverId = driverAgents.Find(d => d.DriverId == driverId) != null ? driverId : 0;
         selectedShiftDriverId = driverId;
-        isWorkerSocialTabActive = false;
+        activeWorkerDetailTab = WorkerDetailTab.Profile;
         shouldScrollWorkersListToSelected = selectedWorkerPanelDriverId > 0;
         isDriversScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         PlayUiSound(uiPanelOpenClip, 0.86f);
     }
 

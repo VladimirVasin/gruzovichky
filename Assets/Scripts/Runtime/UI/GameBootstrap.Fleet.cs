@@ -6,15 +6,21 @@ public partial class GameBootstrap
 {
     // в”Ђв”Ђ Menu bar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
-    private const float MenuBtnW = 90f;
-    private const float MenuBtnH = 40f;
-    private const float MenuBtnGap = 5f;
-    private const int MenuBtnCount = 8;
+    private const float MenuBtnMaxW = 90f, MenuBtnMinW = 62f, MenuBtnH = 40f, MenuBtnGap = 5f;
+    private const int MenuBtnCount = 9;
 
     private Rect GetMenuBarRect()
     {
-        float w = MenuBtnCount * MenuBtnW + (MenuBtnCount + 1) * MenuBtnGap;
+        float buttonWidth = GetMenuButtonWidth();
+        float w = MenuBtnCount * buttonWidth + (MenuBtnCount + 1) * MenuBtnGap;
         return new Rect(12f, 12f, w, MenuBtnH + 10f);
+    }
+
+    private float GetMenuButtonWidth()
+    {
+        float safeRight = Mathf.Max(620f, GetWeatherHudRect().x - 18f);
+        float available = Mathf.Max(0f, safeRight - 12f - (MenuBtnCount + 1) * MenuBtnGap);
+        return Mathf.Clamp(available / MenuBtnCount, MenuBtnMinW, MenuBtnMaxW);
     }
 
     private Rect GetFleetPanelRect()
@@ -40,15 +46,9 @@ public partial class GameBootstrap
 
     private Rect GetDriversPanelRect() => Rect.zero; // Drivers panel is now Canvas-based
 
-    private Rect GetResourcesPanelRect()
-    {
-        return new Rect(12f, 68f, 300f, 210f);
-    }
+    private Rect GetResourcesPanelRect() => new Rect(12f, 68f, 300f, 210f);
 
-    private Rect GetBuildPanelRect()
-    {
-        return new Rect(12f, 68f, 300f, 140f);
-    }
+    private Rect GetBuildPanelRect() => new Rect(12f, 68f, 300f, 140f);
 
     private void ToggleMenuPanel(string panelName, ref bool target)
     {
@@ -72,6 +72,7 @@ public partial class GameBootstrap
         isTradePanelOpen = false;
         isBuildPanelOpen = false;
         isStatesPanelOpen = false;
+        isSocialGraphPanelOpen = false;
         target = !wasOpen;
         if (panelName == "Economy")
         {
@@ -96,10 +97,16 @@ public partial class GameBootstrap
         isBuildScreenDirty = true;
         isWorldMapScreenDirty = true;
         isStatesScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         if (panelName == "Stats")
         {
             EnsureStatesScreenUiReady();
             UpdateStatesScreenUi();
+        }
+        if (panelName == "Social")
+        {
+            EnsureSocialGraphScreenUiReady();
+            UpdateSocialGraphScreenUi();
         }
         LogUiInput($"MenuBar: {(target ? "opened" : "closed")} {panelName}");
         PlayUiSound(target ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
@@ -110,9 +117,10 @@ public partial class GameBootstrap
         Rect bar = GetMenuBarRect();
         GUI.Box(bar, string.Empty);
 
+        float buttonWidth = GetMenuButtonWidth();
         GUIStyle btnStyle = new GUIStyle(GUI.skin.button)
         {
-            fontSize = 14,
+            fontSize = buttonWidth < 70f ? 10 : buttonWidth < 82f ? 12 : 14,
             fontStyle = FontStyle.Bold
         };
 
@@ -125,7 +133,7 @@ public partial class GameBootstrap
             void MenuBtn(string panelName, string displayLabel, ref bool state, float x, bool highlight = false)
             {
                 GUI.color = state ? Color.yellow : Color.white;
-                Rect buttonRect = new Rect(x, btnY, MenuBtnW, MenuBtnH);
+                Rect buttonRect = new Rect(x, btnY, buttonWidth, MenuBtnH);
                 if (GUI.Button(buttonRect, L(displayLabel), btnStyle))
                     ToggleMenuPanel(panelName, ref state);
 
@@ -142,14 +150,15 @@ public partial class GameBootstrap
             }
 
             float x = bar.x + MenuBtnGap;
-            MenuBtn("Workers", "Workers", ref isDriversPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Vacancies", "Vacancies", ref isShiftsPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Economy", "Economy", ref isEconomyPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Trade", "Trade", ref isTradePanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Stats", "Stats", ref isStatesPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Building", "Building", ref isBuildPanelOpen, x); x += MenuBtnW + MenuBtnGap;
-            MenuBtn("Map", "Map", ref isWorldMapPanelOpen, x); x += MenuBtnW + MenuBtnGap;
+            MenuBtn("Workers", "Workers", ref isDriversPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Social", "Social", ref isSocialGraphPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Vacancies", "Vacancies", ref isShiftsPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Economy", "Economy", ref isEconomyPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Trade", "Trade", ref isTradePanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Stats", "Stats", ref isStatesPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Building", "Building", ref isBuildPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Map", "Map", ref isWorldMapPanelOpen, x); x += buttonWidth + MenuBtnGap;
         }
         finally
         {

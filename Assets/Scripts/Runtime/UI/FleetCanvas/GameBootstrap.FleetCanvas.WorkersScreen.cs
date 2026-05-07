@@ -161,7 +161,7 @@ public partial class GameBootstrap
         profileTabLayout.flexibleWidth = 1f;
         driversScreenUi.DetailProfileTabButton.onClick.AddListener(() =>
         {
-            isWorkerSocialTabActive = false;
+            activeWorkerDetailTab = WorkerDetailTab.Profile;
             isDriversScreenDirty = true;
             PlayUiSound(uiSelectClip, 0.7f);
         });
@@ -174,7 +174,20 @@ public partial class GameBootstrap
         socialTabLayout.flexibleWidth = 1f;
         driversScreenUi.DetailSocialTabButton.onClick.AddListener(() =>
         {
-            isWorkerSocialTabActive = true;
+            activeWorkerDetailTab = WorkerDetailTab.Social;
+            isDriversScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.7f);
+        });
+
+        driversScreenUi.DetailThoughtsTabButton = CreateButton("WorkerThoughtsTabBtn", detailTabRow, font, out driversScreenUi.DetailThoughtsTabText, "Thoughts", 13, new Color(0.08f, 0.10f, 0.14f, 1f), Color.white);
+        driversScreenUi.DetailThoughtsTabText.fontStyle = FontStyle.Bold;
+        driversScreenUi.DetailThoughtsTabButton.transition = Selectable.Transition.None;
+        LayoutElement thoughtsTabLayout = driversScreenUi.DetailThoughtsTabButton.gameObject.AddComponent<LayoutElement>();
+        thoughtsTabLayout.preferredHeight = 36f;
+        thoughtsTabLayout.flexibleWidth = 1f;
+        driversScreenUi.DetailThoughtsTabButton.onClick.AddListener(() =>
+        {
+            activeWorkerDetailTab = WorkerDetailTab.Thoughts;
             isDriversScreenDirty = true;
             PlayUiSound(uiSelectClip, 0.7f);
         });
@@ -198,6 +211,17 @@ public partial class GameBootstrap
         socialTabLayoutGroup.childForceExpandWidth = true;
         socialTabLayoutGroup.childForceExpandHeight = false;
         driversScreenUi.DetailSocialTabRoot.SetActive(false);
+
+        RectTransform thoughtsTabRoot = CreateUiObject("WorkerThoughtsTabRoot", detailRoot.transform).GetComponent<RectTransform>();
+        driversScreenUi.DetailThoughtsTabRoot = thoughtsTabRoot.gameObject;
+        thoughtsTabRoot.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        VerticalLayoutGroup thoughtsTabLayoutGroup = thoughtsTabRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        thoughtsTabLayoutGroup.spacing = 14f;
+        thoughtsTabLayoutGroup.childControlWidth = true;
+        thoughtsTabLayoutGroup.childControlHeight = true;
+        thoughtsTabLayoutGroup.childForceExpandWidth = true;
+        thoughtsTabLayoutGroup.childForceExpandHeight = false;
+        driversScreenUi.DetailThoughtsTabRoot.SetActive(false);
 
         // Profile card
         RectTransform profileCard = CreateStyledPanel("WorkerProfileCard", profileTabRoot, FleetInsetColor);
@@ -396,6 +420,32 @@ public partial class GameBootstrap
         for (int i = 0; i < WorkerSocialHudRowCount; i++)
         {
             driversScreenUi.DetailSocialRows.Add(CreateWorkerSocialRow(socialBody, font, i));
+        }
+
+        RectTransform thoughtsCard = CreateSectionCard(thoughtsTabRoot, font, string.Empty, out RectTransform thoughtsBody, false);
+        LayoutElement thoughtsCardLayout = thoughtsCard.gameObject.AddComponent<LayoutElement>();
+        thoughtsCardLayout.preferredHeight = 336f;
+        thoughtsCardLayout.flexibleHeight = 1f;
+        thoughtsCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
+        thoughtsCard.GetComponent<VerticalLayoutGroup>().spacing = 6;
+        thoughtsBody.GetComponent<VerticalLayoutGroup>().spacing = 6;
+        driversScreenUi.DetailThoughtsTitleText = CreateHeaderText("WorkerThoughtsTitle", thoughtsBody, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailThoughtsTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+        RectTransform opinionRow = CreateLayoutRow("WorkerOpinionRow", thoughtsBody, 28f, 8f);
+        for (int i = 0; i < WorkerOpinionHudChipCount; i++)
+        {
+            Text chipText = CreateBodyText($"WorkerOpinionChip{i + 1}", opinionRow, font, string.Empty, 11, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
+            chipText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+            chipText.gameObject.SetActive(false);
+            driversScreenUi.DetailOpinionChipTexts.Add(chipText);
+        }
+
+        driversScreenUi.DetailThoughtsEmptyText = CreateBodyText("WorkerThoughtsEmpty", thoughtsBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
+        driversScreenUi.DetailThoughtsEmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        for (int i = 0; i < WorkerThoughtHudRowCount; i++)
+        {
+            driversScreenUi.DetailThoughtRows.Add(CreateWorkerThoughtRow(thoughtsBody, font, i));
         }
 
         // Focus button

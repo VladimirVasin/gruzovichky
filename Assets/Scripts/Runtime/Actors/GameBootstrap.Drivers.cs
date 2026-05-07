@@ -228,6 +228,23 @@ public partial class GameBootstrap : MonoBehaviour
         if (!IsLocalBusServiceAvailableForPassengers())
         {
             LogLocalBusPassengerSkip(driver, reason, "no bus driver assigned to the current shift or no bus available");
+            RecordWorkerThought(
+                driver,
+                WorkerThoughtKind.Transport,
+                WorkerThoughtTone.Negative,
+                36,
+                "bus_unavailable",
+                new[]
+                {
+                    ThoughtText("reason", "no bus driver")
+                },
+                WorkerThoughtSubjectType.Text,
+                0,
+                "local_bus",
+                "local bus",
+                -2,
+                $"bus_unavailable|{reason}",
+                8f);
             return false;
         }
 
@@ -251,11 +268,45 @@ public partial class GameBootstrap : MonoBehaviour
             ResetWorkerLocalBusTripState(driver);
             driver.WalkPhase = DriverRescuePhase.None;
             LogLocalBusPassengerSkip(driver, reason, $"no safe walk path to Stop #{originStop.StopNumber}");
+            RecordWorkerThought(
+                driver,
+                WorkerThoughtKind.Transport,
+                WorkerThoughtTone.Negative,
+                42,
+                "bus_unavailable",
+                new[]
+                {
+                    ThoughtText("reason", $"Stop #{originStop.StopNumber} path")
+                },
+                WorkerThoughtSubjectType.Text,
+                0,
+                "local_bus",
+                "local bus",
+                -3,
+                $"bus_path_blocked|{originStop.StopNumber}|{reason}",
+                8f);
             return false;
         }
         SessionDebugLogger.Log(
             "BUS_PASSENGER",
             $"{driver.DriverName} chose local bus for {driver.BusTravelReason}: Stop #{originStop.StopNumber} -> Stop #{destinationStop.StopNumber}, finalPhase={finalWalkPhase}, finalCell=({WorldToCell(finalTargetWorld).x},{WorldToCell(finalTargetWorld).y}), fareExempt={(fareExempt ? "yes" : "no")}.");
+        RecordWorkerThought(
+            driver,
+            WorkerThoughtKind.Transport,
+            WorkerThoughtTone.Positive,
+            34,
+            "bus_chosen",
+            new[]
+            {
+                ThoughtText("reason", driver.BusTravelReason)
+            },
+            WorkerThoughtSubjectType.Text,
+            0,
+            "local_bus",
+            "local bus",
+            2,
+            $"bus_chosen|{originStop.StopNumber}|{destinationStop.StopNumber}|{driver.BusTravelReason}",
+            6f);
         return true;
     }
 

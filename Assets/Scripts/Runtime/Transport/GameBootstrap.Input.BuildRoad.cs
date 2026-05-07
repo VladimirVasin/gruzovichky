@@ -539,7 +539,9 @@ public partial class GameBootstrap
         activeBuildTool = BuildTool.SingleRoad;
         hoveredBuildCell = null;
         isBuildPanelOpen = true;
+        isSocialGraphPanelOpen = false;
         isBuildScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         UpdateBuildHoverHighlight();
         RefreshSelectionVisuals();
         SessionDebugLogger.Log("BUILD", $"{placedTool} {connectionLabel} at ({connectionCell.x},{connectionCell.y}) is not connected to road. Switched to Road build tool.");

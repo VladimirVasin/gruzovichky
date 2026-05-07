@@ -12,9 +12,15 @@ public partial class GameBootstrap
         string reason,
         bool force = false,
         WorkerLifeGoal? selectedGoalBefore = null,
-        WorkerLifeGoal? selectedGoalAfter = null)
+        WorkerLifeGoal? selectedGoalAfter = null,
+        bool verboseOnly = false)
     {
         if (driver == null)
+        {
+            return;
+        }
+
+        if (verboseOnly && !SessionDebugLogger.IsVerboseEnabled("WORKER_DECISION"))
         {
             return;
         }
@@ -26,10 +32,13 @@ public partial class GameBootstrap
             ? BuildWorkerDecisionThrottleKey(driver, decision, reason, goalBefore, goalAfter)
             : BuildWorkerDecisionDebugKey(driver, decision, reason, goalBefore, goalAfter);
         float worldHour = shouldThrottleRepeats ? GetCurrentWorldHour() : 0f;
-        if (shouldThrottleRepeats &&
-            driver.LastThrottledWorkerDecisionDebugKey == key &&
-            (Time.unscaledTime - driver.LastThrottledWorkerDecisionDebugTime < WorkerDecisionRepeatThrottleSeconds ||
-             worldHour - driver.LastThrottledWorkerDecisionWorldHour < WorkerDecisionRepeatThrottleWorldHours))
+        if (shouldThrottleRepeats && ShouldSuppressDebugThrottle(
+                driver.WorkerDecisionDebugThrottle,
+                key,
+                Time.unscaledTime,
+                WorkerDecisionRepeatThrottleSeconds,
+                worldHour,
+                WorkerDecisionRepeatThrottleWorldHours))
         {
             return;
         }
@@ -40,16 +49,16 @@ public partial class GameBootstrap
         }
 
         driver.LastWorkerDecisionDebugKey = key;
-        if (shouldThrottleRepeats)
-        {
-            driver.LastThrottledWorkerDecisionDebugKey = key;
-            driver.LastThrottledWorkerDecisionDebugTime = Time.unscaledTime;
-            driver.LastThrottledWorkerDecisionWorldHour = worldHour;
-        }
 
-        SessionDebugLogger.Log(
-            "WORKER_DECISION",
-            $"{driver.DriverName}: {decision}; reason={reason}; selectedGoalBefore={goalBefore}; selectedGoalAfter={goalAfter}; {FormatWorkerDecisionSnapshot(driver)}.");
+        string message = $"{driver.DriverName}: {decision}; reason={reason}; selectedGoalBefore={goalBefore}; selectedGoalAfter={goalAfter}; {FormatWorkerDecisionSnapshot(driver)}.";
+        if (verboseOnly)
+        {
+            SessionDebugLogger.LogVerbose("WORKER_DECISION", message);
+        }
+        else
+        {
+            SessionDebugLogger.Log("WORKER_DECISION", message);
+        }
     }
 
     private static string BuildWorkerDecisionDebugKey(
@@ -154,15 +163,44 @@ public partial class GameBootstrap
 
         string reason = string.IsNullOrEmpty(travelReason) ? "trip" : travelReason;
         string key = $"{reason}|{skipReason}|{driver.WalkPhase}|{driver.RestPhase}|{driver.LifeGoal}|{driver.DutyMode}|{driver.ShiftStartHour}|{driver.AssignedBuildingType}|{driver.AssignedTruckNumber}|{driver.BusOriginStopNumber}|{driver.BusDestinationStopNumber}";
-        if (driver.LastLocalBusSkipDebugKey == key &&
-            Time.unscaledTime - driver.LastLocalBusSkipDebugTime < LocalBusPassengerSkipRepeatThrottleSeconds)
+        if (ShouldSuppressDebugThrottle(
+                driver.LocalBusSkipDebugThrottle,
+                key,
+                Time.unscaledTime,
+                LocalBusPassengerSkipRepeatThrottleSeconds,
+                0f,
+                0f))
         {
             return;
         }
 
-        driver.LastLocalBusSkipDebugKey = key;
-        driver.LastLocalBusSkipDebugTime = Time.unscaledTime;
         SessionDebugLogger.Log("BUS_PASSENGER", $"{driver.DriverName} skipped local bus for {reason}: {skipReason}.");
+    }
+
+    private static bool ShouldSuppressDebugThrottle(
+        System.Collections.Generic.Dictionary<string, DebugThrottleStamp> throttle,
+        string key,
+        float realTime,
+        float realSeconds,
+        float worldHour,
+        float worldHours)
+    {
+        if (throttle.TryGetValue(key, out DebugThrottleStamp stamp))
+        {
+            bool withinRealWindow = realSeconds > 0f && realTime - stamp.RealTime < realSeconds;
+            bool withinWorldWindow = worldHours > 0f && worldHour - stamp.WorldHour < worldHours;
+            if (withinRealWindow || withinWorldWindow)
+            {
+                return true;
+            }
+        }
+
+        throttle[key] = new DebugThrottleStamp
+        {
+            RealTime = realTime,
+            WorldHour = worldHour
+        };
+        return false;
     }
 
     private string FormatWorkerDecisionSnapshot(DriverAgent driver)

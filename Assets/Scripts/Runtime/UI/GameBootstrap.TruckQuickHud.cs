@@ -140,7 +140,8 @@ public partial class GameBootstrap
             !isDriversPanelOpen &&
             !isShiftsPanelOpen &&
             !isResourcesPanelOpen &&
-            !isBuildPanelOpen;
+            !isBuildPanelOpen &&
+            !isSocialGraphPanelOpen;
 
         if (truckQuickHud.CanvasRoot.activeSelf != shouldShow)
         {
@@ -218,7 +219,9 @@ public partial class GameBootstrap
         isShiftsPanelOpen = false;
         isResourcesPanelOpen = false;
         isBuildPanelOpen = false;
+        isSocialGraphPanelOpen = false;
         isFleetScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         PlayUiSound(uiPanelOpenClip, 0.86f);
     }
 }

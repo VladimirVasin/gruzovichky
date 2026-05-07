@@ -151,7 +151,8 @@ public partial class GameBootstrap
             !isTradePanelOpen &&
             !isBuildPanelOpen &&
             !isWorldMapPanelOpen &&
-            !isStatesPanelOpen;
+            !isStatesPanelOpen &&
+            !isSocialGraphPanelOpen;
 
         if (localBusQuickHud.CanvasRoot.activeSelf != shouldShow)
         {

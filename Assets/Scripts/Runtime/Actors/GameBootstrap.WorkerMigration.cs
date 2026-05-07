@@ -82,6 +82,48 @@ public partial class GameBootstrap
             SessionDebugLogger.Log(
                 "MIGRATION",
                 $"{driver.DriverName} satisfaction daily update: delta={delta:+#;-#;0}, value={driver.Satisfaction}, unhappyDays={driver.UnhappyDays}, departureIntent={(driver.DepartureIntent ? "yes" : "no")}, reason={reason}, needs={FormatWorkerNeedsDebug(driver)}, money=${driver.Money}.");
+            if (string.Equals(reason, "no job", System.StringComparison.OrdinalIgnoreCase))
+            {
+                RecordWorkerNoJobThought(driver, reason);
+            }
+
+            if (driver.Money < 15)
+            {
+                RecordWorkerThought(
+                    driver,
+                    WorkerThoughtKind.Money,
+                    WorkerThoughtTone.Negative,
+                    66,
+                    "low_money",
+                    new[]
+                    {
+                        ThoughtText("balance", $"${driver.Money}")
+                    },
+                    WorkerThoughtSubjectType.Text,
+                    0,
+                    "money",
+                    "money",
+                    -5,
+                    "daily_low_money",
+                    18f);
+            }
+            else if (delta >= 8)
+            {
+                RecordWorkerThought(
+                    driver,
+                    WorkerThoughtKind.City,
+                    WorkerThoughtTone.Positive,
+                    34,
+                    "stable_life",
+                    null,
+                    WorkerThoughtSubjectType.Text,
+                    0,
+                    "city_life",
+                    "city life",
+                    2,
+                    "daily_stable_life",
+                    22f);
+            }
 
             if (ShouldWorkerLeaveTown(driver) && TryStartWorkerDeparture(driver, reason))
             {

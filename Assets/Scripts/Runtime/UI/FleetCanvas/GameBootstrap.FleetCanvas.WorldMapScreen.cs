@@ -706,8 +706,10 @@ public partial class GameBootstrap
         isEconomyPanelOpen = false;
         isBuildPanelOpen = false;
         isStatesPanelOpen = false;
+        isSocialGraphPanelOpen = false;
         isTradePanelOpen = true;
         isTradeScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         isWorldMapScreenDirty = true;
         SessionDebugLogger.Log("TRADE_UI", $"Opened Trade HUD from regional map route card: region={regionIndex}; name={GetWorldMapRegionName(regionIndex)}.");
         LogUiInput($"Map route card -> open Trade for region {regionIndex}");

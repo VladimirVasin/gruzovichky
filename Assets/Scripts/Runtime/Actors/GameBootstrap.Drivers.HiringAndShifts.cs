@@ -602,6 +602,24 @@ public partial class GameBootstrap : MonoBehaviour
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         SessionDebugLogger.Log("PAY", $"{driver.DriverName} paid ${driver.Salary}. Personal balance: ${driver.Money}. Treasury: ${money}.");
+        RecordWorkerThought(
+            driver,
+            WorkerThoughtKind.Money,
+            WorkerThoughtTone.Positive,
+            driver.Money < 20 ? 68 : 52,
+            "salary_paid",
+            new[]
+            {
+                ThoughtText("amount", $"${driver.Salary}"),
+                ThoughtText("balance", $"${driver.Money}")
+            },
+            WorkerThoughtSubjectType.Text,
+            0,
+            "salary",
+            "salary",
+            4,
+            $"salary_paid|{salaryShiftDay}|{salaryShiftStart}",
+            8f);
         AdvanceWorkerContractAfterPaidShift(driver);
     }
 

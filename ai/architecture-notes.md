@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 Purpose: describe the real implemented architecture and current hotspots.
 
@@ -110,7 +110,8 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 ### `Assets/Scripts/Runtime/Actors/GameBootstrap.Drivers.*.cs`
 
-- Driver/worker behavior is split into general movement/logistics, warehouse delivery, life cycle and needs, idle wander, hiring/shift orchestration, the MVP worker social-memory layer in `GameBootstrap.WorkerSocial.cs`, the MVP family/home pairing layer in `GameBootstrap.WorkerFamilies.cs`, the child-birth/child-visual layer in `GameBootstrap.WorkerChildren.cs`, and the household upkeep/family happiness layer in `GameBootstrap.WorkerHouseholds.cs`.
+- Driver/worker behavior is split into general movement/logistics, warehouse delivery, life cycle and needs, idle wander, hiring/shift orchestration, the MVP worker social-memory layer in `GameBootstrap.WorkerSocial.cs`, the MVP thoughts/opinions layer in `GameBootstrap.WorkerThoughts.cs`, the MVP family/home pairing layer in `GameBootstrap.WorkerFamilies.cs`, the child-birth/child-visual layer in `GameBootstrap.WorkerChildren.cs`, and the household upkeep/family happiness layer in `GameBootstrap.WorkerHouseholds.cs`.
+- The HUD-level citizen relationship graph is a separate Canvas screen in `Assets/Scripts/Runtime/UI/FleetCanvas/GameBootstrap.FleetCanvas.SocialGraphScreen.cs`; it reads worker social memories and stays dirty off the same social/family mutation points as the Workers detail tabs.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
 

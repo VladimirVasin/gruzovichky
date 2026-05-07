@@ -381,6 +381,7 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("DRIVER", spawnInMotel
             ? $"Registered {driver.DriverName} in Motel."
             : $"Registered {driver.DriverName} for bus arrival.");
+        RecordWorkerArrivalThought(driver, spawnInMotel ? "starter worker" : "arrival bus");
         return driver;
     }
 

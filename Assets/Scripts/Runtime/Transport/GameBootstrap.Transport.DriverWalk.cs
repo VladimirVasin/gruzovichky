@@ -175,6 +175,23 @@ public partial class GameBootstrap
                         SpawnMoneySpendPopup(driver.DriverObject.transform.position, HousePurchasePrice);
                         LogBuildingBankTransaction(house, driver, HousePurchasePrice, "Personal house purchase", mb, bb);
                         SessionDebugLogger.Log("LIFE", $"{driver.DriverName} bought house #{hIdx} for ${HousePurchasePrice} (balance: ${driver.Money}).");
+                        RecordWorkerThought(
+                            driver,
+                            WorkerThoughtKind.Family,
+                            WorkerThoughtTone.Positive,
+                            80,
+                            "house_bought",
+                            new[]
+                            {
+                                ThoughtBuilding("home", LocationType.PersonalHouse)
+                            },
+                            WorkerThoughtSubjectType.BuildingType,
+                            0,
+                            LocationType.PersonalHouse.ToString(),
+                            GetSelectedLocationDisplayName(LocationType.PersonalHouse),
+                            10,
+                            $"house_bought|{hIdx}",
+                            72f);
                         boughtHouse = true;
                         boughtHouseIndex = hIdx;
                     }
@@ -238,6 +255,23 @@ public partial class GameBootstrap
                 driver.DriverObject.SetActive(false);
                 driver.SleepTimer = DriverSleepDuration;
                 driver.RestPhase = DriverRestPhase.SleepingAtHome;
+                RecordWorkerThought(
+                    driver,
+                    WorkerThoughtKind.Need,
+                    WorkerThoughtTone.Positive,
+                    48,
+                    "home_sleep_good",
+                    new[]
+                    {
+                        ThoughtBuilding("home", LocationType.PersonalHouse)
+                    },
+                    WorkerThoughtSubjectType.BuildingType,
+                    0,
+                    LocationType.PersonalHouse.ToString(),
+                    GetSelectedLocationDisplayName(LocationType.PersonalHouse),
+                    3,
+                    "home_sleep_good",
+                    8f);
                 SessionDebugLogger.Log("REST", $"{driver.DriverName} sleeping at home (house #{driver.AssignedPersonalHouseIndex}).");
                 return;
 
@@ -284,6 +318,7 @@ public partial class GameBootstrap
                     driver.SleepTimer = DriverSleepDuration;
                     driver.RestPhase = DriverRestPhase.Sleeping;
                     LogBuildingBankTransaction(motelData, driver, motelData.ServiceFee, "Motel sleep check-in", moneyBefore, bankBefore);
+                    RecordWorkerServiceThought(driver, LocationType.Motel, WorkerNeedKind.Sleep, "sleep_service_good", WorkerThoughtTone.Positive, 46, 3);
                     SessionDebugLogger.Log("REST", $"{driver.DriverName} checked into motel - paid ${motelData.ServiceFee} (balance: ${driver.Money}). Sleeping for {DriverSleepDuration}s.");
                 }
                 else
@@ -416,6 +451,7 @@ public partial class GameBootstrap
                         barData.BuildingBank += barData.ServiceFee;
                         SpawnMoneySpendPopup(driver.DriverObject.transform.position, barData.ServiceFee);
                         LogBuildingBankTransaction(barData, driver, barData.ServiceFee, "Bar leisure visit", moneyBefore, bankBefore);
+                        RecordWorkerServiceThought(driver, LocationType.Bar, WorkerNeedKind.Leisure, "leisure_service_good", WorkerThoughtTone.Positive, 42, 3);
                         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Bar for Leisure; paid=${barData.ServiceFee}, balance=${driver.Money}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
                         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar - paid ${barData.ServiceFee} (balance: ${driver.Money}).");
                     }
@@ -460,6 +496,7 @@ public partial class GameBootstrap
                         canteenData.BuildingBank += canteenData.ServiceFee;
                         SpawnMoneySpendPopup(driver.DriverObject.transform.position, canteenData.ServiceFee);
                         LogBuildingBankTransaction(canteenData, driver, canteenData.ServiceFee, "Canteen meal visit", moneyBefore, bankBefore);
+                        RecordWorkerServiceThought(driver, LocationType.Canteen, WorkerNeedKind.Meal, "meal_service_good", WorkerThoughtTone.Positive, 54, 5);
                         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} entered Canteen for Meal; paid=${canteenData.ServiceFee}, balance=${driver.Money}, need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
                         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen - paid ${canteenData.ServiceFee} (balance: ${driver.Money}).");
                     }
@@ -514,6 +551,7 @@ public partial class GameBootstrap
             case DriverRescuePhase.IdleWalkToCityPark:
                 if (TryStartCityParkPromenade(driver, currentPosition))
                 {
+                    RecordWorkerServiceThought(driver, LocationType.CityPark, WorkerNeedKind.Leisure, "leisure_service_good", WorkerThoughtTone.Positive, 38, 3);
                     return;
                 }
 
@@ -521,6 +559,7 @@ public partial class GameBootstrap
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
                 driver.WalkPhase = DriverRescuePhase.IdleAtCityPark;
+                RecordWorkerServiceThought(driver, LocationType.CityPark, WorkerNeedKind.Leisure, "leisure_service_good", WorkerThoughtTone.Positive, 38, 3);
                 SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at City Park for Leisure.");
                 return;
 

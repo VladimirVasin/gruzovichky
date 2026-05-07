@@ -45,6 +45,7 @@ public partial class GameBootstrap
         RecordWorkerSocialOneWay(first, second, kind, locationType, familiarityDelta, relationshipDelta, now);
         RecordWorkerSocialOneWay(second, first, kind, locationType, familiarityDelta, relationshipDelta, now);
         isDriversScreenDirty = true;
+        isSocialGraphScreenDirty = true;
 
         if (kind == WorkerSocialInteractionKind.IdleConversation ||
             kind == WorkerSocialInteractionKind.ServiceCoPresence)
@@ -54,6 +55,44 @@ public partial class GameBootstrap
                 "SOCIAL",
                 $"{first.DriverName} and {second.DriverName} social memory updated: {kind}, context={context}, familiarity+={familiarityDelta}, relationship+={relationshipDelta}.");
         }
+
+        if (kind == WorkerSocialInteractionKind.IdleConversation)
+        {
+            RecordWorkerSocialThought(first, second, "social_talk_good", null, 2);
+            RecordWorkerSocialThought(second, first, "social_talk_good", null, 2);
+        }
+        else if (kind == WorkerSocialInteractionKind.ServiceCoPresence && locationType.HasValue)
+        {
+            RecordWorkerSocialThought(first, second, "social_shared_place", locationType.Value, 1);
+            RecordWorkerSocialThought(second, first, "social_shared_place", locationType.Value, 1);
+        }
+    }
+
+    private void RecordWorkerSocialThought(DriverAgent owner, DriverAgent other, string templateKey, LocationType? place, int opinionDelta)
+    {
+        List<WorkerThoughtPlaceholder> placeholders = new()
+        {
+            ThoughtWorker("otherWorker", other)
+        };
+        if (place.HasValue)
+        {
+            placeholders.Add(ThoughtBuilding("place", place.Value));
+        }
+
+        RecordWorkerThought(
+            owner,
+            WorkerThoughtKind.Social,
+            WorkerThoughtTone.Positive,
+            place.HasValue ? 36 : 48,
+            templateKey,
+            placeholders,
+            WorkerThoughtSubjectType.Worker,
+            other?.DriverId ?? 0,
+            null,
+            other?.DriverName,
+            opinionDelta,
+            $"{templateKey}|{other?.DriverId ?? 0}|{place?.ToString() ?? "talk"}",
+            place.HasValue ? 8f : 5f);
     }
 
     private void RecordWorkerSocialOneWay(
@@ -295,6 +334,7 @@ public partial class GameBootstrap
         if (changed)
         {
             isDriversScreenDirty = true;
+            isSocialGraphScreenDirty = true;
         }
     }
 

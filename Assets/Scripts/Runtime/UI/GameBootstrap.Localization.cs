@@ -104,6 +104,7 @@ public partial class GameBootstrap
         { "Fleet", "Автопарк" },
         { "Worker", "Рабочий" },
         { "Workers", "Рабочие" },
+        { "Social", "Связи" },
         { "Drivers", "Водители" },
         { "Assignments", "Вакансии" },
         { "Roles", "Вакансии" },
@@ -458,6 +459,7 @@ public partial class GameBootstrap
         isBuildScreenDirty = true;
         isWorldMapScreenDirty = true;
         isStatesScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         UpdateTutorialGoalsLocalization();
     }
 

@@ -105,12 +105,36 @@ public partial class GameBootstrap : MonoBehaviour
     {
         if (driver == null || !locations.TryGetValue(type, out LocationData service))
         {
+            WorkerNeedKind missingNeed = goal == WorkerLifeGoal.Eat
+                ? WorkerNeedKind.Meal
+                : goal == WorkerLifeGoal.Sleep
+                    ? WorkerNeedKind.Sleep
+                    : WorkerNeedKind.Leisure;
+            RecordWorkerServiceMissingThought(driver, type, missingNeed, $"{type} not built");
             LogWorkerDecision(driver, "service-unavailable", $"{type} not built", true);
             return false;
         }
 
         if (driver.Money < service.ServiceFee)
         {
+            RecordWorkerThought(
+                driver,
+                WorkerThoughtKind.Money,
+                WorkerThoughtTone.Negative,
+                74,
+                "service_unaffordable",
+                new[]
+                {
+                    ThoughtBuilding("service", type),
+                    ThoughtText("balance", $"${driver.Money}")
+                },
+                WorkerThoughtSubjectType.BuildingType,
+                0,
+                type.ToString(),
+                GetSelectedLocationDisplayName(type),
+                -7,
+                $"service_unaffordable|{type}",
+                5f);
             LogWorkerDecision(driver, "service-unavailable", $"{type}: {GetWorkerServiceUnavailableReason(driver, type)}", true);
             return false;
         }

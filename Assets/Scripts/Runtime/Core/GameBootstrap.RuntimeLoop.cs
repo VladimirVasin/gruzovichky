@@ -351,6 +351,7 @@ public partial class GameBootstrap
         UpdateBuildScreenUi();
         UpdateWorldMapScreenUi();
         UpdateStatesScreenUi();
+        UpdateSocialGraphScreenUi();
         UpdateEventFeedUi();
         UpdateTutorialGoalsRuntime();
         CloseQuickHudsWhenBlockingHudIsOpen();

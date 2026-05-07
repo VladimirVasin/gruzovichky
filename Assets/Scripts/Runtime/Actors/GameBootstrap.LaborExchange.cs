@@ -459,7 +459,11 @@ public partial class GameBootstrap
         {
             if (driver != null && !string.IsNullOrEmpty(readyReason))
             {
-                LogWorkerDecision(driver, "skip-labor-exchange", readyReason);
+                LogWorkerDecision(
+                    driver,
+                    "skip-labor-exchange",
+                    readyReason,
+                    verboseOnly: IsLaborExchangeReadinessSkipVerboseOnly(readyReason));
             }
             return false;
         }
@@ -520,6 +524,12 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("LABOR_EXCHANGE", $"{driver.DriverName} reserved posting #{posting.Id} and walks to Labor Exchange: {GetLaborExchangePostingLabel(posting)}.");
         LogWorkerDecision(driver, "labor-exchange-apply", $"posting #{posting.Id}: {GetLaborExchangePostingLabel(posting)}", true);
         return true;
+    }
+
+    private static bool IsLaborExchangeReadinessSkipVerboseOnly(string reason)
+    {
+        return reason == "Labor Exchange is not built" ||
+               reason == "Labor Exchange has no clerk on shift";
     }
 
     private bool TryReserveLaborExchangePostingForWorker(DriverAgent driver, out LaborExchangePosting posting, out string reason)

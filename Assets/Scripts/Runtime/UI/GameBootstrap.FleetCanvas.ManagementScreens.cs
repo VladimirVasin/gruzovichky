@@ -12,7 +12,7 @@ public partial class GameBootstrap
 
     private DriversScreenUiRefs driversScreenUi;
     private bool isDriversScreenDirty = true;
-    private bool isWorkerSocialTabActive;
+    private WorkerDetailTab activeWorkerDetailTab = WorkerDetailTab.Profile;
     private int  selectedWorkerPanelDriverId = 0;
     private bool shouldScrollWorkersListToSelected;
     private bool isEconomyScreenDirty = true;
@@ -54,6 +54,13 @@ public partial class GameBootstrap
     private WorldMapScreenUiRefs worldMapScreenUi;
     private bool isWorldMapScreenDirty = true;
 
+    private enum WorkerDetailTab
+    {
+        Profile,
+        Social,
+        Thoughts
+    }
+
     private sealed class DriversScreenUiRefs
     {
         public GameObject    CanvasRoot;
@@ -74,8 +81,11 @@ public partial class GameBootstrap
         public Text DetailProfileTabText;
         public Button DetailSocialTabButton;
         public Text DetailSocialTabText;
+        public Button DetailThoughtsTabButton;
+        public Text DetailThoughtsTabText;
         public GameObject DetailProfileTabRoot;
         public GameObject DetailSocialTabRoot;
+        public GameObject DetailThoughtsTabRoot;
         public Text  DetailNameText;
         public Text  DetailProfileTitleText;
         public Text  DetailRoleText;
@@ -119,6 +129,10 @@ public partial class GameBootstrap
         public Text  DetailSocialFamiliarityHeaderText;
         public Text  DetailSocialContextHeaderText;
         public readonly List<WorkerSocialRowUi> DetailSocialRows = new();
+        public Text  DetailThoughtsTitleText;
+        public Text  DetailThoughtsEmptyText;
+        public readonly List<Text> DetailOpinionChipTexts = new();
+        public readonly List<WorkerThoughtRowUi> DetailThoughtRows = new();
         public Button DetailFocusButton;
         public Text   DetailFocusButtonText;
     }
@@ -146,6 +160,14 @@ public partial class GameBootstrap
         public Text RelationText;
         public Text FamiliarityText;
         public Text ContextText;
+    }
+
+    private sealed class WorkerThoughtRowUi
+    {
+        public RectTransform Root;
+        public Text TimeText;
+        public Text ToneText;
+        public Text BodyText;
     }
 
     private sealed class ShiftsScreenUiRefs

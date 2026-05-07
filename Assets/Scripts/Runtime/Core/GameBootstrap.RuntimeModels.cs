@@ -124,6 +124,35 @@ public partial class GameBootstrap
         Service
     }
 
+    private enum WorkerThoughtKind
+    {
+        Need,
+        Work,
+        Money,
+        Social,
+        Family,
+        Transport,
+        City
+    }
+
+    private enum WorkerThoughtTone
+    {
+        Positive,
+        Neutral,
+        Negative
+    }
+
+    private enum WorkerThoughtSubjectType
+    {
+        None,
+        Text,
+        Worker,
+        BuildingType,
+        Need,
+        Family,
+        Child
+    }
+
     private sealed class DriverAgent
     {
         public int DriverId;
@@ -263,6 +292,9 @@ public partial class GameBootstrap
         public LocationType? InsideBuildingType;
         public int InsideBuildingInstanceId;
         public readonly List<WorkerSocialMemory> SocialMemories = new();
+        public readonly List<WorkerThought> Thoughts = new();
+        public readonly List<WorkerOpinion> Opinions = new();
+        public readonly Dictionary<string, float> WorkerThoughtCooldownWorldHours = new();
         public int Satisfaction = 70;
         public int UnhappyDays;
         public bool DepartureIntent;
@@ -270,11 +302,45 @@ public partial class GameBootstrap
         public bool HasDepartedTown;
         public string DepartureReason = string.Empty;
         public string LastWorkerDecisionDebugKey;
-        public string LastThrottledWorkerDecisionDebugKey;
-        public float LastThrottledWorkerDecisionDebugTime = -999f;
-        public float LastThrottledWorkerDecisionWorldHour = -999f;
-        public string LastLocalBusSkipDebugKey;
-        public float LastLocalBusSkipDebugTime = -999f;
+        public readonly Dictionary<string, DebugThrottleStamp> WorkerDecisionDebugThrottle = new();
+        public readonly Dictionary<string, DebugThrottleStamp> LocalBusSkipDebugThrottle = new();
+    }
+
+    private sealed class DebugThrottleStamp
+    {
+        public float RealTime;
+        public float WorldHour;
+    }
+
+    private sealed class WorkerThought
+    {
+        public WorkerThoughtKind Kind;
+        public WorkerThoughtTone Tone;
+        public int Intensity;
+        public string TemplateKey;
+        public int CreatedDay;
+        public float CreatedWorldHour;
+        public readonly List<WorkerThoughtPlaceholder> Placeholders = new();
+    }
+
+    private sealed class WorkerThoughtPlaceholder
+    {
+        public string Key;
+        public WorkerThoughtSubjectType SubjectType;
+        public int SubjectId;
+        public string SubjectKey;
+        public string FallbackLabel;
+    }
+
+    private sealed class WorkerOpinion
+    {
+        public WorkerThoughtSubjectType SubjectType;
+        public int SubjectId;
+        public string SubjectKey;
+        public string FallbackLabel;
+        public int Score;
+        public int Confidence;
+        public float LastUpdatedWorldHour;
     }
 
     private sealed class WorkerSocialMemory

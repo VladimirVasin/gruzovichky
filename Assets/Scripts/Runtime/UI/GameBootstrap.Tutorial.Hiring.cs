@@ -60,12 +60,14 @@ public partial class GameBootstrap
         }
 
         isDriversPanelOpen = false;
+        isSocialGraphPanelOpen = false;
         if (driversScreenUi?.CanvasRoot != null)
         {
             driversScreenUi.CanvasRoot.SetActive(false);
         }
 
         isDriversScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         ScheduleTutorial(TutorialTrigger.UserWorkerHiringBusInfo, 0.25f);
         SessionDebugLogger.Log("TUTORIAL", "Worker migration goal completed; scheduled arrival bus explanation.");
     }
@@ -680,6 +682,7 @@ public partial class GameBootstrap
         isFleetPanelOpen = false;
         isDriversPanelOpen = false;
         isShiftsPanelOpen = false;
+        isSocialGraphPanelOpen = false;
         isTruckDetailsOpen = false;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
@@ -687,6 +690,7 @@ public partial class GameBootstrap
         selectedLocalStopIndex = -1;
         selectedPersonalHouseIndex = -1;
         RefreshSelectionVisuals();
+        isSocialGraphScreenDirty = true;
 
         isTruckCameraFocused = false;
         isCameraReturningToDiorama = false;

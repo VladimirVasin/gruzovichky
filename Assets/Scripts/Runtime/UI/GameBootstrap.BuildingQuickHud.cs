@@ -97,6 +97,7 @@ public partial class GameBootstrap
                isBuildPanelOpen ||
                isWorldMapPanelOpen ||
                isStatesPanelOpen ||
+               isSocialGraphPanelOpen ||
                activeBuildTool != BuildTool.None;
     }
 
@@ -435,6 +436,8 @@ public partial class GameBootstrap
             !isDriversPanelOpen &&
             !isShiftsPanelOpen &&
             !isResourcesPanelOpen &&
+            !isEconomyPanelOpen &&
+            !isTradePanelOpen &&
             !isBuildPanelOpen;
 
         if (buildingQuickHud.CanvasRoot.activeSelf != shouldShow)
@@ -559,6 +562,8 @@ public partial class GameBootstrap
         }
 
         LocationType locationType = selectedLocation.Value;
+        isSocialGraphPanelOpen = false;
+        isSocialGraphScreenDirty = true;
         switch (locationType)
         {
             case LocationType.Parking:

@@ -199,6 +199,7 @@ public partial class GameBootstrap
             driversScreenUi.DetailSalaryText.text  = FormatWorkerSalaryContract(sel, ru);
             driversScreenUi.DetailBalanceText.text = $"${sel.Money}";
             UpdateWorkerSocialUi(sel, ru);
+            UpdateWorkerThoughtsUi(sel, ru);
 
             bool canFocus = sel.DriverObject != null && sel.DriverObject.activeSelf;
             driversScreenUi.DetailFocusButton.interactable = canFocus;
@@ -250,18 +251,29 @@ public partial class GameBootstrap
             driversScreenUi.DetailSocialTabText.text = ru ? "\u0421\u043e\u0446\u0438\u0430\u043b\u044c\u043d\u044b\u0435 \u0441\u0432\u044f\u0437\u0438" : "Social Links";
         }
 
+        if (driversScreenUi.DetailThoughtsTabText != null)
+        {
+            driversScreenUi.DetailThoughtsTabText.text = ru ? "\u041c\u044b\u0441\u043b\u0438" : "Thoughts";
+        }
+
         if (driversScreenUi.DetailProfileTabRoot != null)
         {
-            driversScreenUi.DetailProfileTabRoot.SetActive(!isWorkerSocialTabActive);
+            driversScreenUi.DetailProfileTabRoot.SetActive(activeWorkerDetailTab == WorkerDetailTab.Profile);
         }
 
         if (driversScreenUi.DetailSocialTabRoot != null)
         {
-            driversScreenUi.DetailSocialTabRoot.SetActive(isWorkerSocialTabActive);
+            driversScreenUi.DetailSocialTabRoot.SetActive(activeWorkerDetailTab == WorkerDetailTab.Social);
         }
 
-        ApplyShiftsTabVisual(driversScreenUi.DetailProfileTabButton, driversScreenUi.DetailProfileTabText, !isWorkerSocialTabActive);
-        ApplyShiftsTabVisual(driversScreenUi.DetailSocialTabButton, driversScreenUi.DetailSocialTabText, isWorkerSocialTabActive);
+        if (driversScreenUi.DetailThoughtsTabRoot != null)
+        {
+            driversScreenUi.DetailThoughtsTabRoot.SetActive(activeWorkerDetailTab == WorkerDetailTab.Thoughts);
+        }
+
+        ApplyShiftsTabVisual(driversScreenUi.DetailProfileTabButton, driversScreenUi.DetailProfileTabText, activeWorkerDetailTab == WorkerDetailTab.Profile);
+        ApplyShiftsTabVisual(driversScreenUi.DetailSocialTabButton, driversScreenUi.DetailSocialTabText, activeWorkerDetailTab == WorkerDetailTab.Social);
+        ApplyShiftsTabVisual(driversScreenUi.DetailThoughtsTabButton, driversScreenUi.DetailThoughtsTabText, activeWorkerDetailTab == WorkerDetailTab.Thoughts);
     }
 
 }

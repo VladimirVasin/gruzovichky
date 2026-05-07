@@ -14,8 +14,10 @@ public partial class GameBootstrap
         isEconomyPanelOpen = false;
         isTradePanelOpen = false;
         isWorldMapPanelOpen = false;
+        isSocialGraphPanelOpen = false;
         isBuildPanelOpen = true;
         isBuildScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         LogUiInput("Tutorial: auto-opened Build panel after tutorial 2 OK");
         PlayUiSound(uiPanelOpenClip, 0.9f);
     }
@@ -44,6 +46,7 @@ public partial class GameBootstrap
         isWorldMapPanelOpen = false;
         isBuildPanelOpen = false;
         isStatesPanelOpen = false;
+        isSocialGraphPanelOpen = false;
         isTruckDetailsOpen = false;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
@@ -58,6 +61,7 @@ public partial class GameBootstrap
 
         isTradePanelOpen = true;
         isTradeScreenDirty = true;
+        isSocialGraphScreenDirty = true;
         LogUiInput("Tutorial: auto-opened Trade panel");
         PlayUiSound(uiPanelOpenClip, 0.9f);
     }

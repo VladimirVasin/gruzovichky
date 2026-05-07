@@ -1,10 +1,18 @@
 # Work Log
 
-Last updated: 2026-05-06
+Last updated: 2026-05-07
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20 and again on 2026-05-03 to keep agent startup light. Use git history for exact old implementation details.
 
 ## Recent Work
+
+- 2026-05-07: Added the MVP citizen social graph HUD. The top menu now has a `Social` / `Связи` button that opens a dedicated Canvas graph of active workers and their remembered social links, with relationship-colored edges, scaled portrait nodes, selected-worker inspection, strongest-link rows, and an `Open in Workers` jump to the Social Links tab. Social/family mutations mark the graph dirty, common menu/quick-HUD/tutorial transitions close it cleanly, and `Assembly-CSharp.csproj` plus owner/architecture memory were updated for the new partial. Verified runtime `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and added-line mojibake scan.
+
+- 2026-05-07: Fixed worker Thoughts observability and early coverage. `THOUGHT` records now write to normal `debug.log` instead of verbose-only logging; workers get initial arrival thoughts, daily no-job thoughts, missing-service thoughts, and fallback-need thoughts now include the concrete reason. Repeated direct `LIFE` skip logs for missing Canteen/Motel were moved to verbose so throttled `WORKER_DECISION` remains the readable non-verbose trace. Verified runtime/editor `dotnet build`, `./tools/check-line-count.ps1`, `git diff --check`, and mojibake scans on added lines/new thought templates.
+
+- 2026-05-07: Added the MVP worker Thoughts layer. Workers now keep bounded thought memories plus lightweight opinions with placeholder-backed templates, generated from service use/failures, salary, transport choices, social contact, house/family events, child birth, and daily money/stability checks. The Workers detail HUD now has a separate Thoughts tab with opinion chips and recent thought rows. Updated `Assembly-CSharp.csproj`, owner map, and architecture notes for the new runtime/UI partials. Verified runtime/editor `dotnet build`, `./tools/check-line-count.ps1`, `git diff --check`, trailing-whitespace scan for new files, and added-line/new-file mojibake scans.
+
+- 2026-05-07: Fixed noisy worker/bus debug-log throttling. Worker decision and local-bus passenger skip throttles now keep per-key stamps instead of one last key per worker, so alternating `skip-due-life-cycle` / `skip-labor-exchange` logs no longer bypass suppression. Expected no-due worker life-cycle skips and Labor Exchange not-built/no-clerk readiness skips are now verbose-only. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, and `git diff --check`.
 
 - 2026-05-07: Fixed the worker microHUD `Open in Workers` button layout so its `HorizontalLayoutGroup` child has `flexibleWidth = 1`, making the full action row reliably clickable while keeping the existing `OpenDriversPanelForDriver(selectedDriverId)` route.
 

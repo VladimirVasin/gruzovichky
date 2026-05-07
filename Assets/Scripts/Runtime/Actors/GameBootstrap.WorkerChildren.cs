@@ -96,6 +96,7 @@ public partial class GameBootstrap
         family.LastHappinessDelta = 8;
         family.LastHappinessReason = "New child";
         CreateWorkerChildVisual(child);
+        RecordWorkerChildBirthThoughts(family, child);
 
         isDriversScreenDirty = true;
         isFleetScreenDirty = true;
@@ -106,6 +107,42 @@ public partial class GameBootstrap
             $"{child.Name} was born in {FormatWorkerFamilyMemberNames(family, false)}'s family.",
             $"\u0412 \u0441\u0435\u043c\u044c\u0435 {FormatWorkerFamilyMemberNames(family, true)} \u043f\u043e\u044f\u0432\u0438\u043b\u0441\u044f \u0440\u0435\u0431\u0435\u043d\u043e\u043a: {child.Name}.",
             FeedEventType.Success);
+    }
+
+    private void RecordWorkerChildBirthThoughts(WorkerFamily family, WorkerChild child)
+    {
+        if (family == null || child == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < family.MemberWorkerIds.Count; i++)
+        {
+            DriverAgent adult = GetDriverAgentById(family.MemberWorkerIds[i]);
+            if (adult == null || adult.HasDepartedTown || adult.IsLeavingTown)
+            {
+                continue;
+            }
+
+            RecordWorkerThought(
+                adult,
+                WorkerThoughtKind.Family,
+                WorkerThoughtTone.Positive,
+                95,
+                "child_born",
+                new[]
+                {
+                    ThoughtChild("child", child),
+                    ThoughtFamily("family", family)
+                },
+                WorkerThoughtSubjectType.Child,
+                child.Id,
+                null,
+                child.Name,
+                18,
+                $"child_born|{child.Id}",
+                72f);
+        }
     }
 
     private string GenerateWorkerChildName(WorkerFamily family, WorkerGender gender)

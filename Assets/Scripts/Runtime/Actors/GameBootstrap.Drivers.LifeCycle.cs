@@ -53,7 +53,11 @@ public partial class GameBootstrap : MonoBehaviour
                           IsWorkerNeedActionReady(driver, WorkerNeedKind.Sleep);
         if (!hasDueNeed)
         {
-            LogWorkerDecision(driver, "skip-due-life-cycle", $"hour={hour}, hasDueNeed=False, retry meal={driver.NextMealRetryAtWorldHour:0.0}, leisure={driver.NextLeisureRetryAtWorldHour:0.0}, sleep={driver.NextSleepRetryAtWorldHour:0.0}, flags eat={driver.AteToday}, leisure={driver.HadLeisureToday}, sleep={driver.SleptToday}");
+            LogWorkerDecision(
+                driver,
+                "skip-due-life-cycle",
+                $"hour={hour}, hasDueNeed=False, retry meal={driver.NextMealRetryAtWorldHour:0.0}, leisure={driver.NextLeisureRetryAtWorldHour:0.0}, sleep={driver.NextSleepRetryAtWorldHour:0.0}, flags eat={driver.AteToday}, leisure={driver.HadLeisureToday}, sleep={driver.SleptToday}",
+                verboseOnly: true);
             return false;
         }
 
@@ -216,7 +220,7 @@ public partial class GameBootstrap : MonoBehaviour
                 if (driver.AssignedPersonalHouseIndex >= 0 && driver.AssignedPersonalHouseIndex < personalHouses.Count)
                 {
                     string homeMealUnavailableReason = "personal house meal path unavailable";
-                    SessionDebugLogger.Log("LIFE", $"{driver.DriverName} skipped Canteen because they own PersonalHouse #{driver.AssignedPersonalHouseIndex}; home meal unavailable; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
+                    SessionDebugLogger.LogVerbose("LIFE", $"{driver.DriverName} skipped Canteen because they own PersonalHouse #{driver.AssignedPersonalHouseIndex}; home meal unavailable; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
                     LogWorkerDecision(driver, "skip-canteen-home-owner", homeMealUnavailableReason, true);
                     driver.LifeGoal = WorkerLifeGoal.None;
                     SetWorkerNeedRetryCooldown(driver, WorkerNeedKind.Meal, homeMealUnavailableReason);
@@ -228,7 +232,7 @@ public partial class GameBootstrap : MonoBehaviour
                     return true;
                 }
                 string mealUnavailableReason = GetWorkerServiceUnavailableReason(driver, LocationType.Canteen);
-                SessionDebugLogger.Log("LIFE", $"{driver.DriverName} skipped Canteen today; reason={mealUnavailableReason}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
+                SessionDebugLogger.LogVerbose("LIFE", $"{driver.DriverName} skipped Canteen today; reason={mealUnavailableReason}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
                 LogWorkerDecision(driver, "skip-meal-service", mealUnavailableReason, true);
                 if (IsCanteenBlockedByMoney(driver, mealUnavailableReason) && TryStartWorkerTrashCanMealFallback(driver, startPosition, mealUnavailableReason))
                 {
@@ -257,7 +261,7 @@ public partial class GameBootstrap : MonoBehaviour
                 {
                     return true;
                 }
-                SessionDebugLogger.Log("LIFE", $"{driver.DriverName} skipped Motel sleep today; reason={GetWorkerServiceUnavailableReason(driver, LocationType.Motel)}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Sleep)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
+                SessionDebugLogger.LogVerbose("LIFE", $"{driver.DriverName} skipped Motel sleep today; reason={GetWorkerServiceUnavailableReason(driver, LocationType.Motel)}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Sleep)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
                 LogWorkerDecision(driver, "skip-sleep-service", GetWorkerServiceUnavailableReason(driver, LocationType.Motel), true);
                 if (TryStartWorkerNeedFallback(driver, WorkerNeedKind.Sleep, startPosition, GetWorkerServiceUnavailableReason(driver, LocationType.Motel)))
                 {
@@ -462,6 +466,7 @@ public partial class GameBootstrap : MonoBehaviour
             {
                 SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} cannot afford Motel and is heading to bench sleep fallback; reason={reason}; bench={benchIndex}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Sleep)}.");
             }
+            RecordWorkerNeedFallbackThought(driver, need, reason);
             LogWorkerDecision(driver, "need-fallback", $"{need}: emergency bench rest; reason={reason}", true);
             return true;
         }
@@ -477,6 +482,7 @@ public partial class GameBootstrap : MonoBehaviour
                     driver.WalkPhase = DriverRescuePhase.None;
                     return false;
                 }
+                RecordWorkerNeedFallbackThought(driver, need, reason);
                 LogWorkerDecision(driver, "need-fallback", $"{need}: walking to free ground rest; reason={reason}", true);
                 return true;
             }
@@ -487,6 +493,7 @@ public partial class GameBootstrap : MonoBehaviour
                 driver.WalkPhase = DriverRescuePhase.None;
                 return false;
             }
+            RecordWorkerNeedFallbackThought(driver, need, reason);
             LogWorkerDecision(driver, "need-fallback-walk", $"{need}: walking to free city fallback; reason={reason}", true);
             return true;
         }
@@ -494,8 +501,31 @@ public partial class GameBootstrap : MonoBehaviour
         driver.WalkPhase = need == WorkerNeedKind.Sleep
             ? DriverRescuePhase.IdleSittingOnBench
             : DriverRescuePhase.IdlePhoneCall;
+        RecordWorkerNeedFallbackThought(driver, need, reason);
         LogWorkerDecision(driver, "need-fallback", $"{need}: immediate free fallback; reason={reason}", true);
         return true;
+    }
+
+    private void RecordWorkerNeedFallbackThought(DriverAgent driver, WorkerNeedKind need, string reason)
+    {
+        RecordWorkerThought(
+            driver,
+            WorkerThoughtKind.Need,
+            WorkerThoughtTone.Negative,
+            72,
+            "need_fallback_bad",
+            new[]
+            {
+                ThoughtNeed("need", need),
+                ThoughtText("reason", reason)
+            },
+            WorkerThoughtSubjectType.Need,
+            0,
+            need.ToString(),
+            need.ToString(),
+            -8,
+            $"need_fallback|{need}",
+            6f);
     }
 
     private bool TryStartWorkerSleep(DriverAgent driver, Vector3 startPosition)
@@ -509,7 +539,14 @@ public partial class GameBootstrap : MonoBehaviour
         if (TryStartWorkerBuyHouseBeforeMotelSleep(driver, startPosition))
             return true;
 
-        if (!locations.TryGetValue(LocationType.Motel, out LocationData motel) || driver.Money < motel.ServiceFee)
+        if (!locations.TryGetValue(LocationType.Motel, out LocationData motel))
+        {
+            RecordWorkerServiceMissingThought(driver, LocationType.Motel, WorkerNeedKind.Sleep, "Motel not built");
+            LogWorkerDecision(driver, "sleep-unavailable", GetWorkerServiceUnavailableReason(driver, LocationType.Motel), true);
+            return false;
+        }
+
+        if (driver.Money < motel.ServiceFee)
         {
             LogWorkerDecision(driver, "sleep-unavailable", GetWorkerServiceUnavailableReason(driver, LocationType.Motel), true);
             return false;
