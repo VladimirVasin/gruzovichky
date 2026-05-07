@@ -6,6 +6,10 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-07: Reworked the Residents HUD Inventory tab into a minimal auto-consumables view. The old item table/empty row was replaced with a single title plus two non-clickable Snack/Coffee cards using real inventory quantities, small runtime pixel icons, trigger/effect/auto-use rows, and muted `x0` states. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, and added-line mojibake scan.
+
+- 2026-05-07: Changed worker consumable auto-use from critical-only to early prevention. Snack and Coffee now auto-use when their linked need has 20% or less remaining before the critical threshold instead of waiting for 0%/Critical; logs distinguish early `low` relief from true `critical` relief. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, and touched-file mojibake scan.
+
 - 2026-05-07: Consolidated worker consumable vending into Kiosk only. Removed Coffee Shop as a buildable/runtime location and build-menu card, kept Kiosk as the single roadless vendor, routed both `$5` Snack and Coffee idle purchases through Kiosk with a pending item id on `DriverAgent`, updated Kiosk HUD/catalog/item copy, and added a custom Kiosk build-menu icon showing the stand plus snack/coffee cues. Verified JSON parse, `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, and `git diff --check`.
 
 - 2026-05-07: Added Social Graph HUD animations. The screen now fades/scales in and out, graph nodes spawn with staggered alpha/scale, every node has a subtle idle wobble, focused maps give non-central nodes a light orbital drift around the selected citizen, edges follow animated node positions, and hover updates inspector/edge emphasis without forcing a full graph rebuild. Updated owner/architecture memory for the new SocialGraph animation partial. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and touched SocialGraph/memory mojibake scan.

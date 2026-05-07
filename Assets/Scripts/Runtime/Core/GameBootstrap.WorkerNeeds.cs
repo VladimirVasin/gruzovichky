@@ -20,6 +20,7 @@ public partial class GameBootstrap
     private const float WorkerNeedMoneyRetryCooldownHours = 3.5f;
     private const float WorkerShiftNeedGrowthMultiplier = 0.25f;
     private const float WorkerConsumableNeedReliefRatio = 0.25f;
+    private const float WorkerConsumableAutoUseRemainingRatio = 0.20f;
 
     private static bool IsWorkerActivelySleeping(DriverAgent driver)
     {
@@ -70,7 +71,7 @@ public partial class GameBootstrap
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Sleep, oldSleep, driver.LastSleepNeedStatus, driver.HoursSinceSleep);
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Leisure, oldLeisure, driver.LastLeisureNeedStatus, driver.HoursSinceLeisure);
 
-        TryAutoUseCriticalNeedConsumables(driver);
+        TryAutoUseNeedConsumables(driver);
 
         if (isDriversPanelOpen && selectedWorkerPanelDriverId == driver.DriverId)
         {
@@ -319,39 +320,56 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} satisfied {need}; before={oldHours:0.0}h/{oldStatus}; after={FormatWorkerNeedsDebug(driver)}.");
     }
 
-    private void TryAutoUseCriticalNeedConsumables(DriverAgent driver)
+    private void TryAutoUseNeedConsumables(DriverAgent driver)
     {
         if (driver == null)
         {
             return;
         }
 
-        if (driver.LastMealNeedStatus == WorkerNeedStatus.Critical &&
+        if (ShouldAutoUseNeedConsumable(driver.HoursSinceMeal, WorkerMealCriticalHours) &&
             HasWorkerInventoryItem(driver, WorkerSnackItemId))
         {
             TryUseWorkerNeedConsumable(driver, WorkerSnackItemId, WorkerNeedKind.Meal, WorkerMealCriticalHours * WorkerConsumableNeedReliefRatio);
         }
 
-        if (driver.LastSleepNeedStatus == WorkerNeedStatus.Critical &&
+        if (ShouldAutoUseNeedConsumable(driver.HoursSinceSleep, WorkerSleepCriticalHours) &&
             HasWorkerInventoryItem(driver, WorkerCoffeeItemId))
         {
             TryUseWorkerNeedConsumable(driver, WorkerCoffeeItemId, WorkerNeedKind.Sleep, WorkerSleepCriticalHours * WorkerConsumableNeedReliefRatio);
         }
     }
 
+    private static bool ShouldAutoUseNeedConsumable(float hoursSinceNeed, float criticalHours)
+    {
+        if (criticalHours <= 0f)
+        {
+            return false;
+        }
+
+        float remainingRatio = Mathf.Clamp01(1f - hoursSinceNeed / criticalHours);
+        return remainingRatio <= WorkerConsumableAutoUseRemainingRatio;
+    }
+
     private bool TryUseWorkerNeedConsumable(DriverAgent driver, string itemId, WorkerNeedKind need, float reliefHours)
     {
-        if (driver == null || !TryRemoveWorkerInventoryItem(driver, itemId, 1, $"critical {need} relief"))
+        if (driver == null)
         {
             return false;
         }
 
         float oldHours = GetWorkerNeedHours(driver, need);
         WorkerNeedStatus oldStatus = GetWorkerNeedLastStatus(driver, need);
+        string urgencyLabel = oldStatus == WorkerNeedStatus.Critical ? "critical" : "low";
+        if (!TryRemoveWorkerInventoryItem(driver, itemId, 1, $"{urgencyLabel} {need} relief"))
+        {
+            return false;
+        }
+
         ApplyWorkerNeedRelief(driver, need, reliefHours);
         SessionDebugLogger.Log(
             "NEEDS",
-            $"{driver.DriverName} auto-used {itemId} for critical {need}; relief={reliefHours:0.0}h, before={oldHours:0.0}h/{oldStatus}, after={FormatWorkerNeedDebug(driver, need)}, inventoryLeft={GetWorkerInventoryItemQuantity(driver, itemId)}.");
+            $"{driver.DriverName} auto-used {itemId} for {urgencyLabel} {need}; relief={reliefHours:0.0}h, before={oldHours:0.0}h/{oldStatus}, after={FormatWorkerNeedDebug(driver, need)}, inventoryLeft={GetWorkerInventoryItemQuantity(driver, itemId)}.");
         return true;
     }
 

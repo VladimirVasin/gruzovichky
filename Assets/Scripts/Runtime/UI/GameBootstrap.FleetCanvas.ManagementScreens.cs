@@ -133,12 +133,8 @@ public partial class GameBootstrap
         public readonly List<Text> DetailOpinionChipTexts = new();
         public readonly List<WorkerThoughtRowUi> DetailThoughtRows = new();
         public Text  DetailInventoryTitleText;
-        public Text  DetailInventoryEmptyText;
-        public Text  DetailInventoryNameHeaderText;
-        public Text  DetailInventoryCategoryHeaderText;
-        public Text  DetailInventoryQuantityHeaderText;
-        public Text  DetailInventoryMetaHeaderText;
-        public readonly List<WorkerInventoryRowUi> DetailInventoryRows = new();
+        public WorkerAutoConsumableCardUi DetailSnackCard;
+        public WorkerAutoConsumableCardUi DetailCoffeeCard;
         public Button DetailFocusButton;
         public Text   DetailFocusButtonText;
     }
@@ -183,13 +179,20 @@ public partial class GameBootstrap
         public Text BodyText;
     }
 
-    private sealed class WorkerInventoryRowUi
+    private sealed class WorkerAutoConsumableCardUi
     {
         public RectTransform Root;
+        public Image Background;
+        public Image ItemIcon;
+        public Image TriggerIcon;
+        public Image EffectIcon;
+        public Image AutoIcon;
         public Text NameText;
-        public Text CategoryText;
         public Text QuantityText;
-        public Text MetaText;
+        public Text TypeText;
+        public Text TriggerText;
+        public Text EffectText;
+        public Text AutoText;
     }
 
     private sealed class ShiftsScreenUiRefs
