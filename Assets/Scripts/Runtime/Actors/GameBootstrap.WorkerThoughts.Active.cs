@@ -305,40 +305,32 @@ public partial class GameBootstrap
     {
         string warningKey = GetWorkerNeedThoughtKey(need, WorkerNeedStatus.Warning);
         string criticalKey = GetWorkerNeedThoughtKey(need, WorkerNeedStatus.Critical);
-        if (status == WorkerNeedStatus.Ok)
+        if (status != WorkerNeedStatus.Critical)
         {
             ResolveActiveWorkerThought(worker, warningKey, "need recovered");
             ResolveActiveWorkerThought(worker, criticalKey, "need recovered");
             return;
         }
 
-        if (status == WorkerNeedStatus.Warning)
-        {
-            ResolveActiveWorkerThought(worker, criticalKey, "need less urgent");
-        }
-        else
-        {
-            ResolveActiveWorkerThought(worker, warningKey, "need escalated");
-        }
-
-        string key = GetWorkerNeedThoughtKey(need, status);
+        ResolveActiveWorkerThought(worker, warningKey, "need escalated");
+        string key = criticalKey;
         AddOrKeepActiveWorkerThought(
             worker,
             key,
             WorkerThoughtKind.Need,
             WorkerThoughtTone.Negative,
-            status == WorkerNeedStatus.Critical ? 90 : 58,
+            90,
             key,
             new[]
             {
                 ThoughtNeed("need", need)
             },
-            status == WorkerNeedStatus.Critical ? WorkerThoughtPriority.Critical : WorkerThoughtPriority.High,
+            WorkerThoughtPriority.Critical,
             WorkerThoughtSubjectType.Need,
             0,
             need.ToString(),
             FormatWorkerThoughtNeed(need.ToString(), false),
-            status == WorkerNeedStatus.Critical ? -6 : -2);
+            -6);
     }
 
     private static string GetWorkerNeedThoughtKey(WorkerNeedKind need, WorkerNeedStatus status)
@@ -561,7 +553,7 @@ public partial class GameBootstrap
         for (int i = 0; i < worker.SocialMemories.Count; i++)
         {
             WorkerSocialMemory memory = worker.SocialMemories[i];
-            if (memory == null || memory.Familiarity <= 0)
+            if (!IsWorkerSocialMemoryVisible(memory))
             {
                 continue;
             }

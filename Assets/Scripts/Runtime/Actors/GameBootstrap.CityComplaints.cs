@@ -135,13 +135,12 @@ public partial class GameBootstrap
     private void TryCreateNeedComplaint(DriverAgent worker, WorkerNeedKind need, ref int createdThisScan)
     {
         WorkerNeedStatus status = GetWorkerNeedLastStatus(worker, need);
-        if (status == WorkerNeedStatus.Ok)
+        if (status != WorkerNeedStatus.Critical)
         {
             return;
         }
 
-        int severity = status == WorkerNeedStatus.Critical ? 4 : 2;
-        TryCreateCityComplaint(worker, CityComplaintCategory.NeedPressure, severity, need, null, ref createdThisScan);
+        TryCreateCityComplaint(worker, CityComplaintCategory.NeedPressure, 4, need, null, ref createdThisScan);
     }
 
     private void TryCreateLowMoneyComplaint(DriverAgent worker, ref int createdThisScan)
@@ -166,19 +165,19 @@ public partial class GameBootstrap
 
     private void TryCreateServiceMissingComplaint(DriverAgent worker, ref int createdThisScan)
     {
-        if (worker.LastMealNeedStatus != WorkerNeedStatus.Ok &&
+        if (worker.LastMealNeedStatus == WorkerNeedStatus.Critical &&
             !locations.ContainsKey(LocationType.Canteen) &&
             !locations.ContainsKey(LocationType.Kiosk))
         {
             TryCreateCityComplaint(worker, CityComplaintCategory.ServiceMissing, 3, WorkerNeedKind.Meal, LocationType.Canteen, ref createdThisScan);
         }
 
-        if (worker.LastSleepNeedStatus != WorkerNeedStatus.Ok && !locations.ContainsKey(LocationType.Motel))
+        if (worker.LastSleepNeedStatus == WorkerNeedStatus.Critical && !locations.ContainsKey(LocationType.Motel))
         {
             TryCreateCityComplaint(worker, CityComplaintCategory.ServiceMissing, 3, WorkerNeedKind.Sleep, LocationType.Motel, ref createdThisScan);
         }
 
-        if (worker.LastLeisureNeedStatus != WorkerNeedStatus.Ok &&
+        if (worker.LastLeisureNeedStatus == WorkerNeedStatus.Critical &&
             !locations.ContainsKey(LocationType.Bar) &&
             !locations.ContainsKey(LocationType.GamblingHall) &&
             !locations.ContainsKey(LocationType.CityPark))
@@ -263,9 +262,9 @@ public partial class GameBootstrap
         switch (complaint.Category)
         {
             case CityComplaintCategory.NeedPressure:
-                if (complaint.LinkedNeed.HasValue && GetWorkerNeedLastStatus(worker, complaint.LinkedNeed.Value) == WorkerNeedStatus.Ok)
+                if (complaint.LinkedNeed.HasValue && GetWorkerNeedLastStatus(worker, complaint.LinkedNeed.Value) != WorkerNeedStatus.Critical)
                 {
-                    reason = "need satisfied";
+                    reason = "need no longer critical";
                     return true;
                 }
                 break;

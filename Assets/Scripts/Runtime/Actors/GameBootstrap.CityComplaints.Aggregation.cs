@@ -283,7 +283,7 @@ public partial class GameBootstrap
         return complaint.Category switch
         {
             CityComplaintCategory.NeedPressure => complaint.LinkedNeed.HasValue &&
-                                                  GetWorkerNeedLastStatus(worker, complaint.LinkedNeed.Value) != WorkerNeedStatus.Ok,
+                                                  GetWorkerNeedLastStatus(worker, complaint.LinkedNeed.Value) == WorkerNeedStatus.Critical,
             CityComplaintCategory.NoJob => IsWorkerVacantForVacancyAssignment(worker),
             CityComplaintCategory.LowMoney => worker.Money < 15,
             CityComplaintCategory.FamilyStress => worker.FamilyId > 0 &&

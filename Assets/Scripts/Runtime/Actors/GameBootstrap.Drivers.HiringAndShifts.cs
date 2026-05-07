@@ -304,13 +304,30 @@ public partial class GameBootstrap : MonoBehaviour
                driver.DriverObject != null &&
                driver.DriverObject.activeSelf &&
                !driver.IsArrivingByBus &&
-               driver.ShiftStartHour < 0 &&
                !driver.IsOnActiveShift &&
                !driver.NeedsShiftEndReturn &&
                !driver.WaitingForShiftAtParking &&
                driver.RestPhase == DriverRestPhase.None &&
                driver.WalkPhase == DriverRescuePhase.None &&
-               GetCurrentTruckForDriver(driver) == null;
+               GetCurrentTruckForDriver(driver) == null &&
+               !IsDriverConversationShiftBlocked(driver);
+    }
+
+    private bool IsDriverConversationShiftBlocked(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return true;
+        }
+
+        if (driver.DutyMode == DriverDutyMode.Logistics &&
+            (ShouldLogisticsWorkerHeadToBuilding(driver) || IsLogisticsWorkerWorkHour(driver)))
+        {
+            return true;
+        }
+
+        return driver.ShiftStartHour >= 0 &&
+               (ShouldDriverHeadToShift(driver) || IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour));
     }
 
     private bool CanDriverStartIdleConversation(DriverAgent driver)
@@ -355,7 +372,8 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
-        if (Random.value > DriverIdleConversationStartChance)
+        float startChance = GetDriverIdleConversationStartChance(driver, bestPartner);
+        if (Random.value > startChance)
         {
             driver.IdleWanderPauseTimer = Random.Range(0.8f, 1.6f);
             return false;
@@ -373,6 +391,22 @@ public partial class GameBootstrap : MonoBehaviour
         RecordWorkerSocialInteraction(driver, bestPartner, WorkerSocialInteractionKind.IdleConversation);
         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} and {bestPartner.DriverName} started an idle conversation.");
         return true;
+    }
+
+    private static float GetDriverIdleConversationStartChance(DriverAgent driver, DriverAgent partner)
+    {
+        float chance = DriverIdleConversationStartChance;
+        if (HasWorkerPerk(driver, WorkerPerkKind.Socialite))
+        {
+            chance += 0.25f;
+        }
+
+        if (HasWorkerPerk(partner, WorkerPerkKind.Socialite))
+        {
+            chance += 0.2f;
+        }
+
+        return Mathf.Clamp01(chance);
     }
 
     private bool CanDriverContinueIdleConversation(DriverAgent driver, DriverAgent partner)

@@ -94,12 +94,12 @@ public partial class GameBootstrap : MonoBehaviour
     private const float DriverIdleWanderPauseMin = 2.2f;
     private const float DriverIdleWanderPauseMax = 4.6f;
     private const float DriverIdlePersonalSpace = 0.62f;
-    private const float DriverIdleConversationDistance = 1.5f;
+    private const float DriverIdleConversationDistance = 2.1f;
     private const float DriverIdleConversationDurationMin = 3.4f;
     private const float DriverIdleConversationDurationMax = 6.2f;
-    private const float DriverIdleConversationCooldownMin = 7.5f;
-    private const float DriverIdleConversationCooldownMax = 12.5f;
-    private const float DriverIdleConversationStartChance = 0.3f;
+    private const float DriverIdleConversationCooldownMin = 4.5f;
+    private const float DriverIdleConversationCooldownMax = 8.5f;
+    private const float DriverIdleConversationStartChance = 0.42f;
     private const int SmokingParticlePoolSize = 5;
     private const float SmokingParticleEmitInterval = 1.1f;
     private const float SmokingParticleMaxLife = 3.2f;

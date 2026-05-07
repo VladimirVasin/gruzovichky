@@ -728,7 +728,6 @@ public partial class GameBootstrap
         return status switch
         {
             WorkerNeedStatus.Critical => 2,
-            WorkerNeedStatus.Warning => 1,
             _ => 0
         };
     }

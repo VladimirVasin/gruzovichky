@@ -4,9 +4,17 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
-    private const int WorkerSocialMemoryCap = 16;
+    private const int WorkerSocialMemoryCap = 10;
+    private const int WorkerSocialFriendRelationshipThreshold = 50;
+    private const int WorkerSocialVisibleFamiliarityThreshold = 10;
+    private const int WorkerSocialServiceExposureThreshold = 3;
+    private const int WorkerSocialCoworkerExposureThreshold = 2;
+    private const int WorkerSocialIdleExposureThreshold = 4;
+    private const float WorkerSocialNewIdleAcquaintanceChance = 0.65f;
+    private const float WorkerSocialSocialiteIdleAcquaintanceChanceBonus = 0.3f;
+    private const int WorkerSocialSocialiteExposureBonus = 1;
     private const int WorkerSocialHudRowCount = 8;
-    private const float WorkerSocialRepeatCooldownHours = 1.5f;
+    private const float WorkerSocialRepeatCooldownHours = 1f;
     private const float WorkerSocialDecayCheckIntervalHours = 1f;
     private const float WorkerSocialFamiliarityDecayGraceHours = 24f;
     private const float WorkerSocialFamiliarityDecayStepHours = 12f;
@@ -32,36 +40,64 @@ public partial class GameBootstrap
         }
 
         float now = GetCurrentWorldHour();
-        WorkerSocialMemory existing = FindWorkerSocialMemory(first, second.DriverId);
-        if (existing != null &&
-            existing.LastKind == kind &&
-            existing.LastLocationType == locationType &&
-            now - existing.LastInteractionWorldHour < WorkerSocialRepeatCooldownHours)
+        WorkerSocialMemory firstExisting = FindWorkerSocialMemory(first, second.DriverId);
+        WorkerSocialMemory secondExisting = FindWorkerSocialMemory(second, first.DriverId);
+        if (firstExisting != null &&
+            secondExisting != null &&
+            firstExisting.LastKind == kind &&
+            secondExisting.LastKind == kind &&
+            firstExisting.LastLocationType == locationType &&
+            secondExisting.LastLocationType == locationType &&
+            now - firstExisting.LastInteractionWorldHour < WorkerSocialRepeatCooldownHours &&
+            now - secondExisting.LastInteractionWorldHour < WorkerSocialRepeatCooldownHours)
         {
             return;
         }
 
+        int socialiteCount = GetWorkerSocialitePairCount(first, second);
+        int previousFamiliarity = Mathf.Max(firstExisting?.Familiarity ?? 0, secondExisting?.Familiarity ?? 0);
+        int previousInteractionCount = Mathf.Max(firstExisting?.InteractionCount ?? 0, secondExisting?.InteractionCount ?? 0);
         GetWorkerSocialDeltas(kind, out int familiarityDelta, out int relationshipDelta);
-        RecordWorkerSocialOneWay(first, second, kind, locationType, familiarityDelta, relationshipDelta, now);
-        RecordWorkerSocialOneWay(second, first, kind, locationType, familiarityDelta, relationshipDelta, now);
-        isDriversScreenDirty = true;
-        isSocialGraphScreenDirty = true;
-
-        if (kind == WorkerSocialInteractionKind.IdleConversation ||
-            kind == WorkerSocialInteractionKind.ServiceCoPresence)
+        ApplyWorkerSocialContextDeltaBonus(kind, locationType, ref familiarityDelta, ref relationshipDelta);
+        ApplyWorkerSocialMomentumBonus(kind, previousFamiliarity, previousInteractionCount, ref relationshipDelta);
+        ApplyWorkerSocialiteSocialDeltaBonus(kind, socialiteCount, ref familiarityDelta, ref relationshipDelta);
+        bool createsVisibleAcquaintance = ShouldCreateVisibleWorkerSocialMemory(
+            kind,
+            locationType,
+            firstExisting,
+            secondExisting,
+            socialiteCount);
+        bool firstVisible = RecordWorkerSocialOneWay(first, second, kind, locationType, familiarityDelta, relationshipDelta, now, createsVisibleAcquaintance, socialiteCount);
+        bool secondVisible = RecordWorkerSocialOneWay(second, first, kind, locationType, familiarityDelta, relationshipDelta, now, createsVisibleAcquaintance, socialiteCount);
+        bool visibleInteraction = firstVisible || secondVisible;
+        if (visibleInteraction)
         {
-            string context = locationType.HasValue ? locationType.Value.ToString() : kind.ToString();
-            SessionDebugLogger.Log(
-                "SOCIAL",
-                $"{first.DriverName} and {second.DriverName} social memory updated: {kind}, context={context}, familiarity+={familiarityDelta}, relationship+={relationshipDelta}.");
+            isDriversScreenDirty = true;
+            isSocialGraphScreenDirty = true;
         }
 
-        if (kind == WorkerSocialInteractionKind.IdleConversation)
+        if (visibleInteraction &&
+            (kind == WorkerSocialInteractionKind.IdleConversation ||
+             kind == WorkerSocialInteractionKind.ServiceCoPresence ||
+             kind == WorkerSocialInteractionKind.CoworkerShift))
+        {
+            string context = locationType.HasValue ? locationType.Value.ToString() : kind.ToString();
+            WorkerSocialMemory firstUpdated = FindWorkerSocialMemory(first, second.DriverId);
+            WorkerSocialMemory secondUpdated = FindWorkerSocialMemory(second, first.DriverId);
+            int totalFamiliarity = GetWorkerSocialPairAverageFamiliarity(firstUpdated, secondUpdated);
+            int totalRelationship = GetWorkerSocialPairAverageRelationship(firstUpdated, secondUpdated);
+            int totalInteractions = Mathf.Max(firstUpdated?.InteractionCount ?? 0, secondUpdated?.InteractionCount ?? 0);
+            SessionDebugLogger.Log(
+                "SOCIAL",
+                $"{first.DriverName} and {second.DriverName} social memory updated: {kind}, context={context}, familiarity+={familiarityDelta}, relationship+={relationshipDelta}, totals familiarity={totalFamiliarity}, relationship={totalRelationship}/{WorkerSocialFriendRelationshipThreshold}, interactions={totalInteractions}.");
+        }
+
+        if (visibleInteraction && kind == WorkerSocialInteractionKind.IdleConversation)
         {
             RecordWorkerSocialThought(first, second, "social_talk_good", null, 2);
             RecordWorkerSocialThought(second, first, "social_talk_good", null, 2);
         }
-        else if (kind == WorkerSocialInteractionKind.ServiceCoPresence && locationType.HasValue)
+        else if (visibleInteraction && kind == WorkerSocialInteractionKind.ServiceCoPresence && locationType.HasValue)
         {
             RecordWorkerSocialThought(first, second, "social_shared_place", locationType.Value, 1);
             RecordWorkerSocialThought(second, first, "social_shared_place", locationType.Value, 1);
@@ -95,14 +131,16 @@ public partial class GameBootstrap
             place.HasValue ? 8f : 5f);
     }
 
-    private void RecordWorkerSocialOneWay(
+    private bool RecordWorkerSocialOneWay(
         DriverAgent owner,
         DriverAgent other,
         WorkerSocialInteractionKind kind,
         LocationType? locationType,
         int familiarityDelta,
         int relationshipDelta,
-        float now)
+        float now,
+        bool createsVisibleAcquaintance,
+        int socialiteCount)
     {
         WorkerSocialMemory memory = FindWorkerSocialMemory(owner, other.DriverId);
         if (memory == null)
@@ -111,15 +149,211 @@ public partial class GameBootstrap
             owner.SocialMemories.Add(memory);
         }
 
-        memory.Familiarity = Mathf.Clamp(memory.Familiarity + familiarityDelta, 0, 100);
-        memory.Relationship = Mathf.Clamp(memory.Relationship + relationshipDelta, -100, 100);
-        memory.InteractionCount++;
+        bool wasVisible = IsWorkerSocialMemoryVisible(memory);
+        memory.Exposure = Mathf.Clamp(memory.Exposure + GetWorkerSocialExposureDelta(kind, locationType, socialiteCount), 0, 100);
+        if (wasVisible || createsVisibleAcquaintance)
+        {
+            memory.Familiarity = Mathf.Clamp(memory.Familiarity + familiarityDelta, 0, 100);
+            if (!wasVisible && memory.Familiarity < WorkerSocialVisibleFamiliarityThreshold)
+            {
+                memory.Familiarity = WorkerSocialVisibleFamiliarityThreshold;
+            }
+
+            memory.Relationship = Mathf.Clamp(memory.Relationship + relationshipDelta, -100, 100);
+            memory.InteractionCount++;
+            memory.Exposure = 0;
+        }
+
         memory.LastInteractionDay = currentDay;
         memory.LastInteractionWorldHour = now;
         memory.NextFamiliarityDecayWorldHour = now + WorkerSocialFamiliarityDecayGraceHours;
         memory.LastKind = kind;
         memory.LastLocationType = locationType;
         TrimWorkerSocialMemories(owner);
+        return IsWorkerSocialMemoryVisible(memory);
+    }
+
+    private bool ShouldCreateVisibleWorkerSocialMemory(
+        WorkerSocialInteractionKind kind,
+        LocationType? locationType,
+        WorkerSocialMemory first,
+        WorkerSocialMemory second,
+        int socialiteCount)
+    {
+        if (IsWorkerSocialMemoryVisible(first) || IsWorkerSocialMemoryVisible(second))
+        {
+            return true;
+        }
+
+        if (kind == WorkerSocialInteractionKind.ArrivalWave)
+        {
+            return false;
+        }
+
+        int exposureAfter = Mathf.Max(
+            (first?.Exposure ?? 0) + GetWorkerSocialExposureDelta(kind, locationType, socialiteCount),
+            (second?.Exposure ?? 0) + GetWorkerSocialExposureDelta(kind, locationType, socialiteCount));
+
+        return kind switch
+        {
+            WorkerSocialInteractionKind.IdleConversation =>
+                Random.value <= GetWorkerSocialIdleAcquaintanceChance(socialiteCount) ||
+                exposureAfter >= WorkerSocialIdleExposureThreshold,
+            WorkerSocialInteractionKind.CoworkerShift => exposureAfter >= WorkerSocialCoworkerExposureThreshold,
+            WorkerSocialInteractionKind.ServiceCoPresence => exposureAfter >= WorkerSocialServiceExposureThreshold,
+            _ => true
+        };
+    }
+
+    private static bool IsWorkerSocialMemoryVisible(WorkerSocialMemory memory)
+    {
+        return memory != null && memory.Familiarity >= WorkerSocialVisibleFamiliarityThreshold;
+    }
+
+    private static int GetWorkerSocialExposureDelta(WorkerSocialInteractionKind kind, LocationType? locationType, int socialiteCount)
+    {
+        int baseDelta = kind switch
+        {
+            WorkerSocialInteractionKind.IdleConversation => 3,
+            WorkerSocialInteractionKind.CoworkerShift => 2,
+            WorkerSocialInteractionKind.ServiceCoPresence => locationType == LocationType.Bar ? 2 : 1,
+            WorkerSocialInteractionKind.ArrivalWave => 1,
+            _ => 0
+        };
+        return baseDelta + Mathf.Max(0, socialiteCount) * WorkerSocialSocialiteExposureBonus;
+    }
+
+    private static float GetWorkerSocialIdleAcquaintanceChance(int socialiteCount)
+    {
+        return Mathf.Clamp01(WorkerSocialNewIdleAcquaintanceChance +
+                             Mathf.Max(0, socialiteCount) * WorkerSocialSocialiteIdleAcquaintanceChanceBonus);
+    }
+
+    private static int GetWorkerSocialitePairCount(DriverAgent first, DriverAgent second)
+    {
+        int count = 0;
+        if (HasWorkerPerk(first, WorkerPerkKind.Socialite))
+        {
+            count++;
+        }
+
+        if (HasWorkerPerk(second, WorkerPerkKind.Socialite))
+        {
+            count++;
+        }
+
+        return count;
+    }
+
+    private static void ApplyWorkerSocialiteSocialDeltaBonus(
+        WorkerSocialInteractionKind kind,
+        int socialiteCount,
+        ref int familiarityDelta,
+        ref int relationshipDelta)
+    {
+        if (socialiteCount <= 0 || kind == WorkerSocialInteractionKind.ArrivalWave)
+        {
+            return;
+        }
+
+        float familiarityMultiplier = 1f + socialiteCount * 0.45f;
+        familiarityDelta = Mathf.Max(
+            familiarityDelta + socialiteCount,
+            Mathf.RoundToInt(familiarityDelta * familiarityMultiplier));
+        if (relationshipDelta > 0)
+        {
+            float relationshipMultiplier = 1f + socialiteCount * 0.45f;
+            relationshipDelta = Mathf.Max(
+                relationshipDelta + socialiteCount * 2,
+                Mathf.RoundToInt(relationshipDelta * relationshipMultiplier));
+        }
+    }
+
+    private static void ApplyWorkerSocialContextDeltaBonus(
+        WorkerSocialInteractionKind kind,
+        LocationType? locationType,
+        ref int familiarityDelta,
+        ref int relationshipDelta)
+    {
+        if (kind == WorkerSocialInteractionKind.ServiceCoPresence &&
+            locationType == LocationType.Bar)
+        {
+            familiarityDelta += 2;
+            relationshipDelta += 2;
+        }
+    }
+
+    private static void ApplyWorkerSocialMomentumBonus(
+        WorkerSocialInteractionKind kind,
+        int previousFamiliarity,
+        int previousInteractionCount,
+        ref int relationshipDelta)
+    {
+        if (relationshipDelta <= 0 ||
+            kind == WorkerSocialInteractionKind.ArrivalWave ||
+            kind == WorkerSocialInteractionKind.FamilyFormation)
+        {
+            return;
+        }
+
+        if (previousFamiliarity >= 60)
+        {
+            relationshipDelta += 3;
+        }
+        else if (previousFamiliarity >= 30)
+        {
+            relationshipDelta += 2;
+        }
+        else if (previousFamiliarity >= WorkerSocialVisibleFamiliarityThreshold)
+        {
+            relationshipDelta += 1;
+        }
+
+        if (previousInteractionCount >= 6)
+        {
+            relationshipDelta += 2;
+        }
+        else if (previousInteractionCount >= 3)
+        {
+            relationshipDelta += 1;
+        }
+
+        if (kind == WorkerSocialInteractionKind.IdleConversation && previousInteractionCount > 0)
+        {
+            relationshipDelta += 1;
+        }
+    }
+
+    private static int GetWorkerSocialPairAverageFamiliarity(WorkerSocialMemory first, WorkerSocialMemory second)
+    {
+        return GetWorkerSocialPairAverageValue(first, second, memory => memory.Familiarity);
+    }
+
+    private static int GetWorkerSocialPairAverageRelationship(WorkerSocialMemory first, WorkerSocialMemory second)
+    {
+        return GetWorkerSocialPairAverageValue(first, second, memory => memory.Relationship);
+    }
+
+    private static int GetWorkerSocialPairAverageValue(
+        WorkerSocialMemory first,
+        WorkerSocialMemory second,
+        System.Func<WorkerSocialMemory, int> selector)
+    {
+        int count = 0;
+        int total = 0;
+        if (IsWorkerSocialMemoryVisible(first))
+        {
+            total += selector(first);
+            count++;
+        }
+
+        if (IsWorkerSocialMemoryVisible(second))
+        {
+            total += selector(second);
+            count++;
+        }
+
+        return count > 0 ? Mathf.RoundToInt(total / (float)count) : 0;
     }
 
     private static WorkerSocialMemory FindWorkerSocialMemory(DriverAgent owner, int otherWorkerId)
@@ -157,7 +391,7 @@ public partial class GameBootstrap
                 WorkerSocialMemory memory = worker.SocialMemories[i];
                 int score = memory == null
                     ? int.MinValue
-                    : memory.Familiarity + Mathf.Abs(memory.Relationship) / 2 + memory.InteractionCount;
+                    : memory.Familiarity + Mathf.Abs(memory.Relationship) / 2 + memory.InteractionCount * 2 + memory.Exposure;
                 if (score < removeScore)
                 {
                     removeScore = score;
@@ -174,19 +408,19 @@ public partial class GameBootstrap
         switch (kind)
         {
             case WorkerSocialInteractionKind.IdleConversation:
-                familiarityDelta = 8;
-                relationshipDelta = 2;
+                familiarityDelta = 16;
+                relationshipDelta = 7;
                 break;
             case WorkerSocialInteractionKind.ServiceCoPresence:
-                familiarityDelta = 3;
+                familiarityDelta = 6;
                 relationshipDelta = 1;
                 break;
             case WorkerSocialInteractionKind.CoworkerShift:
-                familiarityDelta = 4;
-                relationshipDelta = 1;
+                familiarityDelta = 10;
+                relationshipDelta = 5;
                 break;
             case WorkerSocialInteractionKind.ArrivalWave:
-                familiarityDelta = 2;
+                familiarityDelta = 0;
                 relationshipDelta = 0;
                 break;
             case WorkerSocialInteractionKind.FamilyFormation:
@@ -282,22 +516,13 @@ public partial class GameBootstrap
                 continue;
             }
 
-            for (int j = 0; j < worker.SocialMemories.Count; j++)
+            for (int j = worker.SocialMemories.Count - 1; j >= 0; j--)
             {
                 WorkerSocialMemory memory = worker.SocialMemories[j];
                 if (memory == null)
                 {
-                    continue;
-                }
-
-                if (memory.Familiarity <= 0)
-                {
-                    if (memory.Relationship != 0)
-                    {
-                        memory.Relationship = 0;
-                        changed = true;
-                    }
-
+                    worker.SocialMemories.RemoveAt(j);
+                    changed = true;
                     continue;
                 }
 
@@ -312,6 +537,7 @@ public partial class GameBootstrap
                 }
 
                 int decaySteps = Mathf.FloorToInt((now - memory.NextFamiliarityDecayWorldHour) / WorkerSocialFamiliarityDecayStepHours) + 1;
+                int oldExposure = memory.Exposure;
                 int decayAmount = 0;
                 for (int step = 0; step < decaySteps; step++)
                 {
@@ -320,14 +546,31 @@ public partial class GameBootstrap
                 }
 
                 int oldFamiliarity = memory.Familiarity;
+                if (memory.Familiarity < WorkerSocialVisibleFamiliarityThreshold)
+                {
+                    memory.Exposure = Mathf.Max(0, memory.Exposure - decaySteps);
+                    memory.Relationship = 0;
+                }
+                else
+                {
+                    memory.Exposure = 0;
+                }
+
                 memory.Familiarity = Mathf.Max(0, memory.Familiarity - decayAmount);
-                if (memory.Familiarity == 0)
+                if (memory.Familiarity < WorkerSocialVisibleFamiliarityThreshold)
                 {
                     memory.Relationship = 0;
                 }
 
                 memory.NextFamiliarityDecayWorldHour += decaySteps * WorkerSocialFamiliarityDecayStepHours;
-                changed |= memory.Familiarity != oldFamiliarity;
+                if (memory.Familiarity <= 0 && memory.Exposure <= 0)
+                {
+                    worker.SocialMemories.RemoveAt(j);
+                    changed = true;
+                    continue;
+                }
+
+                changed |= memory.Familiarity != oldFamiliarity || memory.Exposure != oldExposure;
             }
         }
 
@@ -360,7 +603,7 @@ public partial class GameBootstrap
         for (int i = 0; i < worker.SocialMemories.Count; i++)
         {
             WorkerSocialMemory memory = worker.SocialMemories[i];
-            if (memory == null || memory.Familiarity <= 0)
+            if (!IsWorkerSocialMemoryVisible(memory))
             {
                 continue;
             }
@@ -392,7 +635,7 @@ public partial class GameBootstrap
 
     private static string GetWorkerSocialRelationshipLabel(int relationship, bool ru)
     {
-        if (relationship >= 50) return ru ? "\u0414\u0440\u0443\u0433" : "Friend";
+        if (relationship >= WorkerSocialFriendRelationshipThreshold) return ru ? "\u0414\u0440\u0443\u0433" : "Friend";
         if (relationship >= 20) return ru ? "\u041f\u0440\u0438\u044f\u0442\u0435\u043b\u044c" : "Pal";
         if (relationship <= -50) return ru ? "\u041a\u043e\u043d\u0444\u043b\u0438\u043a\u0442" : "Conflict";
         if (relationship <= -20) return ru ? "\u041d\u0430\u043f\u0440\u044f\u0436\u0435\u043d\u0438\u0435" : "Tense";

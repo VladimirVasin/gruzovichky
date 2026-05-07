@@ -109,7 +109,7 @@ public partial class GameBootstrap
             for (int j = 0; j < worker.SocialMemories.Count; j++)
             {
                 WorkerSocialMemory memory = worker.SocialMemories[j];
-                if (memory == null || memory.Familiarity <= 0 || !IsSocialGraphWorkerIdVisible(memory.OtherWorkerId))
+                if (!IsWorkerSocialMemoryVisible(memory) || !IsSocialGraphWorkerIdVisible(memory.OtherWorkerId))
                 {
                     continue;
                 }
@@ -162,7 +162,7 @@ public partial class GameBootstrap
         for (int i = 0; i < selected.SocialMemories.Count; i++)
         {
             WorkerSocialMemory memory = selected.SocialMemories[i];
-            if (memory == null || memory.Familiarity <= 0 || !IsSocialGraphWorkerIdVisible(memory.OtherWorkerId))
+            if (!IsWorkerSocialMemoryVisible(memory) || !IsSocialGraphWorkerIdVisible(memory.OtherWorkerId))
             {
                 continue;
             }

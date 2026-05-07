@@ -199,7 +199,7 @@ public partial class GameBootstrap
             driversScreenUi.DetailSkillsTitleText.text = ru ? "\u041d\u0430\u0432\u044b\u043a\u0438" : "Skills";
         }
 
-        SetWorkerSkillTile(driversScreenUi.DetailLogisticsSkillTile, ru ? "\u041b\u043e\u0433\u0438\u043a\u0430" : "Logic", GetWorkerProfessionalLevel(worker, WorkerProfessionalTrack.Logistics));
+        SetWorkerSkillTile(driversScreenUi.DetailLogisticsSkillTile, ru ? "\u041b\u043e\u0433\u0438\u0441\u0442\u0438\u043a\u0430" : "Logistics", GetWorkerProfessionalLevel(worker, WorkerProfessionalTrack.Logistics));
         SetWorkerSkillTile(driversScreenUi.DetailProductionSkillTile, ru ? "\u041f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0441\u0442\u0432\u043e" : "Production", GetWorkerProfessionalLevel(worker, WorkerProfessionalTrack.Production));
         SetWorkerSkillTile(driversScreenUi.DetailServiceSkillTile, ru ? "\u0421\u0435\u0440\u0432\u0438\u0441" : "Service", GetWorkerProfessionalLevel(worker, WorkerProfessionalTrack.Service));
     }

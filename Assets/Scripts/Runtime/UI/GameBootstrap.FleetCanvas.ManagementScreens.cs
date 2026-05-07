@@ -176,6 +176,7 @@ public partial class GameBootstrap
 
     private sealed class WorkerNeedRowUi
     {
+        public Image IconImage;
         public Text LabelText;
         public readonly List<Image> SegmentImages = new();
         public Text StatusText;
@@ -657,7 +658,7 @@ public partial class GameBootstrap
     {
         const int sz = 16;
         Texture2D tex = new(sz, sz, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Bilinear;
+        tex.filterMode = FilterMode.Point;
         Color[] px = new Color[sz * sz];
         for (int i = 0; i < px.Length; i++) px[i] = Color.clear;
         paintFn(px, sz);

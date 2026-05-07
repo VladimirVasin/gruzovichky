@@ -8,6 +8,7 @@ public partial class GameBootstrap
     private static readonly Color ResidentHudBorderColor = new(0.47f, 0.63f, 0.78f, 0.18f);
     private static readonly Color ResidentHudAmberBorderColor = new(0.95f, 0.65f, 0.12f, 0.82f);
     private static readonly Color ResidentHudPositiveColor = new(0.45f, 0.85f, 0.35f, 1f);
+    private static Sprite s_workerProfileNeedsHeartIcon;
 
     private void SetupWorkerProfileTabUi(RectTransform profileTabRoot, Font font)
     {
@@ -78,11 +79,11 @@ public partial class GameBootstrap
         driversScreenUi.DetailSkillsTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
         RectTransform skillsRow = CreateLayoutRow("WorkerSkillsRow", skillsPanel, 84f, 10f);
-        driversScreenUi.DetailLogisticsSkillTile = CreateWorkerSkillTile("WorkerLogicSkill", skillsRow, font);
+        driversScreenUi.DetailLogisticsSkillTile = CreateWorkerSkillTile("WorkerLogisticsSkill", skillsRow, font);
         driversScreenUi.DetailProductionSkillTile = CreateWorkerSkillTile("WorkerProductionSkill", skillsRow, font);
         driversScreenUi.DetailServiceSkillTile = CreateWorkerSkillTile("WorkerServiceSkill", skillsRow, font);
 
-        RectTransform conditionRow = CreateLayoutRow("WorkerConditionRow", profileTabRoot, 238f, 14f);
+        RectTransform conditionRow = CreateLayoutRow("WorkerConditionRow", profileTabRoot, 250f, 14f);
 
         RectTransform needsCard = CreateResidentHudPanel("WorkerNeedsCard", conditionRow, ResidentHudCardColor, ResidentHudBorderColor);
         needsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -94,11 +95,13 @@ public partial class GameBootstrap
         needsCardLayout.childForceExpandWidth = true;
         needsCardLayout.childForceExpandHeight = false;
 
-        driversScreenUi.DetailNeedsTitleText = CreateHeaderText("WorkerNeedsTitle", needsCard, font, string.Empty, 16, TextAnchor.MiddleLeft, FleetAccentColor);
-        driversScreenUi.DetailNeedsTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
-        driversScreenUi.DetailMealNeedRow = CreateWorkerNeedRow("WorkerMealNeed", needsCard, font);
-        driversScreenUi.DetailSleepNeedRow = CreateWorkerNeedRow("WorkerSleepNeed", needsCard, font);
-        driversScreenUi.DetailLeisureNeedRow = CreateWorkerNeedRow("WorkerLeisureNeed", needsCard, font);
+        RectTransform needsTitleRow = CreateLayoutRow("WorkerNeedsTitleRow", needsCard, 24f, 10f);
+        CreateWorkerProfileIconImage("NeedsTitleIcon", needsTitleRow, GetWorkerProfileNeedsHeartIcon(), 22f, FleetAccentColor);
+        driversScreenUi.DetailNeedsTitleText = CreateHeaderText("WorkerNeedsTitle", needsTitleRow, font, string.Empty, 16, TextAnchor.MiddleLeft, FleetAccentColor);
+        driversScreenUi.DetailNeedsTitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        driversScreenUi.DetailMealNeedRow = CreateWorkerNeedRow("WorkerMealNeed", needsCard, font, GetNeedsMealIcon());
+        driversScreenUi.DetailSleepNeedRow = CreateWorkerNeedRow("WorkerSleepNeed", needsCard, font, GetNeedsSleepIcon());
+        driversScreenUi.DetailLeisureNeedRow = CreateWorkerNeedRow("WorkerLeisureNeed", needsCard, font, GetNeedsLeisureIcon());
 
         RectTransform overallRow = CreateResidentHudPanel("WorkerNeedsOverallRow", needsCard, new Color(0.06f, 0.12f, 0.18f, 0.7f), new Color(0.47f, 0.63f, 0.78f, 0.10f));
         overallRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
@@ -218,13 +221,13 @@ public partial class GameBootstrap
         return ui;
     }
 
-    private WorkerNeedRowUi CreateWorkerNeedRow(string name, Transform parent, Font font)
+    private WorkerNeedRowUi CreateWorkerNeedRow(string name, Transform parent, Font font, Sprite iconSprite)
     {
         RectTransform row = CreateResidentHudPanel(name, parent, new Color(0.065f, 0.13f, 0.20f, 0.92f), new Color(0.47f, 0.63f, 0.78f, 0.10f));
-        row.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
+        row.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
         HorizontalLayoutGroup rowLayout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-        rowLayout.padding = new RectOffset(10, 10, 5, 5);
-        rowLayout.spacing = 10f;
+        rowLayout.padding = new RectOffset(10, 10, 6, 6);
+        rowLayout.spacing = 9f;
         rowLayout.childAlignment = TextAnchor.MiddleLeft;
         rowLayout.childControlWidth = true;
         rowLayout.childControlHeight = true;
@@ -232,25 +235,74 @@ public partial class GameBootstrap
         rowLayout.childForceExpandHeight = true;
         WorkerNeedRowUi ui = new()
         {
-            LabelText = CreateBodyText("NeedLabel", row, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white),
-            StatusText = CreateHeaderText("NeedStatus", row, font, string.Empty, 12, TextAnchor.MiddleRight, ResidentHudPositiveColor)
+            IconImage = CreateWorkerProfileIconImage("NeedIcon", row, iconSprite, 24f, Color.white),
+            LabelText = CreateBodyText("NeedLabel", row, font, string.Empty, 12, TextAnchor.MiddleLeft, Color.white)
         };
         ui.LabelText.gameObject.AddComponent<LayoutElement>().preferredWidth = 110f;
 
-        RectTransform segmentsRoot = CreateLayoutRow("NeedSegments", row, 16f, 4f);
+        RectTransform segmentsRoot = CreateLayoutRow("NeedSegments", row, 18f, 4f);
+        HorizontalLayoutGroup segmentsGroup = segmentsRoot.GetComponent<HorizontalLayoutGroup>();
+        segmentsGroup.childAlignment = TextAnchor.MiddleCenter;
         LayoutElement segmentsLayout = segmentsRoot.gameObject.AddComponent<LayoutElement>();
-        segmentsLayout.preferredWidth = 184f;
-        segmentsLayout.minWidth = 172f;
+        segmentsLayout.preferredWidth = 178f;
+        segmentsLayout.minWidth = 166f;
+        segmentsLayout.preferredHeight = 18f;
+        segmentsLayout.minHeight = 14f;
         for (int i = 0; i < 6; i++)
         {
             RectTransform segment = CreateStyledPanel($"Segment{i + 1}", segmentsRoot, new Color(0.19f, 0.23f, 0.28f, 1f));
-            segment.gameObject.AddComponent<LayoutElement>().preferredWidth = 24f;
+            LayoutElement segmentLayout = segment.gameObject.AddComponent<LayoutElement>();
+            segmentLayout.preferredWidth = 24f;
+            segmentLayout.minWidth = 22f;
+            segmentLayout.preferredHeight = 10f;
+            segmentLayout.minHeight = 10f;
             ui.SegmentImages.Add(segment.GetComponent<Image>());
         }
 
         CreateUiObject("NeedRowSpacer", row).AddComponent<LayoutElement>().flexibleWidth = 1f;
+        ui.StatusText = CreateHeaderText("NeedStatus", row, font, string.Empty, 12, TextAnchor.MiddleRight, ResidentHudPositiveColor);
         ui.StatusText.gameObject.AddComponent<LayoutElement>().preferredWidth = 54f;
         return ui;
+    }
+
+    private static Image CreateWorkerProfileIconImage(string name, Transform parent, Sprite sprite, float size, Color color)
+    {
+        GameObject iconObject = CreateUiObject(name, parent);
+        RectTransform rect = iconObject.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(size, size);
+        Image image = iconObject.AddComponent<Image>();
+        image.sprite = sprite;
+        image.color = color;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+        LayoutElement layout = iconObject.AddComponent<LayoutElement>();
+        layout.preferredWidth = size;
+        layout.preferredHeight = size;
+        layout.minWidth = size;
+        layout.minHeight = size;
+        return image;
+    }
+
+    private static Sprite GetWorkerProfileNeedsHeartIcon() =>
+        s_workerProfileNeedsHeartIcon ??= BuildWorkerInventorySprite(22, PaintWorkerProfileNeedsHeartIcon);
+
+    private static void PaintWorkerProfileNeedsHeartIcon(Color[] pixels, int size)
+    {
+        Color amber = new(0.95f, 0.65f, 0.12f, 1f);
+        int[,] points =
+        {
+            { 6, 5 }, { 7, 4 }, { 8, 4 }, { 9, 5 }, { 10, 6 },
+            { 11, 5 }, { 12, 4 }, { 13, 4 }, { 14, 5 },
+            { 5, 6 }, { 6, 7 }, { 7, 8 }, { 8, 9 }, { 9, 10 },
+            { 10, 11 }, { 11, 12 }, { 12, 11 }, { 13, 10 }, { 14, 9 },
+            { 15, 8 }, { 16, 7 }, { 17, 6 }
+        };
+
+        for (int i = 0; i < points.GetLength(0); i++)
+        {
+            WorkerInventoryIconSet(pixels, size, points[i, 0], points[i, 1], amber);
+            WorkerInventoryIconSet(pixels, size, points[i, 0], points[i, 1] + 1, amber);
+        }
     }
 
     private RectTransform CreateProfileValueRow(string name, Transform parent, Font font, out Text label, out Text value)

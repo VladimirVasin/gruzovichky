@@ -393,6 +393,7 @@ public partial class GameBootstrap
     private sealed class WorkerSocialMemory
     {
         public int OtherWorkerId;
+        public int Exposure;
         public int Familiarity;
         public int Relationship;
         public int InteractionCount;

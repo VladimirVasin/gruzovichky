@@ -440,7 +440,6 @@ public partial class GameBootstrap
     {
         return status switch
         {
-            WorkerNeedStatus.Warning => new Color(0.96f, 0.72f, 0.30f, 1f),
             WorkerNeedStatus.Critical => new Color(0.95f, 0.32f, 0.25f, 1f),
             _ => new Color(0.58f, 0.88f, 0.54f, 1f)
         };
@@ -450,7 +449,6 @@ public partial class GameBootstrap
     {
         return status switch
         {
-            WorkerNeedStatus.Warning => ru ? "\u0422\u0440\u0435\u0431\u0443\u0435\u0442 \u0432\u043d\u0438\u043c\u0430\u043d\u0438\u044f" : "Needs attention",
             WorkerNeedStatus.Critical => ru ? "\u0414\u0435\u0431\u0430\u0444\u0444" : "Debuff",
             _ => ru ? "\u041e\u041a" : "OK"
         };
@@ -645,18 +643,13 @@ public partial class GameBootstrap
             driver.LastSleepNeedStatus == WorkerNeedStatus.Critical ||
             driver.LastLeisureNeedStatus == WorkerNeedStatus.Critical
                 ? WorkerNeedStatus.Critical
-                : driver.LastMealNeedStatus == WorkerNeedStatus.Warning ||
-                  driver.LastSleepNeedStatus == WorkerNeedStatus.Warning ||
-                  driver.LastLeisureNeedStatus == WorkerNeedStatus.Warning
-                    ? WorkerNeedStatus.Warning
-                    : WorkerNeedStatus.Ok;
+                : WorkerNeedStatus.Ok;
 
         if (driversScreenUi.DetailOverallNeedsValueText != null)
         {
             driversScreenUi.DetailOverallNeedsValueText.text = overall switch
             {
                 WorkerNeedStatus.Critical => ru ? "\u041f\u043b\u043e\u0445\u043e\u0435" : "Bad",
-                WorkerNeedStatus.Warning => ru ? "\u0421\u0440\u0435\u0434\u043d\u0435\u0435" : "Fair",
                 _ => ru ? "\u0425\u043e\u0440\u043e\u0448\u0435\u0435" : "Good"
             };
             driversScreenUi.DetailOverallNeedsValueText.color = GetWorkerNeedStatusColor(overall);
