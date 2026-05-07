@@ -410,7 +410,8 @@ public partial class GameBootstrap
         ServiceCoPresence,
         CoworkerShift,
         ArrivalWave,
-        FamilyFormation
+        FamilyFormation,
+        PlayerPromptedConversation
     }
 
     private sealed class WorkerFamily

@@ -79,7 +79,8 @@ public partial class GameBootstrap
         if (visibleInteraction &&
             (kind == WorkerSocialInteractionKind.IdleConversation ||
              kind == WorkerSocialInteractionKind.ServiceCoPresence ||
-             kind == WorkerSocialInteractionKind.CoworkerShift))
+             kind == WorkerSocialInteractionKind.CoworkerShift ||
+             kind == WorkerSocialInteractionKind.PlayerPromptedConversation))
         {
             string context = locationType.HasValue ? locationType.Value.ToString() : kind.ToString();
             WorkerSocialMemory firstUpdated = FindWorkerSocialMemory(first, second.DriverId);
@@ -92,7 +93,9 @@ public partial class GameBootstrap
                 $"{first.DriverName} and {second.DriverName} social memory updated: {kind}, context={context}, familiarity+={familiarityDelta}, relationship+={relationshipDelta}, totals familiarity={totalFamiliarity}, relationship={totalRelationship}/{WorkerSocialFriendRelationshipThreshold}, interactions={totalInteractions}.");
         }
 
-        if (visibleInteraction && kind == WorkerSocialInteractionKind.IdleConversation)
+        if (visibleInteraction &&
+            (kind == WorkerSocialInteractionKind.IdleConversation ||
+             kind == WorkerSocialInteractionKind.PlayerPromptedConversation))
         {
             RecordWorkerSocialThought(first, second, "social_talk_good", null, 2);
             RecordWorkerSocialThought(second, first, "social_talk_good", null, 2);
@@ -427,6 +430,10 @@ public partial class GameBootstrap
                 familiarityDelta = 0;
                 relationshipDelta = 0;
                 break;
+            case WorkerSocialInteractionKind.PlayerPromptedConversation:
+                familiarityDelta = 22;
+                relationshipDelta = 13;
+                break;
             default:
                 familiarityDelta = 1;
                 relationshipDelta = 0;
@@ -660,6 +667,7 @@ public partial class GameBootstrap
             WorkerSocialInteractionKind.CoworkerShift => ru ? "\u0421\u043c\u0435\u043d\u0430" : "Shift",
             WorkerSocialInteractionKind.ArrivalWave => ru ? "\u041e\u0434\u0438\u043d \u0430\u0432\u0442\u043e\u0431\u0443\u0441" : "Same bus",
             WorkerSocialInteractionKind.FamilyFormation => ru ? "\u0421\u0435\u043c\u044c\u044f" : "Family",
+            WorkerSocialInteractionKind.PlayerPromptedConversation => ru ? "\u0422\u0435\u043c\u0430 \u043e\u0442 \u0438\u0433\u0440\u043e\u043a\u0430" : "Player topic",
             _ => ru ? "\u041a\u043e\u043d\u0442\u0430\u043a\u0442" : "Contact"
         };
 

@@ -1,10 +1,14 @@
 # Work Log
 
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20 and again on 2026-05-03 to keep agent startup light. Use git history for exact old implementation details.
 
 ## Recent Work
+
+- 2026-05-08: Added an F9 debug trigger for the special City Hall social-introduction scene. The debug panel now has a `SOCIAL REQUEST` button that starts the same fullscreen topic-input request immediately, closes the F9 overlay on success, and falls back to the least-close valid resident pair if no ideal low-familiarity pair exists. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and touched-file mojibake scan.
+
+- 2026-05-08: Added the MVP special City Hall social-introduction request. After City Hall has been active for a while, a random citizen can ask for help talking to a low/no-familiarity target; the full-screen scene fades in from the center, pauses simulation only after the dimming completes, asks the player for a conversation topic, reveals the target portrait, plays a short Russian dialogue with the topic inserted, then records a `PlayerPromptedConversation` social event. That event gives a strong familiarity/relationship bump, has a social-graph reason/relevance, and runs through explicit input/button click-target validation. Synced the runtime owner map and local `Assembly-CSharp.csproj`; verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and a touched-file mojibake scan.
 
 - 2026-05-08: Adjusted City Hall request and Residents inventory HUD behavior. City Hall now lists only active Open/Accepted requests, keeps accepted requests visible until the goal resolves/expires, and gives rejected requests a short fade/collapse dismissal instead of leaving them as history rows. The Residents Inventory tab now hides Snack/Coffee cards when their quantity is 0 and shows a compact empty state when no auto-consumables are in stock. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`.
 

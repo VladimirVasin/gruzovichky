@@ -205,7 +205,7 @@ public partial class GameBootstrap
             return;
         }
 
-        bool blockPlayerInputForTutorial = isTutorialOpen;
+        bool blockPlayerInputForTutorial = isTutorialOpen || isCitySocialRequestSceneOpen;
         if (!blockPlayerInputForTutorial)
         {
             HandleHotkeys();
@@ -359,6 +359,7 @@ public partial class GameBootstrap
         UpdateEventFeedUi();
         UpdateTutorialGoalsRuntime();
         UpdateCityRequestGoalHudRuntime();
+        UpdateCitySocialRequestSceneHudRuntime();
         CloseQuickHudsWhenBlockingHudIsOpen();
         UpdateTruckQuickHud();
         UpdateLocalBusQuickHud();
@@ -517,6 +518,11 @@ public partial class GameBootstrap
     private void OnGUI()
     {
         if (isMainMenuOpen)
+        {
+            return;
+        }
+
+        if (isCitySocialRequestSceneOpen)
         {
             return;
         }

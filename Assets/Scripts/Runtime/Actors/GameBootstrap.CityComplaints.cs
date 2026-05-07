@@ -111,6 +111,7 @@ public partial class GameBootstrap
 
         cityComplaintScanTimer = CityComplaintScanIntervalSeconds;
         ScanCityComplaints();
+        UpdateCitySocialIntroductionRequests();
         ExpireOverdueCityComplaints();
         ResolveSatisfiedCityComplaints();
         PruneResolvedCityComplaints();

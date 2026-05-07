@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-05-07
+Last updated: 2026-05-08
 
 Purpose: describe the real implemented architecture and current hotspots.
 
@@ -110,7 +110,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 ### `Assets/Scripts/Runtime/Actors/GameBootstrap.Drivers.*.cs`
 
-- Driver/worker behavior is split into general movement/logistics, warehouse delivery, life cycle and needs, idle wander, hiring/shift orchestration, the MVP worker social-memory layer in `GameBootstrap.WorkerSocial.cs`, the worker thought log/template layer in `GameBootstrap.WorkerThoughts.cs`, active thought/current-priority/life-opinion rules in `GameBootstrap.WorkerThoughts.Active.cs`, the worker-owned item layer in `GameBootstrap.WorkerInventory.cs` plus `WorkerItemCatalog.cs`, City Hall request accumulation/state in `GameBootstrap.CityComplaints.cs` / `GameBootstrap.CityComplaints.Aggregation.cs`, request display formatting in `GameBootstrap.CityComplaints.Display.cs`, accepted-request goal HUD/City Hall attention marker in `GameBootstrap.CityRequestGoalHud.cs`, the MVP family/home pairing layer in `GameBootstrap.WorkerFamilies.cs`, the child-birth/child-visual layer in `GameBootstrap.WorkerChildren.cs`, and the household upkeep/family happiness layer in `GameBootstrap.WorkerHouseholds.cs`.
+- Driver/worker behavior is split into general movement/logistics, warehouse delivery, life cycle and needs, idle wander, hiring/shift orchestration, the MVP worker social-memory layer in `GameBootstrap.WorkerSocial.cs`, the worker thought log/template layer in `GameBootstrap.WorkerThoughts.cs`, active thought/current-priority/life-opinion rules in `GameBootstrap.WorkerThoughts.Active.cs`, the worker-owned item layer in `GameBootstrap.WorkerInventory.cs` plus `WorkerItemCatalog.cs`, City Hall request accumulation/state in `GameBootstrap.CityComplaints.cs` / `GameBootstrap.CityComplaints.Aggregation.cs`, request display formatting in `GameBootstrap.CityComplaints.Display.cs`, special social-introduction requests in `GameBootstrap.CitySocialRequests.cs`, accepted-request goal HUD/City Hall attention marker in `GameBootstrap.CityRequestGoalHud.cs`, the full-screen social request scene in `GameBootstrap.CitySocialRequestSceneHud.cs`, the MVP family/home pairing layer in `GameBootstrap.WorkerFamilies.cs`, the child-birth/child-visual layer in `GameBootstrap.WorkerChildren.cs`, and the household upkeep/family happiness layer in `GameBootstrap.WorkerHouseholds.cs`.
 - The HUD-level citizen relationship graph is a separate Canvas screen in `Assets/Scripts/Runtime/UI/FleetCanvas/GameBootstrap.FleetCanvas.SocialGraphScreen.cs`; `GameBootstrap.FleetCanvas.SocialGraphModel.cs` owns its focused relation view models, importance/category calculations, filters, and semantic layout, while `GameBootstrap.FleetCanvas.SocialGraphAnimation.cs` owns panel/node/edge animation state. It reads worker social memories and stays dirty off the same social/family mutation points as the Workers detail tabs.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`

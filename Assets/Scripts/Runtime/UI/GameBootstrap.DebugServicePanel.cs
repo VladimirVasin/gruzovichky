@@ -209,6 +209,22 @@ public partial class GameBootstrap
             if (GUILayout.Button("  SUMMON 10 WORKERS  ", adjBtn, GUILayout.Height(36f), GUILayout.ExpandWidth(false)))
                 DebugSummonWorkerWave(DebugHireWorkerWaveCount);
             GUI.enabled = true;
+            GUILayout.Space(6f);
+            bool canStartSocialRequest = activeCitySocialIntroductionRequest == null &&
+                                         !isCitySocialRequestSceneOpen &&
+                                         driverAgents != null &&
+                                         driverAgents.Count >= 2;
+            GUI.enabled = canStartSocialRequest;
+            GUI.backgroundColor = canStartSocialRequest ? new Color(0.46f, 0.24f, 0.62f) : new Color(0.18f, 0.18f, 0.18f);
+            string socialRequestLabel = canStartSocialRequest ? "  SOCIAL REQUEST  " : "  SOCIAL REQUEST  [blocked]  ";
+            if (GUILayout.Button(socialRequestLabel, adjBtn, GUILayout.Height(36f), GUILayout.ExpandWidth(false)))
+            {
+                if (!TryStartDebugCitySocialIntroductionRequest(out string result))
+                {
+                    SessionDebugLogger.Log("CITY_SOCIAL_REQUEST", $"Debug social request launch failed: {result}.");
+                }
+            }
+            GUI.enabled = true;
             GUILayout.Space(24f);
 
             // ── Weather buttons ───────────────────────────────────────
