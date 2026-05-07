@@ -216,6 +216,7 @@ public partial class GameBootstrap
         isBuildPanelOpen = false;
         isStatesPanelOpen = false;
         isSocialGraphPanelOpen = false;
+        isCityHallPanelOpen = false;
         isTruckDetailsOpen = false;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
@@ -240,6 +241,7 @@ public partial class GameBootstrap
         isWorldMapPanelOpen = true;
         isWorldMapScreenDirty = true;
         isSocialGraphScreenDirty = true;
+        isCityHallScreenDirty = true;
         isFleetScreenDirty = true;
         isBuildScreenDirty = true;
         NotifyTutorialWorldMapOpened();
@@ -310,6 +312,7 @@ public partial class GameBootstrap
                tool == BuildTool.Kindergarten ||
                tool == BuildTool.CarMarket ||
                tool == BuildTool.LaborExchange ||
+               tool == BuildTool.CityHall ||
                tool == BuildTool.Docks;
     }
 
@@ -374,6 +377,7 @@ public partial class GameBootstrap
             isBuildPanelOpen ||
             isStatesPanelOpen ||
             isSocialGraphPanelOpen ||
+            isCityHallPanelOpen ||
             isTruckDetailsOpen ||
             isLocalBusDetailsOpen ||
             activeBuildTool != BuildTool.None;
@@ -388,6 +392,7 @@ public partial class GameBootstrap
         isBuildPanelOpen = false;
         isStatesPanelOpen = false;
         isSocialGraphPanelOpen = false;
+        isCityHallPanelOpen = false;
         isTruckDetailsOpen = false;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
@@ -404,6 +409,7 @@ public partial class GameBootstrap
         isWorldMapScreenDirty = true;
         isStatesScreenDirty = true;
         isSocialGraphScreenDirty = true;
+        isCityHallScreenDirty = true;
         DisableTruckCameraFocus();
         RefreshSelectionVisuals();
 

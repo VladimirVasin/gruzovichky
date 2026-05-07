@@ -6,6 +6,14 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-07: Added Social Graph HUD animations. The screen now fades/scales in and out, graph nodes spawn with staggered alpha/scale, every node has a subtle idle wobble, focused maps give non-central nodes a light orbital drift around the selected citizen, edges follow animated node positions, and hover updates inspector/edge emphasis without forcing a full graph rebuild. Updated owner/architecture memory for the new SocialGraph animation partial. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and touched SocialGraph/memory mojibake scan.
+
+- 2026-05-07: Fixed Social Graph node toggle behavior. Clicking the currently focused citizen node now clears focus and returns the HUD to the whole-city overview instead of reselecting the same worker. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and touched SocialGraph mojibake scan.
+
+- 2026-05-07: Fixed the Social Graph follow-up. Opening the Social HUD now starts in an unselected whole-city overview that draws all known unique city links, while clicking a citizen switches to the focused top-relations map. Filter buttons now have fixed-height clickable hit areas and keep their visual/button state in sync. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and touched SocialGraph/Fleet mojibake scan.
+
+- 2026-05-07: Reworked the citizen social graph HUD into a focused social map for the selected worker. The screen now shows only the selected citizen plus their top important visible relations, supports Important/Conflicts/Work filters, computes relation importance from familiarity, recency, emotional intensity, and narrative context, classifies links into Family/Friend/Work/Neighbor/Conflict/Acquaintance, lays nodes out by semantic sectors, and updates the inspector with shown/hidden/tone/strongest-link stats plus hover relation details. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and touched SocialGraph mojibake scan.
+
 - 2026-05-07: Added walk-up Kiosk and Coffee Shop MVP services for the worker consumable loop. The build catalog/menu now exposes roadless multi-instance Kiosk/Coffee Shop placement with low-poly counter decorations and quick-HUD labels; workers can buy one `$5` Snack/Coffee during idle, vendor revenue goes to the building bank, and Snack/Coffee auto-use once at critical Meal/Sleep need for partial relief. Verified JSON parse, `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and added-line mojibake scan.
 
 - 2026-05-07: Added the MVP foundation for worker-owned inventory. `DriverAgent` now carries item stacks, `GameBootstrap.WorkerInventory.cs` owns add/remove/count/normalize helpers and `WORKER_INVENTORY` logs, `WorkerItemCatalog.cs` loads `Assets/Resources/GameData/worker-items.json`, and Workers detail HUD has a dedicated Inventory tab for item/category/quantity/condition rows. Updated `Assembly-CSharp.csproj`, owner map, architecture notes, and project overview. Verified JSON parse, `dotnet build Assembly-CSharp.csproj -v:minimal`, `./tools/check-line-count.ps1`, `git diff --check`, and added-line/new-file mojibake scans.
@@ -282,6 +290,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Summary
 
+- 2026-05-07: Added City Hall MVP. City Hall is a new single 4x3 civic building in Build/Housing & Civic with placement preview, procedural civic visual, quick-HUD entry, and a dedicated City Hall Canvas screen. Worker complaints are generated from critical/warning needs, low money, missing services, unemployment, and family pressure, then auto-resolve when the underlying condition clears or can be manually marked reviewed. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, and touched-file mojibake scan.
+
 - 2026-05-06: Expanded Delete demolition to all buildings except Intercity Stop. Demolition now clears dependent truck, trade, local-bus, worker-inside-building, and lumberyard runtime state before removing a building, and key HUD/runtime paths tolerate missing Parking/Warehouse/Forest/Sawmill/Furniture Factory/Docks after demolition.
 
 - 2026-05-06: Hardened local bus routing against disconnected stops. Route start now searches for the first reachable stop from Parking, route continuation skips unreachable stops instead of collapsing the whole route, and skipped stops are logged for debugging. Split the reachability scan into `GameBootstrap.LocalBus.RouteSkipping.cs` to keep `GameBootstrap.LocalBus.cs` under the 900-line limit. Verified `./tools/check-all.ps1 -SkipSmokeTests`.
@@ -345,3 +355,5 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 - Tutorial flow is sensitive to timing, overlays, highlights, goals, and camera state. When changing tutorial steps, verify OK click behavior, skip behavior, menu highlight cleanup, and whether regular HUDs should be hidden or preserved.
 
 - Quick HUDs should not open automatically after building placement and should close when larger HUD windows open. Fleet details are an exception: preserve Fleet's internal selected-truck state while Fleet is open.
+
+- After adding or changing HUD/Canvas buttons, explicitly verify clickability: Canvas has an EventSystem/GraphicRaycaster, every `Button` has a `targetGraphic` and listener path, text/decorative images do not block raycasts unless they are the button target, overlay close buttons are last-sibling but small, and the new panel is included in `CloseAllMenus`/blocking-HUD state.

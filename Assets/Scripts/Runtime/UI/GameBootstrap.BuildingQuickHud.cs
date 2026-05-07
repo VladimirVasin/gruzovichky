@@ -98,6 +98,7 @@ public partial class GameBootstrap
                isWorldMapPanelOpen ||
                isStatesPanelOpen ||
                isSocialGraphPanelOpen ||
+               isCityHallPanelOpen ||
                activeBuildTool != BuildTool.None;
     }
 
@@ -438,7 +439,11 @@ public partial class GameBootstrap
             !isResourcesPanelOpen &&
             !isEconomyPanelOpen &&
             !isTradePanelOpen &&
-            !isBuildPanelOpen;
+            !isBuildPanelOpen &&
+            !isWorldMapPanelOpen &&
+            !isStatesPanelOpen &&
+            !isSocialGraphPanelOpen &&
+            !isCityHallPanelOpen;
 
         if (buildingQuickHud.CanvasRoot.activeSelf != shouldShow)
         {
@@ -564,6 +569,8 @@ public partial class GameBootstrap
         LocationType locationType = selectedLocation.Value;
         isSocialGraphPanelOpen = false;
         isSocialGraphScreenDirty = true;
+        isCityHallPanelOpen = false;
+        isCityHallScreenDirty = true;
         switch (locationType)
         {
             case LocationType.Parking:
@@ -590,6 +597,22 @@ public partial class GameBootstrap
                 isResourcesPanelOpen = false;
                 isBuildPanelOpen = false;
                 break;
+            case LocationType.CityHall:
+                LogUiInput("Quick HUD: opened City Hall");
+                isCityHallPanelOpen = true;
+                isFleetPanelOpen = false;
+                isDriversPanelOpen = false;
+                isShiftsPanelOpen = false;
+                isResourcesPanelOpen = false;
+                isEconomyPanelOpen = false;
+                isTradePanelOpen = false;
+                isBuildPanelOpen = false;
+                isWorldMapPanelOpen = false;
+                isStatesPanelOpen = false;
+                selectedLocation = null;
+                selectedLocalStopIndex = -1;
+                selectedPersonalHouseIndex = -1;
+                break;
             case LocationType.Docks:
                 LogUiInput("Quick HUD: cycled Dock orders");
                 if (locations.TryGetValue(LocationType.Docks, out LocationData docks))
@@ -610,6 +633,7 @@ public partial class GameBootstrap
         }
 
         isFleetScreenDirty = true;
+        isCityHallScreenDirty = true;
         PlayUiSound(uiPanelOpenClip, 0.86f);
     }
 

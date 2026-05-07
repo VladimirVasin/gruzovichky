@@ -216,6 +216,7 @@ public partial class GameBootstrap : MonoBehaviour
         Kindergarten,
         CarMarket,
         LaborExchange,
+        CityHall,
         Docks
     }
 
@@ -364,6 +365,7 @@ public partial class GameBootstrap : MonoBehaviour
         Kindergarten,
         CarMarket,
         LaborExchange,
+        CityHall,
         Docks
     }
 

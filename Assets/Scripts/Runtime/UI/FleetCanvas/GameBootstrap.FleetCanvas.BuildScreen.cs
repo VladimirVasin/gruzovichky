@@ -29,12 +29,13 @@ public partial class GameBootstrap
     {
         unlockedBuildTools?.Add(BuildTool.SingleRoad);
         unlockedBuildTools?.Add(BuildTool.Road);
+        unlockedBuildTools?.Add(BuildTool.CityHall);
         unlockedBuildTools?.Add(BuildTool.Docks);
     }
 
     private bool IsBuildToolUnlocked(BuildTool tool)
     {
-        if (tool == BuildTool.Docks)
+        if (tool == BuildTool.Docks || tool == BuildTool.CityHall)
         {
             return true;
         }
@@ -137,6 +138,7 @@ public partial class GameBootstrap
                 (BuildTool.Sawmill,          "SW", "Sawmill",           new Color(0.58f, 0.36f, 0.16f)),
                 (BuildTool.FurnitureFactory, "FF", "Furniture Factory", new Color(0.46f, 0.26f, 0.52f))),
             CreateBuildCategory(cardList, font, "Housing & Civic", "Жильё и город", false,
+                (BuildTool.CityHall,         "CH", "City Hall",      new Color(0.35f, 0.42f, 0.55f)),
                 (BuildTool.Motel,            "MT", "Motel",          new Color(0.24f, 0.48f, 0.36f)),
                 (BuildTool.PersonalHouse,    "PH", "Personal House", new Color(0.55f, 0.42f, 0.30f)),
                 (BuildTool.Kindergarten,     "KG", "Kindergarten",   new Color(0.46f, 0.62f, 0.36f)),
@@ -596,6 +598,28 @@ public partial class GameBootstrap
                 P(0.30f, 0.74f, 0.46f, 0.78f, paper);
                 P(0.54f, 0.74f, 0.70f, 0.78f, paper);
                 P(0.08f, 0.08f, 0.92f, 0.14f, new Color(0.74f, 0.70f, 0.58f));
+                break;
+            }
+
+            case BuildTool.CityHall:
+            {
+                Color wall = new(0.52f, 0.60f, 0.72f);
+                Color roof = new(0.18f, 0.23f, 0.32f);
+                Color trim = new(0.82f, 0.78f, 0.62f);
+                Color glass = new(0.62f, 0.84f, 0.94f);
+                Color dark = new(0.12f, 0.14f, 0.18f);
+                P(0.08f, 0.16f, 0.92f, 0.56f, wall);
+                P(0.04f, 0.54f, 0.96f, 0.66f, roof);
+                P(0.38f, 0.58f, 0.62f, 0.82f, wall);
+                P(0.34f, 0.80f, 0.66f, 0.90f, roof);
+                P(0.42f, 0.18f, 0.58f, 0.48f, dark);
+                P(0.16f, 0.36f, 0.32f, 0.50f, glass);
+                P(0.68f, 0.36f, 0.84f, 0.50f, glass);
+                P(0.18f, 0.16f, 0.23f, 0.56f, trim);
+                P(0.30f, 0.16f, 0.35f, 0.56f, trim);
+                P(0.65f, 0.16f, 0.70f, 0.56f, trim);
+                P(0.77f, 0.16f, 0.82f, 0.56f, trim);
+                P(0.46f, 0.68f, 0.54f, 0.76f, new Color(0.94f, 0.90f, 0.76f));
                 break;
             }
 

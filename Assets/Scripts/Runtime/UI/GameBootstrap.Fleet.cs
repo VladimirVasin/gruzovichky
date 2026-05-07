@@ -73,6 +73,7 @@ public partial class GameBootstrap
         isBuildPanelOpen = false;
         isStatesPanelOpen = false;
         isSocialGraphPanelOpen = false;
+        isCityHallPanelOpen = false;
         target = !wasOpen;
         if (panelName == "Economy")
         {
@@ -98,6 +99,7 @@ public partial class GameBootstrap
         isWorldMapScreenDirty = true;
         isStatesScreenDirty = true;
         isSocialGraphScreenDirty = true;
+        isCityHallScreenDirty = true;
         if (panelName == "Stats")
         {
             EnsureStatesScreenUiReady();
@@ -105,6 +107,7 @@ public partial class GameBootstrap
         }
         if (panelName == "Social")
         {
+            if (target) ResetSocialGraphScreenSelection();
             EnsureSocialGraphScreenUiReady();
             UpdateSocialGraphScreenUi();
         }
