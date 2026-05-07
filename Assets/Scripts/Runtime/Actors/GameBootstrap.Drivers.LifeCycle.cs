@@ -41,6 +41,7 @@ public partial class GameBootstrap : MonoBehaviour
 
     private bool TryStartDueWorkerLifeCycle(DriverAgent driver)
     {
+        TryReleaseShiftWaitForCriticalNeed(driver);
         if (!IsWorkerEligibleForFreeLifeCycle(driver, out string blockedReason))
         {
             LogWorkerDecision(driver, "skip-due-life-cycle", blockedReason);
@@ -143,6 +144,72 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         return true;
+    }
+
+    private bool TryReleaseShiftWaitForCriticalNeed(DriverAgent driver)
+    {
+        if (driver == null ||
+            !driver.WaitingForShiftAtParking ||
+            !HasCriticalWorkerNeed(driver) ||
+            driver.DriverObject == null ||
+            driver.IsArrivingByBus ||
+            driver.IsOnActiveShift ||
+            driver.IsInsideBuilding ||
+            driver.NeedsShiftEndReturn ||
+            driver.RestPhase != DriverRestPhase.None ||
+            IsDriverOnActiveTradeRun(driver) ||
+            IsBusDriverOnActiveRoute(driver) ||
+            GetCurrentTruckForDriver(driver) != null)
+        {
+            return false;
+        }
+
+        if (ShouldWorkerStayInShiftWait(driver))
+        {
+            return false;
+        }
+
+        driver.WaitingForShiftAtParking = false;
+        driver.WalkPhase = DriverRescuePhase.None;
+        driver.WalkTargetWorld = driver.DriverObject.transform.position;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        driver.WalkAnimationTime = 0f;
+        driver.IdleActivityTimer = 0f;
+        driver.IdleWanderPauseTimer = 0f;
+        driver.IdleWanderPointIndex = -1;
+        driver.IdleConversationTimer = 0f;
+        driver.IdleConversationPartnerId = -1;
+        driver.LifeGoal = WorkerLifeGoal.None;
+        LogWorkerDecision(
+            driver,
+            "shift-wait-interrupted-critical-need",
+            $"needs={FormatWorkerNeedsDebug(driver)}; minutesUntilShift={GetMinutesUntilShiftStart(driver)}",
+            true);
+        return true;
+    }
+
+    private bool ShouldWorkerStayInShiftWait(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return false;
+        }
+
+        if (driver.DutyMode == DriverDutyMode.Logistics)
+        {
+            return ShouldLogisticsWorkerHeadToBuilding(driver) || IsLogisticsWorkerWorkHour(driver);
+        }
+
+        int hour = GetCurrentHour();
+        if (IsDriverBusDriver(driver))
+        {
+            return ShouldBusDriverHeadToShift(driver) ||
+                   driver.ShiftStartHour >= 0 && IsHourInShiftWindow(hour, driver.ShiftStartHour);
+        }
+
+        return ShouldDriverHeadToShift(driver) ||
+               driver.ShiftStartHour >= 0 && IsHourInShiftWindow(hour, driver.ShiftStartHour);
     }
 
     private void StartWorkerLifeCycleAfterWork(DriverAgent driver, Vector3 startPosition, string sourceLabel)

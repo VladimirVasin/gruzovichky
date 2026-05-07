@@ -19,6 +19,13 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        if (driver.WaitingForShiftAtParking &&
+            HasCriticalWorkerNeed(driver) &&
+            TryStartDueWorkerLifeCycle(driver))
+        {
+            return;
+        }
+
         if (driver.IsArrivingByBus ||
             driver.RestPhase != DriverRestPhase.None ||
             driver.IsOnActiveShift ||
