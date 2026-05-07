@@ -153,7 +153,7 @@ public partial class GameBootstrap
             }
 
             float x = bar.x + MenuBtnGap;
-            MenuBtn("Workers", "Workers", ref isDriversPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Workers", "Residents", ref isDriversPanelOpen, x); x += buttonWidth + MenuBtnGap;
             MenuBtn("Social", "Social", ref isSocialGraphPanelOpen, x); x += buttonWidth + MenuBtnGap;
             MenuBtn("Vacancies", "Vacancies", ref isShiftsPanelOpen, x); x += buttonWidth + MenuBtnGap;
             MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += buttonWidth + MenuBtnGap;
@@ -347,7 +347,7 @@ public partial class GameBootstrap
         GUIStyle btnStyle  = new GUIStyle(GUI.skin.button) { fontSize = 11, fontStyle = FontStyle.Bold };
         GUIStyle btnSmall  = new GUIStyle(GUI.skin.button) { fontSize = 11 };
 
-        GUI.Box(panelRect, "Drivers");
+        GUI.Box(panelRect, "Residents");
 
         float y = panelRect.y + 34f;
         foreach (DriverAgent d in driverAgents)
@@ -366,9 +366,6 @@ public partial class GameBootstrap
 
             string status = GetDriverWorkforceStatus(assignedTruck, d);
             GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 44f, cardRect.width - 120f, 18f), $"Status: {status}", labelMid);
-
-            // Salary row
-            GUI.Label(new Rect(cardRect.x + 8f, cardRect.y + 82f, 220f, 18f), $"Salary: {FormatWorkerSalaryContract(d, false)}", labelMid);
 
             GUIStyle balanceStyle = new GUIStyle(GUI.skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
             GUI.Label(new Rect(cardRect.x + cardRect.width - 120f, cardRect.y + 82f, 112f, 18f), $"Balance: ${d.Money}", balanceStyle);
@@ -390,10 +387,6 @@ public partial class GameBootstrap
 
             y += 114f;
         }
-
-        GUI.enabled = false;
-        GUI.Button(new Rect(panelRect.x + 8f, panelRect.y + panelRect.height - 42f, panelRect.width - 16f, 30f), "Workers arrive automatically", btnStyle);
-        GUI.enabled = true;
     }
 
     private string GetDriverWorkforceStatus(TruckAgent truckAgent, DriverAgent driver)

@@ -290,6 +290,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Summary
 
+- 2026-05-07: Reworked the Workers Canvas first pass into a Residents HUD. The top menu/screen now uses Residents/Жители, the Canvas opens as a near-fullscreen window, the left list is compact without need mini-bars, the old automatic-arrival/motel hint card is removed, and the useless contract/salary block is gone with balance folded into the work summary. Added a setup-time click-target validation for resident rows, detail tabs, and the focus button. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, added-line mojibake scan, and static click-target checks.
+
 - 2026-05-07: Added City Hall MVP. City Hall is a new single 4x3 civic building in Build/Housing & Civic with placement preview, procedural civic visual, quick-HUD entry, and a dedicated City Hall Canvas screen. Worker complaints are generated from critical/warning needs, low money, missing services, unemployment, and family pressure, then auto-resolve when the underlying condition clears or can be manually marked reviewed. Verified `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, and touched-file mojibake scan.
 
 - 2026-05-06: Expanded Delete demolition to all buildings except Intercity Stop. Demolition now clears dependent truck, trade, local-bus, worker-inside-building, and lumberyard runtime state before removing a building, and key HUD/runtime paths tolerate missing Parking/Warehouse/Forest/Sawmill/Furniture Factory/Docks after demolition.

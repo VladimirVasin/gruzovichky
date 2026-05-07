@@ -27,7 +27,7 @@ public partial class GameBootstrap
         // Window root — two-panel layout (980×560)
         GameObject windowRoot = CreateUiObject("DriversWindowRoot", canvasObject.transform);
         RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 1080f, 620f, -16f);
+        SetCenteredWindow(windowRect, 1500f, 820f, -4f);
         driversScreenUi.WindowRoot = windowRect;
         Image windowBg = windowRoot.AddComponent<Image>();
         windowBg.color = DriversScreenTint;
@@ -46,13 +46,13 @@ public partial class GameBootstrap
         RectTransform leftPanel = CreateStyledPanel("WorkersLeftPanel", windowRoot.transform, FleetPanelColor);
         driversScreenUi.LeftPanel = leftPanel;
         LayoutElement leftPanelLE = leftPanel.gameObject.AddComponent<LayoutElement>();
-        leftPanelLE.preferredWidth = 360f;
-        leftPanelLE.minWidth      = 360f;
+        leftPanelLE.preferredWidth = 280f;
+        leftPanelLE.minWidth      = 280f;
         leftPanelLE.flexibleWidth  = 0f;
         leftPanelLE.flexibleHeight = 1f;
         VerticalLayoutGroup leftLayout = leftPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         leftLayout.padding = new RectOffset(16, 16, 16, 16);
-        leftLayout.spacing = 16;
+        leftLayout.spacing = 12;
         leftLayout.childControlWidth = true;
         leftLayout.childControlHeight = true;
         leftLayout.childForceExpandWidth = true;
@@ -60,7 +60,7 @@ public partial class GameBootstrap
 
         // Header
         RectTransform headerRow = CreateLayoutRow("DriversHeaderRow", leftPanel, 40f, 0f);
-        Text titleText = CreateHeaderText("DriversTitle", headerRow, font, "Workers", 24, TextAnchor.MiddleLeft, Color.white);
+        Text titleText = CreateHeaderText("DriversTitle", headerRow, font, "Residents", 24, TextAnchor.MiddleLeft, Color.white);
         titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         driversScreenUi.HeaderCountText = CreateHeaderText("DriversCount", headerRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetSecondaryTextColor);
 
@@ -88,26 +88,6 @@ public partial class GameBootstrap
             driversScreenUi.WorkerRows.Add(CreateWorkerRow(contentRect, font, i));
         }
 
-        // Hire section
-        RectTransform hireSection = CreateStyledPanel("HireSection", leftPanel, FleetInsetColor);
-        hireSection.gameObject.AddComponent<LayoutElement>().preferredHeight = 96f;
-        VerticalLayoutGroup hireLayout = hireSection.gameObject.AddComponent<VerticalLayoutGroup>();
-        hireLayout.padding = new RectOffset(18, 18, 16, 14);
-        hireLayout.spacing = 10;
-        hireLayout.childAlignment = TextAnchor.MiddleCenter;
-        hireLayout.childControlWidth = true;
-        hireLayout.childControlHeight = true;
-        hireLayout.childForceExpandWidth = true;
-        hireLayout.childForceExpandHeight = false;
-        driversScreenUi.HireButton = CreateButton("HireDriverButton", hireSection, font, out driversScreenUi.HireButtonText, "Workers arrive automatically", 16, FleetPrimaryButtonColor, Color.white);
-        driversScreenUi.HireButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
-        driversScreenUi.HireButton.onClick.AddListener(() =>
-        {
-            LogUiInput("Drivers Canvas: clicked disabled direct worker hire info");
-            isDriversScreenDirty = true;
-        });
-        driversScreenUi.HireStatusText = CreateBodyText("HireStatus", hireSection, font, string.Empty, 12, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
-
         // ── RIGHT PANEL ───────────────────────────────────────────────────────
         RectTransform rightPanel = CreateStyledPanel("WorkersDetailPanel", windowRoot.transform, FleetPanelColor);
         driversScreenUi.RightPanel = rightPanel;
@@ -128,7 +108,7 @@ public partial class GameBootstrap
         VerticalLayoutGroup plBodyLayout = placeholderBody.GetComponent<VerticalLayoutGroup>();
         plBodyLayout.childAlignment = TextAnchor.MiddleCenter;
         plBodyLayout.childForceExpandHeight = true;
-        CreateBodyText("DetailPlaceholder", placeholderBody, font, "Select a worker from the list to view details.", 15, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
+        CreateBodyText("DetailPlaceholder", placeholderBody, font, "Select a resident from the list to view details.", 15, TextAnchor.MiddleCenter, FleetSecondaryTextColor);
         driversScreenUi.DetailPlaceholderCard = placeholderCard.gameObject;
 
         // Detail content (hidden until a worker is selected)
@@ -384,36 +364,8 @@ public partial class GameBootstrap
         driversScreenUi.DetailAgeText = CreateBodyText("AgeV", ageRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         driversScreenUi.DetailAgeText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        // Contract card (salary, balance) — compact
-        RectTransform statsCard = CreateSectionCard(profileTabRoot, font, string.Empty, out RectTransform statsBody, false);
-        statsCard.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(16, 16, 10, 10);
-        statsCard.GetComponent<VerticalLayoutGroup>().spacing = 4;
-        statsBody.GetComponent<VerticalLayoutGroup>().spacing = 6;
-        driversScreenUi.DetailContractTitleText = CreateHeaderText("WorkerContractTitle", statsBody, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetAccentColor);
-        driversScreenUi.DetailContractTitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
-
-        RectTransform salaryRow = CreateLayoutRow("SalaryEditRow", statsBody, 28f, 6f);
-        driversScreenUi.DetailSalaryLabel = CreateBodyText("SRL", salaryRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
-        driversScreenUi.DetailSalaryLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
-        driversScreenUi.DetailSalaryMinusBtn = CreateButton("SalaryMinus", salaryRow, font, out Text minusTxt, "-", 14, new Color(0.37f, 0.25f, 0.19f, 1f), Color.white);
-        minusTxt.fontStyle = FontStyle.Bold;
-        LayoutElement minusLE = driversScreenUi.DetailSalaryMinusBtn.gameObject.AddComponent<LayoutElement>();
-        minusLE.preferredWidth = 28f; minusLE.preferredHeight = 24f;
-        RectTransform salaryValPanel = CreateStyledPanel("SalaryValPanel", salaryRow, new Color(0.09f, 0.13f, 0.19f, 1f));
-        LayoutElement salaryValLE = salaryValPanel.gameObject.AddComponent<LayoutElement>();
-        salaryValLE.preferredWidth = 230f; salaryValLE.preferredHeight = 24f;
-        driversScreenUi.DetailSalaryText = CreateHeaderText("SalaryVal", salaryValPanel, font, string.Empty, 13, TextAnchor.MiddleCenter, Color.white);
-        driversScreenUi.DetailSalaryPlusBtn = CreateButton("SalaryPlus", salaryRow, font, out Text plusTxt, "+", 14, new Color(0.24f, 0.38f, 0.24f, 1f), Color.white);
-        plusTxt.fontStyle = FontStyle.Bold;
-        LayoutElement plusLE = driversScreenUi.DetailSalaryPlusBtn.gameObject.AddComponent<LayoutElement>();
-        plusLE.preferredWidth = 28f; plusLE.preferredHeight = 24f;
-        CreateBodyText("PerShift", salaryRow, font, "/ contract", 12, TextAnchor.MiddleLeft, FleetMutedTextColor).gameObject.AddComponent<LayoutElement>().preferredWidth = 70f;
-        driversScreenUi.DetailSalaryMinusBtn.onClick.RemoveAllListeners();
-        driversScreenUi.DetailSalaryPlusBtn.onClick.RemoveAllListeners();
-        driversScreenUi.DetailSalaryMinusBtn.gameObject.SetActive(false);
-        driversScreenUi.DetailSalaryPlusBtn.gameObject.SetActive(false);
-
-        RectTransform balanceRow = CreateLayoutRow("BalanceRow", statsBody, 20f, 12f);
+        // Compact personal money row lives with the worker summary.
+        RectTransform balanceRow = CreateLayoutRow("BalanceRow", assignBody, 20f, 12f);
         driversScreenUi.DetailBalanceLabel = CreateBodyText("BL", balanceRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetMutedTextColor);
         driversScreenUi.DetailBalanceLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 90f;
         driversScreenUi.DetailBalanceText = CreateHeaderText("BV", balanceRow, font, string.Empty, 14, TextAnchor.MiddleLeft, FleetAccentColor);
@@ -486,12 +438,37 @@ public partial class GameBootstrap
             FocusDriver(d.DriverId);
         });
 
+        ValidateDriversScreenClickTargets();
         detailRoot.SetActive(false);
         SetupWorkerTraitTooltip(windowRect, font);
 
         AddOverlayCloseButton(windowRect, font);
         driversScreenUi.CanvasRoot.SetActive(false);
         UpdateDriversScreenUi();
+    }
+
+    private void ValidateDriversScreenClickTargets()
+    {
+        if (driversScreenUi == null)
+        {
+            return;
+        }
+
+        bool ok = IsButtonClickTargetReady(driversScreenUi.DetailProfileTabButton) &&
+                  IsButtonClickTargetReady(driversScreenUi.DetailSocialTabButton) &&
+                  IsButtonClickTargetReady(driversScreenUi.DetailThoughtsTabButton) &&
+                  IsButtonClickTargetReady(driversScreenUi.DetailInventoryTabButton) &&
+                  IsButtonClickTargetReady(driversScreenUi.DetailFocusButton);
+
+        for (int i = 0; i < driversScreenUi.WorkerRows.Count; i++)
+        {
+            ok &= IsButtonClickTargetReady(driversScreenUi.WorkerRows[i]?.SelectButton);
+        }
+
+        if (!ok)
+        {
+            SessionDebugLogger.Log("UI_INPUT", "Residents HUD click-target validation failed: check row, tab, and focus buttons.");
+        }
     }
 
     private void EnsureWorkerRows(int targetCount)
@@ -530,49 +507,39 @@ public partial class GameBootstrap
         WorkerRowUi row = new();
         GameObject rowObj = CreateUiObject($"WorkerRow{index + 1}", parent);
         row.Root = rowObj.GetComponent<RectTransform>();
-        rowObj.AddComponent<LayoutElement>().preferredHeight = 80f;
+        rowObj.AddComponent<LayoutElement>().preferredHeight = 56f;
         row.Background = rowObj.AddComponent<Image>();
+        row.Background.raycastTarget = true;
         row.Background.color = DriversCardColor;
         Outline outline = rowObj.AddComponent<Outline>();
         outline.effectColor = new Color(0f, 0f, 0f, 0.22f);
         outline.effectDistance = new Vector2(1f, -1f);
         VerticalLayoutGroup rowLayout = rowObj.AddComponent<VerticalLayoutGroup>();
-        rowLayout.padding = new RectOffset(14, 14, 10, 10);
-        rowLayout.spacing = 5;
+        rowLayout.padding = new RectOffset(12, 10, 8, 8);
+        rowLayout.spacing = 3;
         rowLayout.childControlWidth = true;
         rowLayout.childControlHeight = true;
         rowLayout.childForceExpandWidth = true;
         rowLayout.childForceExpandHeight = false;
 
         RectTransform nameRow = CreateLayoutRow($"WorkerNameRow{index}", rowObj.transform, 22f, 8f);
-        row.NameText = CreateHeaderText("Name", nameRow, font, string.Empty, 14, TextAnchor.MiddleLeft, Color.white);
+        row.NameText = CreateHeaderText("Name", nameRow, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         row.NameText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         RectTransform badge = CreateStyledPanel($"WorkerStatusBadge{index}", nameRow, new Color(0.24f, 0.29f, 0.36f, 1f));
         row.StatusBadgeBg = badge.GetComponent<Image>();
-        badge.gameObject.AddComponent<LayoutElement>().preferredWidth = 112f;
-        row.StatusText = CreateBodyText("Status", badge, font, string.Empty, 10, TextAnchor.MiddleCenter, Color.white);
+        row.StatusBadgeBg.raycastTarget = false;
+        badge.gameObject.AddComponent<LayoutElement>().preferredWidth = 86f;
+        row.StatusText = CreateBodyText("Status", badge, font, string.Empty, 9, TextAnchor.MiddleCenter, Color.white);
         row.StatusText.fontStyle = FontStyle.Bold;
 
         RectTransform subRow = CreateLayoutRow($"WorkerSubRow{index}", rowObj.transform, 18f, 6f);
         row.SubText = CreateBodyText("SubText", subRow, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
         row.SubText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         row.BalanceText = CreateHeaderText("Balance", subRow, font, string.Empty, 12, TextAnchor.MiddleRight, FleetAccentColor);
-        row.BalanceText.gameObject.AddComponent<LayoutElement>().preferredWidth = 72f;
-
-        RectTransform needsRow = CreateUiObject($"NeedsRow{index}", rowObj.transform).GetComponent<RectTransform>();
-        HorizontalLayoutGroup needsLayout = needsRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-        needsLayout.spacing = 6f;
-        needsLayout.childAlignment = TextAnchor.MiddleLeft;
-        needsLayout.childControlWidth = false;
-        needsLayout.childControlHeight = false;
-        needsLayout.childForceExpandWidth = false;
-        needsLayout.childForceExpandHeight = false;
-        needsRow.gameObject.AddComponent<LayoutElement>().preferredHeight = 10f;
-        row.NeedsMealBarFill    = CreateNeedsMiniBar(needsRow, GetNeedsMealIcon(),    $"Meal{index}",    60f);
-        row.NeedsSleepBarFill   = CreateNeedsMiniBar(needsRow, GetNeedsSleepIcon(),   $"Sleep{index}",   60f);
-        row.NeedsLeisureBarFill = CreateNeedsMiniBar(needsRow, GetNeedsLeisureIcon(), $"Leisure{index}", 60f);
+        row.BalanceText.gameObject.AddComponent<LayoutElement>().preferredWidth = 56f;
 
         row.SelectButton = rowObj.AddComponent<Button>();
+        row.SelectButton.targetGraphic = row.Background;
         ColorBlock rowColors = row.SelectButton.colors;
         rowColors.normalColor = Color.white;
         rowColors.highlightedColor = new Color(1f, 1f, 1f, 0.92f);
@@ -806,17 +773,17 @@ public partial class GameBootstrap
     {
         if (driver == null)
         {
-            return "—";
+            return "\u2014";
         }
 
         return driver.Gender == WorkerGender.Female
-            ? (ru ? "Женщина" : "Female")
-            : (ru ? "Мужчина" : "Male");
+            ? (ru ? "\u0416\u0435\u043d\u0449\u0438\u043d\u0430" : "Female")
+            : (ru ? "\u041c\u0443\u0436\u0447\u0438\u043d\u0430" : "Male");
     }
 
     private string GetWorkerListStatusLabel(DriverAgent driver, bool ru)
     {
-        if (driver == null) return ru ? "Свободен" : "Idle";
+        if (driver == null) return ru ? "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d" : "Idle";
 
         TruckAgent truck = GetAssignedTruckForDriver(driver);
         bool isProduction = driver.DutyMode == DriverDutyMode.Logistics;
@@ -826,33 +793,33 @@ public partial class GameBootstrap
         {
             return ru ? "\u0418\u0449\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0443" : "Job search";
         }
-        return driver.IsArrivingByBus ? (ru ? "В пути" : "Arriving")
-            : IsDriverOnActiveTradeRun(driver) ? (ru ? "Торговый рейс" : "Trade Run")
-            : IsDriverIntercity(driver) ? (ru ? "Межгород" : "Intercity")
-            : IsDriverBusDriver(driver) ? (ru ? "Логистика" : "Logistics")
-            : isService ? (ru ? "На сервисе" : "Service")
-            : isProduction ? (ru ? "На производстве" : "Production")
-            : truck != null ? (ru ? "На логистике" : "Logistics")
-            : driver.RestPhase != DriverRestPhase.None ? (ru ? "Отдыхает" : "Resting")
-            : (ru ? Gend(driver, "Свободен", "Свободна") : "Idle");
+        return driver.IsArrivingByBus ? (ru ? "\u0412 \u043f\u0443\u0442\u0438" : "Arriving")
+            : IsDriverOnActiveTradeRun(driver) ? (ru ? "\u0422\u043e\u0440\u0433\u043e\u0432\u044b\u0439 \u0440\u0435\u0439\u0441" : "Trade Run")
+            : IsDriverIntercity(driver) ? (ru ? "\u041c\u0435\u0436\u0433\u043e\u0440\u043e\u0434" : "Intercity")
+            : IsDriverBusDriver(driver) ? (ru ? "\u041b\u043e\u0433\u0438\u0441\u0442\u0438\u043a\u0430" : "Logistics")
+            : isService ? (ru ? "\u041d\u0430 \u0441\u0435\u0440\u0432\u0438\u0441\u0435" : "Service")
+            : isProduction ? (ru ? "\u041d\u0430 \u043f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0441\u0442\u0432\u0435" : "Production")
+            : truck != null ? (ru ? "\u041d\u0430 \u043b\u043e\u0433\u0438\u0441\u0442\u0438\u043a\u0435" : "Logistics")
+            : driver.RestPhase != DriverRestPhase.None ? (ru ? "\u041e\u0442\u0434\u044b\u0445\u0430\u0435\u0442" : "Resting")
+            : (ru ? Gend(driver, "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d", "\u0421\u0432\u043e\u0431\u043e\u0434\u043d\u0430") : "Idle");
     }
 
     private string GetWorkerDutySummaryLabel(DriverAgent driver, bool ru)
     {
-        if (driver == null) return "—";
+        if (driver == null) return "\u2014";
 
         return driver.WalkPhase == DriverRescuePhase.ToLaborExchangeForJob || driver.WalkPhase == DriverRescuePhase.AtLaborExchange
             ? (ru ? "\u041d\u0430 \u0411\u0438\u0440\u0436\u0435 \u0442\u0440\u0443\u0434\u0430" : "At Labor Exchange")
-            : driver.IsInsideBuilding ? (ru ? "Работает в здании" : "Inside building")
-            : IsBusDriverOnActiveRoute(driver) ? (ru ? "На автобусном маршруте" : "On bus route")
-            : driver.IsOnActiveShift ? (ru ? "На смене" : "On shift")
-            : driver.RestPhase != DriverRestPhase.None ? (ru ? "Отдыхает" : "Resting")
-            : IsDriverBusyWalkPhase(driver) ? (ru ? "В пути" : "Commuting")
-            : IsDriverIntercity(driver) ? (ru ? "Ожидает межгород" : "Waiting for intercity")
-            : IsDriverBusDriver(driver) ? (ru ? "Ожидает автобусный маршрут" : "Waiting for bus route")
+            : driver.IsInsideBuilding ? (ru ? "\u0420\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u0432 \u0437\u0434\u0430\u043d\u0438\u0438" : "Inside building")
+            : IsBusDriverOnActiveRoute(driver) ? (ru ? "\u041d\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043d\u043e\u043c \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0435" : "On bus route")
+            : driver.IsOnActiveShift ? (ru ? "\u041d\u0430 \u0441\u043c\u0435\u043d\u0435" : "On shift")
+            : driver.RestPhase != DriverRestPhase.None ? (ru ? "\u041e\u0442\u0434\u044b\u0445\u0430\u0435\u0442" : "Resting")
+            : IsDriverBusyWalkPhase(driver) ? (ru ? "\u0412 \u043f\u0443\u0442\u0438" : "Commuting")
+            : IsDriverIntercity(driver) ? (ru ? "\u041e\u0436\u0438\u0434\u0430\u0435\u0442 \u043c\u0435\u0436\u0433\u043e\u0440\u043e\u0434" : "Waiting for intercity")
+            : IsDriverBusDriver(driver) ? (ru ? "\u041e\u0436\u0438\u0434\u0430\u0435\u0442 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043d\u044b\u0439 \u043c\u0430\u0440\u0448\u0440\u0443\u0442" : "Waiting for bus route")
             : driver.AssignedPersonalHouseIndex >= 0
-                ? (ru ? Gend(driver, "Свободен у дома", "Свободна у дома") : "Idle at home")
-                : (ru ? Gend(driver, "Свободен в мотеле", "Свободна в мотеле") : "Idle at motel");
+                ? (ru ? Gend(driver, "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d \u0434\u043e\u043c\u0430", "\u0421\u0432\u043e\u0431\u043e\u0434\u043d\u0430 \u0434\u043e\u043c\u0430") : "Idle at home")
+                : (ru ? Gend(driver, "\u0421\u0432\u043e\u0431\u043e\u0434\u0435\u043d", "\u0421\u0432\u043e\u0431\u043e\u0434\u043d\u0430") : "Idle");
     }
 
 

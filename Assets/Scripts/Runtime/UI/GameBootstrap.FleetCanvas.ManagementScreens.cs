@@ -71,9 +71,6 @@ public partial class GameBootstrap
         public RectTransform WorkerListContent;
         public ScrollRect WorkerListScrollRect;
         public readonly List<WorkerRowUi> WorkerRows = new();
-        public Button HireButton;
-        public Text   HireButtonText;
-        public Text   HireStatusText;
         public Text   HeaderCountText;
         // Right panel — detail view
         public GameObject DetailPlaceholderCard;
@@ -119,13 +116,8 @@ public partial class GameBootstrap
         public Text  DetailAgeLabel;
         public Text  DetailAgeText;
         public Text  DetailWorkTitleText;
-        public Text  DetailSalaryLabel;
-        public Text  DetailSalaryText;
-        public Button DetailSalaryMinusBtn;
-        public Button DetailSalaryPlusBtn;
         public Text  DetailBalanceLabel;
         public Text  DetailBalanceText;
-        public Text  DetailContractTitleText;
         public Text  DetailSocialTitleText;
         public Text  DetailSocialEmptyText;
         public Text  DetailSocialNameHeaderText;
@@ -159,9 +151,6 @@ public partial class GameBootstrap
         public Text          SubText;
         public Text          BalanceText;
         public Button        SelectButton;
-        public RectTransform NeedsMealBarFill;
-        public RectTransform NeedsSleepBarFill;
-        public RectTransform NeedsLeisureBarFill;
     }
 
     private sealed class WorkerSocialRowUi

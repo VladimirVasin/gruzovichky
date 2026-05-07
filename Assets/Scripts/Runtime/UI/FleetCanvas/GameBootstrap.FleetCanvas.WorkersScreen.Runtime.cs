@@ -19,7 +19,7 @@ public partial class GameBootstrap
         if (!shouldShow) return;
         if (!isDriversScreenDirty) return;
 
-        driversScreenUi.HeaderCountText.text = $"{driverAgents.Count} {(driverAgents.Count == 1 ? L("Worker") : L("Workers"))}";
+        driversScreenUi.HeaderCountText.text = $"{driverAgents.Count} {(driverAgents.Count == 1 ? L("Resident") : L("Residents"))}";
         EnsureWorkerRows(driverAgents.Count);
 
         // Left panel — compact row list
@@ -55,7 +55,7 @@ public partial class GameBootstrap
                     : new Color(0.24f, 0.29f, 0.36f, 1f);
             }
 
-            row.SubText.text = d.IsArrivingByBus              ? "On the way..."
+            row.SubText.text = d.IsArrivingByBus              ? (ru ? "\u0412 \u043f\u0443\u0442\u0438..." : "On the way...")
                 : isLogistics && d.AssignedBuildingType.HasValue ? GetSelectedLocationDisplayName(d.AssignedBuildingType.Value)
                 : truck != null                                   ? truck.DisplayName
                 : L(GetWorkerOccupationLabel(d));
@@ -65,18 +65,6 @@ public partial class GameBootstrap
                 row.BalanceText.color = d.Money < 15 ? new Color(0.96f, 0.72f, 0.42f, 1f) : FleetAccentColor;
             }
 
-            if (row.NeedsMealBarFill != null)
-            {
-                float mealPct    = Mathf.Clamp01(1f - d.HoursSinceMeal    / WorkerMealCriticalHours);
-                float sleepPct   = Mathf.Clamp01(1f - d.HoursSinceSleep   / WorkerSleepCriticalHours);
-                float leisurePct = Mathf.Clamp01(1f - d.HoursSinceLeisure / WorkerLeisureCriticalHours);
-                row.NeedsMealBarFill.sizeDelta    = new Vector2(mealPct    * 60f, 0f);
-                row.NeedsSleepBarFill.sizeDelta   = new Vector2(sleepPct   * 60f, 0f);
-                row.NeedsLeisureBarFill.sizeDelta = new Vector2(leisurePct * 60f, 0f);
-                row.NeedsMealBarFill.GetComponent<Image>().color    = GetNeedBarColor(mealPct);
-                row.NeedsSleepBarFill.GetComponent<Image>().color   = GetNeedBarColor(sleepPct);
-                row.NeedsLeisureBarFill.GetComponent<Image>().color = GetNeedBarColor(leisurePct);
-            }
         }
 
         // Right panel — visibility toggle (done before LocalizeCanvas so layout is correct)
@@ -92,21 +80,6 @@ public partial class GameBootstrap
         if (driversScreenUi.DetailContentRoot != null)
             driversScreenUi.DetailContentRoot.SetActive(hasSel);
 
-        bool hasMotel = locations.ContainsKey(LocationType.Motel);
-        bool canAutoArrive = hasMotel && locations.ContainsKey(LocationType.IntercityStop);
-        bool ruHire = IsRussianLanguage();
-        driversScreenUi.HireButton.interactable = false;
-        driversScreenUi.HireButtonText.text = ruHire
-            ? "\u0420\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0435\u0437\u0436\u0430\u044e\u0442 \u0441\u0430\u043c\u0438"
-            : "Workers arrive automatically";
-        driversScreenUi.HireStatusText.text = hiringDriverArrival != null
-            ? (ruHire ? "\u041d\u043e\u0432\u044b\u0439 \u0440\u0430\u0431\u043e\u0447\u0438\u0439 \u0443\u0436\u0435 \u0435\u0434\u0435\u0442 \u043d\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435." : "A new worker is already arriving by bus.")
-            : !hasMotel
-                ? (ruHire ? "\u041d\u0443\u0436\u0435\u043d Motel, \u0447\u0442\u043e\u0431\u044b \u043d\u043e\u0432\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043c\u043e\u0433\u043b\u0438 \u0437\u0430\u0441\u0435\u043b\u0438\u0442\u044c\u0441\u044f." : "Build a Motel so new workers can check in.")
-            : !canAutoArrive
-                ? (ruHire ? "\u041d\u0443\u0436\u043d\u0430 \u043c\u0435\u0436\u0433\u043e\u0440\u043e\u0434\u043d\u044f\u044f \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430." : "Build an Intercity Stop for arrivals.")
-                : (ruHire ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044b\u0435 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438 \u043f\u043e\u0432\u044b\u0448\u0430\u044e\u0442 \u0448\u0430\u043d\u0441 \u043f\u0440\u0438\u0435\u0437\u0434\u0430." : "Open vacancies increase the chance of new arrivals.");
-        driversScreenUi.HireStatusText.color = canAutoArrive ? FleetSecondaryTextColor : new Color(0.96f, 0.72f, 0.42f, 1f);
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WorkerListContent);
         LayoutRebuilder.ForceRebuildLayoutImmediate(driversScreenUi.WindowRoot);
         ScrollWorkersListToSelectedIfRequested();
@@ -124,7 +97,7 @@ public partial class GameBootstrap
             ApplyWorkerDetailTabUi(ru);
             driversScreenUi.DetailNameText.text = sel.DriverName;
             if (driversScreenUi.DetailProfileTitleText != null)
-                driversScreenUi.DetailProfileTitleText.text = ru ? "Профиль" : "Profile";
+                driversScreenUi.DetailProfileTitleText.text = ru ? "\u041f\u0440\u043e\u0444\u0438\u043b\u044c" : "Profile";
             if (driversScreenUi.DetailRoleText != null)
                 driversScreenUi.DetailRoleText.text = $"{L(GetWorkerOccupationLabel(sel))} | {GetWorkerGenderLabel(sel, ru)} | {GetWorkerEducationDisplayName(sel.Education, ru)} | {FormatWorkerProfessionalSummary(sel, ru)}";
             UpdateWorkerPortraitUi(sel);
@@ -143,30 +116,26 @@ public partial class GameBootstrap
 
             // Labels (set post-localization so LocalizeCanvas can't corrupt them)
             if (driversScreenUi.DetailAssignmentLabel != null)
-                driversScreenUi.DetailAssignmentLabel.text = isLogistics ? (ru ? "Здание" : "Building") : (ru ? "Грузовик" : "Truck");
+                driversScreenUi.DetailAssignmentLabel.text = isLogistics ? (ru ? "\u0417\u0434\u0430\u043d\u0438\u0435" : "Building") : (ru ? "\u0413\u0440\u0443\u0437\u043e\u0432\u0438\u043a" : "Truck");
             if (driversScreenUi.DetailShiftLabel != null)
-                driversScreenUi.DetailShiftLabel.text = ru ? "Смена" : "Shift";
+                driversScreenUi.DetailShiftLabel.text = ru ? "\u0421\u043c\u0435\u043d\u0430" : "Shift";
             if (driversScreenUi.DetailDutyLabel != null)
-                driversScreenUi.DetailDutyLabel.text = ru ? "Статус" : "Status";
+                driversScreenUi.DetailDutyLabel.text = ru ? "\u0421\u0442\u0430\u0442\u0443\u0441" : "Status";
             if (driversScreenUi.DetailHomeLabel != null)
-                driversScreenUi.DetailHomeLabel.text = ru ? "Жилой дом" : "Home";
+                driversScreenUi.DetailHomeLabel.text = ru ? "\u0416\u0438\u043b\u044c\u0435" : "Home";
             if (driversScreenUi.DetailCarLabel != null)
                 driversScreenUi.DetailCarLabel.text = ru ? "\u0410\u0432\u0442\u043e" : "Car";
             if (driversScreenUi.DetailAgeLabel != null)
                 driversScreenUi.DetailAgeLabel.text = ru ? "\u0412\u043e\u0437\u0440\u0430\u0441\u0442" : "Age";
             if (driversScreenUi.DetailWorkTitleText != null)
-                driversScreenUi.DetailWorkTitleText.text = ru ? "Работа" : "Work";
-            if (driversScreenUi.DetailSalaryLabel != null)
-                driversScreenUi.DetailSalaryLabel.text = ru ? "\u041a\u043e\u043d\u0442\u0440\u0430\u043a\u0442" : "Contract";
+                driversScreenUi.DetailWorkTitleText.text = ru ? "\u0420\u0430\u0431\u043e\u0442\u0430" : "Work";
             if (driversScreenUi.DetailBalanceLabel != null)
-                driversScreenUi.DetailBalanceLabel.text = ru ? "Баланс" : "Balance";
-            if (driversScreenUi.DetailContractTitleText != null)
-                driversScreenUi.DetailContractTitleText.text = ru ? "Контракт" : "Contract";
+                driversScreenUi.DetailBalanceLabel.text = ru ? "\u0411\u0430\u043b\u0430\u043d\u0441" : "Balance";
 
             // Values
             driversScreenUi.DetailAssignmentValue.text = isLogistics && sel.AssignedBuildingType.HasValue
                 ? GetSelectedLocationDisplayName(sel.AssignedBuildingType.Value)
-                : truck != null ? truck.DisplayName : "—";
+                : truck != null ? truck.DisplayName : "\u2014";
 
             if (driversScreenUi.DetailHomeText != null)
             {
@@ -190,13 +159,12 @@ public partial class GameBootstrap
             bool hasShift = sel.ShiftStartHour >= 0;
             driversScreenUi.DetailShiftText.text = isLogistics ? GetProductionWorkRangeLabel()
                 : hasShift                        ? GetShiftRangeLabel(sel.ShiftStartHour)
-                : (ru ? "Не назначена" : "Not assigned");
+                : (ru ? "\u041d\u0435 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0430" : "Not assigned");
             driversScreenUi.DetailShiftText.color = (hasShift || isLogistics) ? FleetAccentColor : FleetMutedTextColor;
 
             string dutyState = GetWorkerDutySummaryLabel(sel, ru);
             driversScreenUi.DetailDutyStateText.text = dutyState;
 
-            driversScreenUi.DetailSalaryText.text  = FormatWorkerSalaryContract(sel, ru);
             driversScreenUi.DetailBalanceText.text = $"${sel.Money}";
             UpdateWorkerSocialUi(sel, ru);
             UpdateWorkerThoughtsUi(sel, ru);
