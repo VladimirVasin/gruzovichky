@@ -273,8 +273,8 @@
             "ru": "Режим активен: поставь столовую 3x2 от подъездной клетки. R - поворот ({rot})."
           },
           "description": {
-            "en": "Service building: visiting drivers/workers pay $10 for a quick meal.",
-            "ru": "Столовая 3x2: рабочие платят $10 за быстрый приём пищи."
+            "en": "Service building: visiting drivers/workers pay $8 for a quick meal.",
+            "ru": "Столовая 3x2: рабочие платят $8 за быстрый приём пищи."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "Уже построено на этой карте." }
         },
@@ -284,12 +284,12 @@
           "title": { "en": "Kiosk", "ru": "\u041a\u0438\u043e\u0441\u043a" },
           "color": "#DB943D",
           "activeDescription": {
-            "en": "Mode active: place one 2x1 walk-up kiosk. Snack and Coffee are sold here for $5. No road driveway required. R rotates ({rot}).",
-            "ru": "\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u043a\u0438\u043e\u0441\u043a 2x1 \u0431\u0435\u0437 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u0430 \u043a \u0434\u043e\u0440\u043e\u0433\u0435. Snack \u0438 Coffee \u043f\u0440\u043e\u0434\u0430\u044e\u0442\u0441\u044f \u0437\u0434\u0435\u0441\u044c \u0437\u0430 $5. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})."
+            "en": "Mode active: place one 2x1 walk-up kiosk. Snack and Coffee are sold here for $4. No road driveway required. R rotates ({rot}).",
+            "ru": "\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u043a\u0438\u043e\u0441\u043a 2x1 \u0431\u0435\u0437 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u0430 \u043a \u0434\u043e\u0440\u043e\u0433\u0435. Snack \u0438 Coffee \u043f\u0440\u043e\u0434\u0430\u044e\u0442\u0441\u044f \u0437\u0434\u0435\u0441\u044c \u0437\u0430 $4. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})."
           },
           "description": {
-            "en": "Walk-up kiosk: workers can buy a $5 Snack or Coffee for their inventory.",
-            "ru": "\u041a\u0438\u043e\u0441\u043a: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0442 \u043a \u0441\u0442\u043e\u0439\u043a\u0435 \u0438 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 Snack \u0438\u043b\u0438 Coffee \u0437\u0430 $5 \u0432 \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c."
+            "en": "Walk-up kiosk: workers can buy a $4 Snack or Coffee for their inventory.",
+            "ru": "\u041a\u0438\u043e\u0441\u043a: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u0434\u0445\u043e\u0434\u044f\u0442 \u043a \u0441\u0442\u043e\u0439\u043a\u0435 \u0438 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 Snack \u0438\u043b\u0438 Coffee \u0437\u0430 $4 \u0432 \u0438\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c."
           },
           "alreadyBuiltDescription": { "en": "Already built on this map.", "ru": "\u0423\u0436\u0435 \u043f\u043e\u0441\u0442\u0440\u043e\u0435\u043d\u043e \u043d\u0430 \u044d\u0442\u043e\u0439 \u043a\u0430\u0440\u0442\u0435." }
         },

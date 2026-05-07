@@ -91,23 +91,7 @@ public partial class GameBootstrap
 
             if (driver.Money < 15)
             {
-                RecordWorkerThought(
-                    driver,
-                    WorkerThoughtKind.Money,
-                    WorkerThoughtTone.Negative,
-                    66,
-                    "low_money",
-                    new[]
-                    {
-                        ThoughtText("balance", $"${driver.Money}")
-                    },
-                    WorkerThoughtSubjectType.Text,
-                    0,
-                    "money",
-                    "money",
-                    -5,
-                    "daily_low_money",
-                    18f);
+                UpdateWorkerActiveLowMoneyThought(driver);
             }
             else if (delta >= 8)
             {

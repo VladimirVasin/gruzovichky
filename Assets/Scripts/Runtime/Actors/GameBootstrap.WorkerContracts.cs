@@ -201,6 +201,7 @@ public partial class GameBootstrap
             return;
         }
 
+        bool hadNoContract = worker.ContractVacancyKind == VacancyKind.None || worker.ContractTotalWorkDays <= 0;
         worker.Salary = Mathf.Max(0, salary);
         worker.ContractSalary = worker.Salary;
         worker.ContractTotalWorkDays = Mathf.Clamp(contractWorkDays, 3, 10);
@@ -215,6 +216,12 @@ public partial class GameBootstrap
         worker.ContractRequiredProfessionalLevel = Mathf.Clamp(requiredProfessionalLevel, 1, WorkerProfessionalMaxLevel);
         int workerLevel = GetWorkerProfessionalLevel(worker, worker.ContractProfessionalTrack);
         SessionDebugLogger.Log("CONTRACT", $"{worker.DriverName} signed {kind} contract from {source}: salary=${worker.Salary}, days={worker.ContractTotalWorkDays}, building={buildingType}, instance={worker.ContractBuildingInstanceId}, slot={slotIndex}, shift={shiftIndex}, track={worker.ContractProfessionalTrack}, requiredLevel={worker.ContractRequiredProfessionalLevel}, workerLevel={workerLevel}.");
+        if (hadNoContract)
+        {
+            RecordWorkerJobFoundThought(worker, kind, buildingType);
+        }
+
+        EvaluateWorkerActiveThoughtRules(worker);
     }
 
     private void ClearWorkerContract(DriverAgent worker, string reason)
@@ -240,6 +247,7 @@ public partial class GameBootstrap
         worker.ContractShiftIndex = -1;
         worker.ContractProfessionalTrack = WorkerProfessionalTrack.None;
         worker.ContractRequiredProfessionalLevel = 1;
+        EvaluateWorkerActiveThoughtRules(worker);
     }
 
     private void AdvanceWorkerContractAfterPaidShift(DriverAgent worker)

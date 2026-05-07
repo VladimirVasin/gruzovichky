@@ -3,7 +3,7 @@ using UnityEngine;
 
 public partial class GameBootstrap : MonoBehaviour
 {
-    private const int WorkerVendorPurchasePrice = 5;
+    private const int WorkerVendorPurchasePrice = 4;
     private const float WorkerVendorPurchaseDuration = 2.4f;
 
     private bool TryStartWeightedLeisureGoal(DriverAgent driver, Vector3 startPosition)
@@ -160,7 +160,48 @@ public partial class GameBootstrap : MonoBehaviour
         return false;
     }
 
-    private bool TryStartWorkerVendorPurchase(DriverAgent driver, LocationType vendorType, string itemId, DriverRescuePhase walkPhase, Vector3 startPosition)
+    private bool TryStartWorkerCriticalNeedVendorPurchase(DriverAgent driver, WorkerNeedKind need, Vector3 startPosition)
+    {
+        if (driver == null || GetWorkerNeedLastStatus(driver, need) != WorkerNeedStatus.Critical)
+        {
+            return false;
+        }
+
+        string itemId = need switch
+        {
+            WorkerNeedKind.Meal => WorkerSnackItemId,
+            WorkerNeedKind.Sleep => WorkerCoffeeItemId,
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrEmpty(itemId) ||
+            HasWorkerInventoryItem(driver, itemId) ||
+            !CanWorkerConsiderVendorPurchase(driver, LocationType.Kiosk, itemId))
+        {
+            return false;
+        }
+
+        if (TryStartWorkerVendorPurchase(driver, LocationType.Kiosk, itemId, DriverRescuePhase.IdleWalkToKiosk, startPosition, GetWorkerGoalForNeed(need)))
+        {
+            LogWorkerDecision(driver, "critical-need-kiosk", $"{need}: buying {itemId} before fallback; need={FormatWorkerNeedDebug(driver, need)}", true);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static WorkerLifeGoal GetWorkerGoalForNeed(WorkerNeedKind need)
+    {
+        return need switch
+        {
+            WorkerNeedKind.Meal => WorkerLifeGoal.Eat,
+            WorkerNeedKind.Sleep => WorkerLifeGoal.Sleep,
+            WorkerNeedKind.Leisure => WorkerLifeGoal.Leisure,
+            _ => WorkerLifeGoal.Idle
+        };
+    }
+
+    private bool TryStartWorkerVendorPurchase(DriverAgent driver, LocationType vendorType, string itemId, DriverRescuePhase walkPhase, Vector3 startPosition, WorkerLifeGoal purchaseGoal = WorkerLifeGoal.Idle)
     {
         if (!TryGetNearestVendorPurchaseTarget(driver, vendorType, walkPhase, startPosition, out LocationData vendor, out Vector3 target))
         {
@@ -168,7 +209,7 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
-        driver.LifeGoal = WorkerLifeGoal.Idle;
+        driver.LifeGoal = purchaseGoal;
         driver.IdleActivityTimer = WorkerVendorPurchaseDuration;
         driver.PendingVendorLocationInstanceId = vendor.InstanceId;
         driver.PendingVendorItemId = itemId;
@@ -320,6 +361,7 @@ public partial class GameBootstrap : MonoBehaviour
         vendor.BuildingBank += price;
         SpawnMoneySpendPopup(purchasePosition, price);
         LogBuildingBankTransaction(vendor, driver, price, $"{GetWorkerInventoryItemTitle(itemId, false)} purchase", moneyBefore, bankBefore);
+        TryAutoUseNeedConsumables(driver);
         SessionDebugLogger.Log("LIFE", $"{driver.DriverName} bought {itemId} at {vendor.Label}#{vendor.InstanceId} for ${price}; balance=${driver.Money}.");
         isDriversScreenDirty = true;
         return true;

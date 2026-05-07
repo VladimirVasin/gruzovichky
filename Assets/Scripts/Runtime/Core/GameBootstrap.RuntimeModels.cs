@@ -153,6 +153,23 @@ public partial class GameBootstrap
         Child
     }
 
+    private enum WorkerThoughtPriority
+    {
+        Low,
+        Normal,
+        High,
+        Critical
+    }
+
+    private enum WorkerLifeOpinionCategory
+    {
+        Work,
+        City,
+        Money,
+        Housing,
+        Social
+    }
+
     private sealed class DriverAgent
     {
         public int DriverId;
@@ -296,6 +313,7 @@ public partial class GameBootstrap
         public readonly List<WorkerSocialMemory> SocialMemories = new();
         public readonly List<WorkerThought> Thoughts = new();
         public readonly List<WorkerOpinion> Opinions = new();
+        public readonly List<WorkerLifeOpinion> LifeOpinions = new();
         public readonly List<WorkerInventoryEntry> Inventory = new();
         public readonly Dictionary<string, float> WorkerThoughtCooldownWorldHours = new();
         public int Satisfaction = 70;
@@ -327,12 +345,19 @@ public partial class GameBootstrap
 
     private sealed class WorkerThought
     {
+        public string Key;
         public WorkerThoughtKind Kind;
         public WorkerThoughtTone Tone;
+        public WorkerThoughtPriority Priority = WorkerThoughtPriority.Normal;
         public int Intensity;
         public string TemplateKey;
         public int CreatedDay;
         public float CreatedWorldHour;
+        public bool Active;
+        public int ResolvedDay;
+        public float ResolvedWorldHour;
+        public string ResolveReason;
+        public float ExpiresWorldHour;
         public readonly List<WorkerThoughtPlaceholder> Placeholders = new();
     }
 
@@ -351,6 +376,15 @@ public partial class GameBootstrap
         public int SubjectId;
         public string SubjectKey;
         public string FallbackLabel;
+        public int Score;
+        public int Confidence;
+        public float LastUpdatedWorldHour;
+    }
+
+    private sealed class WorkerLifeOpinion
+    {
+        public WorkerLifeOpinionCategory Category;
+        public bool HasScore;
         public int Score;
         public int Confidence;
         public float LastUpdatedWorldHour;

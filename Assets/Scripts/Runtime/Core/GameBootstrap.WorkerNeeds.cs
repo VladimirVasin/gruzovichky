@@ -72,6 +72,7 @@ public partial class GameBootstrap
         LogWorkerNeedStatusChange(driver, WorkerNeedKind.Leisure, oldLeisure, driver.LastLeisureNeedStatus, driver.HoursSinceLeisure);
 
         TryAutoUseNeedConsumables(driver);
+        EvaluateWorkerActiveThoughtRules(driver);
 
         if (isDriversPanelOpen && selectedWorkerPanelDriverId == driver.DriverId)
         {
@@ -367,6 +368,7 @@ public partial class GameBootstrap
         }
 
         ApplyWorkerNeedRelief(driver, need, reliefHours);
+        RecordWorkerNeedConsumableThought(driver, itemId, need, oldStatus);
         SessionDebugLogger.Log(
             "NEEDS",
             $"{driver.DriverName} auto-used {itemId} for {urgencyLabel} {need}; relief={reliefHours:0.0}h, before={oldHours:0.0}h/{oldStatus}, after={FormatWorkerNeedDebug(driver, need)}, inventoryLeft={GetWorkerInventoryItemQuantity(driver, itemId)}.");

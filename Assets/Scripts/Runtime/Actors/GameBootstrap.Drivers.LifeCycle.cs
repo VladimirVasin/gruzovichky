@@ -287,11 +287,21 @@ public partial class GameBootstrap : MonoBehaviour
                 if (driver.AssignedPersonalHouseIndex >= 0 && driver.AssignedPersonalHouseIndex < personalHouses.Count)
                 {
                     string homeMealUnavailableReason = "personal house meal path unavailable";
+                    if (TryStartWorkerCriticalNeedVendorPurchase(driver, WorkerNeedKind.Meal, startPosition))
+                    {
+                        return true;
+                    }
+
                     SessionDebugLogger.LogVerbose("LIFE", $"{driver.DriverName} skipped Canteen because they own PersonalHouse #{driver.AssignedPersonalHouseIndex}; home meal unavailable; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Meal)}; snapshot={FormatWorkerNeedsDebug(driver)}.");
                     LogWorkerDecision(driver, "skip-canteen-home-owner", homeMealUnavailableReason, true);
                     driver.LifeGoal = WorkerLifeGoal.None;
                     SetWorkerNeedRetryCooldown(driver, WorkerNeedKind.Meal, homeMealUnavailableReason);
                     return ContinueWorkerLifeCycle(driver, startPosition);
+                }
+
+                if (TryStartWorkerCriticalNeedVendorPurchase(driver, WorkerNeedKind.Meal, startPosition))
+                {
+                    return true;
                 }
 
                 if (TryStartWorkerServiceVisit(driver, LocationType.Canteen, WorkerLifeGoal.Eat, DriverRescuePhase.IdleWalkToCanteen, WorkerCanteenDuration, startPosition))
@@ -324,6 +334,11 @@ public partial class GameBootstrap : MonoBehaviour
                 return true;
 
             case WorkerLifeGoal.Sleep:
+                if (TryStartWorkerCriticalNeedVendorPurchase(driver, WorkerNeedKind.Sleep, startPosition))
+                {
+                    return true;
+                }
+
                 if (TryStartWorkerSleep(driver, startPosition))
                 {
                     return true;

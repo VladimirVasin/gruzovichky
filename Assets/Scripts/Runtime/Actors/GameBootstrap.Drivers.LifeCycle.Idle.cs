@@ -144,6 +144,13 @@ public partial class GameBootstrap : MonoBehaviour
                 {
                     driver.WalkPhase = DriverRescuePhase.None;
                     CompleteWorkerVendorPurchase(driver, completedPhase, completionPosition);
+                    if (completedGoal == WorkerLifeGoal.Eat || completedGoal == WorkerLifeGoal.Sleep)
+                    {
+                        driver.LifeGoal = WorkerLifeGoal.None;
+                        ContinueWorkerLifeCycle(driver, completionPosition);
+                        return;
+                    }
+
                     driver.LifeGoal = WorkerLifeGoal.Idle;
                     driver.IdleWanderPauseTimer = Random.Range(0.5f, 1.4f);
                     return;

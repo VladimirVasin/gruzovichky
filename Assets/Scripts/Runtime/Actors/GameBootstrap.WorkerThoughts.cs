@@ -5,11 +5,11 @@ public partial class GameBootstrap
 {
     private const int WorkerThoughtMemoryCap = 20;
     private const int WorkerOpinionMemoryCap = 12;
-    private const int WorkerThoughtHudRowCount = 10;
+    private const int WorkerThoughtHudRowCount = 4;
     private const int WorkerOpinionHudChipCount = 4;
     private const float WorkerThoughtDefaultCooldownHours = 4f;
 
-    private void RecordWorkerThought(
+    private WorkerThought RecordWorkerThought(
         DriverAgent worker,
         WorkerThoughtKind kind,
         WorkerThoughtTone tone,
@@ -22,14 +22,19 @@ public partial class GameBootstrap
         string opinionFallbackLabel = null,
         int opinionDelta = 0,
         string cooldownKey = null,
-        float cooldownHours = WorkerThoughtDefaultCooldownHours)
+        float cooldownHours = WorkerThoughtDefaultCooldownHours,
+        string thoughtKey = null,
+        WorkerThoughtPriority priority = WorkerThoughtPriority.Normal,
+        bool active = false,
+        float expiresWorldHour = 0f)
     {
         if (worker == null || string.IsNullOrWhiteSpace(templateKey) || worker.HasDepartedTown)
         {
-            return;
+            return null;
         }
 
         float now = GetCurrentWorldHour();
+        string resolvedThoughtKey = string.IsNullOrWhiteSpace(thoughtKey) ? templateKey : thoughtKey;
         string resolvedCooldownKey = string.IsNullOrWhiteSpace(cooldownKey)
             ? $"{templateKey}|{opinionSubjectType}|{opinionSubjectId}|{opinionSubjectKey}"
             : cooldownKey;
@@ -37,7 +42,7 @@ public partial class GameBootstrap
             worker.WorkerThoughtCooldownWorldHours.TryGetValue(resolvedCooldownKey, out float nextAllowedHour) &&
             now < nextAllowedHour)
         {
-            return;
+            return null;
         }
 
         if (cooldownHours > 0f)
@@ -47,12 +52,16 @@ public partial class GameBootstrap
 
         WorkerThought thought = new()
         {
+            Key = resolvedThoughtKey,
             Kind = kind,
             Tone = tone,
+            Priority = priority,
             Intensity = Mathf.Clamp(intensity, 0, 100),
             TemplateKey = templateKey,
             CreatedDay = currentDay,
-            CreatedWorldHour = now
+            CreatedWorldHour = now,
+            Active = active,
+            ExpiresWorldHour = expiresWorldHour
         };
 
         if (placeholders != null)
@@ -80,7 +89,8 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
         SessionDebugLogger.Log(
             "THOUGHT",
-            $"{worker.DriverName}: {RenderWorkerThought(thought, false)}; key={templateKey}; tone={tone}; intensity={intensity}; opinion={opinionSubjectType}/{opinionSubjectId}/{opinionSubjectKey}; delta={opinionDelta:+#;-#;0}.");
+            $"{worker.DriverName}: {RenderWorkerThought(thought, false)}; key={resolvedThoughtKey}; template={templateKey}; active={active}; priority={priority}; tone={tone}; intensity={intensity}; opinion={opinionSubjectType}/{opinionSubjectId}/{opinionSubjectKey}; delta={opinionDelta:+#;-#;0}.");
+        return thought;
     }
 
     private void UpdateWorkerOpinion(
@@ -295,23 +305,23 @@ public partial class GameBootstrap
 
     private void RecordWorkerNoJobThought(DriverAgent worker, string reason)
     {
-        RecordWorkerThought(
+        AddOrKeepActiveWorkerThought(
             worker,
+            "no_job_warning",
             WorkerThoughtKind.Work,
             WorkerThoughtTone.Negative,
-            44,
-            "no_job_today",
+            worker != null && worker.Money < 50 ? 70 : 52,
+            "no_job_warning",
             new[]
             {
                 ThoughtText("reason", reason)
             },
+            worker != null && worker.Money < 80 ? WorkerThoughtPriority.High : WorkerThoughtPriority.Normal,
             WorkerThoughtSubjectType.Text,
             0,
             "city_work",
             "work in town",
-            -3,
-            "daily_no_job",
-            22f);
+            -3);
     }
 
     private string RenderWorkerThought(WorkerThought thought, bool ru)
@@ -392,6 +402,18 @@ public partial class GameBootstrap
             "salary_paid" => ru ? "\u041f\u043e\u043b\u0443\u0447\u0438\u043b {amount}. \u041d\u0430 \u0441\u0447\u0435\u0442\u0443 {balance} - \u043c\u043e\u0436\u043d\u043e \u0432\u044b\u0434\u043e\u0445\u043d\u0443\u0442\u044c." : "Got {amount}. Balance is {balance}, so I can breathe for a moment.",
             "worker_arrived" => ru ? "\u042f \u0432 \u0433\u043e\u0440\u043e\u0434\u0435. \u041f\u043e\u0440\u0430 \u043f\u043e\u043d\u044f\u0442\u044c, \u043a\u0430\u043a \u0442\u0443\u0442 \u0436\u0438\u0442\u044c: {source}." : "I am in town now. Time to see how life works here: {source}.",
             "no_job_today" => ru ? "\u0420\u0430\u0431\u043e\u0442\u044b \u043f\u043e\u043a\u0430 \u043d\u0435\u0442. \u0415\u0441\u043b\u0438 \u044d\u0442\u043e \u0437\u0430\u0442\u044f\u043d\u0435\u0442\u0441\u044f, \u0434\u0435\u043d\u044c\u0433\u0438 \u0431\u044b\u0441\u0442\u0440\u043e \u0440\u0430\u0441\u0442\u0430\u044e\u0442." : "No job yet. If this drags on, the money will melt fast.",
+            "no_job_warning" => ru ? "Работы пока нет. Если это затянется, деньги быстро растают." : "No job yet. If this drags on, the money will melt fast.",
+            "starter_job_suggestion" => ru ? "Нужно начать с простой работы. Подойдет даже стартовая вакансия." : "I should start with simple work. Even a starter vacancy would help.",
+            "starter_job_resolved" => ru ? "Вопрос первой работы закрыт." : "The starter job worry is settled.",
+            "job_found" => ru ? "Работа найдена: {job}. Теперь есть понятный следующий шаг." : "Found work: {job}. There is a clear next step now.",
+            "need_meal_warning" => ru ? "Пора перекусить. Лучше не доводить еду до критического уровня." : "I should eat soon. Better not let food become critical.",
+            "need_meal_critical" => ru ? "Критический голод. Нужно срочно найти еду." : "Critical hunger. I need food urgently.",
+            "need_sleep_warning" => ru ? "Сил почти не осталось. Скоро нужен отдых." : "Energy is running low. I will need rest soon.",
+            "need_sleep_critical" => ru ? "Критическая усталость. Нужно срочно восстановить бодрость." : "Critical fatigue. I need to recover energy urgently.",
+            "need_leisure_warning" => ru ? "Нужно выдохнуть. Без отдыха настроение быстро просядет." : "I need a break. Without leisure, mood will drop fast.",
+            "need_leisure_critical" => ru ? "Отдых на пределе. Нужно срочно отвлечься." : "Leisure is at the limit. I need a break urgently.",
+            "used_snack" => ru ? "Автоматически съел Snack, чтобы не сорваться по еде." : "Auto-used a Snack before food became a crisis.",
+            "used_coffee" => ru ? "Автоматически выпил Coffee, чтобы вернуть бодрость." : "Auto-used Coffee to recover some energy.",
             "house_bought" => ru ? "\u0422\u0435\u043f\u0435\u0440\u044c {home} - \u043c\u043e\u0439 \u0434\u043e\u043c. \u0418\u043d\u0442\u0435\u0440\u0435\u0441\u043d\u043e, \u0447\u0442\u043e \u043f\u043e\u043b\u0443\u0447\u0438\u0442\u0441\u044f \u0434\u0430\u043b\u044c\u0448\u0435." : "{home} is mine now. I wonder what comes next.",
             "social_talk_good" => ru ? "{otherWorker} \u043e\u043a\u0430\u0437\u0430\u043b\u0441\u044f \u043f\u0440\u0438\u044f\u0442\u043d\u044b\u043c \u0441\u043e\u0431\u0435\u0441\u0435\u0434\u043d\u0438\u043a\u043e\u043c." : "{otherWorker} turned out to be easy to talk to.",
             "social_shared_place" => ru ? "\u0412 {place} \u044f \u0437\u0430\u043c\u0435\u0442\u0438\u043b {otherWorker}. \u041a\u0430\u0436\u0435\u0442\u0441\u044f, \u043c\u044b \u0441\u0442\u0430\u043d\u043e\u0432\u0438\u043c\u0441\u044f \u0437\u043d\u0430\u043a\u043e\u043c\u044b\u043c\u0438." : "I noticed {otherWorker} at {place}. We are starting to know each other.",

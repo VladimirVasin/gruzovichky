@@ -128,10 +128,20 @@ public partial class GameBootstrap
         public Text  DetailSocialTitleText;
         public RectTransform DetailSocialGraphCanvas;
         public Text  DetailSocialEmptyText;
-        public Text  DetailThoughtsTitleText;
-        public Text  DetailThoughtsEmptyText;
-        public readonly List<Text> DetailOpinionChipTexts = new();
+        public Text  DetailCurrentThoughtTitleText;
+        public Image DetailCurrentThoughtBackground;
+        public Outline DetailCurrentThoughtOutline;
+        public Image DetailCurrentThoughtIcon;
+        public Text  DetailCurrentThoughtHeadlineText;
+        public Text  DetailCurrentThoughtDescriptionText;
+        public RectTransform DetailCurrentThoughtTimeRow;
+        public Image DetailCurrentThoughtTimeIcon;
+        public Text  DetailCurrentThoughtTimeText;
+        public Text  DetailRecentThoughtsTitleText;
+        public Text  DetailRecentThoughtsEmptyText;
         public readonly List<WorkerThoughtRowUi> DetailThoughtRows = new();
+        public Text  DetailLifeOpinionsTitleText;
+        public readonly List<WorkerLifeOpinionRowUi> DetailLifeOpinionRows = new();
         public Text  DetailInventoryTitleText;
         public WorkerAutoConsumableCardUi DetailSnackCard;
         public WorkerAutoConsumableCardUi DetailCoffeeCard;
@@ -174,9 +184,20 @@ public partial class GameBootstrap
     private sealed class WorkerThoughtRowUi
     {
         public RectTransform Root;
+        public Image Background;
         public Text TimeText;
-        public Text ToneText;
-        public Text BodyText;
+        public Image IconImage;
+        public Text TitleText;
+        public Text DescriptionText;
+    }
+
+    private sealed class WorkerLifeOpinionRowUi
+    {
+        public RectTransform Root;
+        public Image IconImage;
+        public Text CategoryText;
+        public Image StatusDot;
+        public Text StatusText;
     }
 
     private sealed class WorkerAutoConsumableCardUi

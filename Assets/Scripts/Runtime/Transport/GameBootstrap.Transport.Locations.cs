@@ -24,10 +24,10 @@ public partial class GameBootstrap
             Workers = 0,
             ServiceFee = type switch
             {
-                LocationType.Motel   => 10,
-                LocationType.Bar     => 10,
-                LocationType.Canteen => 10,
-                LocationType.Kiosk   => 5,
+                LocationType.Motel   => 8,
+                LocationType.Bar     => 8,
+                LocationType.Canteen => 8,
+                LocationType.Kiosk   => 4,
                 _                    => 0
             },
             BuildingBank  = type == LocationType.GamblingHall ? 50 : 0,
