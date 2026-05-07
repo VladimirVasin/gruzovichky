@@ -201,11 +201,11 @@ public partial class GameBootstrap
             UpdateWorkerSocialUi(sel, ru);
             UpdateWorkerThoughtsUi(sel, ru);
 
-            bool canFocus = sel.DriverObject != null && sel.DriverObject.activeSelf;
+            bool canFocus = CanFocusDriver(sel);
             driversScreenUi.DetailFocusButton.interactable = canFocus;
             driversScreenUi.DetailFocusButtonText.text = canFocus
-                ? (ru ? $"Следить за {sel.DriverName}" : $"Focus on {sel.DriverName}")
-                : (ru ? $"{sel.DriverName} внутри здания" : $"{sel.DriverName} is inside");
+                ? (ru ? $"\u0421\u043b\u0435\u0434\u0438\u0442\u044c \u0437\u0430 {sel.DriverName}" : $"Focus on {sel.DriverName}")
+                : (ru ? $"{sel.DriverName} \u043d\u0435 \u0432\u0438\u0434\u0435\u043d \u043d\u0430 \u043a\u0430\u0440\u0442\u0435" : $"{sel.DriverName} is not on the map");
         }
 
         isDriversScreenDirty = false;

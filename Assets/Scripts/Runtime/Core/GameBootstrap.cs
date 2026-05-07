@@ -344,6 +344,7 @@ public partial class GameBootstrap : MonoBehaviour
     private GameObject selectedLocationLabelRoot;
     private TextMesh selectedLocationLabelText;
     private readonly List<TextMesh> selectedLocationLabelOutlines = new();
+    private GameObject selectedEntityHighlight;
     private GameObject cargoTransferCrate;
     private GameObject buildHoverHighlight;
     private GameObject buildHoverDrivewayHighlight;

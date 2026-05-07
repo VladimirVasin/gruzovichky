@@ -224,6 +224,7 @@ public partial class GameBootstrap
         UpdateDayNightCycle();
         UpdateNightSky();
         UpdateSelectedLocationLabel();
+        UpdateSelectedEntityHighlight();
         if (!isFarZoomVisualLodActive)
         {
             UpdateForestTreeWobbles();

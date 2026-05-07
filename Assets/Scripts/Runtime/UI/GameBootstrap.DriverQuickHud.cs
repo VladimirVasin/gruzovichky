@@ -384,7 +384,16 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
         DriverAgent driver = driverAgents.Find(d => d.DriverId == driverId);
         if (driver != null)
-            LogUiInput($"Selection: focused {driver.DriverName}");
+        {
+            if (TryFocusCameraOnDriver(driver, out string targetLabel))
+            {
+                LogUiInput($"Selection: focused {driver.DriverName} at {targetLabel}");
+            }
+            else
+            {
+                LogUiInput($"Selection: focused {driver.DriverName}");
+            }
+        }
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelOpenClip, 0.9f);
     }

@@ -458,11 +458,6 @@ public partial class GameBootstrap
             isDriversPanelOpen = false;
             isDriversScreenDirty = true;
             FocusDriver(d.DriverId);
-            if (d.DriverObject != null && d.DriverObject.activeSelf)
-            {
-                Vector3 pos = d.DriverObject.transform.position;
-                cameraFocusPoint = new Vector3(pos.x, 0f, pos.z);
-            }
         });
 
         detailRoot.SetActive(false);
@@ -704,11 +699,6 @@ public partial class GameBootstrap
             isDriversPanelOpen = false;
             isDriversScreenDirty = true;
             FocusDriver(d.DriverId);
-            if (d.DriverObject != null && d.DriverObject.activeSelf)
-            {
-                Vector3 pos = d.DriverObject.transform.position;
-                cameraFocusPoint = new Vector3(pos.x, 0f, pos.z);
-            }
         });
 
         RectTransform infoRow = CreateLayoutRow($"DriverCardInfo{cardIndex}", cardObj.transform, 52f, 12f);

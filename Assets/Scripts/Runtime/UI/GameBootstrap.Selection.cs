@@ -18,6 +18,11 @@ public partial class GameBootstrap
         }
 
         selectedLocationLabelRoot = SelectionVisualService.CreateLabelRoot(worldRoot, out selectedLocationLabelText, selectedLocationLabelOutlines);
+        selectedEntityHighlight = SelectionVisualService.CreateHighlight(
+            worldRoot,
+            "SelectedEntity",
+            ApplyColor,
+            ConfigureStaticVisual);
     }
 
     private void UpdateSelectedLocationLabel()
@@ -157,6 +162,11 @@ public partial class GameBootstrap
             }
         }
 
+        if (selectedEntityHighlight != null)
+        {
+            selectedEntityHighlight.SetActive(false);
+        }
+
         if (!TryGetSelectedBuilding(out LocationData location, out LocationType locationType, out Vector3 center))
         {
             if (selectedLocationLabelRoot != null)
@@ -164,6 +174,7 @@ public partial class GameBootstrap
                 selectedLocationLabelRoot.SetActive(false);
             }
 
+            UpdateSelectedEntityHighlight();
             return;
         }
 
@@ -174,7 +185,7 @@ public partial class GameBootstrap
                 GameObject selectionHighlight = localStopSelectionHighlights[selectedLocalStopIndex];
                 if (selectionHighlight != null)
                 {
-                    Vector3 size = new Vector3(location.Max.x - location.Min.x + 1.05f, 0.06f, location.Max.y - location.Min.y + 1.05f);
+                    Vector3 size = GetLocationSelectionHighlightSize(location);
                     selectionHighlight.transform.position = center + new Vector3(0f, 0.03f, 0f);
                     selectionHighlight.transform.localScale = size;
                     selectionHighlight.SetActive(true);
@@ -188,7 +199,7 @@ public partial class GameBootstrap
                 GameObject selectionHighlight = personalHouseSelectionHighlights[selectedPersonalHouseIndex];
                 if (selectionHighlight != null)
                 {
-                    Vector3 size = new Vector3(location.Max.x - location.Min.x + 1.05f, 0.06f, location.Max.y - location.Min.y + 1.05f);
+                    Vector3 size = GetLocationSelectionHighlightSize(location);
                     selectionHighlight.transform.position = center + new Vector3(0f, 0.03f, 0f);
                     selectionHighlight.transform.localScale = size;
                     selectionHighlight.SetActive(true);
@@ -197,7 +208,7 @@ public partial class GameBootstrap
         }
         else if (locationSelectionHighlights.TryGetValue(locationType, out GameObject selectionHighlight) && selectionHighlight != null)
         {
-            Vector3 size = new Vector3(location.Max.x - location.Min.x + 1.05f, 0.06f, location.Max.y - location.Min.y + 1.05f);
+            Vector3 size = GetLocationSelectionHighlightSize(location);
             selectionHighlight.transform.position = center;
             selectionHighlight.transform.localScale = size;
             selectionHighlight.SetActive(true);
@@ -208,6 +219,38 @@ public partial class GameBootstrap
             selectedLocationLabelRoot.transform.position = center + new Vector3(0f, 1.45f, 0f);
             selectedLocationLabelRoot.SetActive(true);
         }
+    }
+
+    private void UpdateSelectedEntityHighlight()
+    {
+        if (selectedEntityHighlight == null)
+        {
+            return;
+        }
+
+        if (TryGetSelectedBuilding(out _, out _, out _))
+        {
+            selectedEntityHighlight.SetActive(false);
+            return;
+        }
+
+        if (!TryGetSelectedEntityHighlightTarget(out Vector3 position, out Vector3 size))
+        {
+            selectedEntityHighlight.SetActive(false);
+            return;
+        }
+
+        Vector3 markerPosition = new(position.x, SampleTerrainHeight(position.x, position.z) + 0.03f, position.z);
+        selectedEntityHighlight.transform.position = markerPosition;
+        selectedEntityHighlight.transform.localScale = size;
+        selectedEntityHighlight.SetActive(true);
+    }
+
+    private static Vector3 GetLocationSelectionHighlightSize(LocationData location)
+    {
+        return location == null
+            ? new Vector3(1.05f, 0.06f, 1.05f)
+            : new Vector3(location.Max.x - location.Min.x + 1.05f, 0.06f, location.Max.y - location.Min.y + 1.05f);
     }
 
     private bool TryGetSelectedBuilding(out LocationData location, out LocationType locationType, out Vector3 center)

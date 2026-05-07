@@ -11,7 +11,9 @@ public partial class GameBootstrap
     private const int WorkerMigrationDailyArrivalCap = 9;
     private const int WorkerMigrationArrivalCooldownHours = 2;
     private const int WorkerMigrationVacancyPressureCooldownHours = 2;
-    private const int WorkerMigrationGuaranteedMissChecks = 2;
+    private const float WorkerMigrationArrivalPressureThreshold = 1f;
+    private const float WorkerMigrationArrivalPressureMax = 3.25f;
+    private const float WorkerMigrationArrivalPressureCost = 0.85f;
     private const int WorkerMigrationUnhappyThreshold = 35;
     private const int WorkerMigrationDepartureThreshold = 24;
     private const int WorkerMigrationProtectedHigherDays = 5;
@@ -21,8 +23,8 @@ public partial class GameBootstrap
     private int lastWorkerMigrationSuccessfulArrivalKey = -1000;
     private int lastWorkerDepartureDay = -1;
     private int recentWorkerDeparturesToday;
-    private int workerMigrationVacancyMissChecks;
     private int workerMigrationArrivalsToday;
+    private float workerMigrationArrivalPressure;
     private bool isMotelBootstrapWorkerWavePending;
     private bool hasMotelBootstrapWorkerWaveStarted;
     private bool hasMotelBootstrapWorkerWaveDisembarked;
@@ -41,12 +43,12 @@ public partial class GameBootstrap
         TryStartPendingMotelBootstrapWorkerWave("pending motel bootstrap");
 
         int currentHour = GetCurrentHour();
-        if (currentDay < WorkerMigrationMinDay || currentHour < WorkerMigrationEvaluationHour)
+        if (currentDay < WorkerMigrationMinDay)
         {
             return;
         }
 
-        if (lastWorkerMigrationEvaluationDay != currentDay)
+        if (currentHour >= WorkerMigrationEvaluationHour && lastWorkerMigrationEvaluationDay != currentDay)
         {
             lastWorkerMigrationEvaluationDay = currentDay;
             UpdateWorkerMigrationSatisfactionDaily();
@@ -458,59 +460,42 @@ public partial class GameBootstrap
         int dailyArrivalCap = GetWorkerMigrationDailyArrivalCap(vacancyShortage);
         int dailyArrivalSlotsLeft = Mathf.Max(0, dailyArrivalCap - workerMigrationArrivalsToday);
         float dailyArrivalFactor = GetWorkerMigrationDailyArrivalFactor(dailyArrivalCap);
+        UpdateWorkerMigrationArrivalPressure(
+            vacancyDemand,
+            vacancyShortage,
+            attraction,
+            treasuryFactor,
+            needPressureFactor,
+            dailyArrivalSlotsLeft);
         float chance = CalculateWorkerArrivalChance(vacancyDemand, freeWorkers, attraction);
-        chance = Mathf.Clamp01(chance * treasuryFactor * needPressureFactor * dailyArrivalFactor);
+        float pressureBonus = Mathf.Clamp01(workerMigrationArrivalPressure * 0.18f);
+        chance = Mathf.Clamp01((chance + pressureBonus) * treasuryFactor * needPressureFactor * dailyArrivalFactor);
         int cooldownHours = vacancyShortage > 0
             ? WorkerMigrationVacancyPressureCooldownHours
             : WorkerMigrationArrivalCooldownHours;
         int cooldownHoursLeft = Mathf.Max(0, cooldownHours - (arrivalCheckKey - lastWorkerMigrationSuccessfulArrivalKey));
-        bool guaranteedByOpenVacancies = vacancyDemand > 0 &&
-                                         freeWorkers < vacancyDemand &&
-                                         dailyArrivalSlotsLeft > 0 &&
-                                         treasuryFactor >= 0.55f &&
-                                         needPressureFactor >= 0.65f &&
-                                         workerMigrationVacancyMissChecks >= WorkerMigrationGuaranteedMissChecks;
+        bool pressureReady = workerMigrationArrivalPressure >= WorkerMigrationArrivalPressureThreshold &&
+                             vacancyShortage > 0 &&
+                             treasuryFactor >= 0.50f &&
+                             needPressureFactor >= 0.60f;
         bool cooldownReady = cooldownHoursLeft == 0;
         bool shouldArrive = dailyArrivalSlotsLeft > 0 &&
                             cooldownReady &&
-                            (guaranteedByOpenVacancies || (chance > 0f && Random.value < chance));
+                            (pressureReady || (chance > 0f && Random.value < chance));
         SessionDebugLogger.Log(
             "MIGRATION",
-            $"city migration check: day={currentDay}, hour={GetCurrentHour()}, vacancyDemand={vacancyDemand}, freeWorkers={freeWorkers}, shortage={vacancyShortage}, attraction={attraction}, chance={chance:0.00}, treasuryFactor={treasuryFactor:0.00}, needPressure={needPressure}, needFactor={needPressureFactor:0.00}, dailyArrivals={workerMigrationArrivalsToday}/{dailyArrivalCap}, dailyFactor={dailyArrivalFactor:0.00}, cooldownHoursLeft={cooldownHoursLeft}, missedVacancyChecks={workerMigrationVacancyMissChecks}, guaranteed={(guaranteedByOpenVacancies ? "yes" : "no")}, arrival={(shouldArrive ? "yes" : "no")}.");
+            $"city migration check: day={currentDay}, hour={GetCurrentHour()}, vacancyDemand={vacancyDemand}, freeWorkers={freeWorkers}, shortage={vacancyShortage}, attraction={attraction}, chance={chance:0.00}, treasuryFactor={treasuryFactor:0.00}, needPressure={needPressure}, needFactor={needPressureFactor:0.00}, dailyArrivals={workerMigrationArrivalsToday}/{dailyArrivalCap}, dailyFactor={dailyArrivalFactor:0.00}, cooldownHoursLeft={cooldownHoursLeft}, migrationPressure={workerMigrationArrivalPressure:0.00}, pressureReady={(pressureReady ? "yes" : "no")}, arrival={(shouldArrive ? "yes" : "no")}.");
 
         if (!shouldArrive)
         {
-            workerMigrationVacancyMissChecks = cooldownReady &&
-                                               dailyArrivalSlotsLeft > 0 &&
-                                               vacancyDemand > 0 &&
-                                               freeWorkers < vacancyDemand
-                ? workerMigrationVacancyMissChecks + 1
-                : 0;
             return;
         }
 
-        int neededWorkers = Mathf.Max(1, vacancyShortage);
-        int maxArrivals = currentDay <= WorkerMigrationMinDay
-            ? WorkerMigrationFirstDayMaxAutoArrivals
-            : WorkerMigrationMaxAutoArrivals;
-        if (vacancyShortage >= 5 && currentDay > WorkerMigrationMinDay)
-        {
-            maxArrivals++;
-        }
-
-        maxArrivals = Mathf.Min(maxArrivals, dailyArrivalSlotsLeft);
-        if (money < 0 || needPressureFactor < 0.75f)
-        {
-            maxArrivals = Mathf.Min(maxArrivals, 1);
-        }
-
-        int demandArrivalCap = vacancyDemand > 0
-            ? Mathf.Clamp(neededWorkers, 1, maxArrivals)
-            : 1;
-        int minimumDemandArrivals = 1;
-        int arrivalCount = vacancyDemand > 0 && demandArrivalCap > 1
-            ? Random.Range(Mathf.Min(minimumDemandArrivals, demandArrivalCap), demandArrivalCap + 1)
-            : 1;
+        int arrivalCount = DetermineAutomaticWorkerArrivalCount(
+            vacancyDemand,
+            vacancyShortage,
+            dailyArrivalSlotsLeft,
+            needPressureFactor);
         List<DriverAgent> arrivals = new(arrivalCount);
         for (int i = 0; i < arrivalCount; i++)
         {
@@ -522,7 +507,10 @@ public partial class GameBootstrap
             return;
         }
 
-        workerMigrationVacancyMissChecks = 0;
+        workerMigrationArrivalPressure = Mathf.Clamp(
+            workerMigrationArrivalPressure - arrivalCount * WorkerMigrationArrivalPressureCost,
+            0f,
+            WorkerMigrationArrivalPressureMax);
         workerMigrationArrivalsToday += arrivalCount;
         lastWorkerMigrationSuccessfulArrivalKey = arrivalCheckKey;
         PushFeedEvent(
@@ -533,6 +521,81 @@ public partial class GameBootstrap
                 ? $"{arrivals[0].DriverName} \u043f\u0440\u0438\u0435\u0437\u0436\u0430\u0435\u0442 \u0432 \u0433\u043e\u0440\u043e\u0434."
                 : $"\u041d\u043e\u0432\u044b\u0435 \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u0435\u0434\u0443\u0442 \u0432 \u0433\u043e\u0440\u043e\u0434: {arrivalCount}.",
             FeedEventType.Info);
+    }
+
+    private void UpdateWorkerMigrationArrivalPressure(
+        int vacancyDemand,
+        int vacancyShortage,
+        int attraction,
+        float treasuryFactor,
+        float needPressureFactor,
+        int dailyArrivalSlotsLeft)
+    {
+        bool hasShortage = vacancyDemand > 0 && vacancyShortage > 0;
+        if (!hasShortage)
+        {
+            workerMigrationArrivalPressure = Mathf.Max(0f, workerMigrationArrivalPressure - 0.28f);
+            return;
+        }
+
+        if (dailyArrivalSlotsLeft <= 0)
+        {
+            workerMigrationArrivalPressure = Mathf.Min(
+                WorkerMigrationArrivalPressureThreshold * 0.8f,
+                workerMigrationArrivalPressure + 0.04f);
+            return;
+        }
+
+        float shortageRatio = vacancyShortage / Mathf.Max(1f, vacancyDemand);
+        float attractionFactor = Mathf.InverseLerp(45f, 85f, attraction);
+        float pressureGain = 0.14f +
+                             Mathf.Clamp01(shortageRatio) * 0.18f +
+                             Mathf.Min(vacancyShortage, 6) * 0.025f +
+                             attractionFactor * 0.08f;
+        if (currentDay <= WorkerMigrationMinDay)
+        {
+            pressureGain *= 0.85f;
+        }
+
+        pressureGain *= Mathf.Clamp(treasuryFactor, 0.35f, 1f);
+        pressureGain *= Mathf.Clamp(needPressureFactor, 0.45f, 1f);
+        workerMigrationArrivalPressure = Mathf.Clamp(
+            workerMigrationArrivalPressure + pressureGain,
+            0f,
+            WorkerMigrationArrivalPressureMax);
+    }
+
+    private int DetermineAutomaticWorkerArrivalCount(
+        int vacancyDemand,
+        int vacancyShortage,
+        int dailyArrivalSlotsLeft,
+        float needPressureFactor)
+    {
+        if (dailyArrivalSlotsLeft <= 0)
+        {
+            return 0;
+        }
+
+        int maxArrivals = Mathf.Min(
+            currentDay <= WorkerMigrationMinDay ? WorkerMigrationFirstDayMaxAutoArrivals : WorkerMigrationMaxAutoArrivals,
+            dailyArrivalSlotsLeft);
+        if (vacancyShortage >= 7 &&
+            currentDay > WorkerMigrationMinDay &&
+            money >= 0 &&
+            needPressureFactor >= 0.85f &&
+            workerMigrationArrivalPressure >= WorkerMigrationArrivalPressureThreshold * 1.8f)
+        {
+            maxArrivals = Mathf.Min(maxArrivals + 1, dailyArrivalSlotsLeft);
+        }
+
+        if (money < 0 || needPressureFactor < 0.75f)
+        {
+            maxArrivals = Mathf.Min(maxArrivals, 1);
+        }
+
+        int neededWorkers = vacancyDemand > 0 ? Mathf.Max(1, vacancyShortage) : 1;
+        int pressureSupported = Mathf.Max(1, Mathf.FloorToInt(workerMigrationArrivalPressure / WorkerMigrationArrivalPressureThreshold));
+        return Mathf.Clamp(Mathf.Min(neededWorkers, pressureSupported), 1, Mathf.Max(1, maxArrivals));
     }
 
     private int CountOpenWorkerVacancyDemand()
@@ -734,7 +797,7 @@ public partial class GameBootstrap
 
         isMotelBootstrapWorkerWavePending = false;
         hasMotelBootstrapWorkerWaveStarted = true;
-        workerMigrationVacancyMissChecks = 0;
+        workerMigrationArrivalPressure = 0f;
         workerMigrationArrivalsToday += arrivals.Count;
         lastWorkerMigrationSuccessfulArrivalKey = currentDay * 24 + GetCurrentHour();
         isDriversScreenDirty = true;
