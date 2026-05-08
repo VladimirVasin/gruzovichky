@@ -296,6 +296,7 @@ public partial class GameBootstrap
         }
 
         NotifyNewGameBuildUnlockProgressionBuilt(type);
+        NotifyCityComplaintServiceBuilt(type);
     }
 
     private static bool DoesLocationRequireRoadAccess(LocationType type)

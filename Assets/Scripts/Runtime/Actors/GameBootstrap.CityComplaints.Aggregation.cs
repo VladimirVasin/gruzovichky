@@ -256,7 +256,7 @@ public partial class GameBootstrap
 
         if (complaint.Category == CityComplaintCategory.ServiceMissing)
         {
-            bool targetMissing = complaint.LinkedLocationType.HasValue && !locations.ContainsKey(complaint.LinkedLocationType.Value);
+            bool targetMissing = !IsCityConstructionRequestSatisfied(complaint);
             reason = targetMissing ? string.Empty : "requested service exists";
             return targetMissing;
         }

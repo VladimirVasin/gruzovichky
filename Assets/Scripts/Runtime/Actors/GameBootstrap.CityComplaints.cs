@@ -35,6 +35,7 @@ public partial class GameBootstrap
         public WorkerNeedKind? LinkedNeed;
         public int Severity;
         public int Weight;
+        public int RequiredLocationCount = 1;
     }
 
     private sealed class CityComplaint
@@ -48,6 +49,7 @@ public partial class GameBootstrap
         public int Severity;
         public WorkerNeedKind? LinkedNeed;
         public LocationType? LinkedLocationType;
+        public int RequiredLocationCount = 1;
         public float CreatedWorldHour;
         public int CreatedDay;
         public float DueWorldHour;
@@ -180,48 +182,7 @@ public partial class GameBootstrap
 
     private List<CityServiceRequestCandidate> BuildMissingServiceRequestCandidates()
     {
-        List<CityServiceRequestCandidate> candidates = new();
-        AddMissingServiceRequestCandidate(candidates, LocationType.Kiosk, WorkerNeedKind.Meal, 3, 8);
-        AddMissingServiceRequestCandidate(candidates, LocationType.Motel, WorkerNeedKind.Sleep, 3, 7);
-        AddMissingServiceRequestCandidate(candidates, LocationType.Canteen, WorkerNeedKind.Meal, 2, 5);
-        AddMissingServiceRequestCandidate(candidates, LocationType.Bar, WorkerNeedKind.Leisure, 2, 4);
-        AddMissingServiceRequestCandidate(candidates, LocationType.CityPark, WorkerNeedKind.Leisure, 2, 3);
-        AddMissingServiceRequestCandidate(candidates, LocationType.GamblingHall, WorkerNeedKind.Leisure, 2, 3);
-        AddMissingServiceRequestCandidate(candidates, LocationType.GasStation, null, 2, 2);
-        return candidates;
-    }
-
-    private void AddMissingServiceRequestCandidate(
-        List<CityServiceRequestCandidate> candidates,
-        LocationType target,
-        WorkerNeedKind? linkedNeed,
-        int severity,
-        int weight)
-    {
-        if (locations.ContainsKey(target))
-        {
-            return;
-        }
-
-        string groupKey = GetCityComplaintGroupKey(CityComplaintCategory.ServiceMissing, linkedNeed, target);
-        if (FindActiveCityComplaintByGroupKey(groupKey) != null)
-        {
-            return;
-        }
-
-        float now = GetCurrentWorldHour();
-        if (cityComplaintCooldownByKey.TryGetValue(groupKey, out float nextAllowedWorldHour) && now < nextAllowedWorldHour)
-        {
-            return;
-        }
-
-        candidates.Add(new CityServiceRequestCandidate
-        {
-            Target = target,
-            LinkedNeed = linkedNeed,
-            Severity = Mathf.Clamp(severity, 1, 4),
-            Weight = Mathf.Max(1, weight)
-        });
+        return BuildCityConstructionRequestCandidates();
     }
 
     private bool TryPickRandomCityRequestSigner(out DriverAgent signer)
@@ -266,6 +227,7 @@ public partial class GameBootstrap
             Severity = Mathf.Clamp(candidate.Severity, 1, 4),
             LinkedNeed = candidate.LinkedNeed,
             LinkedLocationType = candidate.Target,
+            RequiredLocationCount = Mathf.Max(1, candidate.RequiredLocationCount),
             CreatedWorldHour = now,
             CreatedDay = currentDay,
             DueWorldHour = 0f,
@@ -279,7 +241,7 @@ public partial class GameBootstrap
         NotifyCityHallNewRequest(complaint);
         SessionDebugLogger.Log(
             "CITY_HALL",
-            $"Citizen request #{complaint.Id} filed: target={candidate.Target}, signer={complaint.WorkerName}, severity={complaint.Severity}.");
+            $"Citizen request #{complaint.Id} filed: target={candidate.Target}, required={complaint.RequiredLocationCount}, signer={complaint.WorkerName}, severity={complaint.Severity}.");
         return true;
     }
 
@@ -480,7 +442,7 @@ public partial class GameBootstrap
                 }
                 break;
             case CityComplaintCategory.ServiceMissing:
-                if (complaint.LinkedLocationType.HasValue && locations.ContainsKey(complaint.LinkedLocationType.Value))
+                if (IsCityConstructionRequestSatisfied(complaint))
                 {
                     reason = "requested service exists";
                     return true;

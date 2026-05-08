@@ -39,9 +39,12 @@ public partial class GameBootstrap
                 : complaint.SocialTargetWorkerName;
         }
 
-        return complaint != null && complaint.LinkedLocationType.HasValue
+        string targetName = complaint != null && complaint.LinkedLocationType.HasValue
             ? GetSelectedLocationDisplayName(complaint.LinkedLocationType.Value)
             : (IsRussianLanguage() ? "сервис" : "service");
+        return complaint != null && complaint.RequiredLocationCount > 1
+            ? $"{targetName} x{complaint.RequiredLocationCount}"
+            : targetName;
     }
 
     private string FormatCityComplaintTitle(CityComplaint complaint, bool ru)
@@ -72,7 +75,7 @@ public partial class GameBootstrap
             return string.Empty;
         }
 
-        string target = complaint.LinkedLocationType.HasValue ? GetSelectedLocationDisplayName(complaint.LinkedLocationType.Value) : string.Empty;
+        string target = FormatCityComplaintTargetName(complaint);
         string state = GetCityComplaintStateLabel(complaint.State, ru);
         string signers = FormatCityComplaintSignerNames(complaint, ru);
         string timer = complaint.State == CityComplaintState.Accepted
@@ -128,7 +131,7 @@ public partial class GameBootstrap
             LocationType.CityPark => "Городу нужна зелень, которую не надо оправдывать производственной пользой. Просто место, где можно посидеть и не быть частью механизма.",
             LocationType.GamblingHall => "Некоторым нужен зал, где удачу можно обвинить официально. Это дешевле, чем спорить с небом на перекрестке.",
             LocationType.GasStation => "Техника тоже хочет пить, только громче и с запахом бензина. Люди называют это инфраструктурой, чтобы звучало менее тревожно.",
-            _ => "Городу нужен сервис. Не героический, не судьбоносный, просто тот самый, отсутствие которого начинает скрипеть в каждом дне."
+            _ => "Городу нужно новое здание. Не героическое, не судьбоносное, просто то самое, отсутствие которого начинает скрипеть в каждом дне."
         };
     }
 

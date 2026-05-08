@@ -88,6 +88,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Summary
 
+- 2026-05-08: Extended City Hall citizen build requests to cover the staged build progression. Requests now use core/second/third construction layers, honor current build unlocks, keep later layers blocked until the current unlocked layer is built, support required counts such as two bus stops, and resolve against actual built-location counts when construction completes.
+
 - 2026-05-05: Rebuilt the active Tutorial around current systems: Labor Exchange, automatic arrivals, services, warehouse loaders, local buses, economy/taxes, Regional Map route building, Docks staffing, and Trade policy setup.
 
 - 2026-05-05: Built the generated regional route/trade flow. Regional Map now generates the player's town plus visible external cities, route state, resource buy/sell tables, pixel-art map presentation, post-route `Open Trade`, land merchant trucks, and river Docks ships that obey built-route policies.
