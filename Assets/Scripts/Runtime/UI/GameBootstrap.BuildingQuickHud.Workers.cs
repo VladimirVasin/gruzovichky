@@ -32,7 +32,9 @@ public partial class GameBootstrap
         List<BuildingHudWorkerEntry> entries = CollectBuildingQuickHudWorkerEntries(locationType, ru);
         EnsureBuildingWorkerSlotCount(entries.Count);
 
-        buildingQuickHud.WorkerSlotsSectionHeader.text = ru ? "\u041b\u044e\u0434\u0438 \u0432 \u0437\u0434\u0430\u043d\u0438\u0438" : "People in building";
+        buildingQuickHud.WorkerSlotsSectionHeader.text = locationType == LocationType.Warehouse
+            ? (ru ? "\u0413\u0440\u0443\u0437\u0447\u0438\u043a\u0438" : "Loaders")
+            : ru ? "\u041b\u044e\u0434\u0438 \u0432 \u0437\u0434\u0430\u043d\u0438\u0438" : "People in building";
         if (buildingQuickHud.WorkerSlotsEmptyText != null)
         {
             buildingQuickHud.WorkerSlotsEmptyText.text = ru ? "\u0421\u0435\u0439\u0447\u0430\u0441 \u043d\u0438\u043a\u043e\u0433\u043e \u043d\u0435\u0442" : "Nobody inside right now";

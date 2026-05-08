@@ -260,6 +260,7 @@ public partial class GameBootstrap
         buildingQuickHud.ResourceTextLayout.preferredHeight = 82f;
         CreateCityHallBuildingQuickHud(root, uiFont);
         CreateMotelBuildingQuickHud(root, uiFont);
+        CreateWarehouseBuildingQuickHud(root, uiFont);
 
         // в”Ђв”Ђ Worker slots section в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         RectTransform workerSection = CreateUiObject("WorkerSlotsSection", root).GetComponent<RectTransform>();
@@ -509,15 +510,18 @@ public partial class GameBootstrap
         bool ru = IsRussianLanguage();
         bool isCityHall = selectedBuildingType == LocationType.CityHall;
         bool isMotel = selectedBuildingType == LocationType.Motel;
-        ConfigureBuildingQuickHudMode(isCityHall, isMotel);
+        bool isWarehouse = selectedBuildingType == LocationType.Warehouse;
+        ConfigureBuildingQuickHudMode(isCityHall, isMotel, isWarehouse);
         buildingQuickHud.HeaderText.text = isCityHall
             ? "\u0420\u0430\u0442\u0443\u0448\u0430 (\u0421\u0435\u0440\u0432\u0438\u0441)"
             : isMotel
                 ? "\u041c\u043e\u0442\u0435\u043b\u044c"
-            : selectedBuildingType == LocationType.Docks
-                ? GetSelectedLocationDisplayName(selectedBuildingType)
-                : location.Label;
-        buildingQuickHud.HeaderText.fontSize = isMotel ? 22 : isCityHall ? 22 : 21;
+            : isWarehouse
+                ? "\u0421\u043a\u043b\u0430\u0434"
+                : selectedBuildingType == LocationType.Docks
+                    ? GetSelectedLocationDisplayName(selectedBuildingType)
+                    : location.Label;
+        buildingQuickHud.HeaderText.fontSize = isMotel || isCityHall || isWarehouse ? 22 : 21;
         string categoryTag = IsProductionLocation(selectedBuildingType) ? "  [Production]"
             : selectedBuildingType == LocationType.PersonalHouse ? "  [Housing]"
             : "  [Service]";
@@ -528,6 +532,10 @@ public partial class GameBootstrap
         else if (isMotel)
         {
             UpdateMotelBuildingQuickHud(location);
+        }
+        else if (isWarehouse)
+        {
+            UpdateWarehouseBuildingQuickHud(location);
         }
         else
         {
@@ -574,6 +582,10 @@ public partial class GameBootstrap
         else
         {
             UpdateBuildingServiceWorkerSlots(selectedBuildingType, ru);
+            if (isWarehouse)
+            {
+                UpdateWarehouseBuildingWorkerSectionChrome();
+            }
         }
         UpdateHudGamblingEffects();
 

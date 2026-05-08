@@ -337,6 +337,7 @@ public partial class GameBootstrap
         return locationType switch
         {
             LocationType.Parking => "Open Fleet",
+            LocationType.Warehouse => IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0440\u0435\u0441\u0443\u0440\u0441\u044b" : "Open Resources",
             LocationType.Motel => IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u043f\u0438\u0441\u043e\u043a \u043f\u043e\u0441\u0442\u043e\u044f\u043b\u044c\u0446\u0435\u0432" : "Open guest list",
             LocationType.Bar => IsRussianLanguage() ? "\u0412\u043e\u0439\u0442\u0438 \u0432\u043d\u0443\u0442\u0440\u044c" : "Enter Inside",
             LocationType.LaborExchange => IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0411\u0438\u0440\u0436\u0443" : "Open Labor Exchange",

@@ -133,7 +133,7 @@ public partial class GameBootstrap
         card.gameObject.SetActive(false);
     }
 
-    private void ConfigureBuildingQuickHudMode(bool cityHall, bool motel = false)
+    private void ConfigureBuildingQuickHudMode(bool cityHall, bool motel = false, bool warehouse = false)
     {
         if (buildingQuickHud == null)
         {
@@ -144,28 +144,31 @@ public partial class GameBootstrap
             ? new Vector2(330f, 341f)
             : motel
                 ? new Vector2(330f, 374f)
-            : new Vector2(360f, 500f);
+                : warehouse
+                    ? new Vector2(330f, 430f)
+                    : new Vector2(360f, 500f);
 
         if (buildingQuickHud.Root.TryGetComponent(out VerticalLayoutGroup layout))
         {
             layout.padding = cityHall ? new RectOffset(12, 12, 12, 12)
                 : motel ? new RectOffset(12, 12, 12, 12)
+                : warehouse ? new RectOffset(12, 12, 12, 12)
                 : new RectOffset(16, 16, 16, 16);
-            layout.spacing = cityHall ? 7f : motel ? 7f : 14f;
+            layout.spacing = cityHall ? 7f : motel ? 7f : warehouse ? 7f : 14f;
         }
 
         ApplyCityHallQuickHudPanelStyle(
             buildingQuickHud.Root,
-            cityHall || motel ? CityHallQuickHudPanelColor : FleetPanelColor,
-            cityHall || motel);
+            cityHall || motel || warehouse ? CityHallQuickHudPanelColor : FleetPanelColor,
+            cityHall || motel || warehouse);
 
         if (buildingQuickHud.HeaderIconRoot != null)
         {
-            buildingQuickHud.HeaderIconRoot.gameObject.SetActive(cityHall || motel);
+            buildingQuickHud.HeaderIconRoot.gameObject.SetActive(cityHall || motel || warehouse);
             if (buildingQuickHud.HeaderIconRoot.TryGetComponent(out LayoutElement headerIconLayout))
             {
-                headerIconLayout.preferredWidth = cityHall ? 30f : motel ? 44f : 38f;
-                headerIconLayout.preferredHeight = cityHall ? 30f : motel ? 36f : 38f;
+                headerIconLayout.preferredWidth = cityHall ? 30f : motel ? 44f : warehouse ? 38f : 38f;
+                headerIconLayout.preferredHeight = cityHall ? 30f : motel ? 36f : warehouse ? 36f : 38f;
             }
 
             if (cityHall && buildingQuickHud.HeaderIconImage != null)
@@ -182,7 +185,7 @@ public partial class GameBootstrap
 
         if (buildingQuickHud.SummaryCard != null)
         {
-            buildingQuickHud.SummaryCard.gameObject.SetActive(!cityHall && !motel);
+            buildingQuickHud.SummaryCard.gameObject.SetActive(!cityHall && !motel && !warehouse);
         }
 
         if (buildingQuickHud.CityHallCard != null)
@@ -190,6 +193,7 @@ public partial class GameBootstrap
             buildingQuickHud.CityHallCard.gameObject.SetActive(cityHall);
         }
         SetMotelBuildingQuickHudVisible(motel);
+        SetWarehouseBuildingQuickHudVisible(warehouse);
 
         if (buildingQuickHud.ContextButtonRow != null)
         {
@@ -200,6 +204,10 @@ public partial class GameBootstrap
         if (motel)
         {
             UpdateMotelBuildingQuickHudChrome();
+        }
+        else if (warehouse)
+        {
+            UpdateWarehouseBuildingQuickHudChrome();
         }
     }
 
