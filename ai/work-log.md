@@ -1,12 +1,20 @@
 # Work Log
 
-Last updated: 2026-05-08
+Last updated: 2026-05-09
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20, 2026-05-03, and 2026-05-08 to keep agent startup light. Use git history for exact old implementation details.
 
 ## Recent Work
 
-- 2026-05-08: Reworked the Motel building microHUD content. Motel now has a dedicated compact Russian summary for sleep/rest service, fee, staff on shift, and bank; the duplicated "workers inside" counter was removed from the summary while the separate people-in-building list remains with an empty state, and the Motel quickHUD height now shrinks when the inside list is empty. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, and added-line mojibake scan.
+- 2026-05-09: Fixed the follow-up idle overlap case from `debug.log` for Denes Larnac and Raul Muren. The trace showed both workers repeatedly rebuilding `IdleWander` from cell `(44,10)` after Motel arrival/free-time fallback; overlap prevention was canceling even the first step that would move them apart. Idle overlap checks now still block new overlaps but allow a proposed idle step when the driver is already overlapping another visible worker and the step increases their separation. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, and targeted mojibake scan.
+
+- 2026-05-09: Fixed idle life-cycle restart spam found in `debug.log`. When workers had due needs but only free idle fallback was available, overlap-avoidance pauses were ignored and the same `IdleWander` path was rebuilt every update, visually freezing residents in place. Idle pause now gates due-life retries, and need fallback wander advances the idle target index so repeated attempts do not hammer the same cell. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, and targeted mojibake scan.
+
+- 2026-05-08: Tightened building quickHUD submenu behavior after visual review. Motel quickHUD now uses the compact 330px building card sizing, its guest-list submenu is shorter and scrolls internally, world camera zoom ignores mouse-wheel input over HUD/UI, and selecting another quickHUD target clears the previous worker/building submenu focus. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, and targeted added-line mojibake scan.
+
+- 2026-05-08: Reworked Motel into a dedicated compact building quickHUD layout. The Motel HUD now uses a dark compact card headed `Мотель`, a bed header icon, a circular service-bell intro icon, Russian-only service/fee/staff/cash rows, and a separated `Постояльцы` status row while preserving the existing open-list button handler. `GameBootstrap.BuildingQuickHud.Motel.cs` was added and the owner map now lists dedicated City Hall/Motel quickHUD partials. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`.
+
+- 2026-05-08: Fixed the pushed project-sanity line-count failure. `GameBootstrap.Fleet.cs` exceeded the 900-line CI limit at 911 lines; the top HUD rectangle helpers were moved unchanged into `GameBootstrap.Fleet.TopHud.cs`, and the owner map/project file were updated for the new partial. Verification: `tools/check-line-count.ps1`, `dotnet build Assembly-CSharp.csproj -v:minimal`, and `git diff --check`.
 
 - 2026-05-08: Added a second mandatory New Game build-unlock layer. New Game still starts with one-lane road, Warehouse, Motel, and City Hall; after the core trio, only Parking, Labor Exchange, Canteen, Forest, Gas Station, Sawmill, and Bar unlock. The remaining optional layer, including two-way road, bus stop, Docks, advanced production, leisure, housing, Kindergarten, and Car Market, unlocks only after all second-layer buildings exist. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, line-count check, `git diff --check`, and targeted mojibake scan.
 
@@ -89,6 +97,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 - 2026-05-06: Updated early-game balance and workflow rules. Starting treasury is `$5000`; building Motel queues a one-time 10-worker arrival bus through the normal migration flow; development rules now require `.csproj` sync for added/moved/deleted C# files and forbid overlapping build/test/check commands.
 
 ## Recent Summary
+
+- 2026-05-08: Added a reusable expandable submenu layer for building quick HUDs. Motel is the first consumer: its context button now toggles an animated opaque scrollable guest list that expands from the action button up to the content divider, switches between open/close guest-list labels, keeps the main Motel HUD compact, and opens the selected resident directly in the Workers profile screen. `GameBootstrap.BuildingQuickHud.Submenu.cs` owns the generic overlay/toggle/animation scaffold for future building submenu content. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, and targeted mojibake scan of added HUD text.
 
 - 2026-05-08: Retuned the worker microHUD condition readout. The compact resident popup now derives its condition score from current need fullness, so a freshly spawned worker with full needs shows `100` instead of inheriting the longer-term migration satisfaction score, and the warning-styled `Критично сейчас` section became neutral `Нужды` with `Все нужды в норме` as the empty state. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal` and `git diff --check`.
 

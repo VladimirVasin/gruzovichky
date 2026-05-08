@@ -735,6 +735,7 @@ public partial class GameBootstrap
         selectedLocation = null;
         selectedLocalStopIndex = -1;
         selectedPersonalHouseIndex = -1;
+        HideBuildingQuickHudSubmenuImmediate();
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         DriverAgent driver = driverAgents.Find(d => d.DriverId == driverId);

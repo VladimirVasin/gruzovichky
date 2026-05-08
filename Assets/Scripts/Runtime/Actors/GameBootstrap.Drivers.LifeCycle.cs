@@ -570,6 +570,7 @@ public partial class GameBootstrap : MonoBehaviour
             }
 
             driver.WalkPhase = DriverRescuePhase.IdleWander;
+            driver.IdleWanderPointIndex++;
             if (!BuildDriverWalkPath(driver, startPosition, fallbackTarget))
             {
                 driver.WalkPhase = DriverRescuePhase.None;

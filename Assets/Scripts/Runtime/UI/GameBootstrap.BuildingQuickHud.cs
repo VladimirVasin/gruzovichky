@@ -161,6 +161,7 @@ public partial class GameBootstrap
         if (localBusQuickHud?.CanvasRoot != null) localBusQuickHud.CanvasRoot.SetActive(false);
         if (driverQuickHud?.CanvasRoot != null) driverQuickHud.CanvasRoot.SetActive(false);
         if (buildingQuickHud?.CanvasRoot != null) buildingQuickHud.CanvasRoot.SetActive(false);
+        HideBuildingQuickHudSubmenuImmediate();
         if (cellQuickHud?.CanvasRoot != null) cellQuickHud.CanvasRoot.SetActive(false);
         if (selectedDebugCellHighlight != null) selectedDebugCellHighlight.SetActive(false);
         if (selectedDebugCellOutline != null) selectedDebugCellOutline.SetActive(false);
@@ -238,6 +239,7 @@ public partial class GameBootstrap
             selectedLocation = null;
             selectedLocalStopIndex = -1;
             selectedPersonalHouseIndex = -1;
+            HideBuildingQuickHudSubmenuImmediate();
             SetBuildingQuickHudLinkLineVisible(false);
             RefreshSelectionVisuals();
             PlayUiSound(uiPanelCloseClip, 0.82f);
@@ -257,6 +259,7 @@ public partial class GameBootstrap
         buildingQuickHud.ResourceTextLayout = buildingQuickHud.ResourceText.gameObject.AddComponent<LayoutElement>();
         buildingQuickHud.ResourceTextLayout.preferredHeight = 82f;
         CreateCityHallBuildingQuickHud(root, uiFont);
+        CreateMotelBuildingQuickHud(root, uiFont);
 
         // в”Ђв”Ђ Worker slots section в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         RectTransform workerSection = CreateUiObject("WorkerSlotsSection", root).GetComponent<RectTransform>();
@@ -417,13 +420,15 @@ public partial class GameBootstrap
             rowRoot.gameObject.SetActive(false);
         }
 
+        CreateBuildingQuickHudExpandableSubmenu(root, uiFont);
+
         RectTransform actionRow = CreateLayoutRow("BuildingQuickHudActionRow", root, 34f, 10f);
         buildingQuickHud.ContextButtonRow = actionRow;
         buildingQuickHud.ContextButton = CreateButton("ContextButton", actionRow, uiFont, out buildingQuickHud.ContextButtonText, "Open", 13, FleetPrimaryButtonColor, Color.white);
         LayoutElement contextLayout = buildingQuickHud.ContextButton.gameObject.AddComponent<LayoutElement>();
         contextLayout.flexibleWidth = 1f;
         contextLayout.preferredHeight = 34f;
-        buildingQuickHud.ContextButton.onClick.AddListener(OpenContextPanelFromBuildingQuickHud);
+        buildingQuickHud.ContextButton.onClick.AddListener(OnBuildingQuickHudContextButtonClick);
 
         RectTransform stopNumberRow = CreateLayoutRow("StopNumberRow", root, 34f, 8f);
         buildingQuickHud.StopNumberRow = stopNumberRow;
@@ -488,12 +493,14 @@ public partial class GameBootstrap
 
         if (!shouldShow)
         {
+            HideBuildingQuickHudSubmenuImmediate();
             SetBuildingQuickHudLinkLineVisible(false);
             return;
         }
 
         if (!TryGetSelectedBuilding(out LocationData location, out LocationType selectedBuildingType, out _))
         {
+            HideBuildingQuickHudSubmenuImmediate();
             SetBuildingQuickHudLinkLineVisible(false);
             buildingQuickHud.CanvasRoot.SetActive(false);
             return;
@@ -501,19 +508,26 @@ public partial class GameBootstrap
 
         bool ru = IsRussianLanguage();
         bool isCityHall = selectedBuildingType == LocationType.CityHall;
-        ConfigureBuildingQuickHudMode(isCityHall);
+        bool isMotel = selectedBuildingType == LocationType.Motel;
+        ConfigureBuildingQuickHudMode(isCityHall, isMotel);
         buildingQuickHud.HeaderText.text = isCityHall
             ? "\u0420\u0430\u0442\u0443\u0448\u0430 (\u0421\u0435\u0440\u0432\u0438\u0441)"
+            : isMotel
+                ? "\u041c\u043e\u0442\u0435\u043b\u044c"
             : selectedBuildingType == LocationType.Docks
                 ? GetSelectedLocationDisplayName(selectedBuildingType)
                 : location.Label;
-        buildingQuickHud.HeaderText.fontSize = isCityHall ? 22 : 21;
+        buildingQuickHud.HeaderText.fontSize = isMotel ? 22 : isCityHall ? 22 : 21;
         string categoryTag = IsProductionLocation(selectedBuildingType) ? "  [Production]"
             : selectedBuildingType == LocationType.PersonalHouse ? "  [Housing]"
             : "  [Service]";
         if (isCityHall)
         {
             UpdateCityHallBuildingQuickHud();
+        }
+        else if (isMotel)
+        {
+            UpdateMotelBuildingQuickHud(location);
         }
         else
         {
@@ -531,6 +545,7 @@ public partial class GameBootstrap
         buildingQuickHud.ContextButton.gameObject.SetActive(showContextBtn);
         if (showContextBtn)
             buildingQuickHud.ContextButtonText.text = GetBuildingQuickContextButtonText(selectedBuildingType);
+        UpdateBuildingQuickHudSubmenuForSelection(selectedBuildingType, location, showContextBtn);
         bool showStopNumberRow = selectedBuildingType == LocationType.Stop && !isCityHall;
         buildingQuickHud.StopNumberRow.gameObject.SetActive(showStopNumberRow);
         if (showStopNumberRow)
@@ -540,10 +555,10 @@ public partial class GameBootstrap
             buildingQuickHud.StopNumberLabelText.text = ru ? $"Номер остановки: {stopNumber}" : $"Stop Number: {stopNumber}";
         }
 
-        bool isPersonalHouse = selectedBuildingType == LocationType.PersonalHouse && !isCityHall;
+        bool isPersonalHouse = selectedBuildingType == LocationType.PersonalHouse && !isCityHall && !isMotel;
         if (buildingQuickHud.PersonalHouseSection != null)
             buildingQuickHud.PersonalHouseSection.gameObject.SetActive(isPersonalHouse);
-        if (isCityHall)
+        if (isCityHall || isMotel)
         {
             if (buildingQuickHud.WorkerSlotsSection != null)
                 buildingQuickHud.WorkerSlotsSection.gameObject.SetActive(false);
@@ -560,8 +575,6 @@ public partial class GameBootstrap
         {
             UpdateBuildingServiceWorkerSlots(selectedBuildingType, ru);
         }
-        if (selectedBuildingType == LocationType.Motel)
-            ResizeMotelBuildingQuickHudRoot();
         UpdateHudGamblingEffects();
 
         LocalizeCanvas(buildingQuickHud.CanvasRoot);
@@ -741,35 +754,6 @@ public partial class GameBootstrap
             buildingQuickHud.SummaryCardLayout.preferredHeight =
                 cardVerticalPadding + typeHeight + bodySpacing + statusHeight + resourceHeight;
         }
-    }
-
-    private void ResizeMotelBuildingQuickHudRoot()
-    {
-        if (buildingQuickHud?.Root == null)
-        {
-            return;
-        }
-
-        float height = 16f + 42f + 14f;
-        if (buildingQuickHud.SummaryCardLayout != null &&
-            buildingQuickHud.SummaryCard != null &&
-            buildingQuickHud.SummaryCard.gameObject.activeSelf)
-            height += buildingQuickHud.SummaryCardLayout.preferredHeight + 14f;
-        if (buildingQuickHud.WorkerSlotsSection != null && buildingQuickHud.WorkerSlotsSection.gameObject.activeSelf)
-        {
-            height += 18f + 14f;
-            if (buildingQuickHud.WorkerSlotsEmptyText != null && buildingQuickHud.WorkerSlotsEmptyText.gameObject.activeSelf)
-                height += 22f + 6f;
-            if (buildingQuickHud.WorkerSlotsScroll != null && buildingQuickHud.WorkerSlotsScroll.gameObject.activeSelf)
-            {
-                LayoutElement scrollLayout = buildingQuickHud.WorkerSlotsScroll.GetComponent<LayoutElement>();
-                height += (scrollLayout != null ? scrollLayout.preferredHeight : 64f) + 6f;
-            }
-        }
-        if (buildingQuickHud.ContextButton != null && buildingQuickHud.ContextButton.gameObject.activeSelf)
-            height += 34f;
-        height += 16f;
-        buildingQuickHud.Root.sizeDelta = new Vector2(360f, Mathf.Clamp(height, 360f, 500f));
     }
 
     private static int CountHudTextLines(string text)

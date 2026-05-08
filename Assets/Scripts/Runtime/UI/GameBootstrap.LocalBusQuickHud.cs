@@ -430,9 +430,11 @@ public partial class GameBootstrap
         isLocalBusDetailsOpen = true;
         isTruckDetailsOpen = false;
         isDriverDetailsOpen = false;
+        selectedDriverId = 0;
         selectedLocation = null;
         selectedLocalStopIndex = -1;
         selectedPersonalHouseIndex = -1;
+        HideBuildingQuickHudSubmenuImmediate();
         LogUiInput("Selection: focused Local Bus");
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelOpenClip, 0.9f);

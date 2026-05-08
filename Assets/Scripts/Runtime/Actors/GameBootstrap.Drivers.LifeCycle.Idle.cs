@@ -217,6 +217,12 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        if (driver.IdleWanderPauseTimer > 0f)
+        {
+            driver.IdleWanderPauseTimer -= Time.deltaTime * gameSpeedMultiplier;
+            return;
+        }
+
         if (TryStartDueWorkerLifeCycle(driver))
         {
             return;
@@ -224,12 +230,6 @@ public partial class GameBootstrap : MonoBehaviour
 
         if (TryStartLaborExchangeJobSearch(driver))
         {
-            return;
-        }
-
-        if (driver.IdleWanderPauseTimer > 0f)
-        {
-            driver.IdleWanderPauseTimer -= Time.deltaTime * gameSpeedMultiplier;
             return;
         }
 

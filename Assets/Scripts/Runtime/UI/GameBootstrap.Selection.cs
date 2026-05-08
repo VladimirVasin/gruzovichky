@@ -71,6 +71,9 @@ public partial class GameBootstrap
             selectedPersonalHouseIndex = -1;
             isTruckDetailsOpen = false;
             isLocalBusDetailsOpen = false;
+            isDriverDetailsOpen = false;
+            selectedDriverId = 0;
+            HideBuildingQuickHudSubmenuImmediate();
             RefreshSelectionVisuals();
             PlayUiSound(uiSelectClip, 0.9f);
             return true;
@@ -90,6 +93,9 @@ public partial class GameBootstrap
             selectedPersonalHouseIndex = -1;
             isTruckDetailsOpen = false;
             isLocalBusDetailsOpen = false;
+            isDriverDetailsOpen = false;
+            selectedDriverId = 0;
+            HideBuildingQuickHudSubmenuImmediate();
             RefreshSelectionVisuals();
             PlayUiSound(uiSelectClip, 0.9f);
             return true;
@@ -109,6 +115,9 @@ public partial class GameBootstrap
             selectedPersonalHouseIndex = -1;
             isTruckDetailsOpen = false;
             isLocalBusDetailsOpen = false;
+            isDriverDetailsOpen = false;
+            selectedDriverId = 0;
+            HideBuildingQuickHudSubmenuImmediate();
             RefreshSelectionVisuals();
             PlayUiSound(uiSelectClip, 0.9f);
             return true;
@@ -128,6 +137,9 @@ public partial class GameBootstrap
             selectedPersonalHouseIndex = i;
             isTruckDetailsOpen = false;
             isLocalBusDetailsOpen = false;
+            isDriverDetailsOpen = false;
+            selectedDriverId = 0;
+            HideBuildingQuickHudSubmenuImmediate();
             RefreshSelectionVisuals();
             PlayUiSound(uiSelectClip, 0.9f);
             return true;

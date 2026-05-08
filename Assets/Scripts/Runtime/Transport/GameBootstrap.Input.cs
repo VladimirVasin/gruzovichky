@@ -353,6 +353,8 @@ public partial class GameBootstrap
         isTruckDetailsOpen = true;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
+        selectedDriverId = 0;
+        HideBuildingQuickHudSubmenuImmediate();
         isTruckCameraFocused = false;
         isCameraReturningToDiorama = wasTruckCameraFocused;
         isFleetScreenDirty = true;
@@ -378,6 +380,7 @@ public partial class GameBootstrap
             isCityHallPanelOpen ||
             isTruckDetailsOpen ||
             isLocalBusDetailsOpen ||
+            isDriverDetailsOpen ||
             activeBuildTool != BuildTool.None;
 
         isFleetPanelOpen = false;
@@ -394,6 +397,8 @@ public partial class GameBootstrap
         isTruckDetailsOpen = false;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
+        selectedDriverId = 0;
+        HideBuildingQuickHudSubmenuImmediate();
         CancelRoadPathMode();
         activeBuildTool = BuildTool.None;
         hoveredBuildCell = null;
@@ -546,7 +551,7 @@ public partial class GameBootstrap
             float scroll = Mouse.current.scroll.ReadValue().y;
             bool anyHudOpen = isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
                 isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isBuildPanelOpen || isWorldMapPanelOpen || isStatesPanelOpen || isSocialGraphPanelOpen;
-            if (Mathf.Abs(scroll) > 0.01f && !anyHudOpen)
+            if (Mathf.Abs(scroll) > 0.01f && !anyHudOpen && !IsPointerOverHud(mousePosition))
             {
                 float currentDistance = cameraOffset.magnitude;
                 float zoomDistanceT = Mathf.InverseLerp(CameraMinDistance, CameraMaxDistance, currentDistance);
