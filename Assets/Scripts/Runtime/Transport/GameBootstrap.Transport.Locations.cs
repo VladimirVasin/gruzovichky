@@ -294,6 +294,8 @@ public partial class GameBootstrap
         {
             EnsureLocationRoadAccessRoadCell(data, type.ToString());
         }
+
+        NotifyNewGameBuildUnlockProgressionBuilt(type);
     }
 
     private static bool DoesLocationRequireRoadAccess(LocationType type)

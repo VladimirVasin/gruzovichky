@@ -393,6 +393,7 @@ public partial class GameBootstrap
         public RectTransform Root;
         public Button        Button;
         public Image         CardBg;
+        public Image         UnlockGlow;
         public Image         AccentBg;
         public Text          TitleText;
         public Text          StatusText;
@@ -410,6 +411,7 @@ public partial class GameBootstrap
         public RectTransform HeaderRoot;
         public Button        HeaderButton;
         public Image         HeaderBg;
+        public Image         UnlockGlow;
         public RectTransform IconRoot;
         public Text          HeaderText;
         public BuildItemUi[] Items;

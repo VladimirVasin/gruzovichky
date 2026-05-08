@@ -6,6 +6,7 @@ public partial class GameBootstrap
     private const float BarInteriorConversationCycleSeconds = 13f;
     private const float BarInteriorConversationVisibleSeconds = 3.2f;
     private const float BarInteriorDrinkCycleSeconds = 6.4f;
+    private const float BarInteriorDialogueVoiceVolume = 0.095f;
 
     private enum BarInteriorPatronRole
     {
@@ -30,8 +31,11 @@ public partial class GameBootstrap
         public Transform BubbleRoot;
         public TextMesh BubbleText;
         public TextMesh BubbleShadowText;
+        public AudioSource VoiceSource;
         public BarInteriorPatronRole Role;
         public int ConversationGroup;
+        public int VoiceTurnIndex = int.MinValue;
+        public int VoiceWordCount;
         public float Phase;
         public bool Seated;
         public Vector3 RootBaseLocalPosition;
@@ -103,6 +107,8 @@ public partial class GameBootstrap
             {
                 patron.BubbleRoot.gameObject.SetActive(false);
             }
+
+            ResetBarInteriorPatronVoice(patron);
         }
     }
 
@@ -206,6 +212,14 @@ public partial class GameBootstrap
         patron.BubbleText = text;
         patron.BubbleShadowText = shadow;
         bubbleObject.SetActive(false);
+
+        AudioSource voiceSource = CreateAudioSource($"{patron.Name}Voice", patron.Root, false, 0.7f, 1f, false);
+        voiceSource.ignoreListenerPause = true;
+        voiceSource.priority = 135;
+        voiceSource.minDistance = 1.6f;
+        voiceSource.maxDistance = 10.5f;
+        voiceSource.transform.localPosition = new Vector3(0f, patron.Seated ? 1.12f : 1.38f, 0f);
+        patron.VoiceSource = voiceSource;
     }
 
     private TextMesh CreateBarInteriorBubbleText(string name, Transform parent, Color color)
@@ -438,7 +452,7 @@ public partial class GameBootstrap
 
     private float GetBarInteriorConversationTalkWeight(BarInteriorPatronRefs patron)
     {
-        if (!TryGetBarInteriorConversationState(patron, out bool isSpeaker, out float normalizedVisibleTime, out _))
+        if (!TryGetBarInteriorConversationState(patron, out bool isSpeaker, out float normalizedVisibleTime, out _, out _))
         {
             return 0f;
         }
@@ -463,14 +477,16 @@ public partial class GameBootstrap
                 continue;
             }
 
-            if (!TryGetBarInteriorConversationState(patron, out bool isSpeaker, out float normalizedVisibleTime, out string line) || !isSpeaker)
+            if (!TryGetBarInteriorConversationState(patron, out bool isSpeaker, out float normalizedVisibleTime, out string line, out int turnIndex) || !isSpeaker)
             {
                 patron.BubbleRoot.gameObject.SetActive(false);
+                ResetBarInteriorPatronVoice(patron);
                 continue;
             }
 
             string visibleLine = BuildBarInteriorVisibleConversationText(line, normalizedVisibleTime);
             SetBarInteriorBubbleText(patron, visibleLine);
+            UpdateBarInteriorConversationVoice(patron, line, normalizedVisibleTime, turnIndex);
             patron.BubbleRoot.gameObject.SetActive(true);
             float scale = Mathf.Lerp(0.86f, 1f, SmootherStep01(Mathf.Clamp01(normalizedVisibleTime / 0.22f)));
             patron.BubbleRoot.localScale = Vector3.one * scale;
@@ -486,11 +502,12 @@ public partial class GameBootstrap
         }
     }
 
-    private bool TryGetBarInteriorConversationState(BarInteriorPatronRefs patron, out bool isSpeaker, out float normalizedVisibleTime, out string line)
+    private bool TryGetBarInteriorConversationState(BarInteriorPatronRefs patron, out bool isSpeaker, out float normalizedVisibleTime, out string line, out int turnIndex)
     {
         isSpeaker = false;
         normalizedVisibleTime = 0f;
         line = string.Empty;
+        turnIndex = -1;
         if (patron == null || patron.ConversationGroup <= 0)
         {
             return false;
@@ -504,7 +521,7 @@ public partial class GameBootstrap
         }
 
         float groupTime = barInteriorAnimationTimer + patron.ConversationGroup * 1.31f;
-        int turnIndex = Mathf.FloorToInt(groupTime / BarInteriorConversationCycleSeconds);
+        turnIndex = Mathf.FloorToInt(groupTime / BarInteriorConversationCycleSeconds);
         float turnTime = groupTime - turnIndex * BarInteriorConversationCycleSeconds;
         if (turnTime > BarInteriorConversationVisibleSeconds)
         {
@@ -516,6 +533,66 @@ public partial class GameBootstrap
         normalizedVisibleTime = Mathf.Clamp01(turnTime / BarInteriorConversationVisibleSeconds);
         line = GetBarInteriorConversationLine(patron.ConversationGroup, turnIndex);
         return true;
+    }
+
+    private void UpdateBarInteriorConversationVoice(BarInteriorPatronRefs patron, string line, float normalizedVisibleTime, int turnIndex)
+    {
+        if (patron?.VoiceSource == null || string.IsNullOrWhiteSpace(line))
+        {
+            return;
+        }
+
+        if (patron.VoiceTurnIndex != turnIndex)
+        {
+            patron.VoiceTurnIndex = turnIndex;
+            patron.VoiceWordCount = 0;
+        }
+
+        int visibleWords = CountBarInteriorVisibleConversationWords(line, normalizedVisibleTime);
+        while (patron.VoiceWordCount < visibleWords)
+        {
+            patron.VoiceWordCount++;
+            PlayBarInteriorConversationVoiceWord(patron, patron.VoiceWordCount, turnIndex);
+        }
+    }
+
+    private void PlayBarInteriorConversationVoiceWord(BarInteriorPatronRefs patron, int visibleWordIndex, int turnIndex)
+    {
+        if (patron?.VoiceSource == null || visibleWordIndex <= 0)
+        {
+            return;
+        }
+
+        int voiceId = 9000 + patron.ConversationGroup * 101 + GetBarInteriorConversationMemberIndex(patron) * 17 + (int)patron.Role;
+        CitySocialVoiceProfile profile = GetCitySocialVoiceProfile(voiceId, false);
+        AudioClip[] clips = GetCitySocialVoiceClips(profile);
+        if (clips == null || clips.Length == 0)
+        {
+            return;
+        }
+
+        AudioClip clip = clips[Mathf.Abs(voiceId * 23 + visibleWordIndex * 19 + turnIndex * 7) % clips.Length];
+        if (clip == null)
+        {
+            return;
+        }
+
+        float rolePitch = patron.Role == BarInteriorPatronRole.Dancer ? 1.08f : patron.Role == BarInteriorPatronRole.CounterDrinker ? 0.96f : 1f;
+        float wobble = 1f + Mathf.Sin((visibleWordIndex + voiceId) * 0.83f) * 0.045f;
+        patron.VoiceSource.pitch = Mathf.Clamp(rolePitch * wobble, 0.76f, 1.34f);
+        patron.VoiceSource.PlayOneShot(clip, BarInteriorDialogueVoiceVolume);
+    }
+
+    private void ResetBarInteriorPatronVoice(BarInteriorPatronRefs patron)
+    {
+        if (patron == null)
+        {
+            return;
+        }
+
+        patron.VoiceTurnIndex = int.MinValue;
+        patron.VoiceWordCount = 0;
+        patron.VoiceSource?.Stop();
     }
 
     private int GetBarInteriorConversationMemberCount(int group)
@@ -580,6 +657,35 @@ public partial class GameBootstrap
         float typed = Mathf.Clamp01(normalizedVisibleTime / 0.40f);
         int chars = Mathf.Clamp(Mathf.CeilToInt(line.Length * typed), 0, line.Length);
         return WrapBarInteriorConversationText(line.Substring(0, chars));
+    }
+
+    private static int CountBarInteriorVisibleConversationWords(string line, float normalizedVisibleTime)
+    {
+        if (string.IsNullOrWhiteSpace(line))
+        {
+            return 0;
+        }
+
+        float typed = Mathf.Clamp01(normalizedVisibleTime / 0.40f);
+        int chars = Mathf.Clamp(Mathf.CeilToInt(line.Length * typed), 0, line.Length);
+        int words = 0;
+        bool insideWord = false;
+        for (int i = 0; i < chars; i++)
+        {
+            if (char.IsWhiteSpace(line[i]))
+            {
+                insideWord = false;
+                continue;
+            }
+
+            if (!insideWord)
+            {
+                words++;
+                insideWord = true;
+            }
+        }
+
+        return words;
     }
 
     private void SetBarInteriorBubbleText(BarInteriorPatronRefs patron, string text)

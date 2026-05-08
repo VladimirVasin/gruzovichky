@@ -421,12 +421,15 @@ public partial class GameBootstrap
         }
     }
 
-    private void ApplyTutorialSkippedState(string reason)
+    private void ApplyTutorialSkippedState(string reason, bool unlockBuildTools = true)
     {
         isTutorialSkipped = true;
         pendingTutorialTrigger = null;
         pendingTutorialDelay = 0f;
-        UnlockAllBuildTools();
+        if (unlockBuildTools)
+        {
+            UnlockAllBuildTools();
+        }
         UnlockAllTutorialVacancies();
         isTutorialCameraFocusActive = false;
         tutorialCameraFollowTruck = null;

@@ -64,7 +64,7 @@ ai/                    Shared AI memory
 - `SampleScene` hosts `GameBootstrap`.
 - Startup creates the generated world, terrain, highway access, lighting, ambience, UI, and initial mode-specific state.
 - The main menu has two player-facing starts: Tutorial and New Game.
-- Tutorial and New Game share the same build-first empty-town start; Tutorial runs onboarding, while New Game applies the tutorial-skip state immediately and unlocks the tools/vacancies that skipping tutorial would unlock.
+- Tutorial and New Game share the same build-first empty-town start; Tutorial runs onboarding, while New Game skips tutorial windows but uses its own staged build progression instead of unlocking every building immediately.
 - During play:
   - the player builds roads/buildings/stops and manages workers through HUD panels
   - workers resolve shifts and needs through services, production, transit, walking, and fallback activities

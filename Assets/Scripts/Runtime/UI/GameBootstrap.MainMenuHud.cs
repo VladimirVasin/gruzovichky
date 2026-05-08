@@ -731,7 +731,7 @@ public partial class GameBootstrap
         ResetTutorialGoalsForNewGame();
         if (selectedGameStartMode == GameStartMode.NewGame)
         {
-            ApplyTutorialSkippedState("new game start");
+            ApplyTutorialSkippedState("new game start", unlockBuildTools: false);
         }
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;

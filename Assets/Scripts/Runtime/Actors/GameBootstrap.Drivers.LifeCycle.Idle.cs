@@ -328,18 +328,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
         else if (roll < 0.45f)
         {
-            driver.WalkPhase = DriverRescuePhase.IdleWander;
-            driver.IdleWanderPointIndex++;
-            driver.WalkAnimationTime = 0f;
-            if (!BuildDriverWalkPath(driver, startPosition, wanderTarget))
-            {
-                driver.WalkPhase = DriverRescuePhase.None;
-                driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
-                LogWorkerDecision(driver, "idle-activity-blocked", $"wander path unavailable, roll={roll:0.00}", true);
-                return;
-            }
-            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started idle walk.");
-            LogWorkerDecision(driver, "idle-activity", $"wander roll={roll:0.00}", true);
+            TryStartIdleWanderActivity(driver, startPosition, wanderTarget, $"wander roll={roll:0.00}", $"wander path unavailable, roll={roll:0.00}");
         }
         else if (roll < 0.75f && TryGetNearestFreeBench(startPosition, 14f, out int bIdx, out Vector3 bPos))
         {
@@ -362,6 +351,17 @@ public partial class GameBootstrap : MonoBehaviour
         }
         else if (roll < 0.88f)
         {
+            if (IsIdleStationarySpotReserved(driver, startPosition))
+            {
+                TryStartIdleWanderActivity(
+                    driver,
+                    startPosition,
+                    wanderTarget,
+                    $"wander from occupied idle spot, roll={roll:0.00}",
+                    $"stationary idle spot occupied, roll={roll:0.00}");
+                return;
+            }
+
             driver.IdleActivityTimer = Random.Range(20f, 45f);
             driver.WalkPhase = DriverRescuePhase.IdleSmoking;
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started smoking break.");
@@ -373,11 +373,40 @@ public partial class GameBootstrap : MonoBehaviour
         }
         else
         {
+            if (IsIdleStationarySpotReserved(driver, startPosition))
+            {
+                TryStartIdleWanderActivity(
+                    driver,
+                    startPosition,
+                    wanderTarget,
+                    $"wander from occupied idle spot before phone call, roll={roll:0.00}",
+                    $"phone idle spot occupied, roll={roll:0.00}");
+                return;
+            }
+
             driver.IdleActivityTimer = Random.Range(8f, 25f);
             driver.WalkPhase = DriverRescuePhase.IdlePhoneCall;
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} making a phone call.");
             LogWorkerDecision(driver, "idle-activity", $"phone call, roll={roll:0.00}", true);
         }
+    }
+
+    private bool TryStartIdleWanderActivity(DriverAgent driver, Vector3 startPosition, Vector3 wanderTarget, string reason, string blockedReason)
+    {
+        driver.WalkPhase = DriverRescuePhase.IdleWander;
+        driver.IdleWanderPointIndex++;
+        driver.WalkAnimationTime = 0f;
+        if (!BuildDriverWalkPath(driver, startPosition, wanderTarget))
+        {
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.IdleWanderPauseTimer = Random.Range(DriverIdleWanderPauseMin, DriverIdleWanderPauseMax);
+            LogWorkerDecision(driver, "idle-activity-blocked", blockedReason, true);
+            return false;
+        }
+
+        SessionDebugLogger.Log("IDLE", $"{driver.DriverName} started idle walk.");
+        LogWorkerDecision(driver, "idle-activity", reason, true);
+        return true;
     }
 
     private bool TryStartWorkerPetCat(DriverAgent driver, Vector3 startPosition)
@@ -518,6 +547,35 @@ public partial class GameBootstrap : MonoBehaviour
             Vector3 targetDelta = otherTarget - candidate;
             targetDelta.y = 0f;
             if (targetDelta.sqrMagnitude < personalSpaceSqr || WorldToCell(otherTarget) == candidateCell)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsIdleStationarySpotReserved(DriverAgent driver, Vector3 position)
+    {
+        float personalSpaceSqr = DriverIdlePersonalSpace * DriverIdlePersonalSpace;
+        Vector2Int cell = WorldToCell(position);
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent other = driverAgents[i];
+            if (other == null || other == driver || other.DriverObject == null || !other.DriverObject.activeSelf)
+            {
+                continue;
+            }
+
+            Vector3 otherPosition = other.DriverObject.transform.position;
+            if (WorldToCell(otherPosition) == cell)
+            {
+                return true;
+            }
+
+            Vector3 delta = otherPosition - position;
+            delta.y = 0f;
+            if (delta.sqrMagnitude < personalSpaceSqr)
             {
                 return true;
             }

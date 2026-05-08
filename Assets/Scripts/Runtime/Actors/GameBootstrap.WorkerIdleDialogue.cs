@@ -5,10 +5,10 @@ public partial class GameBootstrap
 {
     private const int WorkerIdleDialogueMaxVisible = 3;
     private const float WorkerIdleDialogueWordSeconds = 0.13f;
-    private const float WorkerIdleDialogueLineHoldSeconds = 1.0f;
-    private const float WorkerIdleDialogueMinLineSeconds = 2.1f;
+    private const float WorkerIdleDialogueLineHoldSeconds = 1.55f;
+    private const float WorkerIdleDialogueMinLineSeconds = 2.65f;
     private const float WorkerIdleDialogueBubbleHeight = 1.95f;
-    private const float WorkerIdleDialogueVoiceVolume = 0.075f;
+    private const float WorkerIdleDialogueVoiceVolume = 0.105f;
 
     private readonly List<WorkerIdleDialogueRuntime> activeWorkerIdleDialogues = new();
 
@@ -340,8 +340,8 @@ public partial class GameBootstrap
 
         runtime.VoiceSource = CreateAudioSource("WorkerIdleDialogueVoice", root.transform, false, 0.7f, 1f, false);
         runtime.VoiceSource.priority = 155;
-        runtime.VoiceSource.minDistance = 2.5f;
-        runtime.VoiceSource.maxDistance = 13f;
+        runtime.VoiceSource.minDistance = 1.6f;
+        runtime.VoiceSource.maxDistance = 11f;
     }
 
     private TextMesh CreateWorkerIdleDialogueTextMesh(string name, Transform parent, Color color)
@@ -459,7 +459,7 @@ public partial class GameBootstrap
 
         if (runtime.VoiceSource != null)
         {
-            Vector3 midpoint = (first.DriverObject.transform.position + second.DriverObject.transform.position) * 0.5f + Vector3.up * 1.2f;
+            Vector3 midpoint = (first.DriverObject.transform.position + second.DriverObject.transform.position) * 0.5f + Vector3.up * 1.35f;
             runtime.VoiceSource.transform.position = midpoint;
         }
     }

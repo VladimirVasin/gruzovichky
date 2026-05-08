@@ -32,11 +32,12 @@ Source of truth: code remains authoritative. This file is the cross-session chec
 13. Teach Regional Map. Player opens Map and builds the river trade route to the known city that sells Textile.
 14. Unlock and build Docks on the riverbank, then review/staff the Docks worker slot through Labor Exchange. Docks receive imported goods from ships and export Warehouse cargo; local trucks move goods between Docks and Warehouse.
 15. Teach Trade policy. Player opens Trade, selects Textile, and sets policy to `Buy up to`; river ships can then bring Textile and trucks move it to Warehouse.
-16. Show Demo Complete. Tutorial ends; New Game is the non-tutorial mode with tutorial windows skipped and tools unlocked according to the skip state.
+16. Show Demo Complete. Tutorial ends; New Game is the non-tutorial mode with tutorial windows skipped, but its build tools follow the separate New Game staged unlock progression rather than Tutorial skip unlocking every building.
 
 ## Current Invariants
 
 - All Tutorial-only progression must be guarded by `selectedGameStartMode == GameStartMode.Tutorial` and `!isTutorialSkipped`.
+- New Game build progression is not Tutorial: tutorial skip state may suppress Tutorial windows, but it must not unlock all build tools for a fresh New Game.
 - Normal play does not show a permanent top-HUD Vacancies tab. The top-menu `Staffing` button appears during current Tutorial staffing-goal/manual-override moments and also remains available while the staffing screen is already open.
 - Labor Exchange quick HUD opens the staffing overview. The screen may still have internal `Vacancies` method names, but player-facing Tutorial copy should talk about `Staffing`, `Кадры`, or `Биржа труда` according to context.
 - Tutorial should not teach removed resources or old direct-hiring flow. Current resource/trade path is Logs/Boards/Cotton/Textile/Furniture, with Textile import taught through river trade and Docks.

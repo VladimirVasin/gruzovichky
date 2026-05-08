@@ -205,6 +205,7 @@ public partial class GameBootstrap
     private bool WouldIdleDriverOverlapAtPosition(DriverAgent driver, Vector3 proposedPosition)
     {
         float personalSpaceSqr = DriverIdlePersonalSpace * DriverIdlePersonalSpace;
+        Vector2Int proposedCell = WorldToCell(proposedPosition);
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent other = driverAgents[i];
@@ -213,7 +214,13 @@ public partial class GameBootstrap
                 continue;
             }
 
-            Vector3 otherDelta = other.DriverObject.transform.position - proposedPosition;
+            Vector3 otherPosition = other.DriverObject.transform.position;
+            if (WorldToCell(otherPosition) == proposedCell)
+            {
+                return true;
+            }
+
+            Vector3 otherDelta = otherPosition - proposedPosition;
             otherDelta.y = 0f;
             if (otherDelta.sqrMagnitude < personalSpaceSqr)
             {

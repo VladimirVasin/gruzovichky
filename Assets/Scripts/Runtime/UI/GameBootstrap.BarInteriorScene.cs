@@ -40,12 +40,20 @@ public partial class GameBootstrap
     private Camera barInteriorCamera;
     private RenderTexture barInteriorRenderTexture;
     private Light[] barInteriorPulseLights;
+    private AudioListener barInteriorAudioListener;
+    private AudioListener barInteriorPreviousMainAudioListener;
+    private bool barInteriorPreviousMainAudioListenerEnabled;
+    private bool barInteriorPreviousAudioListenerPause;
+    private bool barInteriorSceneMutedWorldAudio;
+    private AudioSource barInteriorAmbientAudioSource;
+    private AudioClip barInteriorAmbientClip;
 
     private void StartBarInteriorScene(LocationData barLocation)
     {
         EnsureBarInteriorSceneHud();
         EnsureBarInteriorSceneWorld();
         PauseBarInteriorSceneSimulation();
+        MuteWorldAudioForBarInteriorScene();
 
         isBarInteriorSceneOpen = true;
         barInteriorScenePhase = BarInteriorScenePhase.Opening;
@@ -82,6 +90,7 @@ public partial class GameBootstrap
 
         barInteriorRoot.SetActive(true);
         barInteriorCamera.enabled = true;
+        StartBarInteriorSceneAudio();
         barInteriorCamera.Render();
 
         ValidateBarInteriorSceneClickTargets();
@@ -463,6 +472,8 @@ public partial class GameBootstrap
 
         isBarInteriorSceneOpen = false;
         barInteriorScenePhase = BarInteriorScenePhase.Closed;
+        StopBarInteriorSceneAudio();
+        RestoreWorldAudioAfterBarInteriorScene();
         ResumeBarInteriorSceneSimulation();
     }
 
@@ -498,6 +509,59 @@ public partial class GameBootstrap
         Time.timeScale = 0f;
         Time.fixedDeltaTime = 0f;
         barInteriorScenePausedSimulation = true;
+    }
+
+    private void MuteWorldAudioForBarInteriorScene()
+    {
+        if (barInteriorSceneMutedWorldAudio)
+        {
+            return;
+        }
+
+        barInteriorPreviousAudioListenerPause = AudioListener.pause;
+        barInteriorPreviousMainAudioListener = mainCamera != null ? mainCamera.GetComponent<AudioListener>() : null;
+        barInteriorPreviousMainAudioListenerEnabled = barInteriorPreviousMainAudioListener != null && barInteriorPreviousMainAudioListener.enabled;
+
+        if (barInteriorPreviousMainAudioListener != null)
+        {
+            barInteriorPreviousMainAudioListener.enabled = false;
+        }
+
+        if (barInteriorCamera != null)
+        {
+            barInteriorAudioListener = barInteriorCamera.GetComponent<AudioListener>();
+            if (barInteriorAudioListener == null)
+            {
+                barInteriorAudioListener = barInteriorCamera.gameObject.AddComponent<AudioListener>();
+            }
+
+            barInteriorAudioListener.enabled = true;
+        }
+
+        citySocialVoiceAudioSource?.Stop();
+        AudioListener.pause = true;
+        barInteriorSceneMutedWorldAudio = true;
+    }
+
+    private void RestoreWorldAudioAfterBarInteriorScene()
+    {
+        if (!barInteriorSceneMutedWorldAudio)
+        {
+            return;
+        }
+
+        if (barInteriorAudioListener != null)
+        {
+            barInteriorAudioListener.enabled = false;
+        }
+
+        if (barInteriorPreviousMainAudioListener != null)
+        {
+            barInteriorPreviousMainAudioListener.enabled = barInteriorPreviousMainAudioListenerEnabled;
+        }
+
+        AudioListener.pause = barInteriorPreviousAudioListenerPause;
+        barInteriorSceneMutedWorldAudio = false;
     }
 
     private void ResumeBarInteriorSceneSimulation()
@@ -544,6 +608,80 @@ public partial class GameBootstrap
                 ? 1.15f + Mathf.Sin(barInteriorLightTimer * 1.5f) * 0.18f
                 : 1.10f + Mathf.Sin(barInteriorLightTimer * 1.2f + i * 0.73f) * 0.12f;
         }
+    }
+
+    private void StartBarInteriorSceneAudio()
+    {
+        EnsureBarInteriorSceneAudio();
+        if (barInteriorAmbientAudioSource == null || barInteriorAmbientClip == null)
+        {
+            return;
+        }
+
+        barInteriorAmbientAudioSource.clip = barInteriorAmbientClip;
+        barInteriorAmbientAudioSource.volume = 0.12f;
+        if (!barInteriorAmbientAudioSource.isPlaying)
+        {
+            barInteriorAmbientAudioSource.Play();
+        }
+    }
+
+    private void StopBarInteriorSceneAudio()
+    {
+        if (barInteriorAmbientAudioSource != null)
+        {
+            barInteriorAmbientAudioSource.Stop();
+        }
+
+        for (int i = 0; i < barInteriorPatrons.Count; i++)
+        {
+            barInteriorPatrons[i]?.VoiceSource?.Stop();
+        }
+    }
+
+    private void EnsureBarInteriorSceneAudio()
+    {
+        if (barInteriorRoot == null)
+        {
+            return;
+        }
+
+        if (barInteriorAmbientClip == null)
+        {
+            barInteriorAmbientClip = CreateBarInteriorAmbientClip();
+        }
+
+        if (barInteriorAmbientAudioSource != null)
+        {
+            return;
+        }
+
+        barInteriorAmbientAudioSource = CreateAudioSource("BarInteriorAmbient", barInteriorRoot.transform, true, 0.12f, 0.42f, false);
+        barInteriorAmbientAudioSource.ignoreListenerPause = true;
+        barInteriorAmbientAudioSource.priority = 125;
+        barInteriorAmbientAudioSource.minDistance = 4f;
+        barInteriorAmbientAudioSource.maxDistance = 22f;
+        barInteriorAmbientAudioSource.transform.localPosition = new Vector3(0f, 1.4f, 0.2f);
+    }
+
+    private AudioClip CreateBarInteriorAmbientClip()
+    {
+        const float duration = 4.0f;
+        int sampleCount = Mathf.CeilToInt(duration * AudioSampleRate);
+        float[] samples = new float[sampleCount];
+        for (int i = 0; i < sampleCount; i++)
+        {
+            float t = i / (float)AudioSampleRate;
+            float lowRoom = Mathf.Sin(2f * Mathf.PI * 74f * t) * 0.05f +
+                            Mathf.Sin(2f * Mathf.PI * 116f * t + 0.7f) * 0.026f;
+            float chatter = Mathf.Sin(2f * Mathf.PI * 185f * t + Mathf.Sin(2f * Mathf.PI * 1.2f * t) * 0.55f) * 0.018f +
+                            Mathf.Sin(2f * Mathf.PI * 238f * t + Mathf.Sin(2f * Mathf.PI * 0.7f * t) * 0.42f) * 0.014f;
+            float glass = Mathf.Sin(2f * Mathf.PI * 930f * t) * Mathf.Max(0f, Mathf.Sin(2f * Mathf.PI * 0.31f * t + 1.8f)) * 0.008f;
+            float movement = Mathf.Sin(2f * Mathf.PI * 2.6f * t + 0.4f) * 0.006f;
+            samples[i] = Mathf.Clamp((lowRoom + chatter + glass + movement) * 0.78f, -1f, 1f);
+        }
+
+        return CreateClipFromSamples("BarInteriorAmbient", samples);
     }
 
     private GameObject CreateBarInteriorBox(Transform parent, string name, Vector3 localPosition, Vector3 localScale, Color color, float smoothness)
@@ -626,6 +764,9 @@ public partial class GameBootstrap
 
     private void ReleaseBarInteriorSceneResources()
     {
+        StopBarInteriorSceneAudio();
+        RestoreWorldAudioAfterBarInteriorScene();
+
         if (barInteriorCamera != null && barInteriorCamera.targetTexture == barInteriorRenderTexture)
         {
             barInteriorCamera.targetTexture = null;
@@ -638,6 +779,8 @@ public partial class GameBootstrap
             barInteriorRenderTexture = null;
         }
 
+        barInteriorAmbientClip = null;
+        barInteriorAmbientAudioSource = null;
         ResetBarInteriorAnimationState();
     }
 }

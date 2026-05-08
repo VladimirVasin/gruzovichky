@@ -11,6 +11,10 @@ public partial class GameBootstrap
     private int selectedBuildCategoryIndex = -1;
     private float buildScreenPanelAnimation = 0f;
     private float buildScreenTrayAnimation = 0f;
+    private const float BuildUnlockPulseDuration = 7.5f;
+    private readonly Dictionary<BuildTool, float> buildToolUnlockPulseTimers = new();
+    private readonly List<BuildTool> buildPulseScratch = new();
+    private readonly Dictionary<BuildTool, float> buildPulseScratchValues = new();
 
     private void InitUnlockedBuildTools()
     {
@@ -21,28 +25,17 @@ public partial class GameBootstrap
             return;
         }
 
-        foreach (BuildTool tool in System.Enum.GetValues(typeof(BuildTool)))
-        {
-            if (tool == BuildTool.None) continue;
-            unlockedBuildTools.Add(tool);
-        }
+        UnlockNewGameStarterBuildTools();
     }
 
     private void UnlockDefaultRoadBuildTools()
     {
         unlockedBuildTools?.Add(BuildTool.SingleRoad);
         unlockedBuildTools?.Add(BuildTool.Road);
-        unlockedBuildTools?.Add(BuildTool.CityHall);
-        unlockedBuildTools?.Add(BuildTool.Docks);
     }
 
     private bool IsBuildToolUnlocked(BuildTool tool)
     {
-        if (tool == BuildTool.Docks || tool == BuildTool.CityHall)
-        {
-            return true;
-        }
-
         return unlockedBuildTools != null
             ? unlockedBuildTools.Contains(tool)
             : tool == BuildTool.SingleRoad || tool == BuildTool.Road;
@@ -54,8 +47,19 @@ public partial class GameBootstrap
         if (unlockedBuildTools.Add(tool))
         {
             isBuildScreenDirty = true;
+            MarkBuildToolJustUnlocked(tool);
             SessionDebugLogger.Log("BUILD", $"Build tool unlocked: {tool}.");
         }
+    }
+
+    private void MarkBuildToolJustUnlocked(BuildTool tool)
+    {
+        if (tool == BuildTool.None)
+        {
+            return;
+        }
+
+        buildToolUnlockPulseTimers[tool] = BuildUnlockPulseDuration;
     }
 
     private void UnlockAllBuildTools()
@@ -124,9 +128,10 @@ public partial class GameBootstrap
         itemTray.anchoredPosition = new Vector2(0f, 104f);
         itemTray.sizeDelta = new Vector2(980f, 116f);
         Image trayBg = itemTray.gameObject.AddComponent<Image>();
-        trayBg.color = new Color(0.035f, 0.055f, 0.065f, 0.88f);
+        trayBg.color = Color.clear;
+        trayBg.raycastTarget = false;
         Outline trayOutline = itemTray.gameObject.AddComponent<Outline>();
-        trayOutline.effectColor = new Color(0.42f, 0.72f, 0.78f, 0.42f);
+        trayOutline.effectColor = Color.clear;
         trayOutline.effectDistance = new Vector2(0f, 2f);
         CanvasGroup trayGroup = itemTray.gameObject.AddComponent<CanvasGroup>();
         trayGroup.alpha = 0f;
@@ -150,9 +155,10 @@ public partial class GameBootstrap
         dockRoot.anchoredPosition = new Vector2(0f, 22f);
         dockRoot.sizeDelta = new Vector2(760f, 94f);
         Image dockBg = dockRoot.gameObject.AddComponent<Image>();
-        dockBg.color = new Color(0.02f, 0.10f, 0.12f, 0.92f);
+        dockBg.color = Color.clear;
+        dockBg.raycastTarget = false;
         Outline dockOutline = dockRoot.gameObject.AddComponent<Outline>();
-        dockOutline.effectColor = new Color(0.26f, 0.78f, 0.86f, 0.55f);
+        dockOutline.effectColor = Color.clear;
         dockOutline.effectDistance = new Vector2(0f, 2f);
         HorizontalLayoutGroup dockLayout = dockRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
         dockLayout.padding = new RectOffset(16, 16, 10, 10);
@@ -222,6 +228,13 @@ public partial class GameBootstrap
         outline.effectDistance = new Vector2(1.5f, -1.5f);
         item.Root   = cardRoot;
         item.CardBg = cardBg;
+
+        RectTransform unlockGlowRect = CreateUiObject("UnlockGlow", cardRoot).GetComponent<RectTransform>();
+        StretchRect(unlockGlowRect, 0f, 0f, 0f, 0f);
+        Image unlockGlow = unlockGlowRect.gameObject.AddComponent<Image>();
+        unlockGlow.color = Color.clear;
+        unlockGlow.raycastTarget = false;
+        item.UnlockGlow = unlockGlow;
 
         RectTransform accentStrip = CreateUiObject("Icon", cardRoot).GetComponent<RectTransform>();
         accentStrip.anchorMin = new Vector2(0.5f, 1f);

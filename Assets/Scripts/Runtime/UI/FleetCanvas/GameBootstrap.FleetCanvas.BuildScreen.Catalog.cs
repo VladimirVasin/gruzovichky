@@ -102,6 +102,13 @@ public partial class GameBootstrap
         cat.HeaderRoot = headerRoot;
         cat.HeaderBg = headerBg;
 
+        RectTransform unlockGlowRect = CreateUiObject("UnlockGlow", headerRoot).GetComponent<RectTransform>();
+        StretchRect(unlockGlowRect, 0f, 0f, 0f, 0f);
+        Image unlockGlow = unlockGlowRect.gameObject.AddComponent<Image>();
+        unlockGlow.color = Color.clear;
+        unlockGlow.raycastTarget = false;
+        cat.UnlockGlow = unlockGlow;
+
         RectTransform iconRoot = CreateUiObject("Icon", headerRoot).GetComponent<RectTransform>();
         iconRoot.anchorMin = new Vector2(0.5f, 1f);
         iconRoot.anchorMax = new Vector2(0.5f, 1f);
@@ -307,6 +314,8 @@ public partial class GameBootstrap
 
     private void UpdateBuildScreenDockAnimation()
     {
+        TickBuildUnlockPulseTimers();
+
         buildScreenPanelAnimation = Mathf.MoveTowards(buildScreenPanelAnimation, isBuildPanelOpen ? 1f : 0f, Time.unscaledDeltaTime * 5.8f);
         float panelT = SmootherStep01(buildScreenPanelAnimation);
         if (buildScreenUi.PanelGroup != null)
@@ -354,10 +363,16 @@ public partial class GameBootstrap
             bool selected = i == selectedBuildCategoryIndex;
             float categoryTarget = category.IsHovered || selected ? 1f : 0f;
             category.HoverT = Mathf.MoveTowards(category.HoverT, categoryTarget, Time.unscaledDeltaTime * 7f);
-            category.HeaderRoot.localScale = Vector3.one * Mathf.Lerp(1f, selected ? 1.09f : 1.05f, SmootherStep01(category.HoverT));
+            float categoryPulse = GetBuildCategoryUnlockPulse(category);
+            float categoryPulseWave = categoryPulse > 0f ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 9.5f) : 0f;
+            category.HeaderRoot.localScale = Vector3.one * (Mathf.Lerp(1f, selected ? 1.09f : 1.05f, SmootherStep01(category.HoverT)) + categoryPulse * Mathf.Lerp(0.015f, 0.055f, categoryPulseWave));
+            if (category.UnlockGlow != null)
+            {
+                category.UnlockGlow.color = new Color(1f, 0.76f, 0.24f, categoryPulse * Mathf.Lerp(0.04f, 0.20f, categoryPulseWave));
+            }
             if (category.IconRoot != null)
             {
-                category.IconRoot.anchoredPosition = new Vector2(0f, -7f + Mathf.Lerp(0f, 3f, SmootherStep01(category.HoverT)));
+                category.IconRoot.anchoredPosition = new Vector2(0f, -7f + Mathf.Lerp(0f, 3f, SmootherStep01(category.HoverT)) + categoryPulse * Mathf.Lerp(0f, 2f, categoryPulseWave));
             }
 
             for (int j = 0; j < category.Items.Length; j++)
@@ -372,9 +387,71 @@ public partial class GameBootstrap
                 float itemTarget = item.IsHovered || active ? 1f : 0f;
                 item.HoverT = Mathf.MoveTowards(item.HoverT, itemTarget, Time.unscaledDeltaTime * 7f);
                 float hoverT = SmootherStep01(item.HoverT);
-                item.Root.localScale = Vector3.one * Mathf.Lerp(1f, active ? 1.08f : 1.045f, hoverT);
+                float itemPulse = GetBuildToolUnlockPulse(item.Tool);
+                float itemPulseWave = itemPulse > 0f ? 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 10.8f + j * 0.7f) : 0f;
+                item.Root.localScale = Vector3.one * (Mathf.Lerp(1f, active ? 1.08f : 1.045f, hoverT) + itemPulse * Mathf.Lerp(0.02f, 0.07f, itemPulseWave));
+                if (item.UnlockGlow != null)
+                {
+                    item.UnlockGlow.color = new Color(1f, 0.78f, 0.26f, itemPulse * Mathf.Lerp(0.04f, 0.24f, itemPulseWave));
+                }
             }
         }
+    }
+
+    private void TickBuildUnlockPulseTimers()
+    {
+        if (buildToolUnlockPulseTimers.Count == 0 || (!isBuildPanelOpen && buildScreenPanelAnimation <= 0f))
+        {
+            return;
+        }
+
+        buildPulseScratch.Clear();
+        foreach (KeyValuePair<BuildTool, float> kv in buildToolUnlockPulseTimers)
+        {
+            float remaining = kv.Value - Time.unscaledDeltaTime;
+            if (remaining <= 0f)
+            {
+                buildPulseScratch.Add(kv.Key);
+            }
+            else
+            {
+                buildPulseScratchValues[kv.Key] = remaining;
+            }
+        }
+
+        foreach (KeyValuePair<BuildTool, float> kv in buildPulseScratchValues)
+        {
+            buildToolUnlockPulseTimers[kv.Key] = kv.Value;
+        }
+        buildPulseScratchValues.Clear();
+
+        for (int i = 0; i < buildPulseScratch.Count; i++)
+        {
+            buildToolUnlockPulseTimers.Remove(buildPulseScratch[i]);
+        }
+    }
+
+    private float GetBuildToolUnlockPulse(BuildTool tool)
+    {
+        return buildToolUnlockPulseTimers.TryGetValue(tool, out float remaining)
+            ? Mathf.Clamp01(remaining / BuildUnlockPulseDuration)
+            : 0f;
+    }
+
+    private float GetBuildCategoryUnlockPulse(BuildCategoryUi category)
+    {
+        if (category?.Items == null)
+        {
+            return 0f;
+        }
+
+        float pulse = 0f;
+        for (int i = 0; i < category.Items.Length; i++)
+        {
+            pulse = Mathf.Max(pulse, GetBuildToolUnlockPulse(category.Items[i].Tool));
+        }
+
+        return pulse;
     }
 
     private void AddBuildHoverHandlers(GameObject target, System.Action<bool> setHovered)
