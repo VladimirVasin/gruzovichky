@@ -172,6 +172,7 @@ public partial class GameBootstrap
 
     private void OnDestroy()
     {
+        ReleaseBarInteriorSceneResources();
         ClearVisualMaterialCache();
         SessionDebugLogger.EndSession("Play mode object destroyed");
     }
@@ -205,8 +206,8 @@ public partial class GameBootstrap
             return;
         }
 
-        bool blockPlayerInputForTutorial = isTutorialOpen || isCitySocialRequestSceneOpen;
-        if (!blockPlayerInputForTutorial)
+        bool blockPlayerInputForOverlay = isTutorialOpen || isCitySocialRequestSceneOpen || isBarInteriorSceneOpen;
+        if (!blockPlayerInputForOverlay)
         {
             HandleHotkeys();
             HandleCameraInput();
@@ -361,6 +362,7 @@ public partial class GameBootstrap
         UpdateTutorialGoalsRuntime();
         UpdateCityRequestGoalHudRuntime();
         UpdateCitySocialRequestSceneHudRuntime();
+        UpdateBarInteriorSceneRuntime();
         CloseQuickHudsWhenBlockingHudIsOpen();
         UpdateTruckQuickHud();
         UpdateLocalBusQuickHud();
@@ -523,7 +525,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (isCitySocialRequestSceneOpen)
+        if (isCitySocialRequestSceneOpen || isBarInteriorSceneOpen)
         {
             return;
         }

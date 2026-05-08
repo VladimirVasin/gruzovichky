@@ -99,6 +99,7 @@ public partial class GameBootstrap
                isStatesPanelOpen ||
                isSocialGraphPanelOpen ||
                isCityHallPanelOpen ||
+               isBarInteriorSceneOpen ||
                activeBuildTool != BuildTool.None;
     }
 
@@ -443,7 +444,8 @@ public partial class GameBootstrap
             !isWorldMapPanelOpen &&
             !isStatesPanelOpen &&
             !isSocialGraphPanelOpen &&
-            !isCityHallPanelOpen;
+            !isCityHallPanelOpen &&
+            !isBarInteriorSceneOpen;
 
         if (buildingQuickHud.CanvasRoot.activeSelf != shouldShow)
         {
@@ -616,6 +618,10 @@ public partial class GameBootstrap
                 selectedLocation = null;
                 selectedLocalStopIndex = -1;
                 selectedPersonalHouseIndex = -1;
+                break;
+            case LocationType.Bar:
+                TryGetSelectedBuilding(out LocationData barLocation, out _, out _);
+                StartBarInteriorScene(barLocation);
                 break;
             case LocationType.Docks:
                 LogUiInput("Quick HUD: cycled Dock orders");
