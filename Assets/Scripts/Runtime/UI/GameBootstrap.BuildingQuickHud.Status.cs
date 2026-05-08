@@ -319,7 +319,7 @@ public partial class GameBootstrap
         {
             LocationType.Parking => "Open Fleet",
             LocationType.Motel => "Open Drivers",
-            LocationType.LaborExchange => "Open Vacancies",
+            LocationType.LaborExchange => IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0411\u0438\u0440\u0436\u0443" : "Open Labor Exchange",
             LocationType.CityHall => IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0420\u0430\u0442\u0443\u0448\u0443" : "Open City Hall",
             LocationType.Docks => "Cycle Dock Orders",
             _ => "Open Resources"

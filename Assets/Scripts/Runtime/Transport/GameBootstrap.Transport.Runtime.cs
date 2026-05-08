@@ -227,7 +227,7 @@ public partial class GameBootstrap
     private void SeparateOverlappingDrivers()
     {
         if (driverAgents.Count < 2) return;
-        const float minSep = DriverIdlePersonalSpace * 0.55f;
+        const float minSep = DriverIdlePersonalSpace;
         float pushStrength = 2.2f * Time.deltaTime * gameSpeedMultiplier;
         for (int i = 0; i < driverAgents.Count; i++)
         {
@@ -648,17 +648,19 @@ public partial class GameBootstrap
     private void ApplyDriverPose(DriverAgent driver, float swing, float bob)
     {
         bool isConversing = IsDriverIdleConversing(driver);
+        float speechWeight = GetWorkerIdleDialogueSpeechWeight(driver);
+        float conversationEnergy = isConversing ? Mathf.Clamp01(0.35f + speechWeight * 0.8f) : 0f;
         driver.DriverVisualRoot.localPosition = new Vector3(0f, bob, 0f);
-        driver.DriverVisualRoot.localRotation = Quaternion.Euler(0f, 0f, isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.3f) * 1.4f : swing * 2.5f);
+        driver.DriverVisualRoot.localRotation = Quaternion.Euler(0f, 0f, isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.3f) * Mathf.Lerp(1.2f, 3.1f, conversationEnergy) : swing * 2.5f);
 
         if (driver.DriverBodyTransform != null)
         {
-            driver.DriverBodyTransform.localRotation = Quaternion.Euler(isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.1f) * 3.5f : swing * 4f, 0f, 0f);
+            driver.DriverBodyTransform.localRotation = Quaternion.Euler(isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.1f) * Mathf.Lerp(2.6f, 6.4f, conversationEnergy) : swing * 4f, 0f, 0f);
         }
 
         if (driver.DriverHeadTransform != null)
         {
-            float headPitch = isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.7f) * 3.2f : -swing * 2f;
+            float headPitch = isConversing ? Mathf.Sin(driver.WalkAnimationTime * 1.7f) * Mathf.Lerp(2.4f, 7.2f, conversationEnergy) : -swing * 2f;
             driver.DriverHeadTransform.localRotation = Quaternion.Euler(headPitch, 0f, 0f);
         }
 
@@ -670,7 +672,7 @@ public partial class GameBootstrap
         if (driver.DriverLeftArmTransform != null)
         {
             float leftArmPitch = isConversing
-                ? 10f + Mathf.Sin(driver.WalkAnimationTime * 1.9f + driver.DriverId * 0.4f) * 16f
+                ? 8f + Mathf.Sin(driver.WalkAnimationTime * 1.9f + driver.DriverId * 0.4f) * Mathf.Lerp(9f, 25f, conversationEnergy)
                 : swing * 28f;
             driver.DriverLeftArmTransform.localRotation = Quaternion.Euler(leftArmPitch, 0f, 0f);
         }
@@ -679,7 +681,7 @@ public partial class GameBootstrap
         {
             float carryOffset = driver.DriverFuelCanTransform != null && driver.DriverFuelCanTransform.gameObject.activeSelf ? 18f : 0f;
             float rightArmPitch = isConversing
-                ? -12f + Mathf.Sin(driver.WalkAnimationTime * 2.1f + driver.DriverId * 0.7f + 1.3f) * 20f
+                ? -10f + Mathf.Sin(driver.WalkAnimationTime * 2.1f + driver.DriverId * 0.7f + 1.3f) * Mathf.Lerp(10f, 29f, conversationEnergy)
                 : -swing * 28f - carryOffset;
             driver.DriverRightArmTransform.localRotation = Quaternion.Euler(rightArmPitch, 0f, 0f);
         }

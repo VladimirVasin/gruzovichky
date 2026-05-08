@@ -590,12 +590,16 @@ public partial class GameBootstrap
                 isBuildPanelOpen = false;
                 break;
             case LocationType.LaborExchange:
-                LogUiInput("Quick HUD: opened Vacancies from Labor Exchange");
+                LogUiInput("Quick HUD: opened Labor Exchange staffing overview");
                 isShiftsPanelOpen = true;
                 isFleetPanelOpen = false;
                 isDriversPanelOpen = false;
                 isResourcesPanelOpen = false;
+                isEconomyPanelOpen = false;
+                isTradePanelOpen = false;
                 isBuildPanelOpen = false;
+                isStatesPanelOpen = false;
+                isWorldMapPanelOpen = false;
                 break;
             case LocationType.CityHall:
                 LogUiInput("Quick HUD: opened City Hall");

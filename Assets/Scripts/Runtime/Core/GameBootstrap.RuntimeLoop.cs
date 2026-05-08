@@ -344,6 +344,7 @@ public partial class GameBootstrap
         SeparateOverlappingDrivers();
         UpdateCityHallRuntime();
         UpdateCityHallRequestMarkerRuntime();
+        UpdateWorkerIdleDialogueRuntime();
         UpdateMoneyPopup();
         UpdateFleetScreenUi();
         UpdateDriversScreenUi();

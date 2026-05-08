@@ -466,37 +466,64 @@ public partial class GameBootstrap : MonoBehaviour
             }
 
             Vector2Int candidateCell = WorldToCell(candidate);
+            if (candidateCell == startCell)
+            {
+                continue;
+            }
+
             List<Vector2Int> path = FindDriverWalkPath(startCell, candidateCell, DriverRescuePhase.IdleWander);
             if (path == null || path.Count == 0 || path.Count - 1 > maxIdleWanderCellSteps)
             {
                 continue;
             }
 
-            bool blockedByOtherDriver = false;
-            for (int i = 0; i < driverAgents.Count; i++)
-            {
-                DriverAgent other = driverAgents[i];
-                if (other == null || other == driver || other.DriverObject == null || !other.DriverObject.activeSelf)
-                {
-                    continue;
-                }
-
-                Vector3 otherDelta = other.DriverObject.transform.position - candidate;
-                otherDelta.y = 0f;
-                if (otherDelta.sqrMagnitude < personalSpaceSqr)
-                {
-                    blockedByOtherDriver = true;
-                    break;
-                }
-            }
-
-            if (!blockedByOtherDriver)
+            if (!IsIdleWanderTargetReserved(driver, candidate, candidateCell, personalSpaceSqr))
             {
                 return candidate;
             }
         }
 
         return startPosition;
+    }
+
+    private bool IsIdleWanderTargetReserved(DriverAgent driver, Vector3 candidate, Vector2Int candidateCell, float personalSpaceSqr)
+    {
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent other = driverAgents[i];
+            if (other == null || other == driver || other.DriverObject == null || !other.DriverObject.activeSelf)
+            {
+                continue;
+            }
+
+            Vector3 otherPosition = other.DriverObject.transform.position;
+            Vector3 otherDelta = otherPosition - candidate;
+            otherDelta.y = 0f;
+            if (otherDelta.sqrMagnitude < personalSpaceSqr || WorldToCell(otherPosition) == candidateCell)
+            {
+                return true;
+            }
+
+            if (other.WalkPhase != DriverRescuePhase.IdleWander)
+            {
+                continue;
+            }
+
+            Vector3 otherTarget = other.WalkTargetWorld;
+            if (other.WalkPath.Count > 0)
+            {
+                otherTarget = other.WalkPath[other.WalkPath.Count - 1];
+            }
+
+            Vector3 targetDelta = otherTarget - candidate;
+            targetDelta.y = 0f;
+            if (targetDelta.sqrMagnitude < personalSpaceSqr || WorldToCell(otherTarget) == candidateCell)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool IsLowPriorityIdleActivity(DriverAgent driver)

@@ -28,7 +28,7 @@ public partial class GameBootstrap
 
         if (shiftsScreenUi.TitleText != null)
         {
-            shiftsScreenUi.TitleText.text = ru ? "Вакансии" : "Vacancies";
+            shiftsScreenUi.TitleText.text = GetStaffingScreenTitle(ru);
         }
 
         int freeCount = 0;
@@ -42,9 +42,7 @@ public partial class GameBootstrap
 
         if (shiftsScreenUi.HeaderCountText != null)
         {
-            shiftsScreenUi.HeaderCountText.text = ru
-                ? $"{freeCount} свободно / {vacancyViewModels.Count} всего"
-                : $"{freeCount} free / {vacancyViewModels.Count} total";
+            shiftsScreenUi.HeaderCountText.text = GetStaffingScreenCountLabel(freeCount, vacancyViewModels.Count, ru);
         }
 
         EnforceShiftsWindowLayout();
@@ -93,7 +91,7 @@ public partial class GameBootstrap
 
         if (shiftsScreenUi.SelectionTitleText != null)
         {
-            shiftsScreenUi.SelectionTitleText.text = ru ? "Контекст назначения" : "Assignment Context";
+            shiftsScreenUi.SelectionTitleText.text = ru ? "Обзор рабочего места" : "Labor Market";
         }
         UpdateVacancyContextCard(selectedVacancy);
         BuildVacancyFlowOptions(selectedVacancy);
@@ -783,13 +781,15 @@ public partial class GameBootstrap
         if (shiftsScreenUi.VacancyFlowTitleText != null)
         {
             shiftsScreenUi.VacancyFlowTitleText.text = vacancy == null
-                ? (ru ? "Шаги назначения" : "Assignment Steps")
+                ? (locations.ContainsKey(LocationType.LaborExchange)
+                    ? (ru ? "\u0410\u0432\u0442\u043e\u043d\u0430\u0451\u043c" : "Automated Hiring")
+                    : (ru ? "\u0420\u0443\u0447\u043d\u044b\u0435 \u0448\u0430\u0433\u0438" : "Manual Steps"))
                 : GetVacancyFlowTitle(vacancy);
         }
         if (shiftsScreenUi.VacancyFlowHintText != null)
         {
             shiftsScreenUi.VacancyFlowHintText.text = vacancy == null
-                ? (ru ? "Выбери вакансию слева, затем пройди короткую цепочку выбора." : "Pick a vacancy on the left, then follow the short assignment chain.")
+                ? GetStaffingScreenEmptyHint(ru)
                 : GetVacancyFlowHint(vacancy);
         }
 
@@ -872,7 +872,9 @@ public partial class GameBootstrap
             VacancyKind.Production when !HasSelectedVacancyShift(vacancy) => ru ? "Подтверди рабочую смену этого здания." : "Confirm this building's work shift.",
             VacancyKind.Service when !HasSelectedVacancyShift(vacancy) => ru ? "Подтверди сервисную смену этого здания." : "Confirm this building's service shift.",
             VacancyKind.Intercity when !HasSelectedVacancyShift(vacancy) => ru ? "Подтверди межгороднюю смену." : "Confirm the intercity duty shift.",
-            _ => ru ? "Выбери доступного рабочего из списка." : "Choose an available worker from the list."
+            _ => locations.ContainsKey(LocationType.LaborExchange)
+                ? (ru ? "\u0411\u0438\u0440\u0436\u0430 \u0437\u0430\u043a\u0440\u043e\u0435\u0442 \u044d\u0442\u043e \u0441\u0430\u043c\u0430; \u0440\u0443\u0447\u043d\u043e\u0439 \u0432\u044b\u0431\u043e\u0440 \u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d \u043a\u0430\u043a override." : "The Labor Exchange can fill this automatically; manual selection remains as an override.")
+                : (ru ? "Выбери доступного рабочего из списка." : "Choose an available worker from the list.")
         };
     }
 

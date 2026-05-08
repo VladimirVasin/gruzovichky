@@ -24,6 +24,7 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 
 #### Build And Roads
 
+- The Build menu is now organized into intent-based categories: Roads & Transport, Logistics & Trade, Production, Housing & Civic, and Services & Leisure.
 - The regular one-cell road remains the active player road tool, while the two-way road segment tool is visible as temporarily under rework.
 - Two-way road segment work still exists behind the disabled tool: click-start/click-finish, Shift axis constraint, lane footprints, and center markings.
 - Build-mode previews are clearer at night thanks to a warm cursor light with blocked-placement tint.
@@ -38,6 +39,12 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 - Idle workers choose a wider range of city interest points, so the town feels less clustered around one building.
 - Workers now have Basic/Vocational/Higher education, profession levels, dynamic vacancy salaries, and fixed-term contracts.
 - Labor Exchange can post vacancies, receive applicants, and auto-staff its higher-education clerk slot when possible.
+- The permanent top-HUD Vacancies entry has been removed from normal play; staffing is now accessed through Labor Exchange, with manual assignment retained as an override/tutorial path.
+- Workers now have bounded recent thoughts, current-priority concerns, and life-opinion summaries shown in the Residents HUD.
+- Workers can own simple inventory items. Kiosk-sold Snack and Coffee are stored on the worker and auto-used before Food/Sleep needs become critical.
+- Worker social relationships now have visible memories, relationship strength, decay, and a Socialite perk effect; idle and coworker contact can grow friendships over time.
+- Workers can form families in Personal Houses, share household pressure, have children, and care about child-care coverage.
+- Automatic worker migration is more persistent and reacts to open-vacancy pressure while still respecting caps and satisfaction pressure.
 
 #### Transport And Services
 
@@ -48,6 +55,10 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 - Trade moved to a dedicated Trade screen with per-resource `No trade`, `Buy up to`, and `Sell surplus` policies.
 - Docks and generated regional routes now drive river/land trading; ships and merchant trucks only act on active policies with built routes.
 - Fuel, Food, and Alcohol were removed as trade/storage resources; services now operate directly through worker needs, fees, and truck refuel orders.
+- Service prices were lowered for the current economy balance: Motel, Bar, and Canteen charge `$8`, while Kiosk Snack/Coffee costs `$4`.
+- Kindergarten is now a buildable service that provides staffed child-care slots for worker families.
+- City Hall is now a buildable civic building with citizen requests, accept/reject choices, visible goal timers, completion rewards, expiry/rejection penalties, and a city-wide Trust score.
+- City Hall can generate a special social-introduction request where the player suggests a topic and watches a short resident conversation resolve into a relationship outcome.
 
 #### Regional Map
 
@@ -64,6 +75,9 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 - Service/town visuals received more atmosphere: smoother roads, building/perimeter night lighting, warmer lights, richer regional map presentation, and small city-life details.
 - Building demolition now has a confirmation modal, and Event Feed notifications render as compact top-right toasts.
 - The HUD now includes current population beside time and treasury.
+- The Workers screen has been rebuilt as a Residents HUD with profile, needs, thoughts, inventory, work, and social-link views.
+- A dedicated `Social` / `Связи` HUD shows citizen relationship graphs with focused views, filters, animated nodes, and hover details.
+- Residents can now show small in-world idle conversation bubbles with synchronized procedural voice syllables.
 - Debug/User tooling is less intrusive for players: noisy debug traces are verbose-only, while important F9 tools remain available for testing.
 
 ## Lo-fi Delivery Co. v.0.0.2

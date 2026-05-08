@@ -11,6 +11,7 @@ Main memory files:
 - `ai/systems-map.md`
 - `ai/architecture-notes.md`
 - `ai/work-log.md`
+- `ai/tutorial-scenario.md`
 
 Reusable prompt templates live in:
 
@@ -65,6 +66,7 @@ the agent must:
 - Treat code as source of truth if memory and code disagree.
 - Identify affected systems before editing.
 - Before broad code searches, consult the System Owner Map in `ai/systems-map.md`.
+- If a change touches `Обучение` / `GameStartMode.Tutorial` or a system taught by that mode, read `ai/tutorial-scenario.md` and compare the planned change against the current Tutorial scenario.
 - Scan only the necessary code.
 - State a short plan before making code changes.
 - Avoid unrelated refactors.
@@ -86,6 +88,14 @@ the agent must:
 - Do not paste code into memory files.
 - `ai/work-log.md` is the frequently updated file.
 - Stable memory files should only be updated when project reality actually changes.
+
+## Tutorial Scenario Rule
+
+- In this project, `Tutorial` means only the player-facing `Обучение` mode (`GameStartMode.Tutorial`).
+- Keep `ai/tutorial-scenario.md` as the plain-text scenario for the current Tutorial-mode flow.
+- For serious gameplay, HUD, staffing, economy, transport, trade, building, or worker-system changes, compare the implementation with `ai/tutorial-scenario.md`.
+- If the change alters Tutorial flow, prerequisites, unlock order, HUD entry points, required buildings/resources, automation/manual-control balance, or goal text, update both the Tutorial implementation and `ai/tutorial-scenario.md` in the same task.
+- If code and `ai/tutorial-scenario.md` disagree, trust code as behavior, then either fix Tutorial or update the scenario so the next agent sees the real current flow.
 
 ## C# Project File Rules
 

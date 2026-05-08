@@ -345,7 +345,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 - `WorkerSimulation`
   needs, shifts, service visits, fallback activities, and life-cycle decisions
 - `ManagementUI`
-  FleetCanvas screens, vacancies, tutorial goals, localization, regional map, event feed, and main-menu options
+  FleetCanvas screens, Labor Exchange staffing overview, tutorial goals, localization, regional map, event feed, and main-menu options
 
 ## Cleanup Reality
 

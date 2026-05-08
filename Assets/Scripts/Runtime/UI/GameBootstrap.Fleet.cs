@@ -4,23 +4,25 @@ using UnityEngine.EventSystems;
 
 public partial class GameBootstrap
 {
-    // в”Ђв”Ђ Menu bar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // Menu bar
 
     private const float MenuBtnMaxW = 90f, MenuBtnMinW = 62f, MenuBtnH = 40f, MenuBtnGap = 5f;
-    private const int MenuBtnCount = 9;
+    private const int DefaultMenuBtnCount = 8;
 
     private Rect GetMenuBarRect()
     {
         float buttonWidth = GetMenuButtonWidth();
-        float w = MenuBtnCount * buttonWidth + (MenuBtnCount + 1) * MenuBtnGap;
+        int buttonCount = GetVisibleMenuButtonCount();
+        float w = buttonCount * buttonWidth + (buttonCount + 1) * MenuBtnGap;
         return new Rect(12f, 12f, w, MenuBtnH + 10f);
     }
 
     private float GetMenuButtonWidth()
     {
         float safeRight = Mathf.Max(620f, GetWeatherHudRect().x - 18f);
-        float available = Mathf.Max(0f, safeRight - 12f - (MenuBtnCount + 1) * MenuBtnGap);
-        return Mathf.Clamp(available / MenuBtnCount, MenuBtnMinW, MenuBtnMaxW);
+        int buttonCount = GetVisibleMenuButtonCount();
+        float available = Mathf.Max(0f, safeRight - 12f - (buttonCount + 1) * MenuBtnGap);
+        return Mathf.Clamp(available / buttonCount, MenuBtnMinW, MenuBtnMaxW);
     }
 
     private Rect GetFleetPanelRect()
@@ -155,7 +157,11 @@ public partial class GameBootstrap
             float x = bar.x + MenuBtnGap;
             MenuBtn("Workers", "Residents", ref isDriversPanelOpen, x); x += buttonWidth + MenuBtnGap;
             MenuBtn("Social", "Social", ref isSocialGraphPanelOpen, x); x += buttonWidth + MenuBtnGap;
-            MenuBtn("Vacancies", "Vacancies", ref isShiftsPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            if (ShouldShowTutorialStaffingMenuButton())
+            {
+                MenuBtn("Vacancies", "Staffing", ref isShiftsPanelOpen, x, highlight: isTutorialGoalsActive);
+                x += buttonWidth + MenuBtnGap;
+            }
             MenuBtn("Resources", "Resources", ref isResourcesPanelOpen, x); x += buttonWidth + MenuBtnGap;
             MenuBtn("Economy", "Economy", ref isEconomyPanelOpen, x); x += buttonWidth + MenuBtnGap;
             MenuBtn("Trade", "Trade", ref isTradePanelOpen, x); x += buttonWidth + MenuBtnGap;
@@ -170,13 +176,13 @@ public partial class GameBootstrap
         }
     }
 
-    // в”Ђв”Ђ Fleet panel в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // Fleet panel
 
     private void DrawFleetPanel()
     {
     }
 
-    // в”Ђв”Ђ Shifts panel в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // Shifts panel
 
     private static readonly int[]    ShiftPresetHours = { 6, 14, 22 };
     private static readonly string[] ShiftNames       = { "Morning", "Evening", "Night" };

@@ -22,10 +22,12 @@ Global rules for all templates:
 - Read only the AI memory files relevant to the task after that.
 - Treat code as the source of truth if memory and code disagree.
 - Identify affected systems before editing.
+- If the task touches `Обучение` / `GameStartMode.Tutorial` or a system taught by that mode, read `ai/tutorial-scenario.md` and compare the planned change against the current Tutorial scenario.
 - Scan only the relevant code.
 - State a short plan before making code changes.
 - Avoid unrelated refactors.
 - Update `ai/work-log.md` after implementation.
+- Update `ai/tutorial-scenario.md` when serious changes alter the Tutorial-mode player path, prerequisites, unlock order, HUD entry points, required buildings/resources, automation/manual-control balance, or goal text.
 - Update other AI memory files only if structure, system ownership, or architecture actually changed.
 - At the start of every final response, state which template was used.
 - If the template was explicitly requested by the user, say that explicitly.

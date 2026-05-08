@@ -190,13 +190,13 @@ public partial class GameBootstrap
         }
     }
 
-    private Vector3 GetDriverIdleMotelPosition(int driverIndex)
+    private Vector3 GetDriverIdleMotelPosition(int driverIndex, DriverAgent driver = null)
     {
         Vector3 position = GetDriverIdleMotelWanderPosition(driverIndex, driverIndex);
         for (int attempt = 0; attempt < 28; attempt++)
         {
             Vector3 candidate = GetDriverIdleMotelWanderPosition(driverIndex, driverIndex + attempt * 3);
-            if (!WouldIdleDriverOverlapAtPosition(null, candidate))
+            if (!IsDriverIdlePositionReserved(driver, candidate))
             {
                 position = candidate;
                 break;
@@ -293,6 +293,61 @@ public partial class GameBootstrap
         return frontageBase;
     }
 
+    private bool IsDriverIdlePositionReserved(DriverAgent driver, Vector3 candidate)
+    {
+        float personalSpaceSqr = DriverIdlePersonalSpace * DriverIdlePersonalSpace;
+        Vector2Int candidateCell = WorldToCell(candidate);
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent other = driverAgents[i];
+            if (other == null || other == driver || other.DriverObject == null)
+            {
+                continue;
+            }
+
+            if (other.DriverObject.activeSelf && IsDriverIdlePointTooClose(other.DriverObject.transform.position, candidate, candidateCell, personalSpaceSqr))
+            {
+                return true;
+            }
+
+            if (IsDriverIdlePointTooClose(other.MotelIdlePosition, candidate, candidateCell, personalSpaceSqr))
+            {
+                return true;
+            }
+
+            if (other.WalkPhase != DriverRescuePhase.None &&
+                IsDriverIdlePointTooClose(other.WalkTargetWorld, candidate, candidateCell, personalSpaceSqr))
+            {
+                return true;
+            }
+
+            if (other.WalkPath.Count <= 0)
+            {
+                continue;
+            }
+
+            Vector3 finalWaypoint = other.WalkPath[other.WalkPath.Count - 1];
+            if (IsDriverIdlePointTooClose(finalWaypoint, candidate, candidateCell, personalSpaceSqr))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsDriverIdlePointTooClose(Vector3 reservedPosition, Vector3 candidate, Vector2Int candidateCell, float personalSpaceSqr)
+    {
+        if (reservedPosition == Vector3.zero)
+        {
+            return false;
+        }
+
+        Vector3 delta = reservedPosition - candidate;
+        delta.y = 0f;
+        return delta.sqrMagnitude < personalSpaceSqr || WorldToCell(reservedPosition) == candidateCell;
+    }
+
     private Vector3 GetIntercityStopIdlePosition(int driverIndex, int pointIndex)
     {
         Vector3 center = GetLocationCenter(LocationType.IntercityStop);
@@ -345,7 +400,7 @@ public partial class GameBootstrap
             }
 
             Vector3 current = driver.DriverObject.transform.position;
-            driver.MotelIdlePosition = GetDriverIdleMotelPosition(i);
+            driver.MotelIdlePosition = GetDriverIdleMotelPosition(i, driver);
             driver.WalkTargetWorld = driver.MotelIdlePosition;
             driver.WalkPhase = DriverRescuePhase.IdleWander;
             driver.IdleWanderPauseTimer = 0f;

@@ -347,6 +347,8 @@ public partial class GameBootstrap : MonoBehaviour
         DriverAgent bestPartner = null;
         float bestDistanceSqr = DriverIdleConversationDistance * DriverIdleConversationDistance;
         Vector3 driverPosition = driver.DriverObject.transform.position;
+        Vector2Int driverCell = WorldToCell(driverPosition);
+        float minConversationDistanceSqr = DriverIdlePersonalSpace * DriverIdlePersonalSpace;
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent candidate = driverAgents[i];
@@ -358,7 +360,9 @@ public partial class GameBootstrap : MonoBehaviour
             Vector3 delta = candidate.DriverObject.transform.position - driverPosition;
             delta.y = 0f;
             float sqrDistance = delta.sqrMagnitude;
-            if (sqrDistance < 0.12f || sqrDistance > bestDistanceSqr)
+            if (WorldToCell(candidate.DriverObject.transform.position) == driverCell ||
+                sqrDistance < minConversationDistanceSqr ||
+                sqrDistance > bestDistanceSqr)
             {
                 continue;
             }
@@ -379,7 +383,7 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
-        float duration = Random.Range(DriverIdleConversationDurationMin, DriverIdleConversationDurationMax);
+        float duration = StartWorkerIdleDialogue(driver, bestPartner);
         driver.IdleConversationTimer = duration;
         driver.IdleConversationPartnerId = bestPartner.DriverId;
         bestPartner.IdleConversationTimer = duration;
@@ -424,7 +428,8 @@ public partial class GameBootstrap : MonoBehaviour
         Vector3 delta = partner.DriverObject.transform.position - driver.DriverObject.transform.position;
         delta.y = 0f;
         float sqrDistance = delta.sqrMagnitude;
-        return sqrDistance >= 0.12f &&
+        return WorldToCell(partner.DriverObject.transform.position) != WorldToCell(driver.DriverObject.transform.position) &&
+               sqrDistance >= DriverIdlePersonalSpace * DriverIdlePersonalSpace * 0.64f &&
                sqrDistance <= DriverIdleConversationDistance * DriverIdleConversationDistance * 1.2f;
     }
 
@@ -436,6 +441,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         int partnerId = driver.IdleConversationPartnerId;
+        StopWorkerIdleDialogue(driver.DriverId, partnerId);
         driver.IdleConversationTimer = 0f;
         driver.IdleConversationPartnerId = -1;
         driver.IdleConversationCooldownTimer = Random.Range(DriverIdleConversationCooldownMin, DriverIdleConversationCooldownMax);

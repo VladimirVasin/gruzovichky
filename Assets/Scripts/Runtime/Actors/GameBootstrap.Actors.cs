@@ -637,7 +637,7 @@ public partial class GameBootstrap
         driver.DriverFlashlightLight.intensity = 0f;
         driver.DriverFlashlightLight.enabled = false;
 
-        driver.MotelIdlePosition = GetDriverIdleMotelPosition(driver.DriverId - 1);
+        driver.MotelIdlePosition = GetDriverIdleMotelPosition(driver.DriverId - 1, driver);
         driver.DriverObject.transform.position = driver.MotelIdlePosition;
         driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
         driver.WalkTargetWorld = driver.MotelIdlePosition;

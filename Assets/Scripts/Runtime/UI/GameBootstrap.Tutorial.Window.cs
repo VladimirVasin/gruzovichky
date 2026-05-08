@@ -312,7 +312,7 @@ public partial class GameBootstrap
         {
             isBuildPanelOpen = false;
             isShiftsScreenDirty = true;
-            LogUiInput("Tutorial: Lumberjack Camp assignment prompt closed; waiting for player to open Vacancies.");
+            LogUiInput("Tutorial: Lumberjack Camp assignment prompt closed; waiting for player to open Staffing.");
         }
 
         if (activeTutorialTrigger == TutorialTrigger.UserTruckPurchasedArrivalInfo)

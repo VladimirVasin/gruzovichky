@@ -16,6 +16,8 @@ This folder is intentionally small. Code remains the source of truth. These file
   Active and recently completed work. Use this for task state and short implementation notes.
 - `release-notes.md`
   Stable baseline for in-game Patch Notes by version. Use it to compare documented releases against current code when updating patch notes.
+- `tutorial-scenario.md`
+  Plain-text scenario for the current `Обучение` / `GameStartMode.Tutorial` flow. Use it to keep Tutorial aligned with serious gameplay, HUD, staffing, economy, transport, trade, and building changes.
 
 ## Memory Types
 
@@ -44,7 +46,8 @@ Rule:
 4. Read `architecture-notes.md`.
 5. Read `work-log.md`.
 6. Read `release-notes.md` when the task involves version labels, changelogs, release contents, or Patch Notes.
-7. Scan only the code relevant to the requested change.
+7. Read `tutorial-scenario.md` when the task touches Tutorial mode or a system currently taught by Tutorial.
+8. Scan only the code relevant to the requested change.
 
 ## Workflow Contract
 
@@ -55,6 +58,7 @@ Rule:
 - If memory and code disagree, trust code and update memory after finishing.
 - Identify the affected systems before editing.
 - Use `ai/systems-map.md` -> `System Owner Map` to pick the first files to inspect.
+- If the affected system is taught by `Обучение` / `GameStartMode.Tutorial`, compare the change against `ai/tutorial-scenario.md` before editing.
 - Write a short plan before changing code.
 - Do not start editing before the plan is stated.
 
@@ -84,6 +88,7 @@ Rule:
 ### After implementation
 
 - Update `work-log.md` first.
+- Update `tutorial-scenario.md` when serious changes alter the Tutorial-mode player path, prerequisites, unlock order, HUD entry points, required buildings/resources, automation/manual-control balance, or goal text.
 - Update `project-overview.md` only if visible project structure or key responsibilities changed.
 - Update `systems-map.md` if system ownership, file involvement, owner-map paths, or owner-map responsibilities changed.
 - Update `architecture-notes.md` only if the real architecture changed or a new hotspot/refactor seam appeared.
