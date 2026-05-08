@@ -51,6 +51,7 @@ public partial class GameBootstrap
         barInteriorScenePhase = BarInteriorScenePhase.Opening;
         barInteriorSceneTimer = 0f;
         barInteriorLightTimer = 0f;
+        PrepareBarInteriorSceneAnimation();
 
         if (buildingQuickHud?.CanvasRoot != null)
         {
@@ -192,6 +193,7 @@ public partial class GameBootstrap
 
         Transform room = new GameObject("LargeBarRoom").transform;
         room.SetParent(barInteriorRoot.transform, false);
+        ResetBarInteriorAnimationState();
 
         CreateBarInteriorBox(room, "Floor", new Vector3(0f, -0.04f, 0f), new Vector3(15.8f, 0.08f, 10.8f), new Color(0.31f, 0.22f, 0.15f), VisualSmoothnessWood);
         CreateBarInteriorBox(room, "BackWall", new Vector3(0f, 1.55f, 4.95f), new Vector3(15.9f, 3.2f, 0.14f), new Color(0.20f, 0.09f, 0.08f), VisualSmoothnessBuildingWall);
@@ -200,6 +202,7 @@ public partial class GameBootstrap
         CreateBarInteriorBox(room, "StagePlatform", new Vector3(4.85f, 0.08f, 3.2f), new Vector3(3.4f, 0.18f, 2.05f), new Color(0.18f, 0.13f, 0.14f), VisualSmoothnessWood);
         CreateBarInteriorBox(room, "EntranceGlow", new Vector3(-6.8f, 1f, -4.85f), new Vector3(1.4f, 2f, 0.08f), new Color(0.98f, 0.70f, 0.32f), VisualSmoothnessGlass);
 
+        CreateBarInteriorCozyDecor(room);
         CreateBarInteriorBarCounter(room);
         CreateBarInteriorTables(room);
         CreateBarInteriorPatrons(room);
@@ -245,7 +248,6 @@ public partial class GameBootstrap
             CreateBarInteriorStool(room, new Vector3(x, 0f, 2.48f), 180f);
         }
 
-        CreateBarInteriorTextSign(room, "BarSign", "BAR", new Vector3(-2.2f, 2.72f, 4.82f), 0.24f, new Color(1f, 0.72f, 0.28f));
     }
 
     private void CreateBarInteriorTables(Transform room)
@@ -278,6 +280,7 @@ public partial class GameBootstrap
         CreateBarInteriorCylinder(group, "TableLeg", new Vector3(0f, 0.28f, 0f), new Vector3(0.08f, 0.28f, 0.08f), new Color(0.18f, 0.12f, 0.08f), VisualSmoothnessWood);
         CreateBarInteriorCylinder(group, "GlassA", new Vector3(-0.18f, 0.68f, 0.12f), new Vector3(0.06f, 0.10f, 0.06f), new Color(0.78f, 0.90f, 0.96f, 0.82f), VisualSmoothnessGlass);
         CreateBarInteriorCylinder(group, "GlassB", new Vector3(0.24f, 0.68f, -0.10f), new Vector3(0.06f, 0.10f, 0.06f), new Color(0.92f, 0.62f, 0.26f, 0.88f), VisualSmoothnessGlass);
+        CreateBarInteriorTableCandle(group, new Vector3(0.08f, 0.74f, 0.05f), position.x + position.z);
 
         CreateBarInteriorStool(group, new Vector3(-0.92f, 0f, 0f), 90f);
         CreateBarInteriorStool(group, new Vector3(0.92f, 0f, 0f), -90f);
@@ -287,16 +290,16 @@ public partial class GameBootstrap
 
     private void CreateBarInteriorPatrons(Transform room)
     {
-        CreateBarInteriorPatron(room, "PatronCounterA", new Vector3(-4.4f, 0f, 1.98f), 188f, new Color(0.26f, 0.44f, 0.62f), new Color(0.20f, 0.12f, 0.06f), false);
-        CreateBarInteriorPatron(room, "PatronCounterB", new Vector3(-2.7f, 0f, 1.96f), 178f, new Color(0.70f, 0.28f, 0.22f), new Color(0.74f, 0.50f, 0.22f), false);
-        CreateBarInteriorPatron(room, "PatronTableA", new Vector3(-5.75f, 0f, -1.35f), 80f, new Color(0.26f, 0.58f, 0.34f), new Color(0.08f, 0.06f, 0.04f), true);
-        CreateBarInteriorPatron(room, "PatronTableB", new Vector3(-0.48f, 0f, -1.85f), -82f, new Color(0.62f, 0.34f, 0.68f), new Color(0.36f, 0.20f, 0.12f), true);
-        CreateBarInteriorPatron(room, "PatronDanceA", new Vector3(2.05f, 0f, 1.28f), -18f, new Color(0.92f, 0.66f, 0.20f), new Color(0.24f, 0.18f, 0.10f), false);
-        CreateBarInteriorPatron(room, "PatronDanceB", new Vector3(3.08f, 0f, 1.06f), 28f, new Color(0.22f, 0.62f, 0.66f), new Color(0.58f, 0.38f, 0.18f), false);
-        CreateBarInteriorPatron(room, "Bartender", new Vector3(-6.15f, 0f, 4.05f), -8f, new Color(0.92f, 0.86f, 0.70f), new Color(0.16f, 0.12f, 0.08f), false);
+        CreateBarInteriorPatron(room, "PatronCounterA", new Vector3(-4.4f, 0f, 1.98f), 188f, new Color(0.26f, 0.44f, 0.62f), new Color(0.20f, 0.12f, 0.06f), false, BarInteriorPatronRole.CounterDrinker, 1, 0.1f);
+        CreateBarInteriorPatron(room, "PatronCounterB", new Vector3(-2.7f, 0f, 1.96f), 178f, new Color(0.70f, 0.28f, 0.22f), new Color(0.74f, 0.50f, 0.22f), false, BarInteriorPatronRole.CounterDrinker, 1, 1.4f);
+        CreateBarInteriorPatron(room, "PatronTableA", new Vector3(-5.75f, 0f, -1.35f), 80f, new Color(0.26f, 0.58f, 0.34f), new Color(0.08f, 0.06f, 0.04f), true, BarInteriorPatronRole.TableTalker, 2, 2.2f);
+        CreateBarInteriorPatron(room, "PatronTableB", new Vector3(-0.48f, 0f, -1.85f), -82f, new Color(0.62f, 0.34f, 0.68f), new Color(0.36f, 0.20f, 0.12f), true, BarInteriorPatronRole.TableTalker, 2, 3.1f);
+        CreateBarInteriorPatron(room, "PatronDanceA", new Vector3(2.05f, 0f, 1.28f), -18f, new Color(0.92f, 0.66f, 0.20f), new Color(0.24f, 0.18f, 0.10f), false, BarInteriorPatronRole.Dancer, 3, 4.0f);
+        CreateBarInteriorPatron(room, "PatronDanceB", new Vector3(3.08f, 0f, 1.06f), 28f, new Color(0.22f, 0.62f, 0.66f), new Color(0.58f, 0.38f, 0.18f), false, BarInteriorPatronRole.Dancer, 3, 5.4f);
+        CreateBarInteriorPatron(room, "Bartender", new Vector3(-6.15f, 0f, 4.05f), -8f, new Color(0.92f, 0.86f, 0.70f), new Color(0.16f, 0.12f, 0.08f), false, BarInteriorPatronRole.Bartender, 0, 0.8f);
     }
 
-    private void CreateBarInteriorPatron(Transform room, string name, Vector3 position, float yaw, Color shirt, Color hair, bool seated)
+    private BarInteriorPatronRefs CreateBarInteriorPatron(Transform room, string name, Vector3 position, float yaw, Color shirt, Color hair, bool seated, BarInteriorPatronRole role, int conversationGroup, float phase)
     {
         Transform root = new GameObject(name).transform;
         root.SetParent(room, false);
@@ -305,13 +308,46 @@ public partial class GameBootstrap
 
         float bodyY = seated ? 0.68f : 0.88f;
         float legY = seated ? 0.34f : 0.34f;
-        CreateBarInteriorBox(root, "Body", new Vector3(0f, bodyY, 0f), new Vector3(0.34f, 0.58f, 0.22f), shirt, VisualSmoothnessFabric);
-        CreateBarInteriorSphere(root, "Head", new Vector3(0f, bodyY + 0.46f, 0f), new Vector3(0.24f, 0.24f, 0.24f), new Color(0.96f, 0.78f, 0.62f), VisualSmoothnessSkin);
-        CreateBarInteriorSphere(root, "Hair", new Vector3(0f, bodyY + 0.60f, -0.02f), new Vector3(0.25f, 0.13f, 0.24f), hair, VisualSmoothnessFabric);
-        CreateBarInteriorBox(root, "LeftArm", new Vector3(-0.26f, bodyY + 0.08f, 0.03f), new Vector3(0.09f, 0.36f, 0.09f), shirt * 0.92f, VisualSmoothnessFabric);
-        CreateBarInteriorBox(root, "RightArm", new Vector3(0.26f, bodyY + 0.08f, 0.03f), new Vector3(0.09f, 0.36f, 0.09f), shirt * 0.92f, VisualSmoothnessFabric);
-        CreateBarInteriorBox(root, "LeftLeg", new Vector3(-0.09f, legY, 0f), new Vector3(0.10f, seated ? 0.30f : 0.56f, 0.10f), new Color(0.12f, 0.16f, 0.22f), VisualSmoothnessFabric);
-        CreateBarInteriorBox(root, "RightLeg", new Vector3(0.09f, legY, 0f), new Vector3(0.10f, seated ? 0.30f : 0.56f, 0.10f), new Color(0.12f, 0.16f, 0.22f), VisualSmoothnessFabric);
+        Transform body = CreateBarInteriorBox(root, "Body", new Vector3(0f, bodyY, 0f), new Vector3(0.34f, 0.58f, 0.22f), shirt, VisualSmoothnessFabric).transform;
+        Transform head = CreateBarInteriorSphere(root, "Head", new Vector3(0f, bodyY + 0.46f, 0f), new Vector3(0.24f, 0.24f, 0.24f), new Color(0.96f, 0.78f, 0.62f), VisualSmoothnessSkin).transform;
+        Transform hairVisual = CreateBarInteriorSphere(root, "Hair", new Vector3(0f, bodyY + 0.60f, -0.02f), new Vector3(0.25f, 0.13f, 0.24f), hair, VisualSmoothnessFabric).transform;
+        Transform leftArm = CreateBarInteriorBox(root, "LeftArm", new Vector3(-0.26f, bodyY + 0.08f, 0.03f), new Vector3(0.09f, 0.36f, 0.09f), shirt * 0.92f, VisualSmoothnessFabric).transform;
+        Transform rightArm = CreateBarInteriorBox(root, "RightArm", new Vector3(0.26f, bodyY + 0.08f, 0.03f), new Vector3(0.09f, 0.36f, 0.09f), shirt * 0.92f, VisualSmoothnessFabric).transform;
+        Transform leftLeg = CreateBarInteriorBox(root, "LeftLeg", new Vector3(-0.09f, legY, 0f), new Vector3(0.10f, seated ? 0.30f : 0.56f, 0.10f), new Color(0.12f, 0.16f, 0.22f), VisualSmoothnessFabric).transform;
+        Transform rightLeg = CreateBarInteriorBox(root, "RightLeg", new Vector3(0.09f, legY, 0f), new Vector3(0.10f, seated ? 0.30f : 0.56f, 0.10f), new Color(0.12f, 0.16f, 0.22f), VisualSmoothnessFabric).transform;
+
+        BarInteriorPatronRefs patron = new()
+        {
+            Name = name,
+            Root = root,
+            Body = body,
+            Head = head,
+            Hair = hairVisual,
+            LeftArm = leftArm,
+            RightArm = rightArm,
+            LeftLeg = leftLeg,
+            RightLeg = rightLeg,
+            Role = role,
+            ConversationGroup = conversationGroup,
+            Phase = phase,
+            Seated = seated,
+            RootBaseLocalPosition = root.localPosition,
+            RootBaseLocalRotation = root.localRotation,
+            BodyBaseLocalPosition = body.localPosition,
+            HeadBaseLocalPosition = head.localPosition,
+            HairBaseLocalPosition = hairVisual.localPosition,
+            LeftArmBaseLocalPosition = leftArm.localPosition,
+            RightArmBaseLocalPosition = rightArm.localPosition,
+            BodyBaseLocalRotation = body.localRotation,
+            HeadBaseLocalRotation = head.localRotation,
+            HairBaseLocalRotation = hairVisual.localRotation,
+            LeftArmBaseLocalRotation = leftArm.localRotation,
+            RightArmBaseLocalRotation = rightArm.localRotation
+        };
+        CreateBarInteriorPatronGlass(patron);
+        CreateBarInteriorSpeechBubble(patron);
+        RegisterBarInteriorPatron(patron);
+        return patron;
     }
 
     private void CreateBarInteriorLights(Transform room)
@@ -366,6 +402,7 @@ public partial class GameBootstrap
 
         float dt = Time.unscaledDeltaTime;
         UpdateBarInteriorLighting(dt);
+        UpdateBarInteriorAmbientAnimations(dt);
 
         switch (barInteriorScenePhase)
         {
@@ -553,19 +590,27 @@ public partial class GameBootstrap
         CreateBarInteriorBox(stool, "FootRail", new Vector3(0f, 0.18f, 0.19f), new Vector3(0.42f, 0.035f, 0.035f), new Color(0.72f, 0.58f, 0.32f), VisualSmoothnessVehicleMetal);
     }
 
-    private void CreateBarInteriorTextSign(Transform parent, string name, string text, Vector3 localPosition, float characterSize, Color color)
+    private TextMesh CreateBarInteriorTextSign(Transform parent, string name, string text, Vector3 localPosition, float characterSize, Color color)
     {
         GameObject signObject = new(name);
         signObject.transform.SetParent(parent, false);
         signObject.transform.localPosition = localPosition;
-        signObject.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+        signObject.transform.localRotation = Quaternion.identity;
         TextMesh textMesh = signObject.AddComponent<TextMesh>();
         textMesh.text = text;
         textMesh.characterSize = characterSize;
         textMesh.fontSize = 72;
         textMesh.anchor = TextAnchor.MiddleCenter;
         textMesh.alignment = TextAlignment.Center;
-        ApplyUnlitColor(signObject, color);
+        textMesh.color = color;
+        Renderer renderer = signObject.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        return textMesh;
     }
 
     private void ValidateBarInteriorSceneClickTargets()
@@ -592,5 +637,7 @@ public partial class GameBootstrap
             Destroy(barInteriorRenderTexture);
             barInteriorRenderTexture = null;
         }
+
+        ResetBarInteriorAnimationState();
     }
 }

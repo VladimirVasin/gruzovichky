@@ -60,6 +60,11 @@ public partial class GameBootstrap
         public Text             GraphicsButtonText;
         public MainMenuButtonFx GraphicsButtonFx;
         public GameObject       GraphicsOptionsRoot;
+        public Text             GraphicsOptionsTitleText;
+        public Button           GraphicsOptionsCloseButton;
+        public Text             GraphicsOptionsCloseText;
+        public Button           GraphicsOptionsResetButton;
+        public Text             GraphicsOptionsResetText;
         public Button           SoundButton;
         public Text             SoundButtonText;
         public MainMenuButtonFx SoundButtonFx;
@@ -68,7 +73,9 @@ public partial class GameBootstrap
         public Text             SoundOptionsTitleText;
         public Text             SoundOptionsHintText;
         public Text             SoundOptionsCountText;
+        public Button           SoundOptionsCloseButton;
         public Text             SoundOptionsCloseText;
+        public Button           SoundOptionsResetAllButton;
         public Text             SoundOptionsResetAllText;
         public readonly Dictionary<string, SoundOptionRowRefs> SoundOptionRows = new();
         public Button[]         GfxToggleButtons = new Button[4];

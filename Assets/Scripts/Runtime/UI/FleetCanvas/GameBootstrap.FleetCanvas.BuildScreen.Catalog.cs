@@ -77,31 +77,50 @@ public partial class GameBootstrap
         return true;
     }
 
-    private BuildCategoryUi CreateBuildCategory(RectTransform parent, Font font, string labelEn, string labelRu, bool expanded,
+    private BuildCategoryUi CreateBuildCategory(RectTransform categoryParent, RectTransform itemParent, Font font, string labelEn, string labelRu, bool expanded,
         params (BuildTool tool, string abbrev, string title, Color color)[] toolDefs)
     {
-        BuildCategoryUi cat = new BuildCategoryUi { LabelEn = labelEn, LabelRu = labelRu, IsExpanded = expanded };
+        int categoryIndex = categoryParent != null ? categoryParent.childCount : 0;
+        BuildCategoryUi cat = new()
+        {
+            LabelEn = labelEn,
+            LabelRu = labelRu,
+            Index = categoryIndex,
+            IsExpanded = expanded
+        };
 
-        RectTransform headerRoot = CreateHorizontalLayoutPanel(
-            "CatHeader_" + labelEn,
-            parent,
-            new Color(0.13f, 0.17f, 0.23f, 1f),
-            new RectOffset(10, 10, 0, 0),
-            6f,
-            preferredHeight: 30f,
-            flexibleHeight: 0f,
-            childForceExpandHeight: true,
-            addOutline: false);
-        Image headerBg = headerRoot.GetComponent<Image>();
+        RectTransform headerRoot = CreateUiObject("BuildCat_" + labelEn, categoryParent).GetComponent<RectTransform>();
+        headerRoot.sizeDelta = new Vector2(134f, 74f);
+        LayoutElement headerLayout = headerRoot.gameObject.AddComponent<LayoutElement>();
+        headerLayout.preferredWidth = 134f;
+        headerLayout.preferredHeight = 74f;
+        Image headerBg = headerRoot.gameObject.AddComponent<Image>();
+        headerBg.color = new Color(0.08f, 0.16f, 0.18f, 0.95f);
+        Outline outline = headerRoot.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.34f);
+        outline.effectDistance = new Vector2(1.5f, -1.5f);
         cat.HeaderRoot = headerRoot;
+        cat.HeaderBg = headerBg;
 
-        Text arrowText = CreateBodyText("Arrow", headerRoot, font, expanded ? "v" : ">", 13, TextAnchor.MiddleLeft, new Color(0.65f, 0.72f, 0.82f));
-        arrowText.gameObject.AddComponent<LayoutElement>().preferredWidth = 14f;
-        cat.ArrowText = arrowText;
+        RectTransform iconRoot = CreateUiObject("Icon", headerRoot).GetComponent<RectTransform>();
+        iconRoot.anchorMin = new Vector2(0.5f, 1f);
+        iconRoot.anchorMax = new Vector2(0.5f, 1f);
+        iconRoot.pivot = new Vector2(0.5f, 1f);
+        iconRoot.sizeDelta = new Vector2(76f, 40f);
+        iconRoot.anchoredPosition = new Vector2(0f, -7f);
+        cat.IconRoot = iconRoot;
+        CreateBuildCategoryIconVisual(iconRoot, categoryIndex);
 
-        Text headerText = CreateBodyText("CatLabel", headerRoot, font, labelEn, 13, TextAnchor.MiddleLeft, new Color(0.78f, 0.84f, 0.92f));
+        Text headerText = CreateBodyText("CatLabel", headerRoot, font, labelEn, 11, TextAnchor.MiddleCenter, new Color(0.78f, 0.84f, 0.92f));
         headerText.fontStyle = FontStyle.Bold;
-        headerText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        RectTransform headerTextRect = headerText.GetComponent<RectTransform>();
+        headerTextRect.anchorMin = new Vector2(0f, 0f);
+        headerTextRect.anchorMax = new Vector2(1f, 0f);
+        headerTextRect.pivot = new Vector2(0.5f, 0f);
+        headerTextRect.offsetMin = new Vector2(7f, 7f);
+        headerTextRect.offsetMax = new Vector2(-7f, 28f);
+        headerText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        headerText.verticalOverflow = VerticalWrapMode.Truncate;
         cat.HeaderText = headerText;
 
         Button btn = headerRoot.gameObject.AddComponent<Button>();
@@ -114,15 +133,24 @@ public partial class GameBootstrap
         BuildCategoryUi capturedCat = cat;
         btn.onClick.AddListener(() =>
         {
-            capturedCat.IsExpanded = !capturedCat.IsExpanded;
-            isBuildScreenDirty = true;
-            PlayUiSound(uiSelectClip, 0.70f);
-        });
+            bool wasSelected = selectedBuildCategoryIndex == capturedCat.Index;
+            selectedBuildCategoryIndex = wasSelected ? -1 : capturedCat.Index;
+            if (!wasSelected)
+            {
+                buildScreenTrayAnimation = 0f;
+            }
 
-        // Create items after header so they appear below it in the layout
+            isBuildScreenDirty = true;
+            PlayUiSound(wasSelected ? uiPanelCloseClip : uiSelectClip, wasSelected ? 0.64f : 0.70f);
+        });
+        cat.HeaderButton = btn;
+        AddBuildHoverHandlers(headerRoot.gameObject, hovered => capturedCat.IsHovered = hovered);
+
         cat.Items = new BuildItemUi[toolDefs.Length];
         for (int i = 0; i < toolDefs.Length; i++)
-            cat.Items[i] = CreateBuildItemCard(parent, font, toolDefs[i].tool, toolDefs[i].abbrev, toolDefs[i].title, toolDefs[i].color);
+        {
+            cat.Items[i] = CreateBuildItemCard(itemParent, font, toolDefs[i].tool, toolDefs[i].abbrev, toolDefs[i].title, toolDefs[i].color);
+        }
 
         return cat;
     }
@@ -132,40 +160,55 @@ public partial class GameBootstrap
         if (buildScreenUi == null) return;
 
         bool shouldShow = isBuildPanelOpen;
-        if (buildScreenUi.CanvasRoot.activeSelf != shouldShow)
+        if (shouldShow && !buildScreenUi.CanvasRoot.activeSelf)
         {
-            buildScreenUi.CanvasRoot.SetActive(shouldShow);
+            buildScreenUi.CanvasRoot.SetActive(true);
             isBuildScreenDirty = true;
         }
 
-        if (!shouldShow) return;
+        if (!shouldShow && !buildScreenUi.CanvasRoot.activeSelf && buildScreenPanelAnimation <= 0f) return;
+        if (!shouldShow && selectedBuildCategoryIndex >= 0)
+        {
+            selectedBuildCategoryIndex = -1;
+            isBuildScreenDirty = true;
+        }
+
+        EnsureSelectedBuildCategory();
+        UpdateBuildScreenDockAnimation();
+        if (!shouldShow && buildScreenPanelAnimation <= 0f)
+        {
+            buildScreenUi.CanvasRoot.SetActive(false);
+            return;
+        }
+
         if (!isBuildScreenDirty) return;
 
         bool ru = IsRussianLanguage();
-        foreach (BuildCategoryUi cat in buildScreenUi.Categories)
+        for (int categoryIndex = 0; categoryIndex < buildScreenUi.Categories.Length; categoryIndex++)
         {
+            BuildCategoryUi cat = buildScreenUi.Categories[categoryIndex];
             bool anyUnlocked = false;
             foreach (BuildItemUi ci in cat.Items)
                 if (IsBuildToolUnlocked(ci.Tool)) { anyUnlocked = true; break; }
 
+            bool isSelectedCategory = categoryIndex == selectedBuildCategoryIndex;
             foreach (BuildItemUi item in cat.Items)
             {
-                item.Root.gameObject.SetActive(false);
+                bool visible = anyUnlocked && isSelectedCategory && IsBuildToolUnlocked(item.Tool);
+                item.Root.gameObject.SetActive(visible);
             }
             cat.HeaderRoot.gameObject.SetActive(anyUnlocked);
             if (!anyUnlocked) continue;
 
             cat.HeaderText.text = ru ? cat.LabelRu : cat.LabelEn;
-            cat.ArrowText.text  = cat.IsExpanded ? "v" : ">";
+            cat.HeaderBg.color = isSelectedCategory
+                ? new Color(0.12f, 0.31f, 0.36f, 0.98f)
+                : new Color(0.08f, 0.16f, 0.18f, 0.95f);
 
             foreach (BuildItemUi item in cat.Items)
             {
                 bool unlocked = IsBuildToolUnlocked(item.Tool);
-                bool visible  = unlocked && cat.IsExpanded;
-                if (visible)
-                {
-                    item.Root.gameObject.SetActive(true);
-                }
+                bool visible = unlocked && isSelectedCategory;
                 if (!visible) continue;
 
                 bool isActive = activeBuildTool == item.Tool;
@@ -190,30 +233,29 @@ public partial class GameBootstrap
                         : item.DefaultAccentColor;
                 item.TitleText.color = isUnavailable ? new Color(0.62f, 0.66f, 0.72f, 1f) : Color.white;
                 item.TitleText.text = GetBuildCatalogTitle(item.Tool, ru, item.TitleText.text);
-                item.DescText.color = isUnavailable ? new Color(0.52f, 0.56f, 0.62f, 1f) : FleetSecondaryTextColor;
-                item.DescText.text  = isUnavailable
-                    ? GetBuildToolUnavailableDescription(item.Tool, ru)
-                    : GetBuildDescription(item.Tool, isActive);
 
                 if (isUnavailable)
                 {
+                    item.StatusBg.gameObject.SetActive(true);
                     item.StatusBg.color  = new Color(0.24f, 0.24f, 0.26f, 0.85f);
                     item.StatusText.text = GetBuildToolUnavailableStatus(ru);
                 }
                 else if (isActive)
                 {
+                    item.StatusBg.gameObject.SetActive(true);
                     item.StatusBg.color  = new Color(0.60f, 0.36f, 0.10f, 0.85f);
                     item.StatusText.text = "Active";
                 }
                 else if (isBuilt)
                 {
+                    item.StatusBg.gameObject.SetActive(true);
                     item.StatusBg.color  = new Color(0.18f, 0.40f, 0.24f, 0.85f);
                     item.StatusText.text = "Built";
                 }
                 else
                 {
-                    item.StatusBg.color  = new Color(0.22f, 0.28f, 0.38f, 0.80f);
-                    item.StatusText.text = "Available";
+                    item.StatusBg.gameObject.SetActive(false);
+                    item.StatusText.text = string.Empty;
                 }
             }
         }
@@ -221,6 +263,210 @@ public partial class GameBootstrap
         LayoutRebuilder.ForceRebuildLayoutImmediate(buildScreenUi.WindowRoot);
         LocalizeCanvas(buildScreenUi.CanvasRoot);
         isBuildScreenDirty = false;
+    }
+
+    private void EnsureSelectedBuildCategory()
+    {
+        if (buildScreenUi?.Categories == null || buildScreenUi.Categories.Length == 0)
+        {
+            selectedBuildCategoryIndex = -1;
+            buildScreenTrayAnimation = 0f;
+            return;
+        }
+
+        if (selectedBuildCategoryIndex < 0)
+        {
+            return;
+        }
+
+        if (selectedBuildCategoryIndex >= buildScreenUi.Categories.Length ||
+            !HasUnlockedBuildItems(buildScreenUi.Categories[selectedBuildCategoryIndex]))
+        {
+            selectedBuildCategoryIndex = -1;
+            isBuildScreenDirty = true;
+        }
+    }
+
+    private bool HasUnlockedBuildItems(BuildCategoryUi category)
+    {
+        if (category?.Items == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < category.Items.Length; i++)
+        {
+            if (IsBuildToolUnlocked(category.Items[i].Tool))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void UpdateBuildScreenDockAnimation()
+    {
+        buildScreenPanelAnimation = Mathf.MoveTowards(buildScreenPanelAnimation, isBuildPanelOpen ? 1f : 0f, Time.unscaledDeltaTime * 5.8f);
+        float panelT = SmootherStep01(buildScreenPanelAnimation);
+        if (buildScreenUi.PanelGroup != null)
+        {
+            buildScreenUi.PanelGroup.alpha = panelT;
+            buildScreenUi.PanelGroup.blocksRaycasts = isBuildPanelOpen && panelT > 0.12f;
+            buildScreenUi.PanelGroup.interactable = isBuildPanelOpen && panelT > 0.12f;
+        }
+
+        bool trayOpen = selectedBuildCategoryIndex >= 0 &&
+                        buildScreenUi.Categories != null &&
+                        selectedBuildCategoryIndex < buildScreenUi.Categories.Length &&
+                        HasUnlockedBuildItems(buildScreenUi.Categories[selectedBuildCategoryIndex]);
+        float trayTarget = trayOpen ? 1f : 0f;
+        buildScreenTrayAnimation = Mathf.MoveTowards(buildScreenTrayAnimation, trayTarget, Time.unscaledDeltaTime * 5.2f);
+        float trayT = SmootherStep01(buildScreenTrayAnimation);
+        if (buildScreenUi.ItemTrayGroup != null)
+        {
+            buildScreenUi.ItemTrayGroup.alpha = trayT;
+            buildScreenUi.ItemTrayGroup.blocksRaycasts = trayOpen && trayT > 0.55f;
+            buildScreenUi.ItemTrayGroup.interactable = trayOpen && trayT > 0.55f;
+        }
+
+        if (buildScreenUi.ItemTrayRoot != null)
+        {
+            float trayY = Mathf.Lerp(-126f, Mathf.Lerp(104f, 128f, trayT), panelT);
+            buildScreenUi.ItemTrayRoot.anchoredPosition = new Vector2(0f, trayY);
+            buildScreenUi.ItemTrayRoot.localScale = Vector3.one * Mathf.Lerp(0.92f, Mathf.Lerp(0.94f, 1f, trayT), panelT);
+        }
+
+        if (buildScreenUi.DockRoot != null)
+        {
+            buildScreenUi.DockRoot.anchoredPosition = new Vector2(0f, Mathf.Lerp(-112f, 22f, panelT));
+            buildScreenUi.DockRoot.localScale = Vector3.one * Mathf.Lerp(0.96f, 1f, panelT);
+        }
+
+        for (int i = 0; i < buildScreenUi.Categories.Length; i++)
+        {
+            BuildCategoryUi category = buildScreenUi.Categories[i];
+            if (category?.HeaderRoot == null)
+            {
+                continue;
+            }
+
+            bool selected = i == selectedBuildCategoryIndex;
+            float categoryTarget = category.IsHovered || selected ? 1f : 0f;
+            category.HoverT = Mathf.MoveTowards(category.HoverT, categoryTarget, Time.unscaledDeltaTime * 7f);
+            category.HeaderRoot.localScale = Vector3.one * Mathf.Lerp(1f, selected ? 1.09f : 1.05f, SmootherStep01(category.HoverT));
+            if (category.IconRoot != null)
+            {
+                category.IconRoot.anchoredPosition = new Vector2(0f, -7f + Mathf.Lerp(0f, 3f, SmootherStep01(category.HoverT)));
+            }
+
+            for (int j = 0; j < category.Items.Length; j++)
+            {
+                BuildItemUi item = category.Items[j];
+                if (item?.Root == null || !item.Root.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                bool active = activeBuildTool == item.Tool;
+                float itemTarget = item.IsHovered || active ? 1f : 0f;
+                item.HoverT = Mathf.MoveTowards(item.HoverT, itemTarget, Time.unscaledDeltaTime * 7f);
+                float hoverT = SmootherStep01(item.HoverT);
+                item.Root.localScale = Vector3.one * Mathf.Lerp(1f, active ? 1.08f : 1.045f, hoverT);
+            }
+        }
+    }
+
+    private void AddBuildHoverHandlers(GameObject target, System.Action<bool> setHovered)
+    {
+        if (target == null || setHovered == null)
+        {
+            return;
+        }
+
+        EventTrigger trigger = target.GetComponent<EventTrigger>() ?? target.AddComponent<EventTrigger>();
+        EventTrigger.Entry enter = new() { eventID = EventTriggerType.PointerEnter };
+        enter.callback.AddListener(_ =>
+        {
+            setHovered(true);
+            isBuildScreenDirty = true;
+        });
+        trigger.triggers.Add(enter);
+
+        EventTrigger.Entry exit = new() { eventID = EventTriggerType.PointerExit };
+        exit.callback.AddListener(_ =>
+        {
+            setHovered(false);
+            isBuildScreenDirty = true;
+        });
+        trigger.triggers.Add(exit);
+    }
+
+    private void CreateBuildCategoryIconVisual(RectTransform iconRoot, int categoryIndex)
+    {
+        RectTransform P(float ax, float ay, float bx, float by, Color col)
+        {
+            GameObject g = new("CatIc");
+            g.transform.SetParent(iconRoot, false);
+            RectTransform rt = g.AddComponent<RectTransform>();
+            rt.anchorMin = new Vector2(ax, ay);
+            rt.anchorMax = new Vector2(bx, by);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            g.AddComponent<Image>().color = col;
+            return rt;
+        }
+
+        void R(float cx, float cy, float w, float h, Color col, float rot = 0f)
+        {
+            GameObject g = new("CatIcR");
+            g.transform.SetParent(iconRoot, false);
+            RectTransform rt = g.AddComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(w, h);
+            rt.anchoredPosition = new Vector2(cx, cy);
+            if (rot != 0f)
+            {
+                rt.localEulerAngles = new Vector3(0f, 0f, rot);
+            }
+            g.AddComponent<Image>().color = col;
+        }
+
+        switch (Mathf.Abs(categoryIndex) % 5)
+        {
+            case 0:
+                P(0.08f, 0.20f, 0.92f, 0.78f, new Color(0.12f, 0.15f, 0.18f));
+                P(0.45f, 0.20f, 0.55f, 0.78f, new Color(0.95f, 0.82f, 0.32f));
+                P(0.08f, 0.12f, 0.28f, 0.25f, new Color(0.72f, 0.28f, 0.24f));
+                P(0.14f, 0.25f, 0.22f, 0.44f, Color.white);
+                break;
+            case 1:
+                P(0.08f, 0.14f, 0.58f, 0.58f, new Color(0.70f, 0.52f, 0.30f));
+                P(0.06f, 0.56f, 0.62f, 0.72f, new Color(0.50f, 0.34f, 0.18f));
+                P(0.64f, 0.14f, 0.92f, 0.38f, new Color(0.10f, 0.36f, 0.56f));
+                P(0.70f, 0.36f, 0.88f, 0.48f, new Color(0.48f, 0.30f, 0.14f));
+                break;
+            case 2:
+                P(0.12f, 0.16f, 0.58f, 0.54f, new Color(0.58f, 0.36f, 0.16f));
+                P(0.08f, 0.52f, 0.62f, 0.66f, new Color(0.30f, 0.20f, 0.10f));
+                P(0.70f, 0.10f, 0.80f, 0.44f, new Color(0.34f, 0.21f, 0.10f));
+                P(0.60f, 0.42f, 0.90f, 0.64f, new Color(0.20f, 0.50f, 0.16f));
+                P(0.64f, 0.62f, 0.86f, 0.78f, new Color(0.24f, 0.60f, 0.20f));
+                break;
+            case 3:
+                P(0.10f, 0.14f, 0.90f, 0.54f, new Color(0.92f, 0.88f, 0.76f));
+                R(-16f, 17f, 5f, 44f, new Color(0.46f, 0.22f, 0.14f), 32f);
+                R(16f, 17f, 5f, 44f, new Color(0.46f, 0.22f, 0.14f), -32f);
+                P(0.42f, 0.14f, 0.58f, 0.42f, new Color(0.20f, 0.14f, 0.10f));
+                P(0.68f, 0.32f, 0.84f, 0.50f, new Color(0.60f, 0.80f, 0.90f));
+                break;
+            default:
+                P(0.16f, 0.18f, 0.84f, 0.54f, new Color(0.20f, 0.42f, 0.50f));
+                P(0.22f, 0.54f, 0.78f, 0.66f, new Color(0.96f, 0.92f, 0.84f));
+                P(0.56f, 0.20f, 0.72f, 0.44f, new Color(0.90f, 0.70f, 0.22f));
+                P(0.68f, 0.30f, 0.86f, 0.48f, new Color(0.90f, 0.70f, 0.22f));
+                P(0.74f, 0.35f, 0.82f, 0.43f, new Color(0.08f, 0.10f, 0.12f));
+                break;
+        }
     }
 
     private bool GetBuildToolAlreadyBuilt(BuildTool tool)

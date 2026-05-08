@@ -196,6 +196,8 @@ public partial class GameBootstrap
         float windy = currentWeatherState == WeatherState.Windy || nextWeatherState == WeatherState.Windy ? 1f : 0f;
         float waterBlend = waterSurfaceTiles.Count > 0 ? 1f : 0f;
 
+        UpdateRiverAmbienceSourcePosition();
+
         FadeNatureLoop(natureForestBirdsAudioSource, natureForestBirdsClip, 0.20f * dayBlend * (1f - rain * 0.70f), dt);
         FadeNatureLoop(natureCicadasAudioSource, natureCicadasClip, 0.12f * eveningBlend * (1f - rain * 0.80f), dt);
         FadeNatureLoop(natureNightAudioSource, natureNightClip, 0.18f * nightBlend * (1f - rain * 0.45f), dt);
@@ -213,7 +215,7 @@ public partial class GameBootstrap
         EnsureNatureAmbienceSource(ref natureNightAudioSource, "NatureNight", natureNightClip);
         EnsureNatureAmbienceSource(ref natureRainCalmAudioSource, "NatureRainCalm", natureRainCalmClip);
         EnsureNatureAmbienceSource(ref natureRainStrongAudioSource, "NatureRainStrong", natureRainStrongClip);
-        EnsureNatureAmbienceSource(ref natureRiverAudioSource, "NatureRiver", natureRiverClip);
+        EnsureRiverAmbienceSource();
         EnsureNatureAmbienceSource(ref natureWindCalmAudioSource, "NatureWindCalm", natureWindCalmClip);
         EnsureNatureAmbienceSource(ref natureWindForestAudioSource, "NatureWindForest", natureWindForestClip);
     }
@@ -229,6 +231,75 @@ public partial class GameBootstrap
         source.clip = clip;
         source.priority = 210;
         source.Play();
+    }
+
+    private void EnsureRiverAmbienceSource()
+    {
+        if (natureRiverClip == null)
+        {
+            return;
+        }
+
+        if (natureRiverAudioSource == null)
+        {
+            natureRiverAudioSource = CreateAudioSource("NatureRiver", null, true, 0f, 1f, false);
+            natureRiverAudioSource.clip = natureRiverClip;
+            natureRiverAudioSource.priority = 210;
+            natureRiverAudioSource.Play();
+        }
+
+        ConfigureRiverAmbienceSource(natureRiverAudioSource);
+        UpdateRiverAmbienceSourcePosition();
+    }
+
+    private static void ConfigureRiverAmbienceSource(AudioSource source)
+    {
+        if (source == null)
+        {
+            return;
+        }
+
+        source.spatialBlend = 1f;
+        source.rolloffMode = AudioRolloffMode.Linear;
+        source.minDistance = 8f;
+        source.maxDistance = 64f;
+        source.dopplerLevel = 0f;
+    }
+
+    private void UpdateRiverAmbienceSourcePosition()
+    {
+        if (natureRiverAudioSource == null)
+        {
+            return;
+        }
+
+        Vector3 listenerPosition = mainCamera != null
+            ? mainCamera.transform.position
+            : cameraFocusPoint + DioramaCameraOffset;
+        Vector3 focusPoint = GetRiverAmbienceFocusPoint();
+        float riverCenterZ = GridHeight - WaterRiverWidth * 0.5f;
+        float riverDistance = riverCenterZ - focusPoint.z;
+
+        // The river spans the whole top edge, so use a nearest-point proxy. This keeps panning along
+        // the river loud while moving the camera inland fades the loop by map distance.
+        natureRiverAudioSource.transform.position = new Vector3(
+            listenerPosition.x,
+            listenerPosition.y,
+            listenerPosition.z + riverDistance);
+    }
+
+    private Vector3 GetRiverAmbienceFocusPoint()
+    {
+        if (isTruckCameraFocused)
+        {
+            TruckAgent focusedTruck = GetTruckAgent(selectedTruckNumber);
+            if (focusedTruck?.TruckObject != null)
+            {
+                return focusedTruck.TruckObject.transform.position;
+            }
+        }
+
+        return cameraFocusPoint;
     }
 
     private void FadeNatureLoop(AudioSource source, AudioClip clip, float targetBaseVolume, float dt)

@@ -268,7 +268,7 @@ public partial class GameBootstrap
                     TutorialTrigger.UserBuildRoadPrompt,
                     2,
                     "Build the first road",
-                    "Now build your first road.\n\nOpen the Build menu from the top HUD or press B. Choose a road tool, then left-click a cell to place the road.\n\nYour first road must connect to the Highway. Otherwise the town is cut off from outside traffic.\n\nHold Shift and drag to build a longer road segment. Press R to rotate the road direction before placing.");
+                    "Now build your first road.\n\nOpen the Build menu at the bottom of the screen or press B. Choose a road tool, then left-click a cell to place the road.\n\nYour first road must connect to the Highway. Otherwise the town is cut off from outside traffic.\n\nHold Shift and drag to build a longer road segment. Press R to rotate the road direction before placing.");
                 break;
             case TutorialTrigger.UserCoreBuildingsPrompt:
                 if (hasShownUserCoreBuildingsTutorial)
@@ -284,7 +284,7 @@ public partial class GameBootstrap
                     TutorialTrigger.UserCoreBuildingsPrompt,
                     3,
                     "Build the town core",
-                    "The road is only useful when it connects important places.\n\nThree core buildings are now unlocked: Warehouse, Motel, and Parking.\n\nBuild all three from the Build menu. You can open Build from the top HUD or press B.\n\nEvery building needs road access. If a building is not connected by road, workers and vehicles will not be able to use it properly.");
+                    "The road is only useful when it connects important places.\n\nThree core buildings are now unlocked: Warehouse, Motel, and Parking.\n\nBuild all three from the Build menu. You can open Build at the bottom of the screen or press B.\n\nEvery building needs road access. If a building is not connected by road, workers and vehicles will not be able to use it properly.");
                 break;
             case TutorialTrigger.UserWarehouseBuiltInfo:
                 if (hasShownUserWarehouseBuiltTutorial)

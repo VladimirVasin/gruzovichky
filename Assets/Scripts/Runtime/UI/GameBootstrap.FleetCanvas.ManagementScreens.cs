@@ -388,12 +388,13 @@ public partial class GameBootstrap
     {
         public BuildTool     Tool;
         public Color         DefaultAccentColor;
+        public bool          IsHovered;
+        public float         HoverT;
         public RectTransform Root;
         public Button        Button;
         public Image         CardBg;
         public Image         AccentBg;
         public Text          TitleText;
-        public Text          DescText;
         public Text          StatusText;
         public Image         StatusBg;
     }
@@ -402,10 +403,15 @@ public partial class GameBootstrap
     {
         public string        LabelEn;
         public string        LabelRu;
+        public int           Index;
         public bool          IsExpanded;
+        public bool          IsHovered;
+        public float         HoverT;
         public RectTransform HeaderRoot;
+        public Button        HeaderButton;
+        public Image         HeaderBg;
+        public RectTransform IconRoot;
         public Text          HeaderText;
-        public Text          ArrowText;
         public BuildItemUi[] Items;
     }
 
@@ -413,6 +419,11 @@ public partial class GameBootstrap
     {
         public GameObject        CanvasRoot;
         public RectTransform     WindowRoot;
+        public RectTransform     DockRoot;
+        public RectTransform     CategoryRowRoot;
+        public RectTransform     ItemTrayRoot;
+        public CanvasGroup       PanelGroup;
+        public CanvasGroup       ItemTrayGroup;
         public BuildCategoryUi[] Categories;
     }
 

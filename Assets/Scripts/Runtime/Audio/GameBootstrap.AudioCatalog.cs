@@ -250,6 +250,7 @@ public partial class GameBootstrap
         ApplyMusicOptionVolumes();
         RefreshSoundOptionsPanelUI();
         SessionDebugLogger.Log("UI", "Sound effect volumes reset to defaults.");
+        PlayUiSound(uiSelectClip, 0.76f);
     }
 
     private float GetSoundOptionVolumeById(string id)

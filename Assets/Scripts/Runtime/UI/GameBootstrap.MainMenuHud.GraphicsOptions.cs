@@ -12,7 +12,7 @@ public partial class GameBootstrap
         panel.anchorMax = new Vector2(0f, 0f);
         panel.pivot = new Vector2(0f, 0f);
         panel.anchoredPosition = new Vector2(428f, 34f);
-        panel.sizeDelta = new Vector2(690f, 548f);
+        panel.sizeDelta = new Vector2(690f, 680f);
         mainMenuHud.GraphicsOptionsRoot = panel.gameObject;
         mainMenuHud.GraphicsOptionsRoot.SetActive(false);
 
@@ -24,12 +24,21 @@ public partial class GameBootstrap
         vl.childForceExpandWidth = true;
         vl.childForceExpandHeight = false;
 
-        Text title = CreateBodyText("GfxTitle", panel, uiFont,
+        RectTransform headerRow = CreateLayoutRow("GfxHeader", panel, 34f, 12f);
+        mainMenuHud.GraphicsOptionsTitleText = CreateBodyText("GfxTitle", headerRow, uiFont,
             ru ? "Настройки графики" : "Graphics Settings",
             18, TextAnchor.MiddleLeft, new Color(0.94f, 0.97f, 1f));
-        title.fontStyle = FontStyle.Bold;
-        title.raycastTarget = false;
-        title.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
+        mainMenuHud.GraphicsOptionsTitleText.fontStyle = FontStyle.Bold;
+        mainMenuHud.GraphicsOptionsTitleText.raycastTarget = false;
+        mainMenuHud.GraphicsOptionsTitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+
+        mainMenuHud.GraphicsOptionsCloseButton = CreateButton("GfxCloseButton", headerRow, uiFont, out mainMenuHud.GraphicsOptionsCloseText,
+            "X", 14, new Color(0.34f, 0.12f, 0.12f, 1f), Color.white);
+        LayoutElement closeLayout = mainMenuHud.GraphicsOptionsCloseButton.gameObject.AddComponent<LayoutElement>();
+        closeLayout.preferredWidth = 44f;
+        closeLayout.preferredHeight = 32f;
+        mainMenuHud.GraphicsOptionsCloseButton.onClick.AddListener(CloseGraphicsOptionsPanel);
+        mainMenuHud.GraphicsOptionsCloseText.raycastTarget = false;
 
         Text hint = CreateBodyText("GfxHint", panel, uiFont,
             ru
@@ -53,13 +62,13 @@ public partial class GameBootstrap
         CreateGfxOptionRow("GfxSmhRow", panel, uiFont, ru ? "Цветокоррекция" : "Color Grading", 1, -1);
         CreateGfxOptionRow("GfxChromRow", panel, uiFont, ru ? "Хроматическая аберрация" : "Chromatic Aberration", 2, 8);
 
-        Button resetButton = CreateButton("GfxResetDefaultsButton", panel, uiFont, out Text resetText,
+        mainMenuHud.GraphicsOptionsResetButton = CreateButton("GfxResetDefaultsButton", panel, uiFont, out mainMenuHud.GraphicsOptionsResetText,
             ru ? "Сбросить на дефолт" : "Reset to Defaults",
             14, new Color(0.36f, 0.20f, 0.08f, 1f), Color.white);
-        resetButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
-        resetText.fontStyle = FontStyle.Bold;
-        resetText.raycastTarget = false;
-        resetButton.onClick.AddListener(ResetGraphicsOptionsToDefaults);
+        mainMenuHud.GraphicsOptionsResetButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 36f;
+        mainMenuHud.GraphicsOptionsResetText.fontStyle = FontStyle.Bold;
+        mainMenuHud.GraphicsOptionsResetText.raycastTarget = false;
+        mainMenuHud.GraphicsOptionsResetButton.onClick.AddListener(ResetGraphicsOptionsToDefaults);
 
         RefreshGraphicsOptionsPanelUI();
     }
@@ -210,6 +219,7 @@ public partial class GameBootstrap
         SaveGraphicsPrefs();
         ApplyGraphicsOptionsNow();
         RefreshGraphicsOptionsPanelUI();
+        PlayUiSound(uiSelectClip, 0.76f);
     }
 
     private void ToggleGraphicsOptionsPanel()
@@ -226,13 +236,41 @@ public partial class GameBootstrap
             }
             mainMenuHud.GraphicsOptionsRoot.transform.SetAsLastSibling();
             RefreshGraphicsOptionsPanelUI();
+            EnsureMainMenuOptionsActionButtonsClickable();
+            Canvas.ForceUpdateCanvases();
         }
         PlayUiSound(show ? uiPanelOpenClip : uiPanelCloseClip, 0.9f);
+    }
+
+    private void CloseGraphicsOptionsPanel()
+    {
+        if (mainMenuHud?.GraphicsOptionsRoot == null)
+        {
+            return;
+        }
+
+        mainMenuHud.GraphicsOptionsRoot.SetActive(false);
+        PlayUiSound(uiPanelCloseClip, 0.85f);
     }
 
     private void RefreshGraphicsOptionsPanelUI()
     {
         if (mainMenuHud?.GfxToggleButtons == null) return;
+        bool ru = IsRussianLanguage();
+        if (mainMenuHud.GraphicsOptionsTitleText != null)
+        {
+            mainMenuHud.GraphicsOptionsTitleText.text = ru ? "\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u0433\u0440\u0430\u0444\u0438\u043a\u0438" : "Graphics Settings";
+        }
+        if (mainMenuHud.GraphicsOptionsCloseText != null)
+        {
+            mainMenuHud.GraphicsOptionsCloseText.text = "X";
+        }
+        if (mainMenuHud.GraphicsOptionsResetText != null)
+        {
+            mainMenuHud.GraphicsOptionsResetText.text = ru ? "\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c \u0432\u0441\u0435" : "Reset All";
+        }
+        EnsureMainMenuOptionsActionButtonsClickable();
+
         bool[] enabled = { gfxFilmGrainEnabled, gfxSmhEnabled, gfxChromAberrEnabled, gfxDepthOfFieldEnabled };
         Color onColor = new Color(0.14f, 0.42f, 0.22f, 1f);
         Color offColor = new Color(0.28f, 0.28f, 0.32f, 1f);
@@ -269,6 +307,33 @@ public partial class GameBootstrap
         InputField input = mainMenuHud.GfxValueFields[valueIndex];
         if (input == null) return;
         input.SetTextWithoutNotify(Mathf.RoundToInt(Mathf.Clamp01(value) * 100f).ToString(CultureInfo.InvariantCulture));
+    }
+
+    private void EnsureMainMenuOptionsActionButtonsClickable()
+    {
+        EnsureMainMenuActionButtonClickable(mainMenuHud?.GraphicsOptionsCloseButton, mainMenuHud?.GraphicsOptionsCloseText);
+        EnsureMainMenuActionButtonClickable(mainMenuHud?.GraphicsOptionsResetButton, mainMenuHud?.GraphicsOptionsResetText);
+        EnsureMainMenuActionButtonClickable(mainMenuHud?.SoundOptionsCloseButton, mainMenuHud?.SoundOptionsCloseText);
+        EnsureMainMenuActionButtonClickable(mainMenuHud?.SoundOptionsResetAllButton, mainMenuHud?.SoundOptionsResetAllText);
+    }
+
+    private static void EnsureMainMenuActionButtonClickable(Button button, Text label)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        button.enabled = true;
+        button.interactable = true;
+        if (button.targetGraphic is Image image)
+        {
+            image.raycastTarget = true;
+        }
+        if (label != null)
+        {
+            label.raycastTarget = false;
+        }
     }
 
     private void StepGfxValue(int valueIndex, float delta)

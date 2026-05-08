@@ -8,6 +8,9 @@ public partial class GameBootstrap
 {
     private BuildCatalogData cachedBuildCatalogData;
     private Dictionary<BuildTool, BuildCatalogItemData> cachedBuildCatalogItems;
+    private int selectedBuildCategoryIndex = -1;
+    private float buildScreenPanelAnimation = 0f;
+    private float buildScreenTrayAnimation = 0f;
 
     private void InitUnlockedBuildTools()
     {
@@ -72,6 +75,20 @@ public partial class GameBootstrap
         SessionDebugLogger.Log("BUILD", "All build tools unlocked.");
     }
 
+    private void CloseBuildMenuFromWorldClick()
+    {
+        if (!isBuildPanelOpen || activeBuildTool != BuildTool.None)
+        {
+            return;
+        }
+
+        isBuildPanelOpen = false;
+        selectedBuildCategoryIndex = -1;
+        isBuildScreenDirty = true;
+        LogUiInput("Build Canvas: closed by outside world click");
+        PlayUiSound(uiPanelCloseClip, 0.78f);
+    }
+
     private void SetupBuildScreenUi()
     {
         if (buildScreenUi != null) return;
@@ -91,59 +108,85 @@ public partial class GameBootstrap
         scaler.matchWidthOrHeight = 0.5f;
         buildScreenUi.CanvasRoot = canvasObject;
 
-        GameObject windowRoot = CreateUiObject("BuildWindowRoot", canvasObject.transform);
-        RectTransform windowRect = windowRoot.GetComponent<RectTransform>();
-        SetCenteredWindow(windowRect, 660f, 740f, -16f);
+        RectTransform windowRect = CreateUiObject("BuildBottomHudRoot", canvasObject.transform).GetComponent<RectTransform>();
+        StretchRect(windowRect, 0f, 0f, 0f, 0f);
+        CanvasGroup panelGroup = windowRect.gameObject.AddComponent<CanvasGroup>();
+        panelGroup.alpha = 0f;
+        panelGroup.blocksRaycasts = false;
+        panelGroup.interactable = false;
         buildScreenUi.WindowRoot = windowRect;
+        buildScreenUi.PanelGroup = panelGroup;
 
-        Image windowBg = windowRoot.AddComponent<Image>();
-        windowBg.color = FleetScreenTint;
-        Outline windowOutline = windowRoot.AddComponent<Outline>();
-        windowOutline.effectColor = new Color(0f, 0f, 0f, 0.28f);
-        windowOutline.effectDistance = new Vector2(2f, -2f);
+        RectTransform itemTray = CreateUiObject("BuildItemTray", windowRect).GetComponent<RectTransform>();
+        itemTray.anchorMin = new Vector2(0.5f, 0f);
+        itemTray.anchorMax = new Vector2(0.5f, 0f);
+        itemTray.pivot = new Vector2(0.5f, 0f);
+        itemTray.anchoredPosition = new Vector2(0f, 104f);
+        itemTray.sizeDelta = new Vector2(980f, 116f);
+        Image trayBg = itemTray.gameObject.AddComponent<Image>();
+        trayBg.color = new Color(0.035f, 0.055f, 0.065f, 0.88f);
+        Outline trayOutline = itemTray.gameObject.AddComponent<Outline>();
+        trayOutline.effectColor = new Color(0.42f, 0.72f, 0.78f, 0.42f);
+        trayOutline.effectDistance = new Vector2(0f, 2f);
+        CanvasGroup trayGroup = itemTray.gameObject.AddComponent<CanvasGroup>();
+        trayGroup.alpha = 0f;
+        trayGroup.blocksRaycasts = false;
+        trayGroup.interactable = false;
+        HorizontalLayoutGroup trayLayout = itemTray.gameObject.AddComponent<HorizontalLayoutGroup>();
+        trayLayout.padding = new RectOffset(18, 18, 10, 10);
+        trayLayout.spacing = 10f;
+        trayLayout.childAlignment = TextAnchor.MiddleCenter;
+        trayLayout.childControlWidth = false;
+        trayLayout.childControlHeight = false;
+        trayLayout.childForceExpandWidth = false;
+        trayLayout.childForceExpandHeight = false;
+        buildScreenUi.ItemTrayRoot = itemTray;
+        buildScreenUi.ItemTrayGroup = trayGroup;
 
-        VerticalLayoutGroup rootLayout = windowRoot.AddComponent<VerticalLayoutGroup>();
-        rootLayout.padding = new RectOffset(18, 18, 18, 18);
-        rootLayout.spacing = 14;
-        rootLayout.childControlWidth = true;
-        rootLayout.childControlHeight = true;
-        rootLayout.childForceExpandWidth = true;
-        rootLayout.childForceExpandHeight = false;
+        RectTransform dockRoot = CreateUiObject("BuildCategoryDock", windowRect).GetComponent<RectTransform>();
+        dockRoot.anchorMin = new Vector2(0.5f, 0f);
+        dockRoot.anchorMax = new Vector2(0.5f, 0f);
+        dockRoot.pivot = new Vector2(0.5f, 0f);
+        dockRoot.anchoredPosition = new Vector2(0f, 22f);
+        dockRoot.sizeDelta = new Vector2(760f, 94f);
+        Image dockBg = dockRoot.gameObject.AddComponent<Image>();
+        dockBg.color = new Color(0.02f, 0.10f, 0.12f, 0.92f);
+        Outline dockOutline = dockRoot.gameObject.AddComponent<Outline>();
+        dockOutline.effectColor = new Color(0.26f, 0.78f, 0.86f, 0.55f);
+        dockOutline.effectDistance = new Vector2(0f, 2f);
+        HorizontalLayoutGroup dockLayout = dockRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+        dockLayout.padding = new RectOffset(16, 16, 10, 10);
+        dockLayout.spacing = 10f;
+        dockLayout.childAlignment = TextAnchor.MiddleCenter;
+        dockLayout.childControlWidth = false;
+        dockLayout.childControlHeight = false;
+        dockLayout.childForceExpandWidth = false;
+        dockLayout.childForceExpandHeight = false;
+        buildScreenUi.DockRoot = dockRoot;
+        buildScreenUi.CategoryRowRoot = dockRoot;
 
-        RectTransform headerRow = CreateLayoutRow("BuildHeaderRow", windowRoot.transform, 36f, 0f);
-        Text buildTitle = CreateHeaderText("BuildTitle", headerRow, font, "Build", 22, TextAnchor.MiddleLeft, Color.white);
-        buildTitle.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-
-        FleetCanvasUiFactory.ScrollPanelRefs buildScroll = CreateVerticalScrollList(
-            "BuildScrollView",
-            windowRoot.transform,
-            "BuildCardList",
-            10f,
-            flexibleHeight: 1f);
-        RectTransform cardList = buildScroll.Content;
-
-        buildScreenUi.Categories = CreateBuildCategoriesFromCatalog(cardList, font) ?? new BuildCategoryUi[]
+        buildScreenUi.Categories = CreateBuildCategoriesFromCatalog(dockRoot, itemTray, font) ?? new BuildCategoryUi[]
         {
-            CreateBuildCategory(cardList, font, "Roads & Transport", "Дороги и транспорт", true,
+            CreateBuildCategory(dockRoot, itemTray, font, "Roads & Transport", "Дороги и транспорт", true,
                 (BuildTool.SingleRoad,       "1R", "One-Lane Road",     new Color(0.22f, 0.34f, 0.46f)),
                 (BuildTool.Road,             "2W", "Two-Way Road",      new Color(0.27f, 0.42f, 0.60f)),
                 (BuildTool.Stop,             "ST", "Bus Stop",          new Color(0.72f, 0.28f, 0.24f)),
                 (BuildTool.Parking,          "PK", "Parking",           new Color(0.28f, 0.30f, 0.38f)),
                 (BuildTool.GasStation,       "GS", "Gas Station",       new Color(0.84f, 0.68f, 0.26f))),
-            CreateBuildCategory(cardList, font, "Logistics & Trade", "Логистика и торговля", false,
+            CreateBuildCategory(dockRoot, itemTray, font, "Logistics & Trade", "Логистика и торговля", false,
                 (BuildTool.Warehouse,        "WH", "Warehouse",         new Color(0.70f, 0.52f, 0.30f)),
                 (BuildTool.Docks,            "DK", "Docks",             new Color(0.24f, 0.44f, 0.54f))),
-            CreateBuildCategory(cardList, font, "Production", "Производство", false,
+            CreateBuildCategory(dockRoot, itemTray, font, "Production", "Производство", false,
                 (BuildTool.Forest,           "LC", "Lumberjack Camp",    new Color(0.28f, 0.45f, 0.18f)),
                 (BuildTool.Sawmill,          "SW", "Sawmill",           new Color(0.58f, 0.36f, 0.16f)),
                 (BuildTool.FurnitureFactory, "FF", "Furniture Factory", new Color(0.46f, 0.26f, 0.52f))),
-            CreateBuildCategory(cardList, font, "Housing & Civic", "Жильё и город", false,
+            CreateBuildCategory(dockRoot, itemTray, font, "Housing & Civic", "Жильё и город", false,
                 (BuildTool.CityHall,         "CH", "City Hall",      new Color(0.35f, 0.42f, 0.55f)),
                 (BuildTool.Motel,            "MT", "Motel",          new Color(0.24f, 0.48f, 0.36f)),
                 (BuildTool.PersonalHouse,    "PH", "Personal House", new Color(0.55f, 0.42f, 0.30f)),
                 (BuildTool.Kindergarten,     "KG", "Kindergarten",   new Color(0.46f, 0.62f, 0.36f)),
                 (BuildTool.LaborExchange,    "LE", "Labor Exchange", new Color(0.34f, 0.47f, 0.56f))),
-            CreateBuildCategory(cardList, font, "Services & Leisure", "Сервисы и досуг", false,
+            CreateBuildCategory(dockRoot, itemTray, font, "Services & Leisure", "Сервисы и досуг", false,
                 (BuildTool.Canteen,          "CT", "Canteen",       new Color(0.20f, 0.42f, 0.50f)),
                 (BuildTool.Kiosk,            "KS", "Kiosk",         new Color(0.86f, 0.58f, 0.24f)),
                 (BuildTool.Bar,              "BR", "Bar",           new Color(0.52f, 0.20f, 0.20f)),
@@ -152,74 +195,75 @@ public partial class GameBootstrap
                 (BuildTool.CarMarket,        "CM", "Car Market",    new Color(0.64f, 0.52f, 0.38f))),
         };
 
-        AddOverlayCloseButton(windowRect, font);
+        selectedBuildCategoryIndex = -1;
+        buildScreenPanelAnimation = 0f;
+        buildScreenTrayAnimation = 0f;
         buildScreenUi.CanvasRoot.SetActive(false);
         UpdateBuildScreenUi();
     }
 
     private BuildItemUi CreateBuildItemCard(RectTransform parent, Font font, BuildTool tool, string abbrev, string title, Color accentColor)
     {
-        BuildItemUi item = new BuildItemUi { Tool = tool, DefaultAccentColor = accentColor };
+        BuildItemUi item = new() { Tool = tool, DefaultAccentColor = accentColor };
 
-        RectTransform cardRoot = CreateHorizontalLayoutPanel(
-            "BuildCard_" + tool,
-            parent,
-            new Color(0.16f, 0.21f, 0.28f, 1f),
-            new RectOffset(),
-            0f,
-            preferredHeight: 72f,
-            flexibleHeight: 0f,
-            childForceExpandHeight: true,
-            addOutline: false);
+        RectTransform cardRoot = CreateUiObject("BuildTool_" + tool, parent).GetComponent<RectTransform>();
+        cardRoot.sizeDelta = new Vector2(112f, 96f);
+        LayoutElement rootLayout = cardRoot.gameObject.AddComponent<LayoutElement>();
+        rootLayout.preferredWidth = 112f;
+        rootLayout.preferredHeight = 96f;
         Image cardBg = cardRoot.GetComponent<Image>();
+        if (cardBg == null)
+        {
+            cardBg = cardRoot.gameObject.AddComponent<Image>();
+        }
+        cardBg.color = new Color(0.10f, 0.15f, 0.18f, 0.96f);
+        Outline outline = cardRoot.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.34f);
+        outline.effectDistance = new Vector2(1.5f, -1.5f);
         item.Root   = cardRoot;
         item.CardBg = cardBg;
 
-        // Colored accent strip (left)
-        RectTransform accentStrip = CreateUiObject("Accent", cardRoot).GetComponent<RectTransform>();
+        RectTransform accentStrip = CreateUiObject("Icon", cardRoot).GetComponent<RectTransform>();
+        accentStrip.anchorMin = new Vector2(0.5f, 1f);
+        accentStrip.anchorMax = new Vector2(0.5f, 1f);
+        accentStrip.pivot = new Vector2(0.5f, 1f);
+        accentStrip.sizeDelta = new Vector2(68f, 58f);
+        accentStrip.anchoredPosition = new Vector2(0f, -8f);
         Image accentBg = accentStrip.gameObject.AddComponent<Image>();
         accentBg.color = accentColor;
-        accentStrip.gameObject.AddComponent<LayoutElement>().preferredWidth = 68f;
         item.AccentBg = accentBg;
 
         CreateBuildAccentVisual(accentStrip, font, tool, abbrev);
 
-        // Card body (right)
-        RectTransform body = CreateVerticalStack(
-            "Body",
-            cardRoot,
-            new RectOffset(14, 10, 10, 8),
-            4,
-            flexibleWidth: 1f);
-
-        // Title row: name + status badge
-        RectTransform titleRow = CreateLayoutRow("TitleRow", body, 22f, 0f);
-
-        Text titleText = CreateHeaderText("Title", titleRow, font, title, 15, TextAnchor.MiddleLeft, Color.white);
-        titleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        Text titleText = CreateHeaderText("Title", cardRoot, font, title, 11, TextAnchor.MiddleCenter, Color.white);
+        RectTransform titleRect = titleText.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0f, 0f);
+        titleRect.anchorMax = new Vector2(1f, 0f);
+        titleRect.pivot = new Vector2(0.5f, 0f);
+        titleRect.offsetMin = new Vector2(7f, 7f);
+        titleRect.offsetMax = new Vector2(-7f, 34f);
+        titleText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        titleText.verticalOverflow = VerticalWrapMode.Truncate;
         item.TitleText = titleText;
 
         FleetCanvasUiFactory.BadgeRefs statusBadge = CreateBadge(
             "StatusBadge",
-            titleRow,
+            cardRoot,
             font,
-            "Available",
-            11,
+            string.Empty,
+            9,
             new Color(0.22f, 0.28f, 0.38f, 0.8f),
             Color.white,
-            72f,
-            20f);
+            54f,
+            16f);
+        RectTransform badgeRect = statusBadge.Background.GetComponent<RectTransform>();
+        badgeRect.anchorMin = new Vector2(1f, 1f);
+        badgeRect.anchorMax = new Vector2(1f, 1f);
+        badgeRect.pivot = new Vector2(1f, 1f);
+        badgeRect.anchoredPosition = new Vector2(-5f, -5f);
         item.StatusBg = statusBadge.Background;
         item.StatusText = statusBadge.Label;
 
-        // Description
-        Text descText = CreateBodyText("Desc", body, font, string.Empty, 12, TextAnchor.UpperLeft, FleetSecondaryTextColor);
-        descText.horizontalOverflow = HorizontalWrapMode.Wrap;
-        descText.verticalOverflow   = VerticalWrapMode.Overflow;
-        descText.gameObject.AddComponent<LayoutElement>().flexibleHeight = 0f;
-        item.DescText = descText;
-
-        // Invisible button over the whole card
         Button btn = cardRoot.gameObject.AddComponent<Button>();
         btn.targetGraphic = cardBg;
         ColorBlock colors = btn.colors;
@@ -233,13 +277,13 @@ public partial class GameBootstrap
         {
             if (!IsBuildToolUnlocked(capturedTool) || IsBuildToolTemporarilyUnavailable(capturedTool)) return;
             activeBuildTool = activeBuildTool == capturedTool ? BuildTool.None : capturedTool;
-            isBuildPanelOpen = false;
             LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
             PlayUiSound(uiSelectClip, 0.85f);
             SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
             isBuildScreenDirty = true;
         });
         item.Button = btn;
+        AddBuildHoverHandlers(cardRoot.gameObject, hovered => item.IsHovered = hovered);
         return item;
     }
 
@@ -730,7 +774,7 @@ public partial class GameBootstrap
         }
     }
 
-    private BuildCategoryUi[] CreateBuildCategoriesFromCatalog(RectTransform parent, Font font)
+    private BuildCategoryUi[] CreateBuildCategoriesFromCatalog(RectTransform categoryParent, RectTransform itemParent, Font font)
     {
         BuildCatalogData catalog = GetBuildCatalogData();
         if (catalog?.categories == null || catalog.categories.Length == 0)
@@ -767,7 +811,8 @@ public partial class GameBootstrap
             }
 
             categories.Add(CreateBuildCategory(
-                parent,
+                categoryParent,
+                itemParent,
                 font,
                 categoryData.GetLabel(false),
                 categoryData.GetLabel(true),

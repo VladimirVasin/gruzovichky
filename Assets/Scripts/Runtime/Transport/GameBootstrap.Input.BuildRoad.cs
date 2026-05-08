@@ -69,6 +69,8 @@ public partial class GameBootstrap
             return;
         }
 
+        CloseBuildMenuFromWorldClick();
+
         Ray ray = mainCamera.ScreenPointToRay(mousePosition);
         Plane plane = new(Vector3.up, Vector3.zero);
         if (!plane.Raycast(ray, out float distance))

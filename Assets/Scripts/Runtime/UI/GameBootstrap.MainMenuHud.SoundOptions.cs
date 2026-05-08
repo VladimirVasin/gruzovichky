@@ -26,9 +26,11 @@ public partial class GameBootstrap
         mainMenuHud.SoundOptionsTitleText = CreateHeaderText("SoundOptionsTitle", headerRow, uiFont, GetSoundOptionsTitle(), 22, TextAnchor.MiddleLeft, Color.white);
         mainMenuHud.SoundOptionsTitleText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        Button closeButton = CreateButton("SoundOptionsClose", headerRow, uiFont, out mainMenuHud.SoundOptionsCloseText, "X", 14, new Color(0.34f, 0.12f, 0.12f, 1f), Color.white);
-        closeButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 44f;
-        closeButton.onClick.AddListener(CloseSoundOptionsPanel);
+        mainMenuHud.SoundOptionsCloseButton = CreateButton("SoundOptionsClose", headerRow, uiFont, out mainMenuHud.SoundOptionsCloseText, "X", 14, new Color(0.34f, 0.12f, 0.12f, 1f), Color.white);
+        LayoutElement closeLayout = mainMenuHud.SoundOptionsCloseButton.gameObject.AddComponent<LayoutElement>();
+        closeLayout.preferredWidth = 44f;
+        closeLayout.preferredHeight = 34f;
+        mainMenuHud.SoundOptionsCloseButton.onClick.AddListener(CloseSoundOptionsPanel);
         mainMenuHud.SoundOptionsCloseText.raycastTarget = false;
 
         mainMenuHud.SoundOptionsHintText = CreateBodyText("SoundOptionsHint", panel, uiFont, GetSoundOptionsHint(), 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
@@ -53,9 +55,11 @@ public partial class GameBootstrap
         mainMenuHud.SoundOptionsCountText.raycastTarget = false;
         mainMenuHud.SoundOptionsCountText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        Button resetAllButton = CreateButton("SoundOptionsResetAll", footerRow, uiFont, out mainMenuHud.SoundOptionsResetAllText, GetSoundResetAllLabel(), 13, new Color(0.36f, 0.20f, 0.08f, 1f), Color.white);
-        resetAllButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 150f;
-        resetAllButton.onClick.AddListener(ResetAllSoundOptionVolumes);
+        mainMenuHud.SoundOptionsResetAllButton = CreateButton("SoundOptionsResetAll", footerRow, uiFont, out mainMenuHud.SoundOptionsResetAllText, GetSoundResetAllLabel(), 13, new Color(0.36f, 0.20f, 0.08f, 1f), Color.white);
+        LayoutElement resetAllLayout = mainMenuHud.SoundOptionsResetAllButton.gameObject.AddComponent<LayoutElement>();
+        resetAllLayout.preferredWidth = 150f;
+        resetAllLayout.preferredHeight = 34f;
+        mainMenuHud.SoundOptionsResetAllButton.onClick.AddListener(ResetAllSoundOptionVolumes);
         mainMenuHud.SoundOptionsResetAllText.raycastTarget = false;
 
         RebuildSoundOptionsRows(uiFont);
@@ -245,6 +249,8 @@ public partial class GameBootstrap
             }
             mainMenuHud.SoundOptionsRoot.transform.SetAsLastSibling();
             RefreshSoundOptionsPanelUI();
+            EnsureMainMenuOptionsActionButtonsClickable();
+            Canvas.ForceUpdateCanvases();
         }
         else
         {
@@ -294,6 +300,7 @@ public partial class GameBootstrap
         {
             mainMenuHud.SoundOptionsResetAllText.text = GetSoundResetAllLabel();
         }
+        EnsureMainMenuOptionsActionButtonsClickable();
 
         foreach (SoundOptionEntry entry in soundOptionEntries)
         {
