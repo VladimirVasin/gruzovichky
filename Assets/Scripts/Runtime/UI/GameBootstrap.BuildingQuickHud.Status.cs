@@ -33,7 +33,9 @@ public partial class GameBootstrap
                     ? "Receiving imported trade delivery"
                     : "Warehouse operational - resources available"
                 : "Finished goods storage",
-            LocationType.Motel   => "Drivers rest and idle here",
+            LocationType.Motel   => IsRussianLanguage()
+                ? "\u0416\u0438\u0442\u0435\u043b\u0438 \u043e\u0442\u0434\u044b\u0445\u0430\u044e\u0442 \u0438 \u043d\u043e\u0447\u0443\u044e\u0442 \u0437\u0434\u0435\u0441\u044c,\n\u043a\u043e\u0433\u0434\u0430 \u0438\u043c \u043d\u0443\u0436\u0435\u043d \u0441\u043e\u043d \u0438\u043b\u0438 \u043f\u0430\u0443\u0437\u0430."
+                : "Residents sleep and rest here when they need recovery.",
             LocationType.IntercityStop => "Intercity worker arrival stop by the highway",
             LocationType.Stop    => GetLocalBusStopNetworkStatusText(),
             LocationType.Canteen      => IsRussianLanguage() ? "\u0421\u0442\u043e\u043b\u043e\u0432\u0430\u044f - \u043f\u043e\u0441\u0435\u0442\u0438\u0442\u0435\u043b\u0438 \u043f\u043b\u0430\u0442\u044f\u0442 $8 \u0437\u0430 \u0435\u0434\u0443." : "Service canteen - visitors pay $8 for meals",
@@ -45,7 +47,9 @@ public partial class GameBootstrap
             LocationType.Kindergarten  => IsRussianLanguage() ? "\u0414\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434: \u0432\u043e\u0441\u043f\u0438\u0442\u0430\u0442\u0435\u043b\u0438 \u0434\u0430\u044e\u0442 \u043c\u0435\u0441\u0442\u0430 \u0434\u043b\u044f \u0434\u0435\u0442\u0435\u0439 \u0438 \u0441\u043d\u0438\u0436\u0430\u044e\u0442 \u0441\u0442\u0440\u0435\u0441\u0441 \u0441\u0435\u043c\u0435\u0439." : "Kindergarten - caregivers create child-care capacity for families.",
             LocationType.CarMarket     => IsRussianLanguage() ? "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 \u043b\u0438\u0447\u043d\u044b\u0435 \u0430\u0432\u0442\u043e." : "Car Market - workers buy personal cars here.",
             LocationType.LaborExchange => IsRussianLanguage() ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u043a\u043b\u0435\u0440\u043a \u043f\u0443\u0431\u043b\u0438\u043a\u0443\u0435\u0442 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438, \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0445\u043e\u0434\u044f\u0442 \u0437\u0430 \u0440\u0430\u0431\u043e\u0442\u043e\u0439." : "Labor Exchange - a clerk posts vacancies and workers apply here.",
-            LocationType.CityHall      => IsRussianLanguage() ? "Ратуша: горожане подают обращения, а принятые превращаются в городские цели." : "City Hall - citizens file requests that can become city goals.",
+            LocationType.CityHall      => IsRussianLanguage()
+                ? "Ратуша: обращения жителей и городские цели.\nОткрой Ратушу, чтобы принять или отклонить обращения."
+                : "City Hall: citizen requests and city goals.\nOpen City Hall to accept or reject requests.",
             _                         => string.Empty
         };
     }
@@ -66,7 +70,7 @@ public partial class GameBootstrap
                 ? FormatValueLine("Статус", "Готова к приёму")
                 : FormatValueLine("Status", "Intercity arrivals ready"),
             LocationType.Stop       => GetLocalBusStopQuickResourceText(),
-            LocationType.Motel      => GetServiceBuildingQuickResourceText(locationType),
+            LocationType.Motel      => GetMotelQuickResourceText(),
             LocationType.Bar          => GetBarQuickResourceText(),
             LocationType.Canteen      => GetCanteenQuickResourceText(),
             LocationType.Kiosk        => GetServiceBuildingQuickResourceText(locationType),
@@ -228,6 +232,21 @@ public partial class GameBootstrap
         return text;
     }
 
+    private string GetMotelQuickResourceText()
+    {
+        if (!locations.TryGetValue(LocationType.Motel, out LocationData motel))
+        {
+            return string.Empty;
+        }
+
+        bool ru = IsRussianLanguage();
+        string fee = motel.ServiceFee > 0 ? $"${motel.ServiceFee}" : (ru ? "\u0411\u0435\u0441\u043f\u043b\u0430\u0442\u043d\u043e" : "Free");
+        return FormatValueLine(ru ? "\u0423\u0441\u043b\u0443\u0433\u0430" : "Service", ru ? "\u0421\u043e\u043d \u0438 \u043e\u0442\u0434\u044b\u0445" : "Sleep and rest") + "\n" +
+               FormatValueLine(ru ? "\u0421\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c" : "Fee", fee) + "\n" +
+               FormatValueLine(ru ? "\u0421\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a\u0438" : "Staff", $"{CountWorkersOnShiftAt(LocationType.Motel)} / {GetMaxBuildingWorkerSlots(LocationType.Motel)}") + "\n" +
+               FormatValueLine(ru ? "\u041a\u0430\u0441\u0441\u0430" : "Bank", $"${motel.BuildingBank}");
+    }
+
     private string GetGasStationQuickResourceText()
     {
         return $"{FormatValueLine("Truck Fuel Service", "Ready")}\n" +
@@ -318,7 +337,7 @@ public partial class GameBootstrap
         return locationType switch
         {
             LocationType.Parking => "Open Fleet",
-            LocationType.Motel => "Open Drivers",
+            LocationType.Motel => IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0436\u0438\u0442\u0435\u043b\u0435\u0439" : "Open Workers",
             LocationType.Bar => IsRussianLanguage() ? "\u0412\u043e\u0439\u0442\u0438 \u0432\u043d\u0443\u0442\u0440\u044c" : "Enter Inside",
             LocationType.LaborExchange => IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0411\u0438\u0440\u0436\u0443" : "Open Labor Exchange",
             LocationType.CityHall => IsRussianLanguage() ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0420\u0430\u0442\u0443\u0448\u0443" : "Open City Hall",

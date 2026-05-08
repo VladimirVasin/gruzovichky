@@ -6,6 +6,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-08: Reworked the Motel building microHUD content. Motel now has a dedicated compact Russian summary for sleep/rest service, fee, staff on shift, and bank; the duplicated "workers inside" counter was removed from the summary while the separate people-in-building list remains with an empty state, and the Motel quickHUD height now shrinks when the inside list is empty. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, and added-line mojibake scan.
+
 - 2026-05-08: Added a second mandatory New Game build-unlock layer. New Game still starts with one-lane road, Warehouse, Motel, and City Hall; after the core trio, only Parking, Labor Exchange, Canteen, Forest, Gas Station, Sawmill, and Bar unlock. The remaining optional layer, including two-way road, bus stop, Docks, advanced production, leisure, housing, Kindergarten, and Car Market, unlocks only after all second-layer buildings exist. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, line-count check, `git diff --check`, and targeted mojibake scan.
 
 - 2026-05-08: Tightened New Game build progression order. New Game still starts with only the one-lane road, Warehouse, Motel, and City Hall, but no longer unlocks partial groups from each core building. All remaining build tools now unlock together only after Warehouse, Motel, and City Hall all exist, preserving the new-tool pulse/feed feedback at the final core building. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, line-count check, `git diff --check`, and targeted mojibake scan.
@@ -88,7 +90,25 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Summary
 
+- 2026-05-08: Retuned the worker microHUD condition readout. The compact resident popup now derives its condition score from current need fullness, so a freshly spawned worker with full needs shows `100` instead of inheriting the longer-term migration satisfaction score, and the warning-styled `Критично сейчас` section became neutral `Нужды` with `Все нужды в норме` as the empty state. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal` and `git diff --check`.
+
+- 2026-05-08: Reworked the City Hall building microHUD into a compact dedicated layout. The quick HUD now switches City Hall to a worker-sized dark card headed `Ратуша (Сервис)`, keeps the active-request count only in the `Обращения` status row, keeps short Russian effect/status rows, and preserves close/open actions plus map tether behavior. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal` and `git diff --check`.
+
+- 2026-05-08: Added map tether lines to building quick HUDs. Selected building, bus stop, and personal house microHUDs now draw a non-raycast amber UI line from the HUD edge to the start corner of the selected grid footprint, and hide the line when the HUD closes or a blocking HUD opens. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal` and `git diff --check`.
+
+- 2026-05-08: Moved City Trust out of the City Hall quick HUD into the top information bar next to Treasury. City Hall quick HUD now explains that citizen requests become 24h city goals, shows only total active requests, the accepted city goal, and the current focus request, without separate new/urgent counters. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, and targeted mojibake marker scan.
+
+- 2026-05-08: Retuned the compact Event Feed after visual review. Toast rows now keep readable 13px message text, drop the time column, use a stable readable width again, clamp each row to a compact one-line 28px height with clipped overflow instead of tall wrapping, and stay below other HUD layers. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`.
+
+- 2026-05-08: Added a location tether to the compact worker microHUD. The resident popup now draws a non-raycast amber UI line to the same selected worker highlight target used by selection visuals, including workers riding vehicles or being inside buildings, and hides the tether whenever the microHUD is hidden. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal` and `git diff --check`.
+
 - 2026-05-08: Extended City Hall citizen build requests to cover the staged build progression. Requests now use core/second/third construction layers, honor current build unlocks, keep later layers blocked until the current unlocked layer is built, support required counts such as two bus stops, and resolve against actual built-location counts when construction completes.
+
+- 2026-05-08: Fixed Bar interior teardown audio cleanup. Destroyed Unity `AudioSource` references are now stopped through an explicit Unity-null guard instead of C# null-conditional calls, preventing MissingReferenceException during `OnDestroy`/scene release.
+
+- 2026-05-08: Reworked the worker microHUD into a compact Russian status popup. It now shows only resident name, occupation, current activity, overall condition with a readable bar, up to three attention needs with percent bars, money, close, and open-profile actions; profile-style metadata moved back to the full Residents profile.
+
+- 2026-05-08: Compacted the Event Feed into a lower-priority HUD layer. Feed toasts now use smaller rows, fewer visible entries, no separate time column, and `sortingOrder` below quick HUDs and full-screen management windows so other HUDs cover it when they overlap.
 
 - 2026-05-05: Rebuilt the active Tutorial around current systems: Labor Exchange, automatic arrivals, services, warehouse loaders, local buses, economy/taxes, Regional Map route building, Docks staffing, and Trade policy setup.
 

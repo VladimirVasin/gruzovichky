@@ -4,11 +4,11 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
-    private const int EventFeedMaxVisibleEntries = 4;
-    private const float EventFeedEntryLifetime = 5.8f;
-    private const float EventFeedFadeDuration = 0.45f;
-    private const float EventFeedRowWidth = 520f;
-    private const float EventFeedRowHeight = 24f;
+    private const int EventFeedMaxVisibleEntries = 3;
+    private const float EventFeedEntryLifetime = 4.8f;
+    private const float EventFeedFadeDuration = 0.35f;
+    private const float EventFeedRowWidth = 390f;
+    private const float EventFeedRowHeight = 28f;
 
     private enum FeedEventType
     {
@@ -123,7 +123,7 @@ public partial class GameBootstrap
 
         Canvas canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 7;
+        canvas.sortingOrder = 1;
 
         CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -135,16 +135,16 @@ public partial class GameBootstrap
         eventFeedRoot.anchorMin = new Vector2(1f, 1f);
         eventFeedRoot.anchorMax = new Vector2(1f, 1f);
         eventFeedRoot.pivot = new Vector2(1f, 1f);
-        eventFeedRoot.sizeDelta = new Vector2(EventFeedRowWidth, EventFeedMaxVisibleEntries * (EventFeedRowHeight + 3f));
-        eventFeedRoot.anchoredPosition = new Vector2(-20f, -62f);
+        eventFeedRoot.sizeDelta = new Vector2(EventFeedRowWidth, EventFeedMaxVisibleEntries * (EventFeedRowHeight + 2f));
+        eventFeedRoot.anchoredPosition = new Vector2(-14f, -54f);
 
         VerticalLayoutGroup layout = eventFeedRoot.gameObject.AddComponent<VerticalLayoutGroup>();
         layout.childAlignment = TextAnchor.UpperRight;
         layout.childControlWidth = true;
-        layout.childControlHeight = false;
+        layout.childControlHeight = true;
         layout.childForceExpandWidth = true;
         layout.childForceExpandHeight = false;
-        layout.spacing = 3f;
+        layout.spacing = 2f;
         layout.padding = new RectOffset(0, 0, 0, 0);
 
         eventFeedRoot.gameObject.SetActive(false);
@@ -155,6 +155,7 @@ public partial class GameBootstrap
         Font uiFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
         RectTransform row = CreateUiObject("FeedEntry", eventFeedRoot).GetComponent<RectTransform>();
+        row.gameObject.AddComponent<RectMask2D>();
         LayoutElement layout = row.gameObject.AddComponent<LayoutElement>();
         layout.minWidth = EventFeedRowWidth;
         layout.preferredWidth = EventFeedRowWidth;
@@ -162,15 +163,15 @@ public partial class GameBootstrap
         layout.preferredHeight = EventFeedRowHeight;
 
         Image background = row.gameObject.AddComponent<Image>();
-        background.color = new Color(0.06f, 0.08f, 0.11f, 0.62f);
+        background.color = new Color(0.045f, 0.060f, 0.080f, 0.58f);
         background.raycastTarget = false;
         CanvasGroup canvasGroup = row.gameObject.AddComponent<CanvasGroup>();
         canvasGroup.blocksRaycasts = false;
         canvasGroup.interactable = false;
 
         HorizontalLayoutGroup rowLayout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-        rowLayout.padding = new RectOffset(8, 10, 3, 3);
-        rowLayout.spacing = 7f;
+        rowLayout.padding = new RectOffset(7, 9, 2, 2);
+        rowLayout.spacing = 6f;
         rowLayout.childAlignment = TextAnchor.MiddleLeft;
         rowLayout.childControlWidth = true;
         rowLayout.childControlHeight = true;
@@ -179,32 +180,26 @@ public partial class GameBootstrap
 
         RectTransform accent = CreateUiObject("Accent", row).GetComponent<RectTransform>();
         LayoutElement accentLayout = accent.gameObject.AddComponent<LayoutElement>();
-        accentLayout.preferredWidth = 3f;
-        accentLayout.minWidth = 3f;
+        accentLayout.preferredWidth = 2f;
+        accentLayout.minWidth = 2f;
         Image accentImage = accent.gameObject.AddComponent<Image>();
         accentImage.color = GetFeedEventAccentColor(type);
         accentImage.raycastTarget = false;
 
-        Text badgeText = CreateHeaderText("TypeText", row, uiFont, string.Empty, 9, TextAnchor.MiddleLeft, GetFeedEventAccentColor(type));
+        Text badgeText = CreateHeaderText("TypeText", row, uiFont, string.Empty, 12, TextAnchor.MiddleCenter, GetFeedEventAccentColor(type));
         LayoutElement badgeLayout = badgeText.gameObject.AddComponent<LayoutElement>();
-        badgeLayout.preferredWidth = 20f;
+        badgeLayout.preferredWidth = 18f;
         badgeText.horizontalOverflow = HorizontalWrapMode.Overflow;
         badgeText.verticalOverflow = VerticalWrapMode.Truncate;
         badgeText.raycastTarget = false;
 
-        Text timeText = CreateBodyText("Time", row, uiFont, string.Empty, 10, TextAnchor.MiddleLeft, FleetMutedTextColor);
-        LayoutElement timeLayout = timeText.gameObject.AddComponent<LayoutElement>();
-        timeLayout.preferredWidth = 42f;
-        timeText.horizontalOverflow = HorizontalWrapMode.Overflow;
-        timeText.verticalOverflow = VerticalWrapMode.Truncate;
-        timeText.raycastTarget = false;
-
-        Text messageText = CreateBodyText("Message", row, uiFont, string.Empty, 11, TextAnchor.MiddleLeft, Color.white);
+        Text messageText = CreateBodyText("Message", row, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, new Color(0.94f, 0.96f, 0.99f, 1f));
         messageText.supportRichText = true;
-        messageText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        messageText.horizontalOverflow = HorizontalWrapMode.Overflow;
         messageText.verticalOverflow = VerticalWrapMode.Truncate;
         messageText.raycastTarget = false;
         LayoutElement messageLayout = messageText.gameObject.AddComponent<LayoutElement>();
+        messageLayout.minWidth = 120f;
         messageLayout.flexibleWidth = 1f;
 
         return new EventFeedEntryUi
@@ -220,7 +215,7 @@ public partial class GameBootstrap
             AccentImage = accentImage,
             BadgeImage = null,
             BadgeText = badgeText,
-            TimeText = timeText,
+            TimeText = null,
             MessageText = messageText
         };
     }
@@ -239,7 +234,10 @@ public partial class GameBootstrap
         }
 
         Color accent = GetFeedEventAccentColor(entry.Type);
-        entry.TimeText.text = GetDayNightClockLabel();
+        if (entry.TimeText != null)
+        {
+            entry.TimeText.text = GetDayNightClockLabel();
+        }
         entry.BadgeText.text = GetFeedEventTypeLabel(entry.Type);
         entry.BadgeText.color = accent;
         if (entry.BadgeImage != null)

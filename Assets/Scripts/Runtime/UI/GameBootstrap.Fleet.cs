@@ -795,6 +795,7 @@ public partial class GameBootstrap
         Vector2 guiPosition = new Vector2(screenPosition.x, Screen.height - screenPosition.y);
 
         if (GetMoneyHudRect().Contains(guiPosition) ||
+            GetCityTrustHudRect().Contains(guiPosition) ||
             GetPopulationHudRect().Contains(guiPosition) ||
             GetTimeHudRect().Contains(guiPosition) ||
             GetSpeedHudRect().Contains(guiPosition) ||
@@ -818,6 +819,13 @@ public partial class GameBootstrap
 
     private const float TopBarY   = 12f;
     private const float TopBarH   = 50f;
+    private const float TopBarGap = 4f;
+    private const float WeatherHudW = 120f;
+    private const float SpeedHudW = 90f;
+    private const float TimeHudW = 140f;
+    private const float PopulationHudW = 100f;
+    private const float CityTrustHudW = 116f;
+    private const float MoneyHudW = 150f;
     private const float RightColY = TopBarY + TopBarH + 8f;
 
     private Rect GetParkingHudRect()
@@ -835,30 +843,35 @@ public partial class GameBootstrap
         return new Rect(Screen.width - 290, RightColY + GetParkingHudHeight() + 8, 278, 170);
     }
 
-    // Top-right compact bar: [Weather 120] [Speed 90] [Time 140] [Population 100] [Treasury 150]
+    // Top-right compact bar: [Weather] [Speed] [Time] [Population] [Trust] [Treasury]
     private Rect GetMoneyHudRect()
     {
-        return new Rect(Screen.width - 12f - 150f, TopBarY, 150f, TopBarH);
+        return new Rect(Screen.width - 12f - MoneyHudW, TopBarY, MoneyHudW, TopBarH);
+    }
+
+    private Rect GetCityTrustHudRect()
+    {
+        return new Rect(GetMoneyHudRect().x - TopBarGap - CityTrustHudW, TopBarY, CityTrustHudW, TopBarH);
     }
 
     private Rect GetPopulationHudRect()
     {
-        return new Rect(Screen.width - 12f - 150f - 4f - 100f, TopBarY, 100f, TopBarH);
+        return new Rect(GetCityTrustHudRect().x - TopBarGap - PopulationHudW, TopBarY, PopulationHudW, TopBarH);
     }
 
     private Rect GetTimeHudRect()
     {
-        return new Rect(Screen.width - 12f - 150f - 4f - 100f - 4f - 140f, TopBarY, 140f, TopBarH);
+        return new Rect(GetPopulationHudRect().x - TopBarGap - TimeHudW, TopBarY, TimeHudW, TopBarH);
     }
 
     private Rect GetSpeedHudRect()
     {
-        return new Rect(Screen.width - 12f - 150f - 4f - 100f - 4f - 140f - 4f - 90f, TopBarY, 90f, TopBarH);
+        return new Rect(GetTimeHudRect().x - TopBarGap - SpeedHudW, TopBarY, SpeedHudW, TopBarH);
     }
 
     private Rect GetWeatherHudRect()
     {
-        return new Rect(Screen.width - 12f - 150f - 4f - 100f - 4f - 140f - 4f - 90f - 4f - 120f, TopBarY, 120f, TopBarH);
+        return new Rect(GetSpeedHudRect().x - TopBarGap - WeatherHudW, TopBarY, WeatherHudW, TopBarH);
     }
 
     private Rect GetSelectedBuildingHudRect()

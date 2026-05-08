@@ -592,7 +592,7 @@ public partial class GameBootstrap
 
         patron.VoiceTurnIndex = int.MinValue;
         patron.VoiceWordCount = 0;
-        patron.VoiceSource?.Stop();
+        StopUnityAudioSource(patron.VoiceSource);
     }
 
     private int GetBarInteriorConversationMemberCount(int group)

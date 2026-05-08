@@ -428,6 +428,20 @@ public partial class GameBootstrap
         GUI.color = previousColor;
     }
 
+    private void DrawCityTrustHud()
+    {
+        Rect panelRect = GetCityTrustHudRect();
+        GUI.Box(panelRect, IsRussianLanguage() ? "Доверие" : "Trust");
+        GUIStyle centeredHudValueStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontStyle = FontStyle.Bold
+        };
+        centeredHudValueStyle.normal.textColor = GetCityTrustColor();
+
+        GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 26), FormatCityTrustHudValue(IsRussianLanguage()), centeredHudValueStyle);
+    }
+
     private void DrawPopulationHud()
     {
         Rect panelRect = GetPopulationHudRect();

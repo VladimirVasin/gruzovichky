@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 
 public partial class GameBootstrap
@@ -9,27 +9,44 @@ public partial class GameBootstrap
         public RectTransform Root;
         public Text HeaderText;
         public Text OccupationText;
-        public RectTransform PortraitRoot;
-        public Text ProfileText;
-        public Text PlaceText;
-        public Text StatusText;
-        public RectTransform NeedsMealBarFill;
-        public RectTransform NeedsSleepBarFill;
-        public RectTransform NeedsLeisureBarFill;
-        public Text NeedsText;
-        public GameObject TruckRow;
-        public Text TruckText;
-        public Text ShiftText;
-        public Text HomeText;
-        public Text CarText;
+        public Text ActivityText;
+        public Text ConditionText;
+        public RectTransform ConditionBarFill;
+        public Image ConditionBarFillImage;
+        public Text CriticalEmptyText;
+        public DriverQuickHudNeedRow[] NeedRows;
         public Text BalanceText;
-        public Text PerksText;
         public Button OpenDriversButton;
         public Text OpenDriversButtonText;
         public Button CloseButton;
-        public int PortraitDriverId = -1;
+        public Text CloseButtonText;
+        public RectTransform LinkLine;
+        public Image LinkLineImage;
     }
 
+    private sealed class DriverQuickHudNeedRow
+    {
+        public GameObject Root;
+        public Image IconImage;
+        public Text LabelText;
+        public RectTransform BarFill;
+        public Image BarFillImage;
+        public Text PercentText;
+    }
+
+    private struct DriverQuickHudNeedSnapshot
+    {
+        public WorkerNeedKind Kind;
+        public string Label;
+        public Sprite Icon;
+        public float Percent;
+        public WorkerNeedStatus Status;
+    }
+
+    private static Sprite s_driverQuickHudShieldIcon;
+    private static readonly Color DriverQuickHudLinkLineColor = new(1f, 0.74f, 0.25f, 0.76f);
+    private const float DriverQuickHudLinkLineThickness = 3f;
+    private readonly Vector3[] driverQuickHudLinkCorners = new Vector3[4];
     private DriverQuickHudRefs driverQuickHud;
     private int selectedDriverId;
     private bool isDriverDetailsOpen;
@@ -52,113 +69,111 @@ public partial class GameBootstrap
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
         driverQuickHud.CanvasRoot = canvasObject;
+        CreateDriverQuickHudLinkLine(canvasObject.transform);
 
-        RectTransform root = CreateStyledPanel("DriverQuickHudRoot", canvasObject.transform, FleetPanelColor);
+        RectTransform root = CreateStyledPanel("DriverQuickHudRoot", canvasObject.transform, new Color(0.035f, 0.055f, 0.080f, 0.96f));
         root.anchorMin = new Vector2(1f, 0f);
         root.anchorMax = new Vector2(1f, 0f);
         root.pivot = new Vector2(1f, 0f);
-        root.anchoredPosition = new Vector2(-18f, 104f);
-        root.sizeDelta = new Vector2(390f, 420f);
+        root.anchoredPosition = new Vector2(-14f, 92f);
+        root.sizeDelta = new Vector2(330f, 0f);
         root.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         VerticalLayoutGroup rootLayout = root.gameObject.AddComponent<VerticalLayoutGroup>();
-        rootLayout.padding = new RectOffset(16, 16, 16, 16);
-        rootLayout.spacing = 12;
+        rootLayout.padding = new RectOffset(12, 12, 12, 12);
+        rootLayout.spacing = 7;
         rootLayout.childControlWidth = true;
         rootLayout.childControlHeight = true;
         rootLayout.childForceExpandWidth = true;
         rootLayout.childForceExpandHeight = false;
         driverQuickHud.Root = root;
 
-        RectTransform headerRow = CreateLayoutRow("DriverQuickHudHeader", root, 30f, 10f);
-        driverQuickHud.HeaderText = CreateHeaderText("DriverName", headerRow, uiFont, "Driver", 21, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.HeaderText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        driverQuickHud.CloseButton = CreateButton("CloseBtn", headerRow, uiFont, out Text closeTxt, "X", 12, new Color(0.26f, 0.30f, 0.36f, 1f), Color.white);
+        RectTransform headerRow = CreateLayoutRow("DriverQuickHudHeader", root, 42f, 8f);
+        HorizontalLayoutGroup headerLayout = headerRow.GetComponent<HorizontalLayoutGroup>();
+        headerLayout.childAlignment = TextAnchor.MiddleCenter;
+        driverQuickHud.HeaderText = CreateHeaderText("DriverName", headerRow, uiFont, "Житель", 22, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.HeaderText.resizeTextForBestFit = true;
+        driverQuickHud.HeaderText.resizeTextMinSize = 15;
+        driverQuickHud.HeaderText.resizeTextMaxSize = 22;
+        driverQuickHud.HeaderText.verticalOverflow = VerticalWrapMode.Truncate;
+        driverQuickHud.HeaderText.lineSpacing = 0.82f;
+        LayoutElement headerTextLayout = driverQuickHud.HeaderText.gameObject.AddComponent<LayoutElement>();
+        headerTextLayout.flexibleWidth = 1f;
+        headerTextLayout.preferredHeight = 42f;
+
+        driverQuickHud.CloseButton = CreateButton("CloseBtn", headerRow, uiFont, out driverQuickHud.CloseButtonText, "X", 16, new Color(0.08f, 0.12f, 0.17f, 1f), Color.white);
+        driverQuickHud.CloseButtonText.fontStyle = FontStyle.Bold;
         LayoutElement closeLayout = driverQuickHud.CloseButton.gameObject.AddComponent<LayoutElement>();
-        closeLayout.preferredWidth = 28f;
-        closeLayout.preferredHeight = 28f;
+        closeLayout.preferredWidth = 30f;
+        closeLayout.preferredHeight = 30f;
         driverQuickHud.CloseButton.onClick.AddListener(ClearDriverFocus);
 
-        driverQuickHud.OccupationText = CreateBodyText("OccupationText", root, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, new Color(0.55f, 0.65f, 0.80f, 1f));
-        driverQuickHud.OccupationText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        driverQuickHud.OccupationText = CreateBodyText("OccupationText", root, uiFont, string.Empty, 15, TextAnchor.MiddleLeft, new Color(0.64f, 0.74f, 0.90f, 1f));
+        driverQuickHud.OccupationText.fontStyle = FontStyle.Bold;
+        driverQuickHud.OccupationText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
 
-        RectTransform profileRow = CreateLayoutRow("DriverQuickHudProfile", root, 58f, 10f);
-        driverQuickHud.PortraitRoot = CreateUiObject("DriverPortrait", profileRow).GetComponent<RectTransform>();
-        driverQuickHud.PortraitRoot.gameObject.AddComponent<RectMask2D>();
-        driverQuickHud.PortraitRoot.gameObject.AddComponent<LayoutElement>().preferredWidth = 52f;
+        driverQuickHud.ActivityText = CreateBodyText("ActivityText", root, uiFont, string.Empty, 14, TextAnchor.MiddleLeft, new Color(0.78f, 0.84f, 0.92f, 1f));
+        driverQuickHud.ActivityText.fontStyle = FontStyle.Bold;
+        driverQuickHud.ActivityText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
-        RectTransform profileColumn = CreateUiObject("DriverProfileColumn", profileRow).GetComponent<RectTransform>();
-        profileColumn.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
-        VerticalLayoutGroup profileLayout = profileColumn.gameObject.AddComponent<VerticalLayoutGroup>();
-        profileLayout.spacing = 4f;
-        profileLayout.childControlWidth = true;
-        profileLayout.childControlHeight = true;
-        profileLayout.childForceExpandWidth = true;
-        profileLayout.childForceExpandHeight = false;
-        driverQuickHud.ProfileText = CreateBodyText("ProfileText", profileColumn, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        driverQuickHud.ProfileText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
-        driverQuickHud.PlaceText = CreateBodyText("PlaceText", profileColumn, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.PlaceText.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+        RectTransform conditionCard = CreateStyledPanel("DriverQuickHudConditionCard", root, new Color(0.06f, 0.09f, 0.13f, 0.94f));
+        conditionCard.gameObject.AddComponent<LayoutElement>().preferredHeight = 82f;
+        VerticalLayoutGroup conditionLayout = conditionCard.gameObject.AddComponent<VerticalLayoutGroup>();
+        conditionLayout.padding = new RectOffset(10, 10, 9, 10);
+        conditionLayout.spacing = 8f;
+        conditionLayout.childControlWidth = true;
+        conditionLayout.childControlHeight = true;
+        conditionLayout.childForceExpandWidth = true;
+        conditionLayout.childForceExpandHeight = false;
 
-        RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
-        summaryCard.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        RectTransform conditionRow = CreateLayoutRow("DriverQuickHudConditionRow", conditionCard, 32f, 9f);
+        Image shieldIcon = CreateDriverQuickHudIconImage("ConditionShield", conditionRow, GetDriverQuickHudShieldIcon(), new Vector2(30f, 30f));
+        shieldIcon.color = Color.white;
+        driverQuickHud.ConditionText = CreateHeaderText("ConditionText", conditionRow, uiFont, string.Empty, 22, TextAnchor.MiddleLeft, Color.white);
+        driverQuickHud.ConditionText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
-        driverQuickHud.StatusText = CreateBodyText("Status", summaryBody, uiFont, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.StatusText.fontStyle = FontStyle.Bold;
-        driverQuickHud.StatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
+        driverQuickHud.ConditionBarFill = CreateDriverQuickHudProgressBar(
+            conditionCard,
+            "ConditionBar",
+            10f,
+            out driverQuickHud.ConditionBarFillImage);
 
-        RectTransform needsBlock = CreateUiObject("NeedsBlock", summaryBody).GetComponent<RectTransform>();
-        HorizontalLayoutGroup needsBlockLayout = needsBlock.gameObject.AddComponent<HorizontalLayoutGroup>();
-        needsBlockLayout.spacing = 8f;
-        needsBlockLayout.childAlignment = TextAnchor.MiddleLeft;
-        needsBlockLayout.childControlWidth = false;
-        needsBlockLayout.childControlHeight = false;
-        needsBlockLayout.childForceExpandWidth = false;
-        needsBlockLayout.childForceExpandHeight = false;
-        needsBlock.gameObject.AddComponent<LayoutElement>().preferredHeight = 12f;
-        driverQuickHud.NeedsMealBarFill    = CreateNeedsMiniBar(needsBlock, GetNeedsMealIcon(),    "DQHMeal",    80f);
-        driverQuickHud.NeedsSleepBarFill   = CreateNeedsMiniBar(needsBlock, GetNeedsSleepIcon(),   "DQHSleep",   80f);
-        driverQuickHud.NeedsLeisureBarFill = CreateNeedsMiniBar(needsBlock, GetNeedsLeisureIcon(), "DQHLeisure", 80f);
-        driverQuickHud.NeedsText = CreateBodyText("NeedsText", summaryBody, uiFont, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        driverQuickHud.NeedsText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
+        Text criticalHeader = CreateHeaderText("CriticalHeader", root, uiFont, "Нужды", 17, TextAnchor.MiddleLeft, new Color(0.78f, 0.84f, 0.92f, 1f));
+        criticalHeader.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
-        RectTransform statsGrid = CreateUiObject("StatsGrid", summaryBody).GetComponent<RectTransform>();
-        VerticalLayoutGroup statsLayout = statsGrid.gameObject.AddComponent<VerticalLayoutGroup>();
-        statsLayout.spacing = 5f;
-        statsLayout.childControlWidth = true;
-        statsLayout.childControlHeight = true;
-        statsLayout.childForceExpandWidth = true;
-        statsLayout.childForceExpandHeight = false;
-        statsGrid.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        RectTransform needsCard = CreateStyledPanel("DriverQuickHudNeedsCard", root, new Color(0.06f, 0.09f, 0.13f, 0.94f));
+        needsCard.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        VerticalLayoutGroup needsLayout = needsCard.gameObject.AddComponent<VerticalLayoutGroup>();
+        needsLayout.padding = new RectOffset(8, 8, 8, 8);
+        needsLayout.spacing = 5f;
+        needsLayout.childControlWidth = true;
+        needsLayout.childControlHeight = true;
+        needsLayout.childForceExpandWidth = true;
+        needsLayout.childForceExpandHeight = false;
 
-        GameObject truckRow = CreateUiObject("TruckRow", statsGrid);
-        truckRow.AddComponent<LayoutElement>().preferredHeight = 24f;
-        driverQuickHud.TruckRow = truckRow;
-        driverQuickHud.TruckText = CreateBodyText("TruckText", truckRow.GetComponent<RectTransform>(), uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.TruckText.rectTransform.anchorMin = Vector2.zero;
-        driverQuickHud.TruckText.rectTransform.anchorMax = Vector2.one;
-        driverQuickHud.TruckText.rectTransform.offsetMin = Vector2.zero;
-        driverQuickHud.TruckText.rectTransform.offsetMax = Vector2.zero;
+        driverQuickHud.CriticalEmptyText = CreateBodyText("CriticalEmptyText", needsCard, uiFont, "Все нужды в норме", 14, TextAnchor.MiddleCenter, new Color(0.72f, 0.80f, 0.88f, 1f));
+        driverQuickHud.CriticalEmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
 
-        driverQuickHud.ShiftText = CreateBodyText("ShiftText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.ShiftText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
-        driverQuickHud.HomeText = CreateBodyText("HomeText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.HomeText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
-        driverQuickHud.CarText = CreateBodyText("CarText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, Color.white);
-        driverQuickHud.CarText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
-        driverQuickHud.BalanceText = CreateBodyText("BalanceText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetAccentColor);
+        driverQuickHud.NeedRows = new[]
+        {
+            CreateDriverQuickHudNeedRow("Meal", needsCard, uiFont),
+            CreateDriverQuickHudNeedRow("Sleep", needsCard, uiFont),
+            CreateDriverQuickHudNeedRow("Leisure", needsCard, uiFont)
+        };
+
+        driverQuickHud.BalanceText = CreateBodyText("BalanceText", root, uiFont, string.Empty, 16, TextAnchor.MiddleLeft, new Color(0.62f, 0.90f, 0.54f, 1f));
+        driverQuickHud.BalanceText.fontStyle = FontStyle.Bold;
         driverQuickHud.BalanceText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
-        driverQuickHud.PerksText = CreateBodyText("PerksText", statsGrid, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        driverQuickHud.PerksText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
 
         RectTransform actionRow = CreateLayoutRow("DriverQuickHudActions", root, 34f, 0f);
-        driverQuickHud.OpenDriversButton = CreateButton("OpenDriversBtn", actionRow, uiFont, out driverQuickHud.OpenDriversButtonText, "Open Drivers", 13, FleetPrimaryButtonColor, Color.white);
+        driverQuickHud.OpenDriversButton = CreateButton("OpenDriversBtn", actionRow, uiFont, out driverQuickHud.OpenDriversButtonText, "Открыть профиль", 15, new Color(0.80f, 0.36f, 0.03f, 1f), Color.white);
+        driverQuickHud.OpenDriversButtonText.fontStyle = FontStyle.Bold;
         LayoutElement openDriversLayout = driverQuickHud.OpenDriversButton.gameObject.AddComponent<LayoutElement>();
         openDriversLayout.preferredHeight = 34f;
         openDriversLayout.flexibleWidth = 1f;
         driverQuickHud.OpenDriversButton.onClick.AddListener(() =>
         {
             if (selectedDriverId <= 0) return;
-            LogUiInput($"Driver Quick HUD: opened Drivers for Driver #{selectedDriverId}");
+            LogUiInput($"Driver Quick HUD: opened profile for Driver #{selectedDriverId}");
             OpenDriversPanelForDriver(selectedDriverId);
             isDriversScreenDirty = true;
         });
@@ -178,151 +193,526 @@ public partial class GameBootstrap
         if (driverQuickHud.CanvasRoot.activeSelf != shouldShow)
             driverQuickHud.CanvasRoot.SetActive(shouldShow);
 
-        if (!shouldShow) return;
+        if (!shouldShow)
+        {
+            SetDriverQuickHudLinkLineVisible(false);
+            return;
+        }
 
         DriverAgent driver = driverAgents.Find(d => d.DriverId == selectedDriverId);
         if (driver == null)
         {
+            SetDriverQuickHudLinkLineVisible(false);
             driverQuickHud.CanvasRoot.SetActive(false);
             return;
         }
 
-        TruckAgent truck = GetAssignedTruckForDriver(driver);
-        bool ru = IsRussianLanguage();
-
         driverQuickHud.HeaderText.text = driver.DriverName;
-        string occupationLabel = GetWorkerOccupationLabel(driver);
-        driverQuickHud.OccupationText.text = L(occupationLabel);
-        if (driverQuickHud.PortraitDriverId != driver.DriverId)
-        {
-            driverQuickHud.PortraitDriverId = driver.DriverId;
-            DrawWorkerPortraitScaled(driver, driverQuickHud.PortraitRoot, 0.50f);
-        }
-        driverQuickHud.ProfileText.text = $"{GetWorkerGenderLabel(driver, ru)} | {GetWorkerEducationDisplayName(driver.Education, ru)} | {GetWorkerQuickHudAgeLabel(driver, ru)}";
-        driverQuickHud.PlaceText.text = FormatValueLine(ru ? "\u0421\u0435\u0439\u0447\u0430\u0441" : "Now", GetWorkerQuickHudPlaceLabel(driver, ru));
+        driverQuickHud.OccupationText.text = GetWorkerQuickHudOccupationLabelRu(driver);
+        driverQuickHud.ActivityText.text = $"Сейчас: {GetWorkerQuickHudActivityLabelRu(driver)}";
 
-        string migrationLabel = GetWorkerMigrationStatusLabel(driver, ru);
-        driverQuickHud.StatusText.text = string.IsNullOrEmpty(migrationLabel)
-            ? GetDriverQuickHudStatusLabel(driver)
-            : $"{GetDriverQuickHudStatusLabel(driver)} | {migrationLabel} {driver.Satisfaction}";
+        int score = GetDriverQuickHudConditionScore(driver);
+        Color conditionColor = GetDriverQuickHudConditionColor(score);
+        driverQuickHud.ConditionText.text = $"{GetDriverQuickHudConditionLabel(score)} · {score}";
+        SetDriverQuickHudBar(driverQuickHud.ConditionBarFill, driverQuickHud.ConditionBarFillImage, score / 100f, conditionColor);
 
-        bool hasTruck = truck != null;
-        driverQuickHud.TruckRow.SetActive(hasTruck);
-        if (hasTruck)
-            driverQuickHud.TruckText.text = FormatValueLine("Truck", truck.DisplayName);
-
-        string shiftLabel = driver.DutyMode == DriverDutyMode.Logistics
-            ? GetProductionWorkRangeLabel()
-            : driver.ShiftStartHour >= 0 ? GetShiftRangeLabel(driver.ShiftStartHour) : "—";
-        driverQuickHud.ShiftText.text = FormatValueLine("Shift", shiftLabel);
-        driverQuickHud.HomeText.text = FormatValueLine(ru ? "\u0414\u043e\u043c" : "Home", GetWorkerQuickHudHomeLabel(driver));
-        bool hasCar = driver.OwnedCarModelIndex >= 0 && driver.OwnedCarModelIndex < CarModelNames.Length;
-        driverQuickHud.CarText.text = FormatValueLine(ru ? "\u0410\u0432\u0442\u043e" : "Car", hasCar ? CarModelNames[driver.OwnedCarModelIndex] : "—");
-        driverQuickHud.BalanceText.text = FormatValueLine("Balance", $"${driver.Money}");
-        driverQuickHud.PerksText.text =
-            $"{FormatValueLine(ru ? "\u041f\u0440\u043e\u0444." : "Prof.", FormatWorkerProfessionalSummary(driver, ru))}\n" +
-            $"{FormatValueLine(ru ? "\u041f\u0435\u0440\u043a\u0438" : "Perks", FormatWorkerPerksInline(driver, ru, 4))}";
-        driverQuickHud.NeedsText.text = GetWorkerQuickHudNeedsLine(driver, ru);
+        ApplyDriverQuickHudNeeds(driver);
+        driverQuickHud.BalanceText.text = $"Баланс: ${driver.Money}";
         if (driverQuickHud.OpenDriversButtonText != null)
         {
-            driverQuickHud.OpenDriversButtonText.text = ru ? "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0432 \u0420\u0430\u0431\u043e\u0447\u0438\u0435" : "Open in Workers";
+            driverQuickHud.OpenDriversButtonText.text = "Открыть профиль";
         }
 
-        if (driverQuickHud.NeedsMealBarFill != null)
-        {
-            float mealPct    = Mathf.Clamp01(1f - driver.HoursSinceMeal    / WorkerMealCriticalHours);
-            float sleepPct   = Mathf.Clamp01(1f - driver.HoursSinceSleep   / WorkerSleepCriticalHours);
-            float leisurePct = Mathf.Clamp01(1f - driver.HoursSinceLeisure / WorkerLeisureCriticalHours);
-            driverQuickHud.NeedsMealBarFill.sizeDelta    = new Vector2(mealPct    * 80f, 0f);
-            driverQuickHud.NeedsSleepBarFill.sizeDelta   = new Vector2(sleepPct   * 80f, 0f);
-            driverQuickHud.NeedsLeisureBarFill.sizeDelta = new Vector2(leisurePct * 80f, 0f);
-            driverQuickHud.NeedsMealBarFill.GetComponent<Image>().color    = GetNeedBarColor(mealPct);
-            driverQuickHud.NeedsSleepBarFill.GetComponent<Image>().color   = GetNeedBarColor(sleepPct);
-            driverQuickHud.NeedsLeisureBarFill.GetComponent<Image>().color = GetNeedBarColor(leisurePct);
-        }
-
+        LayoutRebuilder.ForceRebuildLayoutImmediate(driverQuickHud.Root);
+        UpdateDriverQuickHudLinkLine();
     }
 
-    private string GetDriverQuickHudStatusLabel(DriverAgent driver)
+    private void CreateDriverQuickHudLinkLine(Transform canvasTransform)
+    {
+        GameObject lineObject = CreateUiObject("DriverQuickHudLinkLine", canvasTransform);
+        RectTransform lineRect = lineObject.GetComponent<RectTransform>();
+        lineRect.anchorMin = new Vector2(0.5f, 0.5f);
+        lineRect.anchorMax = new Vector2(0.5f, 0.5f);
+        lineRect.pivot = new Vector2(0f, 0.5f);
+        lineRect.sizeDelta = new Vector2(0f, DriverQuickHudLinkLineThickness);
+
+        Image lineImage = lineObject.AddComponent<Image>();
+        lineImage.color = DriverQuickHudLinkLineColor;
+        lineImage.raycastTarget = false;
+
+        lineObject.SetActive(false);
+        driverQuickHud.LinkLine = lineRect;
+        driverQuickHud.LinkLineImage = lineImage;
+    }
+
+    private void UpdateDriverQuickHudLinkLine()
+    {
+        if (driverQuickHud?.LinkLine == null ||
+            driverQuickHud.Root == null ||
+            driverQuickHud.CanvasRoot == null ||
+            mainCamera == null ||
+            !driverQuickHud.CanvasRoot.activeInHierarchy ||
+            !isDriverDetailsOpen ||
+            selectedDriverId <= 0)
+        {
+            SetDriverQuickHudLinkLineVisible(false);
+            return;
+        }
+
+        if (!TryGetSelectedEntityHighlightTarget(out Vector3 targetPosition, out _))
+        {
+            SetDriverQuickHudLinkLineVisible(false);
+            return;
+        }
+
+        Vector3 markerPosition = new(
+            targetPosition.x,
+            SampleTerrainHeight(targetPosition.x, targetPosition.z) + 0.08f,
+            targetPosition.z);
+        Vector3 targetScreen3 = mainCamera.WorldToScreenPoint(markerPosition);
+        if (targetScreen3.z <= 0f ||
+            targetScreen3.x < -32f ||
+            targetScreen3.x > Screen.width + 32f ||
+            targetScreen3.y < -32f ||
+            targetScreen3.y > Screen.height + 32f)
+        {
+            SetDriverQuickHudLinkLineVisible(false);
+            return;
+        }
+
+        Vector2 targetScreen = new(targetScreen3.x, targetScreen3.y);
+        Vector2 hudScreenPoint = GetClosestDriverQuickHudEdgePoint(targetScreen);
+        RectTransform canvasRect = driverQuickHud.CanvasRoot.GetComponent<RectTransform>();
+        if (canvasRect == null ||
+            !RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, hudScreenPoint, null, out Vector2 hudLocalPoint) ||
+            !RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, targetScreen, null, out Vector2 targetLocalPoint))
+        {
+            SetDriverQuickHudLinkLineVisible(false);
+            return;
+        }
+
+        Vector2 delta = targetLocalPoint - hudLocalPoint;
+        float length = delta.magnitude;
+        if (length < 8f)
+        {
+            SetDriverQuickHudLinkLineVisible(false);
+            return;
+        }
+
+        RectTransform line = driverQuickHud.LinkLine;
+        line.anchoredPosition = hudLocalPoint;
+        line.sizeDelta = new Vector2(length, DriverQuickHudLinkLineThickness);
+        line.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+        if (driverQuickHud.LinkLineImage != null)
+        {
+            driverQuickHud.LinkLineImage.color = DriverQuickHudLinkLineColor;
+        }
+
+        SetDriverQuickHudLinkLineVisible(true);
+        line.SetAsFirstSibling();
+    }
+
+    private Vector2 GetClosestDriverQuickHudEdgePoint(Vector2 targetScreen)
+    {
+        driverQuickHud.Root.GetWorldCorners(driverQuickHudLinkCorners);
+        Vector2 bottomLeft = RectTransformUtility.WorldToScreenPoint(null, driverQuickHudLinkCorners[0]);
+        Vector2 topLeft = RectTransformUtility.WorldToScreenPoint(null, driverQuickHudLinkCorners[1]);
+        Vector2 topRight = RectTransformUtility.WorldToScreenPoint(null, driverQuickHudLinkCorners[2]);
+        Vector2 bottomRight = RectTransformUtility.WorldToScreenPoint(null, driverQuickHudLinkCorners[3]);
+
+        Vector2 bestPoint = GetClosestPointOnDriverQuickHudSegment(targetScreen, bottomLeft, topLeft);
+        float bestDistance = (targetScreen - bestPoint).sqrMagnitude;
+        TryUseCloserDriverQuickHudSegment(targetScreen, topLeft, topRight, ref bestPoint, ref bestDistance);
+        TryUseCloserDriverQuickHudSegment(targetScreen, topRight, bottomRight, ref bestPoint, ref bestDistance);
+        TryUseCloserDriverQuickHudSegment(targetScreen, bottomRight, bottomLeft, ref bestPoint, ref bestDistance);
+        return bestPoint;
+    }
+
+    private static void TryUseCloserDriverQuickHudSegment(
+        Vector2 target,
+        Vector2 segmentStart,
+        Vector2 segmentEnd,
+        ref Vector2 bestPoint,
+        ref float bestDistance)
+    {
+        Vector2 candidate = GetClosestPointOnDriverQuickHudSegment(target, segmentStart, segmentEnd);
+        float distance = (target - candidate).sqrMagnitude;
+        if (distance < bestDistance)
+        {
+            bestDistance = distance;
+            bestPoint = candidate;
+        }
+    }
+
+    private static Vector2 GetClosestPointOnDriverQuickHudSegment(Vector2 point, Vector2 segmentStart, Vector2 segmentEnd)
+    {
+        Vector2 segment = segmentEnd - segmentStart;
+        float lengthSq = segment.sqrMagnitude;
+        if (lengthSq <= 0.0001f)
+        {
+            return segmentStart;
+        }
+
+        float t = Mathf.Clamp01(Vector2.Dot(point - segmentStart, segment) / lengthSq);
+        return segmentStart + segment * t;
+    }
+
+    private void SetDriverQuickHudLinkLineVisible(bool visible)
+    {
+        if (driverQuickHud?.LinkLine != null &&
+            driverQuickHud.LinkLine.gameObject.activeSelf != visible)
+        {
+            driverQuickHud.LinkLine.gameObject.SetActive(visible);
+        }
+    }
+
+    private DriverQuickHudNeedRow CreateDriverQuickHudNeedRow(string name, Transform parent, Font uiFont)
+    {
+        RectTransform rowRoot = CreateStyledPanel($"DriverQuickHudNeed{name}", parent, new Color(0.075f, 0.105f, 0.150f, 0.96f));
+        rowRoot.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
+        HorizontalLayoutGroup rowLayout = rowRoot.gameObject.AddComponent<HorizontalLayoutGroup>();
+        rowLayout.padding = new RectOffset(8, 8, 5, 5);
+        rowLayout.spacing = 6f;
+        rowLayout.childAlignment = TextAnchor.MiddleCenter;
+        rowLayout.childControlWidth = true;
+        rowLayout.childControlHeight = true;
+        rowLayout.childForceExpandWidth = false;
+        rowLayout.childForceExpandHeight = false;
+
+        Image icon = CreateDriverQuickHudIconImage($"Need{name}Icon", rowRoot, null, new Vector2(20f, 20f));
+
+        Text label = CreateBodyText($"Need{name}Label", rowRoot, uiFont, string.Empty, 15, TextAnchor.MiddleLeft, Color.white);
+        label.fontStyle = FontStyle.Bold;
+        LayoutElement labelLayout = label.gameObject.AddComponent<LayoutElement>();
+        labelLayout.preferredWidth = 58f;
+        labelLayout.preferredHeight = 24f;
+
+        RectTransform barFill = CreateDriverQuickHudProgressBar(rowRoot, $"Need{name}Bar", 10f, out Image fillImage);
+
+        Text percent = CreateBodyText($"Need{name}Percent", rowRoot, uiFont, string.Empty, 14, TextAnchor.MiddleRight, new Color(0.88f, 0.92f, 0.98f, 1f));
+        percent.fontStyle = FontStyle.Bold;
+        LayoutElement percentLayout = percent.gameObject.AddComponent<LayoutElement>();
+        percentLayout.preferredWidth = 42f;
+        percentLayout.preferredHeight = 24f;
+
+        rowRoot.gameObject.SetActive(false);
+        return new DriverQuickHudNeedRow
+        {
+            Root = rowRoot.gameObject,
+            IconImage = icon,
+            LabelText = label,
+            BarFill = barFill,
+            BarFillImage = fillImage,
+            PercentText = percent
+        };
+    }
+
+    private static Image CreateDriverQuickHudIconImage(string name, Transform parent, Sprite sprite, Vector2 size)
+    {
+        GameObject iconObject = CreateUiObject(name, parent);
+        Image image = iconObject.AddComponent<Image>();
+        image.sprite = sprite;
+        image.color = Color.white;
+        image.raycastTarget = false;
+        LayoutElement iconLayout = iconObject.AddComponent<LayoutElement>();
+        iconLayout.preferredWidth = size.x;
+        iconLayout.preferredHeight = size.y;
+        iconLayout.minWidth = size.x;
+        iconLayout.minHeight = size.y;
+        return image;
+    }
+
+    private static RectTransform CreateDriverQuickHudProgressBar(Transform parent, string name, float height, out Image fillImage)
+    {
+        GameObject bgObject = CreateUiObject($"{name}Bg", parent);
+        RectTransform bgRect = bgObject.GetComponent<RectTransform>();
+        Image bgImage = bgObject.AddComponent<Image>();
+        bgImage.color = new Color(0.018f, 0.030f, 0.045f, 1f);
+        bgImage.raycastTarget = false;
+        LayoutElement bgLayout = bgObject.AddComponent<LayoutElement>();
+        bgLayout.preferredHeight = height;
+        bgLayout.minHeight = height;
+        bgLayout.flexibleWidth = 1f;
+
+        GameObject fillObject = CreateUiObject($"{name}Fill", bgRect);
+        RectTransform fillRect = fillObject.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = Vector2.zero;
+        fillRect.offsetMax = Vector2.zero;
+        fillImage = fillObject.AddComponent<Image>();
+        fillImage.color = new Color(0.58f, 0.88f, 0.54f, 1f);
+        fillImage.raycastTarget = false;
+        return fillRect;
+    }
+
+    private void ApplyDriverQuickHudNeeds(DriverAgent driver)
+    {
+        DriverQuickHudNeedSnapshot[] needs =
+        {
+            CreateDriverQuickHudNeedSnapshot(driver, WorkerNeedKind.Meal),
+            CreateDriverQuickHudNeedSnapshot(driver, WorkerNeedKind.Sleep),
+            CreateDriverQuickHudNeedSnapshot(driver, WorkerNeedKind.Leisure)
+        };
+
+        for (int i = 0; i < needs.Length - 1; i++)
+        {
+            for (int j = i + 1; j < needs.Length; j++)
+            {
+                if (needs[j].Percent < needs[i].Percent)
+                {
+                    DriverQuickHudNeedSnapshot tmp = needs[i];
+                    needs[i] = needs[j];
+                    needs[j] = tmp;
+                }
+            }
+        }
+
+        int visibleCount = 0;
+        for (int i = 0; i < needs.Length && visibleCount < driverQuickHud.NeedRows.Length; i++)
+        {
+            if (needs[i].Status == WorkerNeedStatus.Ok)
+            {
+                continue;
+            }
+
+            ApplyDriverQuickHudNeedRow(driverQuickHud.NeedRows[visibleCount], needs[i]);
+            visibleCount++;
+        }
+
+        for (int i = visibleCount; i < driverQuickHud.NeedRows.Length; i++)
+        {
+            driverQuickHud.NeedRows[i].Root.SetActive(false);
+        }
+
+        driverQuickHud.CriticalEmptyText.gameObject.SetActive(visibleCount == 0);
+    }
+
+    private DriverQuickHudNeedSnapshot CreateDriverQuickHudNeedSnapshot(DriverAgent driver, WorkerNeedKind need)
+    {
+        return new DriverQuickHudNeedSnapshot
+        {
+            Kind = need,
+            Label = GetDriverQuickHudNeedLabel(need),
+            Icon = GetDriverQuickHudNeedIcon(need),
+            Percent = GetDriverQuickHudNeedPercent(driver, need),
+            Status = GetWorkerNeedLastStatus(driver, need)
+        };
+    }
+
+    private void ApplyDriverQuickHudNeedRow(DriverQuickHudNeedRow row, DriverQuickHudNeedSnapshot need)
+    {
+        int percent = Mathf.RoundToInt(need.Percent * 100f);
+        row.Root.SetActive(true);
+        row.IconImage.sprite = need.Icon;
+        row.LabelText.text = need.Label;
+        row.PercentText.text = $"{percent}%";
+        SetDriverQuickHudBar(row.BarFill, row.BarFillImage, need.Percent, GetDriverQuickHudNeedColor(need.Percent));
+    }
+
+    private int GetDriverQuickHudConditionScore(DriverAgent driver)
+    {
+        if (driver == null)
+        {
+            return 0;
+        }
+
+        float meal = GetDriverQuickHudNeedPercent(driver, WorkerNeedKind.Meal);
+        float sleep = GetDriverQuickHudNeedPercent(driver, WorkerNeedKind.Sleep);
+        float leisure = GetDriverQuickHudNeedPercent(driver, WorkerNeedKind.Leisure);
+        float worstNeed = Mathf.Min(meal, sleep, leisure);
+        return Mathf.RoundToInt(Mathf.Clamp01(worstNeed) * 100f);
+    }
+
+    private static void SetDriverQuickHudBar(RectTransform fill, Image fillImage, float progress, Color color)
+    {
+        if (fill == null || fillImage == null)
+        {
+            return;
+        }
+
+        fill.anchorMax = new Vector2(Mathf.Clamp01(progress), 1f);
+        fill.offsetMin = Vector2.zero;
+        fill.offsetMax = Vector2.zero;
+        fillImage.color = color;
+    }
+
+    private static string GetDriverQuickHudConditionLabel(int score)
+    {
+        if (score >= 70) return "Хорош";
+        if (score >= 45) return "Стабилен";
+        if (score >= 25) return "Плохо";
+        return "Критично";
+    }
+
+    private static Color GetDriverQuickHudConditionColor(int score)
+    {
+        if (score >= 45) return new Color(0.50f, 0.86f, 0.38f, 1f);
+        if (score >= 25) return new Color(0.96f, 0.62f, 0.20f, 1f);
+        return new Color(0.92f, 0.28f, 0.20f, 1f);
+    }
+
+    private static Color GetDriverQuickHudNeedColor(float percent)
+    {
+        if (percent >= 0.50f) return new Color(0.50f, 0.86f, 0.38f, 1f);
+        if (percent >= 0.20f) return new Color(0.96f, 0.72f, 0.30f, 1f);
+        if (percent > 0f) return new Color(0.96f, 0.45f, 0.14f, 1f);
+        return new Color(0.92f, 0.28f, 0.20f, 1f);
+    }
+
+    private float GetDriverQuickHudNeedPercent(DriverAgent driver, WorkerNeedKind need)
+    {
+        float criticalHours = need switch
+        {
+            WorkerNeedKind.Meal => WorkerMealCriticalHours,
+            WorkerNeedKind.Sleep => WorkerSleepCriticalHours,
+            WorkerNeedKind.Leisure => WorkerLeisureCriticalHours,
+            _ => 1f
+        };
+
+        return Mathf.Clamp01(1f - GetWorkerNeedHours(driver, need) / Mathf.Max(0.01f, criticalHours));
+    }
+
+    private static string GetDriverQuickHudNeedLabel(WorkerNeedKind need)
+    {
+        return need switch
+        {
+            WorkerNeedKind.Meal => "Еда",
+            WorkerNeedKind.Sleep => "Сон",
+            WorkerNeedKind.Leisure => "Досуг",
+            _ => "Нужда"
+        };
+    }
+
+    private static Sprite GetDriverQuickHudNeedIcon(WorkerNeedKind need)
+    {
+        return need switch
+        {
+            WorkerNeedKind.Meal => GetNeedsMealIcon(),
+            WorkerNeedKind.Sleep => GetNeedsSleepIcon(),
+            WorkerNeedKind.Leisure => GetNeedsLeisureIcon(),
+            _ => null
+        };
+    }
+
+    private static Sprite GetDriverQuickHudShieldIcon()
+    {
+        return s_driverQuickHudShieldIcon ??= BuildNeedIcon(PaintDriverQuickHudShieldIcon);
+    }
+
+    private static void PaintDriverQuickHudShieldIcon(Color[] px, int sz)
+    {
+        Color gold = new(1.00f, 0.78f, 0.20f, 1f);
+        Color star = new(1.00f, 0.92f, 0.38f, 1f);
+        void S(int x, int y, Color c) => NeedIconSet(px, sz, x, y, c);
+
+        for (int y = 2; y <= 12; y++)
+        {
+            int left = y < 6 ? 4 - y / 3 : 2 + (y - 6) / 3;
+            int right = sz - 1 - left;
+            S(left, y, gold);
+            S(right, y, gold);
+        }
+
+        for (int x = 4; x <= 11; x++) S(x, 13, gold);
+        for (int x = 5; x <= 10; x++) S(x, 2, gold);
+        S(8, 4, star);
+        S(7, 6, star); S(8, 6, star); S(9, 6, star);
+        S(6, 7, star); S(7, 7, star); S(8, 7, star); S(9, 7, star); S(10, 7, star);
+        S(7, 8, star); S(8, 8, star); S(9, 8, star);
+        S(7, 9, star); S(9, 9, star);
+    }
+
+    private string GetWorkerQuickHudOccupationLabelRu(DriverAgent driver)
+    {
+        if (driver != null && driver.LifeGoal == WorkerLifeGoal.FindJob)
+        {
+            return "Ищет работу";
+        }
+
+        if (IsDriverBusDriver(driver))
+        {
+            return "Водитель автобуса";
+        }
+
+        if (driver != null && driver.DutyMode == DriverDutyMode.Intercity)
+        {
+            return "Межгородный водитель";
+        }
+
+        if (driver != null && driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
+        {
+            return GetWorkerQuickHudBuildingRoleLabelRu(driver.AssignedBuildingType.Value);
+        }
+
+        if (driver != null && driver.AssignedTruckNumber > 0)
+        {
+            return "Водитель грузовика";
+        }
+
+        return "Безработный";
+    }
+
+    private static string GetWorkerQuickHudBuildingRoleLabelRu(LocationType type)
+    {
+        return type switch
+        {
+            LocationType.Forest => "Лесоруб",
+            LocationType.Sawmill => "Рабочий лесопилки",
+            LocationType.FurnitureFactory => "Столяр",
+            LocationType.Warehouse => "Грузчик склада",
+            LocationType.Docks => "Работник доков",
+            LocationType.Kindergarten => "Воспитатель",
+            LocationType.LaborExchange => "Сотрудник биржи труда",
+            _ when HasServiceWorkerSlot(type) => "Сервисный работник",
+            _ => "Работник"
+        };
+    }
+
+    private string GetWorkerQuickHudActivityLabelRu(DriverAgent driver)
     {
         if (IsDriverOnActiveTradeRun(driver))
-            return L("On Trade Run");
+            return "В торговом рейсе";
         if (driver.IsLeavingTown || driver.WalkPhase == DriverRescuePhase.ToIntercityStopForDeparture)
-            return IsRussianLanguage() ? "\u0423\u0435\u0437\u0436\u0430\u0435\u0442" : "Leaving town";
+            return "Уезжает из города";
         if (driver.IsArrivingByBus)
-            return L("Arriving by Bus");
-        if (driver.RestPhase == DriverRestPhase.Sleeping || driver.RestPhase == DriverRestPhase.SleepingAtHome)
-            return L("Sleeping");
-        if (driver.RestPhase != DriverRestPhase.None)
-            return L("Walking");
-        if (IsBusDriverOnActiveRoute(driver))
-            return IsRussianLanguage()
-                ? $"{L("On Bus Route")} • Пассажиры {GetLocalBusPassengerCount(driver)}/{GetLocalBusPassengerCapacity()}"
-                : $"{L("On Bus Route")} • Passengers {GetLocalBusPassengerCount(driver)}/{GetLocalBusPassengerCapacity()}";
-        if (IsDriverBusDriver(driver) && driver.ShiftStartHour < 0)
-            return L("Bus Driver: no shift");
-        if (IsDriverIntercity(driver))
-            return L("Intercity");
-        if (driver.IsOnActiveShift)
-            return L("On Shift");
-        if (driver.WaitingForShiftAtParking)
-            return L("At Parking");
-        if (driver.WalkPhase == DriverRescuePhase.WalkToLocalBusStop)
-            return IsRussianLanguage() ? $"Идёт к остановке #{driver.BusOriginStopNumber}" : $"Walking to Stop #{driver.BusOriginStopNumber}";
-        if (driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop)
-            return IsRussianLanguage() ? $"Ждёт автобус на остановке #{driver.BusOriginStopNumber}" : $"Waiting at Stop #{driver.BusOriginStopNumber}";
-        if (driver.WalkPhase == DriverRescuePhase.RidingLocalBus)
-            return IsRussianLanguage() ? $"Едет до остановки #{driver.BusDestinationStopNumber}" : $"Riding to Stop #{driver.BusDestinationStopNumber}";
-        if (driver.WalkPhase == DriverRescuePhase.ToMotelFromBusStop)
-            return L("Walking from Bus Stop");
-        if (driver.WalkPhase == DriverRescuePhase.IdleWander)
-            return L("Wandering");
-        if (driver.WalkPhase == DriverRescuePhase.ToPersonalHouseMeal || driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal)
-            return IsRussianLanguage() ? "Ест дома" : "Eating at home";
-        if (driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen || driver.WalkPhase == DriverRescuePhase.IdleAtCanteen)
-            return L("At Canteen");
-        if (driver.WalkPhase == DriverRescuePhase.IdleWalkToTrashCan || driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan)
-            return IsRussianLanguage() ? "Ищет еду в мусорке" : "Eating from trash";
-        if (driver.WalkPhase == DriverRescuePhase.IdleWalkToGamblingHall || driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall)
-            return L("At Gambling Hall");
-        if (driver.ShiftStartHour >= 0)
-            return string.Format(L("Shift at {0}:00"), driver.ShiftStartHour.ToString("00"));
-
-        return IsRussianLanguage() ? "Бездельничает" : "Idling";
-    }
-
-    private string GetWorkerQuickHudNeedsLine(DriverAgent driver, bool ru)
-    {
-        string meal = FormatWorkerNeedShort(ru ? "\u0415\u0434\u0430" : "Food", driver.HoursSinceMeal, WorkerMealCriticalHours);
-        string sleep = FormatWorkerNeedShort(ru ? "\u0421\u043e\u043d" : "Sleep", driver.HoursSinceSleep, WorkerSleepCriticalHours);
-        string leisure = FormatWorkerNeedShort(ru ? "\u0414\u043e\u0441\u0443\u0433" : "Leisure", driver.HoursSinceLeisure, WorkerLeisureCriticalHours);
-        return $"{meal}\n{sleep}  |  {leisure}";
-    }
-
-    private static string FormatWorkerNeedShort(string label, float hoursSince, float criticalHours)
-    {
-        float remaining = Mathf.Max(0f, criticalHours - hoursSince);
-        return $"{label}: {hoursSince:0.0}h / {criticalHours:0.0}h ({remaining:0.0}h left)";
-    }
-
-    private string GetWorkerQuickHudPlaceLabel(DriverAgent driver, bool ru)
-    {
+            return "Приезжает";
         if (driver.RestPhase == DriverRestPhase.SleepingAtHome)
-        {
-            return ru ? "\u0421\u043f\u0438\u0442 \u0434\u043e\u043c\u0430" : "Sleeping at home";
-        }
-
+            return "Спит дома";
         if (driver.RestPhase == DriverRestPhase.Sleeping)
-        {
-            return ru ? "\u0421\u043f\u0438\u0442 \u0432 Motel" : "Sleeping at Motel";
-        }
-
+            return "Спит в мотеле";
+        if (driver.RestPhase != DriverRestPhase.None)
+            return "Идёт";
+        if (IsBusDriverOnActiveRoute(driver))
+            return $"Ведёт автобус · {GetLocalBusPassengerCount(driver)}/{GetLocalBusPassengerCapacity()}";
+        if (IsDriverBusDriver(driver) && driver.ShiftStartHour < 0)
+            return "Ждёт расписание";
+        if (IsDriverIntercity(driver))
+            return "Межгород";
+        if (driver.IsOnActiveShift)
+            return "На смене";
+        if (driver.WaitingForShiftAtParking)
+            return "Ждёт смену";
+        if (driver.WalkPhase == DriverRescuePhase.WalkToLocalBusStop)
+            return $"Идёт к остановке #{driver.BusOriginStopNumber}";
+        if (driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop)
+            return $"Ждёт автобус #{driver.BusOriginStopNumber}";
         if (driver.WalkPhase == DriverRescuePhase.RidingLocalBus)
-        {
             return driver.BusDestinationStopNumber > 0
-                ? (ru ? $"\u0412 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435 -> #{driver.BusDestinationStopNumber}" : $"On bus -> #{driver.BusDestinationStopNumber}")
-                : (ru ? "\u0412 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u0435" : "On bus");
-        }
+                ? $"Едет до остановки #{driver.BusDestinationStopNumber}"
+                : "Едет в автобусе";
+        if (driver.WalkPhase == DriverRescuePhase.ToMotelFromBusStop)
+            return "Идёт от остановки";
+        if (driver.WalkPhase == DriverRescuePhase.IdleWander)
+            return "Гуляет";
+        if (driver.WalkPhase == DriverRescuePhase.ToPersonalHouseMeal || driver.WalkPhase == DriverRescuePhase.IdleAtPersonalHouseMeal)
+            return "Ест дома";
+        if (driver.WalkPhase == DriverRescuePhase.IdleWalkToCanteen || driver.WalkPhase == DriverRescuePhase.IdleAtCanteen)
+            return "В столовой";
+        if (driver.WalkPhase == DriverRescuePhase.IdleWalkToTrashCan || driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan)
+            return "Ищет еду";
+        if (driver.WalkPhase == DriverRescuePhase.IdleWalkToGamblingHall || driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall)
+            return "В зале игр";
 
         LocationType? serviceLocation = GetDriverServiceLocation(driver.WalkPhase);
         if (serviceLocation.HasValue)
@@ -330,45 +720,10 @@ public partial class GameBootstrap
             return GetSelectedLocationDisplayName(serviceLocation.Value);
         }
 
-        if (driver.IsInsideBuilding && driver.AssignedBuildingType.HasValue)
-        {
-            return GetSelectedLocationDisplayName(driver.AssignedBuildingType.Value);
-        }
+        if (driver.ShiftStartHour >= 0)
+            return $"Смена в {driver.ShiftStartHour:00}:00";
 
-        if (driver.WaitingForShiftAtParking)
-        {
-            return ru ? "\u041f\u0430\u0440\u043a\u043e\u0432\u043a\u0430" : "Parking";
-        }
-
-        if (driver.AssignedBuildingType.HasValue && driver.IsOnActiveShift)
-        {
-            return GetSelectedLocationDisplayName(driver.AssignedBuildingType.Value);
-        }
-
-        TruckAgent truck = GetAssignedTruckForDriver(driver);
-        if (truck != null)
-        {
-            return truck.DisplayName;
-        }
-
-        return GetDriverQuickHudStatusLabel(driver);
-    }
-
-    private string GetWorkerQuickHudHomeLabel(DriverAgent driver)
-    {
-        return driver.AssignedPersonalHouseIndex >= 0 && driver.AssignedPersonalHouseIndex < personalHouses.Count
-            ? personalHouses[driver.AssignedPersonalHouseIndex].Label
-            : "\u2014";
-    }
-
-    private static string GetWorkerQuickHudAgeLabel(DriverAgent driver, bool ru)
-    {
-        if (driver.Age <= 0)
-        {
-            return "\u2014";
-        }
-
-        return ru ? $"{driver.Age} \u043b\u0435\u0442" : $"{driver.Age} y.o.";
+        return "Бездельничает";
     }
 
     private void FocusDriver(int driverId)
@@ -435,5 +790,3 @@ public partial class GameBootstrap
         PlayUiSound(uiPanelCloseClip, 0.82f);
     }
 }
-
-

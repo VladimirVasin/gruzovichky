@@ -35,8 +35,27 @@ public partial class GameBootstrap
     {
         string label = GetCityTrustLabel(ru);
         return ru
-            ? $"Доверие: {cityTrust}/{CityTrustMax} - {label}"
-            : $"Trust: {cityTrust}/{CityTrustMax} - {label}";
+            ? $"Доверие: {label} ({FormatCityTrustScore()})"
+            : $"Trust: {label} ({FormatCityTrustScore()})";
+    }
+
+    private string FormatCityTrustHudValue(bool ru)
+    {
+        return $"{GetCityTrustShortLabel(ru)} {FormatCityTrustScore()}";
+    }
+
+    private string FormatCityTrustScore()
+    {
+        return cityTrust > 0 ? $"+{cityTrust}" : cityTrust.ToString();
+    }
+
+    private string GetCityTrustShortLabel(bool ru)
+    {
+        if (cityTrust >= 60) return ru ? "высокое" : "high";
+        if (cityTrust >= 20) return ru ? "устойч." : "stable";
+        if (cityTrust > -20) return ru ? "нейтр." : "neutral";
+        if (cityTrust > -60) return ru ? "низкое" : "low";
+        return ru ? "кризис" : "crisis";
     }
 
     private string GetCityTrustLabel(bool ru)

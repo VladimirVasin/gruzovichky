@@ -546,6 +546,7 @@ public partial class GameBootstrap
             if (!isRacingActive && !isWorldMapPanelOpen)
             {
                 DrawMoneyHud();
+                DrawCityTrustHud();
                 DrawPopulationHud();
                 DrawTimeHud();
                 DrawSpeedHud();

@@ -55,13 +55,17 @@ public partial class GameBootstrap
     {
         public GameObject CanvasRoot;
         public RectTransform Root;
+        public RectTransform HeaderIconRoot;
+        public Image HeaderIconImage;
         public Text HeaderText;
+        public RectTransform SummaryCard;
         public LayoutElement SummaryCardLayout;
         public Text TypeText;
         public Text StatusText;
         public LayoutElement StatusTextLayout;
         public Text ResourceText;
         public LayoutElement ResourceTextLayout;
+        public RectTransform ContextButtonRow;
         public Button ContextButton;
         public Text ContextButtonText;
         public RectTransform StopNumberRow;
@@ -74,16 +78,32 @@ public partial class GameBootstrap
         public Text CloseButtonText;
         public RectTransform WorkerSlotsSection;
         public Text WorkerSlotsSectionHeader;
+        public Text WorkerSlotsEmptyText;
         public ScrollRect WorkerSlotsScroll;
         public RectTransform WorkerSlotsContent;
         public ServiceWorkerSlotUi[] WorkerSlots;
         public RectTransform PersonalHouseSection;
         public Text PersonalHouseSectionHeader;
         public PersonalHouseResidentRowUi[] ResidentRows;
+        public RectTransform CityHallCard;
+        public Text CityHallTitleText;
+        public Text CityHallDescriptionText;
+        public CityHallQuickHudRowUi CityHallCompletionRow;
+        public CityHallQuickHudRowUi CityHallPenaltyRow;
+        public CityHallQuickHudRowUi CityHallRequestsStatusRow;
+        public CityHallQuickHudRowUi CityHallGoalStatusRow;
+        public Button CityHallOpenButton;
+        public Text CityHallOpenButtonText;
+        public Image CityHallOpenButtonIcon;
         public Image      FlashOverlay;
         public Vector2    OriginalPos;
+        public RectTransform LinkLine;
+        public Image LinkLineImage;
     }
 
+    private static readonly Color BuildingQuickHudLinkLineColor = new(1f, 0.74f, 0.25f, 0.72f);
+    private const float BuildingQuickHudLinkLineThickness = 3f;
+    private readonly Vector3[] buildingQuickHudLinkCorners = new Vector3[4];
     private BuildingQuickHudRefs buildingQuickHud;
 
     private bool HasBlockingHudOpenForQuickHuds()
@@ -177,6 +197,7 @@ public partial class GameBootstrap
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.5f;
         buildingQuickHud.CanvasRoot = canvasObject;
+        CreateBuildingQuickHudLinkLine(canvasObject.transform);
 
         RectTransform root = CreateStyledPanel("BuildingQuickHudRoot", canvasObject.transform, FleetPanelColor);
         root.anchorMin = new Vector2(1f, 0f);
@@ -194,13 +215,19 @@ public partial class GameBootstrap
         buildingQuickHud.Root = root;
         buildingQuickHud.OriginalPos = root.anchoredPosition;
 
-        RectTransform headerRow = CreateLayoutRow("BuildingQuickHudHeaderRow", root, 30f, 10f);
+        RectTransform headerRow = CreateLayoutRow("BuildingQuickHudHeaderRow", root, 42f, 12f);
+        buildingQuickHud.HeaderIconRoot = CreateUiObject("HeaderIcon", headerRow).GetComponent<RectTransform>();
+        LayoutElement headerIconLayout = buildingQuickHud.HeaderIconRoot.gameObject.AddComponent<LayoutElement>();
+        headerIconLayout.preferredWidth = 38f;
+        headerIconLayout.preferredHeight = 38f;
+        buildingQuickHud.HeaderIconImage = buildingQuickHud.HeaderIconRoot.gameObject.AddComponent<Image>();
+        buildingQuickHud.HeaderIconImage.raycastTarget = false;
         buildingQuickHud.HeaderText = CreateHeaderText("Header", headerRow, uiFont, "Location", 21, TextAnchor.MiddleLeft, Color.white);
         buildingQuickHud.HeaderText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         buildingQuickHud.CloseButton = CreateButton("CloseButton", headerRow, uiFont, out buildingQuickHud.CloseButtonText, "X", 12, new Color(0.26f, 0.30f, 0.36f, 1f), Color.white);
         LayoutElement closeLayout = buildingQuickHud.CloseButton.gameObject.AddComponent<LayoutElement>();
-        closeLayout.preferredWidth = 28f;
-        closeLayout.preferredHeight = 28f;
+        closeLayout.preferredWidth = 36f;
+        closeLayout.preferredHeight = 36f;
         buildingQuickHud.CloseButton.onClick.AddListener(() =>
         {
             if (TryGetSelectedBuilding(out LocationData selectedBuilding, out _, out _))
@@ -211,11 +238,13 @@ public partial class GameBootstrap
             selectedLocation = null;
             selectedLocalStopIndex = -1;
             selectedPersonalHouseIndex = -1;
+            SetBuildingQuickHudLinkLineVisible(false);
             RefreshSelectionVisuals();
             PlayUiSound(uiPanelCloseClip, 0.82f);
         });
 
         RectTransform summaryCard = CreateSectionCard(root, uiFont, string.Empty, out RectTransform summaryBody, false);
+        buildingQuickHud.SummaryCard = summaryCard;
         buildingQuickHud.SummaryCardLayout = summaryCard.gameObject.AddComponent<LayoutElement>();
         buildingQuickHud.SummaryCardLayout.preferredHeight = 170f;
         buildingQuickHud.TypeText = CreateBodyText("TypeText", summaryBody, uiFont, string.Empty, 17, TextAnchor.MiddleLeft, Color.white);
@@ -227,6 +256,7 @@ public partial class GameBootstrap
         buildingQuickHud.ResourceText = CreateBodyText("ResourceText", summaryBody, uiFont, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         buildingQuickHud.ResourceTextLayout = buildingQuickHud.ResourceText.gameObject.AddComponent<LayoutElement>();
         buildingQuickHud.ResourceTextLayout.preferredHeight = 82f;
+        CreateCityHallBuildingQuickHud(root, uiFont);
 
         // в”Ђв”Ђ Worker slots section в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         RectTransform workerSection = CreateUiObject("WorkerSlotsSection", root).GetComponent<RectTransform>();
@@ -241,6 +271,9 @@ public partial class GameBootstrap
 
         buildingQuickHud.WorkerSlotsSectionHeader = CreateBodyText("WorkersHeader", workerSection, uiFont, "Workers inside", 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
         buildingQuickHud.WorkerSlotsSectionHeader.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+        buildingQuickHud.WorkerSlotsEmptyText = CreateBodyText("WorkersEmpty", workerSection, uiFont, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        buildingQuickHud.WorkerSlotsEmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
+        buildingQuickHud.WorkerSlotsEmptyText.gameObject.SetActive(false);
 
         FleetCanvasUiFactory.ScrollPanelRefs workerScroll = CreateVerticalScrollList("WorkerSlotsScroll", workerSection, "WorkerSlotsContent", 6f, preferredHeight: 190f);
         buildingQuickHud.WorkerSlotsScroll = workerScroll.ScrollRect;
@@ -385,6 +418,7 @@ public partial class GameBootstrap
         }
 
         RectTransform actionRow = CreateLayoutRow("BuildingQuickHudActionRow", root, 34f, 10f);
+        buildingQuickHud.ContextButtonRow = actionRow;
         buildingQuickHud.ContextButton = CreateButton("ContextButton", actionRow, uiFont, out buildingQuickHud.ContextButtonText, "Open", 13, FleetPrimaryButtonColor, Color.white);
         LayoutElement contextLayout = buildingQuickHud.ContextButton.gameObject.AddComponent<LayoutElement>();
         contextLayout.flexibleWidth = 1f;
@@ -454,35 +488,50 @@ public partial class GameBootstrap
 
         if (!shouldShow)
         {
+            SetBuildingQuickHudLinkLineVisible(false);
             return;
         }
 
         if (!TryGetSelectedBuilding(out LocationData location, out LocationType selectedBuildingType, out _))
         {
+            SetBuildingQuickHudLinkLineVisible(false);
             buildingQuickHud.CanvasRoot.SetActive(false);
             return;
         }
 
         bool ru = IsRussianLanguage();
-        buildingQuickHud.HeaderText.text = selectedBuildingType == LocationType.Docks
-            ? GetSelectedLocationDisplayName(selectedBuildingType)
-            : location.Label;
+        bool isCityHall = selectedBuildingType == LocationType.CityHall;
+        ConfigureBuildingQuickHudMode(isCityHall);
+        buildingQuickHud.HeaderText.text = isCityHall
+            ? "\u0420\u0430\u0442\u0443\u0448\u0430 (\u0421\u0435\u0440\u0432\u0438\u0441)"
+            : selectedBuildingType == LocationType.Docks
+                ? GetSelectedLocationDisplayName(selectedBuildingType)
+                : location.Label;
+        buildingQuickHud.HeaderText.fontSize = isCityHall ? 22 : 21;
         string categoryTag = IsProductionLocation(selectedBuildingType) ? "  [Production]"
             : selectedBuildingType == LocationType.PersonalHouse ? "  [Housing]"
             : "  [Service]";
-        buildingQuickHud.TypeText.text = GetSelectedLocationDisplayName(selectedBuildingType) + categoryTag;
-        string quickStatus = GetBuildingQuickStatusText(selectedBuildingType);
-        string quickResource = selectedBuildingType == LocationType.PersonalHouse
-            ? GetPersonalHouseQuickResourceText()
-            : GetBuildingQuickResourceText(selectedBuildingType);
-        buildingQuickHud.StatusText.text = quickStatus;
-        buildingQuickHud.ResourceText.text = quickResource;
-        ConfigureBuildingQuickHudSummaryLayout(quickStatus, quickResource);
-        bool showContextBtn = HasBuildingContextAction(selectedBuildingType);
+        if (isCityHall)
+        {
+            UpdateCityHallBuildingQuickHud();
+        }
+        else
+        {
+            buildingQuickHud.TypeText.text = GetSelectedLocationDisplayName(selectedBuildingType) + categoryTag;
+            string quickStatus = GetBuildingQuickStatusText(selectedBuildingType);
+            string quickResource = selectedBuildingType == LocationType.PersonalHouse
+                ? GetPersonalHouseQuickResourceText()
+                : GetBuildingQuickResourceText(selectedBuildingType);
+            buildingQuickHud.StatusText.text = quickStatus;
+            buildingQuickHud.ResourceText.text = quickResource;
+            ConfigureBuildingQuickHudSummaryLayout(quickStatus, quickResource);
+        }
+
+        bool showContextBtn = HasBuildingContextAction(selectedBuildingType) && !isCityHall;
         buildingQuickHud.ContextButton.gameObject.SetActive(showContextBtn);
         if (showContextBtn)
             buildingQuickHud.ContextButtonText.text = GetBuildingQuickContextButtonText(selectedBuildingType);
-        bool showStopNumberRow = selectedBuildingType == LocationType.Stop;
+        bool showStopNumberRow = selectedBuildingType == LocationType.Stop && !isCityHall;
         buildingQuickHud.StopNumberRow.gameObject.SetActive(showStopNumberRow);
         if (showStopNumberRow)
         {
@@ -491,10 +540,17 @@ public partial class GameBootstrap
             buildingQuickHud.StopNumberLabelText.text = ru ? $"Номер остановки: {stopNumber}" : $"Stop Number: {stopNumber}";
         }
 
-        bool isPersonalHouse = selectedBuildingType == LocationType.PersonalHouse;
+        bool isPersonalHouse = selectedBuildingType == LocationType.PersonalHouse && !isCityHall;
         if (buildingQuickHud.PersonalHouseSection != null)
             buildingQuickHud.PersonalHouseSection.gameObject.SetActive(isPersonalHouse);
-        if (isPersonalHouse)
+        if (isCityHall)
+        {
+            if (buildingQuickHud.WorkerSlotsSection != null)
+                buildingQuickHud.WorkerSlotsSection.gameObject.SetActive(false);
+            if (buildingQuickHud.PersonalHouseSection != null)
+                buildingQuickHud.PersonalHouseSection.gameObject.SetActive(false);
+        }
+        else if (isPersonalHouse)
         {
             if (buildingQuickHud.WorkerSlotsSection != null)
                 buildingQuickHud.WorkerSlotsSection.gameObject.SetActive(false);
@@ -504,10 +560,155 @@ public partial class GameBootstrap
         {
             UpdateBuildingServiceWorkerSlots(selectedBuildingType, ru);
         }
+        if (selectedBuildingType == LocationType.Motel)
+            ResizeMotelBuildingQuickHudRoot();
         UpdateHudGamblingEffects();
 
         LocalizeCanvas(buildingQuickHud.CanvasRoot);
         LayoutRebuilder.ForceRebuildLayoutImmediate(buildingQuickHud.Root);
+        UpdateBuildingQuickHudLinkLine(GetBuildingQuickHudLinkTarget(location));
+    }
+
+    private static Vector3 GetBuildingQuickHudLinkTarget(LocationData location)
+    {
+        if (location == null)
+        {
+            return Vector3.zero;
+        }
+
+        const float EdgeInset = 0.08f;
+        return new Vector3(location.Min.x + EdgeInset, 0f, location.Min.y + EdgeInset);
+    }
+
+    private void CreateBuildingQuickHudLinkLine(Transform canvasTransform)
+    {
+        GameObject lineObject = CreateUiObject("BuildingQuickHudLinkLine", canvasTransform);
+        RectTransform lineRect = lineObject.GetComponent<RectTransform>();
+        lineRect.anchorMin = new Vector2(0.5f, 0.5f);
+        lineRect.anchorMax = new Vector2(0.5f, 0.5f);
+        lineRect.pivot = new Vector2(0f, 0.5f);
+        lineRect.sizeDelta = new Vector2(0f, BuildingQuickHudLinkLineThickness);
+
+        Image lineImage = lineObject.AddComponent<Image>();
+        lineImage.color = BuildingQuickHudLinkLineColor;
+        lineImage.raycastTarget = false;
+
+        lineObject.SetActive(false);
+        buildingQuickHud.LinkLine = lineRect;
+        buildingQuickHud.LinkLineImage = lineImage;
+    }
+
+    private void UpdateBuildingQuickHudLinkLine(Vector3 targetPosition)
+    {
+        if (buildingQuickHud?.LinkLine == null ||
+            buildingQuickHud.Root == null ||
+            buildingQuickHud.CanvasRoot == null ||
+            mainCamera == null ||
+            !buildingQuickHud.CanvasRoot.activeInHierarchy)
+        {
+            SetBuildingQuickHudLinkLineVisible(false);
+            return;
+        }
+
+        Vector3 markerPosition = new(
+            targetPosition.x,
+            SampleTerrainHeight(targetPosition.x, targetPosition.z) + 0.08f,
+            targetPosition.z);
+        Vector3 targetScreen3 = mainCamera.WorldToScreenPoint(markerPosition);
+        if (targetScreen3.z <= 0f ||
+            targetScreen3.x < -32f ||
+            targetScreen3.x > Screen.width + 32f ||
+            targetScreen3.y < -32f ||
+            targetScreen3.y > Screen.height + 32f)
+        {
+            SetBuildingQuickHudLinkLineVisible(false);
+            return;
+        }
+
+        Vector2 targetScreen = new(targetScreen3.x, targetScreen3.y);
+        Vector2 hudScreenPoint = GetClosestBuildingQuickHudEdgePoint(targetScreen);
+        RectTransform canvasRect = buildingQuickHud.CanvasRoot.GetComponent<RectTransform>();
+        if (canvasRect == null ||
+            !RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, hudScreenPoint, null, out Vector2 hudLocalPoint) ||
+            !RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, targetScreen, null, out Vector2 targetLocalPoint))
+        {
+            SetBuildingQuickHudLinkLineVisible(false);
+            return;
+        }
+
+        Vector2 delta = targetLocalPoint - hudLocalPoint;
+        float length = delta.magnitude;
+        if (length < 8f)
+        {
+            SetBuildingQuickHudLinkLineVisible(false);
+            return;
+        }
+
+        RectTransform line = buildingQuickHud.LinkLine;
+        line.anchoredPosition = hudLocalPoint;
+        line.sizeDelta = new Vector2(length, BuildingQuickHudLinkLineThickness);
+        line.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+        if (buildingQuickHud.LinkLineImage != null)
+        {
+            buildingQuickHud.LinkLineImage.color = BuildingQuickHudLinkLineColor;
+        }
+
+        SetBuildingQuickHudLinkLineVisible(true);
+        line.SetAsFirstSibling();
+    }
+
+    private Vector2 GetClosestBuildingQuickHudEdgePoint(Vector2 targetScreen)
+    {
+        buildingQuickHud.Root.GetWorldCorners(buildingQuickHudLinkCorners);
+        Vector2 bottomLeft = RectTransformUtility.WorldToScreenPoint(null, buildingQuickHudLinkCorners[0]);
+        Vector2 topLeft = RectTransformUtility.WorldToScreenPoint(null, buildingQuickHudLinkCorners[1]);
+        Vector2 topRight = RectTransformUtility.WorldToScreenPoint(null, buildingQuickHudLinkCorners[2]);
+        Vector2 bottomRight = RectTransformUtility.WorldToScreenPoint(null, buildingQuickHudLinkCorners[3]);
+
+        Vector2 bestPoint = GetClosestPointOnBuildingQuickHudSegment(targetScreen, bottomLeft, topLeft);
+        float bestDistance = (targetScreen - bestPoint).sqrMagnitude;
+        TryUseCloserBuildingQuickHudSegment(targetScreen, topLeft, topRight, ref bestPoint, ref bestDistance);
+        TryUseCloserBuildingQuickHudSegment(targetScreen, topRight, bottomRight, ref bestPoint, ref bestDistance);
+        TryUseCloserBuildingQuickHudSegment(targetScreen, bottomRight, bottomLeft, ref bestPoint, ref bestDistance);
+        return bestPoint;
+    }
+
+    private static void TryUseCloserBuildingQuickHudSegment(
+        Vector2 target,
+        Vector2 segmentStart,
+        Vector2 segmentEnd,
+        ref Vector2 bestPoint,
+        ref float bestDistance)
+    {
+        Vector2 candidate = GetClosestPointOnBuildingQuickHudSegment(target, segmentStart, segmentEnd);
+        float distance = (target - candidate).sqrMagnitude;
+        if (distance < bestDistance)
+        {
+            bestDistance = distance;
+            bestPoint = candidate;
+        }
+    }
+
+    private static Vector2 GetClosestPointOnBuildingQuickHudSegment(Vector2 point, Vector2 segmentStart, Vector2 segmentEnd)
+    {
+        Vector2 segment = segmentEnd - segmentStart;
+        float lengthSq = segment.sqrMagnitude;
+        if (lengthSq <= 0.0001f)
+        {
+            return segmentStart;
+        }
+
+        float t = Mathf.Clamp01(Vector2.Dot(point - segmentStart, segment) / lengthSq);
+        return segmentStart + segment * t;
+    }
+
+    private void SetBuildingQuickHudLinkLineVisible(bool visible)
+    {
+        if (buildingQuickHud?.LinkLine != null &&
+            buildingQuickHud.LinkLine.gameObject.activeSelf != visible)
+        {
+            buildingQuickHud.LinkLine.gameObject.SetActive(visible);
+        }
     }
 
     private void ConfigureBuildingQuickHudSummaryLayout(string statusText, string resourceText)
@@ -540,6 +741,35 @@ public partial class GameBootstrap
             buildingQuickHud.SummaryCardLayout.preferredHeight =
                 cardVerticalPadding + typeHeight + bodySpacing + statusHeight + resourceHeight;
         }
+    }
+
+    private void ResizeMotelBuildingQuickHudRoot()
+    {
+        if (buildingQuickHud?.Root == null)
+        {
+            return;
+        }
+
+        float height = 16f + 42f + 14f;
+        if (buildingQuickHud.SummaryCardLayout != null &&
+            buildingQuickHud.SummaryCard != null &&
+            buildingQuickHud.SummaryCard.gameObject.activeSelf)
+            height += buildingQuickHud.SummaryCardLayout.preferredHeight + 14f;
+        if (buildingQuickHud.WorkerSlotsSection != null && buildingQuickHud.WorkerSlotsSection.gameObject.activeSelf)
+        {
+            height += 18f + 14f;
+            if (buildingQuickHud.WorkerSlotsEmptyText != null && buildingQuickHud.WorkerSlotsEmptyText.gameObject.activeSelf)
+                height += 22f + 6f;
+            if (buildingQuickHud.WorkerSlotsScroll != null && buildingQuickHud.WorkerSlotsScroll.gameObject.activeSelf)
+            {
+                LayoutElement scrollLayout = buildingQuickHud.WorkerSlotsScroll.GetComponent<LayoutElement>();
+                height += (scrollLayout != null ? scrollLayout.preferredHeight : 64f) + 6f;
+            }
+        }
+        if (buildingQuickHud.ContextButton != null && buildingQuickHud.ContextButton.gameObject.activeSelf)
+            height += 34f;
+        height += 16f;
+        buildingQuickHud.Root.sizeDelta = new Vector2(360f, Mathf.Clamp(height, 360f, 500f));
     }
 
     private static int CountHudTextLines(string text)

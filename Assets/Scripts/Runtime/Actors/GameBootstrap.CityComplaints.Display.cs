@@ -17,17 +17,35 @@ public partial class GameBootstrap
     private string GetCityHallQuickResourceText()
     {
         bool ru = IsRussianLanguage();
+        int activeCount = CountOpenCityComplaints();
+        CityComplaint acceptedGoal = GetActiveAcceptedCityServiceRequest();
         CityComplaint top = GetHighestPriorityOpenCityComplaint();
+        string activeLine = activeCount > 0
+            ? (ru ? $"{activeCount} активных" : $"{activeCount} active")
+            : (ru ? "нет активных" : "none active");
+        string goalLine = acceptedGoal != null
+            ? FormatCityComplaintTitle(acceptedGoal, ru)
+            : (ru ? "нет принятой цели" : "no accepted goal");
         string topLine = top != null
             ? FormatCityComplaintTitle(top, ru)
-            : (ru ? "Нет активных обращений" : "No active requests");
+            : (ru ? "нет активных обращений" : "no active requests");
+        string description = ru
+            ? "Жители приносят сюда городские обращения.\nПринятое обращение становится целью на 24 часа.\nВыполнение повышает доверие; отказ или просрочка снижают."
+            : "Citizens file city requests here.\nAccepted requests become 24h goals.\nCompletion raises trust; rejection or expiry lowers it.";
 
-        return FormatValueLine(ru ? "Доверие" : "Trust", $"{cityTrust}/{CityTrustMax}") + "\n" +
-               FormatValueLine(ru ? "Активно" : "Active", CountOpenCityComplaints().ToString()) + "\n" +
-               FormatValueLine(ru ? "Срочных" : "Urgent", CountCriticalCityComplaints().ToString()) + "\n" +
-               FormatValueLine(ru ? "Просрочено" : "Expired", CountExpiredCityComplaints().ToString()) + "\n" +
-               FormatValueLine(ru ? "Выполнено сегодня" : "Resolved today", CountResolvedCityComplaintsToday().ToString()) + "\n" +
-               FormatValueLine(ru ? "Главное" : "Top request", topLine);
+        if (acceptedGoal != null)
+        {
+            string timer = FormatCityComplaintTimeLeft(acceptedGoal, ru);
+            if (!string.IsNullOrWhiteSpace(timer))
+            {
+                goalLine = $"{goalLine} · {timer}";
+            }
+        }
+
+        return description + "\n" +
+               FormatValueLine(ru ? "Обращения" : "Requests", activeLine) + "\n" +
+               FormatValueLine(ru ? "Городская цель" : "City goal", goalLine) + "\n" +
+               FormatValueLine(ru ? "Главное сейчас" : "Focus", topLine);
     }
 
     private string FormatCityComplaintTargetName(CityComplaint complaint)

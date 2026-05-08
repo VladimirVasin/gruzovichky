@@ -538,7 +538,7 @@ public partial class GameBootstrap
             barInteriorAudioListener.enabled = true;
         }
 
-        citySocialVoiceAudioSource?.Stop();
+        StopUnityAudioSource(citySocialVoiceAudioSource);
         AudioListener.pause = true;
         barInteriorSceneMutedWorldAudio = true;
     }
@@ -628,15 +628,26 @@ public partial class GameBootstrap
 
     private void StopBarInteriorSceneAudio()
     {
-        if (barInteriorAmbientAudioSource != null)
-        {
-            barInteriorAmbientAudioSource.Stop();
-        }
+        StopUnityAudioSource(barInteriorAmbientAudioSource);
 
         for (int i = 0; i < barInteriorPatrons.Count; i++)
         {
-            barInteriorPatrons[i]?.VoiceSource?.Stop();
+            BarInteriorPatronRefs patron = barInteriorPatrons[i];
+            if (patron != null)
+            {
+                StopUnityAudioSource(patron.VoiceSource);
+            }
         }
+    }
+
+    private static void StopUnityAudioSource(AudioSource source)
+    {
+        if (source == null)
+        {
+            return;
+        }
+
+        source.Stop();
     }
 
     private void EnsureBarInteriorSceneAudio()
