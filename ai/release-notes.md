@@ -36,7 +36,9 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 - Food, Sleep, and Leisure are handled by urgency during free time, with fallback activities when a resident cannot afford a normal service.
 - Kiosk Snack and Coffee can be carried in personal inventory and auto-used before needs become critical.
 - Residents now have thoughts, opinions, social links, families, children, and child-care pressure in the Residents screen.
-- Topics chosen for City Hall social-introduction conversations are remembered by both residents and can appear later in their thoughts/social context.
+- City Hall conversation topics and first visits to buildings now create time-limited personal knowledge shown in the Residents Knowledge tab.
+- Knowledge can spread between residents through idle chats, shared services, coworker shifts, City Hall introductions, and family formation, with highlighted subjects in dialogue bubbles.
+- The Noosphere HUD records citywide knowledge events, including received, expired, and burned memories with remaining-time indicators.
 - Idle residents can chat in the world with readable bubbles and spatial vocalizer sounds.
 - Idle movement is safer: residents should spread out more reliably instead of stacking on one tile.
 

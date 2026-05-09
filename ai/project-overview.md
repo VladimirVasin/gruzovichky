@@ -1,6 +1,6 @@
 # Project Overview
 
-Last updated: 2026-05-07
+Last updated: 2026-05-09
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Stable high-level map of the current playable prototype. Code remains the source
 - Runtime is still scene-local and generated from `Assets/Scenes/SampleScene.unity`.
 - The main playable slice now combines:
   - buildable roads, service buildings, production buildings, and local bus stops
-  - workers with portraits, education, needs, perks, money, owned-item inventory, jobs, shifts, and life routines
+  - workers with portraits, education, needs, perks, money, owned-item inventory, jobs, shifts, personal knowledge, social links, families, and life routines
   - trucks, local buses, warehouse storage/logistics, and intercity trade
   - taxes, building banks, event feed, regional map, tutorial/onboarding, and racing mode
   - procedural terrain, natural zones, water, ambient life, weather/lighting, low-poly visuals, and runtime audio/options
@@ -45,13 +45,13 @@ ai/                    Shared AI memory
 - `Assets/Scripts/Runtime/Transport/Services/`
   Testable transport helpers for grid pathing, two-lane road geometry, road placement, markings, bus routing/passengers, truck runtime phases, and rewards.
 - `Assets/Scripts/Runtime/Actors/`
-  Trucks, buses, worker/driver visuals, worker life cycle, hiring, shifts, and truck-state synchronization.
+  Trucks, buses, worker/driver visuals, worker life cycle, hiring, shifts, knowledge sharing, families, and truck-state synchronization.
 - `Assets/Scripts/Runtime/Audio/`
   Runtime audio helpers, generated/curated clip catalog, music, ambience, footsteps, and sound-option volume controls.
 - `Assets/Scripts/Runtime/UI/`
   HUDs, quick HUDs, main menu, localization, tutorial, fleet/management screens, map, debug service panel, event feed, and money popups.
 - `Assets/Scripts/Runtime/UI/FleetCanvas/`
-  Main management screens for Build, Workers, Vacancies/Roles/Shifts, Resources, Economy/Trade, Regional Map, and tutorial helpers.
+  Main management screens for Build, Workers/Knowledge, Noosphere, Vacancies/Roles/Shifts, Resources, Economy/Trade, Regional Map, and tutorial helpers.
 - `Assets/Resources/GameData/`
   Runtime-loaded JSON catalogs such as Patch Notes and Build menu definitions.
 - `Assets/Scripts/Runtime/Racing/`
@@ -67,9 +67,9 @@ ai/                    Shared AI memory
 - Tutorial and New Game share the same build-first empty-town start; Tutorial runs onboarding, while New Game skips tutorial windows but uses its own staged build progression instead of unlocking every building immediately.
 - During play:
   - the player builds roads/buildings/stops and manages workers through HUD panels
-  - workers resolve shifts and needs through services, production, transit, walking, and fallback activities
+  - workers resolve shifts and needs through services, production, transit, walking, fallback activities, and time-limited knowledge sharing
   - trucks and buses use grid roads while regional land/river trade uses built routes, Warehouse/Docks, and off-map merchant flows
-  - production, warehouse delivery, taxes, service banks, event feed, and regional trade evolve over time
+  - production, warehouse delivery, taxes, service banks, event feed, Noosphere knowledge logs, and regional trade evolve over time
   - racing can be launched from eligible trade-truck flow
 
 ## High-Impact Areas

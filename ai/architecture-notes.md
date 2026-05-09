@@ -1,6 +1,6 @@
 # Architecture Notes
 
-Last updated: 2026-05-08
+Last updated: 2026-05-09
 
 Purpose: describe the real implemented architecture and current hotspots.
 
@@ -14,7 +14,7 @@ Purpose: describe the real implemented architecture and current hotspots.
   - input handling
   - pathfinding
   - truck, bus, worker, and trade simulation
-  - worker needs/perks/life-cycle logic
+  - worker needs/perks/life-cycle/knowledge logic
   - tutorial, HUD, main menu, regional map, racing, UI, and audio
 
 ## Practical Consequences
@@ -23,6 +23,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 - It still couples presentation and simulation, but the runtime is now split into concern-based partial scripts under `Assets/Scripts/Runtime/`.
 - Runtime C# files are kept under the 900-line cleanup target by splitting feature clusters into focused partials such as `Runtime/Racing/`, `Runtime/UI/FleetCanvas/`, `GameBootstrap.Types*.cs`, `GameBootstrap.WorldVisuals.*.cs`, `GameBootstrap.MainMenuHud*.cs`, and `GameBootstrap.Drivers.*.cs`.
 - Numeric worker skills and temporary worker effects have been removed; `GameBootstrap.WorkerPerks*` owns perk assignment/display, while `GameBootstrap.WorkerEducation.cs` keeps the small Basic/Vocational/Higher gate needed by Labor Exchange staffing.
+- Resident knowledge remains in `GameBootstrap` partials for now: `GameBootstrap.WorkerKnowledge*` owns personal memories, expiry, iteration/source metadata, and resident-to-resident sharing, while the Residents `Knowledge` tab and Noosphere screen own display.
 - Building work schedules now route through `GameBootstrap.RuntimeSchedules.cs`; use that partial before editing staff slot counts, service shifts, higher-education office hours, or transport weekend behavior.
 - Runtime audio has a dedicated partial/catalog layer for generated SFX, curated ambience, music, worker footsteps, and Main Menu Sound options.
 - Navigation now starts from `ai/systems-map.md` -> `System Owner Map`; owner cards are maintained when paths, ownership, or responsibilities change.
@@ -112,6 +113,11 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 - Driver/worker behavior is split into general movement/logistics, warehouse delivery, life cycle and needs, idle wander, hiring/shift orchestration, the MVP worker social-memory layer in `GameBootstrap.WorkerSocial.cs`, the worker thought log/template layer in `GameBootstrap.WorkerThoughts.cs`, active thought/current-priority/life-opinion rules in `GameBootstrap.WorkerThoughts.Active.cs`, the worker-owned item layer in `GameBootstrap.WorkerInventory.cs` plus `WorkerItemCatalog.cs`, City Hall request accumulation/state in `GameBootstrap.CityComplaints.cs` / `GameBootstrap.CityComplaints.Aggregation.cs`, request display formatting in `GameBootstrap.CityComplaints.Display.cs`, special social-introduction requests in `GameBootstrap.CitySocialRequests.cs`, accepted-request goal HUD/City Hall attention marker in `GameBootstrap.CityRequestGoalHud.cs`, the full-screen social request scene in `GameBootstrap.CitySocialRequestSceneHud.cs`, the MVP family/home pairing layer in `GameBootstrap.WorkerFamilies.cs`, the child-birth/child-visual layer in `GameBootstrap.WorkerChildren.cs`, and the household upkeep/family happiness layer in `GameBootstrap.WorkerHouseholds.cs`.
 - The HUD-level citizen relationship graph is a separate Canvas screen in `Assets/Scripts/Runtime/UI/FleetCanvas/GameBootstrap.FleetCanvas.SocialGraphScreen.cs`; `GameBootstrap.FleetCanvas.SocialGraphModel.cs` owns its focused relation view models, importance/category calculations, filters, and semantic layout, while `GameBootstrap.FleetCanvas.SocialGraphAnimation.cs` owns panel/node/edge animation state. It reads worker social memories and stays dirty off the same social/family mutation points as the Workers detail tabs.
+
+### `Assets/Scripts/Runtime/Actors/GameBootstrap.WorkerKnowledge*.cs`
+
+- Owns resident knowledge creation, duplicate checks, expiry/burn handling, source reasons, per-memory iteration snapshots, and sharing through idle dialogue, service co-presence, coworker shifts, City Hall introductions, and family formation.
+- HUD display lives in `GameBootstrap.FleetCanvas.WorkersScreen.Knowledge.cs` and `GameBootstrap.FleetCanvas.NoosphereScreen.cs`; dialogue bubble highlighting is driven from active knowledge but still rendered by the relevant world/interior UI partials.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
 
@@ -343,7 +349,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 - `TransportSimulation`
   production, task selection, pathfinding, truck movement, local bus routing, and intercity trade
 - `WorkerSimulation`
-  needs, shifts, service visits, fallback activities, and life-cycle decisions
+  needs, shifts, service visits, fallback activities, knowledge sharing, and life-cycle decisions
 - `ManagementUI`
   FleetCanvas screens, Labor Exchange staffing overview, tutorial goals, localization, regional map, event feed, and main-menu options
 

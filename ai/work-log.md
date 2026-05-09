@@ -6,6 +6,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-09: Refreshed AI memory after the resident knowledge/Noosphere work. `project-overview.md` now treats knowledge sharing and Noosphere as stable project areas, `architecture-notes.md` documents the `GameBootstrap.WorkerKnowledge*` seam, and `release-notes.md` tracks the player-facing Knowledge tab, spreading memories, and Noosphere HUD for `v.0.0.4`. Verification: `git diff --check` and targeted mojibake scan.
+
 - 2026-05-09: Made residents with active conversation-topic knowledge more likely to initiate idle dialogue themselves. Idle conversation start chance now gets a source-side bonus when the initiating worker holds a non-expired `ConversationTopic` memory; building-existence knowledge does not affect initiation. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted trailing-whitespace scan, and targeted mojibake scan.
 
 - 2026-05-09: Fixed City Hall topic knowledge being hidden behind building transfers. Player-prompted City Hall conversations now suppress the generic pre-topic knowledge share, create the requester topic memory first, then transfer that exact topic to the target as iteration 2 with the City Hall interaction reason. General resident knowledge sharing now prefers conversation-topic candidates before building-existence memories. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted trailing-whitespace scan, and targeted mojibake scan.
