@@ -291,6 +291,7 @@ public partial class GameBootstrap
         float now = GetCurrentWorldHour();
         EnsureFamilySocialMemoryOneWay(first, second, now);
         EnsureFamilySocialMemoryOneWay(second, first, now);
+        TryShareWorkerKnowledgeFromSocialInteraction(first, second, WorkerSocialInteractionKind.FamilyFormation, LocationType.PersonalHouse);
     }
 
     private void EnsureFamilySocialMemoryOneWay(DriverAgent owner, DriverAgent other, float now)

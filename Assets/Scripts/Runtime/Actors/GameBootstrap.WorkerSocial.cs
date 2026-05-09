@@ -30,7 +30,8 @@ public partial class GameBootstrap
         DriverAgent first,
         DriverAgent second,
         WorkerSocialInteractionKind kind,
-        LocationType? locationType = null)
+        LocationType? locationType = null,
+        bool allowKnowledgeShare = true)
     {
         if (first == null ||
             second == null ||
@@ -108,9 +109,14 @@ public partial class GameBootstrap
             RecordWorkerSocialThought(first, second, "social_shared_place", locationType.Value, 1);
             RecordWorkerSocialThought(second, first, "social_shared_place", locationType.Value, 1);
         }
+
+        if (allowKnowledgeShare)
+        {
+            TryShareWorkerKnowledgeFromSocialInteraction(first, second, kind, locationType);
+        }
     }
 
-    private void RecordWorkerPromptedConversationTopicMemory(DriverAgent first, DriverAgent second, string topic, bool success)
+    private void RecordWorkerPromptedConversationTopicMemory(DriverAgent first, DriverAgent second, string topic, bool success, WorkerSocialInteractionKind shareKind)
     {
         if (first == null ||
             second == null ||
@@ -121,8 +127,18 @@ public partial class GameBootstrap
 
         UpdateWorkerSocialConversationTopic(first, second, topic, success);
         UpdateWorkerSocialConversationTopic(second, first, topic, success);
-        RecordWorkerConversationTopicMemory(first, second, topic, success);
-        RecordWorkerConversationTopicMemory(second, first, topic, success);
+        float now = GetCurrentWorldHour();
+        WorkerMemory sourceMemory = RecordWorkerConversationTopicMemory(first, second, topic, success, 1, now);
+        if (sourceMemory != null &&
+            TryShareSpecificWorkerKnowledge(first, second, sourceMemory, 0, shareKind, null, now))
+        {
+            RecordWorkerConversationTopicThought(second, first, topic, success, now);
+        }
+        else if (sourceMemory != null && !WorkerHasEquivalentKnowledge(second, sourceMemory, now))
+        {
+            RecordWorkerConversationTopicMemory(second, first, topic, success, 2, now);
+        }
+
         isDriversScreenDirty = true;
     }
 
@@ -138,17 +154,16 @@ public partial class GameBootstrap
         memory.LastConversationTopicWasPositive = success;
     }
 
-    private void RecordWorkerConversationTopicMemory(DriverAgent owner, DriverAgent other, string topic, bool success)
+    private WorkerMemory RecordWorkerConversationTopicMemory(DriverAgent owner, DriverAgent other, string topic, bool success, int knowledgeIteration, float now)
     {
         if (owner == null ||
             other == null ||
             owner.HasDepartedTown ||
             string.IsNullOrWhiteSpace(topic))
         {
-            return;
+            return null;
         }
 
-        float now = GetCurrentWorldHour();
         PruneExpiredWorkerMemories(owner, now);
         WorkerMemory memory = new()
         {
@@ -156,6 +171,7 @@ public partial class GameBootstrap
             OtherWorkerId = other.DriverId,
             Topic = topic,
             Positive = success,
+            KnowledgeIteration = Mathf.Max(1, knowledgeIteration),
             CreatedDay = currentDay,
             CreatedWorldHour = now,
             ExpiresWorldHour = now + WorkerPersonalMemoryLifetimeHours
@@ -163,7 +179,12 @@ public partial class GameBootstrap
         owner.Memories.Insert(0, memory);
         RecordNoosphereKnowledgeReceived(owner, other, memory, now);
         TrimWorkerMemories(owner, now);
+        RecordWorkerConversationTopicThought(owner, other, topic, success, now);
+        return memory;
+    }
 
+    private void RecordWorkerConversationTopicThought(DriverAgent owner, DriverAgent other, string topic, bool success, float now)
+    {
         RecordWorkerThought(
             owner,
             WorkerThoughtKind.Social,
@@ -386,11 +407,6 @@ public partial class GameBootstrap
             return true;
         }
 
-        if (kind == WorkerSocialInteractionKind.ArrivalWave)
-        {
-            return false;
-        }
-
         int exposureAfter = Mathf.Max(
             (first?.Exposure ?? 0) + GetWorkerSocialExposureDelta(kind, locationType, socialiteCount),
             (second?.Exposure ?? 0) + GetWorkerSocialExposureDelta(kind, locationType, socialiteCount));
@@ -418,7 +434,6 @@ public partial class GameBootstrap
             WorkerSocialInteractionKind.IdleConversation => 3,
             WorkerSocialInteractionKind.CoworkerShift => 2,
             WorkerSocialInteractionKind.ServiceCoPresence => locationType == LocationType.Bar ? 2 : 1,
-            WorkerSocialInteractionKind.ArrivalWave => 1,
             _ => 0
         };
         return baseDelta + Mathf.Max(0, socialiteCount) * WorkerSocialSocialiteExposureBonus;
@@ -452,7 +467,7 @@ public partial class GameBootstrap
         ref int familiarityDelta,
         ref int relationshipDelta)
     {
-        if (socialiteCount <= 0 || kind == WorkerSocialInteractionKind.ArrivalWave)
+        if (socialiteCount <= 0)
         {
             return;
         }
@@ -491,7 +506,6 @@ public partial class GameBootstrap
         ref int relationshipDelta)
     {
         if (relationshipDelta <= 0 ||
-            kind == WorkerSocialInteractionKind.ArrivalWave ||
             kind == WorkerSocialInteractionKind.FamilyFormation)
         {
             return;
@@ -620,10 +634,6 @@ public partial class GameBootstrap
                 familiarityDelta = 10;
                 relationshipDelta = 5;
                 break;
-            case WorkerSocialInteractionKind.ArrivalWave:
-                familiarityDelta = 0;
-                relationshipDelta = 0;
-                break;
             case WorkerSocialInteractionKind.FamilyFormation:
                 familiarityDelta = 0;
                 relationshipDelta = 0;
@@ -687,22 +697,6 @@ public partial class GameBootstrap
             }
 
             RecordWorkerSocialInteraction(worker, other, WorkerSocialInteractionKind.CoworkerShift, building.Type);
-        }
-    }
-
-    private void RecordWorkerArrivalWaveSocial(IReadOnlyList<DriverAgent> workers)
-    {
-        if (workers == null || workers.Count < 2)
-        {
-            return;
-        }
-
-        for (int i = 0; i < workers.Count; i++)
-        {
-            for (int j = i + 1; j < workers.Count; j++)
-            {
-                RecordWorkerSocialInteraction(workers[i], workers[j], WorkerSocialInteractionKind.ArrivalWave);
-            }
         }
     }
 
@@ -867,7 +861,6 @@ public partial class GameBootstrap
                 ? GetSelectedLocationDisplayName(memory.LastLocationType.Value)
                 : (ru ? "\u0421\u0435\u0440\u0432\u0438\u0441" : "Service"),
             WorkerSocialInteractionKind.CoworkerShift => ru ? "\u0421\u043c\u0435\u043d\u0430" : "Shift",
-            WorkerSocialInteractionKind.ArrivalWave => ru ? "\u041e\u0434\u0438\u043d \u0430\u0432\u0442\u043e\u0431\u0443\u0441" : "Same bus",
             WorkerSocialInteractionKind.FamilyFormation => ru ? "\u0421\u0435\u043c\u044c\u044f" : "Family",
             WorkerSocialInteractionKind.PlayerPromptedConversation => FormatWorkerSocialTopicContext(memory, ru, positive: true),
             WorkerSocialInteractionKind.PlayerPromptedConversationFailed => FormatWorkerSocialTopicContext(memory, ru, positive: false),

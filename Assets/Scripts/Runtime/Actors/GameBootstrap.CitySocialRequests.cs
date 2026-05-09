@@ -537,8 +537,8 @@ public partial class GameBootstrap
         WorkerSocialInteractionKind kind = success
             ? WorkerSocialInteractionKind.PlayerPromptedConversation
             : WorkerSocialInteractionKind.PlayerPromptedConversationFailed;
-        RecordWorkerSocialInteraction(requester, target, kind);
-        RecordWorkerPromptedConversationTopicMemory(requester, target, request.Topic, success);
+        RecordWorkerSocialInteraction(requester, target, kind, null, allowKnowledgeShare: false);
+        RecordWorkerPromptedConversationTopicMemory(requester, target, request.Topic, success, kind);
         WorkerSocialMemory requesterMemory = FindWorkerSocialMemory(requester, target.DriverId);
         WorkerSocialMemory targetMemory = FindWorkerSocialMemory(target, requester.DriverId);
         int familiarity = GetWorkerSocialPairAverageFamiliarity(requesterMemory, targetMemory);

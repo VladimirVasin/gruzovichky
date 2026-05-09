@@ -300,7 +300,6 @@ public partial class GameBootstrap
             WorkerSocialInteractionKind.CoworkerShift => 0.65f,
             WorkerSocialInteractionKind.IdleConversation => 0.55f,
             WorkerSocialInteractionKind.ServiceCoPresence => 0.45f,
-            WorkerSocialInteractionKind.ArrivalWave => 0.25f,
             _ => 0.35f
         };
 
@@ -738,7 +737,6 @@ public partial class GameBootstrap
             WorkerSocialInteractionKind.PlayerPromptedConversationFailed => ru ? "\u0442\u0435\u043c\u0430 \u043e\u0442 \u0438\u0433\u0440\u043e\u043a\u0430 \u043e\u0431\u0435\u0440\u043d\u0443\u043b\u0430\u0441\u044c \u043d\u0435\u043b\u043e\u0432\u043a\u043e\u0441\u0442\u044c\u044e" : "player topic turned awkward",
             WorkerSocialInteractionKind.IdleConversation => ru ? "\u0447\u0430\u0441\u0442\u043e \u043e\u0431\u0449\u0430\u043b\u0438\u0441\u044c" : "talked during idle time",
             WorkerSocialInteractionKind.ServiceCoPresence => ru ? "\u0432\u0441\u0442\u0440\u0435\u0447\u0430\u043b\u0438\u0441\u044c \u0432 \u0441\u0435\u0440\u0432\u0438\u0441\u0435" : "met at a service building",
-            WorkerSocialInteractionKind.ArrivalWave => ru ? "\u043f\u0440\u0438\u0435\u0445\u0430\u043b\u0438 \u043e\u0434\u043d\u0438\u043c \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043e\u043c" : "arrived on the same bus",
             _ => ru ? "\u043f\u0430\u043c\u044f\u0442\u044c \u043e \u0432\u0441\u0442\u0440\u0435\u0447\u0435" : "remembered contact"
         };
     }

@@ -190,6 +190,11 @@ public partial class GameBootstrap
 
     private WorkerIdleDialogueLine[] BuildWorkerIdleDialogueLines(DriverAgent first, DriverAgent second)
     {
+        if (TryBuildWorkerKnowledgeShareDialogueLines(first, second, out WorkerIdleDialogueLine[] knowledgeShareLines))
+        {
+            return knowledgeShareLines;
+        }
+
         WorkerIdleDialogueContext context = GetWorkerIdleDialogueContext(first, second);
         int relationship = GetWorkerIdleDialogueRelationship(first, second);
         List<int> candidates = new();
@@ -297,9 +302,7 @@ public partial class GameBootstrap
 
     private static string[] SplitWorkerIdleDialogueWords(string text)
     {
-        return string.IsNullOrWhiteSpace(text)
-            ? System.Array.Empty<string>()
-            : text.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+        return SplitBubbleRichTextWords(text);
     }
 
     private static float GetWorkerIdleDialogueDuration(WorkerIdleDialogueLine[] lines)
@@ -354,7 +357,7 @@ public partial class GameBootstrap
         mesh.fontSize = 54;
         mesh.characterSize = 0.033f;
         mesh.lineSpacing = 0.84f;
-        mesh.richText = false;
+        mesh.richText = true;
         mesh.color = color;
         return mesh;
     }
@@ -558,6 +561,23 @@ public partial class GameBootstrap
 
     private static string BuildWorkerIdleDialogueVisibleText(string[] words, int visibleWords)
     {
+        return BuildVisibleBubbleRichTextWords(words, visibleWords);
+    }
+
+    private static string WrapWorkerIdleDialogueText(string text)
+    {
+        return WrapBubbleRichText(text, 27, 2, "...");
+    }
+
+    private static string[] SplitBubbleRichTextWords(string text)
+    {
+        return string.IsNullOrWhiteSpace(text)
+            ? System.Array.Empty<string>()
+            : text.Split(new[] { ' ', '\n', '\r', '\t' }, System.StringSplitOptions.RemoveEmptyEntries);
+    }
+
+    private static string BuildVisibleBubbleRichTextWords(string[] words, int visibleWords)
+    {
         if (words == null || visibleWords <= 0)
         {
             return string.Empty;
@@ -567,22 +587,60 @@ public partial class GameBootstrap
         return string.Join(" ", words, 0, count);
     }
 
-    private static string WrapWorkerIdleDialogueText(string text)
+    private static int GetBubbleRichTextVisibleLength(string text)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
+
+        int length = 0;
+        bool insideTag = false;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (c == '<')
+            {
+                insideTag = true;
+                continue;
+            }
+
+            if (insideTag)
+            {
+                if (c == '>')
+                {
+                    insideTag = false;
+                }
+
+                continue;
+            }
+
+            length++;
+        }
+
+        return length;
+    }
+
+    private static string WrapBubbleRichText(string text, int maxLineVisibleLength, int maxLines, string overflowSuffix)
+    {
+        if (string.IsNullOrWhiteSpace(text) || maxLines <= 0)
         {
             return string.Empty;
         }
 
-        const int maxLineLength = 27;
-        string[] words = SplitWorkerIdleDialogueWords(text);
+        string[] words = SplitBubbleRichTextWords(text);
+        if (words.Length == 0)
+        {
+            return string.Empty;
+        }
+
         List<string> lines = new();
         string current = string.Empty;
         for (int i = 0; i < words.Length; i++)
         {
             string word = words[i];
             string candidate = string.IsNullOrEmpty(current) ? word : $"{current} {word}";
-            if (candidate.Length > maxLineLength && !string.IsNullOrEmpty(current))
+            if (GetBubbleRichTextVisibleLength(candidate) > maxLineVisibleLength && !string.IsNullOrEmpty(current))
             {
                 lines.Add(current);
                 current = word;
@@ -598,18 +656,46 @@ public partial class GameBootstrap
             lines.Add(current);
         }
 
-        if (lines.Count <= 2)
+        if (lines.Count <= maxLines)
         {
             return string.Join("\n", lines);
         }
 
-        string second = lines[1];
-        if (second.Length > maxLineLength - 1)
+        string[] visibleLines = new string[maxLines];
+        for (int i = 0; i < maxLines; i++)
         {
-            second = second.Substring(0, maxLineLength - 1);
+            visibleLines[i] = lines[i];
         }
 
-        return $"{lines[0]}\n{second}…";
+        string suffix = overflowSuffix ?? string.Empty;
+        int suffixLength = GetBubbleRichTextVisibleLength(suffix);
+        int lastIndex = maxLines - 1;
+        int allowedLength = Mathf.Max(1, maxLineVisibleLength - suffixLength);
+        visibleLines[lastIndex] = TruncateBubbleRichTextByWords(visibleLines[lastIndex], allowedLength) + suffix;
+        return string.Join("\n", visibleLines);
+    }
+
+    private static string TruncateBubbleRichTextByWords(string text, int maxVisibleLength)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        string[] words = SplitBubbleRichTextWords(text);
+        string result = string.Empty;
+        for (int i = 0; i < words.Length; i++)
+        {
+            string candidate = string.IsNullOrEmpty(result) ? words[i] : $"{result} {words[i]}";
+            if (GetBubbleRichTextVisibleLength(candidate) > maxVisibleLength && !string.IsNullOrEmpty(result))
+            {
+                break;
+            }
+
+            result = candidate;
+        }
+
+        return result;
     }
 
     private void PlayWorkerIdleDialogueVoiceWord(WorkerIdleDialogueRuntime runtime, DriverAgent speaker, int visibleWordIndex)

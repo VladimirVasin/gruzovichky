@@ -394,6 +394,7 @@ public partial class GameBootstrap
         public string SourceRu = string.Empty;
         public string SourceEn = string.Empty;
         public bool Positive;
+        public int KnowledgeIteration;
         public int CreatedDay;
         public float CreatedWorldHour;
         public float ExpiresWorldHour;
@@ -414,6 +415,7 @@ public partial class GameBootstrap
         public bool Positive;
         public string ReasonRu = string.Empty;
         public string ReasonEn = string.Empty;
+        public int KnowledgeIteration;
         public int EventDay;
         public float EventWorldHour;
         public float MemoryCreatedWorldHour;
@@ -461,7 +463,6 @@ public partial class GameBootstrap
         IdleConversation,
         ServiceCoPresence,
         CoworkerShift,
-        ArrivalWave,
         FamilyFormation,
         PlayerPromptedConversation,
         PlayerPromptedConversationFailed

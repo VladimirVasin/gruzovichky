@@ -89,6 +89,20 @@ public partial class GameBootstrap
         }
     };
 
+    private static readonly string[] BarInteriorTopicKnowledgeConversationTemplates =
+    {
+        "\u0421\u043b\u044b\u0448\u0430\u043b\u0438 \u0442\u0435\u043c\u0443: {topic}.",
+        "\u0412 \u0440\u0430\u0442\u0443\u0448\u0435 \u0432\u0441\u043f\u043b\u044b\u043b\u0430 \u0442\u0435\u043c\u0430 {topic}.",
+        "\u042f \u0437\u0430\u043f\u043e\u043c\u043d\u0438\u043b: {topic}."
+    };
+
+    private static readonly string[] BarInteriorBuildingKnowledgeConversationTemplates =
+    {
+        "\u0413\u043e\u0432\u043e\u0440\u044f\u0442, \u0435\u0441\u0442\u044c {building}.",
+        "\u042f \u0432\u0438\u0434\u0435\u043b {building}.",
+        "\u0422\u0435\u043f\u0435\u0440\u044c \u0432 \u0433\u043e\u0440\u043e\u0434\u0435 \u0435\u0441\u0442\u044c {building}."
+    };
+
     private void ResetBarInteriorAnimationState()
     {
         barInteriorPatrons.Clear();
@@ -232,7 +246,7 @@ public partial class GameBootstrap
         mesh.fontSize = 46;
         mesh.characterSize = 0.034f;
         mesh.lineSpacing = 0.82f;
-        mesh.richText = false;
+        mesh.richText = true;
         mesh.color = color;
         return mesh;
     }
@@ -631,8 +645,13 @@ public partial class GameBootstrap
         return -1;
     }
 
-    private static string GetBarInteriorConversationLine(int group, int turnIndex)
+    private string GetBarInteriorConversationLine(int group, int turnIndex)
     {
+        if (TryGetBarInteriorKnowledgeConversationLine(group, turnIndex, out string knowledgeLine))
+        {
+            return knowledgeLine;
+        }
+
         if (group < 0 || group >= BarInteriorConversationLines.Length)
         {
             group = 1;
@@ -647,6 +666,104 @@ public partial class GameBootstrap
         return lines[Mathf.Abs(turnIndex) % lines.Length];
     }
 
+    private bool TryGetBarInteriorKnowledgeConversationLine(int group, int turnIndex, out string line)
+    {
+        line = string.Empty;
+        if (!TrySelectBarInteriorKnowledgeMemory(group, turnIndex, true, out WorkerMemory memory) &&
+            !TrySelectBarInteriorKnowledgeMemory(group, turnIndex, false, out memory))
+        {
+            return false;
+        }
+
+        line = FormatBarInteriorKnowledgeConversationLine(memory, group, turnIndex);
+        return !string.IsNullOrWhiteSpace(line);
+    }
+
+    private bool TrySelectBarInteriorKnowledgeMemory(int group, int turnIndex, bool barVisitorsOnly, out WorkerMemory selectedMemory)
+    {
+        selectedMemory = null;
+        float now = GetCurrentWorldHour();
+        int count = 0;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (!IsBarInteriorKnowledgeCandidate(driver, barVisitorsOnly))
+            {
+                continue;
+            }
+
+            for (int j = 0; j < driver.Memories.Count; j++)
+            {
+                WorkerMemory memory = driver.Memories[j];
+                if (IsWorkerMemoryDisplayable(memory) && !ShouldExpireWorkerMemory(memory, now))
+                {
+                    count++;
+                }
+            }
+        }
+
+        if (count == 0)
+        {
+            return false;
+        }
+
+        int seed = currentDay * 53 + Mathf.FloorToInt(now) * 7 + group * 17 + turnIndex * 11 + (barVisitorsOnly ? 3 : 29);
+        int selectedIndex = Mathf.Abs(seed) % count;
+        int seen = 0;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (!IsBarInteriorKnowledgeCandidate(driver, barVisitorsOnly))
+            {
+                continue;
+            }
+
+            for (int j = 0; j < driver.Memories.Count; j++)
+            {
+                WorkerMemory memory = driver.Memories[j];
+                if (!IsWorkerMemoryDisplayable(memory) || ShouldExpireWorkerMemory(memory, now))
+                {
+                    continue;
+                }
+
+                if (seen == selectedIndex)
+                {
+                    selectedMemory = memory;
+                    return true;
+                }
+
+                seen++;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsBarInteriorKnowledgeCandidate(DriverAgent driver, bool barVisitorsOnly)
+    {
+        return driver != null &&
+               !driver.HasDepartedTown &&
+               driver.Memories.Count > 0 &&
+               (!barVisitorsOnly || driver.IsInsideBuilding && driver.InsideBuildingType == LocationType.Bar);
+    }
+
+    private string FormatBarInteriorKnowledgeConversationLine(WorkerMemory memory, int group, int turnIndex)
+    {
+        if (memory == null)
+        {
+            return string.Empty;
+        }
+
+        if (memory.Kind == WorkerMemoryKind.BuildingExistence)
+        {
+            string template = BarInteriorBuildingKnowledgeConversationTemplates[Mathf.Abs(group * 31 + turnIndex) % BarInteriorBuildingKnowledgeConversationTemplates.Length];
+            return template.Replace("{building}", FormatWorkerKnowledgeShareBuildingHighlightedLabel(memory));
+        }
+
+        string topicTemplate = BarInteriorTopicKnowledgeConversationTemplates[Mathf.Abs(group * 29 + turnIndex) % BarInteriorTopicKnowledgeConversationTemplates.Length];
+        return topicTemplate.Replace("{topic}", FormatWorkerKnowledgeShareTopicHighlightedLabel(memory));
+    }
+
     private static string BuildBarInteriorVisibleConversationText(string line, float normalizedVisibleTime)
     {
         if (string.IsNullOrWhiteSpace(line))
@@ -655,8 +772,9 @@ public partial class GameBootstrap
         }
 
         float typed = Mathf.Clamp01(normalizedVisibleTime / 0.40f);
-        int chars = Mathf.Clamp(Mathf.CeilToInt(line.Length * typed), 0, line.Length);
-        return WrapBarInteriorConversationText(line.Substring(0, chars));
+        string[] words = SplitBubbleRichTextWords(line);
+        int visibleWords = Mathf.Clamp(Mathf.CeilToInt(words.Length * typed), 0, words.Length);
+        return WrapBarInteriorConversationText(BuildVisibleBubbleRichTextWords(words, visibleWords));
     }
 
     private static int CountBarInteriorVisibleConversationWords(string line, float normalizedVisibleTime)
@@ -667,25 +785,8 @@ public partial class GameBootstrap
         }
 
         float typed = Mathf.Clamp01(normalizedVisibleTime / 0.40f);
-        int chars = Mathf.Clamp(Mathf.CeilToInt(line.Length * typed), 0, line.Length);
-        int words = 0;
-        bool insideWord = false;
-        for (int i = 0; i < chars; i++)
-        {
-            if (char.IsWhiteSpace(line[i]))
-            {
-                insideWord = false;
-                continue;
-            }
-
-            if (!insideWord)
-            {
-                words++;
-                insideWord = true;
-            }
-        }
-
-        return words;
+        string[] words = SplitBubbleRichTextWords(line);
+        return Mathf.Clamp(Mathf.CeilToInt(words.Length * typed), 0, words.Length);
     }
 
     private void SetBarInteriorBubbleText(BarInteriorPatronRefs patron, string text)
@@ -703,18 +804,7 @@ public partial class GameBootstrap
 
     private static string WrapBarInteriorConversationText(string text)
     {
-        if (string.IsNullOrWhiteSpace(text) || text.Length <= 18)
-        {
-            return text;
-        }
-
-        int split = text.LastIndexOf(' ', Mathf.Min(text.Length - 1, 18));
-        if (split <= 0)
-        {
-            return text;
-        }
-
-        return text.Substring(0, split) + "\n" + text.Substring(split + 1);
+        return WrapBubbleRichText(text, 18, 2, "...");
     }
 
     private void UpdateBarInteriorGlowProps()

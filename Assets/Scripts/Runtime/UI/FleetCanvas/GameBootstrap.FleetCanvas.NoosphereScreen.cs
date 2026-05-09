@@ -45,12 +45,16 @@ public partial class GameBootstrap
 
     private void RecordNoosphereKnowledgeReceived(DriverAgent owner, DriverAgent other, WorkerMemory memory, float now)
     {
-        string reasonRu = memory?.Kind == WorkerMemoryKind.BuildingExistence
+        string reasonRu = !string.IsNullOrWhiteSpace(memory?.SourceRu)
             ? memory.SourceRu
-            : "\u0420\u0430\u0442\u0443\u0448\u0430: \u0442\u0435\u043c\u0430 \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432\u0430 \u043e\u0442 \u0438\u0433\u0440\u043e\u043a\u0430";
-        string reasonEn = memory?.Kind == WorkerMemoryKind.BuildingExistence
+            : memory?.Kind == WorkerMemoryKind.BuildingExistence
+                ? memory.SourceRu
+                : "\u0420\u0430\u0442\u0443\u0448\u0430: \u0442\u0435\u043c\u0430 \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432\u0430 \u043e\u0442 \u0438\u0433\u0440\u043e\u043a\u0430";
+        string reasonEn = !string.IsNullOrWhiteSpace(memory?.SourceEn)
             ? memory.SourceEn
-            : "City Hall: player-provided introduction topic";
+            : memory?.Kind == WorkerMemoryKind.BuildingExistence
+                ? memory.SourceEn
+                : "City Hall: player-provided introduction topic";
         RecordNoosphereKnowledgeEvent(
             NoosphereKnowledgeEventKind.Received,
             owner,
@@ -129,6 +133,7 @@ public partial class GameBootstrap
             Positive = memory.Positive,
             ReasonRu = reasonRu ?? string.Empty,
             ReasonEn = reasonEn ?? string.Empty,
+            KnowledgeIteration = GetWorkerKnowledgeIteration(memory),
             EventDay = currentDay,
             EventWorldHour = now,
             MemoryCreatedWorldHour = memory.CreatedWorldHour,
@@ -598,13 +603,22 @@ public partial class GameBootstrap
 
         if (entry.MemoryKind == WorkerMemoryKind.BuildingExistence)
         {
-            return ru ? $"\u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}" : $"Reason: {reason}";
+            return ru
+                ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}"
+                : $"Iteration {GetNoosphereKnowledgeIteration(entry)}; Reason: {reason}";
         }
 
         string outcome = entry.Positive
             ? (ru ? "\u0438\u0441\u0445\u043e\u0434: \u0442\u0435\u043c\u0430 \u0441\u0440\u0430\u0431\u043e\u0442\u0430\u043b\u0430" : "outcome: topic worked")
             : (ru ? "\u0438\u0441\u0445\u043e\u0434: \u0442\u0435\u043c\u0430 \u0431\u044b\u043b\u0430 \u043d\u0435\u043b\u043e\u0432\u043a\u043e\u0439" : "outcome: topic felt awkward");
-        return ru ? $"\u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {outcome}" : $"Reason: {reason}; {outcome}";
+        return ru
+            ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {outcome}"
+            : $"Iteration {GetNoosphereKnowledgeIteration(entry)}; Reason: {reason}; {outcome}";
+    }
+
+    private static int GetNoosphereKnowledgeIteration(NoosphereKnowledgeLogEntry entry)
+    {
+        return Mathf.Max(1, entry?.KnowledgeIteration ?? 0);
     }
 
     private static string FormatNoosphereEventTime(NoosphereKnowledgeLogEntry entry, bool ru)

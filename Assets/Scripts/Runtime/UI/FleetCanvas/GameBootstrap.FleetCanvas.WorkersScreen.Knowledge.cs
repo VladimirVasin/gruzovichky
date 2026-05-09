@@ -246,9 +246,14 @@ public partial class GameBootstrap
 
         if (row.MetaText != null)
         {
-            row.MetaText.text = memory.Positive
+            string outcome = memory.Positive
                 ? (ru ? "\u0418\u0441\u0445\u043e\u0434: \u0442\u0435\u043c\u0430 \u0441\u0440\u0430\u0431\u043e\u0442\u0430\u043b\u0430" : "Outcome: topic worked")
                 : (ru ? "\u0418\u0441\u0445\u043e\u0434: \u0442\u0435\u043c\u0430 \u0431\u044b\u043b\u0430 \u043d\u0435\u043b\u043e\u0432\u043a\u043e\u0439" : "Outcome: topic felt awkward");
+            string source = ru ? memory.SourceRu : memory.SourceEn;
+            string iteration = FormatWorkerKnowledgeIteration(memory, ru);
+            row.MetaText.text = string.IsNullOrWhiteSpace(source)
+                ? $"{iteration}; {outcome}"
+                : ru ? $"{iteration}; \u0418\u0441\u0442\u043e\u0447\u043d\u0438\u043a: {source}; {outcome}" : $"{iteration}; Source: {source}; {outcome}";
             row.MetaText.color = memory.Positive ? ResidentHudPositiveColor : FleetSecondaryTextColor;
         }
 
@@ -298,7 +303,9 @@ public partial class GameBootstrap
 
         if (row.MetaText != null)
         {
-            row.MetaText.text = ru ? $"\u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}" : $"Reason: {reason}";
+            row.MetaText.text = ru
+                ? $"{FormatWorkerKnowledgeIteration(memory, ru)}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}"
+                : $"{FormatWorkerKnowledgeIteration(memory, ru)}; Reason: {reason}";
             row.MetaText.color = new Color(0.58f, 0.78f, 0.92f, 1f);
         }
 
@@ -380,5 +387,11 @@ public partial class GameBootstrap
 
         int hour = Mathf.FloorToInt(Mathf.Repeat(memory.CreatedWorldHour, 24f));
         return ru ? $"\u0414{memory.CreatedDay} {hour:00}:00" : $"D{memory.CreatedDay} {hour:00}:00";
+    }
+
+    private static string FormatWorkerKnowledgeIteration(WorkerMemory memory, bool ru)
+    {
+        int iteration = GetWorkerKnowledgeIteration(memory);
+        return ru ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {iteration}" : $"Iteration {iteration}";
     }
 }

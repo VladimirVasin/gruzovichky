@@ -813,7 +813,6 @@ public partial class GameBootstrap
             Phase = HiringDriverArrivalPhase.WaitingLaneClear
         };
         hiringDriverArrival.Drivers.AddRange(workers);
-        RecordWorkerArrivalWaveSocial(workers);
         SessionDebugLogger.Log("MIGRATION", $"{workers.Count} worker(s) started arrival bus flow; source={source}, tutorialWave={(isTutorialWave ? "yes" : "no")}.");
         return true;
     }

@@ -41,6 +41,7 @@ public partial class GameBootstrap
             SourceRu = reasonRu ?? string.Empty,
             SourceEn = reasonEn ?? string.Empty,
             Positive = true,
+            KnowledgeIteration = 1,
             CreatedDay = currentDay,
             CreatedWorldHour = now,
             ExpiresWorldHour = now + WorkerPersonalMemoryLifetimeHours
@@ -127,6 +128,11 @@ public partial class GameBootstrap
                 memory.Kind == WorkerMemoryKind.BuildingExistence);
     }
 
+    private static int GetWorkerKnowledgeIteration(WorkerMemory memory)
+    {
+        return Mathf.Max(1, memory?.KnowledgeIteration ?? 0);
+    }
+
     private static bool IsWorkerMemoryDisplayable(WorkerMemory memory)
     {
         if (memory == null)
@@ -140,6 +146,28 @@ public partial class GameBootstrap
             WorkerMemoryKind.BuildingExistence => memory.BuildingType.HasValue && memory.BuildingInstanceId > 0,
             _ => false
         };
+    }
+
+    private bool HasActiveWorkerConversationTopicKnowledge(DriverAgent worker)
+    {
+        if (worker == null || worker.Memories.Count == 0)
+        {
+            return false;
+        }
+
+        float now = GetCurrentWorldHour();
+        for (int i = 0; i < worker.Memories.Count; i++)
+        {
+            WorkerMemory memory = worker.Memories[i];
+            if (memory?.Kind == WorkerMemoryKind.ConversationTopic &&
+                IsWorkerMemoryDisplayable(memory) &&
+                !ShouldExpireWorkerMemory(memory, now))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private string GetWorkerKnowledgeBuildingDisplayName(WorkerMemory memory, bool ru)
