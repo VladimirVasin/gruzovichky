@@ -124,7 +124,7 @@ public partial class GameBootstrap
             OtherWorkerId = memory.OtherWorkerId,
             OwnerName = GetNoosphereWorkerName(owner, owner?.DriverId ?? 0),
             OtherName = GetNoosphereWorkerName(other, memory.OtherWorkerId),
-            Topic = memory.Topic,
+            Topic = GetWorkerRumorTopic(memory),
             BuildingType = memory.BuildingType,
             BuildingInstanceId = memory.BuildingInstanceId,
             BuildingLabel = memory.Kind == WorkerMemoryKind.BuildingExistence
@@ -134,11 +134,18 @@ public partial class GameBootstrap
             ReasonRu = reasonRu ?? string.Empty,
             ReasonEn = reasonEn ?? string.Empty,
             KnowledgeIteration = GetWorkerKnowledgeIteration(memory),
+            SourceAttitude = memory.SourceAttitude,
+            OpinionTone = memory.OpinionTone,
+            OpinionScore = memory.OpinionScore,
+            OpinionConfidence = memory.OpinionConfidence,
+            OpinionReasonRu = memory.OpinionReasonRu ?? string.Empty,
+            OpinionReasonEn = memory.OpinionReasonEn ?? string.Empty,
             EventDay = currentDay,
             EventWorldHour = now,
             MemoryCreatedWorldHour = memory.CreatedWorldHour,
             MemoryExpiresWorldHour = GetWorkerMemoryExpiresWorldHour(memory)
         };
+        CopyWorkerRumorState(entry, memory);
 
         noosphereKnowledgeLog.Insert(0, entry);
         while (noosphereKnowledgeLog.Count > NoosphereKnowledgeLogCap)
@@ -579,7 +586,7 @@ public partial class GameBootstrap
         }
 
         string other = $"<b>{SanitizeRichTextLiteral(entry.OtherName)}</b>";
-        string topic = FormatCitySocialTopicRichText(entry.Topic);
+        string topic = FormatCitySocialTopicRichText(GetWorkerRumorTopic(entry));
 
         if (entry.EventKind == NoosphereKnowledgeEventKind.Burned)
         {
@@ -604,16 +611,45 @@ public partial class GameBootstrap
         if (entry.MemoryKind == WorkerMemoryKind.BuildingExistence)
         {
             return ru
-                ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}"
-                : $"Iteration {GetNoosphereKnowledgeIteration(entry)}; Reason: {reason}";
+                ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {FormatNoosphereKnowledgeOpinion(entry, ru)}"
+                : $"Iteration {GetNoosphereKnowledgeIteration(entry)}; Reason: {reason}; {FormatNoosphereKnowledgeOpinion(entry, ru)}";
         }
 
         string outcome = entry.Positive
             ? (ru ? "\u0438\u0441\u0445\u043e\u0434: \u0442\u0435\u043c\u0430 \u0441\u0440\u0430\u0431\u043e\u0442\u0430\u043b\u0430" : "outcome: topic worked")
             : (ru ? "\u0438\u0441\u0445\u043e\u0434: \u0442\u0435\u043c\u0430 \u0431\u044b\u043b\u0430 \u043d\u0435\u043b\u043e\u0432\u043a\u043e\u0439" : "outcome: topic felt awkward");
+        string rumorState = FormatWorkerRumorStateMeta(entry, ru);
+        string originalTopic = GetWorkerRumorOriginalTopic(entry);
+        string currentTopic = GetWorkerRumorTopic(entry);
+        string originalMeta = !string.IsNullOrWhiteSpace(originalTopic) &&
+                              NormalizeWorkerKnowledgeTopicKey(originalTopic) != NormalizeWorkerKnowledgeTopicKey(currentTopic)
+            ? ru ? $"; \u0418\u0441\u0445\u043e\u0434\u043d\u043e: \u00ab{FormatCitySocialTopicRichText(originalTopic)}\u00bb" : $"; Original: \"{FormatCitySocialTopicRichText(originalTopic)}\""
+            : string.Empty;
         return ru
-            ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {outcome}"
-            : $"Iteration {GetNoosphereKnowledgeIteration(entry)}; Reason: {reason}; {outcome}";
+            ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}; {rumorState}; {FormatWorkerKnowledgeSourceAttitudeMeta(entry.SourceAttitude, ru)}{originalMeta}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {outcome}; {FormatNoosphereKnowledgeOpinion(entry, ru)}"
+            : $"Iteration {GetNoosphereKnowledgeIteration(entry)}; {rumorState}; {FormatWorkerKnowledgeSourceAttitudeMeta(entry.SourceAttitude, ru)}{originalMeta}; Reason: {reason}; {outcome}; {FormatNoosphereKnowledgeOpinion(entry, ru)}";
+    }
+
+    private static string FormatNoosphereKnowledgeOpinion(NoosphereKnowledgeLogEntry entry, bool ru)
+    {
+        string opinion = entry?.OpinionTone switch
+        {
+            WorkerKnowledgeOpinionTone.Positive => ru ? "\u043c\u043d\u0435\u043d\u0438\u0435: \u043f\u043e\u043b\u0435\u0437\u043d\u043e" : "opinion: useful",
+            WorkerKnowledgeOpinionTone.Negative => ru ? "\u043c\u043d\u0435\u043d\u0438\u0435: \u0441\u043e\u043c\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e" : "opinion: doubtful",
+            _ => ru ? "\u043c\u043d\u0435\u043d\u0438\u0435: \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e" : "opinion: neutral"
+        };
+        int confidence = Mathf.Clamp(entry?.OpinionConfidence ?? 0, 0, 100);
+        string reason = ru ? entry?.OpinionReasonRu : entry?.OpinionReasonEn;
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return confidence > 0
+                ? $"{opinion}, {confidence}%"
+                : opinion;
+        }
+
+        return confidence > 0
+            ? $"{opinion}, {confidence}%, {reason}"
+            : $"{opinion}, {reason}";
     }
 
     private static int GetNoosphereKnowledgeIteration(NoosphereKnowledgeLogEntry entry)

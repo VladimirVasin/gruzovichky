@@ -167,6 +167,27 @@ public partial class GameBootstrap
         BuildingExistence
     }
 
+    private enum WorkerKnowledgeFormationStage
+    {
+        Heard,
+        Comparing,
+        Judging
+    }
+
+    private enum WorkerKnowledgeOpinionTone
+    {
+        Neutral,
+        Positive,
+        Negative
+    }
+
+    private enum WorkerKnowledgeSourceAttitude
+    {
+        Neutral,
+        Positive,
+        Negative
+    }
+
     private enum NoosphereKnowledgeEventKind
     {
         Received,
@@ -324,6 +345,8 @@ public partial class GameBootstrap
         public int InsideBuildingInstanceId;
         public readonly List<WorkerSocialMemory> SocialMemories = new();
         public readonly List<WorkerThought> Thoughts = new();
+        public readonly List<PendingWorkerThought> PendingThoughts = new();
+        public readonly List<PendingWorkerKnowledge> PendingKnowledge = new();
         public readonly List<WorkerMemory> Memories = new();
         public readonly List<WorkerOpinion> Opinions = new();
         public readonly List<WorkerLifeOpinion> LifeOpinions = new();
@@ -374,6 +397,76 @@ public partial class GameBootstrap
         public readonly List<WorkerThoughtPlaceholder> Placeholders = new();
     }
 
+    private sealed class PendingWorkerThought
+    {
+        public string FormationKey;
+        public string ThoughtKey;
+        public WorkerThoughtKind Kind;
+        public WorkerThoughtTone Tone;
+        public WorkerThoughtPriority Priority = WorkerThoughtPriority.Normal;
+        public int Intensity;
+        public string TemplateKey;
+        public WorkerThoughtSubjectType OpinionSubjectType;
+        public int OpinionSubjectId;
+        public string OpinionSubjectKey;
+        public string OpinionFallbackLabel;
+        public int OpinionDelta;
+        public string CooldownKey;
+        public float CooldownHours;
+        public bool Active;
+        public float ExpiresWorldHour;
+        public int StartedDay;
+        public float StartedWorldHour;
+        public float ReadyWorldHour;
+        public float LastRefreshedWorldHour;
+        public string FormationReason;
+        public bool HasKnowledgeSnapshot;
+        public WorkerMemoryKind KnowledgeKind;
+        public int KnowledgeOtherWorkerId;
+        public string KnowledgeTopic = string.Empty;
+        public LocationType? KnowledgeBuildingType;
+        public int KnowledgeBuildingInstanceId;
+        public string KnowledgeBuildingLabel = string.Empty;
+        public float KnowledgeExpiresWorldHour;
+        public readonly List<WorkerThoughtPlaceholder> Placeholders = new();
+    }
+
+    private sealed class PendingWorkerKnowledge
+    {
+        public string FormationKey = string.Empty;
+        public WorkerMemoryKind Kind;
+        public int OtherWorkerId;
+        public string Topic = string.Empty;
+        public LocationType? BuildingType;
+        public int BuildingInstanceId;
+        public string BuildingLabel = string.Empty;
+        public string SourceRu = string.Empty;
+        public string SourceEn = string.Empty;
+        public bool Positive;
+        public int KnowledgeIteration;
+        public WorkerKnowledgeSourceAttitude SourceAttitude = WorkerKnowledgeSourceAttitude.Neutral;
+        public int RumorRootId;
+        public string OriginalTopic = string.Empty;
+        public string RumorTopic = string.Empty;
+        public int RumorDistortionPercent;
+        public int RumorConnotationScore;
+        public int RumorConnotationConfidence;
+        public int SourceWorkerId;
+        public WorkerSocialInteractionKind SourceInteractionKind;
+        public LocationType? SourceLocationType;
+        public WorkerKnowledgeFormationStage Stage = WorkerKnowledgeFormationStage.Heard;
+        public int StartedDay;
+        public float StartedWorldHour;
+        public float StageStartedWorldHour;
+        public float NextStageWorldHour;
+        public float LastRefreshedWorldHour;
+        public WorkerKnowledgeOpinionTone OpinionTone = WorkerKnowledgeOpinionTone.Neutral;
+        public int OpinionScore;
+        public int OpinionConfidence;
+        public string OpinionReasonRu = string.Empty;
+        public string OpinionReasonEn = string.Empty;
+    }
+
     private sealed class WorkerThoughtPlaceholder
     {
         public string Key;
@@ -395,6 +488,21 @@ public partial class GameBootstrap
         public string SourceEn = string.Empty;
         public bool Positive;
         public int KnowledgeIteration;
+        public WorkerKnowledgeSourceAttitude SourceAttitude = WorkerKnowledgeSourceAttitude.Neutral;
+        public int RumorRootId;
+        public string OriginalTopic = string.Empty;
+        public string RumorTopic = string.Empty;
+        public int RumorDistortionPercent;
+        public int RumorConnotationScore;
+        public int RumorConnotationConfidence;
+        public WorkerKnowledgeOpinionTone OpinionTone = WorkerKnowledgeOpinionTone.Neutral;
+        public int OpinionScore;
+        public int OpinionConfidence;
+        public string OpinionReasonRu = string.Empty;
+        public string OpinionReasonEn = string.Empty;
+        public int FormedFromWorkerId;
+        public float FormationStartedWorldHour;
+        public float FormationCompletedWorldHour;
         public int CreatedDay;
         public float CreatedWorldHour;
         public float ExpiresWorldHour;
@@ -416,6 +524,18 @@ public partial class GameBootstrap
         public string ReasonRu = string.Empty;
         public string ReasonEn = string.Empty;
         public int KnowledgeIteration;
+        public WorkerKnowledgeSourceAttitude SourceAttitude = WorkerKnowledgeSourceAttitude.Neutral;
+        public int RumorRootId;
+        public string OriginalTopic = string.Empty;
+        public string RumorTopic = string.Empty;
+        public int RumorDistortionPercent;
+        public int RumorConnotationScore;
+        public int RumorConnotationConfidence;
+        public WorkerKnowledgeOpinionTone OpinionTone = WorkerKnowledgeOpinionTone.Neutral;
+        public int OpinionScore;
+        public int OpinionConfidence;
+        public string OpinionReasonRu = string.Empty;
+        public string OpinionReasonEn = string.Empty;
         public int EventDay;
         public float EventWorldHour;
         public float MemoryCreatedWorldHour;
@@ -456,6 +576,7 @@ public partial class GameBootstrap
         public LocationType? LastLocationType;
         public string LastConversationTopic = string.Empty;
         public bool LastConversationTopicWasPositive;
+        public WorkerKnowledgeSourceAttitude LastConversationTopicAttitude = WorkerKnowledgeSourceAttitude.Neutral;
     }
 
     private enum WorkerSocialInteractionKind

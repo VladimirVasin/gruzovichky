@@ -537,8 +537,9 @@ public partial class GameBootstrap
         WorkerSocialInteractionKind kind = success
             ? WorkerSocialInteractionKind.PlayerPromptedConversation
             : WorkerSocialInteractionKind.PlayerPromptedConversationFailed;
+        const WorkerKnowledgeSourceAttitude sourceAttitude = WorkerKnowledgeSourceAttitude.Neutral;
         RecordWorkerSocialInteraction(requester, target, kind, null, allowKnowledgeShare: false);
-        RecordWorkerPromptedConversationTopicMemory(requester, target, request.Topic, success, kind);
+        RecordWorkerPromptedConversationTopicMemory(requester, target, request.Topic, success, kind, sourceAttitude);
         WorkerSocialMemory requesterMemory = FindWorkerSocialMemory(requester, target.DriverId);
         WorkerSocialMemory targetMemory = FindWorkerSocialMemory(target, requester.DriverId);
         int familiarity = GetWorkerSocialPairAverageFamiliarity(requesterMemory, targetMemory);
@@ -560,7 +561,7 @@ public partial class GameBootstrap
 
         SessionDebugLogger.Log(
             "CITY_SOCIAL_REQUEST",
-            $"Social introduction request #{request.Id} completed: requester={request.RequesterName}, target={request.TargetName}, topic='{request.Topic}', outcome={(success ? "success" : "failure")}, familiarity={familiarity}, relationship={relationship}.");
+            $"Social introduction request #{request.Id} completed: requester={request.RequesterName}, target={request.TargetName}, topic='{request.Topic}', firstIterationFraming={sourceAttitude}, outcome={(success ? "success" : "failure")}, familiarity={familiarity}, relationship={relationship}.");
     }
 
     private static string SanitizeCitySocialTopic(string rawTopic)

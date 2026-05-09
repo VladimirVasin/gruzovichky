@@ -116,7 +116,13 @@ public partial class GameBootstrap
         }
     }
 
-    private void RecordWorkerPromptedConversationTopicMemory(DriverAgent first, DriverAgent second, string topic, bool success, WorkerSocialInteractionKind shareKind)
+    private void RecordWorkerPromptedConversationTopicMemory(
+        DriverAgent first,
+        DriverAgent second,
+        string topic,
+        bool success,
+        WorkerSocialInteractionKind shareKind,
+        WorkerKnowledgeSourceAttitude sourceAttitude)
     {
         if (first == null ||
             second == null ||
@@ -125,24 +131,26 @@ public partial class GameBootstrap
             return;
         }
 
-        UpdateWorkerSocialConversationTopic(first, second, topic, success);
-        UpdateWorkerSocialConversationTopic(second, first, topic, success);
+        UpdateWorkerSocialConversationTopic(first, second, topic, success, sourceAttitude);
+        UpdateWorkerSocialConversationTopic(second, first, topic, success, sourceAttitude);
         float now = GetCurrentWorldHour();
-        WorkerMemory sourceMemory = RecordWorkerConversationTopicMemory(first, second, topic, success, 1, now);
-        if (sourceMemory != null &&
-            TryShareSpecificWorkerKnowledge(first, second, sourceMemory, 0, shareKind, null, now))
+        WorkerMemory sourceMemory = RecordWorkerConversationTopicMemory(first, second, topic, success, 1, shareKind, sourceAttitude, now);
+        bool sharedSource = sourceMemory != null &&
+                            TryShareSpecificWorkerKnowledge(first, second, sourceMemory, 0, shareKind, null, now);
+        if (sourceMemory != null && !sharedSource && !WorkerHasEquivalentKnowledge(second, sourceMemory, now))
         {
-            RecordWorkerConversationTopicThought(second, first, topic, success, now);
-        }
-        else if (sourceMemory != null && !WorkerHasEquivalentKnowledge(second, sourceMemory, now))
-        {
-            RecordWorkerConversationTopicMemory(second, first, topic, success, 2, now);
+            RecordWorkerConversationTopicMemory(second, first, topic, success, 2, shareKind, sourceAttitude, now);
         }
 
         isDriversScreenDirty = true;
     }
 
-    private void UpdateWorkerSocialConversationTopic(DriverAgent owner, DriverAgent other, string topic, bool success)
+    private void UpdateWorkerSocialConversationTopic(
+        DriverAgent owner,
+        DriverAgent other,
+        string topic,
+        bool success,
+        WorkerKnowledgeSourceAttitude sourceAttitude)
     {
         WorkerSocialMemory memory = FindWorkerSocialMemory(owner, other?.DriverId ?? 0);
         if (memory == null || string.IsNullOrWhiteSpace(topic))
@@ -152,9 +160,18 @@ public partial class GameBootstrap
 
         memory.LastConversationTopic = topic;
         memory.LastConversationTopicWasPositive = success;
+        memory.LastConversationTopicAttitude = sourceAttitude;
     }
 
-    private WorkerMemory RecordWorkerConversationTopicMemory(DriverAgent owner, DriverAgent other, string topic, bool success, int knowledgeIteration, float now)
+    private WorkerMemory RecordWorkerConversationTopicMemory(
+        DriverAgent owner,
+        DriverAgent other,
+        string topic,
+        bool success,
+        int knowledgeIteration,
+        WorkerSocialInteractionKind sourceKind,
+        WorkerKnowledgeSourceAttitude sourceAttitude,
+        float now)
     {
         if (owner == null ||
             other == null ||
@@ -172,39 +189,19 @@ public partial class GameBootstrap
             Topic = topic,
             Positive = success,
             KnowledgeIteration = Mathf.Max(1, knowledgeIteration),
+            SourceAttitude = sourceAttitude,
             CreatedDay = currentDay,
             CreatedWorldHour = now,
             ExpiresWorldHour = now + WorkerPersonalMemoryLifetimeHours
         };
-        owner.Memories.Insert(0, memory);
-        RecordNoosphereKnowledgeReceived(owner, other, memory, now);
-        TrimWorkerMemories(owner, now);
-        RecordWorkerConversationTopicThought(owner, other, topic, success, now);
-        return memory;
+        InitializeWorkerRumorState(memory, owner, other, topic, success, sourceAttitude);
+
+        return QueueWorkerKnowledgeFormation(owner, other, memory, now, sourceKind);
     }
 
-    private void RecordWorkerConversationTopicThought(DriverAgent owner, DriverAgent other, string topic, bool success, float now)
+    private void RecordWorkerConversationTopicThought(DriverAgent owner, DriverAgent other, WorkerMemory memory, float now)
     {
-        RecordWorkerThought(
-            owner,
-            WorkerThoughtKind.Social,
-            success ? WorkerThoughtTone.Positive : WorkerThoughtTone.Neutral,
-            success ? 58 : 44,
-            "social_learned_new_topic",
-            new[]
-            {
-                ThoughtWorker("otherWorker", other),
-                ThoughtText("topic", topic)
-            },
-            WorkerThoughtSubjectType.Worker,
-            other.DriverId,
-            null,
-            other.DriverName,
-            success ? 3 : 1,
-            $"social_learned_new_topic|{owner.DriverId}|{other.DriverId}|{currentDay}|{Mathf.FloorToInt(now * 2f)}",
-            0f,
-            "social_learned_new_topic",
-            WorkerThoughtPriority.Normal);
+        QueueWorkerKnowledgeReflectionThought(owner, other, memory, now);
     }
 
     private void TrimWorkerMemories(DriverAgent worker, float now)

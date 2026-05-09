@@ -33,13 +33,16 @@ public partial class GameBootstrap
             return existing;
         }
 
-        return RecordWorkerThought(
+        AddOrKeepPendingWorkerThought(
             worker,
+            thoughtKey,
+            thoughtKey,
             kind,
             tone,
             intensity,
             templateKey,
             placeholders,
+            priority,
             opinionSubjectType,
             opinionSubjectId,
             opinionSubjectKey,
@@ -47,9 +50,9 @@ public partial class GameBootstrap
             opinionDelta,
             $"active|{thoughtKey}",
             cooldownHours,
-            thoughtKey,
-            priority,
-            true);
+            active: true,
+            formationReason: "active condition");
+        return null;
     }
 
     private WorkerThought FindActiveWorkerThought(DriverAgent worker, string thoughtKey)
@@ -87,7 +90,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        bool resolved = false;
+        bool resolved = CancelPendingWorkerThought(worker, thoughtKey, reason);
         float now = GetCurrentWorldHour();
         for (int i = 0; i < worker.Thoughts.Count; i++)
         {
@@ -116,7 +119,7 @@ public partial class GameBootstrap
             return;
         }
 
-        bool resolved = false;
+        bool resolved = CancelAllPendingWorkerThoughts(worker, reason);
         float now = GetCurrentWorldHour();
         for (int i = 0; i < worker.Thoughts.Count; i++)
         {

@@ -287,16 +287,21 @@ public partial class GameBootstrap
     private void UpdateWorkerCurrentImportantThoughtUi(DriverAgent worker)
     {
         WorkerThought thought = GetMostImportantWorkerThought(worker);
+        PendingWorkerThought pendingThought = thought == null ? GetMostImportantPendingWorkerThought(worker) : null;
         bool hasThought = thought != null;
+        bool hasPendingThought = pendingThought != null;
         WorkerThoughtDisplayData display = hasThought
             ? GetWorkerThoughtDisplayData(thought)
-            : new WorkerThoughtDisplayData(
+            : hasPendingThought
+                ? GetPendingWorkerThoughtDisplayData(pendingThought)
+                : new WorkerThoughtDisplayData(
                 worker == null ? "\u0416\u0438\u0442\u0435\u043b\u044c \u043d\u0435 \u0432\u044b\u0431\u0440\u0430\u043d" : "\u0421\u0435\u0439\u0447\u0430\u0441 \u0441\u043f\u043e\u043a\u043e\u0439\u043d\u043e",
                 worker == null ? "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0436\u0438\u0442\u0435\u043b\u044f \u0441\u043b\u0435\u0432\u0430." : "\u0423 \u0436\u0438\u0442\u0435\u043b\u044f \u043d\u0435\u0442 \u0441\u0440\u043e\u0447\u043d\u044b\u0445 \u043c\u044b\u0441\u043b\u0435\u0439.",
                 GetWorkerThoughtSpeechIcon(),
                 FleetMutedTextColor);
 
-        bool warning = hasThought && thought.Tone == WorkerThoughtTone.Negative;
+        bool warning = hasThought && thought.Tone == WorkerThoughtTone.Negative ||
+                       hasPendingThought && pendingThought.Tone == WorkerThoughtTone.Negative;
         if (driversScreenUi.DetailCurrentThoughtBackground != null)
         {
             driversScreenUi.DetailCurrentThoughtBackground.color = warning
@@ -329,13 +334,48 @@ public partial class GameBootstrap
 
         if (driversScreenUi.DetailCurrentThoughtTimeRow != null)
         {
-            driversScreenUi.DetailCurrentThoughtTimeRow.gameObject.SetActive(hasThought);
+            driversScreenUi.DetailCurrentThoughtTimeRow.gameObject.SetActive(hasThought || hasPendingThought);
         }
 
         if (driversScreenUi.DetailCurrentThoughtTimeText != null)
         {
-            driversScreenUi.DetailCurrentThoughtTimeText.text = hasThought ? FormatWorkerThoughtTime(thought, true) : string.Empty;
+            driversScreenUi.DetailCurrentThoughtTimeText.text = hasThought
+                ? FormatWorkerThoughtTime(thought, true)
+                : hasPendingThought
+                    ? FormatPendingWorkerThoughtProgress(pendingThought, true)
+                    : string.Empty;
         }
+    }
+
+    private WorkerThoughtDisplayData GetPendingWorkerThoughtDisplayData(PendingWorkerThought pending)
+    {
+        if (pending == null)
+        {
+            return new WorkerThoughtDisplayData("\u0420\u0430\u0437\u0434\u0443\u043c\u044b\u0432\u0430\u0435\u0442", string.Empty, GetWorkerThoughtSpeechIcon(), FleetMutedTextColor);
+        }
+
+        string description = RenderPendingWorkerThought(pending, true);
+        string title = pending.HasKnowledgeSnapshot
+            ? "\u041e\u0441\u043c\u044b\u0441\u043b\u044f\u0435\u0442 \u0437\u043d\u0430\u043d\u0438\u0435"
+            : pending.Tone == WorkerThoughtTone.Negative
+                ? "\u041d\u0430\u0437\u0440\u0435\u0432\u0430\u0435\u0442 \u043c\u044b\u0441\u043b\u044c"
+                : "\u0420\u0430\u0437\u0434\u0443\u043c\u044b\u0432\u0430\u0435\u0442";
+        Sprite icon = pending.Kind switch
+        {
+            WorkerThoughtKind.Work => GetWorkerThoughtBriefcaseIcon(),
+            WorkerThoughtKind.Money => GetWorkerThoughtCoinsIcon(),
+            WorkerThoughtKind.Social => GetWorkerThoughtPeopleIcon(),
+            WorkerThoughtKind.Family => GetWorkerThoughtHouseIcon(),
+            WorkerThoughtKind.Need when pending.Tone == WorkerThoughtTone.Negative => GetWorkerInventoryWarningIcon(),
+            _ => GetWorkerThoughtSpeechIcon()
+        };
+        Color color = pending.Tone switch
+        {
+            WorkerThoughtTone.Positive => ResidentHudPositiveColor,
+            WorkerThoughtTone.Negative => new Color(0.94f, 0.34f, 0.24f, 1f),
+            _ => new Color(0.42f, 0.62f, 0.82f, 1f)
+        };
+        return new WorkerThoughtDisplayData(title, description, icon, color);
     }
 
     private void UpdateWorkerRecentThoughtsUi(DriverAgent worker)
@@ -439,6 +479,14 @@ public partial class GameBootstrap
                !string.Equals(thought.TemplateKey, "starter_job_resolved", System.StringComparison.Ordinal);
     }
 
+    private string GetWorkerThoughtDescriptionForDisplay(WorkerThought thought, string fallback)
+    {
+        string rendered = RenderWorkerThought(thought, true);
+        return string.IsNullOrWhiteSpace(rendered) || string.Equals(rendered, thought?.TemplateKey, System.StringComparison.Ordinal)
+            ? fallback
+            : rendered;
+    }
+
     private WorkerThoughtDisplayData GetWorkerThoughtDisplayData(WorkerThought thought)
     {
         if (thought == null)
@@ -454,18 +502,18 @@ public partial class GameBootstrap
 
         return key switch
         {
-            "no_job_warning" or "no_job_today" => new WorkerThoughtDisplayData("\u0420\u0430\u0431\u043e\u0442\u044b \u043f\u043e\u043a\u0430 \u043d\u0435\u0442", "\u0415\u0441\u043b\u0438 \u044d\u0442\u043e \u0437\u0430\u0442\u044f\u043d\u0435\u0442\u0441\u044f, \u0434\u0435\u043d\u044c\u0433\u0438 \u0431\u044b\u0441\u0442\u0440\u043e \u0440\u0430\u0441\u0442\u0430\u044e\u0442.", GetWorkerInventoryWarningIcon(), warning),
+            "no_job_warning" or "no_job_today" => new WorkerThoughtDisplayData("\u0420\u0430\u0431\u043e\u0442\u044b \u043f\u043e\u043a\u0430 \u043d\u0435\u0442", GetWorkerThoughtDescriptionForDisplay(thought, "\u0415\u0441\u043b\u0438 \u044d\u0442\u043e \u0437\u0430\u0442\u044f\u043d\u0435\u0442\u0441\u044f, \u0434\u0435\u043d\u044c\u0433\u0438 \u0431\u044b\u0441\u0442\u0440\u043e \u0440\u0430\u0441\u0442\u0430\u044e\u0442."), GetWorkerInventoryWarningIcon(), warning),
             "worker_arrived" => new WorkerThoughtDisplayData("\u042f \u0432 \u0433\u043e\u0440\u043e\u0434\u0435", "\u041f\u043e\u0440\u0430 \u043f\u043e\u043d\u044f\u0442\u044c, \u043a\u0430\u043a \u0442\u0443\u0442 \u0436\u0438\u0442\u044c.", GetWorkerThoughtSpeechIcon(), neutral),
             "starter_job_suggestion" => new WorkerThoughtDisplayData("\u041d\u0443\u0436\u043d\u043e \u043d\u0430\u0447\u0430\u0442\u044c \u0441 \u043f\u0440\u043e\u0441\u0442\u043e\u0439 \u0440\u0430\u0431\u043e\u0442\u044b", "\u041f\u043e\u0434\u043e\u0439\u0434\u0435\u0442 \u0434\u0430\u0436\u0435 \u0441\u0442\u0430\u0440\u0442\u043e\u0432\u0430\u044f \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u044f.", GetWorkerThoughtBriefcaseIcon(), muted),
             "low_money" => new WorkerThoughtDisplayData("\u0414\u0435\u043d\u0435\u0433 \u043f\u043e\u0447\u0442\u0438 \u043d\u0435\u0442", "\u041b\u044e\u0431\u0430\u044f \u043c\u0435\u043b\u043e\u0447\u044c \u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u0441\u044f \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u043e\u0439.", GetWorkerThoughtCoinsIcon(), warning),
             "job_found" => new WorkerThoughtDisplayData("\u0420\u0430\u0431\u043e\u0442\u0430 \u043d\u0430\u0439\u0434\u0435\u043d\u0430", "\u0422\u0435\u043f\u0435\u0440\u044c \u0435\u0441\u0442\u044c \u043f\u043e\u043d\u044f\u0442\u043d\u044b\u0439 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0439 \u0448\u0430\u0433.", GetWorkerThoughtBriefcaseIcon(), positive),
             "salary_paid" => new WorkerThoughtDisplayData("\u041f\u043e\u043b\u0443\u0447\u0438\u043b \u0437\u0430\u0440\u043f\u043b\u0430\u0442\u0443", RenderWorkerThought(thought, true), GetWorkerThoughtCoinsIcon(), positive),
             "need_meal_warning" => new WorkerThoughtDisplayData("\u041f\u043e\u0440\u0430 \u043f\u0435\u0440\u0435\u043a\u0443\u0441\u0438\u0442\u044c", "\u041b\u0443\u0447\u0448\u0435 \u043d\u0435 \u0434\u043e\u0432\u043e\u0434\u0438\u0442\u044c \u0435\u0434\u0443 \u0434\u043e \u043a\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043a\u043e\u0433\u043e \u0443\u0440\u043e\u0432\u043d\u044f.", GetNeedsMealIcon(), warning),
-            "need_meal_critical" => new WorkerThoughtDisplayData("\u041a\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0433\u043e\u043b\u043e\u0434", "\u041d\u0443\u0436\u043d\u043e \u0441\u0440\u043e\u0447\u043d\u043e \u043d\u0430\u0439\u0442\u0438 \u0435\u0434\u0443.", GetWorkerInventoryWarningIcon(), warning),
+            "need_meal_critical" => new WorkerThoughtDisplayData("\u041a\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043a\u0438\u0439 \u0433\u043e\u043b\u043e\u0434", GetWorkerThoughtDescriptionForDisplay(thought, "\u041d\u0443\u0436\u043d\u043e \u0441\u0440\u043e\u0447\u043d\u043e \u043d\u0430\u0439\u0442\u0438 \u0435\u0434\u0443."), GetWorkerInventoryWarningIcon(), warning),
             "need_sleep_warning" => new WorkerThoughtDisplayData("\u0421\u0438\u043b \u043f\u043e\u0447\u0442\u0438 \u043d\u0435 \u043e\u0441\u0442\u0430\u043b\u043e\u0441\u044c", "\u0421\u043a\u043e\u0440\u043e \u043d\u0443\u0436\u0435\u043d \u043e\u0442\u0434\u044b\u0445.", GetNeedsSleepIcon(), warning),
-            "need_sleep_critical" => new WorkerThoughtDisplayData("\u041a\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0443\u0441\u0442\u0430\u043b\u043e\u0441\u0442\u044c", "\u041d\u0443\u0436\u043d\u043e \u0441\u0440\u043e\u0447\u043d\u043e \u0432\u0435\u0440\u043d\u0443\u0442\u044c \u0431\u043e\u0434\u0440\u043e\u0441\u0442\u044c.", GetWorkerInventoryWarningIcon(), warning),
+            "need_sleep_critical" => new WorkerThoughtDisplayData("\u041a\u0440\u0438\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0443\u0441\u0442\u0430\u043b\u043e\u0441\u0442\u044c", GetWorkerThoughtDescriptionForDisplay(thought, "\u041d\u0443\u0436\u043d\u043e \u0441\u0440\u043e\u0447\u043d\u043e \u0432\u0435\u0440\u043d\u0443\u0442\u044c \u0431\u043e\u0434\u0440\u043e\u0441\u0442\u044c."), GetWorkerInventoryWarningIcon(), warning),
             "need_leisure_warning" => new WorkerThoughtDisplayData("\u041d\u0443\u0436\u043d\u043e \u0432\u044b\u0434\u043e\u0445\u043d\u0443\u0442\u044c", "\u0411\u0435\u0437 \u043e\u0442\u0434\u044b\u0445\u0430 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d\u0438\u0435 \u0431\u044b\u0441\u0442\u0440\u043e \u043f\u0440\u043e\u0441\u044f\u0434\u0435\u0442.", GetNeedsLeisureIcon(), warning),
-            "need_leisure_critical" => new WorkerThoughtDisplayData("\u041e\u0442\u0434\u044b\u0445 \u043d\u0430 \u043f\u0440\u0435\u0434\u0435\u043b\u0435", "\u041d\u0443\u0436\u043d\u043e \u0441\u0440\u043e\u0447\u043d\u043e \u043e\u0442\u0432\u043b\u0435\u0447\u044c\u0441\u044f.", GetWorkerInventoryWarningIcon(), warning),
+            "need_leisure_critical" => new WorkerThoughtDisplayData("\u041e\u0442\u0434\u044b\u0445 \u043d\u0430 \u043f\u0440\u0435\u0434\u0435\u043b\u0435", GetWorkerThoughtDescriptionForDisplay(thought, "\u041d\u0443\u0436\u043d\u043e \u0441\u0440\u043e\u0447\u043d\u043e \u043e\u0442\u0432\u043b\u0435\u0447\u044c\u0441\u044f."), GetWorkerInventoryWarningIcon(), warning),
             "used_snack" => new WorkerThoughtDisplayData("\u0421\u044a\u0435\u043b Snack", "\u0410\u0432\u0442\u043e\u0440\u0430\u0441\u0445\u043e\u0434\u043d\u0438\u043a \u043f\u043e\u043c\u043e\u0433 \u043d\u0435 \u0434\u043e\u0432\u0435\u0441\u0442\u0438 \u0433\u043e\u043b\u043e\u0434 \u0434\u043e \u043a\u0440\u0438\u0437\u0438\u0441\u0430.", GetWorkerInventorySnackIcon(), positive),
             "used_coffee" => new WorkerThoughtDisplayData("\u0412\u044b\u043f\u0438\u043b Coffee", "\u0410\u0432\u0442\u043e\u0440\u0430\u0441\u0445\u043e\u0434\u043d\u0438\u043a \u0432\u0435\u0440\u043d\u0443\u043b \u043d\u0435\u043c\u043d\u043e\u0433\u043e \u0431\u043e\u0434\u0440\u043e\u0441\u0442\u0438.", GetWorkerInventoryCoffeeIcon(), positive),
             "service_missing" => new WorkerThoughtDisplayData("\u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0441\u0435\u0440\u0432\u0438\u0441\u0430", "\u0413\u043e\u0440\u043e\u0434 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0437\u0430\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u044d\u0442\u0443 \u043f\u043e\u0442\u0440\u0435\u0431\u043d\u043e\u0441\u0442\u044c.", GetWorkerInventoryWarningIcon(), warning),
@@ -477,6 +525,7 @@ public partial class GameBootstrap
             "social_talk_good" => new WorkerThoughtDisplayData("\u041f\u0440\u0438\u044f\u0442\u043d\u044b\u0439 \u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440", RenderWorkerThought(thought, true), GetWorkerThoughtPeopleIcon(), positive),
             "social_shared_place" => new WorkerThoughtDisplayData("\u041d\u043e\u0432\u043e\u0435 \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432\u043e", RenderWorkerThought(thought, true), GetWorkerThoughtPeopleIcon(), neutral),
             "social_learned_new_topic" => new WorkerThoughtDisplayData("\u042f \u0443\u0437\u043d\u0430\u043b \u0447\u0442\u043e-\u0442\u043e \u043d\u043e\u0432\u043e\u0435", RenderWorkerThought(thought, true), GetWorkerThoughtSpeechIcon(), thought.Tone == WorkerThoughtTone.Positive ? positive : neutral),
+            "knowledge_reflection_building" => new WorkerThoughtDisplayData("\u0417\u0430\u043f\u043e\u043c\u043d\u0438\u043b \u043e\u0440\u0438\u0435\u043d\u0442\u0438\u0440", RenderWorkerThought(thought, true), GetWorkerThoughtCityIcon(), neutral),
             "family_formed" => new WorkerThoughtDisplayData("\u041f\u043e\u044f\u0432\u0438\u043b\u0430\u0441\u044c \u0441\u0435\u043c\u044c\u044f", RenderWorkerThought(thought, true), GetWorkerThoughtHouseIcon(), positive),
             "child_born" => new WorkerThoughtDisplayData("\u0420\u043e\u0434\u0438\u043b\u0441\u044f \u0440\u0435\u0431\u0435\u043d\u043e\u043a", RenderWorkerThought(thought, true), GetWorkerThoughtPeopleIcon(), positive),
             "house_bought" => new WorkerThoughtDisplayData("\u0415\u0441\u0442\u044c \u0441\u0432\u043e\u0439 \u0434\u043e\u043c", RenderWorkerThought(thought, true), GetWorkerThoughtHouseIcon(), positive),

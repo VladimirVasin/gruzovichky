@@ -47,10 +47,7 @@ public partial class GameBootstrap
             ExpiresWorldHour = now + WorkerPersonalMemoryLifetimeHours
         };
 
-        worker.Memories.Insert(0, memory);
-        RecordNoosphereKnowledgeReceived(worker, null, memory, now);
-        TrimWorkerMemories(worker, now);
-        isDriversScreenDirty = true;
+        QueueWorkerKnowledgeFormation(worker, null, memory, now, sourceLocationType: location.Type);
     }
 
     private void RecordCityHallKnowledgeForComplaintSigners(CityComplaint complaint, string reasonRu, string reasonEn)
@@ -142,7 +139,7 @@ public partial class GameBootstrap
 
         return memory.Kind switch
         {
-            WorkerMemoryKind.ConversationTopic => !string.IsNullOrWhiteSpace(memory.Topic),
+            WorkerMemoryKind.ConversationTopic => !string.IsNullOrWhiteSpace(GetWorkerRumorTopic(memory)),
             WorkerMemoryKind.BuildingExistence => memory.BuildingType.HasValue && memory.BuildingInstanceId > 0,
             _ => false
         };

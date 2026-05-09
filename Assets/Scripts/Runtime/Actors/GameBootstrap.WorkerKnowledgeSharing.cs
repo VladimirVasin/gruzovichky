@@ -259,23 +259,8 @@ public partial class GameBootstrap
             return true;
         }
 
-        for (int i = 0; i < worker.Memories.Count; i++)
-        {
-            WorkerMemory existing = worker.Memories[i];
-            if (existing == null ||
-                !IsWorkerMemoryDisplayable(existing) ||
-                ShouldExpireWorkerMemory(existing, now))
-            {
-                continue;
-            }
-
-            if (AreWorkerKnowledgeEquivalent(existing, source))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return HasEquivalentFormedWorkerKnowledge(worker, source, now) ||
+               HasEquivalentPendingWorkerKnowledge(worker, source);
     }
 
     private static bool AreWorkerKnowledgeEquivalent(WorkerMemory first, WorkerMemory second)
@@ -288,7 +273,11 @@ public partial class GameBootstrap
         return first.Kind switch
         {
             WorkerMemoryKind.ConversationTopic =>
-                NormalizeWorkerKnowledgeTopicKey(first.Topic) == NormalizeWorkerKnowledgeTopicKey(second.Topic),
+                AreWorkerRumorsSameRoot(
+                    first.RumorRootId,
+                    GetWorkerRumorOriginalTopic(first),
+                    second.RumorRootId,
+                    GetWorkerRumorOriginalTopic(second)),
             WorkerMemoryKind.BuildingExistence =>
                 first.BuildingType == second.BuildingType &&
                 first.BuildingInstanceId == second.BuildingInstanceId,
@@ -328,15 +317,23 @@ public partial class GameBootstrap
             return false;
         }
 
-        transfer.Receiver.Memories.Insert(0, received);
-        transfer.ReceivedMemory = received;
-        RecordNoosphereKnowledgeReceived(transfer.Receiver, transfer.Sharer, received, now);
-        TrimWorkerMemories(transfer.Receiver, now);
-        isDriversScreenDirty = true;
+        WorkerMemory queued = QueueWorkerKnowledgeFormation(
+            transfer.Receiver,
+            transfer.Sharer,
+            received,
+            now,
+            transfer.ShareKind,
+            transfer.ShareLocationType);
+        if (queued == null)
+        {
+            return false;
+        }
+
+        transfer.ReceivedMemory = queued;
 
         SessionDebugLogger.Log(
             "KNOWLEDGE",
-            $"{GetWorkerDisplayNameSafe(transfer.Sharer)} shared {FormatWorkerKnowledgeShareDebugLabel(received)} with {GetWorkerDisplayNameSafe(transfer.Receiver)} {FormatWorkerKnowledgeShareReason(transfer.ShareKind, transfer.ShareLocationType, false)}.");
+            $"{GetWorkerDisplayNameSafe(transfer.Sharer)} shared {FormatWorkerKnowledgeShareDebugLabel(received)} with {GetWorkerDisplayNameSafe(transfer.Receiver)} for reflection {FormatWorkerKnowledgeShareReason(transfer.ShareKind, transfer.ShareLocationType, false)}.");
         return true;
     }
 
@@ -356,10 +353,13 @@ public partial class GameBootstrap
             SourceEn = FormatWorkerKnowledgeShareSource(sharer, transfer.ShareKind, transfer.ShareLocationType, false),
             Positive = source?.Positive ?? true,
             KnowledgeIteration = GetWorkerKnowledgeIteration(source) + 1,
+            SourceAttitude = source?.SourceAttitude ?? WorkerKnowledgeSourceAttitude.Neutral,
+            FormedFromWorkerId = sharer?.DriverId ?? 0,
             CreatedDay = currentDay,
             CreatedWorldHour = now,
             ExpiresWorldHour = now + WorkerPersonalMemoryLifetimeHours
         };
+        AdvanceSharedWorkerRumorState(received, source, transfer, now);
 
         if (received.Kind == WorkerMemoryKind.BuildingExistence &&
             received.BuildingType.HasValue &&
@@ -444,7 +444,7 @@ public partial class GameBootstrap
         int seed = (transfer?.Sharer?.DriverId ?? 0) * 29 +
                    (transfer?.Receiver?.DriverId ?? 0) * 37 +
                    (transfer?.SourceMemory?.BuildingInstanceId ?? 0) * 11 +
-                   NormalizeWorkerKnowledgeTopicKey(transfer?.SourceMemory?.Topic).Length * 5;
+                   NormalizeWorkerKnowledgeTopicKey(GetWorkerRumorTopic(transfer?.SourceMemory)).Length * 5;
         return templates[Mathf.Abs(seed) % templates.Length];
     }
 
@@ -466,7 +466,7 @@ public partial class GameBootstrap
 
     private static string FormatWorkerKnowledgeShareTopicLabel(WorkerMemory memory)
     {
-        return SanitizeWorkerKnowledgeBubbleText(memory?.Topic, 48);
+        return SanitizeWorkerKnowledgeBubbleText(GetWorkerRumorTopic(memory), 48);
     }
 
     private string FormatWorkerKnowledgeShareBuildingHighlightedLabel(WorkerMemory memory)
@@ -517,7 +517,7 @@ public partial class GameBootstrap
 
         return memory.Kind == WorkerMemoryKind.BuildingExistence
             ? $"building {memory.BuildingType}/{memory.BuildingInstanceId}"
-            : $"topic '{memory.Topic}'";
+            : $"topic '{GetWorkerRumorTopic(memory)}'";
     }
 
     private static string SanitizeWorkerKnowledgeBubbleText(string value, int maxLength)

@@ -184,7 +184,7 @@ public partial class GameBootstrap
         textPanel.anchorMax = new Vector2(0.5f, 0f);
         textPanel.pivot = new Vector2(0.5f, 0f);
         textPanel.anchoredPosition = new Vector2(0f, 18f);
-        textPanel.sizeDelta = new Vector2(820f, 238f);
+        textPanel.sizeDelta = new Vector2(820f, 276f);
         VerticalLayoutGroup textLayout = textPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         textLayout.padding = new RectOffset(24, 24, 18, 18);
         textLayout.spacing = 10f;
@@ -197,7 +197,7 @@ public partial class GameBootstrap
         citySocialRequestSceneHud.TitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
         citySocialRequestSceneHud.BodyText = CreateBodyText("Body", textPanel, font, string.Empty, 17, TextAnchor.UpperLeft, new Color(0.88f, 0.92f, 0.98f, 1f));
         citySocialRequestSceneHud.BodyText.supportRichText = true;
-        citySocialRequestSceneHud.BodyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 76f;
+        citySocialRequestSceneHud.BodyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 60f;
 
         citySocialRequestSceneHud.TopicInput = CreateCitySocialTopicInput("TopicInput", textPanel, font, out citySocialRequestSceneHud.TopicInputText);
         citySocialRequestSceneHud.TopicInput.gameObject.SetActive(false);
@@ -212,7 +212,7 @@ public partial class GameBootstrap
         });
 
         citySocialRequestSceneHud.ActionButton = CreateButton("ActionButton", textPanel, font, out citySocialRequestSceneHud.ActionButtonText, string.Empty, 15, new Color(0.63f, 0.36f, 0.06f, 1f), Color.white);
-        citySocialRequestSceneHud.ActionButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 42f;
+        citySocialRequestSceneHud.ActionButton.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
         citySocialRequestSceneHud.ActionButtonText.fontStyle = FontStyle.Bold;
         citySocialRequestSceneHud.ActionButtonText.raycastTarget = false;
         citySocialRequestSceneHud.ActionButton.onClick.AddListener(AdvanceCitySocialRequestScene);
@@ -292,7 +292,7 @@ public partial class GameBootstrap
         GameObject go = new(name, typeof(RectTransform), typeof(Image), typeof(InputField));
         go.transform.SetParent(parent, false);
         LayoutElement layout = go.AddComponent<LayoutElement>();
-        layout.preferredHeight = 42f;
+        layout.preferredHeight = 38f;
         Image image = go.GetComponent<Image>();
         image.color = new Color(0.02f, 0.04f, 0.07f, 0.98f);
         image.raycastTarget = true;
