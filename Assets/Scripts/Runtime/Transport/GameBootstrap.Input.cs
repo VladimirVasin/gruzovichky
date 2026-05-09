@@ -24,7 +24,7 @@ public partial class GameBootstrap
             bool anyMenuOpen =
                 isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
                 isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isBuildPanelOpen || isWorldMapPanelOpen ||
-                isStatesPanelOpen || isSocialGraphPanelOpen || isTruckDetailsOpen || isDriverDetailsOpen || activeBuildTool != BuildTool.None;
+                isStatesPanelOpen || isSocialGraphPanelOpen || isNoospherePanelOpen || isTruckDetailsOpen || isDriverDetailsOpen || activeBuildTool != BuildTool.None;
 
             if (anyMenuOpen)
             {
@@ -104,9 +104,11 @@ public partial class GameBootstrap
                 isEconomyPanelOpen = false;
                 isTradePanelOpen = false;
                 isSocialGraphPanelOpen = false;
+                isNoospherePanelOpen = false;
             }
             isBuildScreenDirty = true;
             isSocialGraphScreenDirty = true;
+            isNoosphereScreenDirty = true;
             PlayUiSound(isBuildPanelOpen ? uiPanelOpenClip : uiPanelCloseClip, 0.85f);
             return;
         }
@@ -217,6 +219,7 @@ public partial class GameBootstrap
         isStatesPanelOpen = false;
         isSocialGraphPanelOpen = false;
         isCityHallPanelOpen = false;
+        isNoospherePanelOpen = false;
         isTruckDetailsOpen = false;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
@@ -242,6 +245,7 @@ public partial class GameBootstrap
         isWorldMapScreenDirty = true;
         isSocialGraphScreenDirty = true;
         isCityHallScreenDirty = true;
+        isNoosphereScreenDirty = true;
         isFleetScreenDirty = true;
         isBuildScreenDirty = true;
         NotifyTutorialWorldMapOpened();
@@ -378,6 +382,7 @@ public partial class GameBootstrap
             isStatesPanelOpen ||
             isSocialGraphPanelOpen ||
             isCityHallPanelOpen ||
+            isNoospherePanelOpen ||
             isTruckDetailsOpen ||
             isLocalBusDetailsOpen ||
             isDriverDetailsOpen ||
@@ -394,6 +399,7 @@ public partial class GameBootstrap
         isStatesPanelOpen = false;
         isSocialGraphPanelOpen = false;
         isCityHallPanelOpen = false;
+        isNoospherePanelOpen = false;
         isTruckDetailsOpen = false;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
@@ -413,6 +419,7 @@ public partial class GameBootstrap
         isStatesScreenDirty = true;
         isSocialGraphScreenDirty = true;
         isCityHallScreenDirty = true;
+        isNoosphereScreenDirty = true;
         DisableTruckCameraFocus();
         RefreshSelectionVisuals();
 
@@ -550,7 +557,7 @@ public partial class GameBootstrap
 
             float scroll = Mouse.current.scroll.ReadValue().y;
             bool anyHudOpen = isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
-                isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isBuildPanelOpen || isWorldMapPanelOpen || isStatesPanelOpen || isSocialGraphPanelOpen;
+                isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isBuildPanelOpen || isWorldMapPanelOpen || isStatesPanelOpen || isSocialGraphPanelOpen || isNoospherePanelOpen;
             if (Mathf.Abs(scroll) > 0.01f && !anyHudOpen && !IsPointerOverHud(mousePosition))
             {
                 float currentDistance = cameraOffset.magnitude;

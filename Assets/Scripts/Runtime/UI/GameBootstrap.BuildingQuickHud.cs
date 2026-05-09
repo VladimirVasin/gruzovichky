@@ -119,6 +119,7 @@ public partial class GameBootstrap
                isStatesPanelOpen ||
                isSocialGraphPanelOpen ||
                isCityHallPanelOpen ||
+               isNoospherePanelOpen ||
                isBarInteriorSceneOpen ||
                activeBuildTool != BuildTool.None;
     }
@@ -485,6 +486,7 @@ public partial class GameBootstrap
             !isStatesPanelOpen &&
             !isSocialGraphPanelOpen &&
             !isCityHallPanelOpen &&
+            !isNoospherePanelOpen &&
             !isBarInteriorSceneOpen;
 
         if (buildingQuickHud.CanvasRoot.activeSelf != shouldShow)

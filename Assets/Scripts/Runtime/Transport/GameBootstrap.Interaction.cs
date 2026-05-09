@@ -92,6 +92,10 @@ public partial class GameBootstrap
         activeTruckInteraction = interactionType;
         activeServiceLocation = locationType;
         truckInteractionTimer = 0f;
+        if (locations.TryGetValue(locationType, out LocationData activeLocation))
+        {
+            RecordWorkerBuildingKnowledge(GetLoadedTruckDriver(), activeLocation, "\u0412\u044b\u043f\u043e\u043b\u043d\u0438\u043b \u0440\u0435\u0439\u0441 \u0443 \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438", "Handled a truck stop at this building");
+        }
 
         Vector3 buildingCenter = GetLocationCenter(locationType);
         Vector3 directionToBuilding = buildingCenter - truckObject.transform.position;

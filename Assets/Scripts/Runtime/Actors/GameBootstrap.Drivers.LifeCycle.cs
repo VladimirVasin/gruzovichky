@@ -737,6 +737,7 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPath.Add(benchPosition);
             driver.WalkTargetWorld = benchPosition;
             driver.IdleActivityTimer = WorkerCityParkDuration * Random.Range(0.85f, 1.25f);
+            RecordWorkerBuildingKnowledge(driver, park, "\u041f\u043e\u0441\u0435\u0442\u0438\u043b \u0433\u043e\u0440\u043e\u0434\u0441\u043a\u043e\u0439 \u043f\u0430\u0440\u043a", "Visited the city park");
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered City Park and is walking to park bench {benchIndex}.");
             LogWorkerDecision(driver, "city-park-promenade", $"bench={benchIndex}", true);
             return true;
@@ -748,6 +749,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.WalkTargetWorld = strollPoint;
         driver.IdleActivityTimer = WorkerCityParkDuration * Random.Range(0.70f, 1.20f);
         string activityLabel = GetCityParkActivityLabel(activityStyle);
+        RecordWorkerBuildingKnowledge(driver, park, "\u041f\u043e\u0441\u0435\u0442\u0438\u043b \u0433\u043e\u0440\u043e\u0434\u0441\u043a\u043e\u0439 \u043f\u0430\u0440\u043a", "Visited the city park");
         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered City Park and started activity={activityLabel}.");
         LogWorkerDecision(driver, "city-park-promenade", activityLabel, true);
         return true;

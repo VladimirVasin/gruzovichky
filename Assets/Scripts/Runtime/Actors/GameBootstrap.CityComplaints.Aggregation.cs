@@ -48,6 +48,11 @@ public partial class GameBootstrap
                 changed = true;
             }
 
+            if (changed)
+            {
+                RecordWorkerBuildingKnowledge(worker, LocationType.CityHall, "\u041f\u0440\u0438\u0441\u043e\u0435\u0434\u0438\u043d\u0438\u043b\u0441\u044f \u043a \u0436\u0430\u043b\u043e\u0431\u0435 \u0432 \u0440\u0430\u0442\u0443\u0448\u0435", "Joined a complaint at City Hall");
+            }
+
             return changed;
         }
 
@@ -84,6 +89,7 @@ public partial class GameBootstrap
         cityComplaints.Add(complaint);
         cityComplaintPendingGroups.Remove(groupKey);
         cityComplaintCooldownByKey[groupKey] = now + CityComplaintCooldownWorldHours;
+        RecordCityHallKnowledgeForComplaintSigners(complaint, "\u041f\u043e\u0434\u0430\u043b \u0436\u0430\u043b\u043e\u0431\u0443 \u0432 \u0440\u0430\u0442\u0443\u0448\u0443", "Filed a complaint at City Hall");
 
         SessionDebugLogger.Log(
             "CITY_HALL",

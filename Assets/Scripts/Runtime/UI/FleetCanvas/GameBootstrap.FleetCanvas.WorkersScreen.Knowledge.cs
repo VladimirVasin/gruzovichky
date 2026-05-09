@@ -203,14 +203,18 @@ public partial class GameBootstrap
 
     private static bool ShouldShowWorkerMemoryInKnowledgeHud(WorkerMemory memory, float now)
     {
-        return memory != null &&
-               memory.Kind == WorkerMemoryKind.ConversationTopic &&
-               !string.IsNullOrWhiteSpace(memory.Topic) &&
+        return IsWorkerMemoryDisplayable(memory) &&
                !ShouldExpireWorkerMemory(memory, now);
     }
 
     private void ApplyWorkerKnowledgeRow(WorkerKnowledgeRowUi row, WorkerMemory memory, bool ru, float now)
     {
+        if (memory != null && memory.Kind == WorkerMemoryKind.BuildingExistence)
+        {
+            ApplyWorkerBuildingKnowledgeRow(row, memory, ru, now);
+            return;
+        }
+
         DriverAgent other = GetDriverAgentById(memory.OtherWorkerId);
         string otherName = other != null && !other.HasDepartedTown
             ? other.DriverName
@@ -257,6 +261,68 @@ public partial class GameBootstrap
                 ? Color.Lerp(new Color(0.16f, 0.095f, 0.055f, 0.90f), new Color(0.050f, 0.135f, 0.120f, 0.88f), freshness)
                 : Color.Lerp(new Color(0.16f, 0.075f, 0.070f, 0.90f), new Color(0.050f, 0.105f, 0.165f, 0.88f), freshness);
         }
+    }
+
+    private void ApplyWorkerBuildingKnowledgeRow(WorkerKnowledgeRowUi row, WorkerMemory memory, bool ru, float now)
+    {
+        string buildingName = GetWorkerKnowledgeBuildingDisplayName(memory, ru);
+        string reason = ru ? memory.SourceRu : memory.SourceEn;
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            reason = ru ? "\u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043b \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0443" : "used the building";
+        }
+
+        if (row.TimeText != null)
+        {
+            row.TimeText.text = FormatWorkerMemoryTime(memory, ru);
+        }
+
+        if (row.IconImage != null)
+        {
+            row.IconImage.sprite = GetWorkerBuildingKnowledgeIcon(memory);
+            row.IconImage.color = new Color(0.50f, 0.78f, 0.92f, 1f);
+        }
+
+        if (row.TitleText != null)
+        {
+            row.TitleText.text = ru ? "\u0417\u043d\u0430\u043d\u0438\u0435 \u043e \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0435" : "Building knowledge";
+        }
+
+        if (row.DescriptionText != null)
+        {
+            string building = $"<color=#74D7FF><b>{SanitizeRichTextLiteral(buildingName)}</b></color>";
+            row.DescriptionText.text = ru
+                ? $"\u041f\u043e\u043d\u044f\u043b, \u0447\u0442\u043e \u0432 \u0433\u043e\u0440\u043e\u0434\u0435 \u0435\u0441\u0442\u044c {building}."
+                : $"Understood that {building} exists in town.";
+        }
+
+        if (row.MetaText != null)
+        {
+            row.MetaText.text = ru ? $"\u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}" : $"Reason: {reason}";
+            row.MetaText.color = new Color(0.58f, 0.78f, 0.92f, 1f);
+        }
+
+        ApplyWorkerKnowledgeExpiryIndicator(row, memory, now, ru);
+
+        if (row.Background != null)
+        {
+            float freshness = GetWorkerMemoryFreshness01(memory, now);
+            row.Background.color = Color.Lerp(
+                new Color(0.085f, 0.075f, 0.145f, 0.92f),
+                new Color(0.045f, 0.115f, 0.155f, 0.88f),
+                freshness);
+        }
+    }
+
+    private static Sprite GetWorkerBuildingKnowledgeIcon(WorkerMemory memory)
+    {
+        return memory?.BuildingType switch
+        {
+            LocationType.PersonalHouse => GetWorkerThoughtHouseIcon(),
+            LocationType.LaborExchange => GetWorkerThoughtBriefcaseIcon(),
+            LocationType.Warehouse or LocationType.Sawmill or LocationType.Forest or LocationType.FurnitureFactory or LocationType.Docks => GetWorkerThoughtBriefcaseIcon(),
+            _ => GetWorkerThoughtCityIcon()
+        };
     }
 
     private void ApplyWorkerKnowledgeExpiryIndicator(WorkerKnowledgeRowUi row, WorkerMemory memory, float now, bool ru)

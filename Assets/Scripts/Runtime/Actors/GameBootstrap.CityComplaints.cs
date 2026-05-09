@@ -239,6 +239,7 @@ public partial class GameBootstrap
         cityComplaints.Add(complaint);
         cityComplaintCooldownByKey[groupKey] = now + CityServiceRequestCooldownWorldHours;
         NotifyCityHallNewRequest(complaint);
+        RecordWorkerBuildingKnowledge(signer, LocationType.CityHall, "\u041e\u0431\u0440\u0430\u0442\u0438\u043b\u0441\u044f \u0432 \u0440\u0430\u0442\u0443\u0448\u0443", "Filed a request at City Hall");
         SessionDebugLogger.Log(
             "CITY_HALL",
             $"Citizen request #{complaint.Id} filed: target={candidate.Target}, required={complaint.RequiredLocationCount}, signer={complaint.WorkerName}, severity={complaint.Severity}.");

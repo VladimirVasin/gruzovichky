@@ -817,6 +817,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.InsideBuildingType = building.Type;
         driver.InsideBuildingInstanceId = building.InstanceId;
         driver.IsShiftSalaryPending = true;
+        RecordWorkerBuildingKnowledge(driver, building, "\u0412\u044b\u0448\u0435\u043b \u043d\u0430 \u0441\u043c\u0435\u043d\u0443 \u0432 \u044d\u0442\u043e\u043c \u0437\u0434\u0430\u043d\u0438\u0438", "Started a shift in this building");
         RecordWorkerCoworkerShiftSocial(driver, building);
         if (driver.DriverObject != null)
         {

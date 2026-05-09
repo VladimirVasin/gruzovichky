@@ -361,6 +361,7 @@ public partial class GameBootstrap : MonoBehaviour
         vendor.BuildingBank += price;
         SpawnMoneySpendPopup(purchasePosition, price);
         LogBuildingBankTransaction(vendor, driver, price, $"{GetWorkerInventoryItemTitle(itemId, false)} purchase", moneyBefore, bankBefore);
+        RecordWorkerBuildingKnowledge(driver, vendor, "\u041a\u0443\u043f\u0438\u043b \u0442\u043e\u0432\u0430\u0440 \u0432 \u043a\u0438\u043e\u0441\u043a\u0435", "Bought an item at the kiosk");
         TryAutoUseNeedConsumables(driver);
         SessionDebugLogger.Log("LIFE", $"{driver.DriverName} bought {itemId} at {vendor.Label}#{vendor.InstanceId} for ${price}; balance=${driver.Money}.");
         isDriversScreenDirty = true;

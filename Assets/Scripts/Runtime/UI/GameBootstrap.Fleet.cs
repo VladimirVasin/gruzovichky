@@ -6,8 +6,8 @@ public partial class GameBootstrap
 {
     // Menu bar
 
-    private const float MenuBtnMaxW = 90f, MenuBtnMinW = 62f, MenuBtnH = 40f, MenuBtnGap = 5f;
-    private const int DefaultMenuBtnCount = 8;
+    private const float MenuBtnMaxW = 90f, MenuBtnMinW = 56f, MenuBtnH = 40f, MenuBtnGap = 5f;
+    private const int DefaultMenuBtnCount = 9;
 
     private Rect GetMenuBarRect()
     {
@@ -76,6 +76,7 @@ public partial class GameBootstrap
         isStatesPanelOpen = false;
         isSocialGraphPanelOpen = false;
         isCityHallPanelOpen = false;
+        isNoospherePanelOpen = false;
         target = !wasOpen;
         if (panelName == "Economy")
         {
@@ -102,6 +103,7 @@ public partial class GameBootstrap
         isStatesScreenDirty = true;
         isSocialGraphScreenDirty = true;
         isCityHallScreenDirty = true;
+        isNoosphereScreenDirty = true;
         if (panelName == "Stats")
         {
             EnsureStatesScreenUiReady();
@@ -125,7 +127,7 @@ public partial class GameBootstrap
         float buttonWidth = GetMenuButtonWidth();
         GUIStyle btnStyle = new GUIStyle(GUI.skin.button)
         {
-            fontSize = buttonWidth < 70f ? 10 : buttonWidth < 82f ? 12 : 14,
+            fontSize = buttonWidth < 62f ? 9 : buttonWidth < 74f ? 10 : buttonWidth < 84f ? 12 : 14,
             fontStyle = FontStyle.Bold
         };
 
@@ -157,6 +159,7 @@ public partial class GameBootstrap
             float x = bar.x + MenuBtnGap;
             MenuBtn("Workers", "Residents", ref isDriversPanelOpen, x); x += buttonWidth + MenuBtnGap;
             MenuBtn("Social", "Social", ref isSocialGraphPanelOpen, x); x += buttonWidth + MenuBtnGap;
+            MenuBtn("Noosphere", IsRussianLanguage() ? "\u041d\u043e\u043e\u0441" : "Noos", ref isNoospherePanelOpen, x); x += buttonWidth + MenuBtnGap;
             if (ShouldShowTutorialStaffingMenuButton())
             {
                 MenuBtn("Vacancies", "Staffing", ref isShiftsPanelOpen, x, highlight: isTutorialGoalsActive);

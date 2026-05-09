@@ -142,6 +142,11 @@ public partial class GameBootstrap
         nextCitySocialIntroductionRequestAllowedWorldHour =
             now + Random.Range(CitySocialRequestSpacingMinWorldHours, CitySocialRequestSpacingMaxWorldHours);
         NotifyCityHallNewRequest(complaint);
+        RecordWorkerBuildingKnowledge(
+            GetDriverAgentById(request.RequesterId),
+            LocationType.CityHall,
+            "\u041e\u0431\u0440\u0430\u0442\u0438\u043b\u0441\u044f \u0432 \u0440\u0430\u0442\u0443\u0448\u0443 \u0437\u0430 \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432\u043e\u043c",
+            "Filed a social introduction request at City Hall");
         SessionDebugLogger.Log(
             "CITY_SOCIAL_REQUEST",
             $"Social introduction request #{complaint.Id} filed in City Hall: requester={request.RequesterName}, target={request.TargetName}, nextAllowed={nextCitySocialIntroductionRequestAllowedWorldHour:0.0}.");

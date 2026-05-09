@@ -163,7 +163,14 @@ public partial class GameBootstrap
 
     private enum WorkerMemoryKind
     {
-        ConversationTopic
+        ConversationTopic,
+        BuildingExistence
+    }
+
+    private enum NoosphereKnowledgeEventKind
+    {
+        Received,
+        Burned
     }
 
     private enum WorkerLifeOpinionCategory
@@ -381,10 +388,36 @@ public partial class GameBootstrap
         public WorkerMemoryKind Kind;
         public int OtherWorkerId;
         public string Topic = string.Empty;
+        public LocationType? BuildingType;
+        public int BuildingInstanceId;
+        public string BuildingLabel = string.Empty;
+        public string SourceRu = string.Empty;
+        public string SourceEn = string.Empty;
         public bool Positive;
         public int CreatedDay;
         public float CreatedWorldHour;
         public float ExpiresWorldHour;
+    }
+
+    private sealed class NoosphereKnowledgeLogEntry
+    {
+        public NoosphereKnowledgeEventKind EventKind;
+        public WorkerMemoryKind MemoryKind;
+        public int OwnerWorkerId;
+        public int OtherWorkerId;
+        public string OwnerName = string.Empty;
+        public string OtherName = string.Empty;
+        public string Topic = string.Empty;
+        public LocationType? BuildingType;
+        public int BuildingInstanceId;
+        public string BuildingLabel = string.Empty;
+        public bool Positive;
+        public string ReasonRu = string.Empty;
+        public string ReasonEn = string.Empty;
+        public int EventDay;
+        public float EventWorldHour;
+        public float MemoryCreatedWorldHour;
+        public float MemoryExpiresWorldHour;
     }
 
     private sealed class WorkerOpinion

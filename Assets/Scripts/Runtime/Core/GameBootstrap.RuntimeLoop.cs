@@ -359,6 +359,7 @@ public partial class GameBootstrap
         UpdateStatesScreenUi();
         UpdateSocialGraphScreenUi();
         UpdateCityHallScreenUi();
+        UpdateNoosphereScreenUi();
         UpdateEventFeedUi();
         UpdateTutorialGoalsRuntime();
         UpdateCityRequestGoalHudRuntime();

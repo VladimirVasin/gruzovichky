@@ -261,6 +261,10 @@ public partial class GameBootstrap : MonoBehaviour
         driver.InsideBuildingType = locationType;
         driver.InsideBuildingInstanceId = locations.TryGetValue(locationType, out LocationData location) ? location.InstanceId : 0;
         driver.DriverObject.SetActive(false);
+        if (location != null)
+        {
+            RecordWorkerBuildingKnowledge(driver, location, "\u041f\u043e\u0441\u0435\u0442\u0438\u043b \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0443", "Visited the building");
+        }
         RecordWorkerServiceCoPresence(driver, locationType);
         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered {locationType} interior.");
     }

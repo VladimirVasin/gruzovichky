@@ -150,7 +150,7 @@ public partial class GameBootstrap
 
         float now = GetCurrentWorldHour();
         PruneExpiredWorkerMemories(owner, now);
-        owner.Memories.Insert(0, new WorkerMemory
+        WorkerMemory memory = new()
         {
             Kind = WorkerMemoryKind.ConversationTopic,
             OtherWorkerId = other.DriverId,
@@ -159,8 +159,10 @@ public partial class GameBootstrap
             CreatedDay = currentDay,
             CreatedWorldHour = now,
             ExpiresWorldHour = now + WorkerPersonalMemoryLifetimeHours
-        });
-        TrimWorkerMemories(owner);
+        };
+        owner.Memories.Insert(0, memory);
+        RecordNoosphereKnowledgeReceived(owner, other, memory, now);
+        TrimWorkerMemories(owner, now);
 
         RecordWorkerThought(
             owner,
@@ -184,11 +186,13 @@ public partial class GameBootstrap
             WorkerThoughtPriority.Normal);
     }
 
-    private static void TrimWorkerMemories(DriverAgent worker)
+    private void TrimWorkerMemories(DriverAgent worker, float now)
     {
         while (worker != null && worker.Memories.Count > WorkerPersonalMemoryCap)
         {
-            worker.Memories.RemoveAt(worker.Memories.Count - 1);
+            int removeIndex = worker.Memories.Count - 1;
+            RecordNoosphereKnowledgeForgottenByLimit(worker, worker.Memories[removeIndex], now);
+            worker.Memories.RemoveAt(removeIndex);
         }
     }
 
@@ -246,6 +250,7 @@ public partial class GameBootstrap
 
             if (ShouldExpireWorkerMemory(memory, now))
             {
+                RecordNoosphereKnowledgeExpired(worker, memory, now);
                 worker.Memories.RemoveAt(i);
                 changed = true;
             }
@@ -265,7 +270,7 @@ public partial class GameBootstrap
         {
             WorkerMemory memory = worker.Memories[i];
             if (memory != null &&
-                memory.Kind == WorkerMemoryKind.ConversationTopic &&
+                IsTimedWorkerMemory(memory) &&
                 GetWorkerMemoryExpiresWorldHour(memory) > now)
             {
                 return true;
@@ -295,7 +300,7 @@ public partial class GameBootstrap
 
     private static float GetDefaultWorkerMemoryExpiresWorldHour(WorkerMemory memory)
     {
-        return memory != null && memory.Kind == WorkerMemoryKind.ConversationTopic
+        return IsTimedWorkerMemory(memory)
             ? memory.CreatedWorldHour + WorkerPersonalMemoryLifetimeHours
             : 0f;
     }
