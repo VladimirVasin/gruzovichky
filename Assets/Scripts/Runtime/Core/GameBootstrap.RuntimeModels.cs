@@ -161,6 +161,11 @@ public partial class GameBootstrap
         Critical
     }
 
+    private enum WorkerMemoryKind
+    {
+        ConversationTopic
+    }
+
     private enum WorkerLifeOpinionCategory
     {
         Work,
@@ -312,6 +317,7 @@ public partial class GameBootstrap
         public int InsideBuildingInstanceId;
         public readonly List<WorkerSocialMemory> SocialMemories = new();
         public readonly List<WorkerThought> Thoughts = new();
+        public readonly List<WorkerMemory> Memories = new();
         public readonly List<WorkerOpinion> Opinions = new();
         public readonly List<WorkerLifeOpinion> LifeOpinions = new();
         public readonly List<WorkerInventoryEntry> Inventory = new();
@@ -370,6 +376,17 @@ public partial class GameBootstrap
         public string FallbackLabel;
     }
 
+    private sealed class WorkerMemory
+    {
+        public WorkerMemoryKind Kind;
+        public int OtherWorkerId;
+        public string Topic = string.Empty;
+        public bool Positive;
+        public int CreatedDay;
+        public float CreatedWorldHour;
+        public float ExpiresWorldHour;
+    }
+
     private sealed class WorkerOpinion
     {
         public WorkerThoughtSubjectType SubjectType;
@@ -402,6 +419,8 @@ public partial class GameBootstrap
         public float NextFamiliarityDecayWorldHour;
         public WorkerSocialInteractionKind LastKind;
         public LocationType? LastLocationType;
+        public string LastConversationTopic = string.Empty;
+        public bool LastConversationTopicWasPositive;
     }
 
     private enum WorkerSocialInteractionKind

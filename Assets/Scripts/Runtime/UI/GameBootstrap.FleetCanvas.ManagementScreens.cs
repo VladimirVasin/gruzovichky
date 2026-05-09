@@ -59,6 +59,7 @@ public partial class GameBootstrap
         Profile,
         Social,
         Thoughts,
+        Knowledge,
         Inventory
     }
 
@@ -81,11 +82,14 @@ public partial class GameBootstrap
         public Text DetailSocialTabText;
         public Button DetailThoughtsTabButton;
         public Text DetailThoughtsTabText;
+        public Button DetailKnowledgeTabButton;
+        public Text DetailKnowledgeTabText;
         public Button DetailInventoryTabButton;
         public Text DetailInventoryTabText;
         public GameObject DetailProfileTabRoot;
         public GameObject DetailSocialTabRoot;
         public GameObject DetailThoughtsTabRoot;
+        public GameObject DetailKnowledgeTabRoot;
         public GameObject DetailInventoryTabRoot;
         public Text  DetailNameText;
         public Text  DetailProfileTitleText;
@@ -142,6 +146,9 @@ public partial class GameBootstrap
         public readonly List<WorkerThoughtRowUi> DetailThoughtRows = new();
         public Text  DetailLifeOpinionsTitleText;
         public readonly List<WorkerLifeOpinionRowUi> DetailLifeOpinionRows = new();
+        public Text  DetailKnowledgeTitleText;
+        public Text  DetailKnowledgeEmptyText;
+        public readonly List<WorkerKnowledgeRowUi> DetailKnowledgeRows = new();
         public Text  DetailInventoryTitleText;
         public GameObject DetailInventoryCardRowRoot;
         public Text  DetailInventoryEmptyText;
@@ -201,6 +208,20 @@ public partial class GameBootstrap
         public Text CategoryText;
         public Image StatusDot;
         public Text StatusText;
+    }
+
+    private sealed class WorkerKnowledgeRowUi
+    {
+        public RectTransform Root;
+        public Image Background;
+        public Image IconImage;
+        public Text TimeText;
+        public Text TitleText;
+        public Text DescriptionText;
+        public Text MetaText;
+        public RectTransform ExpiryFillRect;
+        public Image ExpiryFillImage;
+        public Text ExpiryText;
     }
 
     private sealed class WorkerAutoConsumableCardUi

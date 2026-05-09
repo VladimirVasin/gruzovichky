@@ -2,6 +2,7 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private const string CitySocialTopicHighlightColorHex = "#FFD84A";
     private int citySocialDialogueVariantIndex;
 
     private readonly struct CitySocialDialogueLine
@@ -317,6 +318,18 @@ public partial class GameBootstrap
         return (template ?? string.Empty)
             .Replace("{requester}", requester ?? "Житель")
             .Replace("{target}", target ?? "Житель")
-            .Replace("{topic}", topic ?? string.Empty);
+            .Replace("{topic}", FormatCitySocialTopicRichText(topic));
+    }
+
+    private static string FormatCitySocialTopicRichText(string topic)
+    {
+        return $"<color={CitySocialTopicHighlightColorHex}><b>{SanitizeRichTextLiteral(topic)}</b></color>";
+    }
+
+    private static string SanitizeRichTextLiteral(string text)
+    {
+        return string.IsNullOrEmpty(text)
+            ? string.Empty
+            : text.Replace('<', '‹').Replace('>', '›');
     }
 }

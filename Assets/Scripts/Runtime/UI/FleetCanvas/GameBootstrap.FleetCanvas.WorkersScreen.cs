@@ -189,6 +189,19 @@ public partial class GameBootstrap
             PlayUiSound(uiSelectClip, 0.7f);
         });
 
+        driversScreenUi.DetailKnowledgeTabButton = CreateButton("WorkerKnowledgeTabBtn", detailTabRow, font, out driversScreenUi.DetailKnowledgeTabText, "Knowledge", 13, new Color(0.07f, 0.11f, 0.17f, 1f), Color.white);
+        driversScreenUi.DetailKnowledgeTabText.fontStyle = FontStyle.Bold;
+        driversScreenUi.DetailKnowledgeTabButton.transition = Selectable.Transition.None;
+        LayoutElement knowledgeTabLayout = driversScreenUi.DetailKnowledgeTabButton.gameObject.AddComponent<LayoutElement>();
+        knowledgeTabLayout.preferredHeight = 46f;
+        knowledgeTabLayout.flexibleWidth = 1f;
+        driversScreenUi.DetailKnowledgeTabButton.onClick.AddListener(() =>
+        {
+            activeWorkerDetailTab = WorkerDetailTab.Knowledge;
+            isDriversScreenDirty = true;
+            PlayUiSound(uiSelectClip, 0.7f);
+        });
+
         driversScreenUi.DetailInventoryTabButton = CreateButton("WorkerInventoryTabBtn", detailTabRow, font, out driversScreenUi.DetailInventoryTabText, "Inventory", 13, new Color(0.07f, 0.11f, 0.17f, 1f), Color.white);
         driversScreenUi.DetailInventoryTabText.fontStyle = FontStyle.Bold;
         driversScreenUi.DetailInventoryTabButton.transition = Selectable.Transition.None;
@@ -233,6 +246,17 @@ public partial class GameBootstrap
         thoughtsTabLayoutGroup.childForceExpandHeight = false;
         driversScreenUi.DetailThoughtsTabRoot.SetActive(false);
 
+        RectTransform knowledgeTabRoot = CreateUiObject("WorkerKnowledgeTabRoot", detailRoot.transform).GetComponent<RectTransform>();
+        driversScreenUi.DetailKnowledgeTabRoot = knowledgeTabRoot.gameObject;
+        knowledgeTabRoot.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        VerticalLayoutGroup knowledgeTabLayoutGroup = knowledgeTabRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+        knowledgeTabLayoutGroup.spacing = 14f;
+        knowledgeTabLayoutGroup.childControlWidth = true;
+        knowledgeTabLayoutGroup.childControlHeight = true;
+        knowledgeTabLayoutGroup.childForceExpandWidth = true;
+        knowledgeTabLayoutGroup.childForceExpandHeight = false;
+        driversScreenUi.DetailKnowledgeTabRoot.SetActive(false);
+
         RectTransform inventoryTabRoot = CreateUiObject("WorkerInventoryTabRoot", detailRoot.transform).GetComponent<RectTransform>();
         driversScreenUi.DetailInventoryTabRoot = inventoryTabRoot.gameObject;
         inventoryTabRoot.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
@@ -249,6 +273,8 @@ public partial class GameBootstrap
         SetupWorkerSocialTabUi(socialTabRoot, font);
 
         SetupWorkerThoughtsUi(thoughtsTabRoot, font);
+
+        SetupWorkerKnowledgeUi(knowledgeTabRoot, font);
 
         SetupWorkerInventoryUi(inventoryTabRoot, font);
 
@@ -271,6 +297,7 @@ public partial class GameBootstrap
         bool ok = IsButtonClickTargetReady(driversScreenUi.DetailProfileTabButton) &&
                   IsButtonClickTargetReady(driversScreenUi.DetailSocialTabButton) &&
                   IsButtonClickTargetReady(driversScreenUi.DetailThoughtsTabButton) &&
+                  IsButtonClickTargetReady(driversScreenUi.DetailKnowledgeTabButton) &&
                   IsButtonClickTargetReady(driversScreenUi.DetailInventoryTabButton) &&
                   IsButtonClickTargetReady(driversScreenUi.DetailFocusButton);
 

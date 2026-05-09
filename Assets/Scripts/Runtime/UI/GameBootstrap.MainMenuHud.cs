@@ -99,7 +99,7 @@ public partial class GameBootstrap
     private GameObject loadingOverlayCanvas;
     private Image loadingBarFill;
     private Text loadingStatusText;
-    private const string MainMenuVersionLabel = "Lo-fi Delivery Co. v.0.0.3";
+    private const string MainMenuVersionLabel = "Lo-fi Delivery Co. v.0.0.4";
     private const string PatchNotesButtonLabel = "Patch Notes";
     private bool isGameStarted;
     private GameStartMode selectedGameStartMode = GameStartMode.Tutorial;

@@ -270,6 +270,7 @@ public partial class GameBootstrap
         }
         UpdateHourlyNeedsEconomyTelemetry();
         UpdateWorkerSocialDecay();
+        UpdateWorkerPersonalMemoryExpiry();
         UpdateWorkerFamilyRuntime();
         UpdateWorkerMigrationRuntime();
 

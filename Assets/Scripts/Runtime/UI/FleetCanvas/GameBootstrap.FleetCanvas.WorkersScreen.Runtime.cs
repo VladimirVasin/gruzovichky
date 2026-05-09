@@ -167,6 +167,7 @@ public partial class GameBootstrap
 
             UpdateWorkerSocialUi(sel, ru);
             UpdateWorkerThoughtsUi(sel, ru);
+            UpdateWorkerKnowledgeUi(sel, ru);
             UpdateWorkerInventoryUi(sel, ru);
 
             bool canFocus = CanFocusDriver(sel);
@@ -396,6 +397,11 @@ public partial class GameBootstrap
             driversScreenUi.DetailThoughtsTabText.text = ru ? "\u041c\u044b\u0441\u043b\u0438" : "Thoughts";
         }
 
+        if (driversScreenUi.DetailKnowledgeTabText != null)
+        {
+            driversScreenUi.DetailKnowledgeTabText.text = ru ? "\u0417\u043d\u0430\u043d\u0438\u044f" : "Knowledge";
+        }
+
         if (driversScreenUi.DetailInventoryTabText != null)
         {
             driversScreenUi.DetailInventoryTabText.text = ru ? "\u0418\u043d\u0432\u0435\u043d\u0442\u0430\u0440\u044c" : "Inventory";
@@ -416,6 +422,11 @@ public partial class GameBootstrap
             driversScreenUi.DetailThoughtsTabRoot.SetActive(activeWorkerDetailTab == WorkerDetailTab.Thoughts);
         }
 
+        if (driversScreenUi.DetailKnowledgeTabRoot != null)
+        {
+            driversScreenUi.DetailKnowledgeTabRoot.SetActive(activeWorkerDetailTab == WorkerDetailTab.Knowledge);
+        }
+
         if (driversScreenUi.DetailInventoryTabRoot != null)
         {
             driversScreenUi.DetailInventoryTabRoot.SetActive(activeWorkerDetailTab == WorkerDetailTab.Inventory);
@@ -424,6 +435,7 @@ public partial class GameBootstrap
         ApplyResidentDetailTabVisual(driversScreenUi.DetailProfileTabButton, driversScreenUi.DetailProfileTabText, activeWorkerDetailTab == WorkerDetailTab.Profile);
         ApplyResidentDetailTabVisual(driversScreenUi.DetailSocialTabButton, driversScreenUi.DetailSocialTabText, activeWorkerDetailTab == WorkerDetailTab.Social);
         ApplyResidentDetailTabVisual(driversScreenUi.DetailThoughtsTabButton, driversScreenUi.DetailThoughtsTabText, activeWorkerDetailTab == WorkerDetailTab.Thoughts);
+        ApplyResidentDetailTabVisual(driversScreenUi.DetailKnowledgeTabButton, driversScreenUi.DetailKnowledgeTabText, activeWorkerDetailTab == WorkerDetailTab.Knowledge);
         ApplyResidentDetailTabVisual(driversScreenUi.DetailInventoryTabButton, driversScreenUi.DetailInventoryTabText, activeWorkerDetailTab == WorkerDetailTab.Inventory);
     }
 

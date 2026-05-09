@@ -196,6 +196,7 @@ public partial class GameBootstrap
         citySocialRequestSceneHud.TitleText = CreateHeaderText("Title", textPanel, font, string.Empty, 25, TextAnchor.MiddleLeft, new Color(1f, 0.82f, 0.28f, 1f));
         citySocialRequestSceneHud.TitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
         citySocialRequestSceneHud.BodyText = CreateBodyText("Body", textPanel, font, string.Empty, 17, TextAnchor.UpperLeft, new Color(0.88f, 0.92f, 0.98f, 1f));
+        citySocialRequestSceneHud.BodyText.supportRichText = true;
         citySocialRequestSceneHud.BodyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 76f;
 
         citySocialRequestSceneHud.TopicInput = CreateCitySocialTopicInput("TopicInput", textPanel, font, out citySocialRequestSceneHud.TopicInputText);
@@ -242,6 +243,7 @@ public partial class GameBootstrap
         Text title = CreateHeaderText("ResultTitle", panel, font, string.Empty, 34, TextAnchor.MiddleCenter, Color.white);
         title.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
         Text body = CreateBodyText("ResultBody", panel, font, string.Empty, 17, TextAnchor.UpperCenter, new Color(0.88f, 0.92f, 0.98f, 1f));
+        body.supportRichText = true;
         body.horizontalOverflow = HorizontalWrapMode.Wrap;
         body.gameObject.AddComponent<LayoutElement>().preferredHeight = 82f;
         citySocialRequestSceneHud.ResultPanel = panel;

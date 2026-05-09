@@ -72,12 +72,24 @@ public partial class GameBootstrap
         FileCitySocialIntroductionComplaint(request);
     }
 
-    private bool TryStartDebugCitySocialIntroductionRequest(out string result)
+    private bool TryFileDebugCitySocialIntroductionRequest(out string result)
     {
         result = string.Empty;
+        if (locations == null || !locations.ContainsKey(LocationType.CityHall))
+        {
+            result = "city hall is not built";
+            return false;
+        }
+
         if (activeCitySocialIntroductionRequest != null || isCitySocialRequestSceneOpen)
         {
             result = "social request scene is already active";
+            return false;
+        }
+
+        if (HasActiveCitySocialIntroductionComplaint())
+        {
+            result = "social request is already filed in City Hall";
             return false;
         }
 
@@ -94,9 +106,8 @@ public partial class GameBootstrap
             return false;
         }
 
-        isDebugServicePanelOpen = false;
-        BeginCitySocialIntroductionRequest(request, manualDebug: true);
-        result = $"{request.RequesterName} -> {request.TargetName}";
+        FileCitySocialIntroductionComplaint(request);
+        result = $"filed in City Hall: {request.RequesterName} -> {request.TargetName}";
         return true;
     }
 
@@ -522,6 +533,7 @@ public partial class GameBootstrap
             ? WorkerSocialInteractionKind.PlayerPromptedConversation
             : WorkerSocialInteractionKind.PlayerPromptedConversationFailed;
         RecordWorkerSocialInteraction(requester, target, kind);
+        RecordWorkerPromptedConversationTopicMemory(requester, target, request.Topic, success);
         WorkerSocialMemory requesterMemory = FindWorkerSocialMemory(requester, target.DriverId);
         WorkerSocialMemory targetMemory = FindWorkerSocialMemory(target, requester.DriverId);
         int familiarity = GetWorkerSocialPairAverageFamiliarity(requesterMemory, targetMemory);

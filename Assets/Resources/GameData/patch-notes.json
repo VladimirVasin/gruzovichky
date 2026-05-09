@@ -5,60 +5,60 @@
   },
   "versions": [
     {
-      "version": "v.0.0.3",
+      "version": "v.0.0.4",
       "title": {
-        "en": "v.0.0.3 - In development",
-        "ru": "v.0.0.3 - в разработке"
+        "en": "v.0.0.4 - In development",
+        "ru": "v.0.0.4 - в разработке"
       },
       "sections": [
         {
           "title": {
-            "en": "Build and roads",
-            "ru": "Стройка и дороги"
+            "en": "Build and progression",
+            "ru": "Стройка и прогрессия"
           },
           "body": {
-            "en": "- The regular one-cell road remains the active player road tool, while the two-way road segment tool is visible as temporarily under rework.\n- Two-way road segment work still exists behind the disabled tool: click-start/click-finish, Shift axis constraint, lane footprints, and center markings.\n- Build previews are clearer at night thanks to a warm cursor light with blocked-placement tint.\n- New buildings create valid driveway/access road cells automatically when possible.\n- Road visuals and markings follow uneven terrain more smoothly.",
-            "ru": "- Обычная дорога в 1 клетку остаётся активным дорожным инструментом игрока, а двухполосная дорога временно показана как инструмент на реконструкции.\n- Работа над двухполосными участками уже есть под отключённой карточкой: начало/конец участка, ограничение Shift по оси, отпечатки полос и центральная разметка.\n- Ночные превью стройки стали заметнее благодаря тёплой подсветке курсора и оттенку для заблокированной клетки.\n- Новые здания автоматически создают подъездные дорожные клетки, когда это возможно.\n- Дороги и разметка аккуратнее повторяют неровный рельеф."
+            "en": "- The Build menu now lives as a bottom dock with five icon categories and an animated tool tray.\n- New Game starts with only the one-cell road, Warehouse, Motel, and City Hall, then unlocks later buildings in clear construction layers.\n- Newly unlocked buildings pulse in the Build dock and appear in the event feed.\n- City Hall construction requests now follow the same staged order and can eventually suggest every available building.\n- Build previews, automatic driveway cells, road visuals, and road markings are easier to read on uneven terrain and at night.",
+            "ru": "- Меню строительства переехало в нижний док с пятью категориями-иконками и анимированной верхней панелью инструментов.\n- Новая игра начинается только с дороги в 1 клетку, Склада, Мотеля и Ратуши, а следующие здания открываются понятными слоями.\n- Новые открытые здания подсвечиваются в меню строительства и появляются в ленте событий.\n- Строительные обращения Ратуши теперь идут по той же прогрессии и со временем предлагают все доступные здания.\n- Превью стройки, автоматические подъезды, дороги и разметка стали понятнее на неровном рельефе и ночью."
           }
         },
         {
           "title": {
-            "en": "Workers and needs",
-            "ru": "Рабочие и потребности"
+            "en": "Residents and city life",
+            "ru": "Жители и городская жизнь"
           },
           "body": {
-            "en": "- New workers start with a random personal balance.\n- Workers resolve Food, Sleep, and Leisure by urgency and can handle needs during free/off-shift time.\n- Workers who cannot afford Canteen food or Motel sleep can use fallback activities such as trash meals or bench sleep and receive the temporary I Have Fallen effect.\n- Workers now have education, profession levels, dynamic vacancy salaries, and fixed-term contracts.\n- Labor Exchange can post vacancies, receive applicants, and auto-staff its clerk slot when possible.\n- The permanent top-HUD Vacancies entry has been removed from normal play; staffing now lives behind the Labor Exchange, with manual assignment kept as an override.",
-            "ru": "- Новые рабочие начинают с разным личным балансом.\n- Еда, сон и досуг выбираются по срочности, а свободные рабочие могут закрывать потребности не только вечером.\n- Если рабочий не может оплатить столовую или мотель, он может воспользоваться запасным вариантом вроде еды из мусорки или сна на лавочке и получить временный эффект I Have Fallen.\n- У рабочих появились образование, профессиональные уровни, динамические зарплаты вакансий и срочные контракты.\n- Биржа труда публикует вакансии, принимает соискателей и по возможности автоматически получает клерка.\n- Постоянная вкладка Вакансии убрана из обычного верхнего HUD: кадровый обзор теперь открывается через Биржу труда, а ручное назначение осталось как override."
+            "en": "- Residents now have personal money, education, profession levels, dynamic vacancy salaries, and fixed-term contracts.\n- Food, Sleep, and Leisure are handled by urgency during free time, with fallback activities when a resident cannot afford a normal service.\n- Kiosk Snack and Coffee can be carried in personal inventory and auto-used before needs become critical.\n- Residents now have thoughts, opinions, social links, families, children, and child-care pressure in the Residents screen.\n- Topics chosen for City Hall social-introduction conversations are remembered by both residents and can appear later in their thoughts/social context.\n- Idle residents can chat in the world with readable bubbles and spatial vocalizer sounds.\n- Idle movement is safer: residents should spread out more reliably instead of stacking on one tile.",
+            "ru": "- У жителей появились личные деньги, образование, уровни профессий, динамические зарплаты вакансий и срочные контракты.\n- Еда, сон и досуг выбираются по срочности даже в свободное время, а при нехватке денег жители используют запасные варианты.\n- Snack и Coffee из киоска хранятся в личном инвентаре и автоматически используются до критического состояния.\n- В меню жителей появились мысли, мнения, социальные связи, семьи, дети и давление по уходу за детьми.\n- Темы, выбранные игроком для социального обращения Ратуши, запоминаются обоими жителями и позже могут появиться в их мыслях или социальном контексте.\n- Жители могут болтать прямо в городе: над ними появляются читаемые реплики со spatial-вокалайзером.\n- Idle-поведение стало стабильнее: жители надёжнее расходятся и не должны зависать друг в друге на одной клетке."
           }
         },
         {
           "title": {
-            "en": "Transport and services",
-            "ru": "Транспорт и сервисы"
+            "en": "Services, City Hall, and trade",
+            "ru": "Сервисы, Ратуша и торговля"
           },
           "body": {
-            "en": "- Trade dispatch now uses the regular Truck Driver shift pool and automatically reserves a truck from Parking infrastructure.\n- Local bus service requires at least two local stops before it becomes active, with clearer one-stop warnings.\n- Local buses now tolerate disconnected stops by starting from reachable stops and skipping unreachable route targets.\n- Parking now provides truck and bus slots automatically; separate vehicle purchases are no longer required.\n- Trade moved to a dedicated Trade screen with per-resource No trade, Buy up to, and Sell surplus policies.\n- Docks and generated regional routes now drive river/land trading; ships and merchant trucks only act on active policies with built routes.\n- Fuel, Food, and Alcohol were removed as trade/storage resources; services now operate directly through worker needs, fees, and truck refuel orders.",
-            "ru": "- Междугородняя торговля теперь использует обычных водителей грузовиков на смене и автоматически резервирует грузовик из инфраструктуры Parking.\n- Городской автобус запускается только при двух локальных остановках, а сеть с одной остановкой понятнее предупреждает игрока.\n- Автобусы теперь устойчивее к разорванным маршрутам: стартуют с достижимой остановки и пропускают недоступные цели.\n- Parking теперь автоматически даёт слоты грузовиков и автобусов; отдельная покупка транспорта больше не нужна.\n- Торговля переехала на отдельный экран с политиками по каждому ресурсу: No trade, Buy up to и Sell surplus.\n- Доки и сгенерированные региональные маршруты управляют речной и сухопутной торговлей; корабли и торговые грузовики работают только по активным политикам с построенными маршрутами.\n- Fuel, Food и Alcohol удалены из торговых/складских ресурсов; сервисы работают напрямую через потребности рабочих, оплату услуг и заказы на дозаправку грузовиков."
+            "en": "- Labor Exchange now owns vacancy posting, applicants, and automatic staffing, so the permanent Vacancies top-HUD entry is gone in normal play.\n- City Hall accepts citizen requests, turns accepted requests into 24-hour city goals, and changes city Trust on success, rejection, or expiry.\n- City Hall can create a social-introduction request where the player chooses a topic for two residents.\n- Parking automatically provides truck and bus slots; local buses need at least two stops and skip unreachable route targets.\n- Trade moved to policy-based resource controls, while Docks and regional routes drive river and land trade.\n- Motel, Bar, Canteen, Kiosk, and Kindergarten are tied more directly into resident needs, fees, families, and child care.",
+            "ru": "- Биржа труда теперь отвечает за публикацию вакансий, соискателей и автоматическое назначение, поэтому постоянная вкладка Вакансии убрана из обычного верхнего HUD.\n- Ратуша принимает обращения жителей, превращает принятые обращения в городские цели на 24 часа и меняет Доверие за успех, отказ или просрочку.\n- Ратуша может создать социальное обращение, где игрок выбирает тему для знакомства двух жителей.\n- Парковка автоматически даёт слоты грузовиков и автобусов; городские автобусы требуют минимум две остановки и пропускают недоступные цели маршрута.\n- Торговля перешла на политики по ресурсам, а Доки и региональные маршруты ведут речную и сухопутную торговлю.\n- Мотель, Бар, Столовая, Киоск и Детский сад сильнее связаны с нуждами жителей, оплатой услуг, семьями и уходом за детьми."
           }
         },
         {
           "title": {
-            "en": "Regional map",
-            "ru": "Региональная карта"
+            "en": "HUD and interaction",
+            "ru": "HUD и взаимодействие"
           },
           "body": {
-            "en": "- Regional Map is now a borderless fullscreen pixel-art map that pauses simulation while open.\n- The map currently shows the player's town plus two visible external cities with resource buy/sell tables.\n- Trade-route lines appear only after the player builds a route, and built city cards can open the Trade screen directly.\n- Regional labels and descriptions use localized display strings where available.",
-            "ru": "- Региональная карта стала полноэкранной pixel-art картой без рамки и ставит симуляцию на паузу, пока открыта.\n- Сейчас карта показывает город игрока и два внешних города с таблицами покупки и продажи ресурсов.\n- Линии торговых маршрутов появляются только после строительства маршрута, а карточка подключённого города может сразу открыть экран торговли.\n- Названия и описания регионов используют локализованный текст, где он уже есть."
+            "en": "- Resident, City Hall, Motel, and Warehouse microHUDs were rebuilt as compact status cards with only the most useful actions and numbers.\n- Worker and building microHUDs now draw a line to the selected person or building tile, making the map target easier to find.\n- Motel has an animated guest submenu with its own scroll, and clicking a guest opens that resident in the Residents screen.\n- Opening a different microHUD closes the current one, and the Event Feed now sits below other HUD panels.\n- The top HUD now shows population and city Trust near Treasury, while compact event messages stay readable without covering the play area.\n- Building demolition now asks for confirmation before removing a structure.",
+            "ru": "- MicroHUD жителя, Ратуши, Мотеля и Склада переработаны в компактные статусные карточки только с нужными действиями и числами.\n- MicroHUD жителей и зданий теперь ведут линию к выбранному персонажу или клетке здания, чтобы цель было легче найти на карте.\n- У Мотеля появилось анимированное подменю постояльцев со своим скроллом, а клик по постояльцу открывает его в меню Жители.\n- Открытие другого microHUD закрывает текущий, а Event Feed теперь находится ниже остальных HUD-панелей.\n- Верхний HUD показывает население и Доверие рядом с казной, а компактные события остаются читаемыми и не закрывают игровую область.\n- Снос здания теперь требует подтверждения перед удалением."
           }
         },
         {
           "title": {
-            "en": "User experience and presentation",
-            "ru": "Интерфейс и подача"
+            "en": "Atmosphere, audio, and map",
+            "ru": "Атмосфера, звук и карта"
           },
           "body": {
-            "en": "- Main Menu graphics settings now expose live 0..100 controls, effect toggles, and reset-to-defaults.\n- Main Menu sound options expose music, curated ambience, worker footsteps, and the kept generated SFX with preview/reset/volume controls.\n- The rebuilt Tutorial follows the current empty-town flow through roads, core buildings, Labor Exchange, services, warehouse loaders, local buses, taxes, Regional Map, Docks, and Trade policy setup.\n- Building demolition now has a confirmation modal, Event Feed notifications render as compact toasts, and the HUD shows current population.\n- Town visuals gained smoother roads, night lighting, warmer lights, and small city-life details.\n- Noisy debug traces are now verbose-only while important F9 tools remain available for testing.",
-            "ru": "- В главном меню появились живые настройки графики 0..100, переключатели эффектов и сброс к дефолту.\n- Настройки звука в главном меню показывают музыку, выбранный ambience, шаги рабочих и сохранённые generated SFX с прослушиванием, сбросом и громкостью.\n- Обновлённое обучение идёт по текущему старту пустого города: дороги, базовые здания, Биржа труда, сервисы, грузчики склада, автобусы, налоги, Региональная карта, Доки и настройка торговой политики.\n- Снос зданий получил окно подтверждения, Event Feed стал компактными уведомлениями, а HUD показывает население города.\n- Город выглядит богаче: дороги глаже, ночное освещение заметнее, свет теплее, мелких деталей больше.\n- Шумные debug-трассы теперь включаются отдельно, а важные инструменты F9 остаются доступны для тестирования."
+            "en": "- The Bar can now be entered as a separate large interior scene that pauses the town and returns with a fade.\n- Bar patrons idle, talk, drink, dance, and use their own room ambience and vocalizer sounds.\n- Entering the Bar interior mutes the outside city soundscape, and the river ambience is now positioned on the map instead of playing everywhere equally.\n- Regional Map is a fullscreen pixel-art screen that pauses simulation, shows external cities, and links built routes into Trade.\n- Tutorial text and flow now follow the current build-first start, bottom Build dock, Labor Exchange, services, buses, Docks, and trade policies.\n- Town presentation is warmer and busier: better lighting, smoother roads, richer service details, and more small life in the scene.",
+            "ru": "- В Бар теперь можно войти как в отдельную большую интерьерную сцену: город ставится на паузу, а вход и выход идут через плавный fade.\n- Посетители Бара стоят, разговаривают, пьют, танцуют и используют отдельную атмосферу помещения со своими vocalizer-звуками.\n- При входе внутрь Бара внешний город заглушается, а звук реки теперь привязан к месту на карте и не звучит везде одинаково.\n- Региональная карта стала полноэкранной pixel-art сценой с паузой симуляции, внешними городами и переходом от построенных маршрутов к торговле.\n- Обучение теперь следует текущему старту через строительство, нижний Build dock, Биржу труда, сервисы, автобусы, Доки и торговые политики.\n- Подача города стала теплее и живее: лучше освещение, ровнее дороги, богаче сервисные детали и больше маленькой жизни в сцене."
           }
         }
       ]

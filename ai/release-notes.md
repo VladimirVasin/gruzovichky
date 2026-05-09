@@ -10,75 +10,62 @@ Rules:
 - Update the in-game Patch Notes text in `Assets/Resources/GameData/patch-notes.json`.
 - `Assets/Scripts/Runtime/UI/GameBootstrap.MainMenuHud.cs` keeps a hardcoded fallback only for missing/invalid JSON.
 
-## Lo-fi Delivery Co. v.0.0.3
+## Lo-fi Delivery Co. v.0.0.4
 
-Status: in development. Main Menu version label has been bumped to `Lo-fi Delivery Co. v.0.0.3`.
+Status: in development. Main Menu version label has been bumped to `Lo-fi Delivery Co. v.0.0.4`.
 
 ### Release Tracking
 
 - Use `v.0.0.2` as the previous public baseline.
-- When the user asks to update Patch Notes for `v.0.0.3`, compare current code and recent `ai/work-log.md` entries against the `v.0.0.2` section below.
+- When the user asks to update Patch Notes for `v.0.0.4`, compare current code and recent `ai/work-log.md` entries against the `v.0.0.2` section below.
 - Record only player-facing mechanics, content, UX, and visual changes here. Do not include internal refactors, line-count work, temporary failed attempts, or debug-only implementation details unless they matter to players.
 
 ### New Since v.0.0.2
 
-#### Build And Roads
+#### Build And Progression
 
-- The Build menu is now organized into intent-based categories: Roads & Transport, Logistics & Trade, Production, Housing & Civic, and Services & Leisure.
-- The regular one-cell road remains the active player road tool, while the two-way road segment tool is visible as temporarily under rework.
-- Two-way road segment work still exists behind the disabled tool: click-start/click-finish, Shift axis constraint, lane footprints, and center markings.
-- Build-mode previews are clearer at night thanks to a warm cursor light with blocked-placement tint.
-- New buildings automatically create valid driveway/access road cells when possible, reducing manual cleanup around entrances.
-- Road visuals and markings now follow uneven terrain more smoothly instead of appearing buried, floating, or stair-stepped.
+- The Build menu now lives as a bottom dock with five icon categories and an animated tool tray.
+- New Game starts with only the one-cell road, Warehouse, Motel, and City Hall, then unlocks later buildings in clear construction layers.
+- Newly unlocked buildings pulse in the Build dock and appear in the event feed.
+- City Hall construction requests now follow the same staged order and can eventually suggest every available building.
+- Build previews, automatic driveway cells, road visuals, and road markings are easier to read on uneven terrain and at night.
 
-#### Workers And Needs
+#### Residents And City Life
 
-- New workers start with a random personal balance, making early need/service behavior less uniform.
-- Workers resolve Food, Sleep, and Leisure by urgency and can handle due needs during free/off-shift time instead of waiting for evening.
-- Workers who cannot afford Canteen food or Motel sleep can use fallback activities such as trash meals or bench sleep and receive the temporary `I Have Fallen` effect.
-- Idle workers choose a wider range of city interest points, so the town feels less clustered around one building.
-- Workers now have Basic/Vocational/Higher education, profession levels, dynamic vacancy salaries, and fixed-term contracts.
-- Labor Exchange can post vacancies, receive applicants, and auto-staff its higher-education clerk slot when possible.
-- The permanent top-HUD Vacancies entry has been removed from normal play; staffing is now accessed through Labor Exchange, with manual assignment retained as an override/tutorial path.
-- Workers now have bounded recent thoughts, current-priority concerns, and life-opinion summaries shown in the Residents HUD.
-- Workers can own simple inventory items. Kiosk-sold Snack and Coffee are stored on the worker and auto-used before Food/Sleep needs become critical.
-- Worker social relationships now have visible memories, relationship strength, decay, and a Socialite perk effect; idle and coworker contact can grow friendships over time.
-- Workers can form families in Personal Houses, share household pressure, have children, and care about child-care coverage.
-- Automatic worker migration is more persistent and reacts to open-vacancy pressure while still respecting caps and satisfaction pressure.
+- Residents now have personal money, education, profession levels, dynamic vacancy salaries, and fixed-term contracts.
+- Food, Sleep, and Leisure are handled by urgency during free time, with fallback activities when a resident cannot afford a normal service.
+- Kiosk Snack and Coffee can be carried in personal inventory and auto-used before needs become critical.
+- Residents now have thoughts, opinions, social links, families, children, and child-care pressure in the Residents screen.
+- Topics chosen for City Hall social-introduction conversations are remembered by both residents and can appear later in their thoughts/social context.
+- Idle residents can chat in the world with readable bubbles and spatial vocalizer sounds.
+- Idle movement is safer: residents should spread out more reliably instead of stacking on one tile.
 
-#### Transport And Services
+#### Services, City Hall, And Trade
 
-- Trade dispatch now uses the regular Truck Driver shift pool and automatically reserves an available parked truck from Parking.
-- Local bus service now requires at least two local stops before it becomes active; one-stop networks show clearer warnings and no longer trap passengers in dead-wait loops.
-- Parking now provides truck and bus slots automatically; separate vehicle purchases are no longer required for the current fleet flow.
-- Local buses now tolerate disconnected stops by starting from reachable stops and skipping unreachable route targets.
-- Trade moved to a dedicated Trade screen with per-resource `No trade`, `Buy up to`, and `Sell surplus` policies.
-- Docks and generated regional routes now drive river/land trading; ships and merchant trucks only act on active policies with built routes.
-- Fuel, Food, and Alcohol were removed as trade/storage resources; services now operate directly through worker needs, fees, and truck refuel orders.
-- Service prices were lowered for the current economy balance: Motel, Bar, and Canteen charge `$8`, while Kiosk Snack/Coffee costs `$4`.
-- Kindergarten is now a buildable service that provides staffed child-care slots for worker families.
-- City Hall is now a buildable civic building with citizen requests, accept/reject choices, visible goal timers, completion rewards, expiry/rejection penalties, and a city-wide Trust score.
-- City Hall can generate a special social-introduction request where the player suggests a topic and watches a short resident conversation resolve into a relationship outcome.
+- Labor Exchange now owns vacancy posting, applicants, and automatic staffing, so the permanent Vacancies top-HUD entry is gone in normal play.
+- City Hall accepts citizen requests, turns accepted requests into 24-hour city goals, and changes city Trust on success, rejection, or expiry.
+- City Hall can create a social-introduction request where the player chooses a topic for two residents.
+- Parking automatically provides truck and bus slots; local buses need at least two stops and skip unreachable route targets.
+- Trade moved to policy-based resource controls, while Docks and regional routes drive river and land trade.
+- Motel, Bar, Canteen, Kiosk, and Kindergarten are tied more directly into resident needs, fees, families, and child care.
 
-#### Regional Map
+#### HUD And Interaction
 
-- The Regional Map is now a borderless fullscreen pixel-art map that pauses simulation while open.
-- The map currently shows the player's town plus two visible external cities with resource buy/sell tables.
-- Trade-route lines appear only after the player builds a route, and built city cards can open the Trade screen directly.
-- Regional labels/descriptions use localized display strings where available.
+- Resident, City Hall, Motel, and Warehouse microHUDs were rebuilt as compact status cards with only the most useful actions and numbers.
+- Worker and building microHUDs now draw a line to the selected person or building tile, making the map target easier to find.
+- Motel has an animated guest submenu with its own scroll, and clicking a guest opens that resident in the Residents screen.
+- Opening a different microHUD closes the current one, and the Event Feed now sits below other HUD panels.
+- The top HUD now shows population and city Trust near Treasury, while compact event messages stay readable without covering the play area.
+- Building demolition now asks for confirmation before removing a structure.
 
-#### User Experience And Presentation
+#### Atmosphere, Audio, And Map
 
-- Main Menu graphics settings now expose live `0..100` controls, effect toggles, and a reset-to-defaults action for post-processing.
-- Main Menu sound options expose music, curated ambience, worker footsteps, and the kept generated SFX with preview/reset/volume controls.
-- The rebuilt Tutorial now follows the current empty-town flow through roads, core buildings, Labor Exchange, services, warehouse loaders, local buses, taxes, Regional Map, Docks, and Trade policy setup.
-- Service/town visuals received more atmosphere: smoother roads, building/perimeter night lighting, warmer lights, richer regional map presentation, and small city-life details.
-- Building demolition now has a confirmation modal, and Event Feed notifications render as compact top-right toasts.
-- The HUD now includes current population beside time and treasury.
-- The Workers screen has been rebuilt as a Residents HUD with profile, needs, thoughts, inventory, work, and social-link views.
-- A dedicated `Social` / `Связи` HUD shows citizen relationship graphs with focused views, filters, animated nodes, and hover details.
-- Residents can now show small in-world idle conversation bubbles with synchronized procedural voice syllables.
-- Debug/User tooling is less intrusive for players: noisy debug traces are verbose-only, while important F9 tools remain available for testing.
+- The Bar can now be entered as a separate large interior scene that pauses the town and returns with a fade.
+- Bar patrons idle, talk, drink, dance, and use their own room ambience and vocalizer sounds.
+- Entering the Bar interior mutes the outside city soundscape, and the river ambience is now positioned on the map instead of playing everywhere equally.
+- Regional Map is a fullscreen pixel-art screen that pauses simulation, shows external cities, and links built routes into Trade.
+- Tutorial text and flow now follow the current build-first start, bottom Build dock, Labor Exchange, services, buses, Docks, and trade policies.
+- Town presentation is warmer and busier: better lighting, smoother roads, richer service details, and more small life in the scene.
 
 ## Lo-fi Delivery Co. v.0.0.2
 

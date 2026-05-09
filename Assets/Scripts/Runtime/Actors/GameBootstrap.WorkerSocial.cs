@@ -5,6 +5,9 @@ using UnityEngine.UI;
 public partial class GameBootstrap
 {
     private const int WorkerSocialMemoryCap = 10;
+    private const int WorkerPersonalMemoryCap = 20;
+    private const float WorkerPersonalMemoryLifetimeHours = 48f;
+    private const float WorkerPersonalMemoryExpiryCheckIntervalHours = 1f;
     private const int WorkerSocialFriendRelationshipThreshold = 50;
     private const int WorkerSocialVisibleFamiliarityThreshold = 10;
     private const int WorkerSocialServiceExposureThreshold = 3;
@@ -21,6 +24,7 @@ public partial class GameBootstrap
     private const int WorkerSocialFamiliarityDecayMaxPerStep = 8;
 
     private float lastWorkerSocialDecayCheckWorldHour = -1f;
+    private float lastWorkerPersonalMemoryExpiryCheckWorldHour = -1f;
 
     private void RecordWorkerSocialInteraction(
         DriverAgent first,
@@ -94,9 +98,7 @@ public partial class GameBootstrap
                 $"{first.DriverName} and {second.DriverName} social memory updated: {kind}, context={context}, familiarity+={familiarityDelta}, relationship+={relationshipDelta}, totals familiarity={totalFamiliarity}, relationship={totalRelationship}/{WorkerSocialFriendRelationshipThreshold}, interactions={totalInteractions}.");
         }
 
-        if (visibleInteraction &&
-            (kind == WorkerSocialInteractionKind.IdleConversation ||
-             kind == WorkerSocialInteractionKind.PlayerPromptedConversation))
+        if (visibleInteraction && kind == WorkerSocialInteractionKind.IdleConversation)
         {
             RecordWorkerSocialThought(first, second, "social_talk_good", null, 2);
             RecordWorkerSocialThought(second, first, "social_talk_good", null, 2);
@@ -106,6 +108,196 @@ public partial class GameBootstrap
             RecordWorkerSocialThought(first, second, "social_shared_place", locationType.Value, 1);
             RecordWorkerSocialThought(second, first, "social_shared_place", locationType.Value, 1);
         }
+    }
+
+    private void RecordWorkerPromptedConversationTopicMemory(DriverAgent first, DriverAgent second, string topic, bool success)
+    {
+        if (first == null ||
+            second == null ||
+            string.IsNullOrWhiteSpace(topic))
+        {
+            return;
+        }
+
+        UpdateWorkerSocialConversationTopic(first, second, topic, success);
+        UpdateWorkerSocialConversationTopic(second, first, topic, success);
+        RecordWorkerConversationTopicMemory(first, second, topic, success);
+        RecordWorkerConversationTopicMemory(second, first, topic, success);
+        isDriversScreenDirty = true;
+    }
+
+    private void UpdateWorkerSocialConversationTopic(DriverAgent owner, DriverAgent other, string topic, bool success)
+    {
+        WorkerSocialMemory memory = FindWorkerSocialMemory(owner, other?.DriverId ?? 0);
+        if (memory == null || string.IsNullOrWhiteSpace(topic))
+        {
+            return;
+        }
+
+        memory.LastConversationTopic = topic;
+        memory.LastConversationTopicWasPositive = success;
+    }
+
+    private void RecordWorkerConversationTopicMemory(DriverAgent owner, DriverAgent other, string topic, bool success)
+    {
+        if (owner == null ||
+            other == null ||
+            owner.HasDepartedTown ||
+            string.IsNullOrWhiteSpace(topic))
+        {
+            return;
+        }
+
+        float now = GetCurrentWorldHour();
+        PruneExpiredWorkerMemories(owner, now);
+        owner.Memories.Insert(0, new WorkerMemory
+        {
+            Kind = WorkerMemoryKind.ConversationTopic,
+            OtherWorkerId = other.DriverId,
+            Topic = topic,
+            Positive = success,
+            CreatedDay = currentDay,
+            CreatedWorldHour = now,
+            ExpiresWorldHour = now + WorkerPersonalMemoryLifetimeHours
+        });
+        TrimWorkerMemories(owner);
+
+        RecordWorkerThought(
+            owner,
+            WorkerThoughtKind.Social,
+            success ? WorkerThoughtTone.Positive : WorkerThoughtTone.Neutral,
+            success ? 58 : 44,
+            "social_learned_new_topic",
+            new[]
+            {
+                ThoughtWorker("otherWorker", other),
+                ThoughtText("topic", topic)
+            },
+            WorkerThoughtSubjectType.Worker,
+            other.DriverId,
+            null,
+            other.DriverName,
+            success ? 3 : 1,
+            $"social_learned_new_topic|{owner.DriverId}|{other.DriverId}|{currentDay}|{Mathf.FloorToInt(now * 2f)}",
+            0f,
+            "social_learned_new_topic",
+            WorkerThoughtPriority.Normal);
+    }
+
+    private static void TrimWorkerMemories(DriverAgent worker)
+    {
+        while (worker != null && worker.Memories.Count > WorkerPersonalMemoryCap)
+        {
+            worker.Memories.RemoveAt(worker.Memories.Count - 1);
+        }
+    }
+
+    private void UpdateWorkerPersonalMemoryExpiry()
+    {
+        float now = GetCurrentWorldHour();
+        if (lastWorkerPersonalMemoryExpiryCheckWorldHour >= 0f &&
+            now - lastWorkerPersonalMemoryExpiryCheckWorldHour < WorkerPersonalMemoryExpiryCheckIntervalHours)
+        {
+            return;
+        }
+
+        lastWorkerPersonalMemoryExpiryCheckWorldHour = now;
+        bool changed = false;
+        bool hasActiveTimer = false;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent worker = driverAgents[i];
+            changed |= PruneExpiredWorkerMemories(worker, now);
+            hasActiveTimer |= HasActiveWorkerMemoryTimer(worker, now);
+        }
+
+        if (changed ||
+            hasActiveTimer &&
+            isDriversPanelOpen &&
+            activeWorkerDetailTab == WorkerDetailTab.Knowledge)
+        {
+            isDriversScreenDirty = true;
+        }
+    }
+
+    private bool PruneExpiredWorkerMemories(DriverAgent worker, float now)
+    {
+        if (worker == null || worker.Memories.Count == 0)
+        {
+            return false;
+        }
+
+        bool changed = false;
+        for (int i = worker.Memories.Count - 1; i >= 0; i--)
+        {
+            WorkerMemory memory = worker.Memories[i];
+            if (memory == null)
+            {
+                worker.Memories.RemoveAt(i);
+                changed = true;
+                continue;
+            }
+
+            if (memory.ExpiresWorldHour <= 0f)
+            {
+                memory.ExpiresWorldHour = GetDefaultWorkerMemoryExpiresWorldHour(memory);
+                changed |= memory.ExpiresWorldHour > 0f;
+            }
+
+            if (ShouldExpireWorkerMemory(memory, now))
+            {
+                worker.Memories.RemoveAt(i);
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    private static bool HasActiveWorkerMemoryTimer(DriverAgent worker, float now)
+    {
+        if (worker == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < worker.Memories.Count; i++)
+        {
+            WorkerMemory memory = worker.Memories[i];
+            if (memory != null &&
+                memory.Kind == WorkerMemoryKind.ConversationTopic &&
+                GetWorkerMemoryExpiresWorldHour(memory) > now)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool ShouldExpireWorkerMemory(WorkerMemory memory, float now)
+    {
+        float expiresWorldHour = GetWorkerMemoryExpiresWorldHour(memory);
+        return expiresWorldHour > 0f && now >= expiresWorldHour;
+    }
+
+    private static float GetWorkerMemoryExpiresWorldHour(WorkerMemory memory)
+    {
+        if (memory == null)
+        {
+            return 0f;
+        }
+
+        return memory.ExpiresWorldHour > 0f
+            ? memory.ExpiresWorldHour
+            : GetDefaultWorkerMemoryExpiresWorldHour(memory);
+    }
+
+    private static float GetDefaultWorkerMemoryExpiresWorldHour(WorkerMemory memory)
+    {
+        return memory != null && memory.Kind == WorkerMemoryKind.ConversationTopic
+            ? memory.CreatedWorldHour + WorkerPersonalMemoryLifetimeHours
+            : 0f;
     }
 
     private void RecordWorkerSocialThought(DriverAgent owner, DriverAgent other, string templateKey, LocationType? place, int opinionDelta)
@@ -672,13 +864,27 @@ public partial class GameBootstrap
             WorkerSocialInteractionKind.CoworkerShift => ru ? "\u0421\u043c\u0435\u043d\u0430" : "Shift",
             WorkerSocialInteractionKind.ArrivalWave => ru ? "\u041e\u0434\u0438\u043d \u0430\u0432\u0442\u043e\u0431\u0443\u0441" : "Same bus",
             WorkerSocialInteractionKind.FamilyFormation => ru ? "\u0421\u0435\u043c\u044c\u044f" : "Family",
-            WorkerSocialInteractionKind.PlayerPromptedConversation => ru ? "\u0422\u0435\u043c\u0430 \u043e\u0442 \u0438\u0433\u0440\u043e\u043a\u0430" : "Player topic",
-            WorkerSocialInteractionKind.PlayerPromptedConversationFailed => ru ? "\u041d\u0435\u0443\u0434\u0430\u0447\u043d\u0430\u044f \u0442\u0435\u043c\u0430" : "Awkward topic",
+            WorkerSocialInteractionKind.PlayerPromptedConversation => FormatWorkerSocialTopicContext(memory, ru, positive: true),
+            WorkerSocialInteractionKind.PlayerPromptedConversationFailed => FormatWorkerSocialTopicContext(memory, ru, positive: false),
             _ => ru ? "\u041a\u043e\u043d\u0442\u0430\u043a\u0442" : "Contact"
         };
 
         return ru
             ? $"{context}, \u0434\u0435\u043d\u044c {memory.LastInteractionDay}"
             : $"{context}, day {memory.LastInteractionDay}";
+    }
+
+    private static string FormatWorkerSocialTopicContext(WorkerSocialMemory memory, bool ru, bool positive)
+    {
+        if (!string.IsNullOrWhiteSpace(memory?.LastConversationTopic))
+        {
+            return ru
+                ? $"\u0422\u0435\u043c\u0430: \u00ab{memory.LastConversationTopic}\u00bb"
+                : $"Topic: \"{memory.LastConversationTopic}\"";
+        }
+
+        return positive
+            ? (ru ? "\u0422\u0435\u043c\u0430 \u043e\u0442 \u0438\u0433\u0440\u043e\u043a\u0430" : "Player topic")
+            : (ru ? "\u041d\u0435\u0443\u0434\u0430\u0447\u043d\u0430\u044f \u0442\u0435\u043c\u0430" : "Awkward topic");
     }
 }
