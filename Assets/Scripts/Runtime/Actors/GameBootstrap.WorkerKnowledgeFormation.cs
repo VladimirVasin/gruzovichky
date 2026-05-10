@@ -232,6 +232,7 @@ public partial class GameBootstrap
         worker.Memories.Insert(0, memory);
         DriverAgent sourceWorker = GetDriverAgentById(pending.SourceWorkerId);
         RecordNoosphereKnowledgeReceived(worker, sourceWorker, memory, now);
+        TryCanonizeCityKnowledge(memory, now);
         TrimWorkerMemories(worker, now);
         QueueWorkerKnowledgeReflectionThought(worker, sourceWorker, memory, now);
         isDriversScreenDirty = true;
@@ -691,6 +692,11 @@ public partial class GameBootstrap
     private bool HasEquivalentFormedWorkerKnowledge(DriverAgent worker, WorkerMemory source, float now)
     {
         if (worker == null || source == null)
+        {
+            return true;
+        }
+
+        if (HasCityKnowledgeCanonEquivalent(source))
         {
             return true;
         }

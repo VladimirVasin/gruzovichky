@@ -208,7 +208,7 @@ public partial class GameBootstrap
     {
         while (worker != null && worker.Memories.Count > WorkerPersonalMemoryCap)
         {
-            int removeIndex = worker.Memories.Count - 1;
+            int removeIndex = FindWorkerMemoryTrimIndex(worker);
             RecordNoosphereKnowledgeForgottenByLimit(worker, worker.Memories[removeIndex], now);
             worker.Memories.RemoveAt(removeIndex);
         }
@@ -300,6 +300,11 @@ public partial class GameBootstrap
 
     private static bool ShouldExpireWorkerMemory(WorkerMemory memory, float now)
     {
+        if (IsPermanentWorkerMemory(memory))
+        {
+            return false;
+        }
+
         float expiresWorldHour = GetWorkerMemoryExpiresWorldHour(memory);
         return expiresWorldHour > 0f && now >= expiresWorldHour;
     }
@@ -307,6 +312,11 @@ public partial class GameBootstrap
     private static float GetWorkerMemoryExpiresWorldHour(WorkerMemory memory)
     {
         if (memory == null)
+        {
+            return 0f;
+        }
+
+        if (IsPermanentWorkerMemory(memory))
         {
             return 0f;
         }

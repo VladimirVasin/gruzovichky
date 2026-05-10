@@ -121,6 +121,7 @@ public partial class GameBootstrap
     private static bool IsTimedWorkerMemory(WorkerMemory memory)
     {
         return memory != null &&
+               !IsPermanentWorkerMemory(memory) &&
                (memory.Kind == WorkerMemoryKind.ConversationTopic ||
                 memory.Kind == WorkerMemoryKind.BuildingExistence);
     }
@@ -147,9 +148,14 @@ public partial class GameBootstrap
 
     private bool HasActiveWorkerConversationTopicKnowledge(DriverAgent worker)
     {
-        if (worker == null || worker.Memories.Count == 0)
+        if (worker == null)
         {
             return false;
+        }
+
+        if (HasAnyCityCanonConversationTopic())
+        {
+            return true;
         }
 
         float now = GetCurrentWorldHour();

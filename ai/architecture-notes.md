@@ -23,7 +23,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 - It still couples presentation and simulation, but the runtime is now split into concern-based partial scripts under `Assets/Scripts/Runtime/`.
 - Runtime C# files are kept under the 900-line cleanup target by splitting feature clusters into focused partials such as `Runtime/Racing/`, `Runtime/UI/FleetCanvas/`, `GameBootstrap.Types*.cs`, `GameBootstrap.WorldVisuals.*.cs`, `GameBootstrap.MainMenuHud*.cs`, and `GameBootstrap.Drivers.*.cs`.
 - Numeric worker skills and temporary worker effects have been removed; `GameBootstrap.WorkerPerks*` owns perk assignment/display, while `GameBootstrap.WorkerEducation.cs` keeps the small Basic/Vocational/Higher gate needed by Labor Exchange staffing.
-- Resident knowledge remains in `GameBootstrap` partials for now: `GameBootstrap.WorkerKnowledge*` / `GameBootstrap.WorkerRumors.cs` own pending knowledge formation, personal memories, expiry, opinion/iteration/source/rumor metadata, and resident-to-resident sharing, while the Residents `Knowledge` tab and Noosphere screen own display.
+- Resident knowledge remains in `GameBootstrap` partials for now: `GameBootstrap.WorkerKnowledge*` / `GameBootstrap.WorkerRumors.cs` / `GameBootstrap.CityKnowledgeCanon.cs` own pending knowledge formation, personal memories, expiry, opinion/iteration/source/rumor metadata, resident-to-resident sharing, and permanent citywide Noosphere canon knowledge, while the Residents `Knowledge` tab and Noosphere screen own display.
 - Building work schedules now route through `GameBootstrap.RuntimeSchedules.cs`; use that partial before editing staff slot counts, service shifts, higher-education office hours, or transport weekend behavior.
 - Runtime audio has a dedicated partial/catalog layer for generated SFX, curated ambience, music, worker footsteps, and Main Menu Sound options.
 - Navigation now starts from `ai/systems-map.md` -> `System Owner Map`; owner cards are maintained when paths, ownership, or responsibilities change.
@@ -116,7 +116,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 ### `Assets/Scripts/Runtime/Actors/GameBootstrap.WorkerKnowledge*.cs`
 
-- Owns resident knowledge creation, pending formation before memory insertion, duplicate checks, expiry/burn handling, source reasons, per-memory opinion/iteration/rumor snapshots, and sharing through idle dialogue, service co-presence, coworker shifts, City Hall introductions, and family formation.
+- Owns resident knowledge creation, pending formation before memory insertion, duplicate checks, expiry/burn handling, source reasons, per-memory opinion/iteration/rumor snapshots, citywide permanent canonization, and sharing through idle dialogue, service co-presence, coworker shifts, City Hall introductions, and family formation.
 - HUD display lives in `GameBootstrap.FleetCanvas.WorkersScreen.Knowledge.cs` and `GameBootstrap.FleetCanvas.NoosphereScreen.cs`; dialogue bubble highlighting is driven from active knowledge but still rendered by the relevant world/interior UI partials.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`

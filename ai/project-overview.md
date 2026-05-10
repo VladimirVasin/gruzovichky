@@ -69,7 +69,7 @@ ai/                    Shared AI memory
   - the player builds roads/buildings/stops and manages workers through HUD panels
   - workers resolve shifts and needs through services, production, transit, walking, fallback activities, and time-limited knowledge sharing
   - trucks and buses use grid roads while regional land/river trade uses built routes, Warehouse/Docks, and off-map merchant flows
-  - production, warehouse delivery, taxes, service banks, event feed, Noosphere knowledge logs, and regional trade evolve over time
+  - production, warehouse delivery, taxes, service banks, event feed, personal and citywide Noosphere knowledge, and regional trade evolve over time
   - racing can be launched from eligible trade-truck flow
 
 ## High-Impact Areas

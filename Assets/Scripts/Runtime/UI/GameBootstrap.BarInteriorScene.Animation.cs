@@ -684,6 +684,7 @@ public partial class GameBootstrap
         selectedMemory = null;
         float now = GetCurrentWorldHour();
         int count = 0;
+        bool canUseCityCanon = HasBarInteriorKnowledgeAudience(barVisitorsOnly);
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent driver = driverAgents[i];
@@ -700,6 +701,11 @@ public partial class GameBootstrap
                     count++;
                 }
             }
+        }
+
+        if (canUseCityCanon)
+        {
+            count += GetCityKnowledgeCanonMemoryCount();
         }
 
         if (count == 0)
@@ -733,6 +739,35 @@ public partial class GameBootstrap
                 }
 
                 seen++;
+            }
+        }
+
+        if (canUseCityCanon &&
+            TryGetCityKnowledgeCanonMemoryAt(selectedIndex - seen, out WorkerMemory cityCanonMemory))
+        {
+            selectedMemory = cityCanonMemory;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool HasBarInteriorKnowledgeAudience(bool barVisitorsOnly)
+    {
+        if (!barVisitorsOnly)
+        {
+            return true;
+        }
+
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (driver != null &&
+                !driver.HasDepartedTown &&
+                driver.IsInsideBuilding &&
+                driver.InsideBuildingType == LocationType.Bar)
+            {
+                return true;
             }
         }
 

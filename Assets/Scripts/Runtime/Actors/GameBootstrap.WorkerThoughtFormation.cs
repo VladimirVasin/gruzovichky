@@ -468,7 +468,7 @@ public partial class GameBootstrap
         out WorkerMemory result)
     {
         result = null;
-        if (worker == null || buildingTypes == null || worker.Memories.Count == 0)
+        if (worker == null || buildingTypes == null)
         {
             return false;
         }
@@ -500,6 +500,12 @@ public partial class GameBootstrap
             if (newestForType != null)
             {
                 result = newestForType;
+                return true;
+            }
+
+            if (TryFindCityCanonBuildingKnowledge(type, out WorkerMemory cityCanonMemory))
+            {
+                result = cityCanonMemory;
                 return true;
             }
         }
@@ -621,25 +627,53 @@ public partial class GameBootstrap
         if (memory == null)
         {
             pending.KnowledgeTopic = string.Empty;
+            pending.KnowledgeRumorRootId = 0;
+            pending.KnowledgeOriginalTopic = string.Empty;
             pending.KnowledgeBuildingType = null;
             pending.KnowledgeBuildingInstanceId = 0;
             pending.KnowledgeBuildingLabel = string.Empty;
             pending.KnowledgeExpiresWorldHour = 0f;
+            pending.KnowledgeIsCityCanon = false;
             return;
         }
 
         pending.KnowledgeKind = memory.Kind;
         pending.KnowledgeOtherWorkerId = memory.OtherWorkerId;
         pending.KnowledgeTopic = GetWorkerRumorTopic(memory);
+        pending.KnowledgeRumorRootId = memory.RumorRootId;
+        pending.KnowledgeOriginalTopic = GetWorkerRumorOriginalTopic(memory);
         pending.KnowledgeBuildingType = memory.BuildingType;
         pending.KnowledgeBuildingInstanceId = memory.BuildingInstanceId;
         pending.KnowledgeBuildingLabel = memory.BuildingLabel ?? string.Empty;
         pending.KnowledgeExpiresWorldHour = GetWorkerMemoryExpiresWorldHour(memory);
+        pending.KnowledgeIsCityCanon = memory.IsCityCanonKnowledge;
     }
 
     private bool IsPendingWorkerKnowledgeStillKnown(DriverAgent worker, PendingWorkerThought pending, float now)
     {
         if (worker == null || pending == null || !pending.HasKnowledgeSnapshot)
+        {
+            return true;
+        }
+
+        if (pending.KnowledgeIsCityCanon)
+        {
+            return true;
+        }
+
+        WorkerMemory canonProbe = new()
+        {
+            Kind = pending.KnowledgeKind,
+            OtherWorkerId = pending.KnowledgeOtherWorkerId,
+            Topic = pending.KnowledgeTopic,
+            RumorRootId = pending.KnowledgeRumorRootId,
+            OriginalTopic = pending.KnowledgeOriginalTopic,
+            RumorTopic = pending.KnowledgeTopic,
+            BuildingType = pending.KnowledgeBuildingType,
+            BuildingInstanceId = pending.KnowledgeBuildingInstanceId,
+            BuildingLabel = pending.KnowledgeBuildingLabel
+        };
+        if (HasCityKnowledgeCanonEquivalent(canonProbe))
         {
             return true;
         }

@@ -191,7 +191,8 @@ public partial class GameBootstrap
     private enum NoosphereKnowledgeEventKind
     {
         Received,
-        Burned
+        Burned,
+        Canonized
     }
 
     private enum WorkerLifeOpinionCategory
@@ -424,10 +425,13 @@ public partial class GameBootstrap
         public WorkerMemoryKind KnowledgeKind;
         public int KnowledgeOtherWorkerId;
         public string KnowledgeTopic = string.Empty;
+        public int KnowledgeRumorRootId;
+        public string KnowledgeOriginalTopic = string.Empty;
         public LocationType? KnowledgeBuildingType;
         public int KnowledgeBuildingInstanceId;
         public string KnowledgeBuildingLabel = string.Empty;
         public float KnowledgeExpiresWorldHour;
+        public bool KnowledgeIsCityCanon;
         public readonly List<WorkerThoughtPlaceholder> Placeholders = new();
     }
 
@@ -501,6 +505,9 @@ public partial class GameBootstrap
         public string OpinionReasonRu = string.Empty;
         public string OpinionReasonEn = string.Empty;
         public int FormedFromWorkerId;
+        public bool IsCityCanonKnowledge;
+        public int CityCanonAdoptionCount;
+        public int CityCanonAdoptionRequired;
         public float FormationStartedWorldHour;
         public float FormationCompletedWorldHour;
         public int CreatedDay;
@@ -536,6 +543,9 @@ public partial class GameBootstrap
         public int OpinionConfidence;
         public string OpinionReasonRu = string.Empty;
         public string OpinionReasonEn = string.Empty;
+        public bool IsCityCanonKnowledge;
+        public int CityCanonAdoptionCount;
+        public int CityCanonAdoptionRequired;
         public int EventDay;
         public float EventWorldHour;
         public float MemoryCreatedWorldHour;

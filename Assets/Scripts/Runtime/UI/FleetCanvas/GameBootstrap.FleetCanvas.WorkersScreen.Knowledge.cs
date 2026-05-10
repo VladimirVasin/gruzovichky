@@ -207,10 +207,13 @@ public partial class GameBootstrap
             return result;
         }
 
+        AddCityKnowledgeCanonHudEntries(result);
+
         for (int i = 0; i < worker.Memories.Count && result.Count < WorkerPersonalMemoryCap; i++)
         {
             WorkerMemory memory = worker.Memories[i];
-            if (ShouldShowWorkerMemoryInKnowledgeHud(memory, now))
+            if (ShouldShowWorkerMemoryInKnowledgeHud(memory, now) &&
+                !HasCityKnowledgeCanonEquivalent(memory))
             {
                 result.Add(new WorkerKnowledgeHudEntry(memory));
             }
@@ -219,7 +222,13 @@ public partial class GameBootstrap
         for (int i = 0; i < worker.PendingKnowledge.Count && result.Count < WorkerPersonalMemoryCap; i++)
         {
             PendingWorkerKnowledge pending = worker.PendingKnowledge[i];
-            if (IsPendingWorkerKnowledgeDisplayable(pending))
+            if (!IsPendingWorkerKnowledgeDisplayable(pending))
+            {
+                continue;
+            }
+
+            WorkerMemory probe = CreateWorkerMemoryProbe(pending);
+            if (!HasCityKnowledgeCanonEquivalent(probe))
             {
                 result.Add(new WorkerKnowledgeHudEntry(pending));
             }
@@ -350,7 +359,9 @@ public partial class GameBootstrap
 
         if (row.TitleText != null)
         {
-            row.TitleText.text = ru ? "\u0422\u0435\u043c\u0430 \u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440\u0430" : "Conversation topic";
+            row.TitleText.text = memory.IsCityCanonKnowledge
+                ? (ru ? "\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u043e\u0439 \u0441\u043b\u0443\u0445" : "City rumor")
+                : (ru ? "\u0422\u0435\u043c\u0430 \u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440\u0430" : "Conversation topic");
         }
 
         if (row.DescriptionText != null)
@@ -361,9 +372,13 @@ public partial class GameBootstrap
                                     NormalizeWorkerKnowledgeTopicKey(originalTopic) != NormalizeWorkerKnowledgeTopicKey(GetWorkerRumorTopic(memory))
                 ? ru ? $" \u0418\u0441\u0445\u043e\u0434\u043d\u043e: \u00ab{FormatCitySocialTopicRichText(originalTopic)}\u00bb." : $" Original: \"{FormatCitySocialTopicRichText(originalTopic)}\"."
                 : string.Empty;
-            row.DescriptionText.text = ru
-                ? $"\u041f\u043e\u0441\u043b\u0435 \u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440\u0430 \u0441 {otherName} \u0437\u0430\u043f\u043e\u043c\u043d\u0438\u043b \u0441\u043b\u0443\u0445: \u00ab{topic}\u00bb.{originalSuffix}"
-                : $"After talking with {otherName}, remembered rumor: \"{topic}\".{originalSuffix}";
+            row.DescriptionText.text = memory.IsCityCanonKnowledge
+                ? ru
+                    ? $"\u041d\u043e\u043e\u0441\u0444\u0435\u0440\u0430 \u0437\u0430\u043a\u0440\u0435\u043f\u0438\u043b\u0430 \u0441\u043b\u0443\u0445: \u00ab{topic}\u00bb. \u0414\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u0436\u0438\u0442\u0435\u043b\u044f \u043e\u043d \u0443\u0436\u0435 \u043e\u0431\u0449\u0435\u0435 \u0437\u043d\u0430\u043d\u0438\u0435.{originalSuffix}"
+                    : $"The Noosphere canonized rumor: \"{topic}\". This resident treats it as shared knowledge.{originalSuffix}"
+                : ru
+                    ? $"\u041f\u043e\u0441\u043b\u0435 \u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440\u0430 \u0441 {otherName} \u0437\u0430\u043f\u043e\u043c\u043d\u0438\u043b \u0441\u043b\u0443\u0445: \u00ab{topic}\u00bb.{originalSuffix}"
+                    : $"After talking with {otherName}, remembered rumor: \"{topic}\".{originalSuffix}";
         }
 
         if (row.MetaText != null)
@@ -376,9 +391,14 @@ public partial class GameBootstrap
             string opinion = FormatWorkerKnowledgeOpinionMeta(memory, ru);
             string attitude = FormatWorkerKnowledgeSourceAttitudeMeta(memory.SourceAttitude, ru);
             string rumorState = FormatWorkerRumorStateMeta(memory, ru);
-            row.MetaText.text = string.IsNullOrWhiteSpace(source)
-                ? $"{iteration}; {rumorState}; {attitude}; {outcome}; {opinion}"
-                : ru ? $"{iteration}; {rumorState}; {attitude}; \u0418\u0441\u0442\u043e\u0447\u043d\u0438\u043a: {source}; {outcome}; {opinion}" : $"{iteration}; {rumorState}; {attitude}; Source: {source}; {outcome}; {opinion}";
+            string canonMeta = memory.IsCityCanonKnowledge
+                ? ru ? $"\u041d\u043e\u043e\u0441\u0444\u0435\u0440\u0430: \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430; \u043f\u0440\u0438\u043d\u044f\u043b\u0438 {memory.CityCanonAdoptionCount}/{memory.CityCanonAdoptionRequired}" : $"Noosphere: forever; accepted {memory.CityCanonAdoptionCount}/{memory.CityCanonAdoptionRequired}"
+                : string.Empty;
+            row.MetaText.text = memory.IsCityCanonKnowledge
+                ? $"{canonMeta}; {iteration}; {rumorState}; {attitude}; {outcome}; {opinion}"
+                : string.IsNullOrWhiteSpace(source)
+                    ? $"{iteration}; {rumorState}; {attitude}; {outcome}; {opinion}"
+                    : ru ? $"{iteration}; {rumorState}; {attitude}; \u0418\u0441\u0442\u043e\u0447\u043d\u0438\u043a: {source}; {outcome}; {opinion}" : $"{iteration}; {rumorState}; {attitude}; Source: {source}; {outcome}; {opinion}";
             row.MetaText.color = GetWorkerKnowledgeOpinionColor(memory.OpinionTone);
         }
 
@@ -415,23 +435,34 @@ public partial class GameBootstrap
 
         if (row.TitleText != null)
         {
-            row.TitleText.text = ru ? "\u0417\u043d\u0430\u043d\u0438\u0435 \u043e \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0435" : "Building knowledge";
+            row.TitleText.text = memory.IsCityCanonKnowledge
+                ? (ru ? "\u041e\u0431\u0449\u0435\u0435 \u0437\u043d\u0430\u043d\u0438\u0435 \u043e \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0435" : "Shared building knowledge")
+                : (ru ? "\u0417\u043d\u0430\u043d\u0438\u0435 \u043e \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0435" : "Building knowledge");
         }
 
         if (row.DescriptionText != null)
         {
             string building = $"<color=#74D7FF><b>{SanitizeRichTextLiteral(buildingName)}</b></color>";
-            row.DescriptionText.text = ru
-                ? $"\u041f\u043e\u043d\u044f\u043b, \u0447\u0442\u043e \u0432 \u0433\u043e\u0440\u043e\u0434\u0435 \u0435\u0441\u0442\u044c {building}."
-                : $"Understood that {building} exists in town.";
+            row.DescriptionText.text = memory.IsCityCanonKnowledge
+                ? ru
+                    ? $"\u0413\u043e\u0440\u043e\u0434 \u0437\u0430\u043a\u0440\u0435\u043f\u0438\u043b, \u0447\u0442\u043e \u0443 \u043d\u0435\u0433\u043e \u0435\u0441\u0442\u044c {building}. \u0416\u0438\u0442\u0435\u043b\u044c \u0437\u043d\u0430\u0435\u0442 \u044d\u0442\u043e \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430."
+                    : $"The city canonized that {building} exists. This resident knows it forever."
+                : ru
+                    ? $"\u041f\u043e\u043d\u044f\u043b, \u0447\u0442\u043e \u0432 \u0433\u043e\u0440\u043e\u0434\u0435 \u0435\u0441\u0442\u044c {building}."
+                    : $"Understood that {building} exists in town.";
         }
 
         if (row.MetaText != null)
         {
             string opinion = FormatWorkerKnowledgeOpinionMeta(memory, ru);
-            row.MetaText.text = ru
-                ? $"{FormatWorkerKnowledgeIteration(memory, ru)}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {opinion}"
-                : $"{FormatWorkerKnowledgeIteration(memory, ru)}; Reason: {reason}; {opinion}";
+            string canonMeta = memory.IsCityCanonKnowledge
+                ? ru ? $"\u041d\u043e\u043e\u0441\u0444\u0435\u0440\u0430: \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430; \u043f\u0440\u0438\u043d\u044f\u043b\u0438 {memory.CityCanonAdoptionCount}/{memory.CityCanonAdoptionRequired}" : $"Noosphere: forever; accepted {memory.CityCanonAdoptionCount}/{memory.CityCanonAdoptionRequired}"
+                : string.Empty;
+            row.MetaText.text = memory.IsCityCanonKnowledge
+                ? $"{canonMeta}; {FormatWorkerKnowledgeIteration(memory, ru)}; {opinion}"
+                : ru
+                    ? $"{FormatWorkerKnowledgeIteration(memory, ru)}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {opinion}"
+                    : $"{FormatWorkerKnowledgeIteration(memory, ru)}; Reason: {reason}; {opinion}";
             row.MetaText.color = GetWorkerKnowledgeOpinionColor(memory.OpinionTone);
         }
 
@@ -581,6 +612,28 @@ public partial class GameBootstrap
 
     private void ApplyWorkerKnowledgeExpiryIndicator(WorkerKnowledgeRowUi row, WorkerMemory memory, float now, bool ru)
     {
+        if (IsPermanentWorkerMemory(memory))
+        {
+            Color permanentColor = new Color(0.60f, 0.78f, 1f, 1f);
+            if (row.ExpiryFillRect != null)
+            {
+                row.ExpiryFillRect.sizeDelta = new Vector2(WorkerKnowledgeExpiryBarWidth, 0f);
+            }
+
+            if (row.ExpiryFillImage != null)
+            {
+                row.ExpiryFillImage.color = permanentColor;
+            }
+
+            if (row.ExpiryText != null)
+            {
+                row.ExpiryText.text = ru ? "\u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430" : "forever";
+                row.ExpiryText.color = permanentColor;
+            }
+
+            return;
+        }
+
         float freshness = GetWorkerMemoryFreshness01(memory, now);
         float remainingHours = GetWorkerMemoryRemainingHours(memory, now);
         Color expiryColor = Color.Lerp(new Color(0.95f, 0.34f, 0.24f, 1f), new Color(1f, 0.82f, 0.29f, 1f), freshness);
@@ -604,6 +657,11 @@ public partial class GameBootstrap
 
     private static float GetWorkerMemoryFreshness01(WorkerMemory memory, float now)
     {
+        if (IsPermanentWorkerMemory(memory))
+        {
+            return 1f;
+        }
+
         float remainingHours = GetWorkerMemoryRemainingHours(memory, now);
         return Mathf.Clamp01(remainingHours / WorkerPersonalMemoryLifetimeHours);
     }

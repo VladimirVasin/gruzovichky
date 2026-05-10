@@ -20,6 +20,7 @@ public partial class GameBootstrap
         public RectTransform WindowRoot;
         public Text TitleText;
         public Text SummaryText;
+        public RectTransform VisualPanelRoot;
         public Text EmptyText;
         public ScrollRect ScrollRect;
         public Button CloseButton;
@@ -140,6 +141,9 @@ public partial class GameBootstrap
             OpinionConfidence = memory.OpinionConfidence,
             OpinionReasonRu = memory.OpinionReasonRu ?? string.Empty,
             OpinionReasonEn = memory.OpinionReasonEn ?? string.Empty,
+            IsCityCanonKnowledge = memory.IsCityCanonKnowledge,
+            CityCanonAdoptionCount = memory.CityCanonAdoptionCount,
+            CityCanonAdoptionRequired = memory.CityCanonAdoptionRequired,
             EventDay = currentDay,
             EventWorldHour = now,
             MemoryCreatedWorldHour = memory.CreatedWorldHour,
@@ -154,6 +158,7 @@ public partial class GameBootstrap
         }
 
         isNoosphereScreenDirty = true;
+        NotifyNoosphereVisualKnowledgeEvent(entry);
     }
 
     private static string GetNoosphereWorkerName(DriverAgent worker, int fallbackId)
@@ -223,8 +228,28 @@ public partial class GameBootstrap
         noosphereScreenUi.SummaryText.horizontalOverflow = HorizontalWrapMode.Wrap;
         noosphereScreenUi.SummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
 
-        RectTransform listPanel = CreateStyledPanel("NoosphereListPanel", window, FleetInsetColor);
-        listPanel.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        RectTransform bodyRow = CreateUiObject("NoosphereBodyRow", window).GetComponent<RectTransform>();
+        LayoutElement bodyLayoutElement = bodyRow.gameObject.AddComponent<LayoutElement>();
+        bodyLayoutElement.flexibleHeight = 1f;
+        bodyLayoutElement.minHeight = 420f;
+        HorizontalLayoutGroup bodyLayout = bodyRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+        bodyLayout.spacing = 12f;
+        bodyLayout.childControlWidth = true;
+        bodyLayout.childControlHeight = true;
+        bodyLayout.childForceExpandWidth = false;
+        bodyLayout.childForceExpandHeight = true;
+
+        RectTransform visualPanel = CreateStyledPanel("NoosphereVisualPanel", bodyRow, FleetInsetColor);
+        LayoutElement visualLayout = visualPanel.gameObject.AddComponent<LayoutElement>();
+        visualLayout.preferredWidth = 390f;
+        visualLayout.flexibleHeight = 1f;
+        noosphereScreenUi.VisualPanelRoot = visualPanel;
+        SetupNoosphereVisualPanelUi(visualPanel, font);
+
+        RectTransform listPanel = CreateStyledPanel("NoosphereListPanel", bodyRow, FleetInsetColor);
+        LayoutElement listPanelLayout = listPanel.gameObject.AddComponent<LayoutElement>();
+        listPanelLayout.flexibleWidth = 1f;
+        listPanelLayout.flexibleHeight = 1f;
         VerticalLayoutGroup listLayout = listPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         listLayout.padding = new RectOffset(12, 12, 12, 12);
         listLayout.spacing = 8f;
@@ -423,11 +448,12 @@ public partial class GameBootstrap
         int activeKnowledgeCount = CountActiveNoosphereKnowledge(now);
         int burnedCount = CountNoosphereEvents(NoosphereKnowledgeEventKind.Burned);
         int receivedCount = CountNoosphereEvents(NoosphereKnowledgeEventKind.Received);
+        int canonizedCount = CountNoosphereEvents(NoosphereKnowledgeEventKind.Canonized);
 
         noosphereScreenUi.TitleText.text = ru ? "\u041d\u043e\u043e\u0441\u0444\u0435\u0440\u0430" : "Noosphere";
         noosphereScreenUi.SummaryText.text = ru
-            ? $"\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u043e\u0439 \u0441\u043b\u0435\u0434 \u0437\u043d\u0430\u043d\u0438\u0439: \u0430\u043a\u0442\u0438\u0432\u043d\u043e {activeKnowledgeCount}, \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u043e {receivedCount}, \u0441\u0433\u043e\u0440\u0435\u043b\u043e {burnedCount}. \u0417\u0434\u0435\u0441\u044c \u0432\u0438\u0434\u043d\u043e, \u043a\u0442\u043e \u0447\u0442\u043e \u0443\u0437\u043d\u0430\u043b, \u043e\u0442 \u043a\u043e\u0433\u043e \u0438 \u043f\u043e\u0447\u0435\u043c\u0443 \u0437\u043d\u0430\u043d\u0438\u0435 \u0438\u0441\u0447\u0435\u0437\u043b\u043e."
-            : $"City knowledge trace: active {activeKnowledgeCount}, received {receivedCount}, burned {burnedCount}. This shows who learned what, from whom, and why knowledge disappeared.";
+            ? $"\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u043e\u0439 \u0441\u043b\u0435\u0434 \u0437\u043d\u0430\u043d\u0438\u0439: \u0430\u043a\u0442\u0438\u0432\u043d\u043e {activeKnowledgeCount}, \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u043e {receivedCount}, \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u043e {canonizedCount}, \u0441\u0433\u043e\u0440\u0435\u043b\u043e {burnedCount}. \u0417\u0434\u0435\u0441\u044c \u0432\u0438\u0434\u043d\u043e, \u043a\u0442\u043e \u0447\u0442\u043e \u0443\u0437\u043d\u0430\u043b, \u043e\u0442 \u043a\u043e\u0433\u043e \u0438 \u043a\u0430\u043a\u0438\u0435 \u0437\u043d\u0430\u043d\u0438\u044f \u0441\u0442\u0430\u043b\u0438 \u0432\u0435\u0447\u043d\u044b\u043c\u0438."
+            : $"City knowledge trace: active {activeKnowledgeCount}, received {receivedCount}, canonized {canonizedCount}, burned {burnedCount}. This shows who learned what, from whom, and which knowledge became permanent.";
 
         noosphereScreenUi.EmptyText.gameObject.SetActive(noosphereKnowledgeLog.Count == 0);
         noosphereScreenUi.EmptyText.text = ru
@@ -462,14 +488,17 @@ public partial class GameBootstrap
         row.BodyText.text = BuildNoosphereEventBody(entry, ru);
         row.ReasonText.text = BuildNoosphereEventReason(entry, ru);
         ApplyNoosphereExpiryIndicator(row, entry, now, ru);
-        row.Background.color = entry.EventKind == NoosphereKnowledgeEventKind.Received
-            ? new Color(0.050f, 0.115f, 0.105f, 0.94f)
-            : new Color(0.130f, 0.070f, 0.070f, 0.94f);
+        row.Background.color = entry.EventKind switch
+        {
+            NoosphereKnowledgeEventKind.Canonized => new Color(0.095f, 0.105f, 0.155f, 0.94f),
+            NoosphereKnowledgeEventKind.Received => new Color(0.050f, 0.115f, 0.105f, 0.94f),
+            _ => new Color(0.130f, 0.070f, 0.070f, 0.94f)
+        };
     }
 
     private int CountActiveNoosphereKnowledge(float now)
     {
-        int count = 0;
+        int count = GetCityKnowledgeCanonMemoryCount();
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent worker = driverAgents[i];
@@ -482,7 +511,8 @@ public partial class GameBootstrap
             {
                 WorkerMemory memory = worker.Memories[j];
                 if (IsWorkerMemoryDisplayable(memory) &&
-                    !ShouldExpireWorkerMemory(memory, now))
+                    !ShouldExpireWorkerMemory(memory, now) &&
+                    !HasCityKnowledgeCanonEquivalent(memory))
                 {
                     count++;
                 }
@@ -516,7 +546,38 @@ public partial class GameBootstrap
         bool hasTimer = entry != null &&
                         entry.MemoryCreatedWorldHour >= 0f &&
                         entry.MemoryExpiresWorldHour > entry.MemoryCreatedWorldHour;
-        row.ExpiryRoot.gameObject.SetActive(hasTimer);
+        bool isPermanent = entry != null &&
+                           (entry.EventKind == NoosphereKnowledgeEventKind.Canonized ||
+                            entry.IsCityCanonKnowledge);
+        row.ExpiryRoot.gameObject.SetActive(hasTimer || isPermanent);
+        if (isPermanent)
+        {
+            Color permanentColor = new Color(0.60f, 0.78f, 1f, 1f);
+            if (row.ExpiryLabelText != null)
+            {
+                row.ExpiryLabelText.text = ru ? "\u0421\u0442\u0430\u0442\u0443\u0441" : "Status";
+                row.ExpiryLabelText.color = permanentColor;
+            }
+
+            if (row.ExpiryFillRect != null)
+            {
+                row.ExpiryFillRect.sizeDelta = new Vector2(NoosphereKnowledgeExpiryBarWidth, 0f);
+            }
+
+            if (row.ExpiryFillImage != null)
+            {
+                row.ExpiryFillImage.color = permanentColor;
+            }
+
+            if (row.ExpiryText != null)
+            {
+                row.ExpiryText.text = ru ? "\u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430" : "forever";
+                row.ExpiryText.color = permanentColor;
+            }
+
+            return;
+        }
+
         if (!hasTimer)
         {
             return;
@@ -573,6 +634,13 @@ public partial class GameBootstrap
                 ? (ru ? "\u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0430" : "building")
                 : entry.BuildingLabel;
             string building = $"<color=#74D7FF><b>{SanitizeRichTextLiteral(buildingLabel)}</b></color>";
+            if (entry.EventKind == NoosphereKnowledgeEventKind.Canonized)
+            {
+                return ru
+                    ? $"\u0413\u043e\u0440\u043e\u0434 \u0437\u0430\u043a\u0440\u0435\u043f\u0438\u043b \u0437\u043d\u0430\u043d\u0438\u0435, \u0447\u0442\u043e \u0443 \u043d\u0435\u0433\u043e \u0435\u0441\u0442\u044c {building}. \u0422\u0435\u043f\u0435\u0440\u044c \u044d\u0442\u043e \u0437\u043d\u0430\u044e\u0442 \u0432\u0441\u0435."
+                    : $"The city canonized that {building} exists. Everyone knows it now.";
+            }
+
             if (entry.EventKind == NoosphereKnowledgeEventKind.Burned)
             {
                 return ru
@@ -587,6 +655,13 @@ public partial class GameBootstrap
 
         string other = $"<b>{SanitizeRichTextLiteral(entry.OtherName)}</b>";
         string topic = FormatCitySocialTopicRichText(GetWorkerRumorTopic(entry));
+
+        if (entry.EventKind == NoosphereKnowledgeEventKind.Canonized)
+        {
+            return ru
+                ? $"\u0412 \u041d\u043e\u043e\u0441\u0444\u0435\u0440\u0435 \u0437\u0430\u043a\u0440\u0435\u043f\u0438\u043b\u0441\u044f \u0441\u043b\u0443\u0445 \u00ab{topic}\u00bb. \u0422\u0435\u043f\u0435\u0440\u044c \u043a\u0430\u0436\u0434\u044b\u0439 \u0436\u0438\u0442\u0435\u043b\u044c \u0441\u0447\u0438\u0442\u0430\u0435\u0442, \u0447\u0442\u043e \u0441\u043b\u044b\u0448\u0430\u043b \u0435\u0433\u043e."
+                : $"The Noosphere canonized the rumor \"{topic}\". Every resident now behaves as if they have heard it.";
+        }
 
         if (entry.EventKind == NoosphereKnowledgeEventKind.Burned)
         {
@@ -610,9 +685,12 @@ public partial class GameBootstrap
 
         if (entry.MemoryKind == WorkerMemoryKind.BuildingExistence)
         {
+            string canon = entry.EventKind == NoosphereKnowledgeEventKind.Canonized
+                ? ru ? $"; \u041f\u0440\u0438\u043d\u044f\u043b\u0438: {entry.CityCanonAdoptionCount}/{entry.CityCanonAdoptionRequired}; \u0421\u0440\u043e\u043a: \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430" : $"; Accepted: {entry.CityCanonAdoptionCount}/{entry.CityCanonAdoptionRequired}; TTL: forever"
+                : string.Empty;
             return ru
-                ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {FormatNoosphereKnowledgeOpinion(entry, ru)}"
-                : $"Iteration {GetNoosphereKnowledgeIteration(entry)}; Reason: {reason}; {FormatNoosphereKnowledgeOpinion(entry, ru)}";
+                ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}{canon}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {FormatNoosphereKnowledgeOpinion(entry, ru)}"
+                : $"Iteration {GetNoosphereKnowledgeIteration(entry)}{canon}; Reason: {reason}; {FormatNoosphereKnowledgeOpinion(entry, ru)}";
         }
 
         string outcome = entry.Positive
@@ -625,9 +703,12 @@ public partial class GameBootstrap
                               NormalizeWorkerKnowledgeTopicKey(originalTopic) != NormalizeWorkerKnowledgeTopicKey(currentTopic)
             ? ru ? $"; \u0418\u0441\u0445\u043e\u0434\u043d\u043e: \u00ab{FormatCitySocialTopicRichText(originalTopic)}\u00bb" : $"; Original: \"{FormatCitySocialTopicRichText(originalTopic)}\""
             : string.Empty;
+        string canonMeta = entry.EventKind == NoosphereKnowledgeEventKind.Canonized
+            ? ru ? $"; \u041f\u0440\u0438\u043d\u044f\u043b\u0438: {entry.CityCanonAdoptionCount}/{entry.CityCanonAdoptionRequired}; \u0421\u0440\u043e\u043a: \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430" : $"; Accepted: {entry.CityCanonAdoptionCount}/{entry.CityCanonAdoptionRequired}; TTL: forever"
+            : string.Empty;
         return ru
-            ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}; {rumorState}; {FormatWorkerKnowledgeSourceAttitudeMeta(entry.SourceAttitude, ru)}{originalMeta}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {outcome}; {FormatNoosphereKnowledgeOpinion(entry, ru)}"
-            : $"Iteration {GetNoosphereKnowledgeIteration(entry)}; {rumorState}; {FormatWorkerKnowledgeSourceAttitudeMeta(entry.SourceAttitude, ru)}{originalMeta}; Reason: {reason}; {outcome}; {FormatNoosphereKnowledgeOpinion(entry, ru)}";
+            ? $"\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f {GetNoosphereKnowledgeIteration(entry)}{canonMeta}; {rumorState}; {FormatWorkerKnowledgeSourceAttitudeMeta(entry.SourceAttitude, ru)}{originalMeta}; \u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reason}; {outcome}; {FormatNoosphereKnowledgeOpinion(entry, ru)}"
+            : $"Iteration {GetNoosphereKnowledgeIteration(entry)}{canonMeta}; {rumorState}; {FormatWorkerKnowledgeSourceAttitudeMeta(entry.SourceAttitude, ru)}{originalMeta}; Reason: {reason}; {outcome}; {FormatNoosphereKnowledgeOpinion(entry, ru)}";
     }
 
     private static string FormatNoosphereKnowledgeOpinion(NoosphereKnowledgeLogEntry entry, bool ru)
@@ -673,9 +754,19 @@ public partial class GameBootstrap
     {
         if (entry?.MemoryKind == WorkerMemoryKind.BuildingExistence)
         {
+            if (entry.EventKind == NoosphereKnowledgeEventKind.Canonized)
+            {
+                return ru ? "\u0417\u043d\u0430\u043d\u0438\u0435 \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u043e" : "Knowledge canonized";
+            }
+
             return entry.EventKind == NoosphereKnowledgeEventKind.Burned
                 ? (ru ? "\u0417\u043d\u0430\u043d\u0438\u0435 \u043e \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0435 \u0441\u0433\u043e\u0440\u0435\u043b\u043e" : "Building knowledge burned")
                 : (ru ? "\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0430 \u0432 \u043f\u0430\u043c\u044f\u0442\u0438" : "Building discovered");
+        }
+
+        if (entry != null && entry.EventKind == NoosphereKnowledgeEventKind.Canonized)
+        {
+            return ru ? "\u0421\u043b\u0443\u0445 \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0435\u043d" : "Rumor canonized";
         }
 
         return entry != null && entry.EventKind == NoosphereKnowledgeEventKind.Burned
@@ -685,16 +776,22 @@ public partial class GameBootstrap
 
     private static string GetNoosphereBadgeText(NoosphereKnowledgeEventKind kind, bool ru)
     {
-        return kind == NoosphereKnowledgeEventKind.Burned
-            ? (ru ? "\u0421\u0413\u041e\u0420" : "OUT")
-            : (ru ? "\u041d\u041e\u0412" : "NEW");
+        return kind switch
+        {
+            NoosphereKnowledgeEventKind.Burned => ru ? "\u0421\u0413\u041e\u0420" : "OUT",
+            NoosphereKnowledgeEventKind.Canonized => ru ? "\u0412\u0415\u0427" : "PERM",
+            _ => ru ? "\u041d\u041e\u0412" : "NEW"
+        };
     }
 
     private static Color GetNoosphereEventColor(NoosphereKnowledgeEventKind kind)
     {
-        return kind == NoosphereKnowledgeEventKind.Burned
-            ? new Color(0.95f, 0.36f, 0.25f, 1f)
-            : new Color(0.50f, 0.86f, 0.42f, 1f);
+        return kind switch
+        {
+            NoosphereKnowledgeEventKind.Burned => new Color(0.95f, 0.36f, 0.25f, 1f),
+            NoosphereKnowledgeEventKind.Canonized => new Color(0.60f, 0.78f, 1f, 1f),
+            _ => new Color(0.50f, 0.86f, 0.42f, 1f)
+        };
     }
 
     private static Button FindNoosphereCloseButton(RectTransform root)
