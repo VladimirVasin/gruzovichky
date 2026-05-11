@@ -4,8 +4,15 @@ using UnityEngine.UI;
 
 public partial class GameBootstrap
 {
-    private string GetBuildingQuickStatusText(LocationType locationType)
+    private static readonly Color BuildingQuickHudRoadWarningColor = new(0.96f, 0.34f, 0.20f, 1f);
+
+    private string GetBuildingQuickStatusText(LocationData location, LocationType locationType)
     {
+        if (TryGetRoadAccessQuickWarning(location, out string roadWarning, out _))
+        {
+            return roadWarning;
+        }
+
         if (locationType != LocationType.Docks && IsProductionLocation(locationType) && !IsLocationOperational(locationType))
         {
             return locationType switch
@@ -82,6 +89,23 @@ public partial class GameBootstrap
             LocationType.CityHall      => GetCityHallQuickResourceText(),
             _ => string.Empty
         };
+    }
+
+    private bool TryGetRoadAccessQuickWarning(LocationData location, out string status, out Color color)
+    {
+        status = string.Empty;
+        color = BuildingQuickHudRoadWarningColor;
+        if (location == null ||
+            !DoesLocationRequireRoadAccess(location.Type) ||
+            IsRequiredLocationRoadConnected(location))
+        {
+            return false;
+        }
+
+        status = IsRussianLanguage()
+            ? "\u041d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u043e \u043a \u0434\u043e\u0440\u043e\u0433\u0435\n\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0434\u043e\u0440\u043e\u0433\u0443 \u043a \u0432\u044a\u0435\u0437\u0434\u0443"
+            : "No road connection\nBuild a road to the entrance";
+        return true;
     }
 
     private string GetLocalBusStopNetworkStatusText()

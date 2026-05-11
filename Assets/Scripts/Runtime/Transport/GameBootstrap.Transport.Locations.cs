@@ -309,7 +309,6 @@ public partial class GameBootstrap
         LocationType.FurnitureFactory => true,
         LocationType.Docks            => true,
         LocationType.Stop             => true,
-        LocationType.IntercityStop    => true,
         _                             => false
     };
 

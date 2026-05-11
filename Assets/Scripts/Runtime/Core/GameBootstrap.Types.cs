@@ -578,6 +578,7 @@ public partial class GameBootstrap : MonoBehaviour
     private sealed class ImportedBuildingDoor
     {
         public Transform DoorTransform;
+        public Transform HingeTransform;
         public Quaternion ClosedLocalRotation;
         public Quaternion OpenLocalRotation;
     }

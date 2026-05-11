@@ -61,7 +61,7 @@ public sealed class WorldGenerationSmokeTests
     }
 
     [Test]
-    public void WorldLayoutGenerator_DebugStarterRoadNetworkConnectsRequiredDestinations()
+    public void WorldLayoutGenerator_DebugStarterRoadNetworkConnectsRequiredRoadDestinations()
     {
         for (int seed = 1; seed <= 20; seed++)
         {
@@ -73,7 +73,6 @@ public sealed class WorldGenerationSmokeTests
             Assert.That(IsConnectedByRoad(roadCells, layout.Parking.RoadAccess, layout.Warehouse.RoadAccess), Is.True, $"parking -> warehouse disconnected, seed {seed}");
             Assert.That(IsConnectedByRoad(roadCells, layout.Parking.RoadAccess, layout.Forest.RoadAccess), Is.True, $"parking -> forest disconnected, seed {seed}");
             Assert.That(IsConnectedByRoad(roadCells, layout.Parking.RoadAccess, layout.Motel.RoadAccess), Is.True, $"parking -> motel disconnected, seed {seed}");
-            Assert.That(IsConnectedByRoad(roadCells, layout.Parking.RoadAccess, layout.BusStop.RoadAccess), Is.True, $"parking -> bus stop disconnected, seed {seed}");
         }
     }
 
@@ -629,16 +628,14 @@ public sealed class WorldGenerationSmokeTests
                HasWideRoad(layout, layout.Warehouse.RoadAccess, layout.Forest.RoadAccess) &&
                HasWideRoad(layout, layout.Forest.RoadAccess, layout.Sawmill.RoadAccess) &&
                HasWideRoad(layout, layout.Sawmill.RoadAccess, layout.Warehouse.RoadAccess) &&
-               HasWideRoad(layout, layout.Warehouse.RoadAccess, layout.Motel.RoadAccess) &&
-               HasWideRoad(layout, layout.Motel.RoadAccess, layout.BusStop.RoadAccess);
+               HasWideRoad(layout, layout.Warehouse.RoadAccess, layout.Motel.RoadAccess);
     }
 
     private static bool HasUserRoadChain(GeneratedWorldLayout layout)
     {
         return HasWideRoad(layout, layout.Parking.RoadAccess, layout.GasStation.RoadAccess) &&
                HasWideRoad(layout, layout.GasStation.RoadAccess, layout.Warehouse.RoadAccess) &&
-               HasWideRoad(layout, layout.Warehouse.RoadAccess, layout.Forest.RoadAccess) &&
-               HasWideRoad(layout, layout.Warehouse.RoadAccess, layout.BusStop.RoadAccess);
+               HasWideRoad(layout, layout.Warehouse.RoadAccess, layout.Forest.RoadAccess);
     }
 
     private static HashSet<Vector2Int> BuildDebugStarterRoadCells(GeneratedWorldLayout layout)
@@ -650,7 +647,6 @@ public sealed class WorldGenerationSmokeTests
         Assert.That(AppendWideRoad(layout, roadCells, layout.Forest.RoadAccess, layout.Sawmill.RoadAccess), Is.True);
         Assert.That(AppendWideRoad(layout, roadCells, layout.Sawmill.RoadAccess, layout.Warehouse.RoadAccess), Is.True);
         Assert.That(AppendWideRoad(layout, roadCells, layout.Warehouse.RoadAccess, layout.Motel.RoadAccess), Is.True);
-        Assert.That(AppendWideRoad(layout, roadCells, layout.Motel.RoadAccess, layout.BusStop.RoadAccess), Is.True);
         return roadCells;
     }
 

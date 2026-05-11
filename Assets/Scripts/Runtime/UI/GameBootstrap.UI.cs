@@ -237,7 +237,6 @@ public partial class GameBootstrap
     {
         driver.WalkPath.Clear();
         driver.WalkWaypointIndex = 0;
-        driver.HasLastFootpathWearCell = false;
 
         DriverRescuePhase requestedPhase = driver.WalkPhase;
         if (TryRescueDriverFromUnsafeWalkCell(driver, "walk path start was unsafe"))

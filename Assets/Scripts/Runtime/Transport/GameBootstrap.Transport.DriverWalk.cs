@@ -41,6 +41,13 @@ public partial class GameBootstrap
         Vector3 currentPosition = driver.DriverObject.transform.position;
         UpdateDriverLastSafeWalkPosition(driver, currentPosition);
         RecordDriverFootpathWear(driver, currentPosition);
+        if (driver.IdleOverlapRerouteCooldown > 0f)
+        {
+            driver.IdleOverlapRerouteCooldown = Mathf.Max(
+                0f,
+                driver.IdleOverlapRerouteCooldown - Time.deltaTime);
+        }
+
         Vector3 targetPosition = driver.WalkTargetWorld;
         if (driver.WalkPath.Count > 0)
         {
@@ -60,11 +67,13 @@ public partial class GameBootstrap
 
             if (driver.WalkPhase == DriverRescuePhase.IdleWander && WouldIdleDriverOverlapAtPosition(driver, proposedPosition))
             {
-                driver.WalkPhase = DriverRescuePhase.None;
-                driver.WalkPath.Clear();
-                driver.WalkWaypointIndex = 0;
-                driver.IdleWanderPauseTimer = Random.Range(0.8f, 1.8f);
-                SessionDebugLogger.LogVerbose("IDLE", $"{driver.DriverName} paused idle walk to avoid overlapping another driver.");
+                if (driver.IdleOverlapRerouteCooldown <= 0f &&
+                    TryRerouteIdleDriverAroundOverlap(driver, currentPosition))
+                {
+                    return;
+                }
+
+                PauseIdleDriverWalkForOverlap(driver, currentPosition);
                 return;
             }
 
@@ -705,6 +714,50 @@ public partial class GameBootstrap
                 }
                 return;
         }
+    }
+
+    private bool TryRerouteIdleDriverAroundOverlap(DriverAgent driver, Vector3 currentPosition)
+    {
+        if (driver == null ||
+            driver.DriverObject == null ||
+            driver.WalkPhase != DriverRescuePhase.IdleWander ||
+            driver.IdleOverlapRerouteCooldown > 0f)
+        {
+            return false;
+        }
+
+        Vector3 targetWorld = driver.WalkTargetWorld;
+        if (driver.WalkPath.Count > 0)
+        {
+            targetWorld = driver.WalkPath[driver.WalkPath.Count - 1];
+        }
+
+        driver.IdleOverlapRerouteCooldown = Random.Range(0.55f, 1.1f);
+        if (!BuildDriverWalkPath(driver, currentPosition, targetWorld))
+        {
+            return false;
+        }
+
+        SessionDebugLogger.LogVerbose("IDLE", $"{driver.DriverName} rerouted idle walk around nearby pedestrians.");
+        return true;
+    }
+
+    private void PauseIdleDriverWalkForOverlap(DriverAgent driver, Vector3 currentPosition)
+    {
+        if (driver == null)
+        {
+            return;
+        }
+
+        driver.WalkPhase = DriverRescuePhase.None;
+        driver.WalkPath.Clear();
+        driver.WalkWaypointIndex = 0;
+        driver.WalkAnimationTime = 0f;
+        driver.IdleOverlapRerouteCooldown = 0f;
+        driver.WalkTargetWorld = currentPosition;
+        driver.IdleWanderPauseTimer = Random.Range(1.0f, 2.2f);
+        ApplyDriverPose(driver, 0f, 0f);
+        SessionDebugLogger.LogVerbose("IDLE", $"{driver.DriverName} paused idle walk to avoid overlapping another driver.");
     }
 
     private static bool RequiresDriverWalkPathForArrival(DriverRescuePhase phase)

@@ -186,10 +186,12 @@ public partial class GameBootstrap : MonoBehaviour
         texture.wrapMode = TextureWrapMode.Repeat;
         texture.filterMode = FilterMode.Bilinear;
 
-        Color packedDust = new(0.55f, 0.47f, 0.32f);
-        Color drySoil = new(0.68f, 0.59f, 0.42f);
-        Color straw = new(0.78f, 0.70f, 0.50f);
-        Color pebble = new(0.42f, 0.38f, 0.31f);
+        Color packedDust = new(0.48f, 0.39f, 0.25f);
+        Color drySoil = new(0.66f, 0.56f, 0.38f);
+        Color straw = new(0.81f, 0.73f, 0.49f);
+        Color dampSoil = new(0.34f, 0.28f, 0.20f);
+        Color edgeGrass = new(0.36f, 0.43f, 0.24f);
+        Color pebble = new(0.40f, 0.37f, 0.31f);
 
         for (int x = 0; x < size; x++)
         {
@@ -197,15 +199,40 @@ public partial class GameBootstrap : MonoBehaviour
             {
                 float u = x / (float)(size - 1);
                 float v = y / (float)(size - 1);
-                float centerWear = Mathf.Clamp01(1f - Mathf.Abs(v - 0.5f) * 2.35f);
-                float broadNoise = Mathf.PerlinNoise(u * 3.5f + 4.2f, v * 3.1f + 1.4f);
-                float gritNoise = Mathf.PerlinNoise(u * 18.5f + 8.3f, v * 16.2f + 5.7f);
-                float scratch = Mathf.Abs(Mathf.Sin((u * 1.2f + v * 0.25f) * 42f)) * 0.08f;
+                float broadNoise = Mathf.PerlinNoise(u * 3.1f + 4.2f, v * 2.7f + 1.4f);
+                float frayNoise = Mathf.PerlinNoise(u * 7.4f + 12.2f, v * 5.8f + 3.7f);
+                float gritNoise = Mathf.PerlinNoise(u * 24.5f + 8.3f, v * 21.2f + 5.7f);
+                float fineNoise = Mathf.PerlinNoise(u * 47.0f + 2.8f, v * 43.0f + 9.1f);
+                float centerOffset = (Mathf.PerlinNoise(u * 2.2f + 0.6f, 5.3f) - 0.5f) * 0.16f;
+                float lateral = Mathf.Abs(v - (0.5f + centerOffset)) * 2f;
+                float centerWear = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.12f, 0.86f, lateral));
+                float edgeWear = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.52f, 1f, lateral));
 
-                Color color = Color.Lerp(drySoil, packedDust, centerWear * 0.8f);
-                color = Color.Lerp(color, straw, Mathf.Clamp01((broadNoise - 0.48f) * 0.6f));
-                color = Color.Lerp(color, pebble, Mathf.Clamp01((gritNoise - 0.72f) * 0.42f));
-                color *= 0.95f + centerWear * 0.08f + scratch;
+                float leftTrack = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.035f, 0.12f, Mathf.Abs(v - 0.39f - centerOffset * 0.35f)));
+                float rightTrack = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.035f, 0.12f, Mathf.Abs(v - 0.61f - centerOffset * 0.35f)));
+                float trackWear = Mathf.Max(leftTrack, rightTrack) * Mathf.Clamp01(0.55f + broadNoise * 0.55f);
+
+                float footprint = 0f;
+                for (int i = 0; i < 6; i++)
+                {
+                    float stepU = (i + 0.45f) / 6f;
+                    float stepV = ((i & 1) == 0 ? 0.43f : 0.57f) + centerOffset * 0.25f;
+                    float du = (u - stepU) / 0.055f;
+                    float dv = (v - stepV) / 0.04f;
+                    footprint = Mathf.Max(footprint, Mathf.Clamp01(1f - (du * du + dv * dv)));
+                }
+
+                float frayedEdge = edgeWear * Mathf.Clamp01((frayNoise - 0.32f) * 1.45f);
+                float strawMask = Mathf.Clamp01((broadNoise - 0.56f) * 0.75f + Mathf.Abs(Mathf.Sin((u * 1.8f + v * 0.35f) * 38f)) * 0.05f);
+                float pebbleMask = Mathf.Clamp01((gritNoise - 0.70f) * 1.75f);
+                float dampMask = Mathf.Clamp01((fineNoise - 0.73f) * 1.4f) * centerWear;
+
+                Color color = Color.Lerp(drySoil, packedDust, centerWear * 0.64f + trackWear * 0.18f);
+                color = Color.Lerp(color, dampSoil, dampMask * 0.28f + footprint * 0.18f);
+                color = Color.Lerp(color, straw, strawMask * (0.16f + edgeWear * 0.18f));
+                color = Color.Lerp(color, edgeGrass, frayedEdge * 0.42f);
+                color = Color.Lerp(color, pebble, pebbleMask * 0.24f);
+                color *= 0.92f + centerWear * 0.10f + fineNoise * 0.09f;
                 texture.SetPixel(x, y, color);
             }
         }

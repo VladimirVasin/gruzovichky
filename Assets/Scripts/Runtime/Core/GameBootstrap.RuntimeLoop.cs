@@ -226,6 +226,7 @@ public partial class GameBootstrap
         UpdateNightSky();
         UpdateSelectedLocationLabel();
         UpdateSelectedEntityHighlight();
+        UpdateRoadAccessWarningMarkerRuntime();
         if (!isFarZoomVisualLodActive)
         {
             UpdateForestTreeWobbles();

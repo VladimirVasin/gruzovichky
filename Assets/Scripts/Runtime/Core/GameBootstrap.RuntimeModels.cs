@@ -273,6 +273,7 @@ public partial class GameBootstrap
         public Vector2Int LastFootpathWearCell;
         public int IdleWanderPointIndex = -1;
         public float IdleWanderPauseTimer;
+        public float IdleOverlapRerouteCooldown;
         public float IdleConversationTimer;
         public int IdleConversationPartnerId = -1;
         public float IdleConversationCooldownTimer;

@@ -6,6 +6,7 @@ public partial class GameBootstrap
     private const float ImportedBuildingDoorOpenAngle = 78f;
     private const float ImportedBuildingDoorSpeed = 3.8f;
     private const float ImportedBuildingDoorHoldDuration = 1.2f;
+    private const float ImportedVisibleSeatRootLift = 0.11f;
 
     private void RegisterImportedServiceInteractionMetadata(LocationData owner, Transform modelRoot)
     {
@@ -25,9 +26,9 @@ public partial class GameBootstrap
                 FindImportedTransform(modelRoot, "JackpotSign_Face")
         };
 
-        RegisterImportedBuildingDoor(runtime, FindImportedTransform(modelRoot, "Door"), ImportedBuildingDoorOpenAngle);
-        RegisterImportedBuildingDoor(runtime, FindImportedTransform(modelRoot, "DoubleDoor_Left"), ImportedBuildingDoorOpenAngle);
-        RegisterImportedBuildingDoor(runtime, FindImportedTransform(modelRoot, "DoubleDoor_Right"), -ImportedBuildingDoorOpenAngle);
+        RegisterImportedBuildingDoor(runtime, modelRoot, FindImportedTransform(modelRoot, "Door"), ImportedBuildingDoorOpenAngle);
+        RegisterImportedBuildingDoor(runtime, modelRoot, FindImportedTransform(modelRoot, "DoubleDoor_Left"), ImportedBuildingDoorOpenAngle);
+        RegisterImportedBuildingDoor(runtime, modelRoot, FindImportedTransform(modelRoot, "DoubleDoor_Right"), -ImportedBuildingDoorOpenAngle);
 
         List<ImportedBuildingSeatAnchor> seatAnchors = FindImportedServiceSeatAnchors(modelRoot, owner.Type);
         List<Transform> lookAtMarkers = FindImportedTransformsByPrefix(modelRoot, "P_TableLookAt");
@@ -96,12 +97,13 @@ public partial class GameBootstrap
         for (int i = 0; i < runtime.Doors.Count; i++)
         {
             ImportedBuildingDoor door = runtime.Doors[i];
-            if (door?.DoorTransform == null)
+            Transform animatedDoorTransform = door?.HingeTransform ?? door?.DoorTransform;
+            if (animatedDoorTransform == null)
             {
                 continue;
             }
 
-            door.DoorTransform.localRotation = Quaternion.Slerp(
+            animatedDoorTransform.localRotation = Quaternion.Slerp(
                 door.ClosedLocalRotation,
                 door.OpenLocalRotation,
                 eased);
@@ -296,7 +298,7 @@ public partial class GameBootstrap
         public bool HasWorldPosition;
     }
 
-    private static void RegisterImportedBuildingDoor(ImportedBuildingRuntime runtime, Transform doorTransform, float openAngle)
+    private static void RegisterImportedBuildingDoor(ImportedBuildingRuntime runtime, Transform modelRoot, Transform doorTransform, float openAngle)
     {
         if (runtime == null || doorTransform == null)
         {
@@ -311,10 +313,14 @@ public partial class GameBootstrap
             }
         }
 
-        Quaternion closed = doorTransform.localRotation;
+        Transform knobTransform = FindImportedDoorKnob(modelRoot, doorTransform);
+        Transform hingeTransform = CreateImportedDoorHingePivot(modelRoot, doorTransform, knobTransform, openAngle);
+        Transform animatedTransform = hingeTransform != null ? hingeTransform : doorTransform;
+        Quaternion closed = animatedTransform.localRotation;
         ImportedBuildingDoor door = new()
         {
             DoorTransform = doorTransform,
+            HingeTransform = hingeTransform,
             ClosedLocalRotation = closed,
             OpenLocalRotation = closed * Quaternion.Euler(0f, openAngle, 0f)
         };
@@ -322,9 +328,162 @@ public partial class GameBootstrap
 
         if (runtime.DoorTransform == null)
         {
-            runtime.DoorTransform = doorTransform;
+            runtime.DoorTransform = animatedTransform;
             runtime.DoorClosedLocalRotation = door.ClosedLocalRotation;
             runtime.DoorOpenLocalRotation = door.OpenLocalRotation;
+        }
+    }
+
+    private static Transform CreateImportedDoorHingePivot(Transform modelRoot, Transform doorTransform, Transform knobTransform, float openAngle)
+    {
+        if (doorTransform == null ||
+            doorTransform.parent == null ||
+            !TryGetImportedWorldRendererBounds(doorTransform, out Bounds bounds))
+        {
+            return null;
+        }
+
+        Vector3 hingePosition = ResolveImportedDoorHingeWorldPosition(modelRoot, doorTransform, knobTransform, bounds, openAngle);
+        Transform originalParent = doorTransform.parent;
+        int siblingIndex = doorTransform.GetSiblingIndex();
+        GameObject hingeObject = new($"{doorTransform.name}_HingePivot");
+        Transform hingeTransform = hingeObject.transform;
+        hingeTransform.SetParent(originalParent, false);
+        hingeTransform.SetSiblingIndex(siblingIndex);
+        hingeTransform.position = hingePosition;
+        hingeTransform.rotation = doorTransform.rotation;
+        hingeTransform.localScale = Vector3.one;
+
+        doorTransform.SetParent(hingeTransform, true);
+        if (knobTransform != null &&
+            knobTransform != doorTransform &&
+            !knobTransform.IsChildOf(doorTransform) &&
+            knobTransform.parent == originalParent)
+        {
+            knobTransform.SetParent(hingeTransform, true);
+        }
+
+        return hingeTransform;
+    }
+
+    private static Vector3 ResolveImportedDoorHingeWorldPosition(
+        Transform modelRoot,
+        Transform doorTransform,
+        Transform knobTransform,
+        Bounds bounds,
+        float openAngle)
+    {
+        Vector3 widthAxis = ResolveImportedDoorWidthAxis(doorTransform, bounds);
+        GetBoundsProjection(bounds, widthAxis, out float minProjection, out float maxProjection);
+        float centerProjection = Vector3.Dot(bounds.center, widthAxis);
+        float hingeProjection;
+
+        if (knobTransform != null)
+        {
+            float knobProjection = Vector3.Dot(knobTransform.position, widthAxis);
+            hingeProjection = knobProjection >= centerProjection ? minProjection : maxProjection;
+        }
+        else if (doorTransform.name.IndexOf("DoubleDoor", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                 modelRoot != null)
+        {
+            float rootProjection = Vector3.Dot(modelRoot.position, widthAxis);
+            hingeProjection = centerProjection >= rootProjection ? maxProjection : minProjection;
+        }
+        else
+        {
+            hingeProjection = openAngle >= 0f ? minProjection : maxProjection;
+        }
+
+        Vector3 hingePosition = bounds.center + widthAxis * (hingeProjection - centerProjection);
+        hingePosition.y = bounds.center.y;
+        return hingePosition;
+    }
+
+    private static Vector3 ResolveImportedDoorWidthAxis(Transform doorTransform, Bounds bounds)
+    {
+        Vector3 right = doorTransform != null ? doorTransform.right : Vector3.right;
+        Vector3 forward = doorTransform != null ? doorTransform.forward : Vector3.forward;
+        right.y = 0f;
+        forward.y = 0f;
+
+        if (right.sqrMagnitude < 0.0001f)
+        {
+            right = Vector3.right;
+        }
+
+        if (forward.sqrMagnitude < 0.0001f)
+        {
+            forward = Vector3.forward;
+        }
+
+        right.Normalize();
+        forward.Normalize();
+        float rightSpan = GetBoundsProjectionSpan(bounds, right);
+        float forwardSpan = GetBoundsProjectionSpan(bounds, forward);
+        return rightSpan >= forwardSpan ? right : forward;
+    }
+
+    private static Transform FindImportedDoorKnob(Transform modelRoot, Transform doorTransform)
+    {
+        if (modelRoot == null || doorTransform == null)
+        {
+            return null;
+        }
+
+        Transform[] transforms = modelRoot.GetComponentsInChildren<Transform>(true);
+        Transform best = null;
+        float bestDistanceSqr = float.PositiveInfinity;
+        Vector3 doorPosition = doorTransform.position;
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform current = transforms[i];
+            if (current == null || current == doorTransform || current.IsChildOf(doorTransform))
+            {
+                continue;
+            }
+
+            string name = current.name;
+            if (name.IndexOf("Knob", System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                name.IndexOf("Handle", System.StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                continue;
+            }
+
+            float distanceSqr = (current.position - doorPosition).sqrMagnitude;
+            if (distanceSqr < bestDistanceSqr)
+            {
+                best = current;
+                bestDistanceSqr = distanceSqr;
+            }
+        }
+
+        return best;
+    }
+
+    private static float GetBoundsProjectionSpan(Bounds bounds, Vector3 axis)
+    {
+        GetBoundsProjection(bounds, axis, out float min, out float max);
+        return max - min;
+    }
+
+    private static void GetBoundsProjection(Bounds bounds, Vector3 axis, out float min, out float max)
+    {
+        min = float.PositiveInfinity;
+        max = float.NegativeInfinity;
+        Vector3 center = bounds.center;
+        Vector3 extents = bounds.extents;
+        for (int x = -1; x <= 1; x += 2)
+        {
+            for (int y = -1; y <= 1; y += 2)
+            {
+                for (int z = -1; z <= 1; z += 2)
+                {
+                    Vector3 corner = center + Vector3.Scale(extents, new Vector3(x, y, z));
+                    float projection = Vector3.Dot(corner, axis);
+                    min = Mathf.Min(min, projection);
+                    max = Mathf.Max(max, projection);
+                }
+            }
         }
     }
 
@@ -428,7 +587,9 @@ public partial class GameBootstrap
     {
         if (TryGetImportedWorldRendererBounds(seatMesh, out Bounds bounds))
         {
-            return bounds.center;
+            Vector3 position = bounds.center;
+            position.y = bounds.max.y + ImportedVisibleSeatRootLift;
+            return position;
         }
 
         return seatMesh.position;

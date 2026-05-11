@@ -542,11 +542,15 @@ public partial class GameBootstrap
         else
         {
             buildingQuickHud.TypeText.text = GetSelectedLocationDisplayName(selectedBuildingType) + categoryTag;
-            string quickStatus = GetBuildingQuickStatusText(selectedBuildingType);
+            string quickStatus = GetBuildingQuickStatusText(location, selectedBuildingType);
             string quickResource = selectedBuildingType == LocationType.PersonalHouse
                 ? GetPersonalHouseQuickResourceText()
                 : GetBuildingQuickResourceText(selectedBuildingType);
             buildingQuickHud.StatusText.text = quickStatus;
+            buildingQuickHud.StatusText.color = TryGetRoadAccessQuickWarning(location, out _, out Color roadWarningColor)
+                ? roadWarningColor
+                : FleetSecondaryTextColor;
+            buildingQuickHud.ResourceText.color = Color.white;
             buildingQuickHud.ResourceText.text = quickResource;
             ConfigureBuildingQuickHudSummaryLayout(quickStatus, quickResource);
         }

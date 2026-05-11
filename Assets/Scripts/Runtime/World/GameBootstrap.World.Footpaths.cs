@@ -70,13 +70,48 @@ public partial class GameBootstrap
             return 1f;
         }
 
-        if (!IsVisibleFootpathCell(cell))
+        float baseCost = 1f;
+        if (IsVisibleFootpathCell(cell))
         {
-            return 1f;
+            float t = GetFootpathWear01(cell);
+            baseCost = Mathf.Lerp(FootpathFreshWalkCost, FootpathStrongWalkCost, t);
         }
 
-        float t = GetFootpathWear01(cell);
-        return Mathf.Lerp(FootpathFreshWalkCost, FootpathStrongWalkCost, t);
+        return baseCost + GetDriverWalkCongestionCost(cell);
+    }
+
+    private float GetDriverWalkCongestionCost(Vector2Int cell)
+    {
+        float cost = 0f;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent other = driverAgents[i];
+            if (other == null ||
+                other.DriverObject == null ||
+                !other.DriverObject.activeSelf ||
+                other.IsInsideBuilding ||
+                other.IsDrivingPersonalCar)
+            {
+                continue;
+            }
+
+            Vector2Int otherCell = WorldToCell(other.DriverObject.transform.position);
+            if (otherCell == cell)
+            {
+                cost += DriverWalkOccupiedCellCost;
+            }
+            else if (Mathf.Abs(otherCell.x - cell.x) + Mathf.Abs(otherCell.y - cell.y) == 1)
+            {
+                cost += DriverWalkAdjacentCellCost;
+            }
+
+            if (cost >= DriverWalkMaxCongestionCost)
+            {
+                return DriverWalkMaxCongestionCost;
+            }
+        }
+
+        return cost;
     }
 
     private bool ClearFootpathAtCell(Vector2Int cell, bool refreshGround = true)
@@ -155,11 +190,11 @@ public partial class GameBootstrap
 
         float wear01 = GetFootpathWear01(cell);
         float tintNoise = Mathf.PerlinNoise((cell.x + 1) * 0.33f + 6.8f, (cell.y + 1) * 0.35f + 9.1f);
-        Color fresh = Color.Lerp(new Color(0.75f, 0.66f, 0.45f), new Color(0.85f, 0.77f, 0.55f), tintNoise);
-        Color packed = new(0.56f, 0.47f, 0.31f);
-        Color tint = QuantizeVisualTint(Color.Lerp(fresh, packed, wear01), 12f);
+        Color fresh = Color.Lerp(new Color(0.80f, 0.70f, 0.48f), new Color(0.92f, 0.82f, 0.60f), tintNoise);
+        Color packed = new(0.50f, 0.40f, 0.26f);
+        Color tint = QuantizeVisualTint(Color.Lerp(fresh, packed, wear01), 14f);
         Texture texture = footpathSurfaceTexture != null ? footpathSurfaceTexture : groundSurfaceTexture;
-        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, 0.09f, new Vector2(0.72f, 0.72f));
+        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, 0.07f, new Vector2(0.96f, 0.96f));
     }
 
     private bool IsVisibleFootpathCell(Vector2Int cell)

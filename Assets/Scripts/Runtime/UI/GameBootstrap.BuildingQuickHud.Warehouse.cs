@@ -131,7 +131,14 @@ public partial class GameBootstrap
 
         int loadersOnShift = CountWorkersOnShiftAt(LocationType.Warehouse);
         int assignedLoaders = CountLogisticsWorkers(LocationType.Warehouse);
-        GetWarehouseQuickHudStatus(loadersOnShift, assignedLoaders, out string statusText, out Color statusColor);
+        if (!TryGetRoadAccessQuickWarning(warehouse, out string statusText, out Color statusColor))
+        {
+            GetWarehouseQuickHudStatus(loadersOnShift, assignedLoaders, out statusText, out statusColor);
+        }
+        else
+        {
+            statusText = IsRussianLanguage() ? "\u041d\u0435\u0442 \u0434\u043e\u0440\u043e\u0433\u0438" : "No road";
+        }
 
         warehouseQuickHudDescriptionText.text =
             "\u0426\u0435\u043d\u0442\u0440\u0430\u043b\u044c\u043d\u043e\u0435 \u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435 \u0440\u0435\u0441\u0443\u0440\u0441\u043e\u0432.\n" +
