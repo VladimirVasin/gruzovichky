@@ -146,7 +146,7 @@ public partial class GameBootstrap
             LinkedLocationType = group.LinkedLocationType,
             CreatedWorldHour = now,
             CreatedDay = currentDay,
-            DueWorldHour = now + CityComplaintDueWorldHours
+            DueWorldHour = now + GetCityComplaintDueWorldHours()
         };
 
         complaint.SignerIds.AddRange(group.SignerIds);
@@ -233,12 +233,12 @@ public partial class GameBootstrap
             if (!complaint.TrustPenaltyApplied)
             {
                 complaint.TrustPenaltyApplied = true;
-                ApplyCityTrustDelta(CityTrustComplaintExpiredPenalty, $"citizen request #{complaint.Id} expired");
+                ApplyCityTrustDelta(GetCityTrustComplaintExpiredPenalty(), $"citizen request #{complaint.Id} expired");
             }
 
             StartCityRequestGoalFeedback(success: false, complaint);
             changed = true;
-            SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} expired after 24h: key={complaint.GroupKey}.");
+            SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} expired after {GetCityComplaintDueWorldHours():0.#}h: key={complaint.GroupKey}.");
             PushFeedEvent(
                 "A City Hall request expired.",
                 "Обращение в Ратуше просрочено.",

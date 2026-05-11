@@ -24,9 +24,10 @@ public partial class GameBootstrap
 
     private int GetBuildToolCost(BuildTool tool)
     {
-        return TryGetBuildCatalogItem(tool, out BuildCatalogItemData item)
+        int baseCost = TryGetBuildCatalogItem(tool, out BuildCatalogItemData item)
             ? Mathf.Max(0, item.cost)
             : 0;
+        return ApplyCityUpgradeBuildCostDiscount(baseCost);
     }
 
     private bool CanAffordBuildTool(BuildTool tool)

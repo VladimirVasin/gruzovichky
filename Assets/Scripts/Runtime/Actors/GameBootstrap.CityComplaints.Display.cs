@@ -29,9 +29,10 @@ public partial class GameBootstrap
         string topLine = top != null
             ? FormatCityComplaintTitle(top, ru)
             : (ru ? "нет активных обращений" : "no active requests");
+        int dueHours = Mathf.RoundToInt(GetCityComplaintDueWorldHours());
         string description = ru
-            ? "Жители приносят сюда городские обращения.\nПринятое обращение становится целью на 24 часа.\nВыполнение повышает доверие; отказ или просрочка снижают."
-            : "Citizens file city requests here.\nAccepted requests become 24h goals.\nCompletion raises trust; rejection or expiry lowers it.";
+            ? $"Жители приносят сюда городские обращения.\nПринятое обращение становится целью на {dueHours} ч.\nВыполнение повышает доверие; отказ или просрочка снижают."
+            : $"Citizens file city requests here.\nAccepted requests become {dueHours}h goals.\nCompletion raises trust; rejection or expiry lowers it.";
 
         if (acceptedGoal != null)
         {

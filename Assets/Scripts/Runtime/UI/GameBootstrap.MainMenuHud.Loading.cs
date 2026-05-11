@@ -74,6 +74,7 @@ public partial class GameBootstrap
         ResetSquirrelMemorialWorldState();
         ResetFootpathSystem();
         ResetStreetLitterSystem();
+        ResetCityUpgrades();
         worldRoot = new GameObject("PrototypeWorld").transform;
         roadsRoot = new GameObject("Roads").transform;
         roadsRoot.SetParent(worldRoot, false);

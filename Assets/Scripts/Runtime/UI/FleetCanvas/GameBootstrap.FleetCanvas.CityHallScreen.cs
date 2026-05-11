@@ -10,6 +10,7 @@ public partial class GameBootstrap
     private bool isCityHallPanelOpen;
     private bool isCityHallScreenDirty = true;
     private int selectedCityComplaintId;
+    private bool isCityHallUpgradesTabActive;
     private int cityHallDismissingRejectedComplaintId;
     private float cityHallRejectedRowDismissTimer;
     private CityHallScreenUiRefs cityHallScreenUi;
@@ -26,12 +27,17 @@ public partial class GameBootstrap
         public int ComplaintId;
     }
 
-    private sealed class CityHallScreenUiRefs
+    private sealed partial class CityHallScreenUiRefs
     {
         public GameObject CanvasRoot;
         public RectTransform WindowRoot;
         public Text TitleText;
         public Text SummaryText;
+        public RectTransform RequestsRoot;
+        public Button RequestsTabButton;
+        public Text RequestsTabText;
+        public Button UpgradesTabButton;
+        public Text UpgradesTabText;
         public Text EmptyText;
         public CityHallComplaintRowUi[] Rows;
         public Text DetailTitleText;
@@ -82,9 +88,31 @@ public partial class GameBootstrap
         cityHallScreenUi.TitleText = CreateHeaderText("CityHallTitle", window, font, string.Empty, 24, TextAnchor.MiddleLeft, Color.white);
         cityHallScreenUi.TitleText.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
         cityHallScreenUi.SummaryText = CreateBodyText("CityHallSummary", window, font, string.Empty, 13, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        cityHallScreenUi.SummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 48f;
+        cityHallScreenUi.SummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 60f;
+
+        RectTransform tabRow = CreateTabRow("CityHallTabRow", window, 38f, 8f);
+        cityHallScreenUi.RequestsTabButton = CreateButton("CityHallRequestsTab", tabRow, font, out cityHallScreenUi.RequestsTabText, string.Empty, 13, FleetPrimaryButtonColor, Color.white);
+        ConfigureCityHallTabButton(cityHallScreenUi.RequestsTabButton, cityHallScreenUi.RequestsTabText);
+        cityHallScreenUi.RequestsTabButton.onClick.AddListener(() =>
+        {
+            isCityHallUpgradesTabActive = false;
+            isCityHallScreenDirty = true;
+            PlayUiSound(uiPanelOpenClip, 0.48f);
+            UpdateCityHallScreenUi();
+        });
+
+        cityHallScreenUi.UpgradesTabButton = CreateButton("CityHallUpgradesTab", tabRow, font, out cityHallScreenUi.UpgradesTabText, string.Empty, 13, new Color(0.22f, 0.26f, 0.32f, 1f), Color.white);
+        ConfigureCityHallTabButton(cityHallScreenUi.UpgradesTabButton, cityHallScreenUi.UpgradesTabText);
+        cityHallScreenUi.UpgradesTabButton.onClick.AddListener(() =>
+        {
+            isCityHallUpgradesTabActive = true;
+            isCityHallScreenDirty = true;
+            PlayUiSound(uiPanelOpenClip, 0.48f);
+            UpdateCityHallScreenUi();
+        });
 
         RectTransform bodyRow = CreateUiObject("CityHallBody", window).GetComponent<RectTransform>();
+        cityHallScreenUi.RequestsRoot = bodyRow;
         bodyRow.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
         HorizontalLayoutGroup bodyLayout = bodyRow.gameObject.AddComponent<HorizontalLayoutGroup>();
         bodyLayout.spacing = 14f;
@@ -148,6 +176,7 @@ public partial class GameBootstrap
         ConfigureCityHallDecisionButton(cityHallScreenUi.RejectButton, cityHallScreenUi.RejectButtonText);
         cityHallScreenUi.RejectButton.onClick.AddListener(RejectSelectedCityComplaint);
 
+        SetupCityHallUpgradeTreeUi(window, font);
         AddOverlayCloseButton(window, font);
         EnsureCityHallDecisionButtonsClickable();
         ValidateCityHallScreenClickTargets();
@@ -164,7 +193,10 @@ public partial class GameBootstrap
 
         bool ok = cityHallScreenUi.CanvasRoot.GetComponent<GraphicRaycaster>() != null &&
                   IsButtonClickTargetReady(cityHallScreenUi.AcceptButton) &&
-                  IsButtonClickTargetReady(cityHallScreenUi.RejectButton);
+                  IsButtonClickTargetReady(cityHallScreenUi.RejectButton) &&
+                  IsButtonClickTargetReady(cityHallScreenUi.RequestsTabButton) &&
+                  IsButtonClickTargetReady(cityHallScreenUi.UpgradesTabButton) &&
+                  AreCityHallUpgradeClickTargetsReady();
 
         if (cityHallScreenUi.Rows != null)
         {
@@ -197,6 +229,8 @@ public partial class GameBootstrap
 
         ConfigureCityHallDecisionButton(cityHallScreenUi.AcceptButton, cityHallScreenUi.AcceptButtonText);
         ConfigureCityHallDecisionButton(cityHallScreenUi.RejectButton, cityHallScreenUi.RejectButtonText);
+        ConfigureCityHallTabButton(cityHallScreenUi.RequestsTabButton, cityHallScreenUi.RequestsTabText);
+        ConfigureCityHallTabButton(cityHallScreenUi.UpgradesTabButton, cityHallScreenUi.UpgradesTabText);
         if (cityHallScreenUi.DecisionRow != null)
         {
             cityHallScreenUi.DecisionRow.SetAsLastSibling();
@@ -245,6 +279,47 @@ public partial class GameBootstrap
         layout.flexibleWidth = 1f;
         layout.minHeight = 38f;
         layout.preferredHeight = 42f;
+        layout.flexibleHeight = 0f;
+
+        Navigation navigation = button.navigation;
+        navigation.mode = Navigation.Mode.None;
+        button.navigation = navigation;
+    }
+
+    private static void ConfigureCityHallTabButton(Button button, Text label)
+    {
+        if (button == null)
+        {
+            return;
+        }
+
+        Image image = button.targetGraphic as Image;
+        if (image == null)
+        {
+            image = button.GetComponent<Image>();
+        }
+
+        if (image != null)
+        {
+            image.raycastTarget = true;
+            button.targetGraphic = image;
+        }
+
+        if (label != null)
+        {
+            label.fontStyle = FontStyle.Bold;
+            label.raycastTarget = false;
+        }
+
+        LayoutElement layout = button.GetComponent<LayoutElement>();
+        if (layout == null)
+        {
+            layout = button.gameObject.AddComponent<LayoutElement>();
+        }
+
+        layout.minHeight = 38f;
+        layout.preferredHeight = 38f;
+        layout.flexibleWidth = 1f;
         layout.flexibleHeight = 0f;
 
         Navigation navigation = button.navigation;
@@ -337,17 +412,38 @@ public partial class GameBootstrap
     {
         bool ru = IsRussianLanguage();
         ClearUnreadCityHallRequests();
-        List<CityComplaintRowViewModel> rows = BuildCityHallComplaintRows(ru);
-        if (selectedCityComplaintId <= 0 || !DoesCityHallRowsContain(rows, selectedCityComplaintId))
+        List<CityComplaintRowViewModel> rows = isCityHallUpgradesTabActive ? null : BuildCityHallComplaintRows(ru);
+        if (rows != null && (selectedCityComplaintId <= 0 || !DoesCityHallRowsContain(rows, selectedCityComplaintId)))
         {
             selectedCityComplaintId = rows.Count > 0 ? rows[0].Id : 0;
         }
 
         cityHallScreenUi.TitleText.text = ru ? "\u0420\u0430\u0442\u0443\u0448\u0430" : "City Hall";
+        int dueHours = Mathf.RoundToInt(GetCityComplaintDueWorldHours());
+        int requestPenalty = GetCityTrustCitizenRequestRejectedPenalty();
         cityHallScreenUi.SummaryText.text = ru
-            ? $"{FormatCityTrustSummary(ru)}.\nОбращения: активно {CountOpenCityComplaints()}, срочных {CountCriticalCityComplaints()}, просрочено {CountExpiredCityComplaints()}, выполнено сегодня {CountResolvedCityComplaintsToday()}.\nПринятое обращение становится городской целью на 24 часа. Отклонение или просрочка снижает доверие на 25."
-            : $"{FormatCityTrustSummary(ru)}.\nCitizen requests: active {CountOpenCityComplaints()}, urgent {CountCriticalCityComplaints()}, expired {CountExpiredCityComplaints()}, resolved today {CountResolvedCityComplaintsToday()}.\nAccepted requests become 24h city goals. Rejection or expiry costs 25 trust.";
+            ? $"{FormatCityTrustSummary(ru)}.\nОбращения: активно {CountOpenCityComplaints()}, срочных {CountCriticalCityComplaints()}, просрочено {CountExpiredCityComplaints()}, выполнено сегодня {CountResolvedCityComplaintsToday()}.\nПринятое обращение становится городской целью на {dueHours} ч. Отказ или просрочка: доверие {requestPenalty}.\nАпдейты: куплено {CountPurchasedCityUpgrades()} / {CityUpgradeDefinitions.Length}."
+            : $"{FormatCityTrustSummary(ru)}.\nCitizen requests: active {CountOpenCityComplaints()}, urgent {CountCriticalCityComplaints()}, expired {CountExpiredCityComplaints()}, resolved today {CountResolvedCityComplaintsToday()}.\nAccepted requests become {dueHours}h city goals. Rejection or expiry: {requestPenalty} trust.\nUpgrades: purchased {CountPurchasedCityUpgrades()} / {CityUpgradeDefinitions.Length}.";
         cityHallScreenUi.SummaryText.color = cityTrust <= -20 ? GetCityTrustColor() : FleetSecondaryTextColor;
+        ApplyCityHallTabVisuals(ru);
+
+        if (cityHallScreenUi.RequestsRoot != null)
+        {
+            cityHallScreenUi.RequestsRoot.gameObject.SetActive(!isCityHallUpgradesTabActive);
+        }
+
+        if (cityHallScreenUi.UpgradesRoot != null)
+        {
+            cityHallScreenUi.UpgradesRoot.gameObject.SetActive(isCityHallUpgradesTabActive);
+        }
+
+        if (isCityHallUpgradesTabActive)
+        {
+            RebuildCityHallUpgradeTree(ru);
+            LocalizeCanvas(cityHallScreenUi.CanvasRoot);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(cityHallScreenUi.WindowRoot);
+            return;
+        }
 
         cityHallScreenUi.EmptyText.gameObject.SetActive(rows.Count == 0);
         cityHallScreenUi.EmptyText.text = ru

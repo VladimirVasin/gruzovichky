@@ -172,6 +172,8 @@ public partial class GameBootstrap
                 gain *= 1.35f;
             }
 
+            gain *= GetStreetLitterCityUpgradeGainMultiplier();
+
             streetLitterByCell.TryGetValue(cell, out float previousScore);
             float nextScore = Mathf.Min(StreetLitterMaxScore, previousScore + gain);
             if (!Mathf.Approximately(previousScore, nextScore))

@@ -104,7 +104,8 @@ public partial class GameBootstrap
         Vector3 cellCenter = GetCellCenter(cell);
         float dx = cellCenter.x - center.x;
         float dz = cellCenter.z - center.z;
-        return dx * dx + dz * dz <= CleanerCoverageRadius * CleanerCoverageRadius;
+        float radius = GetCleanerCoverageRadius();
+        return dx * dx + dz * dz <= radius * radius;
     }
 
     private void ShowCleaningDepotSelectionRadius(LocationData depot)
@@ -187,6 +188,7 @@ public partial class GameBootstrap
             line.startColor = CleanerCoverageRingColor;
             line.endColor = CleanerCoverageRingColor;
             line.widthMultiplier = 0.085f;
+            ConfigureCleaningDepotRadiusLine(line, GetCleanerCoverageRadius());
         }
 
         visual.SetActive(true);
@@ -208,14 +210,34 @@ public partial class GameBootstrap
         line.material = new Material(ShaderRefs.Sprites);
         line.startColor = CleanerCoverageRingColor;
         line.endColor = CleanerCoverageRingColor;
-
-        for (int i = 0; i < CleanerCoverageRingSegments; i++)
-        {
-            float angle = i / (float)CleanerCoverageRingSegments * Mathf.PI * 2f;
-            line.SetPosition(i, new Vector3(Mathf.Cos(angle) * CleanerCoverageRadius, 0f, Mathf.Sin(angle) * CleanerCoverageRadius));
-        }
+        ConfigureCleaningDepotRadiusLine(line, GetCleanerCoverageRadius());
 
         visual.SetActive(false);
         return visual;
+    }
+
+    private void ConfigureCleaningDepotRadiusLine(LineRenderer line, float radius)
+    {
+        if (line == null)
+        {
+            return;
+        }
+
+        line.positionCount = CleanerCoverageRingSegments;
+        for (int i = 0; i < CleanerCoverageRingSegments; i++)
+        {
+            float angle = i / (float)CleanerCoverageRingSegments * Mathf.PI * 2f;
+            line.SetPosition(i, new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius));
+        }
+    }
+
+    private void RefreshCleaningDepotRadiusVisuals()
+    {
+        ConfigureCleaningDepotRadiusLine(
+            cleaningDepotSelectionRadiusVisual != null ? cleaningDepotSelectionRadiusVisual.GetComponent<LineRenderer>() : null,
+            GetCleanerCoverageRadius());
+        ConfigureCleaningDepotRadiusLine(
+            cleaningDepotBuildRadiusVisual != null ? cleaningDepotBuildRadiusVisual.GetComponent<LineRenderer>() : null,
+            GetCleanerCoverageRadius());
     }
 }

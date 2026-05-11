@@ -499,7 +499,7 @@ public partial class GameBootstrap
         complaint.AcceptedWorldHour = now;
         complaint.DueWorldHour = complaint.Category == CityComplaintCategory.SocialIntroduction
             ? 0f
-            : now + CityComplaintDueWorldHours;
+            : now + GetCityComplaintDueWorldHours();
         complaint.IsUnread = false;
         isCityHallScreenDirty = true;
         if (complaint.Category == CityComplaintCategory.SocialIntroduction)
@@ -513,9 +513,10 @@ public partial class GameBootstrap
         else
         {
             StartCityRequestGoalFeedback(success: false, complaint, previewOnly: true);
+            int dueHours = Mathf.RoundToInt(GetCityComplaintDueWorldHours());
             PushFeedEvent(
                 "Citizen request accepted.",
-                $"Обращение принято: построить {FormatCityComplaintTargetName(complaint)} за 24 часа.",
+                $"Обращение принято: построить {FormatCityComplaintTargetName(complaint)} за {dueHours} ч.",
                 FeedEventType.Info);
             SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} accepted: due={complaint.DueWorldHour:0.0}.");
         }
@@ -541,11 +542,12 @@ public partial class GameBootstrap
         cityComplaintCooldownByKey[GetCityComplaintCooldownKey(complaint)] =
             now + CityServiceRequestCooldownWorldHours;
 
-        ApplyCityTrustDelta(CityTrustCitizenRequestRejectedPenalty, $"citizen request #{complaint.Id} rejected");
+        int rejectedPenalty = GetCityTrustCitizenRequestRejectedPenalty();
+        ApplyCityTrustDelta(rejectedPenalty, $"citizen request #{complaint.Id} rejected");
         isCityHallScreenDirty = true;
         PushFeedEvent(
             "Citizen request rejected.",
-            $"Обращение отклонено: доверие {CityTrustCitizenRequestRejectedPenalty}.",
+            $"Обращение отклонено: доверие {rejectedPenalty}.",
             FeedEventType.Warning);
         SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} rejected.");
         return true;

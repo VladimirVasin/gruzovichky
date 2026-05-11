@@ -298,7 +298,8 @@ public partial class GameBootstrap
     {
         if (complaint == null || complaint.DueWorldHour <= 0f)
         {
-            return ru ? "Осталось: 24ч" : "Time left: 24h";
+            int dueHours = Mathf.RoundToInt(GetCityComplaintDueWorldHours());
+            return ru ? $"Осталось: {dueHours}ч" : $"Time left: {dueHours}h";
         }
 
         float remaining = Mathf.Max(0f, complaint.DueWorldHour - GetCurrentWorldHour());
