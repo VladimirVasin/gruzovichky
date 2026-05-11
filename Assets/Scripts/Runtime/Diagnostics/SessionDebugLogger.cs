@@ -12,9 +12,12 @@ public enum SessionDebugLogLevel
 
 public static class SessionDebugLogger
 {
+    private const int BufferedLineFlushThreshold = 24;
+
     private static readonly object SyncRoot = new();
     private static readonly HashSet<string> VerboseCategories = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Encoding LogEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
+    private static readonly List<string> PendingLines = new();
     private static string logFilePath;
     private static bool sessionActive;
     private static bool verboseLogging;
@@ -41,9 +44,11 @@ public static class SessionDebugLogger
             RefreshSettingsFromEnvironment();
             Directory.CreateDirectory(Path.GetDirectoryName(LogFilePath) ?? ".");
             File.WriteAllText(LogFilePath, string.Empty, LogEncoding);
+            PendingLines.Clear();
             sessionActive = true;
             WriteLine("SESSION", $"Started new play session: {sessionLabel}");
             WriteLine("SESSION", $"Debug logging verbose={(verboseLogging ? "on" : "off")}; categories={FormatVerboseCategories()}.");
+            FlushPendingLines();
         }
     }
 
@@ -91,6 +96,7 @@ public static class SessionDebugLogger
             }
 
             WriteLine("SESSION", $"Ended play session: {reason}");
+            FlushPendingLines();
             sessionActive = false;
         }
     }
@@ -115,7 +121,22 @@ public static class SessionDebugLogger
             }
         }
 
-        File.AppendAllText(LogFilePath, $"[{timestamp}]{gameTimePrefix} [{category}] {message}{Environment.NewLine}", LogEncoding);
+        PendingLines.Add($"[{timestamp}]{gameTimePrefix} [{category}] {message}");
+        if (PendingLines.Count >= BufferedLineFlushThreshold)
+        {
+            FlushPendingLines();
+        }
+    }
+
+    private static void FlushPendingLines()
+    {
+        if (PendingLines.Count == 0)
+        {
+            return;
+        }
+
+        File.AppendAllLines(LogFilePath, PendingLines, LogEncoding);
+        PendingLines.Clear();
     }
 
     private static bool ShouldWrite(string category, SessionDebugLogLevel level)

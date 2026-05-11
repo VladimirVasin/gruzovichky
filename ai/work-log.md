@@ -6,6 +6,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-11: Reduced noticeable runtime stalls after the recent street-litter/cleaner additions. `SessionDebugLogger` now buffers log lines and writes them in batches instead of appending to `debug.log` synchronously on every event. Street-litter scans now cap their game-speed scaling, reuse scratch collections, prune tracked cells, and cleaner target selection pathfinds only the top cheap candidates instead of every visible litter cell in range. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.
+
 - 2026-05-11: Suppressed local-bus runtime noise before the player has built any local stops. Worker travel now checks for a viable stop pair before logging unavailable bus service, bus drivers do not commute/board for an empty local-bus network, route-start/no-stop cases stay silent when `localStops.Count == 0`, and local-bus passenger skip logging ignores the zero-stop state. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.
 
 - 2026-05-11: Fixed the Parking shift-commute loop from `debug.log`. Truck/intercity drivers now wait on safe cells around the Parking road access instead of targeting truck-slot cells inside the Parking footprint, trade commutes abort cleanly if no safe pedestrian path exists, critical needs can interrupt pre-shift preparation when there is more than 30 in-game minutes before the shift, and future `debug.log` sessions are written as UTF-8 with BOM for safer Cyrillic viewing. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.
