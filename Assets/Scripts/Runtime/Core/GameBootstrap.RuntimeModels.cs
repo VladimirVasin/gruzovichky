@@ -204,6 +204,24 @@ public partial class GameBootstrap
         Social
     }
 
+    private enum WorkerDailyOpinionTone
+    {
+        Positive,
+        Negative
+    }
+
+    private enum WorkerDailyOpinionFactorKind
+    {
+        Need,
+        Work,
+        Money,
+        Social,
+        Family,
+        Transport,
+        City,
+        Housing
+    }
+
     private sealed class DriverAgent
     {
         public int DriverId;
@@ -361,8 +379,10 @@ public partial class GameBootstrap
         public readonly List<WorkerMemory> Memories = new();
         public readonly List<WorkerOpinion> Opinions = new();
         public readonly List<WorkerLifeOpinion> LifeOpinions = new();
+        public readonly List<WorkerDailyOpinion> DailyOpinions = new();
         public readonly List<WorkerInventoryEntry> Inventory = new();
         public readonly Dictionary<string, float> WorkerThoughtCooldownWorldHours = new();
+        public int LastDailyOpinionDay = -1;
         public int Satisfaction = 70;
         public int UnhappyDays;
         public bool DepartureIntent;
@@ -580,6 +600,38 @@ public partial class GameBootstrap
         public int Score;
         public int Confidence;
         public float LastUpdatedWorldHour;
+    }
+
+    private sealed class WorkerDailyOpinion
+    {
+        public int Day;
+        public WorkerDailyOpinionTone FinalTone;
+        public int Score;
+        public int Confidence;
+        public string SummaryRu = string.Empty;
+        public string SummaryEn = string.Empty;
+        public string MainReasonRu = string.Empty;
+        public string MainReasonEn = string.Empty;
+        public string SecondaryReasonRu = string.Empty;
+        public string SecondaryReasonEn = string.Empty;
+        public string PositiveReasonRu = string.Empty;
+        public string PositiveReasonEn = string.Empty;
+        public string NegativeReasonRu = string.Empty;
+        public string NegativeReasonEn = string.Empty;
+        public int PositiveThoughtCount;
+        public int NegativeThoughtCount;
+        public int CriticalActiveThoughtCount;
+        public int SatisfactionDeltaHint;
+        public WorkerDailyOpinionFactorKind DominantKind = WorkerDailyOpinionFactorKind.City;
+        public readonly List<WorkerDailyOpinionFactor> Factors = new();
+    }
+
+    private sealed class WorkerDailyOpinionFactor
+    {
+        public WorkerDailyOpinionFactorKind Kind;
+        public int Score;
+        public string ReasonRu = string.Empty;
+        public string ReasonEn = string.Empty;
     }
 
     private sealed class WorkerSocialMemory

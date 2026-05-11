@@ -141,6 +141,14 @@ public partial class GameBootstrap
         public RectTransform DetailCurrentThoughtTimeRow;
         public Image DetailCurrentThoughtTimeIcon;
         public Text  DetailCurrentThoughtTimeText;
+        public Text  DetailDailyOpinionTitleText;
+        public Image DetailDailyOpinionBackground;
+        public Outline DetailDailyOpinionOutline;
+        public Image DetailDailyOpinionIcon;
+        public Text  DetailDailyOpinionToneText;
+        public Text  DetailDailyOpinionSummaryText;
+        public Text  DetailDailyOpinionReasonText;
+        public Text  DetailDailyOpinionScoreText;
         public Text  DetailRecentThoughtsTitleText;
         public Text  DetailRecentThoughtsEmptyText;
         public readonly List<WorkerThoughtRowUi> DetailThoughtRows = new();

@@ -133,6 +133,8 @@ public partial class GameBootstrap
             FleetMutedTextColor);
         driversScreenUi.DetailCurrentThoughtTimeText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
 
+        SetupWorkerDailyOpinionUi(content, font);
+
         RectTransform lowerRow = CreateUiObject("WorkerThoughtsLowerRow", content).GetComponent<RectTransform>();
         lowerRow.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
         HorizontalLayoutGroup lowerLayout = lowerRow.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -280,6 +282,7 @@ public partial class GameBootstrap
         }
 
         UpdateWorkerCurrentImportantThoughtUi(worker);
+        UpdateWorkerDailyOpinionUi(worker);
         UpdateWorkerRecentThoughtsUi(worker);
         UpdateWorkerLifeOpinionsUi(worker);
     }

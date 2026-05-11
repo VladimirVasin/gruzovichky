@@ -701,11 +701,13 @@ public partial class GameBootstrap
         }
 
         float cycleDeltaTime = deltaTime >= 0f ? deltaTime : Time.deltaTime;
+        int endedDay = currentDay;
         bool didWrapDay = dayNightCycleTimer + cycleDeltaTime >= DayNightCycleDuration;
         if (didWrapDay) currentDay++;
         dayNightCycleTimer = Mathf.Repeat(dayNightCycleTimer + cycleDeltaTime, DayNightCycleDuration);
         if (didWrapDay)
         {
+            FinalizeWorkerDailyOpinionsForDay(endedDay);
             CollectDailyBuildingTaxes();
             TickWorkerAging();
         }
