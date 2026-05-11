@@ -24,7 +24,7 @@ public partial class GameBootstrap
 
         List<BuildTool> newlyUnlocked = new();
         UnlockNewGameSecondLayerBuildTools(newlyUnlocked);
-        if (AreNewGameSecondLayerBuildingsBuilt())
+        if (AreNewGameSecondLayerUnlockPrerequisitesBuilt())
         {
             UnlockNewGameThirdLayerBuildTools(newlyUnlocked);
         }
@@ -71,15 +71,13 @@ public partial class GameBootstrap
                locations.ContainsKey(LocationType.CityHall);
     }
 
-    private bool AreNewGameSecondLayerBuildingsBuilt()
+    private bool AreNewGameSecondLayerUnlockPrerequisitesBuilt()
     {
         return locations.ContainsKey(LocationType.Parking) &&
                locations.ContainsKey(LocationType.LaborExchange) &&
-               locations.ContainsKey(LocationType.Canteen) &&
                locations.ContainsKey(LocationType.Forest) &&
                locations.ContainsKey(LocationType.GasStation) &&
-               locations.ContainsKey(LocationType.Sawmill) &&
-               locations.ContainsKey(LocationType.Bar);
+               locations.ContainsKey(LocationType.Sawmill);
     }
 
     private void UnlockNewGameBuildGroup(List<BuildTool> newlyUnlocked, params BuildTool[] tools)

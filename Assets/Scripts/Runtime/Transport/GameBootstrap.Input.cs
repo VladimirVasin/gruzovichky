@@ -21,6 +21,11 @@ public partial class GameBootstrap
 
         if (Keyboard.current.escapeKey.wasPressedThisFrame)
         {
+            if (TryHandleBuildMenuEscape())
+            {
+                return;
+            }
+
             bool anyMenuOpen =
                 isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
                 isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isBuildPanelOpen || isWorldMapPanelOpen ||
@@ -110,6 +115,11 @@ public partial class GameBootstrap
             isSocialGraphScreenDirty = true;
             isNoosphereScreenDirty = true;
             PlayUiSound(isBuildPanelOpen ? uiPanelOpenClip : uiPanelCloseClip, 0.85f);
+            return;
+        }
+
+        if (isBuildPanelOpen && TryHandleBuildMenuHotkey())
+        {
             return;
         }
 
@@ -321,9 +331,21 @@ public partial class GameBootstrap
 
     private static bool IsRoadlessBuildTool(BuildTool tool)
     {
-        return tool == BuildTool.CityPark ||
-               tool == BuildTool.Kiosk;
+        return IsBuildingBuildTool(tool) && !DoesBuildToolRequireRoadAccess(tool);
     }
+
+    private static bool DoesBuildToolRequireRoadAccess(BuildTool tool) => tool switch
+    {
+        BuildTool.Parking          => true,
+        BuildTool.Warehouse        => true,
+        BuildTool.Stop             => true,
+        BuildTool.Forest           => true,
+        BuildTool.FurnitureFactory => true,
+        BuildTool.Sawmill          => true,
+        BuildTool.GasStation       => true,
+        BuildTool.Docks            => true,
+        _                          => false
+    };
 
     private static bool IsRoadBuildTool(BuildTool tool)
     {
@@ -556,9 +578,9 @@ public partial class GameBootstrap
             }
 
             float scroll = Mouse.current.scroll.ReadValue().y;
-            bool anyHudOpen = isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
-                isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isBuildPanelOpen || isWorldMapPanelOpen || isStatesPanelOpen || isSocialGraphPanelOpen || isNoospherePanelOpen;
-            if (Mathf.Abs(scroll) > 0.01f && !anyHudOpen && !IsPointerOverHud(mousePosition))
+            bool blockingHudOpen = isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
+                isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isWorldMapPanelOpen || isStatesPanelOpen || isSocialGraphPanelOpen || isNoospherePanelOpen;
+            if (Mathf.Abs(scroll) > 0.01f && !blockingHudOpen && !IsPointerOverHud(mousePosition))
             {
                 float currentDistance = cameraOffset.magnitude;
                 float zoomDistanceT = Mathf.InverseLerp(CameraMinDistance, CameraMaxDistance, currentDistance);

@@ -80,8 +80,6 @@ public partial class GameBootstrap
                 CreateBuildingBox(root, "QueueRope", new Vector3(x + 0.18f, 0.28f, 1.18f), new Vector3(0.34f, 0.035f, 0.035f), new Color(0.18f, 0.20f, 0.24f), VisualSmoothnessFabric, true);
             }
         }
-
-        CreateDrivewayToAnchor(parent, min, max, anchor, 0.68f);
         EnhanceLaborExchangeModel(parent, center, min, max, anchor);
     }
 }

@@ -275,6 +275,7 @@ public partial class GameBootstrap
         UpdateWorkerThoughtFormationRuntime();
         UpdateWorkerFamilyRuntime();
         UpdateWorkerMigrationRuntime();
+        UpdateImportedBuildingInteractions(Time.deltaTime * gameSpeedMultiplier);
 
         for (int i = 0; i < truckAgents.Count; i++)
         {

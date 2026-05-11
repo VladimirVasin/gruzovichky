@@ -72,6 +72,7 @@ public partial class GameBootstrap
         shadowLodRenderers.Clear();
         gridLinesRoot = null;
         ResetSquirrelMemorialWorldState();
+        ResetFootpathSystem();
         worldRoot = new GameObject("PrototypeWorld").transform;
         roadsRoot = new GameObject("Roads").transform;
         roadsRoot.SetParent(worldRoot, false);

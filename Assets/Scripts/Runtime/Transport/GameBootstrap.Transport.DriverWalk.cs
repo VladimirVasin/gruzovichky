@@ -40,6 +40,7 @@ public partial class GameBootstrap
 
         Vector3 currentPosition = driver.DriverObject.transform.position;
         UpdateDriverLastSafeWalkPosition(driver, currentPosition);
+        RecordDriverFootpathWear(driver, currentPosition);
         Vector3 targetPosition = driver.WalkTargetWorld;
         if (driver.WalkPath.Count > 0)
         {
@@ -78,6 +79,7 @@ public partial class GameBootstrap
 
             driver.DriverObject.transform.position = currentPosition;
             UpdateDriverLastSafeWalkPosition(driver, currentPosition);
+            RecordDriverFootpathWear(driver, currentPosition);
             driver.DriverObject.transform.rotation = Quaternion.Slerp(
                 driver.DriverObject.transform.rotation,
                 Quaternion.LookRotation(flatDirection.normalized, Vector3.up),
@@ -459,8 +461,8 @@ public partial class GameBootstrap
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
-                if (locations.TryGetValue(LocationType.Bar, out LocationData barData) &&
-                    driver.Money >= barData.ServiceFee)
+                LocationData barData = GetDriverPendingServiceLocation(driver, LocationType.Bar);
+                if (barData != null && driver.Money >= barData.ServiceFee)
                 {
                     driver.WalkPhase = DriverRescuePhase.IdleAtBar;
                     if (barData.ServiceFee > 0)
@@ -480,10 +482,11 @@ public partial class GameBootstrap
                         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar.");
                     }
 
-                    EnterWorkerServiceInterior(driver, LocationType.Bar);
+                    EnterWorkerServiceInterior(driver, LocationType.Bar, barData);
                 }
                 else
                 {
+                    driver.PendingServiceLocationInstanceId = 0;
                     if (driver.LifeGoal == WorkerLifeGoal.Leisure)
                     {
                         driver.LifeGoal = WorkerLifeGoal.None;
@@ -504,8 +507,8 @@ public partial class GameBootstrap
                 driver.WalkPath.Clear();
                 driver.WalkWaypointIndex = 0;
                 driver.WalkAnimationTime = 0f;
-                if (locations.TryGetValue(LocationType.Canteen, out LocationData canteenData) &&
-                    driver.Money >= canteenData.ServiceFee)
+                LocationData canteenData = GetDriverPendingServiceLocation(driver, LocationType.Canteen);
+                if (canteenData != null && driver.Money >= canteenData.ServiceFee)
                 {
                     driver.WalkPhase = DriverRescuePhase.IdleAtCanteen;
                     if (canteenData.ServiceFee > 0)
@@ -525,10 +528,11 @@ public partial class GameBootstrap
                         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Canteen.");
                     }
 
-                    EnterWorkerServiceInterior(driver, LocationType.Canteen);
+                    EnterWorkerServiceInterior(driver, LocationType.Canteen, canteenData);
                 }
                 else
                 {
+                    driver.PendingServiceLocationInstanceId = 0;
                     if (driver.LifeGoal == WorkerLifeGoal.Eat)
                     {
                         driver.LifeGoal = WorkerLifeGoal.None;
@@ -588,10 +592,11 @@ public partial class GameBootstrap
                 driver.WalkAnimationTime = 0f;
                 driver.WalkPhase = DriverRescuePhase.IdleAtGamblingHall;
                 ResolveWorkerGamblingSpinResult(driver);
-                EnterWorkerServiceInterior(driver, LocationType.GamblingHall);
+                EnterWorkerServiceInterior(driver, LocationType.GamblingHall, GetDriverPendingServiceLocation(driver, LocationType.GamblingHall));
                 return;
 
             case DriverRescuePhase.IdleWalkToCityPark:
+                driver.PendingServiceLocationInstanceId = 0;
                 if (TryStartCityParkPromenade(driver, currentPosition))
                 {
                     RecordWorkerServiceThought(driver, LocationType.CityPark, WorkerNeedKind.Leisure, "leisure_service_good", WorkerThoughtTone.Positive, 38, 3);

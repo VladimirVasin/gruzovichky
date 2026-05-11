@@ -70,7 +70,8 @@ public partial class GameBootstrap
     {
         foreach (LocationData location in locations.Values)
         {
-            if (location.Anchor == cell || location.RoadAccess == cell)
+            if (DoesLocationRequireRoadAccess(location.Type) &&
+                (location.Anchor == cell || location.RoadAccess == cell))
             {
                 return true;
             }
@@ -78,7 +79,9 @@ public partial class GameBootstrap
 
         for (int i = 0; i < extraServiceLocations.Count; i++)
         {
-            if (extraServiceLocations[i].Anchor == cell || extraServiceLocations[i].RoadAccess == cell)
+            LocationData location = extraServiceLocations[i];
+            if (DoesLocationRequireRoadAccess(location.Type) &&
+                (location.Anchor == cell || location.RoadAccess == cell))
             {
                 return true;
             }
@@ -86,7 +89,9 @@ public partial class GameBootstrap
 
         for (int i = 0; i < localStops.Count; i++)
         {
-            if (localStops[i].Anchor == cell || localStops[i].RoadAccess == cell)
+            LocationData stop = localStops[i];
+            if (DoesLocationRequireRoadAccess(stop.Type) &&
+                (stop.Anchor == cell || stop.RoadAccess == cell))
             {
                 return true;
             }
@@ -199,6 +204,7 @@ public partial class GameBootstrap
 
     private void AddRoadCellUnchecked(Vector2Int cell)
     {
+        ClearFootpathAtCell(cell);
         if (!roadCells.Add(cell))
         {
             return;
@@ -224,6 +230,7 @@ public partial class GameBootstrap
         {
             RebuildUnifiedRoadVisuals();
         }
+        UpdateRoadAccessWarningMarkers();
         if (SessionDebugLogger.IsVerboseEnabled("ROAD_TRACE"))
         {
             SessionDebugLogger.LogVerbose("ROAD_TRACE", $"Added road at cell ({cell.x},{cell.y}).");
@@ -256,6 +263,7 @@ public partial class GameBootstrap
         {
             RebuildUnifiedRoadVisuals();
         }
+        UpdateRoadAccessWarningMarkers();
         SessionDebugLogger.Log("ROAD", $"Removed road at cell ({cell.x},{cell.y}).");
     }
     private bool ConnectsToRoadOrAnchor(Vector2Int cell, Vector2Int offset)

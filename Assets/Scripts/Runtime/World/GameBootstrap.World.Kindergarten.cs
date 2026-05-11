@@ -66,7 +66,5 @@ public partial class GameBootstrap
             CreateBuildingBox(root, "PlayFence", new Vector3(side * 1.48f, 0.05f, 1.08f), new Vector3(0.06f, 0.36f, 1.28f), new Color(0.94f, 0.90f, 0.74f), VisualSmoothnessWood, true);
             CreateBuildingBox(root, "PlayFenceFront", new Vector3(side * 0.84f, 0.05f, 1.70f), new Vector3(0.92f, 0.32f, 0.06f), new Color(0.94f, 0.90f, 0.74f), VisualSmoothnessWood, true);
         }
-
-        CreateDrivewayToAnchor(parent, min, max, anchor, 0.68f);
     }
 }

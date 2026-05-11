@@ -91,6 +91,13 @@ public partial class GameBootstrap : MonoBehaviour
     private const int LaborExchangeMaxActivePostings = 6;
     private const float DriverWalkSpeed = 2.2f;
     private const float DriverIdleWanderSpeed = 1.35f;
+    private const float FootpathWearPerCellVisit = 1f;
+    private const float FootpathVisibleWear = 4f;
+    private const float FootpathEstablishedWear = 11f;
+    private const float FootpathStrongWear = 24f;
+    private const float FootpathMaxWear = 32f;
+    private const float FootpathFreshWalkCost = 0.55f;
+    private const float FootpathStrongWalkCost = 0.18f;
     private const float DriverIdleWanderPauseMin = 2.2f;
     private const float DriverIdleWanderPauseMax = 4.6f;
     private const float DriverIdlePersonalSpace = 0.62f;
@@ -159,6 +166,8 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly HashSet<Vector2Int> roadCells = new();
     private readonly HashSet<Vector2Int> edgeHighwayCells = new();
     private readonly HashSet<Vector2Int> miscOccupiedCells = new();
+    private readonly Dictionary<Vector2Int, float> footpathWearByCell = new();
+    private readonly HashSet<Vector2Int> visibleFootpathCells = new();
     private readonly Dictionary<Vector2Int, GameObject> roadVisuals = new();
     private readonly Dictionary<LocationType, LocationData> locations = new();
     private readonly List<LocationData> extraServiceLocations = new();
@@ -317,6 +326,7 @@ public partial class GameBootstrap : MonoBehaviour
     private Material highwayShoulderMaterial;
     private Texture2D groundSurfaceTexture;
     private Texture2D grassSurfaceTexture;
+    private Texture2D footpathSurfaceTexture;
     private Texture2D roadSurfaceTexture;
     private Light mainDirectionalLight;
     private Volume dioramaVolume;

@@ -37,10 +37,36 @@ public partial class GameBootstrap
             Color offColor = i < locationNightLightOffColors.Count ? locationNightLightOffColors[i] : new Color(0.28f, 0.24f, 0.18f);
             Color onColor = i < locationNightLightOnColors.Count ? locationNightLightOnColors[i] : new Color(1f, 0.9f, 0.72f);
             Color lampColor = Color.Lerp(offColor, onColor, nightT);
-            material.color = lampColor;
+            SetLocationNightLightMaterialColor(material, lampColor);
         }
 
         UpdateRoadLanternLights(darkness);
+    }
+
+    private static void SetLocationNightLightMaterialColor(Material material, Color color)
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        bool setAnyColor = false;
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", color);
+            setAnyColor = true;
+        }
+
+        if (material.HasProperty("_Color"))
+        {
+            material.SetColor("_Color", color);
+            setAnyColor = true;
+        }
+
+        if (!setAnyColor && material.HasProperty("_TintColor"))
+        {
+            material.SetColor("_TintColor", color);
+        }
     }
 
     private bool IsLocationNightLightStaffed(int ownerInstanceId)

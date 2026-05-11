@@ -140,15 +140,7 @@ public partial class GameBootstrap
         BuildCategoryUi capturedCat = cat;
         btn.onClick.AddListener(() =>
         {
-            bool wasSelected = selectedBuildCategoryIndex == capturedCat.Index;
-            selectedBuildCategoryIndex = wasSelected ? -1 : capturedCat.Index;
-            if (!wasSelected)
-            {
-                buildScreenTrayAnimation = 0f;
-            }
-
-            isBuildScreenDirty = true;
-            PlayUiSound(wasSelected ? uiPanelCloseClip : uiSelectClip, wasSelected ? 0.64f : 0.70f);
+            SelectBuildCategoryFromMenu(capturedCat, true);
         });
         cat.HeaderButton = btn;
         AddBuildHoverHandlers(headerRoot.gameObject, hovered => capturedCat.IsHovered = hovered);
@@ -191,6 +183,7 @@ public partial class GameBootstrap
         if (!isBuildScreenDirty) return;
 
         bool ru = IsRussianLanguage();
+        int visibleCategoryNumber = 0;
         for (int categoryIndex = 0; categoryIndex < buildScreenUi.Categories.Length; categoryIndex++)
         {
             BuildCategoryUi cat = buildScreenUi.Categories[categoryIndex];
@@ -207,11 +200,13 @@ public partial class GameBootstrap
             cat.HeaderRoot.gameObject.SetActive(anyUnlocked);
             if (!anyUnlocked) continue;
 
-            cat.HeaderText.text = ru ? cat.LabelRu : cat.LabelEn;
+            visibleCategoryNumber++;
+            cat.HeaderText.text = FormatBuildMenuHotkeyLabel(visibleCategoryNumber, ru ? cat.LabelRu : cat.LabelEn);
             cat.HeaderBg.color = isSelectedCategory
                 ? new Color(0.12f, 0.31f, 0.36f, 0.98f)
                 : new Color(0.08f, 0.16f, 0.18f, 0.95f);
 
+            int visibleItemNumber = 0;
             foreach (BuildItemUi item in cat.Items)
             {
                 bool unlocked = IsBuildToolUnlocked(item.Tool);
@@ -238,8 +233,9 @@ public partial class GameBootstrap
                     : isActive
                         ? FleetAccentColor
                         : item.DefaultAccentColor;
+                visibleItemNumber++;
                 item.TitleText.color = isUnavailable ? new Color(0.62f, 0.66f, 0.72f, 1f) : Color.white;
-                item.TitleText.text = GetBuildCatalogTitle(item.Tool, ru, item.TitleText.text);
+                item.TitleText.text = FormatBuildMenuHotkeyLabel(visibleItemNumber, GetBuildCatalogTitle(item.Tool, ru, item.TitleFallback));
 
                 if (isUnavailable)
                 {
@@ -596,18 +592,18 @@ public partial class GameBootstrap
                 BuildTool.Stop             => ru ? $"Режим активен: поставь автобусную остановку 2x1 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x1 bus stop from its driveway cell. R rotates ({rot}).",
                 BuildTool.Forest           => ru ? $"Режим активен: поставь лагерь лесорубов 3x3 с подъездом. R — поворот ({rot})." : $"Mode active: place one 3x3 lumberjack camp from its driveway cell. R rotates ({rot}).",
                 BuildTool.Sawmill          => ru ? $"Режим активен: поставь лесопилку 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x2 sawmill from its driveway cell. R rotates ({rot}).",
-                BuildTool.Motel            => ru ? $"Режим активен: поставь мотель 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x2 motel from its driveway cell. R rotates ({rot}).",
+                BuildTool.Motel            => ru ? $"Режим активен: поставь мотель 2x2. R — поворот ({rot})." : $"Mode active: place one 2x2 motel. R rotates ({rot}).",
                 BuildTool.FurnitureFactory => ru ? $"Режим активен: поставь фабрику 3x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 3x2 furniture factory from its driveway cell. R rotates ({rot}).",
-                BuildTool.Bar              => ru ? $"Режим активен: поставь бар с подъездом. Можно строить несколько. R — поворот ({rot})." : $"Mode active: place a bar from its driveway cell. Multiple bars are allowed. R rotates ({rot}).",
-                BuildTool.Canteen          => ru ? $"Режим активен: поставь столовую 3x2 с подъездом. Можно строить несколько. R — поворот ({rot})." : $"Mode active: place a 3x2 canteen from its driveway cell. Multiple canteens are allowed. R rotates ({rot}).",
+                BuildTool.Bar              => ru ? $"Режим активен: поставь бар. Можно строить несколько. R — поворот ({rot})." : $"Mode active: place a bar. Multiple bars are allowed. R rotates ({rot}).",
+                BuildTool.Canteen          => ru ? $"Режим активен: поставь столовую 3x2. Можно строить несколько. R — поворот ({rot})." : $"Mode active: place a 3x2 canteen. Multiple canteens are allowed. R rotates ({rot}).",
                 BuildTool.Kiosk            => ru ? $"Режим активен: поставь киоск 2x1 без подъезда к дороге. Snack и Coffee покупаются здесь за $4. R — поворот ({rot})." : $"Mode active: place a 2x1 walk-up kiosk. Snacks and Coffee cost $4 here. No road driveway required. R rotates ({rot}).",
-                BuildTool.GamblingHall     => ru ? $"Режим активен: поставь игровой зал 3x3 с подъездом. Можно строить несколько. R — поворот ({rot})." : $"Mode active: place a 3x3 gambling hall from its driveway cell. Multiple halls are allowed. R rotates ({rot}).",
+                BuildTool.GamblingHall     => ru ? $"Режим активен: поставь игровой зал 3x3. Можно строить несколько. R — поворот ({rot})." : $"Mode active: place a 3x3 gambling hall. Multiple halls are allowed. R rotates ({rot}).",
                 BuildTool.CityPark         => ru ? $"Режим активен: поставь городской парк 8x8 без подъезда к дороге. R — поворот ({rot})." : $"Mode active: place an 8x8 city park with no road driveway. R rotates ({rot}).",
-                BuildTool.PersonalHouse    => ru ? $"Режим активен: жилой дом 5x6, вход со стороны дороги. R — поворот ({rot})." : $"Mode active: 5x6 personal house, entrance faces the road. R rotates ({rot}).",
-                BuildTool.Kindergarten     => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0434\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434 4x3 \u0441 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u043e\u043c. \u041c\u043e\u0436\u043d\u043e \u0441\u0442\u0440\u043e\u0438\u0442\u044c \u043d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u043e. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place a 4x3 kindergarten from its driveway cell. Multiple kindergartens are allowed. R rotates ({rot}).",
-                BuildTool.CarMarket        => $"Mode active: place one 5x5 car market from its driveway cell. R rotates ({rot}).",
-                BuildTool.LaborExchange    => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0411\u0438\u0440\u0436\u0443 \u0442\u0440\u0443\u0434\u0430 3x2 \u0441 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u043e\u043c. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place one 3x2 labor exchange from its driveway cell. R rotates ({rot}).",
-                BuildTool.CityHall         => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0440\u0430\u0442\u0443\u0448\u0443 4x3 \u0441 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u043e\u043c. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place one 4x3 city hall from its driveway cell. R rotates ({rot}).",
+                BuildTool.PersonalHouse    => ru ? $"Режим активен: поставь жилой дом 5x6. R — поворот ({rot})." : $"Mode active: place one 5x6 personal house. R rotates ({rot}).",
+                BuildTool.Kindergarten     => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0434\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434 4x3. \u041c\u043e\u0436\u043d\u043e \u0441\u0442\u0440\u043e\u0438\u0442\u044c \u043d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u043e. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place a 4x3 kindergarten. Multiple kindergartens are allowed. R rotates ({rot}).",
+                BuildTool.CarMarket        => ru ? $"Режим активен: поставь авторынок 5x5. R — поворот ({rot})." : $"Mode active: place one 5x5 car market. R rotates ({rot}).",
+                BuildTool.LaborExchange    => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0411\u0438\u0440\u0436\u0443 \u0442\u0440\u0443\u0434\u0430 3x2. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place one 3x2 labor exchange. R rotates ({rot}).",
+                BuildTool.CityHall         => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0440\u0430\u0442\u0443\u0448\u0443 4x3. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place one 4x3 city hall. R rotates ({rot}).",
                 BuildTool.GasStation       => ru ? $"\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u043e\u0441\u0442\u0430\u0432\u044c \u0437\u0430\u043f\u0440\u0430\u0432\u043a\u0443 2x2 \u0441 \u043f\u043e\u0434\u044a\u0435\u0437\u0434\u043e\u043c. R - \u043f\u043e\u0432\u043e\u0440\u043e\u0442 ({rot})." : $"Mode active: place one 2x2 gas station from its driveway cell. R rotates ({rot}).",
                 _                          => string.Empty
             };

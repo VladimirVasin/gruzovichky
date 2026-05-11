@@ -6,6 +6,7 @@ public partial class GameBootstrap : MonoBehaviour
     {
         groundSurfaceTexture = CreateStylizedGroundTexture(128);
         grassSurfaceTexture = CreateStylizedGrassTexture(128);
+        footpathSurfaceTexture = CreateStylizedFootpathTexture(128);
         roadSurfaceTexture = CreateStylizedRoadTexture(128);
         groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.95f, 0.91f, 0.84f), 0.1f);
         grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.72f, 0.82f, 0.69f), 0.08f);
@@ -170,6 +171,41 @@ public partial class GameBootstrap : MonoBehaviour
                 color = Color.Lerp(color, mossGreen, Mathf.Clamp01((mossNoise - 0.55f) * 0.45f));
                 color = Color.Lerp(color, lightGreen * 1.05f, Mathf.Clamp01((bladeNoise - 0.52f) * 1.8f));
                 color *= 0.96f + stripe;
+                texture.SetPixel(x, y, color);
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    private Texture2D CreateStylizedFootpathTexture(int size)
+    {
+        Texture2D texture = new(size, size, TextureFormat.RGBA32, false);
+        texture.name = "StylizedFootpathTexture";
+        texture.wrapMode = TextureWrapMode.Repeat;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color packedDust = new(0.55f, 0.47f, 0.32f);
+        Color drySoil = new(0.68f, 0.59f, 0.42f);
+        Color straw = new(0.78f, 0.70f, 0.50f);
+        Color pebble = new(0.42f, 0.38f, 0.31f);
+
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                float u = x / (float)(size - 1);
+                float v = y / (float)(size - 1);
+                float centerWear = Mathf.Clamp01(1f - Mathf.Abs(v - 0.5f) * 2.35f);
+                float broadNoise = Mathf.PerlinNoise(u * 3.5f + 4.2f, v * 3.1f + 1.4f);
+                float gritNoise = Mathf.PerlinNoise(u * 18.5f + 8.3f, v * 16.2f + 5.7f);
+                float scratch = Mathf.Abs(Mathf.Sin((u * 1.2f + v * 0.25f) * 42f)) * 0.08f;
+
+                Color color = Color.Lerp(drySoil, packedDust, centerWear * 0.8f);
+                color = Color.Lerp(color, straw, Mathf.Clamp01((broadNoise - 0.48f) * 0.6f));
+                color = Color.Lerp(color, pebble, Mathf.Clamp01((gritNoise - 0.72f) * 0.42f));
+                color *= 0.95f + centerWear * 0.08f + scratch;
                 texture.SetPixel(x, y, color);
             }
         }

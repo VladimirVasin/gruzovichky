@@ -88,7 +88,5 @@ public partial class GameBootstrap
 
         CreateBuildingBox(root, "ReceptionDesk", new Vector3(1.08f, 0.13f, 1.12f), new Vector3(0.68f, 0.20f, 0.30f), new Color(0.38f, 0.25f, 0.15f), VisualSmoothnessWood, true, true);
         CreateBuildingBox(root, "InTray", new Vector3(0.92f, 0.27f, 1.13f), new Vector3(0.24f, 0.06f, 0.18f), paper, VisualSmoothnessDefault, true);
-
-        CreateDrivewayToAnchor(parent, min, max, anchor, 0.74f);
     }
 }

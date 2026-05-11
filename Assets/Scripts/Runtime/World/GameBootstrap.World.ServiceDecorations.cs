@@ -22,10 +22,16 @@ public partial class GameBootstrap
         }
     }
 
-    private void CreateBarDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateBarDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedBarModel(owner, parent, center, min, max, anchor))
+        {
+            CreateBarEntranceLight(parent, center, min, max, anchor);
+            return;
+        }
+
         Color bodyColor = new Color(0.38f, 0.18f, 0.12f);
-        float scale = BuildingDecorScale;
+        float scale = BuildingDecorScale * 1.45f;
 
         // Main body
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -101,20 +107,8 @@ public partial class GameBootstrap
             ConfigureStaticVisual(barrel);
         }
 
-        // Warm point light above entrance
-        GameObject lightObj = new("BarLight");
-        lightObj.transform.SetParent(parent, false);
-        lightObj.transform.position = center + new Vector3(0f, 0.9f * scale, -0.9f * scale);
-        Light barLight = lightObj.AddComponent<Light>();
-        barLight.type = LightType.Point;
-        ServiceDecorationLightStyle barLightStyle = ServiceDecorationStyleService.GetLightStyle(ServiceDecorationKind.Bar);
-        barLight.color = barLightStyle.Color;
-        barLight.intensity = barLightStyle.Intensity;
-        barLight.range = barLightStyle.Range;
-        barLight.shadows = LightShadows.None;
+        CreateBarEntranceLight(parent, center, min, max, anchor);
 
-        // Walkway from entrance to anchor
-        CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
         EnhanceBarModel(parent, center, min, max, anchor);
     }
 
@@ -201,7 +195,6 @@ public partial class GameBootstrap
         canteenLight.range = canteenLightStyle.Range;
         canteenLight.shadows = LightShadows.None;
 
-        CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
         EnhanceCanteenModel(parent, center, min, max, anchor);
     }
 
@@ -267,8 +260,6 @@ public partial class GameBootstrap
         ApplyColor(steam, new Color(0.88f, 0.86f, 0.78f, 0.75f), VisualSmoothnessVehicleMetal);
         ConfigureStaticVisual(steam, VisualSmoothnessVehicleMetal);
 
-        CreateDrivewayToAnchor(parent, min, max, anchor, 0.42f);
-
         GameObject lightObj = new("KioskLight");
         lightObj.transform.SetParent(parent, false);
         lightObj.transform.position = GetCellCenter(anchor) + new Vector3(0f, 1.0f * scale, 0f);
@@ -280,8 +271,14 @@ public partial class GameBootstrap
         light.shadows = LightShadows.None;
     }
 
-    private void CreateGamblingHallDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateGamblingHallDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedGamblingHallModel(owner, parent, center, min, max, anchor))
+        {
+            CreateGamblingHallEntranceLight(parent, center, min, max, anchor);
+            return;
+        }
+
         float scale = BuildingDecorScale;
         float width = max.x - min.x + 1;
         float depth = max.y - min.y + 1;
@@ -353,7 +350,6 @@ public partial class GameBootstrap
         gamblingLight.range = gamblingLightStyle.Range;
         gamblingLight.shadows = LightShadows.None;
 
-        CreateDrivewayToAnchor(parent, min, max, anchor, 0.52f);
         EnhanceGamblingHallModel(parent, center, min, max, anchor);
     }
 
@@ -619,7 +615,6 @@ public partial class GameBootstrap
             default: HouseSplitLevel(or); break;
         }
 
-        CreateDrivewayToAnchor(parent, min, max, anchor, 0.72f);
         EnhancePersonalHouseModel(parent, center, min, max, anchor);
     }
 

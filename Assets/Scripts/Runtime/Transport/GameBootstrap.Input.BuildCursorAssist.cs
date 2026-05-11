@@ -2,6 +2,13 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private const float BuildCursorAssistLightHeight = 3.2f;
+    private const float BuildCursorAssistLightRangeMultiplier = 2.75f;
+    private const float BuildCursorAssistLightMinRange = 10f;
+    private const float BuildCursorAssistLightMaxRange = 24f;
+    private const float BuildCursorAssistLightMinIntensity = 0.22f;
+    private const float BuildCursorAssistLightMaxIntensity = 1.35f;
+
     private void DecorateRoadPreviewTile(GameObject root)
     {
         if (root == null)
@@ -44,11 +51,11 @@ public partial class GameBootstrap
 
         GameObject lightObject = new("BuildCursorAssistLight");
         lightObject.transform.SetParent(buildCursorAssistRoot.transform, false);
-        lightObject.transform.localPosition = new Vector3(0f, 2.4f, 0f);
+        lightObject.transform.localPosition = new Vector3(0f, BuildCursorAssistLightHeight, 0f);
         buildCursorAssistLight = lightObject.AddComponent<Light>();
         buildCursorAssistLight.type = LightType.Point;
         buildCursorAssistLight.color = new Color(1f, 0.78f, 0.46f);
-        buildCursorAssistLight.range = 7.5f;
+        buildCursorAssistLight.range = BuildCursorAssistLightMinRange;
         buildCursorAssistLight.intensity = 0f;
         buildCursorAssistLight.shadows = LightShadows.None;
         buildCursorAssistLight.enabled = false;
@@ -131,7 +138,13 @@ public partial class GameBootstrap
 
         buildCursorAssistLight.enabled = true;
         buildCursorAssistLight.color = canBuild ? new Color(1f, 0.78f, 0.46f) : new Color(1f, 0.36f, 0.24f);
-        buildCursorAssistLight.range = Mathf.Clamp(radius * 1.25f, 4f, 10f);
-        buildCursorAssistLight.intensity = Mathf.Lerp(0.15f, 0.9f, nightFactor);
+        buildCursorAssistLight.range = Mathf.Clamp(
+            radius * BuildCursorAssistLightRangeMultiplier,
+            BuildCursorAssistLightMinRange,
+            BuildCursorAssistLightMaxRange);
+        buildCursorAssistLight.intensity = Mathf.Lerp(
+            BuildCursorAssistLightMinIntensity,
+            BuildCursorAssistLightMaxIntensity,
+            nightFactor);
     }
 }

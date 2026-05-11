@@ -411,6 +411,10 @@ public partial class GameBootstrap : MonoBehaviour
         {
             target = GetNearestCityParkEntranceTarget(service, startPosition);
         }
+        else if (type == LocationType.Bar || type == LocationType.GamblingHall)
+        {
+            target = GetImportedServiceVisitTarget(service);
+        }
         else
         {
             target = GetCellCenter(service.RoadAccess == default ? service.Anchor : service.RoadAccess);
@@ -420,6 +424,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
         driver.LifeGoal = goal;
         driver.IdleActivityTimer = duration;
+        driver.PendingServiceLocationInstanceId = service.InstanceId;
         ResetWorkerLocalBusTripState(driver);
         if (TryStartWorkerPersonalCarTrip(driver, startPosition, target, walkPhase, $"{type} visit"))
         {
@@ -429,6 +434,7 @@ public partial class GameBootstrap : MonoBehaviour
         if (CanWorkerUsePersonalCar(driver))
         {
             LogWorkerDecision(driver, "service-visit-car-blocked", $"{type} for {goal}: no personal car route", true);
+            driver.PendingServiceLocationInstanceId = 0;
             return false;
         }
 
@@ -446,12 +452,25 @@ public partial class GameBootstrap : MonoBehaviour
             driver.WalkPhase = DriverRescuePhase.None;
             driver.LifeGoal = WorkerLifeGoal.None;
             driver.IdleActivityTimer = 0f;
+            driver.PendingServiceLocationInstanceId = 0;
             LogWorkerDecision(driver, "service-visit-path-blocked", $"{type} for {goal}; no safe walk path", true);
             return false;
         }
         SessionDebugLogger.Log("LIFE", $"{driver.DriverName} heading to {type} for {goal}; serviceFee=${service.ServiceFee}, need={FormatWorkerNeedDebug(driver, goal == WorkerLifeGoal.Eat ? WorkerNeedKind.Meal : WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
         LogWorkerDecision(driver, "service-visit-walk", $"{type} for {goal}; fee=${service.ServiceFee}; duration={duration:0.0}s", true);
         return true;
+    }
+
+    private LocationData GetDriverPendingServiceLocation(DriverAgent driver, LocationType type)
+    {
+        LocationData service = FindLocationByInstanceId(driver?.PendingServiceLocationInstanceId ?? 0);
+        if (service != null && service.Type == type)
+        {
+            return service;
+        }
+
+        locations.TryGetValue(type, out service);
+        return service;
     }
 
     private Vector3 GetNearestCityParkEntranceTarget(LocationData park, Vector3 startPosition)

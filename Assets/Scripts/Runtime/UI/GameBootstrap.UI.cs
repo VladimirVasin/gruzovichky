@@ -237,6 +237,7 @@ public partial class GameBootstrap
     {
         driver.WalkPath.Clear();
         driver.WalkWaypointIndex = 0;
+        driver.HasLastFootpathWearCell = false;
 
         DriverRescuePhase requestedPhase = driver.WalkPhase;
         if (TryRescueDriverFromUnsafeWalkCell(driver, "walk path start was unsafe"))
@@ -454,11 +455,12 @@ public partial class GameBootstrap
 
     private List<Vector2Int> FindDriverWalkPath(Vector2Int start, Vector2Int goal, DriverRescuePhase walkPhase)
     {
-        return GridPathService.FindPath(
+        return GridPathService.FindWeightedPath(
                    start,
                    goal,
                    GridPathService.GetCardinalNeighbors,
-                   neighbor => IsWalkableDriverCell(neighbor, start, goal, walkPhase));
+                   neighbor => IsWalkableDriverCell(neighbor, start, goal, walkPhase),
+                   neighbor => GetDriverWalkCellCost(neighbor, start, goal));
     }
 
     private bool TryFindNearestDriverWalkFallbackTarget(Vector2Int startCell, Vector2Int blockedGoalCell, DriverRescuePhase walkPhase, out Vector2Int targetCell, out List<Vector2Int> cellPath)

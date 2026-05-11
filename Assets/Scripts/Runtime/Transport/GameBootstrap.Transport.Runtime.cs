@@ -366,6 +366,13 @@ public partial class GameBootstrap
             case DriverRescuePhase.IdleSittingOnBench:
                 ApplyDriverSittingPose(driver);
                 return;
+            case DriverRescuePhase.IdleAtBar:
+            case DriverRescuePhase.IdleAtGamblingHall:
+                if (TryApplyImportedServiceSeatPose(driver))
+                {
+                    return;
+                }
+                break;
             case DriverRescuePhase.IdleSmoking:
                 ApplyDriverSmokingPose(driver);
                 return;

@@ -167,7 +167,7 @@ public partial class GameBootstrap : MonoBehaviour
                 }
                 else
                 {
-                    ApplyStylizedGroundMaterial(groundTile, x, y);
+                    ApplyGroundCellSurfaceMaterial(groundTile, x, y);
                     ConfigureStaticVisual(groundTile);
                 }
             }

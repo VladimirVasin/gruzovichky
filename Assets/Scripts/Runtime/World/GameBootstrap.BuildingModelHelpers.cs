@@ -170,4 +170,68 @@ public partial class GameBootstrap
             collider.enabled = false;
         }
     }
+
+    private void HideBuildingLightSourceVisuals(Transform root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            if (IsBuildingLightSourceVisual(renderer.transform))
+            {
+                renderer.enabled = false;
+            }
+        }
+    }
+
+    private static bool IsBuildingLightSourceVisual(Transform transform)
+    {
+        while (transform != null)
+        {
+            if (transform.TryGetComponent(out Light _))
+            {
+                return true;
+            }
+
+            if (IsBuildingLightSourceVisualName(transform.name))
+            {
+                return true;
+            }
+
+            transform = transform.parent;
+        }
+
+        return false;
+    }
+
+    private static bool IsBuildingLightSourceVisualName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        return name.StartsWith("P_", System.StringComparison.OrdinalIgnoreCase) ||
+            name.IndexOf("LightSource", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Light_Source", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("NightLampVisual", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("LampGlow", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("LightGlow", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("GlowSphere", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Lantern_Light", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Lantern_VFX", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Bulb", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("CandleFlame", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Flame", System.StringComparison.OrdinalIgnoreCase) >= 0;
+    }
 }

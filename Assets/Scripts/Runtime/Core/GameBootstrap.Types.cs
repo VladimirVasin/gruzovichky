@@ -535,7 +535,9 @@ public partial class GameBootstrap : MonoBehaviour
         public int DocksImportFurnitureStored;
         public GameObject RootObject;
         public GameObject LocalBusWarningMarker;
+        public GameObject RoadAccessWarningMarker;
         public Renderer BaseRenderer;
+        public ImportedBuildingRuntime ImportedRuntime;
         public readonly List<GameObject> StoredLogVisuals = new();
         public readonly List<GameObject> StoredBoardVisuals = new();
 
@@ -555,6 +557,38 @@ public partial class GameBootstrap : MonoBehaviour
         {
             return cell.x >= Min.x && cell.x <= Max.x && cell.y >= Min.y && cell.y <= Max.y;
         }
+    }
+
+    private sealed class ImportedBuildingRuntime
+    {
+        public Transform DoorTransform;
+        public Quaternion DoorClosedLocalRotation;
+        public Quaternion DoorOpenLocalRotation;
+        public float DoorOpenAmount;
+        public float DoorTargetOpenAmount;
+        public float DoorHoldTimer;
+        public Transform DoorEnterMarker;
+        public Transform DoorInsideMarker;
+        public Transform VisitorStandMarker;
+        public Transform TableLookAtMarker;
+        public readonly List<ImportedBuildingDoor> Doors = new();
+        public readonly List<ImportedBuildingSeat> Seats = new();
+    }
+
+    private sealed class ImportedBuildingDoor
+    {
+        public Transform DoorTransform;
+        public Quaternion ClosedLocalRotation;
+        public Quaternion OpenLocalRotation;
+    }
+
+    private sealed class ImportedBuildingSeat
+    {
+        public Transform SeatMarker;
+        public Transform LookAtMarker;
+        public Vector3 SeatWorldPosition;
+        public bool HasSeatWorldPosition;
+        public int OccupantDriverId;
     }
 
     private sealed class TripOption

@@ -250,7 +250,7 @@ public partial class GameBootstrap : MonoBehaviour
         SelectNextIdleActivity(driver, startPosition, targetPosition);
     }
 
-    private void EnterWorkerServiceInterior(DriverAgent driver, LocationType locationType)
+    private void EnterWorkerServiceInterior(DriverAgent driver, LocationType locationType, LocationData locationOverride = null)
     {
         if (driver?.DriverObject == null)
         {
@@ -259,8 +259,24 @@ public partial class GameBootstrap : MonoBehaviour
 
         driver.IsInsideBuilding = true;
         driver.InsideBuildingType = locationType;
-        driver.InsideBuildingInstanceId = locations.TryGetValue(locationType, out LocationData location) ? location.InstanceId : 0;
-        driver.DriverObject.SetActive(false);
+        LocationData location = locationOverride != null && locationOverride.Type == locationType
+            ? locationOverride
+            : GetDriverPendingServiceLocation(driver, locationType);
+        driver.PendingServiceLocationInstanceId = 0;
+        driver.InsideBuildingInstanceId = location != null ? location.InstanceId : 0;
+        bool isVisibleImportedVisitor =
+            (locationType == LocationType.Bar || locationType == LocationType.GamblingHall) &&
+            TrySeatWorkerAtImportedService(driver, location);
+        if (!isVisibleImportedVisitor)
+        {
+            if (locationType == LocationType.Bar || locationType == LocationType.GamblingHall)
+            {
+                RequestImportedBuildingDoorOpen(location);
+            }
+
+            driver.DriverObject.SetActive(false);
+        }
+
         if (location != null)
         {
             RecordWorkerBuildingKnowledge(driver, location, "\u041f\u043e\u0441\u0435\u0442\u0438\u043b \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0443", "Visited the building");
@@ -293,6 +309,27 @@ public partial class GameBootstrap : MonoBehaviour
             ApplyDriverPose(driver, 0f, 0f);
             SessionDebugLogger.Log("IDLE", $"{driver.DriverName} exited PersonalHouse meal interior.");
             return homeMealExitPosition;
+        }
+
+        if (locationType == LocationType.Bar || locationType == LocationType.GamblingHall)
+        {
+            LocationType serviceType = locationType.Value;
+            if (!TryGetImportedServiceExitPosition(driver, serviceType, out Vector3 serviceExitPosition))
+            {
+                serviceExitPosition = GetDriverStandPointNearLocation(serviceType);
+            }
+
+            ReleaseImportedBarSeat(driver);
+            driver.IsInsideBuilding = false;
+            driver.InsideBuildingType = null;
+            driver.InsideBuildingInstanceId = 0;
+            driver.DriverObject.transform.position = serviceExitPosition;
+            driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            driver.DriverObject.SetActive(true);
+            driver.WalkAnimationTime = 0f;
+            ApplyDriverPose(driver, 0f, 0f);
+            SessionDebugLogger.Log("IDLE", $"{driver.DriverName} exited {serviceType} interior.");
+            return serviceExitPosition;
         }
 
         if (locationType != LocationType.Bar &&

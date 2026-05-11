@@ -329,6 +329,7 @@ public partial class GameBootstrap : MonoBehaviour
             if (driver.IsInsideBuilding && bd != null)
             {
                 bd.Workers = Mathf.Max(0, bd.Workers - 1);
+                ReleaseImportedBarSeat(driver);
                 driver.IsInsideBuilding = false;
                 driver.InsideBuildingType = null;
                 driver.InsideBuildingInstanceId = 0;
@@ -478,6 +479,7 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IdleWanderPointIndex = -1;
         driver.PendingVendorLocationInstanceId = 0;
         driver.PendingVendorItemId = string.Empty;
+        driver.PendingServiceLocationInstanceId = 0;
         driver.IdleConversationTimer = 0f;
         driver.IdleConversationPartnerId = -1;
         driver.LifeGoal = WorkerLifeGoal.None;

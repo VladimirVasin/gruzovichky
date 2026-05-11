@@ -641,7 +641,7 @@ public partial class GameBootstrap
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
         GetRotatedBuildingFootprint(anchorCell, 2, 2, out Vector2Int previewMin, out Vector2Int previewMax);
-        SetBuildFootprintPreviewCells(previewMin, previewMax, anchorCell);
+        SetBuildFootprintPreviewCells(previewMin, previewMax, DoesLocationRequireRoadAccess(LocationType.Bar) ? anchorCell : null);
         bool canPlace = TryGetBarPlacement(anchorCell, out Vector2Int min, out Vector2Int max);
         if (!canPlace) return false;
 

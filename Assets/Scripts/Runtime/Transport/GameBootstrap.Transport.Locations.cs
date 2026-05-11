@@ -108,6 +108,15 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
             ApplyColor(baseBlock, new Color(0.62f, 0.56f, 0.44f), VisualSmoothnessAsphalt);
         }
+        else if (type == LocationType.Bar || type == LocationType.GamblingHall)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.26f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.09f, size.y * 0.99f);
+            ApplyColor(
+                baseBlock,
+                type == LocationType.Bar ? new Color(0.34f, 0.22f, 0.14f) : new Color(0.24f, 0.12f, 0.28f),
+                VisualSmoothnessWood);
+        }
         else if (type == LocationType.Docks)
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.23f, 0f);
@@ -126,6 +135,12 @@ public partial class GameBootstrap
             : type == LocationType.Forest
                 ? VisualSmoothnessWood
                 : VisualSmoothnessBuildingWall);
+        if ((type == LocationType.Bar || type == LocationType.GamblingHall) &&
+            baseBlock.TryGetComponent(out Renderer serviceBaseRenderer))
+        {
+            serviceBaseRenderer.enabled = false;
+        }
+
         data.BaseRenderer = baseBlock.GetComponent<Renderer>();
 
         if (type == LocationType.Parking)
@@ -166,7 +181,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Bar)
         {
-            CreateBarDecoration(root.transform, center, min, max, anchor);
+            CreateBarDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.Canteen)
         {
@@ -178,7 +193,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.GamblingHall)
         {
-            CreateGamblingHallDecoration(root.transform, center, min, max, anchor);
+            CreateGamblingHallDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.CityPark)
         {
@@ -217,32 +232,16 @@ public partial class GameBootstrap
         CreateLocationNightLights(data, type, root.transform, center, size);
         CreateLocationWindowLanguage(data, type, root.transform, center, size);
 
-        // в”Ђв”Ђ Category indicator stripe в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-        // Production (Forest / Sawmill / FurnitureFactory) = amber
-        // Service (everything else) = slate blue
-        // Forest and BusStop have no upright base block - skip.
-        if (type != LocationType.Forest && type != LocationType.IntercityStop && type != LocationType.Stop && type != LocationType.CityPark && type != LocationType.PersonalHouse && type != LocationType.CarMarket && type != LocationType.Kiosk)
+        if (DoesLocationRequireRoadAccess(type))
         {
-            bool isProduction = IsProductionLocation(type);
-            Color stripeColor = isProduction
-                ? new Color(0.95f, 0.58f, 0.10f)   // amber - production
-                : new Color(0.28f, 0.55f, 0.84f);   // blue - service
-
-            GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            stripe.name = "CategoryStripe";
-            stripe.transform.SetParent(root.transform, false);
-            stripe.transform.position   = center + new Vector3(0f, 0.38f, 0f);
-            stripe.transform.localScale = new Vector3(size.x * 0.97f, 0.06f, size.y * 0.97f);
-            ApplyColor(stripe, stripeColor, VisualSmoothnessVehicleMetal);
-            ConfigureStaticVisual(stripe, VisualSmoothnessVehicleMetal);
-            if (stripe.TryGetComponent(out Collider sc)) sc.enabled = false;
+            GameObject anchorMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            anchorMarker.transform.SetParent(root.transform, false);
+            anchorMarker.transform.position = GetCellCenter(anchor) + new Vector3(0f, 0.05f, 0f);
+            anchorMarker.transform.localScale = new Vector3(0.22f, 0.02f, 0.22f);
+            ApplyColor(anchorMarker, new Color(1f, 0.9f, 0.35f), VisualSmoothnessVehicleMetal);
         }
 
-        GameObject anchorMarker = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        anchorMarker.transform.SetParent(root.transform, false);
-        anchorMarker.transform.position = GetCellCenter(anchor) + new Vector3(0f, 0.05f, 0f);
-        anchorMarker.transform.localScale = new Vector3(0.22f, 0.02f, 0.22f);
-        ApplyColor(anchorMarker, new Color(1f, 0.9f, 0.35f), VisualSmoothnessVehicleMetal);
+        HideBuildingLightSourceVisuals(root.transform);
 
         if (type == LocationType.Stop)
         {
@@ -295,15 +294,24 @@ public partial class GameBootstrap
             EnsureLocationRoadAccessRoadCell(data, type.ToString());
         }
 
+        UpdateRoadAccessWarningMarkers();
         NotifyNewGameBuildUnlockProgressionBuilt(type);
         NotifyCityComplaintServiceBuilt(type);
     }
 
-    private static bool DoesLocationRequireRoadAccess(LocationType type)
+    private static bool DoesLocationRequireRoadAccess(LocationType type) => type switch
     {
-        return type != LocationType.CityPark &&
-               type != LocationType.Kiosk;
-    }
+        LocationType.Parking          => true,
+        LocationType.GasStation       => true,
+        LocationType.Forest           => true,
+        LocationType.Warehouse        => true,
+        LocationType.Sawmill          => true,
+        LocationType.FurnitureFactory => true,
+        LocationType.Docks            => true,
+        LocationType.Stop             => true,
+        LocationType.IntercityStop    => true,
+        _                             => false
+    };
 
     private static bool IsMultiInstanceServiceBuildType(LocationType type) => type switch
     {

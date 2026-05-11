@@ -408,6 +408,7 @@ public partial class GameBootstrap
     private sealed class BuildItemUi
     {
         public BuildTool     Tool;
+        public string        TitleFallback;
         public Color         DefaultAccentColor;
         public bool          IsHovered;
         public float         HoverT;

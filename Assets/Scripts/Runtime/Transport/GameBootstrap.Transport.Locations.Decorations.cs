@@ -368,7 +368,6 @@ public partial class GameBootstrap
             ConfigureStaticVisual(slot, VisualSmoothnessAsphalt);
         }
 
-        CreateDrivewayToAnchor(parent, min, max, anchor, 0.88f);
         EnhanceMotelModel(parent, center, min, max, anchor);
     }
 
@@ -559,12 +558,18 @@ public partial class GameBootstrap
     private void CreateLocationNightLight(LocationData owner, Transform parent, Vector3 localPosition, Color offColor, Color onColor, float maxIntensity, float range)
     {
         GameObject lampVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        lampVisual.name = "NightLampVisual";
         lampVisual.transform.SetParent(parent, false);
         lampVisual.transform.localPosition = localPosition;
         lampVisual.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
         ApplyColor(lampVisual, offColor, VisualSmoothnessGlass);
         ConfigureStaticVisual(lampVisual, VisualSmoothnessGlass);
         Renderer lampRenderer = lampVisual.GetComponent<Renderer>();
+        if (lampRenderer != null)
+        {
+            lampRenderer.enabled = false;
+        }
+
         locationNightLightRenderers.Add(lampRenderer);
         locationNightLightMaterials.Add(lampRenderer != null ? lampRenderer.material : null);
         locationNightLightOffColors.Add(offColor);
@@ -594,6 +599,11 @@ public partial class GameBootstrap
     private void CreateLocationWindowLanguage(LocationData owner, LocationType type, Transform parent, Vector3 center, Vector2Int size)
     {
         if (type == LocationType.IntercityStop || type == LocationType.Stop || type == LocationType.CityPark || type == LocationType.PersonalHouse)
+        {
+            return;
+        }
+
+        if ((type == LocationType.Bar || type == LocationType.GamblingHall) && HasImportedBuildingModel(parent))
         {
             return;
         }

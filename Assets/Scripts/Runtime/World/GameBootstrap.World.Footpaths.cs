@@ -1,0 +1,220 @@
+using UnityEngine;
+
+public partial class GameBootstrap
+{
+    private void ResetFootpathSystem()
+    {
+        footpathWearByCell.Clear();
+        visibleFootpathCells.Clear();
+
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            driverAgents[i].HasLastFootpathWearCell = false;
+        }
+    }
+
+    private void RecordDriverFootpathWear(DriverAgent driver, Vector3 position)
+    {
+        if (driver == null ||
+            driver.DriverObject == null ||
+            driver.IsInsideBuilding ||
+            driver.IsDrivingPersonalCar ||
+            driver.WalkPhase == DriverRescuePhase.None ||
+            driver.WalkPhase == DriverRescuePhase.RidingLocalBus ||
+            driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop)
+        {
+            return;
+        }
+
+        Vector2Int cell = WorldToCell(position);
+        if (driver.HasLastFootpathWearCell && driver.LastFootpathWearCell == cell)
+        {
+            return;
+        }
+
+        driver.LastFootpathWearCell = cell;
+        driver.HasLastFootpathWearCell = true;
+
+        if (!CanFootpathOccupyCell(cell))
+        {
+            return;
+        }
+
+        footpathWearByCell.TryGetValue(cell, out float previousWear);
+        float nextWear = Mathf.Min(FootpathMaxWear, previousWear + FootpathWearPerCellVisit);
+        if (Mathf.Approximately(previousWear, nextWear))
+        {
+            return;
+        }
+
+        footpathWearByCell[cell] = nextWear;
+
+        int previousStage = GetFootpathVisualStage(previousWear);
+        int nextStage = GetFootpathVisualStage(nextWear);
+        if (nextStage <= 0)
+        {
+            return;
+        }
+
+        visibleFootpathCells.Add(cell);
+        if (nextStage != previousStage)
+        {
+            RefreshGroundCellSurfaceMaterial(cell);
+        }
+    }
+
+    private float GetDriverWalkCellCost(Vector2Int cell, Vector2Int start, Vector2Int goal)
+    {
+        if (cell == start || cell == goal)
+        {
+            return 1f;
+        }
+
+        if (!IsVisibleFootpathCell(cell))
+        {
+            return 1f;
+        }
+
+        float t = GetFootpathWear01(cell);
+        return Mathf.Lerp(FootpathFreshWalkCost, FootpathStrongWalkCost, t);
+    }
+
+    private bool ClearFootpathAtCell(Vector2Int cell, bool refreshGround = true)
+    {
+        bool removedWear = footpathWearByCell.Remove(cell);
+        bool removedVisible = visibleFootpathCells.Remove(cell);
+        if (!removedWear && !removedVisible)
+        {
+            return false;
+        }
+
+        if (refreshGround)
+        {
+            RefreshGroundCellSurfaceMaterial(cell);
+        }
+
+        return true;
+    }
+
+    private int ClearFootpathsInFootprint(Vector2Int min, Vector2Int max)
+    {
+        int removed = 0;
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                if (ClearFootpathAtCell(new Vector2Int(x, y)))
+                {
+                    removed++;
+                }
+            }
+        }
+
+        return removed;
+    }
+
+    private void ApplyGroundCellSurfaceMaterial(GameObject target, int x, int y)
+    {
+        Vector2Int cell = new(x, y);
+        if (IsVisibleFootpathCell(cell))
+        {
+            ApplyFootpathGroundMaterial(target, cell);
+            return;
+        }
+
+        ApplyStylizedGroundMaterial(target, x, y);
+    }
+
+    private void RefreshGroundCellSurfaceMaterial(Vector2Int cell)
+    {
+        if (!IsInsideGrid(cell) || IsWaterOrBeachCell(cell) || groundRoot == null)
+        {
+            return;
+        }
+
+        Transform tile = groundRoot.Find($"Ground_{cell.x}_{cell.y}");
+        if (tile == null)
+        {
+            return;
+        }
+
+        ApplyGroundCellSurfaceMaterial(tile.gameObject, cell.x, cell.y);
+    }
+
+    private void ApplyFootpathGroundMaterial(GameObject target, Vector2Int cell)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        if (!target.TryGetComponent(out Renderer renderer))
+        {
+            return;
+        }
+
+        float wear01 = GetFootpathWear01(cell);
+        float tintNoise = Mathf.PerlinNoise((cell.x + 1) * 0.33f + 6.8f, (cell.y + 1) * 0.35f + 9.1f);
+        Color fresh = Color.Lerp(new Color(0.75f, 0.66f, 0.45f), new Color(0.85f, 0.77f, 0.55f), tintNoise);
+        Color packed = new(0.56f, 0.47f, 0.31f);
+        Color tint = QuantizeVisualTint(Color.Lerp(fresh, packed, wear01), 12f);
+        Texture texture = footpathSurfaceTexture != null ? footpathSurfaceTexture : groundSurfaceTexture;
+        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, 0.09f, new Vector2(0.72f, 0.72f));
+    }
+
+    private bool IsVisibleFootpathCell(Vector2Int cell)
+    {
+        return visibleFootpathCells.Contains(cell) &&
+               footpathWearByCell.TryGetValue(cell, out float wear) &&
+               wear >= FootpathVisibleWear &&
+               CanFootpathOccupyCell(cell);
+    }
+
+    private bool CanFootpathOccupyCell(Vector2Int cell)
+    {
+        if (!IsInsideGrid(cell) ||
+            IsWaterOrBeachCell(cell) ||
+            roadCells.Contains(cell) ||
+            edgeHighwayCells.Contains(cell))
+        {
+            return false;
+        }
+
+        return !IsLocationCell(cell) || IsCityParkFootpathCell(cell);
+    }
+
+    private bool IsCityParkFootpathCell(Vector2Int cell)
+    {
+        return locations.TryGetValue(LocationType.CityPark, out LocationData park) && park.Contains(cell);
+    }
+
+    private float GetFootpathWear01(Vector2Int cell)
+    {
+        if (!footpathWearByCell.TryGetValue(cell, out float wear))
+        {
+            return 0f;
+        }
+
+        return Mathf.InverseLerp(FootpathVisibleWear, FootpathStrongWear, wear);
+    }
+
+    private int GetFootpathVisualStage(float wear)
+    {
+        if (wear >= FootpathStrongWear)
+        {
+            return 3;
+        }
+
+        if (wear >= FootpathEstablishedWear)
+        {
+            return 2;
+        }
+
+        if (wear >= FootpathVisibleWear)
+        {
+            return 1;
+        }
+
+        return 0;
+    }
+}

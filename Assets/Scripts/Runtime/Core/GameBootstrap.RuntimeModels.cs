@@ -269,6 +269,8 @@ public partial class GameBootstrap
         public int FootstepClipCursor;
         public bool HasLastSafeWalkPosition;
         public Vector3 LastSafeWalkPosition;
+        public bool HasLastFootpathWearCell;
+        public Vector2Int LastFootpathWearCell;
         public int IdleWanderPointIndex = -1;
         public float IdleWanderPauseTimer;
         public float IdleConversationTimer;
@@ -277,6 +279,8 @@ public partial class GameBootstrap
         public bool IsArrivingByBus;
         public int SittingBenchIndex = -1;
         public int CityParkBenchIndex = -1;
+        public int ImportedBarSeatLocationInstanceId;
+        public int ImportedBarSeatIndex = -1;
         public int CityParkPromenadeStep;
         public int CityParkActivityStyle;
         public float IdleActivityTimer;
@@ -293,6 +297,7 @@ public partial class GameBootstrap
         public bool HadLeisureToday;
         public int PendingVendorLocationInstanceId;
         public string PendingVendorItemId = string.Empty;
+        public int PendingServiceLocationInstanceId;
         public int GamblingBet;
         public int GamblingPayout;
         public int GamblingMultiplier;

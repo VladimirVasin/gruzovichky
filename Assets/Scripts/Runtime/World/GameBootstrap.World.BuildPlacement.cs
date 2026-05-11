@@ -5,6 +5,7 @@ public partial class GameBootstrap
     private void PrepareBuildSiteForLocation(LocationType type, Vector2Int min, Vector2Int max)
     {
         int removedMiscCount = 0;
+        int removedFootpathCount = ClearFootpathsInFootprint(min, max);
         for (int x = min.x; x <= max.x; x++)
         {
             for (int y = min.y; y <= max.y; y++)
@@ -17,11 +18,11 @@ public partial class GameBootstrap
         }
 
         bool flattened = FlattenTerrainForBuildingFootprint(min, max, out float flatHeight);
-        if (removedMiscCount > 0 || flattened)
+        if (removedMiscCount > 0 || removedFootpathCount > 0 || flattened)
         {
             SessionDebugLogger.Log(
                 "BUILD",
-                $"Prepared build site for {type}: footprint=({min.x},{min.y})-({max.x},{max.y}), removedMisc={removedMiscCount}, flattened={flattened}, height={flatHeight:0.00}.");
+                $"Prepared build site for {type}: footprint=({min.x},{min.y})-({max.x},{max.y}), removedMisc={removedMiscCount}, removedFootpaths={removedFootpathCount}, flattened={flattened}, height={flatHeight:0.00}.");
         }
     }
 

@@ -266,6 +266,7 @@ public partial class GameBootstrap
             driver.DriverObject.SetActive(true);
             driver.DriverObject.transform.position = releasePosition;
             driver.DriverObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            ReleaseImportedBarSeat(driver);
             driver.IsInsideBuilding = false;
             driver.InsideBuildingType = null;
             driver.InsideBuildingInstanceId = 0;

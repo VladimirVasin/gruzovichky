@@ -210,7 +210,7 @@ public partial class GameBootstrap
 
     private BuildItemUi CreateBuildItemCard(RectTransform parent, Font font, BuildTool tool, string abbrev, string title, Color accentColor)
     {
-        BuildItemUi item = new() { Tool = tool, DefaultAccentColor = accentColor };
+        BuildItemUi item = new() { Tool = tool, TitleFallback = title, DefaultAccentColor = accentColor };
 
         RectTransform cardRoot = CreateUiObject("BuildTool_" + tool, parent).GetComponent<RectTransform>();
         cardRoot.sizeDelta = new Vector2(112f, 96f);
@@ -288,12 +288,7 @@ public partial class GameBootstrap
         BuildTool capturedTool = tool;
         btn.onClick.AddListener(() =>
         {
-            if (!IsBuildToolUnlocked(capturedTool) || IsBuildToolTemporarilyUnavailable(capturedTool)) return;
-            activeBuildTool = activeBuildTool == capturedTool ? BuildTool.None : capturedTool;
-            LogUiInput($"Build Canvas: switched tool to {activeBuildTool}");
-            PlayUiSound(uiSelectClip, 0.85f);
-            SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
-            isBuildScreenDirty = true;
+            TryToggleBuildToolFromBuildMenu(capturedTool, "Build Canvas");
         });
         item.Button = btn;
         AddBuildHoverHandlers(cardRoot.gameObject, hovered => item.IsHovered = hovered);

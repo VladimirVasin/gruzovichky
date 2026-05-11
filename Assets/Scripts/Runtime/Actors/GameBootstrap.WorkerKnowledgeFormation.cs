@@ -131,11 +131,19 @@ public partial class GameBootstrap
         bool changed = false;
         for (int i = worker.PendingKnowledge.Count - 1; i >= 0; i--)
         {
+            if (i >= worker.PendingKnowledge.Count)
+            {
+                i = worker.PendingKnowledge.Count - 1;
+                if (i < 0)
+                {
+                    break;
+                }
+            }
+
             PendingWorkerKnowledge pending = worker.PendingKnowledge[i];
             if (!IsPendingWorkerKnowledgeValid(worker, pending, now))
             {
-                worker.PendingKnowledge.RemoveAt(i);
-                changed = true;
+                changed |= RemovePendingWorkerKnowledgeIfPresent(worker, i, pending);
                 continue;
             }
 
@@ -165,11 +173,36 @@ public partial class GameBootstrap
             }
 
             WorkerMemory formed = FormWorkerKnowledgeFromPending(worker, pending, now);
-            worker.PendingKnowledge.RemoveAt(i);
-            changed = formed != null || changed;
+            bool removed = RemovePendingWorkerKnowledgeIfPresent(worker, i, pending);
+            changed = formed != null || removed || changed;
         }
 
         return changed;
+    }
+
+    private static bool RemovePendingWorkerKnowledgeIfPresent(DriverAgent worker, int index, PendingWorkerKnowledge pending)
+    {
+        if (worker == null)
+        {
+            return false;
+        }
+
+        if (index >= 0 &&
+            index < worker.PendingKnowledge.Count &&
+            ReferenceEquals(worker.PendingKnowledge[index], pending))
+        {
+            worker.PendingKnowledge.RemoveAt(index);
+            return true;
+        }
+
+        int currentIndex = worker.PendingKnowledge.IndexOf(pending);
+        if (currentIndex >= 0)
+        {
+            worker.PendingKnowledge.RemoveAt(currentIndex);
+            return true;
+        }
+
+        return false;
     }
 
     private bool IsPendingWorkerKnowledgeValid(DriverAgent worker, PendingWorkerKnowledge pending, float now)
