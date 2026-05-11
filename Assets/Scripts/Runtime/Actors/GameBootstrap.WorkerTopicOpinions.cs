@@ -170,6 +170,7 @@ public partial class GameBootstrap
 
         ApplyTopicOpinionSocialTrust(worker, pending, ref score, ref confidence, ref strongestReasonMagnitude, ref reasonRu, ref reasonEn);
         ApplyTopicOpinionLivedExperience(worker, ref score, ref confidence, ref strongestReasonMagnitude, ref reasonRu, ref reasonEn);
+        ApplyTopicOpinionCityExperience(ref score, ref confidence, ref strongestReasonMagnitude, ref reasonRu, ref reasonEn);
 
         int disposition = CalculateWorkerTopicOpinionDispositionBias(worker, pending);
         AddTopicOpinionComponent(

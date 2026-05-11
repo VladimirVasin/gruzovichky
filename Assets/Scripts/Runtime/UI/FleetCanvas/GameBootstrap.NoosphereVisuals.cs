@@ -90,7 +90,7 @@ public partial class GameBootstrap
         title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
         noosphereVisualUi.StatsText = CreateBodyText("NoosphereVisualStats", headerRow, font, string.Empty, 11, TextAnchor.MiddleRight, FleetMutedTextColor);
         noosphereVisualUi.StatsText.raycastTarget = false;
-        noosphereVisualUi.StatsText.gameObject.AddComponent<LayoutElement>().preferredWidth = 158f;
+        noosphereVisualUi.StatsText.gameObject.AddComponent<LayoutElement>().preferredWidth = 218f;
 
         RectTransform field = CreateStyledPanel("NoosphereVisualField", panel, new Color(0.020f, 0.032f, 0.052f, 0.94f));
         field.gameObject.AddComponent<RectMask2D>();
@@ -517,7 +517,9 @@ public partial class GameBootstrap
         noosphereVisualUi.CoreRoot.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(time * 0.9f) * 4f);
         if (noosphereVisualUi.CoreGlyph != null)
         {
-            noosphereVisualUi.CoreGlyph.color = new Color(0.60f, 0.86f, 1f, 0.84f + Mathf.Sin(time * 2.6f) * 0.08f);
+            Color coreColor = GetNoosphereCityExperienceCoreColor();
+            coreColor.a = 0.84f + Mathf.Sin(time * 2.6f) * 0.08f;
+            noosphereVisualUi.CoreGlyph.color = coreColor;
         }
 
         for (int i = 0; i < noosphereVisualUi.Nodes.Count; i++)
@@ -571,9 +573,10 @@ public partial class GameBootstrap
             pending += driverAgents[i]?.PendingKnowledge.Count ?? 0;
         }
 
-        noosphereVisualUi.StatsText.text = IsRussianLanguage()
-            ? $"\u0430\u043a\u0442 {CountActiveNoosphereKnowledge(now)} / \u0440\u0430\u0437\u0434 {pending} / \u0432\u0435\u0447 {GetCityKnowledgeCanonMemoryCount()}"
-            : $"act {CountActiveNoosphereKnowledge(now)} / form {pending} / perm {GetCityKnowledgeCanonMemoryCount()}";
+        bool ru = IsRussianLanguage();
+        noosphereVisualUi.StatsText.text = ru
+            ? $"\u0430\u043a\u0442 {CountActiveNoosphereKnowledge(now)} / \u0440\u0430\u0437\u0434 {pending} / \u0432\u0435\u0447 {GetCityKnowledgeCanonMemoryCount()}{FormatNoosphereVisualCityExperienceStat(ru)}"
+            : $"act {CountActiveNoosphereKnowledge(now)} / form {pending} / perm {GetCityKnowledgeCanonMemoryCount()}{FormatNoosphereVisualCityExperienceStat(ru)}";
     }
 
     private bool TryGetNoosphereVisualEventEndpoints(NoosphereKnowledgeLogEntry entry, Vector2 fieldSize, Vector2 core, out Vector2 from, out Vector2 to)

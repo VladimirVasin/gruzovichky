@@ -52,6 +52,8 @@ public partial class GameBootstrap
                 $"Finalized day {endedDay} resident opinions: positive={positive}, negative={negative}.");
             isDriversScreenDirty = true;
         }
+
+        FinalizeCityDailyExperienceForDay(endedDay);
     }
 
     private WorkerDailyOpinion BuildWorkerDailyOpinion(DriverAgent worker, int day)
