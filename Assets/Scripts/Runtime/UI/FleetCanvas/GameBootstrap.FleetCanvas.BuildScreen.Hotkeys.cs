@@ -4,11 +4,45 @@ public partial class GameBootstrap
 {
     private bool TryHandleBuildMenuEscape()
     {
+        return TryHandleBuildMenuCancel("Escape");
+    }
+
+    private bool TryHandleBuildMenuRightClickCancel()
+    {
+        if (Mouse.current == null || !Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            return false;
+        }
+
+        var mousePosition = Mouse.current.position.ReadValue();
+        lastMousePosition = mousePosition;
+        rightMousePressPosition = mousePosition;
+        isRightMouseDragging = false;
+
+        if (isBuildPanelOpen)
+        {
+            return TryHandleBuildMenuCancel("right click");
+        }
+
+        if (activeBuildTool == BuildTool.None)
+        {
+            return false;
+        }
+
+        CloseAllMenus();
+        LogUiInput("Build mode: closed by right click");
+        SessionDebugLogger.Log("BUILD", "Build mode closed by right click.");
+        return true;
+    }
+
+    private bool TryHandleBuildMenuCancel(string source)
+    {
         if (!isBuildPanelOpen)
         {
             return false;
         }
 
+        bool isEscape = source == "Escape";
         if (selectedBuildCategoryIndex >= 0 || activeBuildTool != BuildTool.None)
         {
             selectedBuildCategoryIndex = -1;
@@ -16,8 +50,8 @@ public partial class GameBootstrap
             hoveredBuildCell = null;
             CancelRoadPathMode();
             isBuildScreenDirty = true;
-            LogUiInput("Build Canvas: escaped to category layer");
-            SessionDebugLogger.Log("BUILD", "Build menu escaped to category layer.");
+            LogUiInput(isEscape ? "Build Canvas: escaped to category layer" : "Build Canvas: returned to category layer by right click");
+            SessionDebugLogger.Log("BUILD", isEscape ? "Build menu escaped to category layer." : "Build menu returned to category layer by right click.");
             PlayUiSound(uiPanelCloseClip, 0.66f);
             RefreshSelectionVisuals();
             return true;
@@ -26,8 +60,8 @@ public partial class GameBootstrap
         isBuildPanelOpen = false;
         selectedBuildCategoryIndex = -1;
         isBuildScreenDirty = true;
-        LogUiInput("Build Canvas: closed by Escape");
-        SessionDebugLogger.Log("BUILD", "Build menu closed by Escape.");
+        LogUiInput(isEscape ? "Build Canvas: closed by Escape" : "Build Canvas: closed by right click");
+        SessionDebugLogger.Log("BUILD", isEscape ? "Build menu closed by Escape." : "Build menu closed by right click.");
         PlayUiSound(uiPanelCloseClip, 0.82f);
         return true;
     }

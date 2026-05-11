@@ -292,6 +292,12 @@ public partial class GameBootstrap
             return;
         }
 
+        if (IsRoadBuildTool(activeBuildTool) && roadConstructionHiddenCells.Count > 0)
+        {
+            HideBuildHoverHighlights();
+            return;
+        }
+
         Vector2 mousePosition = Mouse.current.position.ReadValue();
         if (IsPointerOverHud(mousePosition))
         {

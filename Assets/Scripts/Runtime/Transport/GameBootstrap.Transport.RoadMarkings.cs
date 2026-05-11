@@ -11,7 +11,7 @@ public partial class GameBootstrap
 
         foreach (Vector2Int cell in roadCells)
         {
-            if (!TryGetRoadVisualAxis(cell, out bool isHorizontal))
+            if (!IsRoadVisualReady(cell) || !TryGetRoadVisualAxis(cell, out bool isHorizontal))
             {
                 continue;
             }
@@ -91,6 +91,12 @@ public partial class GameBootstrap
     }
     private bool TryGetRoadVisualAxis(Vector2Int cell, out bool isHorizontal)
     {
+        if (!IsRoadVisualReady(cell))
+        {
+            isHorizontal = true;
+            return false;
+        }
+
         return RoadMarkingPlanner.TryGetRoadVisualAxis(cell, ConnectsToRoadOrAnchor, out isHorizontal);
     }
     private void AddRoadMarkings(Vector2Int cell, Transform roadTransform, Vector3 roadScale, bool isHorizontal)
@@ -123,7 +129,7 @@ public partial class GameBootstrap
             if (dash.TryGetComponent(out Collider dc)) dc.enabled = false;
         }
 
-        // White shoulder stripes — road edges
+        // White shoulder stripes - road edges
         for (int s = -1; s <= 1; s += 2)
         {
             GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -141,6 +147,12 @@ public partial class GameBootstrap
     }
     private bool ShouldDrawTwoCellRoadCenterDash(Vector2Int cell, bool isHorizontal)
     {
+        Vector2Int pairedCell = isHorizontal ? cell + Vector2Int.up : cell + Vector2Int.right;
+        if (!IsRoadVisualReady(cell) || !IsRoadVisualReady(pairedCell))
+        {
+            return false;
+        }
+
         return RoadMarkingPlanner.ShouldDrawTwoCellCenterDash(cell, isHorizontal, roadCells, ConnectsToRoadOrAnchor);
     }
     private void AddRoadCornerMarkings(Transform roadTransform, int horizontalSign, int verticalSign)

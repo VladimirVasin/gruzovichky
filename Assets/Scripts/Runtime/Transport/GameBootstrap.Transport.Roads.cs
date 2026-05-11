@@ -269,7 +269,7 @@ public partial class GameBootstrap
     private bool ConnectsToRoadOrAnchor(Vector2Int cell, Vector2Int offset)
     {
         Vector2Int neighbor = cell + offset;
-        return roadCells.Contains(neighbor) || IsAnchorCell(neighbor);
+        return IsRoadVisualReady(neighbor) || IsAnchorCell(neighbor);
     }
 
     private void QueueRoadsideRefreshAround(Vector2Int cell)

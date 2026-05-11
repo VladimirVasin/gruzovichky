@@ -168,6 +168,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly HashSet<Vector2Int> naturalBeachCells = new();
     private readonly HashSet<Vector2Int> roadCells = new();
     private readonly HashSet<Vector2Int> edgeHighwayCells = new();
+    private readonly HashSet<Vector2Int> roadConstructionHiddenCells = new();
     private readonly HashSet<Vector2Int> miscOccupiedCells = new();
     private readonly Dictionary<Vector2Int, float> footpathWearByCell = new();
     private readonly HashSet<Vector2Int> visibleFootpathCells = new();
@@ -272,6 +273,8 @@ public partial class GameBootstrap : MonoBehaviour
     private Transform gridLinesRoot;
     private Transform roadsRoot;
     private Transform unifiedRoadVisualRoot;
+    private Transform roadConstructionWaveRoot;
+    private Coroutine roadConstructionWaveCoroutine;
     private bool suppressUnifiedRoadVisualRebuild;
     private bool suppressRoadsideRefresh;
     private readonly HashSet<Vector2Int> pendingRoadsideRefreshCells = new();

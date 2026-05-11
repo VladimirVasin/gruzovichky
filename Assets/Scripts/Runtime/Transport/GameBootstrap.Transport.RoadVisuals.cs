@@ -32,19 +32,19 @@ public partial class GameBootstrap
 
         foreach (Vector2Int cell in roadCells)
         {
-            if (horizontalVisited.Contains(cell) || !IsHorizontalUnifiedRoadCell(cell))
+            if (!IsRoadVisualReady(cell) || horizontalVisited.Contains(cell) || !IsHorizontalUnifiedRoadCell(cell))
             {
                 continue;
             }
 
             int startX = cell.x;
-            while (roadCells.Contains(new Vector2Int(startX - 1, cell.y)) && IsHorizontalUnifiedRoadCell(new Vector2Int(startX - 1, cell.y)))
+            while (IsHorizontalUnifiedRoadCell(new Vector2Int(startX - 1, cell.y)))
             {
                 startX--;
             }
 
             int endX = cell.x;
-            while (roadCells.Contains(new Vector2Int(endX + 1, cell.y)) && IsHorizontalUnifiedRoadCell(new Vector2Int(endX + 1, cell.y)))
+            while (IsHorizontalUnifiedRoadCell(new Vector2Int(endX + 1, cell.y)))
             {
                 endX++;
             }
@@ -61,19 +61,19 @@ public partial class GameBootstrap
 
         foreach (Vector2Int cell in roadCells)
         {
-            if (coveredCells.Contains(cell) || verticalVisited.Contains(cell) || !IsVerticalUnifiedRoadCell(cell))
+            if (!IsRoadVisualReady(cell) || coveredCells.Contains(cell) || verticalVisited.Contains(cell) || !IsVerticalUnifiedRoadCell(cell))
             {
                 continue;
             }
 
             int startY = cell.y;
-            while (roadCells.Contains(new Vector2Int(cell.x, startY - 1)) && IsVerticalUnifiedRoadCell(new Vector2Int(cell.x, startY - 1)))
+            while (IsVerticalUnifiedRoadCell(new Vector2Int(cell.x, startY - 1)))
             {
                 startY--;
             }
 
             int endY = cell.y;
-            while (roadCells.Contains(new Vector2Int(cell.x, endY + 1)) && IsVerticalUnifiedRoadCell(new Vector2Int(cell.x, endY + 1)))
+            while (IsVerticalUnifiedRoadCell(new Vector2Int(cell.x, endY + 1)))
             {
                 endY++;
             }
@@ -90,7 +90,7 @@ public partial class GameBootstrap
 
         foreach (Vector2Int cell in roadCells)
         {
-            if (coveredCells.Contains(cell))
+            if (!IsRoadVisualReady(cell) || coveredCells.Contains(cell))
             {
                 continue;
             }
@@ -104,13 +104,13 @@ public partial class GameBootstrap
     }
     private bool IsHorizontalUnifiedRoadCell(Vector2Int cell)
     {
-        return roadCells.Contains(cell) &&
-               (roadCells.Contains(cell + Vector2Int.left) || roadCells.Contains(cell + Vector2Int.right));
+        return IsRoadVisualReady(cell) &&
+               (IsRoadVisualReady(cell + Vector2Int.left) || IsRoadVisualReady(cell + Vector2Int.right));
     }
     private bool IsVerticalUnifiedRoadCell(Vector2Int cell)
     {
-        return roadCells.Contains(cell) &&
-               (roadCells.Contains(cell + Vector2Int.down) || roadCells.Contains(cell + Vector2Int.up));
+        return IsRoadVisualReady(cell) &&
+               (IsRoadVisualReady(cell + Vector2Int.down) || IsRoadVisualReady(cell + Vector2Int.up));
     }
     private void CreateUnifiedRoadRun(Vector2Int startCell, int length, bool horizontal)
     {
@@ -244,7 +244,7 @@ public partial class GameBootstrap
 
         foreach (Vector2Int cell in roadCells)
         {
-            if (!TryGetRoadCorner(cell, out int horizontalSign, out int verticalSign))
+            if (!IsRoadVisualReady(cell) || !TryGetRoadCorner(cell, out int horizontalSign, out int verticalSign))
             {
                 continue;
             }
@@ -491,8 +491,9 @@ public partial class GameBootstrap
 
     private void SetRoadTileFallbackVisibility(bool visible)
     {
-        foreach (GameObject road in roadVisuals.Values)
+        foreach (KeyValuePair<Vector2Int, GameObject> pair in roadVisuals)
         {
+            GameObject road = pair.Value;
             if (road == null)
             {
                 continue;
@@ -506,7 +507,7 @@ public partial class GameBootstrap
 
             foreach (Renderer renderer in surface.GetComponentsInChildren<Renderer>(true))
             {
-                renderer.enabled = visible;
+                renderer.enabled = visible && IsRoadVisualReady(pair.Key);
             }
 
             foreach (Collider collider in surface.GetComponentsInChildren<Collider>(true))
@@ -518,6 +519,13 @@ public partial class GameBootstrap
 
     private bool TryGetRoadCorner(Vector2Int cell, out int horizontalSign, out int verticalSign)
     {
+        if (!IsRoadVisualReady(cell))
+        {
+            horizontalSign = 0;
+            verticalSign = 0;
+            return false;
+        }
+
         bool east = ConnectsToRoadOrAnchor(cell, Vector2Int.right);
         bool west = ConnectsToRoadOrAnchor(cell, Vector2Int.left);
         bool north = ConnectsToRoadOrAnchor(cell, Vector2Int.up);

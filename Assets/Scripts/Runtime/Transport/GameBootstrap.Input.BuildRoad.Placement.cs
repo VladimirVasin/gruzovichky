@@ -8,9 +8,19 @@ public partial class GameBootstrap
     {
         Vector2Int direction = GetBuildRoadDirection();
         SessionDebugLogger.Log("BUILD_ROAD", $"click tool={activeBuildTool} cell={FormatCell(cell)} dir={FormatCell(direction)} mode=single-click.");
-        bool built = RunBatchedRoadPlacement(() => activeBuildTool == BuildTool.SingleRoad
-            ? TryPlaceSingleRoadCell(cell, "player")
-            : TryPlaceRoadFootprint(cell, direction, "player"));
+        bool built = RunBatchedRoadPlacement(() =>
+        {
+            HashSet<Vector2Int> roadsBeforeBuild = new(roadCells);
+            bool placed = activeBuildTool == BuildTool.SingleRoad
+                ? TryPlaceSingleRoadCell(cell, "player")
+                : TryPlaceRoadFootprint(cell, direction, "player");
+            if (placed)
+            {
+                StartRoadConstructionWave(new[] { cell }, CollectNewRoadCells(roadsBeforeBuild));
+            }
+
+            return placed;
+        });
         SessionDebugLogger.Log("BUILD_ROAD", $"click-result tool={activeBuildTool} cell={FormatCell(cell)} built={built}.");
         return built;
     }

@@ -256,9 +256,16 @@ public partial class GameBootstrap
             if (start == end)
             {
                 SessionDebugLogger.Log("BUILD_ROAD", $"path-build same-cell start={FormatCell(start)} tool={activeBuildTool} previewFootprintCells={FormatCellList(buildPreviewFootprintCells)} lanePairId=single.");
-                return activeBuildTool == BuildTool.SingleRoad
+                HashSet<Vector2Int> sameCellRoadsBeforeBuild = new(roadCells);
+                bool builtSameCell = activeBuildTool == BuildTool.SingleRoad
                     ? TryPlaceSingleRoadCell(start, "player-path")
                     : TryPlaceRoadFootprint(start, GetBuildRoadDirection(), "player-path");
+                if (builtSameCell)
+                {
+                    StartRoadConstructionWave(new[] { start }, CollectNewRoadCells(sameCellRoadsBeforeBuild));
+                }
+
+                return builtSameCell;
             }
 
             List<Vector2Int> path = GetRoadBuildToolPath(start, end);
@@ -345,17 +352,11 @@ public partial class GameBootstrap
                 }
             }
 
-            List<Vector2Int> newRoadCells = new();
-            foreach (Vector2Int roadCell in roadCells)
-            {
-                if (!roadsBeforeBuild.Contains(roadCell))
-                {
-                    newRoadCells.Add(roadCell);
-                }
-            }
+            List<Vector2Int> newRoadCells = CollectNewRoadCells(roadsBeforeBuild);
 
             if (anyBuilt)
             {
+                StartRoadConstructionWave(path, newRoadCells);
                 List<Vector2Int> refreshCells = new(path);
                 refreshCells.AddRange(buildPreviewFootprintCells);
                 refreshCells.AddRange(newRoadCells);

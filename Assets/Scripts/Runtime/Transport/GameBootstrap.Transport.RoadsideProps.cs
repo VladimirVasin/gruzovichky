@@ -20,6 +20,11 @@ public partial class GameBootstrap
 
         foreach (Vector2Int roadCell in roadCells)
         {
+            if (!IsRoadVisualReady(roadCell))
+            {
+                continue;
+            }
+
             if (!TryGetRoadLanternPlacement(roadCell, out Vector3 worldPosition, out Quaternion worldRotation))
             {
                 continue;
@@ -76,7 +81,7 @@ public partial class GameBootstrap
 
         System.Collections.Generic.List<Vector2Int> toRefresh = new() { cell };
         foreach (Vector2Int n in GridPathService.GetCardinalNeighbors(cell))
-            if (roadCells.Contains(n)) toRefresh.Add(n);
+            if (IsRoadVisualReady(n)) toRefresh.Add(n);
 
         RefreshRoadLanternCells(toRefresh, refreshMoths: true);
     }
@@ -95,7 +100,7 @@ public partial class GameBootstrap
 
         foreach (Vector2Int c in cells)
         {
-            if (!roadCells.Contains(c)) continue;
+            if (!IsRoadVisualReady(c)) continue;
             if (!TryGetRoadLanternPlacement(c, out Vector3 pos, out Quaternion rot)) continue;
             CreateRoadLanternForCell(c, pos, rot);
         }
@@ -183,10 +188,10 @@ public partial class GameBootstrap
         bool north = ConnectsToRoadOrAnchor(cell, Vector2Int.up);
         bool south = ConnectsToRoadOrAnchor(cell, Vector2Int.down);
 
-        bool northLane = roadCells.Contains(cell + Vector2Int.up);
-        bool southLane = roadCells.Contains(cell + Vector2Int.down);
-        bool eastLane = roadCells.Contains(cell + Vector2Int.right);
-        bool westLane = roadCells.Contains(cell + Vector2Int.left);
+        bool northLane = IsRoadVisualReady(cell + Vector2Int.up);
+        bool southLane = IsRoadVisualReady(cell + Vector2Int.down);
+        bool eastLane = IsRoadVisualReady(cell + Vector2Int.right);
+        bool westLane = IsRoadVisualReady(cell + Vector2Int.left);
 
         bool horizontalCandidate = (east || west) && (northLane ^ southLane);
         bool verticalCandidate = (north || south) && (eastLane ^ westLane);
@@ -296,7 +301,7 @@ public partial class GameBootstrap
                 continue;
             }
 
-            if (roadCells.Contains(neighbor) || IsAnchorCell(neighbor))
+            if (IsRoadVisualReady(neighbor) || IsAnchorCell(neighbor))
             {
                 return true;
             }
@@ -322,6 +327,11 @@ public partial class GameBootstrap
 
         foreach (Vector2Int roadCell in roadCells)
         {
+            if (!IsRoadVisualReady(roadCell))
+            {
+                continue;
+            }
+
             if (!TryGetRoadsideBenchPlacement(roadCell, benchSideCells, out Vector3 worldPosition, out Quaternion worldRotation, out Vector2Int sideCell))
             {
                 continue;
@@ -337,7 +347,7 @@ public partial class GameBootstrap
 
         System.Collections.Generic.List<Vector2Int> toRefresh = new() { cell };
         foreach (Vector2Int n in GridPathService.GetCardinalNeighbors(cell))
-            if (roadCells.Contains(n)) toRefresh.Add(n);
+            if (IsRoadVisualReady(n)) toRefresh.Add(n);
 
         RefreshRoadsideBenchCells(toRefresh);
     }
@@ -357,7 +367,7 @@ public partial class GameBootstrap
 
         foreach (Vector2Int c in cells)
         {
-            if (!roadCells.Contains(c)) continue;
+            if (!IsRoadVisualReady(c)) continue;
             if (!TryGetRoadsideBenchPlacement(c, benchSideCells, out Vector3 pos, out Quaternion rot, out Vector2Int sideCell)) continue;
             CreateRoadsideBench(pos, rot, c, sideCell);
             benchSideCells.Add(sideCell);
@@ -486,6 +496,11 @@ public partial class GameBootstrap
 
         foreach (Vector2Int roadCell in roadCells)
         {
+            if (!IsRoadVisualReady(roadCell))
+            {
+                continue;
+            }
+
             if (!TryGetRoadSignPlacement(roadCell, signSideCells, out Vector3 pos, out Quaternion rot,
                 out Vector2Int sideCell, out bool isTrafficLight)) continue;
 
@@ -499,7 +514,7 @@ public partial class GameBootstrap
 
         System.Collections.Generic.List<Vector2Int> toRefresh = new() { cell };
         foreach (Vector2Int n in GridPathService.GetCardinalNeighbors(cell))
-            if (roadCells.Contains(n)) toRefresh.Add(n);
+            if (IsRoadVisualReady(n)) toRefresh.Add(n);
 
         RefreshRoadSignCells(toRefresh);
     }
@@ -518,7 +533,7 @@ public partial class GameBootstrap
 
         foreach (Vector2Int c in cells)
         {
-            if (!roadCells.Contains(c)) continue;
+            if (!IsRoadVisualReady(c)) continue;
             if (!TryGetRoadSignPlacement(c, signSideCells, out Vector3 pos, out Quaternion rot,
                 out Vector2Int sideCell, out bool isTrafficLight)) continue;
             CreateRoadSignAtCell(pos, rot, c, sideCell, isTrafficLight);

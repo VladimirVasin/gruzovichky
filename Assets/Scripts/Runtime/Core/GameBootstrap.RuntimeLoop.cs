@@ -210,9 +210,13 @@ public partial class GameBootstrap
         if (!blockPlayerInputForOverlay)
         {
             HandleHotkeys();
-            HandleCameraInput();
-            HandleRoadRemovalInput();
-            HandleRoadPlacementInput();
+            bool buildCancelledByRightClick = TryHandleBuildMenuRightClickCancel();
+            if (!buildCancelledByRightClick)
+            {
+                HandleCameraInput();
+                HandleRoadRemovalInput();
+                HandleRoadPlacementInput();
+            }
             UpdateBuildHoverHighlight();
         }
 
