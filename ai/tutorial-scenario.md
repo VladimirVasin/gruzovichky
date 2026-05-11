@@ -18,7 +18,7 @@ Source of truth: code remains authoritative. This file is the cross-session chec
 ## Current Scenario
 
 1. Start Tutorial mode with an almost empty town, highway/intercity access, starter workers, and locked progression. Show welcome, focus the start area, then require camera controls: zoom in, zoom out, pan, and rotate.
-2. Teach road building. Player opens the bottom-centered Build dock or presses `B`, selects a road tool from the category tray, places one road cell, then uses Shift-drag to place a longer road segment. Roads must connect the town to the highway.
+2. Teach road building. Player opens the bottom-centered Build dock or presses `B`, selects a road tool from the category tray, left-clicks a start cell, then left-clicks an end cell to build the road segment. Roads are currently free and must connect the town to the highway.
 3. Unlock and build the core: Warehouse, Motel, and Parking. Each built core building can show its own explanation. The core goal completes when all three exist; tutorial text warns that road access is required for buildings to work properly.
 4. Unlock and build Lumberjack Camp near trees. Tutorial temporarily exposes the top-menu `Staffing` entry for early manual assignment. Player opens Staffing, selects the Lumberjack Camp vacancy, and assigns a lumberjack.
 5. Explain production shifts and wages. Then teach freight setup: player assigns a Truck Driver shift through Staffing, and Parking automatically provides the truck from fleet capacity. No separate truck purchase is taught.
@@ -42,3 +42,4 @@ Source of truth: code remains authoritative. This file is the cross-session chec
 - Labor Exchange quick HUD opens the staffing overview. The screen may still have internal `Vacancies` method names, but player-facing Tutorial copy should talk about `Staffing`, `Кадры`, or `Биржа труда` according to context.
 - Tutorial should not teach removed resources or old direct-hiring flow. Current resource/trade path is Logs/Boards/Cotton/Textile/Furniture, with Textile import taught through river trade and Docks.
 - Parking provides tutorial freight vehicles from capacity; Tutorial should not tell the player to buy a truck separately.
+- Building placement spends Treasury using `build-catalog.json` costs. The current required Tutorial building chain costs `$3740` before optional buildings, below `StartingTreasury = $5000`, so Tutorial should remain passable without a special subsidy.

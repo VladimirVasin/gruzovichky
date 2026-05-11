@@ -24,6 +24,7 @@ public sealed class BuildCatalogItemData
     public string abbrev;
     public LocalizedContentData title;
     public string color;
+    public int cost;
     public LocalizedContentData activeDescription;
     public LocalizedContentData description;
     public LocalizedContentData alreadyBuiltDescription;

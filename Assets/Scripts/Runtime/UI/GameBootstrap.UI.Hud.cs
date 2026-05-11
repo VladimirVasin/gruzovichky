@@ -419,7 +419,7 @@ public partial class GameBootstrap
 
         GUI.Label(new Rect(panelRect.x, panelRect.y + 22, panelRect.width, 26), FormatTreasuryAmount(), centeredHudValueStyle);
 
-        if (moneyPopupTimer <= 0f || moneyPopupAmount <= 0)
+        if (moneyPopupTimer <= 0f || moneyPopupAmount == 0)
         {
             return;
         }
@@ -428,8 +428,11 @@ public partial class GameBootstrap
         float rise = Mathf.Lerp(0f, 26f, normalized);
         float alpha = 1f - normalized;
         Color previousColor = GUI.color;
-        GUI.color = new Color(1f, 0.95f, 0.55f, alpha);
-        GUI.Label(new Rect(panelRect.x, panelRect.y - 8f - rise, panelRect.width, 24), $"+${moneyPopupAmount}", centeredHudValueStyle);
+        GUI.color = moneyPopupAmount > 0
+            ? new Color(1f, 0.95f, 0.55f, alpha)
+            : new Color(1f, 0.48f, 0.34f, alpha);
+        string sign = moneyPopupAmount > 0 ? "+" : "-";
+        GUI.Label(new Rect(panelRect.x, panelRect.y - 8f - rise, panelRect.width, 24), $"{sign}${Mathf.Abs(moneyPopupAmount)}", centeredHudValueStyle);
         GUI.color = previousColor;
     }
 

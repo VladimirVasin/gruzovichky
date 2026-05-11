@@ -187,6 +187,11 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (TryRejectBuildToolForInsufficientFunds(tool))
+        {
+            return false;
+        }
+
         activeBuildTool = activeBuildTool == tool ? BuildTool.None : tool;
         LogUiInput($"{source}: switched tool to {activeBuildTool}");
         PlayUiSound(uiSelectClip, 0.85f);
@@ -198,7 +203,7 @@ public partial class GameBootstrap
     private static string FormatBuildMenuHotkeyLabel(int hotkeyNumber, string label)
     {
         return hotkeyNumber > 0
-            ? hotkeyNumber + "." + (label ?? string.Empty)
+            ? hotkeyNumber + ". " + (label ?? string.Empty)
             : label ?? string.Empty;
     }
 

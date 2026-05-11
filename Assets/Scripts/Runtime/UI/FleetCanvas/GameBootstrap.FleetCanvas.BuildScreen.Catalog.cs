@@ -22,6 +22,72 @@ public partial class GameBootstrap
         return cachedBuildCatalogItems != null && cachedBuildCatalogItems.TryGetValue(tool, out item);
     }
 
+    private int GetBuildToolCost(BuildTool tool)
+    {
+        return TryGetBuildCatalogItem(tool, out BuildCatalogItemData item)
+            ? Mathf.Max(0, item.cost)
+            : 0;
+    }
+
+    private bool CanAffordBuildTool(BuildTool tool)
+    {
+        int cost = GetBuildToolCost(tool);
+        return cost <= 0 || money >= cost;
+    }
+
+    private string GetBuildToolCostLabel(BuildTool tool)
+    {
+        int cost = GetBuildToolCost(tool);
+        return cost > 0 ? $"${cost}" : string.Empty;
+    }
+
+    private string GetBuildToolNoFundsStatus(bool ru)
+    {
+        return ru ? "\u041d\u0435\u0442 \u0434\u0435\u043d\u0435\u0433" : "No funds";
+    }
+
+    private bool TryRejectBuildToolForInsufficientFunds(BuildTool tool)
+    {
+        int cost = GetBuildToolCost(tool);
+        if (cost <= 0 || money >= cost)
+        {
+            return false;
+        }
+
+        string titleEn = GetBuildCatalogTitle(tool, false, tool.ToString());
+        string titleRu = GetBuildCatalogTitle(tool, true, titleEn);
+        PushFeedEvent(
+            $"Not enough treasury for {titleEn}: ${money}/${cost}.",
+            $"\u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0434\u0435\u043d\u0435\u0433 \u043d\u0430 {titleRu}: ${money}/${cost}.",
+            FeedEventType.Warning);
+        PlayUiSound(uiPanelCloseClip, 0.62f);
+        activeBuildTool = BuildTool.None;
+        hoveredBuildCell = null;
+        HideBuildHoverHighlights();
+        isBuildScreenDirty = true;
+        RefreshSelectionVisuals();
+        SessionDebugLogger.Log("BUILD", $"Build rejected: not enough treasury for {tool}; cost=${cost}, treasury=${money}.");
+        return true;
+    }
+
+    private string AppendBuildToolCostDescription(BuildTool tool, string description, bool ru)
+    {
+        int cost = GetBuildToolCost(tool);
+        if (cost <= 0)
+        {
+            return description;
+        }
+
+        string costLine = CanAffordBuildTool(tool)
+            ? ru ? $"\u0421\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c: ${cost}." : $"Cost: ${cost}."
+            : ru ? $"\u0421\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c: ${cost}. \u0412 \u043a\u0430\u0437\u043d\u0435 ${money}."
+                 : $"Cost: ${cost}. Treasury has ${money}.";
+
+        return string.IsNullOrWhiteSpace(description)
+            ? costLine
+            : description + "\n" + costLine;
+    }
+
     private static bool IsBuildToolTemporarilyUnavailable(BuildTool tool)
     {
         return tool == BuildTool.Road;
@@ -29,7 +95,7 @@ public partial class GameBootstrap
 
     private string GetBuildToolUnavailableStatus(bool ru)
     {
-        return ru ? "\u041d\u0430 \u0440\u0435\u043a\u043e\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0438\u0438" : "Rework";
+        return ru ? "\u0420\u0435\u043c\u043e\u043d\u0442" : "Rework";
     }
 
     private string GetBuildToolUnavailableDescription(BuildTool tool, bool ru)
@@ -73,7 +139,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        description = text.Replace("{rot}", GetBuildRotationLabel());
+        description = AppendBuildToolCostDescription(tool, text.Replace("{rot}", GetBuildRotationLabel()), ru);
         return true;
     }
 
@@ -216,44 +282,59 @@ public partial class GameBootstrap
                 bool isActive = activeBuildTool == item.Tool;
                 bool isBuilt  = GetBuildToolAlreadyBuilt(item.Tool);
                 bool isUnavailable = IsBuildToolTemporarilyUnavailable(item.Tool);
-                if (isUnavailable && isActive)
+                bool isUnaffordable = !isUnavailable && !isBuilt && !CanAffordBuildTool(item.Tool);
+                item.IsUnaffordable = isUnaffordable;
+                if ((isUnavailable || isUnaffordable) && isActive)
                 {
                     activeBuildTool = BuildTool.None;
                     isActive = false;
                 }
 
-                item.Button.interactable = !isUnavailable;
-                item.CardBg.color = isUnavailable
+                bool isBlocked = isUnavailable || isUnaffordable;
+                item.Button.interactable = !isBlocked;
+                item.CardBg.color = isBlocked
                     ? new Color(0.11f, 0.13f, 0.16f, 0.82f)
                     : isActive
                         ? new Color(0.20f, 0.27f, 0.37f, 1f)
                         : new Color(0.16f, 0.21f, 0.28f, 1f);
-                item.AccentBg.color = isUnavailable
+                item.AccentBg.color = isBlocked
                     ? new Color(0.20f, 0.22f, 0.25f, 0.88f)
                     : isActive
                         ? FleetAccentColor
                         : item.DefaultAccentColor;
                 visibleItemNumber++;
-                item.TitleText.color = isUnavailable ? new Color(0.62f, 0.66f, 0.72f, 1f) : Color.white;
+                item.TitleText.color = isBlocked ? new Color(0.62f, 0.66f, 0.72f, 1f) : Color.white;
                 item.TitleText.text = FormatBuildMenuHotkeyLabel(visibleItemNumber, GetBuildCatalogTitle(item.Tool, ru, item.TitleFallback));
 
                 if (isUnavailable)
                 {
                     item.StatusBg.gameObject.SetActive(true);
-                    item.StatusBg.color  = new Color(0.24f, 0.24f, 0.26f, 0.85f);
+                    item.StatusBg.color  = new Color(0.16f, 0.16f, 0.18f, 0.96f);
                     item.StatusText.text = GetBuildToolUnavailableStatus(ru);
+                }
+                else if (isUnaffordable)
+                {
+                    item.StatusBg.gameObject.SetActive(true);
+                    item.StatusBg.color  = new Color(0.52f, 0.10f, 0.09f, 0.97f);
+                    item.StatusText.text = GetBuildToolNoFundsStatus(ru);
                 }
                 else if (isActive)
                 {
                     item.StatusBg.gameObject.SetActive(true);
-                    item.StatusBg.color  = new Color(0.60f, 0.36f, 0.10f, 0.85f);
+                    item.StatusBg.color  = new Color(0.60f, 0.36f, 0.10f, 0.96f);
                     item.StatusText.text = "Active";
                 }
                 else if (isBuilt)
                 {
                     item.StatusBg.gameObject.SetActive(true);
-                    item.StatusBg.color  = new Color(0.18f, 0.40f, 0.24f, 0.85f);
+                    item.StatusBg.color  = new Color(0.14f, 0.36f, 0.20f, 0.96f);
                     item.StatusText.text = "Built";
+                }
+                else if (!string.IsNullOrWhiteSpace(GetBuildToolCostLabel(item.Tool)))
+                {
+                    item.StatusBg.gameObject.SetActive(true);
+                    item.StatusBg.color  = new Color(0.18f, 0.13f, 0.06f, 0.98f);
+                    item.StatusText.text = GetBuildToolCostLabel(item.Tool);
                 }
                 else
                 {
@@ -588,8 +669,8 @@ public partial class GameBootstrap
             {
                 BuildTool.Parking          => ru ? "Парковка — основной хаб грузовиков. Поставь её вручную, когда будешь готов к автопарку." : "Mode active: place the truck yard manually when you are ready to run a fleet.",
                 BuildTool.Warehouse        => ru ? $"Режим активен: поставь склад 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x2 warehouse from its driveway cell. R rotates ({rot}).",
-                BuildTool.SingleRoad       => ru ? $"Режим активен: левая кнопка строит обычную дорогу 1 клетку шириной. Shift — протянуть путь." : "Mode active: left click builds a 1-cell road. Hold Shift to drag a path.",
-                BuildTool.Road             => ru ? $"Режим активен: ЛКМ выбирает начало участка, второй ЛКМ строит двухполосную дорогу. Shift — строго по одной оси. R — поворот ({rot})." : $"Mode active: left click selects a segment start, second left click builds the two-way road. Shift constrains to one axis. R rotates ({rot}).",
+                BuildTool.SingleRoad       => ru ? "\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u0435\u0440\u0432\u044b\u0439 \u041b\u041a\u041c \u0432\u044b\u0431\u0438\u0440\u0430\u0435\u0442 \u043d\u0430\u0447\u0430\u043b\u043e, \u0432\u0442\u043e\u0440\u043e\u0439 \u041b\u041a\u041c \u0441\u0442\u0440\u043e\u0438\u0442 \u0434\u043e\u0440\u043e\u0433\u0443." : "Mode active: first left click selects the start, second left click builds the road.",
+                BuildTool.Road             => ru ? "\u0420\u0435\u0436\u0438\u043c \u0430\u043a\u0442\u0438\u0432\u0435\u043d: \u043f\u0435\u0440\u0432\u044b\u0439 \u041b\u041a\u041c \u0432\u044b\u0431\u0438\u0440\u0430\u0435\u0442 \u043d\u0430\u0447\u0430\u043b\u043e, \u0432\u0442\u043e\u0440\u043e\u0439 \u041b\u041a\u041c \u0441\u0442\u0440\u043e\u0438\u0442 \u0434\u0432\u0443\u0445\u043f\u043e\u043b\u043e\u0441\u043d\u0443\u044e \u0434\u043e\u0440\u043e\u0433\u0443." : "Mode active: first left click selects the start, second left click builds the two-way road.",
                 BuildTool.Stop             => ru ? $"Режим активен: поставь автобусную остановку 2x1 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x1 bus stop from its driveway cell. R rotates ({rot}).",
                 BuildTool.Forest           => ru ? $"Режим активен: поставь лагерь лесорубов 3x3 с подъездом. R — поворот ({rot})." : $"Mode active: place one 3x3 lumberjack camp from its driveway cell. R rotates ({rot}).",
                 BuildTool.Sawmill          => ru ? $"Режим активен: поставь лесопилку 2x2 с подъездом. R — поворот ({rot})." : $"Mode active: place one 2x2 sawmill from its driveway cell. R rotates ({rot}).",

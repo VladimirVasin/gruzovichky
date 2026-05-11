@@ -132,6 +132,11 @@ public partial class GameBootstrap
         }
 
         BuildTool placementTool = activeBuildTool;
+        if (TryRejectBuildToolForInsufficientFunds(placementTool))
+        {
+            return;
+        }
+
         bool buildActionSucceeded = placementTool switch
         {
             BuildTool.Road => TryHandleRoadPlacement(cell),
@@ -182,6 +187,7 @@ public partial class GameBootstrap
         DisableTruckCameraFocus();
         if (IsBuildingBuildTool(placementTool))
         {
+            SpendBuildToolConstructionCost(placementTool, cell);
             PlayUiSound(buildingCompleteClip, 0.86f);
             CompleteBuildingPlacementFlow(placementTool, cell);
             return;
@@ -196,23 +202,90 @@ public partial class GameBootstrap
         }
     }
 
+    private void SpendBuildToolConstructionCost(BuildTool tool, Vector2Int anchorCell)
+    {
+        int cost = GetBuildToolCost(tool);
+        if (cost <= 0)
+        {
+            return;
+        }
+
+        string titleEn = GetBuildCatalogTitle(tool, false, tool.ToString());
+        string titleRu = GetBuildCatalogTitle(tool, true, titleEn);
+        money -= cost;
+        RecordMoneyMovement(-cost, "Treasury", "Construction Crew", $"Construction: {titleEn}", money);
+        PushFeedEvent(
+            $"Built {titleEn}: -${cost}.",
+            $"\u041f\u043e\u0441\u0442\u0440\u043e\u0435\u043d\u043e: {titleRu}. -${cost}.",
+            FeedEventType.Money);
+        SpawnMoneySpendPopup(GetBuildCostPopupPosition(tool, anchorCell), cost);
+        moneyPopupAmount = -cost;
+        moneyPopupTimer = MoneyPopupDuration;
+        isFleetScreenDirty = true;
+        isDriversScreenDirty = true;
+        isEconomyScreenDirty = true;
+        isBuildScreenDirty = true;
+        SessionDebugLogger.Log("BUILD", $"Construction paid for {tool}: cost=${cost}, treasury=${money}.");
+    }
+
+    private Vector3 GetBuildCostPopupPosition(BuildTool tool, Vector2Int anchorCell)
+    {
+        if (TryGetBuildToolLocationType(tool, out LocationType type) &&
+            TryFindNewestBuiltLocation(type, anchorCell, out LocationData location))
+        {
+            float x = (location.Min.x + location.Max.x + 1) * 0.5f;
+            float z = (location.Min.y + location.Max.y + 1) * 0.5f;
+            return new Vector3(x, SampleTerrainHeight(x, z) + 1.0f, z);
+        }
+
+        Vector3 fallback = GetCellCenter(anchorCell);
+        fallback.y = SampleTerrainHeight(fallback.x, fallback.z) + 1.0f;
+        return fallback;
+    }
+
+    private bool TryFindNewestBuiltLocation(LocationType type, Vector2Int anchorCell, out LocationData result)
+    {
+        LocationData best = null;
+        int bestScore = int.MinValue;
+        void Consider(LocationData location)
+        {
+            if (location == null || location.Type != type)
+            {
+                return;
+            }
+
+            int score = location.InstanceId;
+            if (location.Anchor == anchorCell)
+            {
+                score += 2000000;
+            }
+            else if (location.RoadAccess == anchorCell || location.Contains(anchorCell))
+            {
+                score += 1000000;
+            }
+
+            if (score <= bestScore)
+            {
+                return;
+            }
+
+            bestScore = score;
+            best = location;
+        }
+
+        foreach (LocationData location in locations.Values) Consider(location);
+        for (int i = 0; i < extraServiceLocations.Count; i++) Consider(extraServiceLocations[i]);
+        for (int i = 0; i < localStops.Count; i++) Consider(localStops[i]);
+        for (int i = 0; i < personalHouses.Count; i++) Consider(personalHouses[i]);
+        result = best;
+        return result != null;
+    }
+
     private bool TryHandleRoadPlacement(Vector2Int cell)
     {
-        bool shiftHeld = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
         if (activeBuildTool == BuildTool.Road)
         {
             return TryHandleTwoLaneRoadSegmentPlacement(cell);
-        }
-
-        if (!shiftHeld)
-        {
-            CancelRoadPathMode();
-            bool builtSingleCell = TryPlaceRoadAtCell(cell);
-            if (builtSingleCell)
-            {
-                MarkTutorialGoalComplete(TutorialGoalKind.RoadSingleCell);
-            }
-            return builtSingleCell;
         }
 
         if (!roadPathStart.HasValue)
@@ -234,6 +307,7 @@ public partial class GameBootstrap
             roadPathStart = cell;
             SetRoadPathStartHighlights(cell, startDirection, true);
             PlayUiSound(uiSelectClip, 0.65f);
+            MarkTutorialGoalComplete(TutorialGoalKind.RoadSegmentStart);
             SessionDebugLogger.Log("BUILD_ROAD", $"path-start accepted tool={activeBuildTool} cell={FormatCell(cell)} dir={FormatCell(startDirection)}.");
             return false;
         }
@@ -243,7 +317,7 @@ public partial class GameBootstrap
         if (built)
         {
             PlayUiSound(roadDragClip, 0.84f);
-            MarkTutorialGoalComplete(TutorialGoalKind.RoadShiftPath);
+            MarkTutorialGoalComplete(TutorialGoalKind.RoadSegmentEnd);
         }
         roadPathStart = null; // clear before CancelRoadPathMode so it doesn't log a spurious path-cancel
         CancelRoadPathMode();

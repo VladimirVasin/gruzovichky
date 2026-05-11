@@ -268,7 +268,7 @@ public partial class GameBootstrap
                     TutorialTrigger.UserBuildRoadPrompt,
                     2,
                     "Build the first road",
-                    "Now build your first road.\n\nOpen the Build menu at the bottom of the screen or press B. Choose a road tool, then left-click a cell to place the road.\n\nYour first road must connect to the Highway. Otherwise the town is cut off from outside traffic.\n\nHold Shift and drag to build a longer road segment. Press R to rotate the road direction before placing.");
+                    "Now build your first road.\n\nOpen the Build menu at the bottom of the screen or press B. Choose a road tool, then left-click the start cell.\n\nMove the cursor to the end cell and left-click again to build the road.\n\nYour first road must connect to the Highway. Otherwise the town is cut off from outside traffic.");
                 break;
             case TutorialTrigger.UserCoreBuildingsPrompt:
                 if (hasShownUserCoreBuildingsTutorial)

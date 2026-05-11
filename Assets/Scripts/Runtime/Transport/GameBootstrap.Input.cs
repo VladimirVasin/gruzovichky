@@ -308,26 +308,37 @@ public partial class GameBootstrap
 
     private static bool IsBuildingBuildTool(BuildTool tool)
     {
-        return tool == BuildTool.Parking ||
-               tool == BuildTool.Warehouse ||
-               tool == BuildTool.Stop ||
-               tool == BuildTool.Forest ||
-               tool == BuildTool.FurnitureFactory ||
-               tool == BuildTool.Sawmill ||
-               tool == BuildTool.Motel ||
-               tool == BuildTool.Bar ||
-               tool == BuildTool.Canteen ||
-               tool == BuildTool.Kiosk ||
-               tool == BuildTool.CleaningDepot ||
-               tool == BuildTool.GasStation ||
-               tool == BuildTool.GamblingHall ||
-               tool == BuildTool.CityPark ||
-               tool == BuildTool.PersonalHouse ||
-               tool == BuildTool.Kindergarten ||
-               tool == BuildTool.CarMarket ||
-               tool == BuildTool.LaborExchange ||
-               tool == BuildTool.CityHall ||
-               tool == BuildTool.Docks;
+        return TryGetBuildToolLocationType(tool, out _);
+    }
+
+    private static bool TryGetBuildToolLocationType(BuildTool tool, out LocationType type)
+    {
+        switch (tool)
+        {
+            case BuildTool.Parking:          type = LocationType.Parking;          return true;
+            case BuildTool.Warehouse:        type = LocationType.Warehouse;        return true;
+            case BuildTool.Stop:             type = LocationType.Stop;             return true;
+            case BuildTool.Forest:           type = LocationType.Forest;           return true;
+            case BuildTool.FurnitureFactory: type = LocationType.FurnitureFactory; return true;
+            case BuildTool.Sawmill:          type = LocationType.Sawmill;          return true;
+            case BuildTool.Motel:            type = LocationType.Motel;            return true;
+            case BuildTool.Bar:              type = LocationType.Bar;              return true;
+            case BuildTool.Canteen:          type = LocationType.Canteen;          return true;
+            case BuildTool.Kiosk:            type = LocationType.Kiosk;            return true;
+            case BuildTool.CleaningDepot:    type = LocationType.CleaningDepot;    return true;
+            case BuildTool.GasStation:       type = LocationType.GasStation;       return true;
+            case BuildTool.GamblingHall:     type = LocationType.GamblingHall;     return true;
+            case BuildTool.CityPark:         type = LocationType.CityPark;         return true;
+            case BuildTool.PersonalHouse:    type = LocationType.PersonalHouse;    return true;
+            case BuildTool.Kindergarten:     type = LocationType.Kindergarten;     return true;
+            case BuildTool.CarMarket:        type = LocationType.CarMarket;        return true;
+            case BuildTool.LaborExchange:    type = LocationType.LaborExchange;    return true;
+            case BuildTool.CityHall:         type = LocationType.CityHall;         return true;
+            case BuildTool.Docks:            type = LocationType.Docks;            return true;
+            default:
+                type = default;
+                return false;
+        }
     }
 
     private static bool IsRoadlessBuildTool(BuildTool tool)

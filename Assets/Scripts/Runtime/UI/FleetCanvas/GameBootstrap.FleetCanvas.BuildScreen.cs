@@ -265,16 +265,23 @@ public partial class GameBootstrap
             cardRoot,
             font,
             string.Empty,
-            9,
-            new Color(0.22f, 0.28f, 0.38f, 0.8f),
+            12,
+            new Color(0.08f, 0.10f, 0.12f, 0.96f),
             Color.white,
-            54f,
-            16f);
+            78f,
+            21f);
         RectTransform badgeRect = statusBadge.Background.GetComponent<RectTransform>();
         badgeRect.anchorMin = new Vector2(1f, 1f);
         badgeRect.anchorMax = new Vector2(1f, 1f);
         badgeRect.pivot = new Vector2(1f, 1f);
-        badgeRect.anchoredPosition = new Vector2(-5f, -5f);
+        badgeRect.anchoredPosition = new Vector2(-6f, -6f);
+        statusBadge.Label.fontStyle = FontStyle.Bold;
+        statusBadge.Label.resizeTextForBestFit = true;
+        statusBadge.Label.resizeTextMinSize = 9;
+        statusBadge.Label.resizeTextMaxSize = 12;
+        Outline badgeTextOutline = statusBadge.Label.gameObject.AddComponent<Outline>();
+        badgeTextOutline.effectColor = new Color(0f, 0f, 0f, 0.7f);
+        badgeTextOutline.effectDistance = new Vector2(1f, -1f);
         item.StatusBg = statusBadge.Background;
         item.StatusText = statusBadge.Label;
 

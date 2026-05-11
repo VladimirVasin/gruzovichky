@@ -428,6 +428,7 @@ public partial class GameBootstrap
         public Text          TitleText;
         public Text          StatusText;
         public Image         StatusBg;
+        public bool          IsUnaffordable;
     }
 
     private sealed class BuildCategoryUi

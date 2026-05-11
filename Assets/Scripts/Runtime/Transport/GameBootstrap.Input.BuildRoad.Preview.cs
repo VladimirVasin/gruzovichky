@@ -278,13 +278,6 @@ public partial class GameBootstrap
             return;
         }
 
-        if (roadPathStart.HasValue &&
-            activeBuildTool == BuildTool.SingleRoad &&
-            (Keyboard.current == null || !Keyboard.current.shiftKey.isPressed))
-        {
-            CancelRoadPathMode();
-        }
-
         hoveredBuildCell = null;
         if (activeBuildTool == BuildTool.None || mainCamera == null || Mouse.current == null || isTruckCameraFocused || isRightMouseDragging)
         {
@@ -328,22 +321,9 @@ public partial class GameBootstrap
             return;
         }
 
-        bool shiftHeld = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
-
-        if (activeBuildTool == BuildTool.Road && roadPathStart.HasValue)
+        if (IsRoadBuildTool(activeBuildTool) && roadPathStart.HasValue)
         {
             UpdateRoadPathPreview(cell, roadPathStart.Value);
-            return;
-        }
-
-        if (IsRoadBuildTool(activeBuildTool) && shiftHeld)
-        {
-            if (roadPathStart.HasValue)
-            {
-                UpdateRoadPathPreview(cell, roadPathStart.Value);
-                return;
-            }
-            UpdateBuildFootprintHoverHighlights(canBuild);
             return;
         }
 

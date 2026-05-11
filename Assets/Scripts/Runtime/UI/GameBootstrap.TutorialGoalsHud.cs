@@ -10,8 +10,8 @@ public partial class GameBootstrap
         CameraZoomOut,
         CameraPan,
         CameraRotate,
-        RoadSingleCell,
-        RoadShiftPath,
+        RoadSegmentStart,
+        RoadSegmentEnd,
         BuildWarehouse,
         BuildMotel,
         BuildParking,
@@ -159,8 +159,8 @@ public partial class GameBootstrap
         completedTutorialGoals.Clear();
         activeTutorialGoals.Clear();
         ClearTutorialGoalContinuationFlags();
-        activeTutorialGoals.Add(TutorialGoalKind.RoadSingleCell);
-        activeTutorialGoals.Add(TutorialGoalKind.RoadShiftPath);
+        activeTutorialGoals.Add(TutorialGoalKind.RoadSegmentStart);
+        activeTutorialGoals.Add(TutorialGoalKind.RoadSegmentEnd);
         isTutorialGoalsActive = true;
         isTutorialGoalsComplete = false;
         tutorialGoalsSuccessTimer = 0f;
@@ -535,8 +535,8 @@ public partial class GameBootstrap
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.CameraZoomOut);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.CameraPan);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.CameraRotate);
-        CreateTutorialGoalRow(panel, font, TutorialGoalKind.RoadSingleCell);
-        CreateTutorialGoalRow(panel, font, TutorialGoalKind.RoadShiftPath);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.RoadSegmentStart);
+        CreateTutorialGoalRow(panel, font, TutorialGoalKind.RoadSegmentEnd);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildWarehouse);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildMotel);
         CreateTutorialGoalRow(panel, font, TutorialGoalKind.BuildParking);
@@ -635,7 +635,7 @@ public partial class GameBootstrap
         tutorialGoalsHud.TitleText.text = ru ? "Цели" : "Goals";
         tutorialGoalsHud.SubtitleText.text = tutorialGoalsMode switch
         {
-            TutorialGoalsMode.RoadBuilding => ru ? "Построй дорогу двумя способами." : "Build roads in two ways.",
+            TutorialGoalsMode.RoadBuilding => ru ? "Построй участок дороги." : "Build a road segment.",
             TutorialGoalsMode.CoreBuildings => ru ? "Построй базовые здания города." : "Build the town core buildings.",
             TutorialGoalsMode.LumberjackCamp => ru ? "Запусти первую добычу дерева." : "Start your first logging production.",
             TutorialGoalsMode.BuyTruck => ru ? "Назначь первого водителя грузовика." : "Assign the first truck driver.",
@@ -645,7 +645,7 @@ public partial class GameBootstrap
         tutorialGoalsHud.TitleText.text = ru ? "\u0426\u0435\u043b\u0438" : "Goals";
         tutorialGoalsHud.SubtitleText.text = tutorialGoalsMode switch
         {
-            TutorialGoalsMode.RoadBuilding => ru ? "Открой Стройку (B), выбери дорогу и поставь её двумя способами." : "Open Build (B), choose a road, and place it in two ways.",
+            TutorialGoalsMode.RoadBuilding => ru ? "Открой Стройку (B), выбери дорогу, затем укажи начало и конец." : "Open Build (B), choose a road, then choose the start and end.",
             TutorialGoalsMode.CoreBuildings => ru ? "Открой Стройку (B) и поставь три базовых здания." : "Open Build (B) and place the three core buildings.",
             TutorialGoalsMode.LumberjackCamp => ru ? "Открой Стройку (B), поставь лагерь, затем открой Кадры." : "Open Build (B), place the camp, then open Staffing.",
             TutorialGoalsMode.BuyTruck => ru ? "Открой Кадры: выбери смену водителя. Parking выдаст грузовик автоматически." : "Open Staffing: choose a driver shift. Parking will provide the truck automatically.",
@@ -675,8 +675,8 @@ public partial class GameBootstrap
             TutorialGoalKind.CameraZoomOut => ru ? "Zoom Out: \u043e\u0442\u0434\u0430\u043b\u0438 \u043a\u0430\u043c\u0435\u0440\u0443" : "Zoom Out: move camera away",
             TutorialGoalKind.CameraPan => ru ? "Scroll \u043a\u0430\u0440\u0442\u044b: \u0441\u0434\u0432\u0438\u043d\u044c \u043e\u0431\u0437\u043e\u0440" : "Map scroll: pan the view",
             TutorialGoalKind.CameraRotate => ru ? "\u041f\u043e\u0432\u043e\u0440\u043e\u0442 \u043a\u0430\u0440\u0442\u044b: Q / E" : "Rotate map: Q / E",
-            TutorialGoalKind.RoadSingleCell => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0414\u043e\u0440\u043e\u0433\u0430: \u043f\u043e\u0441\u0442\u0430\u0432\u044c 1 \u043a\u043b\u0435\u0442\u043a\u0443 \u041b\u041a\u041c" : "Build (B) -> Road: place 1 cell with left click",
-            TutorialGoalKind.RoadShiftPath => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0414\u043e\u0440\u043e\u0433\u0430: \u043f\u0440\u043e\u0442\u044f\u043d\u0438 Shift + \u041b\u041a\u041c" : "Build (B) -> Road: drag with Shift + left click",
+            TutorialGoalKind.RoadSegmentStart => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0414\u043e\u0440\u043e\u0433\u0430: \u0432\u044b\u0431\u0435\u0440\u0438 \u043d\u0430\u0447\u0430\u043b\u043e \u041b\u041a\u041c" : "Build (B) -> Road: choose the start with left click",
+            TutorialGoalKind.RoadSegmentEnd => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0414\u043e\u0440\u043e\u0433\u0430: \u0432\u044b\u0431\u0435\u0440\u0438 \u043a\u043e\u043d\u0435\u0446 \u041b\u041a\u041c" : "Build (B) -> Road: choose the end with left click",
             TutorialGoalKind.BuildWarehouse => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u0421\u043a\u043b\u0430\u0434: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Warehouse: select and place",
             TutorialGoalKind.BuildMotel => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u041c\u043e\u0442\u0435\u043b\u044c: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Motel: select and place",
             TutorialGoalKind.BuildParking => ru ? "\u0421\u0442\u0440\u043e\u0439\u043a\u0430 (B) -> \u041f\u0430\u0440\u043a\u043e\u0432\u043a\u0430: \u0432\u044b\u0431\u0435\u0440\u0438 \u0438 \u043f\u043e\u0441\u0442\u0430\u0432\u044c" : "Build (B) -> Parking: select and place",
@@ -725,7 +725,7 @@ public partial class GameBootstrap
     {
         return tutorialGoalsMode switch
         {
-            TutorialGoalsMode.RoadBuilding => kind is TutorialGoalKind.RoadSingleCell or TutorialGoalKind.RoadShiftPath,
+            TutorialGoalsMode.RoadBuilding => kind is TutorialGoalKind.RoadSegmentStart or TutorialGoalKind.RoadSegmentEnd,
             TutorialGoalsMode.CoreBuildings => kind is TutorialGoalKind.BuildWarehouse or TutorialGoalKind.BuildMotel or TutorialGoalKind.BuildParking,
             TutorialGoalsMode.LumberjackCamp => kind is TutorialGoalKind.BuildLumberjackCamp or TutorialGoalKind.AssignLumberjackWorker,
             TutorialGoalsMode.BuyTruck => kind is TutorialGoalKind.AssignTruckDriverShift,

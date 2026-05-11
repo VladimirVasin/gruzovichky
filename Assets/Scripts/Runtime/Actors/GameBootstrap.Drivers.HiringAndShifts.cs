@@ -732,6 +732,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         LogEconomyMovement(entry);
         isEconomyScreenDirty = true;
+        isBuildScreenDirty = true;
     }
 
     private void UpdateIdleRecall(DriverAgent driver)
