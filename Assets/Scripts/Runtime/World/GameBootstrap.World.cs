@@ -318,7 +318,8 @@ public partial class GameBootstrap
             return false;
         }
 
-        CreateLocation(LocationType.Bar, "Bar", min, max, anchorCell, new Color(0.46f, 0.16f, 0.11f));
+        LocationData bar = CreateLocation(LocationType.Bar, "Bar", min, max, anchorCell, new Color(0.46f, 0.16f, 0.11f));
+        StartBarConstructionAnimation(bar);
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
@@ -397,7 +398,8 @@ public partial class GameBootstrap
             return false;
         }
 
-        CreateLocation(LocationType.GamblingHall, "Gambling Hall", min, max, anchorCell, new Color(0.34f, 0.16f, 0.46f));
+        LocationData gamblingHall = CreateLocation(LocationType.GamblingHall, "Gambling Hall", min, max, anchorCell, new Color(0.34f, 0.16f, 0.46f));
+        StartGamblingHallConstructionAnimation(gamblingHall);
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();

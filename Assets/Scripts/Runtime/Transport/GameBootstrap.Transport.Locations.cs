@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
-    private void CreateLocation(LocationType type, string label, Vector2Int min, Vector2Int max, Vector2Int anchor, Color baseColor, Vector2Int? roadAccess = null)
+    private LocationData CreateLocation(LocationType type, string label, Vector2Int min, Vector2Int max, Vector2Int anchor, Color baseColor, Vector2Int? roadAccess = null)
     {
         Vector2Int accessCell = roadAccess ?? anchor;
         PrepareBuildSiteForLocation(type, min, max, accessCell);
@@ -298,6 +298,7 @@ public partial class GameBootstrap
         UpdateRoadAccessWarningMarkers();
         NotifyNewGameBuildUnlockProgressionBuilt(type);
         NotifyCityComplaintServiceBuilt(type);
+        return data;
     }
 
     private static bool DoesLocationRequireRoadAccess(LocationType type) => type switch

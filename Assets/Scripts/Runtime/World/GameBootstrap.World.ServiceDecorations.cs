@@ -9,6 +9,7 @@ public partial class GameBootstrap
     private void CreateServiceGlowPanel(Transform parent, Vector3 worldPosition, Vector3 localScale, Color tint)
     {
         GameObject glow = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        glow.name = "ServiceGlowPanel";
         glow.transform.SetParent(parent, false);
         glow.transform.position = worldPosition;
         glow.transform.localScale = localScale;
@@ -35,6 +36,7 @@ public partial class GameBootstrap
 
         // Main body
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        body.name = "BarBody";
         body.transform.SetParent(parent, false);
         body.transform.position = center + new Vector3(0f, 0.42f * scale, 0f);
         body.transform.localScale = new Vector3(1.6f * scale, 0.84f * scale, 1.6f * scale);
@@ -43,6 +45,7 @@ public partial class GameBootstrap
 
         // Roof overhang
         GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        roof.name = "BarRoof";
         roof.transform.SetParent(parent, false);
         roof.transform.position = center + new Vector3(0f, 0.88f * scale, 0f);
         roof.transform.localScale = new Vector3(1.76f * scale, 0.07f * scale, 1.76f * scale);
@@ -51,6 +54,7 @@ public partial class GameBootstrap
 
         // Small chimney
         GameObject chimney = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        chimney.name = "BarChimney";
         chimney.transform.SetParent(parent, false);
         chimney.transform.position = center + new Vector3(-0.38f * scale, 1.18f * scale, 0.28f * scale);
         chimney.transform.localScale = new Vector3(0.16f * scale, 0.58f * scale, 0.16f * scale);
@@ -59,6 +63,7 @@ public partial class GameBootstrap
 
         // Door faces south toward the road anchor.
         GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        door.name = "BarDoor";
         door.transform.SetParent(parent, false);
         door.transform.position = center + new Vector3(0f, 0.22f * scale, -0.81f * scale);
         door.transform.localScale = new Vector3(0.36f * scale, 0.52f * scale, 0.04f * scale);
@@ -67,6 +72,7 @@ public partial class GameBootstrap
 
         // Door frame
         GameObject doorFrame = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        doorFrame.name = "BarDoorFrame";
         doorFrame.transform.SetParent(parent, false);
         doorFrame.transform.position = center + new Vector3(0f, 0.26f * scale, -0.82f * scale);
         doorFrame.transform.localScale = new Vector3(0.44f * scale, 0.62f * scale, 0.03f * scale);
@@ -76,6 +82,7 @@ public partial class GameBootstrap
 
         // Sign board above door
         GameObject signBg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        signBg.name = "BarSignBoard";
         signBg.transform.SetParent(parent, false);
         signBg.transform.position = center + new Vector3(0f, 0.68f * scale, -0.82f * scale);
         signBg.transform.localScale = new Vector3(0.68f * scale, 0.22f * scale, 0.04f * scale);
@@ -84,6 +91,7 @@ public partial class GameBootstrap
         CreateServiceGlowPanel(parent, signBg.transform.position + new Vector3(0f, 0f, -0.025f * scale), new Vector3(0.82f * scale, 0.28f * scale, 0.02f * scale), new Color(1f, 0.72f, 0.34f, 0.18f));
 
         GameObject facade = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        facade.name = "BarFacade";
         facade.transform.SetParent(parent, false);
         facade.transform.position = center + new Vector3(0f, 1.12f * scale, -0.73f * scale);
         facade.transform.localScale = new Vector3(1.18f * scale, 0.52f * scale, 0.06f * scale);
@@ -91,6 +99,7 @@ public partial class GameBootstrap
         ConfigureStaticVisual(facade);
 
         GameObject porch = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        porch.name = "BarPorch";
         porch.transform.SetParent(parent, false);
         porch.transform.position = center + new Vector3(0f, 0.08f * scale, -1.02f * scale);
         porch.transform.localScale = new Vector3(1.2f * scale, 0.06f * scale, 0.42f * scale);
@@ -100,6 +109,7 @@ public partial class GameBootstrap
         for (int i = 0; i < 2; i++)
         {
             GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            barrel.name = $"BarBarrel{i + 1}";
             barrel.transform.SetParent(parent, false);
             barrel.transform.position = center + new Vector3((-0.54f + i * 1.08f) * scale, 0.14f * scale, -0.88f * scale);
             barrel.transform.localScale = new Vector3(0.12f * scale, 0.16f * scale, 0.12f * scale);

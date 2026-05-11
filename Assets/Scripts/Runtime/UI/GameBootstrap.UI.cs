@@ -400,7 +400,58 @@ public partial class GameBootstrap
         return IsInsideGrid(cell) &&
                !waterCells.Contains(cell) &&
                !IsBuildingWalkBufferCell(cell) &&
-               !edgeHighwayCells.Contains(cell);
+               !edgeHighwayCells.Contains(cell) &&
+               !IsDriverBlockedLocationStandCell(cell);
+    }
+
+    private bool IsDriverBlockedLocationStandCell(Vector2Int cell)
+    {
+        foreach (LocationData location in locations.Values)
+        {
+            if (IsDriverBlockedLocationStandCell(location, cell))
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < extraServiceLocations.Count; i++)
+        {
+            if (IsDriverBlockedLocationStandCell(extraServiceLocations[i], cell))
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < personalHouses.Count; i++)
+        {
+            if (IsDriverBlockedLocationStandCell(personalHouses[i], cell))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsDriverBlockedLocationStandCell(LocationData location, Vector2Int cell)
+    {
+        if (location == null ||
+            location.Type == LocationType.CityPark ||
+            location.Type == LocationType.Stop ||
+            location.Type == LocationType.IntercityStop)
+        {
+            return false;
+        }
+
+        bool externalAccessCell =
+            (location.Anchor == cell || location.RoadAccess == cell) &&
+            !location.Contains(cell);
+        if (externalAccessCell)
+        {
+            return false;
+        }
+
+        return location.Contains(cell) || location.Anchor == cell;
     }
 
     private bool TryFindNearestDriverSafeWalkCell(Vector2Int origin, out Vector2Int safeCell)

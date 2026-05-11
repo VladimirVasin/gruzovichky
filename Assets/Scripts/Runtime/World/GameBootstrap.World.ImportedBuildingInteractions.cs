@@ -114,15 +114,16 @@ public partial class GameBootstrap
     private Vector3 GetImportedServiceVisitTarget(LocationData service)
     {
         if (TryGetImportedServiceDoorWorldPosition(service, true, out Vector3 doorPosition) &&
-            IsDriverSafeWalkCell(WorldToCell(doorPosition)))
+            TryResolveImportedServiceSafeStandPosition(service, doorPosition, out Vector3 safeDoorPosition))
         {
-            return doorPosition;
+            return safeDoorPosition;
         }
 
         Vector3 target = GetCellCenter(service.RoadAccess == default ? service.Anchor : service.RoadAccess);
-        target.x += Random.Range(-0.18f, 0.18f);
-        target.z += Random.Range(-0.18f, 0.18f);
-        target.y = SampleTerrainHeight(target.x, target.z);
+        if (TryResolveImportedServiceSafeStandPosition(service, target, out Vector3 safeTarget))
+        {
+            target = safeTarget;
+        }
 
         return target;
     }
@@ -281,13 +282,48 @@ public partial class GameBootstrap
             exitPosition = GetCellCenter(location.RoadAccess == default ? location.Anchor : location.RoadAccess);
         }
 
-        if (!IsDriverSafeWalkCell(WorldToCell(exitPosition)))
+        if (!TryResolveImportedServiceSafeStandPosition(location, exitPosition, out exitPosition))
         {
             exitPosition = GetCellCenter(location.RoadAccess == default ? location.Anchor : location.RoadAccess);
         }
 
         exitPosition.y = SampleTerrainHeight(exitPosition.x, exitPosition.z);
         return true;
+    }
+
+    private bool TryResolveImportedServiceSafeStandPosition(LocationData service, Vector3 preferredPosition, out Vector3 standPosition)
+    {
+        standPosition = preferredPosition;
+        if (service == null)
+        {
+            return false;
+        }
+
+        Vector2Int preferredCell = WorldToCell(preferredPosition);
+        if (IsDriverSafeWalkCell(preferredCell))
+        {
+            standPosition.y = SampleTerrainHeight(standPosition.x, standPosition.z);
+            return true;
+        }
+
+        Vector2Int accessCell = service.RoadAccess == default ? service.Anchor : service.RoadAccess;
+        if (IsDriverSafeWalkCell(accessCell))
+        {
+            standPosition = GetCellCenter(accessCell);
+            standPosition.x += Random.Range(-0.12f, 0.12f);
+            standPosition.z += Random.Range(-0.12f, 0.12f);
+            standPosition.y = SampleTerrainHeight(standPosition.x, standPosition.z);
+            return true;
+        }
+
+        if (TryFindNearestDriverSafeWalkCell(preferredCell, out Vector2Int safeCell))
+        {
+            standPosition = GetCellCenter(safeCell);
+            standPosition.y = SampleTerrainHeight(standPosition.x, standPosition.z);
+            return true;
+        }
+
+        return false;
     }
 
     private bool TryApplyImportedServiceSeatPose(DriverAgent driver)
