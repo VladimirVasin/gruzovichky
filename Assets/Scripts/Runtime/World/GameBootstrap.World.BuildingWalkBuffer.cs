@@ -4,7 +4,9 @@ public partial class GameBootstrap
 {
     private bool IsBuildingWalkBufferCell(Vector2Int cell)
     {
-        if (!IsInsideGrid(cell) || IsAnyLocationEntranceCell(cell))
+        if (!IsInsideGrid(cell) ||
+            IsAnyLocationEntranceCell(cell) ||
+            IsAdjacentToAnyLocationEntranceCell(cell))
         {
             return false;
         }
@@ -120,6 +122,72 @@ public partial class GameBootstrap
         }
 
         return false;
+    }
+
+    private bool IsAdjacentToAnyLocationEntranceCell(Vector2Int cell)
+    {
+        foreach (LocationData location in locations.Values)
+        {
+            if (IsAdjacentToLocationEntranceCell(location, cell))
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < extraServiceLocations.Count; i++)
+        {
+            if (IsAdjacentToLocationEntranceCell(extraServiceLocations[i], cell))
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < localStops.Count; i++)
+        {
+            if (IsAdjacentToLocationEntranceCell(localStops[i], cell))
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < personalHouses.Count; i++)
+        {
+            if (IsAdjacentToLocationEntranceCell(personalHouses[i], cell))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsAdjacentToLocationEntranceCell(LocationData location, Vector2Int cell)
+    {
+        if (location == null)
+        {
+            return false;
+        }
+
+        if (IsCardinalNeighborCell(cell, location.Anchor) ||
+            IsCardinalNeighborCell(cell, location.RoadAccess))
+        {
+            return true;
+        }
+
+        ImportedBuildingRuntime runtime = location.ImportedRuntime;
+        return IsAdjacentToImportedEntranceMarker(runtime?.DoorEnterMarker, cell) ||
+               IsAdjacentToImportedEntranceMarker(runtime?.DoorInsideMarker, cell) ||
+               IsAdjacentToImportedEntranceMarker(runtime?.VisitorStandMarker, cell);
+    }
+
+    private bool IsAdjacentToImportedEntranceMarker(Transform marker, Vector2Int cell)
+    {
+        return marker != null && IsCardinalNeighborCell(cell, WorldToCell(marker.position));
+    }
+
+    private static bool IsCardinalNeighborCell(Vector2Int a, Vector2Int b)
+    {
+        return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y) == 1;
     }
 
     private bool IsImportedEntranceMarkerCell(Transform marker, Vector2Int cell)

@@ -318,6 +318,7 @@ public partial class GameBootstrap
                tool == BuildTool.Bar ||
                tool == BuildTool.Canteen ||
                tool == BuildTool.Kiosk ||
+               tool == BuildTool.CleaningDepot ||
                tool == BuildTool.GasStation ||
                tool == BuildTool.GamblingHall ||
                tool == BuildTool.CityPark ||

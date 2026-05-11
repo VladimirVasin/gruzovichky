@@ -479,7 +479,8 @@ public partial class GameBootstrap
             LocationType.GamblingHall,
             LocationType.Kindergarten,
             LocationType.CarMarket,
-            LocationType.LaborExchange
+            LocationType.LaborExchange,
+            LocationType.CleaningDepot
         };
 
         for (int ti = 0; ti < buildingTypes.Length; ti++)

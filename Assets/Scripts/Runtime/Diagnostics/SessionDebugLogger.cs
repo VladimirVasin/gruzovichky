@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using UnityEngine;
 
 public enum SessionDebugLogLevel
@@ -13,6 +14,7 @@ public static class SessionDebugLogger
 {
     private static readonly object SyncRoot = new();
     private static readonly HashSet<string> VerboseCategories = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Encoding LogEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
     private static string logFilePath;
     private static bool sessionActive;
     private static bool verboseLogging;
@@ -38,7 +40,7 @@ public static class SessionDebugLogger
         {
             RefreshSettingsFromEnvironment();
             Directory.CreateDirectory(Path.GetDirectoryName(LogFilePath) ?? ".");
-            File.WriteAllText(LogFilePath, string.Empty);
+            File.WriteAllText(LogFilePath, string.Empty, LogEncoding);
             sessionActive = true;
             WriteLine("SESSION", $"Started new play session: {sessionLabel}");
             WriteLine("SESSION", $"Debug logging verbose={(verboseLogging ? "on" : "off")}; categories={FormatVerboseCategories()}.");
@@ -113,7 +115,7 @@ public static class SessionDebugLogger
             }
         }
 
-        File.AppendAllText(LogFilePath, $"[{timestamp}]{gameTimePrefix} [{category}] {message}{Environment.NewLine}");
+        File.AppendAllText(LogFilePath, $"[{timestamp}]{gameTimePrefix} [{category}] {message}{Environment.NewLine}", LogEncoding);
     }
 
     private static bool ShouldWrite(string category, SessionDebugLogLevel level)

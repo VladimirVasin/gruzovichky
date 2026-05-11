@@ -195,6 +195,7 @@ public partial class GameBootstrap
             CreateBuildCategory(dockRoot, itemTray, font, "Services & Leisure", "Сервисы и досуг", false,
                 (BuildTool.Canteen,          "CT", "Canteen",       new Color(0.20f, 0.42f, 0.50f)),
                 (BuildTool.Kiosk,            "KS", "Kiosk",         new Color(0.86f, 0.58f, 0.24f)),
+                (BuildTool.CleaningDepot,    "CL", "Cleaning Depot", new Color(0.24f, 0.55f, 0.45f)),
                 (BuildTool.Bar,              "BR", "Bar",           new Color(0.52f, 0.20f, 0.20f)),
                 (BuildTool.GamblingHall,     "GH", "Gambling Hall", new Color(0.52f, 0.38f, 0.08f)),
                 (BuildTool.CityPark,         "CP", "City Park",     new Color(0.22f, 0.48f, 0.22f)),
@@ -568,6 +569,25 @@ public partial class GameBootstrap
             }
 
             // ── City Park ─────────────────────────────────────────────────────
+            case BuildTool.CleaningDepot:
+            {
+                Color wall = new(0.24f, 0.55f, 0.45f);
+                Color roof = new(0.16f, 0.22f, 0.24f);
+                Color door = new(0.12f, 0.14f, 0.15f);
+                Color brush = new(0.84f, 0.72f, 0.36f);
+                Color metal = new(0.70f, 0.76f, 0.74f);
+                P(0.10f, 0.22f, 0.90f, 0.58f, wall);
+                P(0.06f, 0.56f, 0.94f, 0.68f, roof);
+                P(0.40f, 0.22f, 0.60f, 0.50f, door);
+                P(0.16f, 0.32f, 0.32f, 0.48f, new Color(0.58f, 0.82f, 0.90f));
+                P(0.68f, 0.32f, 0.84f, 0.48f, new Color(0.58f, 0.82f, 0.90f));
+                R(-16f, -12f, 5f, 38f, brush, -28f);
+                R(-23f, -26f, 20f, 7f, metal, -28f);
+                P(0.72f, 0.08f, 0.88f, 0.24f, new Color(0.22f, 0.26f, 0.26f));
+                P(0.76f, 0.24f, 0.84f, 0.34f, new Color(0.34f, 0.40f, 0.38f));
+                break;
+            }
+
             case BuildTool.CityPark:
             {
                 Color trunk = new(0.44f, 0.30f, 0.14f);

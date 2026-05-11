@@ -413,10 +413,86 @@ public partial class GameBootstrap
 
     private Vector3 GetDriverParkingWaitPosition(TruckAgent truckAgent)
     {
-        Vector3 truckPosition = truckAgent != null ? GetParkingSlotWorldPosition(truckAgent.ParkingSlotIndex) : GetLocationCenter(LocationType.Parking);
-        Vector3 waitPosition = truckPosition + new Vector3(-0.42f, 0f, -0.34f);
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            return Vector3.zero;
+        }
+
+        int slotIndex = truckAgent != null ? truckAgent.ParkingSlotIndex : 0;
+        Vector2Int waitCell = GetDriverParkingSafeWaitCell(parking, slotIndex);
+        Vector3 waitPosition = GetCellCenter(waitCell);
         waitPosition.y = SampleTerrainHeight(waitPosition.x, waitPosition.z);
         return waitPosition;
+    }
+
+    private Vector2Int GetDriverParkingSafeWaitCell(LocationData parking, int parkingSlotIndex)
+    {
+        Vector2Int access = parking.RoadAccess == default ? parking.Anchor : parking.RoadAccess;
+        Vector2Int clampedFootprint = new(
+            Mathf.Clamp(access.x, parking.Min.x, parking.Max.x),
+            Mathf.Clamp(access.y, parking.Min.y, parking.Max.y));
+        Vector2Int outward = GetDominantCardinalDirection(access - clampedFootprint);
+        if (outward == Vector2Int.zero)
+        {
+            Vector2Int footprintCenter = new((parking.Min.x + parking.Max.x) / 2, (parking.Min.y + parking.Max.y) / 2);
+            outward = GetDominantCardinalDirection(access - footprintCenter);
+        }
+
+        if (outward == Vector2Int.zero)
+        {
+            outward = Vector2Int.left;
+        }
+
+        Vector2Int side = new(-outward.y, outward.x);
+        Vector2Int[] candidates =
+        {
+            access + GetParkingWaitSlotOffset(parkingSlotIndex, outward, side),
+            access,
+            access + side,
+            access - side,
+            access + outward,
+            access + outward + side,
+            access + outward - side
+        };
+
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (IsDriverSafeWalkCell(candidates[i]))
+            {
+                return candidates[i];
+            }
+        }
+
+        if (TryFindNearestDriverSafeWalkCell(access, out Vector2Int fallbackCell))
+        {
+            return fallbackCell;
+        }
+
+        return access;
+    }
+
+    private static Vector2Int GetParkingWaitSlotOffset(int parkingSlotIndex, Vector2Int outward, Vector2Int side)
+    {
+        return (Mathf.Abs(parkingSlotIndex) % 5) switch
+        {
+            1 => side,
+            2 => -side,
+            3 => outward,
+            4 => outward + side,
+            _ => Vector2Int.zero
+        };
+    }
+
+    private static Vector2Int GetDominantCardinalDirection(Vector2Int delta)
+    {
+        if (delta == Vector2Int.zero)
+        {
+            return Vector2Int.zero;
+        }
+
+        return Mathf.Abs(delta.x) >= Mathf.Abs(delta.y)
+            ? new Vector2Int(delta.x >= 0 ? 1 : -1, 0)
+            : new Vector2Int(0, delta.y >= 0 ? 1 : -1);
     }
 
     private TruckAgent GetAssignedTruckForDriver(DriverAgent driver)

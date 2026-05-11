@@ -225,6 +225,11 @@ public partial class GameBootstrap : MonoBehaviour
             return false;
         }
 
+        if (!TryFindWorkerLocalBusTrip(startPosition, finalTargetWorld, out LocationData originStop, out LocationData destinationStop))
+        {
+            return false;
+        }
+
         if (!IsLocalBusServiceAvailableForPassengers())
         {
             LogLocalBusPassengerSkip(driver, reason, "no bus driver assigned to the current shift or no bus available");
@@ -245,11 +250,6 @@ public partial class GameBootstrap : MonoBehaviour
                 -2,
                 $"bus_unavailable|{reason}",
                 8f);
-            return false;
-        }
-
-        if (!TryFindWorkerLocalBusTrip(startPosition, finalTargetWorld, out LocationData originStop, out LocationData destinationStop))
-        {
             return false;
         }
 
@@ -321,9 +321,9 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver.DutyMode == DriverDutyMode.Logistics && driver.AssignedBuildingType.HasValue)
         {
             if (driver.AssignedBuildingType == LocationType.Forest)
-            {
                 CancelForestFieldWork(driver);
-            }
+            else if (driver.AssignedBuildingType == LocationType.CleaningDepot)
+                CancelStreetCleaningWork(driver);
 
             LocationData bd = GetAssignedBuildingLocation(driver);
             if (driver.IsInsideBuilding && bd != null)
@@ -657,6 +657,7 @@ public partial class GameBootstrap : MonoBehaviour
         {
             if (driver.IsArrivingByBus || driver.IsOnActiveShift ||
                 driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) ||
+                HasReadyCriticalNeedBeforeShift(driver) ||
                 !driver.AssignedBuildingType.HasValue)
             {
                 return;
@@ -688,6 +689,7 @@ public partial class GameBootstrap : MonoBehaviour
                 driver.IsOnActiveShift ||
                 driver.RestPhase != DriverRestPhase.None ||
                 IsDriverBusyWalkPhase(driver) ||
+                HasReadyCriticalNeedBeforeShift(driver) ||
                 IsBusDriverOnActiveRoute(driver))
             {
                 return;
@@ -709,7 +711,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        if (driver == null || IsDriverIntercity(driver) || driver.DutyMode == DriverDutyMode.Logistics || driver.IsArrivingByBus || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver))
+        if (driver == null || IsDriverIntercity(driver) || driver.DutyMode == DriverDutyMode.Logistics || driver.IsArrivingByBus || driver.ShiftStartHour < 0 || driver.IsOnActiveShift || driver.RestPhase != DriverRestPhase.None || IsDriverBusyWalkPhase(driver) || HasReadyCriticalNeedBeforeShift(driver))
         {
             return;
         }
@@ -869,7 +871,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
         else
         {
-            // Field-worker case: lumberyard worker may still be outside with a tree task.
+            // Field-worker case: service worker may still be outside with an active task.
             if (driver.AssignedBuildingType == LocationType.Forest && driver.DriverObject != null && driver.DriverObject.activeSelf)
             {
                 CancelForestFieldWork(driver);
@@ -882,6 +884,9 @@ public partial class GameBootstrap : MonoBehaviour
                 StartWorkerLifeCycleAfterWork(driver, driver.DriverObject.transform.position, "Lumberyard field work");
                 return;
             }
+
+            if (TryFinishActiveStreetCleaningShift(driver, building))
+                return;
 
             // Safety: shift ended but driver not inside (edge case)
             driver.IsOnActiveShift = false;

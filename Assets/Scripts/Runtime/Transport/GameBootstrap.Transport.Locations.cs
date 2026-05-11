@@ -109,6 +109,12 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
             ApplyColor(baseBlock, new Color(0.62f, 0.56f, 0.44f), VisualSmoothnessAsphalt);
         }
+        else if (type == LocationType.CleaningDepot)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
+            ApplyColor(baseBlock, new Color(0.42f, 0.46f, 0.44f), VisualSmoothnessAsphalt);
+        }
         else if (type == LocationType.Bar || type == LocationType.GamblingHall)
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.26f, 0f);
@@ -215,6 +221,10 @@ public partial class GameBootstrap
         else if (type == LocationType.LaborExchange)
         {
             CreateLaborExchangeDecoration(root.transform, center, min, max, anchor);
+        }
+        else if (type == LocationType.CleaningDepot)
+        {
+            CreateCleaningDepotDecoration(root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.CityHall)
         {
@@ -339,6 +349,7 @@ public partial class GameBootstrap
             LocationType.CarMarket     => 3,
             LocationType.CityHall      => 3,
             LocationType.Kindergarten  => 2,
+            LocationType.CleaningDepot => 2,
             LocationType.Parking       => 3,
             LocationType.Warehouse     => 2,
             LocationType.GasStation    => 2,

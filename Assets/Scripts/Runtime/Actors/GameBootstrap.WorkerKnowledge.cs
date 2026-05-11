@@ -264,6 +264,7 @@ public partial class GameBootstrap
                 LocationType.Kindergarten => "Kindergarten",
                 LocationType.CarMarket => "Car Market",
                 LocationType.LaborExchange => "Labor Exchange",
+                LocationType.CleaningDepot => "Cleaning Depot",
                 LocationType.CityHall => "City Hall",
                 LocationType.Docks => "Docks",
                 _ => "Building"
@@ -290,6 +291,7 @@ public partial class GameBootstrap
             LocationType.Kindergarten => "\u0414\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434",
             LocationType.CarMarket => "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a",
             LocationType.LaborExchange => "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430",
+            LocationType.CleaningDepot => "\u0421\u043b\u0443\u0436\u0431\u0430 \u0443\u0431\u043e\u0440\u043a\u0438",
             LocationType.CityHall => "\u0420\u0430\u0442\u0443\u0448\u0430",
             LocationType.Docks => "\u0414\u043e\u043a\u0438",
             _ => "\u041f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0430"

@@ -206,6 +206,11 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver.DutyMode == DriverDutyMode.Logistics &&
             (ShouldLogisticsWorkerHeadToBuilding(driver) || IsLogisticsWorkerWorkHour(driver)))
         {
+            if (ShouldCriticalNeedOverrideShiftPreparation(driver) && TryStartDueWorkerLifeCycle(driver))
+            {
+                return;
+            }
+
             LogWorkerDecision(driver, "idle-blocked", "logistics worker should be handled by production/logistics runtime");
             return;
         }
@@ -213,6 +218,11 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver.ShiftStartHour >= 0 &&
             (ShouldDriverHeadToShift(driver) || IsHourInShiftWindow(GetCurrentHour(), driver.ShiftStartHour)))
         {
+            if (ShouldCriticalNeedOverrideShiftPreparation(driver) && TryStartDueWorkerLifeCycle(driver))
+            {
+                return;
+            }
+
             LogWorkerDecision(driver, "idle-blocked", "worker should prepare for assigned shift");
             return;
         }

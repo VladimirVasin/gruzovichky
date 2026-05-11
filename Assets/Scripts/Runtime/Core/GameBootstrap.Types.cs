@@ -215,6 +215,7 @@ public partial class GameBootstrap : MonoBehaviour
         Kindergarten,
         CarMarket,
         LaborExchange,
+        CleaningDepot,
         CityHall,
         Docks
     }
@@ -245,6 +246,7 @@ public partial class GameBootstrap : MonoBehaviour
         LocationType.Kindergarten   => true,
         LocationType.CarMarket     => true,
         LocationType.LaborExchange => true,
+        LocationType.CleaningDepot => true,
         _                          => false
     };
 
@@ -259,6 +261,7 @@ public partial class GameBootstrap : MonoBehaviour
         LocationType.Docks            => "Dock Worker",
         LocationType.Kindergarten     => "Childcare Worker",
         LocationType.LaborExchange    => "Employment Clerk",
+        LocationType.CleaningDepot    => "Cleaner",
         _ when HasServiceWorkerSlot(type) => "Service Worker",
         _                             => "Worker"
     };
@@ -363,6 +366,7 @@ public partial class GameBootstrap : MonoBehaviour
         Kindergarten,
         CarMarket,
         LaborExchange,
+        CleaningDepot,
         CityHall,
         Docks
     }
@@ -439,6 +443,9 @@ public partial class GameBootstrap : MonoBehaviour
         ToCarMarketForPurchase,
         ToLaborExchangeForJob,
         ToIntercityStopForDeparture,
+        CleanerToLitter,
+        CleanerCleaning,
+        CleanerReturnToDepot,
         AtLaborExchange
     }
 

@@ -382,6 +382,8 @@ public partial class GameBootstrap
 
     private void HideBuildFootprintHoverHighlights()
     {
+        HideCleaningDepotBuildRadius();
+
         if (buildHoverDrivewayHighlight != null)
         {
             buildHoverDrivewayHighlight.SetActive(false);
@@ -471,6 +473,7 @@ public partial class GameBootstrap
         }
 
         UpdateBuildCursorAssistFromPreview(canBuild);
+        ShowCleaningDepotBuildRadiusFromPreview();
 
         if (buildHoverDrivewayHighlight != null)
         {

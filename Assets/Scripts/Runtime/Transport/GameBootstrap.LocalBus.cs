@@ -166,7 +166,7 @@ public partial class GameBootstrap
 
     private void StartBusDriverShiftCommute(DriverAgent driver)
     {
-        if (driver == null || driver.DriverObject == null || !locations.ContainsKey(LocationType.Parking))
+        if (driver == null || driver.DriverObject == null || !locations.ContainsKey(LocationType.Parking) || localStops.Count == 0)
         {
             return;
         }
@@ -224,6 +224,11 @@ public partial class GameBootstrap
 
     private bool TryBoardBusDriver(DriverAgent driver)
     {
+        if (localStops.Count == 0)
+        {
+            return false;
+        }
+
         if (driver == null || !IsDriverBusDriver(driver) || !driver.WaitingForShiftAtParking || driver.DriverObject == null)
         {
             if (driver != null && IsDriverBusDriver(driver) && driver.WaitingForShiftAtParking)
@@ -234,9 +239,9 @@ public partial class GameBootstrap
         }
 
         NormalizeLocalStopNumbers();
-        if (localStops.Count == 0 || !locations.ContainsKey(LocationType.Parking))
+        if (!locations.ContainsKey(LocationType.Parking))
         {
-            LogBusBoardingBlockOnce($"{driver.DriverName} cannot board local bus: no connected local stops or Parking is missing.");
+            LogBusBoardingBlockOnce($"{driver.DriverName} cannot board local bus: Parking is missing.");
             return false;
         }
 
@@ -651,9 +656,12 @@ public partial class GameBootstrap
             else
             {
                 localBusRoute.Phase = LocalBusPhase.ParkedAwaitingShiftStart;
-                SessionDebugLogger.Log(
-                    "BUS_SHIFT",
-                    $"{driver?.DriverName ?? "Bus driver"} returned to Parking and is waiting for the next valid local-bus route start.");
+                if (localStops.Count > 0)
+                {
+                    SessionDebugLogger.Log(
+                        "BUS_SHIFT",
+                        $"{driver?.DriverName ?? "Bus driver"} returned to Parking and is waiting for the next valid local-bus route start.");
+                }
             }
 
             return;
@@ -697,14 +705,19 @@ public partial class GameBootstrap
     {
         NormalizeLocalStopNumbers();
         List<LocationData> orderedStops = GetOrderedLocalStops();
+        if (orderedStops.Count == 0)
+        {
+            return false;
+        }
+
         if (orderedStops.Count < 2)
         {
             ShowLocalBusStopMinimumHintIfNeeded();
         }
 
-        if (orderedStops.Count == 0 || !locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
         {
-            SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} cannot start route from Parking: no local stops or Parking missing.");
+            SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} cannot start route from Parking: Parking missing.");
             return false;
         }
 
@@ -725,8 +738,8 @@ public partial class GameBootstrap
         List<LocationData> orderedStops = GetOrderedLocalStops();
         if (orderedStops.Count == 0)
         {
-            SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} cannot continue route: no local stops.");
-            return false;
+            BeginLocalBusReturnToParking(logStart: false);
+            return true;
         }
 
         if (orderedStops.Count == 1)
@@ -738,7 +751,7 @@ public partial class GameBootstrap
         return TryBeginNextReachableLocalBusStop(orderedStops);
     }
 
-    private void BeginLocalBusReturnToParking()
+    private void BeginLocalBusReturnToParking(bool logStart = true)
     {
         if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
         {
@@ -749,7 +762,10 @@ public partial class GameBootstrap
             ? WorldToCell(localBusRoute.RootTransform.position)
             : parking.Anchor;
 
-        SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} starting return-to-parking segment from ({startCell.x},{startCell.y}) to Parking ({parking.Anchor.x},{parking.Anchor.y}).");
+        if (logStart)
+        {
+            SessionDebugLogger.Log("BUS_SHIFT", $"{localBusRoute?.Driver?.DriverName ?? "Bus driver"} starting return-to-parking segment from ({startCell.x},{startCell.y}) to Parking ({parking.Anchor.x},{parking.Anchor.y}).");
+        }
 
         if (!TryBeginLocalBusDriveSegment(startCell, parking.Anchor, LocalBusPhase.ReturningToParking))
         {

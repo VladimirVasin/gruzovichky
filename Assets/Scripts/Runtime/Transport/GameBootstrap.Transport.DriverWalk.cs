@@ -33,6 +33,11 @@ public partial class GameBootstrap
             return;
         }
 
+        if (driver.WalkPhase == DriverRescuePhase.CleanerCleaning)
+        {
+            return;
+        }
+
         if (TryRescueDriverFromUnsafeWalkCell(driver, "walk update"))
         {
             return;
@@ -688,6 +693,17 @@ public partial class GameBootstrap
                 ReturnForestWorkerInside(driver, "walked back into Lumberyard");
                 return;
 
+            case DriverRescuePhase.CleanerToLitter:
+                driver.WalkPath.Clear();
+                driver.WalkWaypointIndex = 0;
+                driver.WalkAnimationTime = 0f;
+                StartCleanerCleaningAtTarget(driver);
+                return;
+
+            case DriverRescuePhase.CleanerReturnToDepot:
+                ReturnCleanerInside(driver, "walked back into Cleaning Depot");
+                return;
+
             case DriverRescuePhase.ToMotelFromBuilding:
                 driver.WalkPhase = DriverRescuePhase.None;
                 driver.WalkPath.Clear();
@@ -794,6 +810,8 @@ public partial class GameBootstrap
             DriverRescuePhase.LumberCarryLogToBuilding or
             DriverRescuePhase.LumberReturnToTreeForPlanting or
             DriverRescuePhase.LumberReturnToBuilding or
+            DriverRescuePhase.CleanerToLitter or
+            DriverRescuePhase.CleanerReturnToDepot or
             DriverRescuePhase.ToMotelFromBuilding => true,
             _ => false
         };

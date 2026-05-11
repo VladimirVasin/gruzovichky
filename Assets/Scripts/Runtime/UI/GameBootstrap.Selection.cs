@@ -179,6 +179,8 @@ public partial class GameBootstrap
             selectedEntityHighlight.SetActive(false);
         }
 
+        HideCleaningDepotSelectionRadius();
+
         if (!TryGetSelectedBuilding(out LocationData location, out LocationType locationType, out Vector3 center))
         {
             if (selectedLocationLabelRoot != null)
@@ -224,6 +226,11 @@ public partial class GameBootstrap
             selectionHighlight.transform.position = center;
             selectionHighlight.transform.localScale = size;
             selectionHighlight.SetActive(true);
+        }
+
+        if (locationType == LocationType.CleaningDepot)
+        {
+            ShowCleaningDepotSelectionRadius(location);
         }
 
         if (selectedLocationLabelRoot != null)

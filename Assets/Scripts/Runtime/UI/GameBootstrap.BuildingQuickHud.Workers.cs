@@ -649,6 +649,7 @@ public partial class GameBootstrap
             DriverRescuePhase.IdleAtGamblingHall => LocationType.GamblingHall,
             DriverRescuePhase.IdleAtCityPark => LocationType.CityPark,
             DriverRescuePhase.AtLaborExchange => LocationType.LaborExchange,
+            DriverRescuePhase.CleanerToLitter or DriverRescuePhase.CleanerCleaning or DriverRescuePhase.CleanerReturnToDepot => LocationType.CleaningDepot,
             _ => (LocationType?)null
         };
     }
@@ -664,6 +665,7 @@ public partial class GameBootstrap
             LocationType.CityPark => WorkerCityParkDuration,
             LocationType.Motel => DriverSleepDuration,
             LocationType.LaborExchange => LaborExchangeInterviewDuration,
+            LocationType.CleaningDepot => CleanerSweepDuration,
             _ => 1f
         };
     }
@@ -679,6 +681,7 @@ public partial class GameBootstrap
             LocationType.CityPark => ru ? "\u0413\u0443\u043b\u044f\u0435\u0442 \u0432 \u043f\u0430\u0440\u043a\u0435" : "Strolling in park",
             LocationType.Motel => ru ? "\u0421\u043f\u0438\u0442" : "Sleeping",
             LocationType.LaborExchange => ru ? "\u0418\u0449\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0443" : "Applying",
+            LocationType.CleaningDepot => ru ? "\u0423\u0431\u0438\u0440\u0430\u0435\u0442 \u043c\u0443\u0441\u043e\u0440" : "Cleaning litter",
             _ => ru ? "\u0412\u043d\u0443\u0442\u0440\u0438" : "Inside"
         };
     }

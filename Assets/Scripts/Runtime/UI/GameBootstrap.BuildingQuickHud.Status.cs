@@ -54,6 +54,7 @@ public partial class GameBootstrap
             LocationType.Kindergarten  => IsRussianLanguage() ? "\u0414\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434: \u0432\u043e\u0441\u043f\u0438\u0442\u0430\u0442\u0435\u043b\u0438 \u0434\u0430\u044e\u0442 \u043c\u0435\u0441\u0442\u0430 \u0434\u043b\u044f \u0434\u0435\u0442\u0435\u0439 \u0438 \u0441\u043d\u0438\u0436\u0430\u044e\u0442 \u0441\u0442\u0440\u0435\u0441\u0441 \u0441\u0435\u043c\u0435\u0439." : "Kindergarten - caregivers create child-care capacity for families.",
             LocationType.CarMarket     => IsRussianLanguage() ? "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 \u043b\u0438\u0447\u043d\u044b\u0435 \u0430\u0432\u0442\u043e." : "Car Market - workers buy personal cars here.",
             LocationType.LaborExchange => IsRussianLanguage() ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u043a\u043b\u0435\u0440\u043a \u043f\u0443\u0431\u043b\u0438\u043a\u0443\u0435\u0442 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438, \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0445\u043e\u0434\u044f\u0442 \u0437\u0430 \u0440\u0430\u0431\u043e\u0442\u043e\u0439." : "Labor Exchange - a clerk posts vacancies and workers apply here.",
+            LocationType.CleaningDepot => IsRussianLanguage() ? "\u0421\u043b\u0443\u0436\u0431\u0430 \u0443\u0431\u043e\u0440\u043a\u0438: \u0443\u0431\u043e\u0440\u0449\u0438\u043a\u0438 \u043f\u0430\u0442\u0440\u0443\u043b\u0438\u0440\u0443\u044e\u0442 \u0443\u043b\u0438\u0446\u044b \u0438 \u0443\u0431\u0438\u0440\u0430\u044e\u0442 \u0432\u0438\u0434\u0438\u043c\u044b\u0439 \u043c\u0443\u0441\u043e\u0440." : "Cleaning Depot - cleaners patrol streets and remove visible litter.",
             LocationType.CityHall      => IsRussianLanguage()
                 ? "Ратуша: обращения жителей и городские цели.\nОткрой Ратушу, чтобы принять или отклонить обращения."
                 : "City Hall: citizen requests and city goals.\nOpen City Hall to accept or reject requests.",
@@ -86,6 +87,7 @@ public partial class GameBootstrap
             LocationType.Kindergarten  => GetKindergartenQuickResourceText(),
             LocationType.CarMarket    => GetServiceBuildingQuickResourceText(locationType),
             LocationType.LaborExchange => GetLaborExchangeQuickResourceText(),
+            LocationType.CleaningDepot => GetCleaningDepotQuickResourceText(),
             LocationType.CityHall      => GetCityHallQuickResourceText(),
             _ => string.Empty
         };
@@ -317,6 +319,15 @@ public partial class GameBootstrap
         text += "\n" + FormatLaborExchangePostingLines(3, ru);
         text += "\n" + FormatValueLine(ru ? "\u0421\u0435\u0433\u043e\u0434\u043d\u044f \u043f\u0440\u0438\u0448\u043b\u0438" : "Applicants today", laborExchangeApplicantsToday.ToString());
         return text;
+    }
+
+    private string GetCleaningDepotQuickResourceText()
+    {
+        bool ru = IsRussianLanguage();
+        return FormatValueLine(ru ? "\u0423\u0431\u043e\u0440\u0449\u0438\u043a\u0438" : "Cleaners on shift", $"{CountWorkersOnShiftAt(LocationType.CleaningDepot)} / {GetMaxBuildingWorkerSlots(LocationType.CleaningDepot)}") + "\n" +
+               FormatValueLine(ru ? "\u0412\u0438\u0434\u0438\u043c\u044b\u0439 \u043c\u0443\u0441\u043e\u0440" : "Visible litter", CountVisibleStreetLitterCells().ToString()) + "\n" +
+               FormatValueLine(ru ? "\u0420\u0430\u0434\u0438\u0443\u0441" : "Radius", $"{Mathf.RoundToInt(CleanerCoverageRadius)}") + "\n" +
+               FormatValueLine(ru ? "\u041d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u043e" : "Assigned", CountLogisticsWorkers(LocationType.CleaningDepot).ToString());
     }
 
     private string GetWarehouseQuickResourceText()

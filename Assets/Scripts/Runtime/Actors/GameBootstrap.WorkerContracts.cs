@@ -60,7 +60,9 @@ public partial class GameBootstrap
             _ => 25
         };
 
-        if (buildingType == LocationType.GasStation || buildingType == LocationType.CarMarket)
+        if (buildingType == LocationType.GasStation ||
+            buildingType == LocationType.CarMarket ||
+            buildingType == LocationType.CleaningDepot)
         {
             salary += 5;
         }

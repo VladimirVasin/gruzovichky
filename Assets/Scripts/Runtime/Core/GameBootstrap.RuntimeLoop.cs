@@ -342,6 +342,7 @@ public partial class GameBootstrap
             UpdateDriverShiftActivation(driver);
             UpdateBusDriverShiftEnd(driver);
             UpdateLogisticsShiftEnd(driver);
+            UpdateStreetCleaningWorker(driver);
             UpdateWarehouseDelivery(driver);
             UpdateDriverRest(driver);
             UpdateDriverIdleWander(driver);
@@ -352,6 +353,7 @@ public partial class GameBootstrap
         }
 
         SeparateOverlappingDrivers();
+        UpdateStreetLitterRuntime();
         UpdateCityHallRuntime();
         UpdateCityHallRequestMarkerRuntime();
         UpdateWorkerIdleDialogueRuntime();

@@ -205,6 +205,7 @@ public partial class GameBootstrap
     private void AddRoadCellUnchecked(Vector2Int cell)
     {
         ClearFootpathAtCell(cell);
+        ClearStreetLitterAtCell(cell);
         if (!roadCells.Add(cell))
         {
             return;

@@ -132,15 +132,21 @@ public partial class GameBootstrap : MonoBehaviour
         if (driver.DutyMode == DriverDutyMode.Logistics &&
             (ShouldLogisticsWorkerHeadToBuilding(driver) || IsLogisticsWorkerWorkHour(driver)))
         {
-            blockedReason = "logistics worker should be handled by production/logistics runtime";
-            return false;
+            if (!ShouldCriticalNeedOverrideShiftPreparation(driver))
+            {
+                blockedReason = "logistics worker should be handled by production/logistics runtime";
+                return false;
+            }
         }
 
         if (driver.ShiftStartHour >= 0 &&
             (ShouldDriverHeadToShift(driver) || IsHourInShiftWindow(hour, driver.ShiftStartHour)))
         {
-            blockedReason = "worker should prepare for assigned shift";
-            return false;
+            if (!ShouldCriticalNeedOverrideShiftPreparation(driver))
+            {
+                blockedReason = "worker should prepare for assigned shift";
+                return false;
+            }
         }
 
         return true;
@@ -507,6 +513,39 @@ public partial class GameBootstrap : MonoBehaviour
                (driver.LastMealNeedStatus == WorkerNeedStatus.Critical ||
                 driver.LastSleepNeedStatus == WorkerNeedStatus.Critical ||
                 driver.LastLeisureNeedStatus == WorkerNeedStatus.Critical);
+    }
+
+    private bool HasReadyCriticalNeedBeforeShift(DriverAgent driver)
+    {
+        if (!ShouldCriticalNeedOverrideShiftPreparation(driver))
+        {
+            return false;
+        }
+
+        return driver.LastMealNeedStatus == WorkerNeedStatus.Critical && IsWorkerNeedActionReady(driver, WorkerNeedKind.Meal) ||
+               driver.LastSleepNeedStatus == WorkerNeedStatus.Critical && IsWorkerNeedActionReady(driver, WorkerNeedKind.Sleep) ||
+               driver.LastLeisureNeedStatus == WorkerNeedStatus.Critical && IsWorkerNeedActionReady(driver, WorkerNeedKind.Leisure);
+    }
+
+    private bool ShouldCriticalNeedOverrideShiftPreparation(DriverAgent driver)
+    {
+        if (driver == null || !HasCriticalWorkerNeed(driver))
+        {
+            return false;
+        }
+
+        int hour = GetCurrentHour();
+        if (driver.ShiftStartHour >= 0 && IsHourInShiftWindow(hour, driver.ShiftStartHour))
+        {
+            return false;
+        }
+
+        if (driver.DutyMode == DriverDutyMode.Logistics && IsLogisticsWorkerWorkHour(driver))
+        {
+            return false;
+        }
+
+        return GetMinutesUntilShiftStart(driver) > 30;
     }
 
     private bool TryStartWorkerNeedFallback(DriverAgent driver, WorkerNeedKind need, Vector3 startPosition, string reason)

@@ -643,6 +643,12 @@ public partial class GameBootstrap
         {
             return ru ? "\u0418\u0449\u0435\u0442 \u0440\u0430\u0431\u043e\u0442\u0443" : "Job search";
         }
+        if (driver.WalkPhase == DriverRescuePhase.CleanerToLitter ||
+            driver.WalkPhase == DriverRescuePhase.CleanerCleaning ||
+            driver.WalkPhase == DriverRescuePhase.CleanerReturnToDepot)
+        {
+            return ru ? "\u0423\u0431\u0438\u0440\u043a\u0430" : "Cleaning";
+        }
         return driver.IsArrivingByBus ? (ru ? "\u0412 \u043f\u0443\u0442\u0438" : "Arriving")
             : IsDriverOnActiveTradeRun(driver) ? (ru ? "\u0422\u043e\u0440\u0433\u043e\u0432\u044b\u0439 \u0440\u0435\u0439\u0441" : "Trade Run")
             : IsDriverIntercity(driver) ? (ru ? "\u041c\u0435\u0436\u0433\u043e\u0440\u043e\u0434" : "Intercity")
@@ -660,6 +666,8 @@ public partial class GameBootstrap
 
         return driver.WalkPhase == DriverRescuePhase.ToLaborExchangeForJob || driver.WalkPhase == DriverRescuePhase.AtLaborExchange
             ? (ru ? "\u041d\u0430 \u0411\u0438\u0440\u0436\u0435 \u0442\u0440\u0443\u0434\u0430" : "At Labor Exchange")
+            : driver.WalkPhase == DriverRescuePhase.CleanerToLitter || driver.WalkPhase == DriverRescuePhase.CleanerCleaning || driver.WalkPhase == DriverRescuePhase.CleanerReturnToDepot
+                ? (ru ? "\u0423\u0431\u0438\u0440\u0430\u0435\u0442 \u043c\u0443\u0441\u043e\u0440" : "Cleaning litter")
             : driver.IsInsideBuilding ? (ru ? "\u0420\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u0432 \u0437\u0434\u0430\u043d\u0438\u0438" : "Inside building")
             : IsBusDriverOnActiveRoute(driver) ? (ru ? "\u041d\u0430 \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043d\u043e\u043c \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0435" : "On bus route")
             : driver.IsOnActiveShift ? (ru ? "\u041d\u0430 \u0441\u043c\u0435\u043d\u0435" : "On shift")

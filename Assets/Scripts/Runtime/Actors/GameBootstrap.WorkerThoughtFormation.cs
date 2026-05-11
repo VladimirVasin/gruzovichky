@@ -36,7 +36,8 @@ public partial class GameBootstrap
         LocationType.Canteen,
         LocationType.Bar,
         LocationType.Motel,
-        LocationType.GasStation
+        LocationType.GasStation,
+        LocationType.CleaningDepot
     };
 
     private float lastWorkerThoughtFormationCheckWorldHour = -1f;

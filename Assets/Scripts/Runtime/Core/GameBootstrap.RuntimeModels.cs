@@ -271,6 +271,10 @@ public partial class GameBootstrap
         public Vector3 LastSafeWalkPosition;
         public bool HasLastFootpathWearCell;
         public Vector2Int LastFootpathWearCell;
+        public Vector2Int CleanerTargetCell;
+        public bool HasCleanerTargetCell;
+        public float CleanerActionTimer;
+        public float CleanerSearchCooldown;
         public int IdleWanderPointIndex = -1;
         public float IdleWanderPauseTimer;
         public float IdleOverlapRerouteCooldown;

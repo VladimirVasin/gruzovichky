@@ -245,6 +245,7 @@ public partial class GameBootstrap
         { "Carpenter", "Столяр" },
         { "Warehouse Loader", "Грузчик склада" },
         { "Employment Clerk", "Клерк биржи труда" },
+        { "Cleaner", "Уборщик" },
         { "Production Worker", "Рабочий производства" },
         { "Service Worker", "Работник сервиса" },
         { "Bus Driver", "Водитель автобуса" },
@@ -273,6 +274,7 @@ public partial class GameBootstrap
         { "Canteen", "Столовая" },
         { "Gambling Hall", "Игровые автоматы" },
         { "Labor Exchange", "Биржа труда" },
+        { "Cleaning Depot", "Служба уборки" },
         { "Furniture Factory", "Мебельная фабрика" },
         { "Open Resources", "Открыть ресурсы" },
 

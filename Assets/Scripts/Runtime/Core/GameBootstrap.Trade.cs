@@ -390,7 +390,14 @@ public partial class GameBootstrap
             return;
         }
 
-        BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld);
+        if (!BuildDriverWalkPath(driver, driver.DriverObject.transform.position, driver.WalkTargetWorld))
+        {
+            driver.WalkPhase = DriverRescuePhase.None;
+            driver.WalkTargetWorld = driver.DriverObject.transform.position;
+            SessionDebugLogger.Log("TRADE", $"{driver.DriverName} could not start Intercity trade commute to Parking; no safe walk path.");
+            return;
+        }
+
         SessionDebugLogger.Log("TRADE", $"{driver.DriverName} started walking from Motel to Parking for Intercity trade.");
     }
 

@@ -156,7 +156,7 @@ public partial class GameBootstrap
 
     private void LogLocalBusPassengerSkip(DriverAgent driver, string travelReason, string skipReason)
     {
-        if (driver == null)
+        if (driver == null || localStops.Count == 0)
         {
             return;
         }

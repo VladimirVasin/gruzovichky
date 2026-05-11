@@ -6,9 +6,11 @@ public partial class GameBootstrap
     {
         int removedMiscCount = 0;
         int removedFootpathCount = ClearFootpathsInFootprint(min, max);
+        int removedLitterCount = ClearStreetLitterInFootprint(min, max);
         if (ShouldLocationHaveBuildingWalkBuffer(type))
         {
             removedFootpathCount += ClearFootpathsInBuildingWalkBuffer(min, max, openingCell);
+            removedLitterCount += ClearStreetLitterInBuildingWalkBuffer(min, max, openingCell);
         }
         for (int x = min.x; x <= max.x; x++)
         {
@@ -22,11 +24,11 @@ public partial class GameBootstrap
         }
 
         bool flattened = FlattenTerrainForBuildingFootprint(min, max, out float flatHeight);
-        if (removedMiscCount > 0 || removedFootpathCount > 0 || flattened)
+        if (removedMiscCount > 0 || removedFootpathCount > 0 || removedLitterCount > 0 || flattened)
         {
             SessionDebugLogger.Log(
                 "BUILD",
-                $"Prepared build site for {type}: footprint=({min.x},{min.y})-({max.x},{max.y}), removedMisc={removedMiscCount}, removedFootpaths={removedFootpathCount}, flattened={flattened}, height={flatHeight:0.00}.");
+                $"Prepared build site for {type}: footprint=({min.x},{min.y})-({max.x},{max.y}), removedMisc={removedMiscCount}, removedFootpaths={removedFootpathCount}, removedLitter={removedLitterCount}, flattened={flattened}, height={flatHeight:0.00}.");
         }
     }
 

@@ -484,6 +484,7 @@ public partial class GameBootstrap
         {
             LocationType.PersonalHouse => GetWorkerThoughtHouseIcon(),
             LocationType.LaborExchange => GetWorkerThoughtBriefcaseIcon(),
+            LocationType.CleaningDepot => GetWorkerThoughtBriefcaseIcon(),
             LocationType.Warehouse or LocationType.Sawmill or LocationType.Forest or LocationType.FurnitureFactory or LocationType.Docks => GetWorkerThoughtBriefcaseIcon(),
             _ => GetWorkerThoughtCityIcon()
         };

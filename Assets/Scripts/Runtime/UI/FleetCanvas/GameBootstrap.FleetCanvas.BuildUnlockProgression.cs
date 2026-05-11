@@ -38,6 +38,7 @@ public partial class GameBootstrap
             BuildTool.Parking,
             BuildTool.LaborExchange,
             BuildTool.Canteen,
+            BuildTool.CleaningDepot,
             BuildTool.Forest,
             BuildTool.GasStation,
             BuildTool.Sawmill,
