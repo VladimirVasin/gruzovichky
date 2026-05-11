@@ -91,12 +91,11 @@ public partial class GameBootstrap
         float maxHeight = 0f;
         bool hasCell = false;
 
-        for (int i = 0; i < buildPreviewFootprintCells.Count; i++)
+        void IncludeCell(Vector2Int cell)
         {
-            Vector2Int cell = buildPreviewFootprintCells[i];
             if (!IsInsideGrid(cell))
             {
-                continue;
+                return;
             }
 
             minX = Mathf.Min(minX, cell.x);
@@ -106,6 +105,19 @@ public partial class GameBootstrap
             Vector3 center = GetCellCenter(cell);
             maxHeight = Mathf.Max(maxHeight, SampleTerrainHeight(center.x, center.z));
             hasCell = true;
+        }
+
+        for (int i = 0; i < buildPreviewFootprintCells.Count; i++)
+        {
+            IncludeCell(buildPreviewFootprintCells[i]);
+        }
+
+        if (IsBuildingBuildTool(activeBuildTool))
+        {
+            for (int i = 0; i < buildPreviewWalkBufferCells.Count; i++)
+            {
+                IncludeCell(buildPreviewWalkBufferCells[i]);
+            }
         }
 
         if (!hasCell)

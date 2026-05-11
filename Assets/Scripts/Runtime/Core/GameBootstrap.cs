@@ -365,6 +365,7 @@ public partial class GameBootstrap : MonoBehaviour
     private Light buildCursorAssistLight;
     private readonly List<GameObject> buildHoverCellHighlights = new();
     private readonly List<Vector2Int> buildPreviewFootprintCells = new();
+    private readonly List<Vector2Int> buildPreviewWalkBufferCells = new();
     private readonly List<Vector2Int> buildPreviewRoadDirections = new();
     private Vector2Int? buildPreviewDrivewayCell;
     private Vector2Int? roadPathStart;

@@ -210,7 +210,8 @@ public partial class GameBootstrap
         if (!IsInsideGrid(cell) ||
             IsWaterOrBeachCell(cell) ||
             roadCells.Contains(cell) ||
-            edgeHighwayCells.Contains(cell))
+            edgeHighwayCells.Contains(cell) ||
+            IsBuildingWalkBufferCell(cell))
         {
             return false;
         }

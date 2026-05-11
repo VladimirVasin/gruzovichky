@@ -264,7 +264,10 @@ public partial class GameBootstrap
             bool startInLocation = IsLocationCell(startCell);
             bool goalInLocation = IsLocationCell(goalCell);
             bool isIdleWander = driver.WalkPhase == DriverRescuePhase.IdleWander;
-            if (!isIdleWander && !startInLocation && !goalInLocation && !DoesWalkSegmentCrossWater(startWorld, targetWorld))
+            if (!isIdleWander &&
+                !startInLocation &&
+                !goalInLocation &&
+                !DoesWalkSegmentCrossBlockedWalkCell(startWorld, targetWorld, driver.WalkPhase))
             {
                 driver.WalkPath.Add(targetWorld);
                 driver.WalkTargetWorld = targetWorld;
@@ -396,6 +399,7 @@ public partial class GameBootstrap
     {
         return IsInsideGrid(cell) &&
                !waterCells.Contains(cell) &&
+               !IsBuildingWalkBufferCell(cell) &&
                !edgeHighwayCells.Contains(cell);
     }
 
@@ -481,8 +485,11 @@ public partial class GameBootstrap
                     if (!IsDriverWalkFallbackCell(candidate))
                         continue;
 
+                    if (candidate == startCell)
+                        continue;
+
                     List<Vector2Int> path = FindDriverWalkPath(startCell, candidate, walkPhase);
-                    if (path == null || path.Count == 0)
+                    if (path == null || path.Count <= 1)
                         continue;
 
                     float score = path.Count * 10f + radius;
@@ -504,6 +511,7 @@ public partial class GameBootstrap
         return IsInsideGrid(cell) &&
                !waterCells.Contains(cell) &&
                !edgeHighwayCells.Contains(cell) &&
+               !IsBuildingWalkBufferCell(cell) &&
                !IsLocationCell(cell);
     }
 
@@ -519,7 +527,17 @@ public partial class GameBootstrap
             return cell == start;
         }
 
-        if (cell == start || cell == goal || IsAnchorCell(cell))
+        if (cell == start)
+        {
+            return true;
+        }
+
+        if (IsBuildingWalkBufferCell(cell))
+        {
+            return false;
+        }
+
+        if (cell == goal || IsAnchorCell(cell))
         {
             return true;
         }

@@ -8,7 +8,8 @@ public partial class GameBootstrap
 {
     private void CreateLocation(LocationType type, string label, Vector2Int min, Vector2Int max, Vector2Int anchor, Color baseColor, Vector2Int? roadAccess = null)
     {
-        PrepareBuildSiteForLocation(type, min, max);
+        Vector2Int accessCell = roadAccess ?? anchor;
+        PrepareBuildSiteForLocation(type, min, max, accessCell);
 
         LocationData data = new()
         {
@@ -18,7 +19,7 @@ public partial class GameBootstrap
             Min = min,
             Max = max,
             Anchor = anchor,
-            RoadAccess = roadAccess ?? anchor,
+            RoadAccess = accessCell,
             BaseColor = baseColor,
             StopNumber = type == LocationType.Stop ? GetNextStopNumber() : 0,
             Workers = 0,

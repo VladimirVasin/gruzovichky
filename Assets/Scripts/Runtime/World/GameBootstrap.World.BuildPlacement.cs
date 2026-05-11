@@ -2,10 +2,14 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private void PrepareBuildSiteForLocation(LocationType type, Vector2Int min, Vector2Int max)
+    private void PrepareBuildSiteForLocation(LocationType type, Vector2Int min, Vector2Int max, Vector2Int openingCell)
     {
         int removedMiscCount = 0;
         int removedFootpathCount = ClearFootpathsInFootprint(min, max);
+        if (ShouldLocationHaveBuildingWalkBuffer(type))
+        {
+            removedFootpathCount += ClearFootpathsInBuildingWalkBuffer(min, max, openingCell);
+        }
         for (int x = min.x; x <= max.x; x++)
         {
             for (int y = min.y; y <= max.y; y++)

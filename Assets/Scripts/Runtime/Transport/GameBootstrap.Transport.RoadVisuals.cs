@@ -3,10 +3,10 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private const float UnifiedRoadSurfaceLift = RoadHeight + 0.32f;
-    private const float UnifiedRoadMaskLift = UnifiedRoadSurfaceLift + 0.022f;
-    private const float UnifiedRoadShoulderArcLift = UnifiedRoadSurfaceLift + 0.032f;
-    private const float RoadTileSurfaceLift = RoadHeight + 0.34f;
+    private const float UnifiedRoadSurfaceLift = 0.016f;
+    private const float UnifiedRoadMaskLift = UnifiedRoadSurfaceLift + 0.006f;
+    private const float UnifiedRoadShoulderArcLift = UnifiedRoadSurfaceLift + 0.011f;
+    private const float RoadTileSurfaceLift = 0.018f;
 
     private void RebuildUnifiedRoadVisuals()
     {

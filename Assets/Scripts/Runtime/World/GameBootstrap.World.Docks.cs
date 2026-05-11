@@ -54,11 +54,11 @@ public partial class GameBootstrap
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
         GetRotatedBuildingFootprint(anchorCell, DocksFootprintWidth, DocksFootprintDepth, out Vector2Int min, out Vector2Int max);
-        SetBuildFootprintPreviewCells(min, max, anchorCell);
+        SetBuildFootprintPreviewCells(min, max, anchorCell, anchorCell);
         bool canPlace = TryGetDocksPlacement(anchorCell, out min, out max, out Vector2Int placementAnchor, out Vector2Int roadAccess);
         if (canPlace)
         {
-            SetBuildFootprintPreviewCells(min, max, roadAccess);
+            SetBuildFootprintPreviewCells(min, max, roadAccess, roadAccess);
         }
 
         BuildingPlacementPreview preview = BuildingPlacementService.CreatePreview(min, max);

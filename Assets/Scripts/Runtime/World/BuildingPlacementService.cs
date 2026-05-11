@@ -98,6 +98,34 @@ public static class BuildingPlacementService
         }
     }
 
+    public static void FillFootprintBufferCells(List<Vector2Int> target, Vector2Int min, Vector2Int max, Vector2Int? openingCell)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        target.Clear();
+        for (int x = min.x - 1; x <= max.x + 1; x++)
+        {
+            for (int y = min.y - 1; y <= max.y + 1; y++)
+            {
+                Vector2Int cell = new(x, y);
+                if (x >= min.x && x <= max.x && y >= min.y && y <= max.y)
+                {
+                    continue;
+                }
+
+                if (openingCell.HasValue && openingCell.Value == cell)
+                {
+                    continue;
+                }
+
+                target.Add(cell);
+            }
+        }
+    }
+
     public static BuildingPlacementPreview CreatePreview(Vector2Int min, Vector2Int max)
     {
         return new BuildingPlacementPreview(

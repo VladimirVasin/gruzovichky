@@ -195,12 +195,12 @@ public partial class GameBootstrap
         noosphereScreenUi.CanvasRoot = canvasObject;
 
         RectTransform window = CreateStyledPanel("NoosphereWindowRoot", canvasObject.transform, FleetPanelColor);
-        SetCenteredWindow(window, 1120f, 650f, -12f);
+        StretchRect(window, 0f, 0f, 0f, 0f);
         noosphereScreenUi.WindowRoot = window;
 
         VerticalLayoutGroup windowLayout = window.gameObject.AddComponent<VerticalLayoutGroup>();
-        windowLayout.padding = new RectOffset(18, 18, 18, 18);
-        windowLayout.spacing = 12f;
+        windowLayout.padding = new RectOffset(32, 32, 28, 28);
+        windowLayout.spacing = 14f;
         windowLayout.childControlWidth = true;
         windowLayout.childControlHeight = true;
         windowLayout.childForceExpandWidth = true;
@@ -231,7 +231,7 @@ public partial class GameBootstrap
         RectTransform bodyRow = CreateUiObject("NoosphereBodyRow", window).GetComponent<RectTransform>();
         LayoutElement bodyLayoutElement = bodyRow.gameObject.AddComponent<LayoutElement>();
         bodyLayoutElement.flexibleHeight = 1f;
-        bodyLayoutElement.minHeight = 420f;
+        bodyLayoutElement.minHeight = 560f;
         HorizontalLayoutGroup bodyLayout = bodyRow.gameObject.AddComponent<HorizontalLayoutGroup>();
         bodyLayout.spacing = 12f;
         bodyLayout.childControlWidth = true;
@@ -241,7 +241,7 @@ public partial class GameBootstrap
 
         RectTransform visualPanel = CreateStyledPanel("NoosphereVisualPanel", bodyRow, FleetInsetColor);
         LayoutElement visualLayout = visualPanel.gameObject.AddComponent<LayoutElement>();
-        visualLayout.preferredWidth = 390f;
+        visualLayout.preferredWidth = 520f;
         visualLayout.flexibleHeight = 1f;
         noosphereScreenUi.VisualPanelRoot = visualPanel;
         SetupNoosphereVisualPanelUi(visualPanel, font);

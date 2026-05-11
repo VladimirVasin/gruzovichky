@@ -452,6 +452,7 @@ public partial class GameBootstrap
             Vector2Int c = buildPreviewFootprintCells[i];
             Vector3 worldCenter = GetCellCenter(c);
             buildHoverCellHighlights[i].transform.position = new Vector3(worldCenter.x, SampleTerrainHeight(worldCenter.x, worldCenter.z) + RoadHeight + 0.05f, worldCenter.z);
+            buildHoverCellHighlights[i].transform.localScale = new Vector3(0.86f, 0.045f, 0.86f);
             Vector2Int direction = i < buildPreviewRoadDirections.Count ? buildPreviewRoadDirections[i] : GetBuildRoadDirection();
             SetRoadPreviewTileOrientation(buildHoverCellHighlights[i], direction);
             SetRoadPreviewTileVisual(buildHoverCellHighlights[i], pathBuildable);

@@ -60,6 +60,8 @@ public partial class GameBootstrap
             return;
         }
 
+        SetRoadPreviewTileDecorationsActive(root, true);
+
         Renderer baseRenderer = root.GetComponent<Renderer>();
         if (baseRenderer != null)
         {
@@ -97,6 +99,32 @@ public partial class GameBootstrap
         if (rightEdge != null && rightEdge.TryGetComponent(out Renderer rightRenderer))
         {
             rightRenderer.sharedMaterial.color = edgeColor;
+        }
+    }
+
+    private static void SetRoadPreviewTileDecorationsActive(GameObject root, bool active)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        Transform centerDash = root.transform.Find("RoadPreviewCenterDash");
+        Transform leftEdge = root.transform.Find("RoadPreviewLeftEdge");
+        Transform rightEdge = root.transform.Find("RoadPreviewRightEdge");
+        if (centerDash != null)
+        {
+            centerDash.gameObject.SetActive(active);
+        }
+
+        if (leftEdge != null)
+        {
+            leftEdge.gameObject.SetActive(active);
+        }
+
+        if (rightEdge != null)
+        {
+            rightEdge.gameObject.SetActive(active);
         }
     }
 
@@ -162,6 +190,7 @@ public partial class GameBootstrap
     private void ClearBuildRoadPreviewCells()
     {
         buildPreviewFootprintCells.Clear();
+        buildPreviewWalkBufferCells.Clear();
         buildPreviewRoadDirections.Clear();
     }
 
@@ -387,24 +416,34 @@ public partial class GameBootstrap
             buildHoverHighlight.SetActive(false);
         }
 
-        EnsureBuildFootprintHoverCount(buildPreviewFootprintCells.Count);
+        int footprintCount = buildPreviewFootprintCells.Count;
+        int bufferCount = IsBuildingBuildTool(activeBuildTool) ? buildPreviewWalkBufferCells.Count : 0;
+        int totalCount = footprintCount + bufferCount;
+        EnsureBuildFootprintHoverCount(totalCount);
         Color footprintColor = canBuild ? new Color(0.22f, 0.9f, 0.32f) : new Color(0.92f, 0.28f, 0.22f);
+        Color bufferColor = canBuild ? new Color(1f, 0.52f, 0.12f) : new Color(1f, 0.24f, 0.14f);
         for (int i = 0; i < buildHoverCellHighlights.Count; i++)
         {
             GameObject highlight = buildHoverCellHighlights[i];
-            bool active = i < buildPreviewFootprintCells.Count && IsInsideGrid(buildPreviewFootprintCells[i]);
+            bool isBufferCell = i >= footprintCount && i < totalCount;
+            Vector2Int cell = isBufferCell
+                ? buildPreviewWalkBufferCells[i - footprintCount]
+                : i < footprintCount
+                    ? buildPreviewFootprintCells[i]
+                    : default;
+            bool active = i < totalCount && IsInsideGrid(cell);
             highlight.SetActive(active);
             if (!active)
             {
                 continue;
             }
 
-            Vector2Int cell = buildPreviewFootprintCells[i];
             Vector3 center = GetCellCenter(cell);
             highlight.transform.position = new Vector3(center.x, SampleTerrainHeight(center.x, center.z) + RoadHeight + 0.05f, center.z);
             highlight.transform.rotation = Quaternion.identity;
             if (IsRoadBuildTool(activeBuildTool))
             {
+                highlight.transform.localScale = new Vector3(0.86f, 0.045f, 0.86f);
                 Vector2Int direction = i < buildPreviewRoadDirections.Count
                     ? buildPreviewRoadDirections[i]
                     : GetBuildRoadDirection();
@@ -413,10 +452,14 @@ public partial class GameBootstrap
             }
             else
             {
+                SetRoadPreviewTileDecorationsActive(highlight, false);
+                highlight.transform.localScale = isBufferCell
+                    ? new Vector3(0.64f, 0.035f, 0.64f)
+                    : new Vector3(0.86f, 0.045f, 0.86f);
                 Renderer renderer = highlight.GetComponent<Renderer>();
                 if (renderer != null)
                 {
-                    renderer.sharedMaterial.color = footprintColor;
+                    renderer.sharedMaterial.color = isBufferCell ? bufferColor : footprintColor;
                 }
             }
         }

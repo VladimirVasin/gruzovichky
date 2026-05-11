@@ -758,6 +758,7 @@ public partial class GameBootstrap : MonoBehaviour
                 roadCells.Contains(cell) ||
                 edgeHighwayCells.Contains(cell) ||
                 waterCells.Contains(cell) ||
+                IsBuildingWalkBufferCell(cell) ||
                 IsLocationCell(cell))
             {
                 continue;

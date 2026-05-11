@@ -108,6 +108,7 @@ public partial class GameBootstrap
             driver.WalkPhase = DriverRescuePhase.None;
             driver.WalkWaypointIndex = 0;
             driver.WalkAnimationTime = 0f;
+            HandleBlockedDriverWalkArrival(driver, blockedPhase);
             SessionDebugLogger.Log(
                 "DRIVER",
                 $"{driver.DriverName} halted {blockedPhase}: no valid walk path was available, so the phase will not auto-complete at the start position.");
@@ -796,6 +797,50 @@ public partial class GameBootstrap
             DriverRescuePhase.ToMotelFromBuilding => true,
             _ => false
         };
+    }
+
+    private void HandleBlockedDriverWalkArrival(DriverAgent driver, DriverRescuePhase blockedPhase)
+    {
+        if (driver == null ||
+            !TryGetWorkerNeedForBlockedWalkPhase(blockedPhase, driver.LifeGoal, out WorkerNeedKind need))
+        {
+            return;
+        }
+
+        driver.PendingServiceLocationInstanceId = 0;
+        driver.LifeGoal = WorkerLifeGoal.None;
+        driver.IdleActivityTimer = 0f;
+        driver.IdleWanderPauseTimer = Random.Range(0.8f, 1.8f);
+        SetWorkerNeedRetryCooldown(driver, need, $"{blockedPhase} path halted before arrival");
+        LogWorkerDecision(
+            driver,
+            "service-walk-halted",
+            $"{blockedPhase}: no valid path; {need} retry cooldown applied",
+            true);
+    }
+
+    private static bool TryGetWorkerNeedForBlockedWalkPhase(
+        DriverRescuePhase phase,
+        WorkerLifeGoal goal,
+        out WorkerNeedKind need)
+    {
+        switch (phase)
+        {
+            case DriverRescuePhase.IdleWalkToCanteen:
+                need = WorkerNeedKind.Meal;
+                return goal == WorkerLifeGoal.Eat;
+            case DriverRescuePhase.ToMotelEntrance:
+                need = WorkerNeedKind.Sleep;
+                return goal == WorkerLifeGoal.Sleep;
+            case DriverRescuePhase.IdleWalkToBar:
+            case DriverRescuePhase.IdleWalkToGamblingHall:
+            case DriverRescuePhase.IdleWalkToCityPark:
+                need = WorkerNeedKind.Leisure;
+                return goal == WorkerLifeGoal.Leisure;
+            default:
+                need = WorkerNeedKind.Meal;
+                return false;
+        }
     }
 
 

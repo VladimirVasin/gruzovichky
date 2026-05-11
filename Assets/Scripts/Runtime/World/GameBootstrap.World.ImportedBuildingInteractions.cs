@@ -6,7 +6,8 @@ public partial class GameBootstrap
     private const float ImportedBuildingDoorOpenAngle = 78f;
     private const float ImportedBuildingDoorSpeed = 3.8f;
     private const float ImportedBuildingDoorHoldDuration = 1.2f;
-    private const float ImportedVisibleSeatRootLift = 0.11f;
+    private const float ImportedVisibleSeatRootLift = 0.18f;
+    private const float ImportedSeatDuplicateRadius = 0.24f;
 
     private void RegisterImportedServiceInteractionMetadata(LocationData owner, Transform modelRoot)
     {
@@ -135,10 +136,16 @@ public partial class GameBootstrap
         }
 
         RequestImportedBuildingDoorOpen(service);
+        if (driver.ImportedBarSeatLocationInstanceId > 0)
+        {
+            ReleaseImportedBarSeat(driver);
+        }
+
+        PruneImportedServiceSeatReservations(service, runtime);
         for (int i = 0; i < runtime.Seats.Count; i++)
         {
             ImportedBuildingSeat seat = runtime.Seats[i];
-            if (seat?.SeatMarker == null || seat.OccupantDriverId != 0)
+            if (!CanReserveImportedServiceSeat(service, runtime, seat, i))
             {
                 continue;
             }
@@ -157,6 +164,78 @@ public partial class GameBootstrap
         }
 
         return false;
+    }
+
+    private void PruneImportedServiceSeatReservations(LocationData service, ImportedBuildingRuntime runtime)
+    {
+        if (service == null || runtime == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < runtime.Seats.Count; i++)
+        {
+            ImportedBuildingSeat seat = runtime.Seats[i];
+            if (seat?.OccupantDriverId <= 0)
+            {
+                continue;
+            }
+
+            DriverAgent occupant = GetDriverAgentById(seat.OccupantDriverId);
+            if (!IsDriverHoldingImportedServiceSeat(occupant, service.InstanceId, i))
+            {
+                seat.OccupantDriverId = 0;
+            }
+        }
+    }
+
+    private bool CanReserveImportedServiceSeat(LocationData service, ImportedBuildingRuntime runtime, ImportedBuildingSeat seat, int seatIndex)
+    {
+        if (service == null || runtime == null || seat?.SeatMarker == null)
+        {
+            return false;
+        }
+
+        Vector3 seatPosition = GetImportedServiceSeatWorldPosition(seat);
+        for (int i = 0; i < runtime.Seats.Count; i++)
+        {
+            ImportedBuildingSeat other = runtime.Seats[i];
+            if (other == null || other.OccupantDriverId <= 0)
+            {
+                continue;
+            }
+
+            DriverAgent occupant = GetDriverAgentById(other.OccupantDriverId);
+            if (!IsDriverHoldingImportedServiceSeat(occupant, service.InstanceId, i))
+            {
+                other.OccupantDriverId = 0;
+                continue;
+            }
+
+            if (i == seatIndex || AreImportedSeatPositionsOverlapping(seatPosition, GetImportedServiceSeatWorldPosition(other)))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsDriverHoldingImportedServiceSeat(DriverAgent driver, int locationInstanceId, int seatIndex)
+    {
+        return driver != null &&
+            driver.ImportedBarSeatLocationInstanceId == locationInstanceId &&
+            driver.ImportedBarSeatIndex == seatIndex &&
+            (driver.WalkPhase == DriverRescuePhase.IdleAtBar ||
+             driver.WalkPhase == DriverRescuePhase.IdleAtGamblingHall ||
+             (driver.IsInsideBuilding && driver.InsideBuildingInstanceId == locationInstanceId));
+    }
+
+    private static bool AreImportedSeatPositionsOverlapping(Vector3 a, Vector3 b)
+    {
+        float dx = a.x - b.x;
+        float dz = a.z - b.z;
+        return dx * dx + dz * dz <= ImportedSeatDuplicateRadius * ImportedSeatDuplicateRadius;
     }
 
     private void ReleaseImportedBarSeat(DriverAgent driver)
@@ -521,10 +600,16 @@ public partial class GameBootstrap
         for (int i = 0; i < visibleSeatMeshes.Count; i++)
         {
             Transform seatMesh = visibleSeatMeshes[i];
+            Vector3 worldPosition = ResolveImportedSeatMeshPosition(seatMesh);
+            if (HasNearbyImportedSeatAnchor(anchors, worldPosition))
+            {
+                continue;
+            }
+
             anchors.Add(new ImportedBuildingSeatAnchor
             {
                 Marker = seatMesh,
-                WorldPosition = ResolveImportedSeatMeshPosition(seatMesh),
+                WorldPosition = worldPosition,
                 HasWorldPosition = true
             });
         }
@@ -539,6 +624,11 @@ public partial class GameBootstrap
         for (int i = 0; i < seatMarkers.Count; i++)
         {
             Transform marker = seatMarkers[i];
+            if (HasNearbyImportedSeatAnchor(anchors, marker.position))
+            {
+                continue;
+            }
+
             anchors.Add(new ImportedBuildingSeatAnchor
             {
                 Marker = marker,
@@ -557,6 +647,11 @@ public partial class GameBootstrap
         for (int i = 0; i < markers.Count; i++)
         {
             Transform marker = markers[i];
+            if (HasNearbyImportedSeatAnchor(anchors, marker.position))
+            {
+                continue;
+            }
+
             anchors.Add(new ImportedBuildingSeatAnchor
             {
                 Marker = marker,
@@ -574,13 +669,34 @@ public partial class GameBootstrap
         }
 
         string name = transform.name;
+        if (name.IndexOf("Leg", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Back", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Post", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Support", System.StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return false;
+        }
+
         bool hasSeatName = name.IndexOf("Seat", System.StringComparison.OrdinalIgnoreCase) >= 0;
-        bool isSeatLike = hasSeatName ||
-            name.IndexOf("Stool", System.StringComparison.OrdinalIgnoreCase) >= 0;
-        return isSeatLike &&
-            (name.IndexOf("Stool", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-             name.IndexOf("Chair", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
-             name.IndexOf("Bench", System.StringComparison.OrdinalIgnoreCase) >= 0);
+        bool isNamedSeatFurniture =
+            name.IndexOf("Stool", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Chair", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            name.IndexOf("Bench", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        return isNamedSeatFurniture &&
+            (hasSeatName || name.IndexOf("Stool", System.StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    private static bool HasNearbyImportedSeatAnchor(List<ImportedBuildingSeatAnchor> anchors, Vector3 worldPosition)
+    {
+        for (int i = 0; i < anchors.Count; i++)
+        {
+            if (AreImportedSeatPositionsOverlapping(anchors[i].WorldPosition, worldPosition))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static Vector3 ResolveImportedSeatMeshPosition(Transform seatMesh)
