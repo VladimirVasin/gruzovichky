@@ -406,6 +406,7 @@ public partial class GameBootstrap
             isSocialGraphPanelOpen ||
             isCityHallPanelOpen ||
             isNoospherePanelOpen ||
+            IsNoosphereDiveInputBlocking() ||
             isTruckDetailsOpen ||
             isLocalBusDetailsOpen ||
             isDriverDetailsOpen ||
@@ -423,6 +424,7 @@ public partial class GameBootstrap
         isSocialGraphPanelOpen = false;
         isCityHallPanelOpen = false;
         isNoospherePanelOpen = false;
+        CloseNoosphereDiveImmediate();
         isTruckDetailsOpen = false;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;

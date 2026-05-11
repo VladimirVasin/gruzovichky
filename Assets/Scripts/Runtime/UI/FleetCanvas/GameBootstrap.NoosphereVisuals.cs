@@ -95,6 +95,18 @@ public partial class GameBootstrap
         RectTransform field = CreateStyledPanel("NoosphereVisualField", panel, new Color(0.020f, 0.032f, 0.052f, 0.94f));
         field.gameObject.AddComponent<RectMask2D>();
         field.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        Image fieldImage = field.GetComponent<Image>();
+        fieldImage.raycastTarget = true;
+        Button diveButton = field.gameObject.AddComponent<Button>();
+        diveButton.targetGraphic = fieldImage;
+        diveButton.transition = Selectable.Transition.ColorTint;
+        ColorBlock diveColors = diveButton.colors;
+        diveColors.normalColor = new Color(0.020f, 0.032f, 0.052f, 0.94f);
+        diveColors.highlightedColor = new Color(0.035f, 0.060f, 0.096f, 0.98f);
+        diveColors.pressedColor = new Color(0.070f, 0.115f, 0.175f, 1f);
+        diveColors.selectedColor = diveColors.normalColor;
+        diveButton.colors = diveColors;
+        diveButton.onClick.AddListener(BeginNoosphereDive);
         noosphereVisualUi.Field = field;
 
         CreateNoosphereVisualCore(field, font);
@@ -130,7 +142,7 @@ public partial class GameBootstrap
 
     private void UpdateNoosphereVisualsRuntime()
     {
-        if (!isNoospherePanelOpen || noosphereVisualUi?.Field == null)
+        if (!isNoospherePanelOpen || IsNoosphereDiveInputBlocking() || noosphereVisualUi?.Field == null)
         {
             return;
         }

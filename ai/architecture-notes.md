@@ -117,7 +117,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 ### `Assets/Scripts/Runtime/Actors/GameBootstrap.WorkerKnowledge*.cs`
 
 - Owns resident knowledge creation, pending formation before memory insertion, duplicate checks, expiry/burn handling, source reasons, per-memory opinion/iteration/rumor snapshots, per-resident topic opinions for arbitrary player conversation topics, citywide permanent canonization, citywide daily lived-experience aggregation for Noosphere display/topic-opinion background mood, and sharing through idle dialogue, service co-presence, coworker shifts, City Hall introductions, and family formation.
-- HUD display lives in `GameBootstrap.FleetCanvas.WorkersScreen.Knowledge.cs` and `GameBootstrap.FleetCanvas.NoosphereScreen.cs`; dialogue bubble highlighting is driven from active knowledge but still rendered by the relevant world/interior UI partials.
+- HUD display lives in `GameBootstrap.FleetCanvas.WorkersScreen.Knowledge.cs` and `GameBootstrap.FleetCanvas.NoosphereScreen.cs`; `GameBootstrap.NoosphereDive*.cs` renders the fullscreen 3D Noosphere dive from the same knowledge/opinion/experience data, while dialogue bubble highlighting is still driven from active knowledge but rendered by the relevant world/interior UI partials.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
 

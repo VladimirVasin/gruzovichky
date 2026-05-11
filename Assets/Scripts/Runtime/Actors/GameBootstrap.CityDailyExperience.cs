@@ -62,6 +62,7 @@ public partial class GameBootstrap
 
         isNoosphereScreenDirty = true;
         noosphereVisualDirty = true;
+        MarkNoosphereDiveDirty();
         SessionDebugLogger.Log(
             "CITY_EXPERIENCE",
             $"City day {endedDay}: tone={experience.FinalTone}, score={experience.Score}, confidence={experience.Confidence}, consensus={experience.Consensus}, tension={experience.Tension}, residents={experience.ResidentCount}, main={experience.MainReasonEn}.");

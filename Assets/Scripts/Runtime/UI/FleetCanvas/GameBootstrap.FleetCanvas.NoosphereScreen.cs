@@ -158,6 +158,7 @@ public partial class GameBootstrap
         }
 
         isNoosphereScreenDirty = true;
+        MarkNoosphereDiveDirty();
         NotifyNoosphereVisualKnowledgeEvent(entry);
     }
 

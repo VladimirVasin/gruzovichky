@@ -206,7 +206,7 @@ public partial class GameBootstrap
             return;
         }
 
-        bool blockPlayerInputForOverlay = isTutorialOpen || isCitySocialRequestSceneOpen || isBarInteriorSceneOpen;
+        bool blockPlayerInputForOverlay = isTutorialOpen || isCitySocialRequestSceneOpen || isBarInteriorSceneOpen || IsNoosphereDiveInputBlocking();
         if (!blockPlayerInputForOverlay)
         {
             HandleHotkeys();
@@ -370,6 +370,7 @@ public partial class GameBootstrap
         UpdateSocialGraphScreenUi();
         UpdateCityHallScreenUi();
         UpdateNoosphereScreenUi();
+        UpdateNoosphereDiveRuntime();
         UpdateNoosphereVisualsRuntime();
         UpdateEventFeedUi();
         UpdateTutorialGoalsRuntime();
