@@ -595,8 +595,8 @@ public partial class GameBootstrap
     {
         return tone switch
         {
-            WorkerKnowledgeOpinionTone.Positive => ru ? "\u043f\u043e\u043b\u0435\u0437\u043d\u043e" : "useful",
-            WorkerKnowledgeOpinionTone.Negative => ru ? "\u0441\u043e\u043c\u043d\u0438\u0442\u0435\u043b\u044c\u043d\u043e" : "doubtful",
+            WorkerKnowledgeOpinionTone.Positive => ru ? "\u043f\u043e\u0437\u0438\u0442\u0438\u0432\u043d\u043e" : "positive",
+            WorkerKnowledgeOpinionTone.Negative => ru ? "\u043d\u0435\u0433\u0430\u0442\u0438\u0432\u043d\u043e" : "negative",
             _ => ru ? "\u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e" : "neutral"
         };
     }

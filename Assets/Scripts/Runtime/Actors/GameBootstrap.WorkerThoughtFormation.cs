@@ -544,13 +544,25 @@ public partial class GameBootstrap
         {
             string topic = GetWorkerRumorTopic(memory);
             string normalizedTopic = NormalizeWorkerKnowledgeTopicKey(topic);
+            WorkerThoughtTone thoughtTone = memory.OpinionTone switch
+            {
+                WorkerKnowledgeOpinionTone.Positive => WorkerThoughtTone.Positive,
+                WorkerKnowledgeOpinionTone.Negative => WorkerThoughtTone.Negative,
+                _ => memory.Positive ? WorkerThoughtTone.Positive : WorkerThoughtTone.Neutral
+            };
+            int thoughtIntensity = memory.OpinionTone switch
+            {
+                WorkerKnowledgeOpinionTone.Positive => 60,
+                WorkerKnowledgeOpinionTone.Negative => 56,
+                _ => memory.Positive ? 50 : 42
+            };
             AddOrKeepPendingWorkerThought(
                 owner,
                 $"knowledge_topic|{owner.DriverId}|{memory.OtherWorkerId}|{normalizedTopic}",
                 "social_learned_new_topic",
                 WorkerThoughtKind.Social,
-                memory.Positive ? WorkerThoughtTone.Positive : WorkerThoughtTone.Neutral,
-                memory.Positive ? 58 : 44,
+                thoughtTone,
+                thoughtIntensity,
                 "social_learned_new_topic",
                 new[]
                 {
@@ -562,7 +574,7 @@ public partial class GameBootstrap
                 memory.OtherWorkerId,
                 null,
                 other?.DriverName ?? GetDriverAgentById(memory.OtherWorkerId)?.DriverName,
-                memory.Positive ? 3 : 1,
+                Mathf.Clamp(Mathf.RoundToInt(memory.OpinionScore / 16f), -5, 5),
                 $"social_learned_new_topic|{owner.DriverId}|{memory.OtherWorkerId}|{normalizedTopic}",
                 0f,
                 false,

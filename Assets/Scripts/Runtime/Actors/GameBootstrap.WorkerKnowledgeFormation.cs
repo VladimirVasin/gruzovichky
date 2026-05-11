@@ -49,6 +49,7 @@ public partial class GameBootstrap
 
         ApplyWorkerKnowledgeSeed(pending, sourceWorker, seed, sourceKind, sourceLocationType, now);
         RefreshPendingWorkerKnowledgeOpinion(owner, pending);
+        CopyWorkerKnowledgeOpinionState(seed, pending);
         isDriversScreenDirty = true;
         SessionDebugLogger.Log(
             "KNOWLEDGE",
@@ -81,6 +82,7 @@ public partial class GameBootstrap
         pending.KnowledgeIteration = Mathf.Max(1, seed.KnowledgeIteration);
         pending.SourceAttitude = seed.SourceAttitude;
         CopyWorkerRumorState(pending, seed);
+        CopyWorkerKnowledgeOpinionState(pending, seed);
         pending.SourceWorkerId = sourceWorker?.DriverId ?? seed.FormedFromWorkerId;
         pending.SourceInteractionKind = sourceKind;
         pending.SourceLocationType = sourceLocationType;
@@ -255,6 +257,12 @@ public partial class GameBootstrap
         };
         CopyWorkerRumorState(memory, pending);
 
+        DriverAgent sourceWorker = GetDriverAgentById(pending.SourceWorkerId);
+        if (memory.Kind == WorkerMemoryKind.ConversationTopic)
+        {
+            CommitWorkerTopicOpinion(worker, sourceWorker, memory, pending, now);
+        }
+
         if (memory.Kind == WorkerMemoryKind.BuildingExistence &&
             memory.BuildingType.HasValue &&
             string.IsNullOrWhiteSpace(memory.BuildingLabel))
@@ -263,7 +271,6 @@ public partial class GameBootstrap
         }
 
         worker.Memories.Insert(0, memory);
-        DriverAgent sourceWorker = GetDriverAgentById(pending.SourceWorkerId);
         RecordNoosphereKnowledgeReceived(worker, sourceWorker, memory, now);
         TryCanonizeCityKnowledge(memory, now);
         TrimWorkerMemories(worker, now);
@@ -427,6 +434,11 @@ public partial class GameBootstrap
 
     private void EvaluateTopicKnowledgeOpinion(DriverAgent worker, PendingWorkerKnowledge pending)
     {
+        if (TryEvaluateWorkerTopicOpinion(worker, pending))
+        {
+            return;
+        }
+
         int score = pending.Positive ? 20 : -20;
         int confidence = pending.Positive ? 52 : 46;
         string reasonRu = pending.Positive

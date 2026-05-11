@@ -1,10 +1,12 @@
 # Work Log
 
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20, 2026-05-03, 2026-05-08, and 2026-05-09 to keep agent startup light. Use git history for exact old implementation details.
 
 ## Recent Work
+
+- 2026-05-12: Added per-resident `WorkerTopicOpinion` for arbitrary player conversation topics. Conversation-topic knowledge now forms a positive/negative stance by combining rumor connotation, source trust, repeated or contradictory versions, deterministic resident disposition, and the latest "Пережитый опыт"; the result is stored by rumor root/original topic, copied back into memory/opinion metadata, propagated through later rumor iterations, and used by topic reflection thoughts. Workers/Noosphere opinion labels now say positive/negative instead of useful/doubtful for these opinions. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`.
 
 - 2026-05-11: Added per-resident end-of-day "Пережитый опыт" summaries. On each day rollover, active residents now receive a capped daily opinion record with final positive/negative tone, score, confidence, dominant reason, secondary reason, and positive/negative counterpoint derived from that day's thoughts, active critical worries, needs, work, money, housing, social, and family state. The Workers -> Thoughts tab now shows the latest "Пережитый опыт" card with the final verdict and explanation. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
 

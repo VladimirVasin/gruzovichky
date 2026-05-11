@@ -223,7 +223,8 @@ public partial class GameBootstrap
                memory != null &&
                IsWorkerMemoryDisplayable(memory) &&
                !ShouldExpireWorkerMemory(memory, now) &&
-               !WorkerHasEquivalentKnowledge(receiver, memory, now);
+               (!WorkerHasEquivalentKnowledge(receiver, memory, now) ||
+                CanRefreshWorkerTopicOpinionFromKnowledge(receiver, memory, now));
     }
 
     private bool TryShareSpecificWorkerKnowledge(
@@ -305,10 +306,14 @@ public partial class GameBootstrap
     {
         if (transfer?.Sharer == null ||
             transfer.Receiver == null ||
-            transfer.SourceMemory == null ||
-            WorkerHasEquivalentKnowledge(transfer.Receiver, transfer.SourceMemory, now))
+            transfer.SourceMemory == null)
         {
             return false;
+        }
+
+        if (WorkerHasEquivalentKnowledge(transfer.Receiver, transfer.SourceMemory, now))
+        {
+            return TryAbsorbRepeatedWorkerTopicKnowledge(transfer, now);
         }
 
         WorkerMemory received = CreateSharedWorkerMemory(transfer, now);
@@ -354,6 +359,11 @@ public partial class GameBootstrap
             Positive = source?.Positive ?? true,
             KnowledgeIteration = GetWorkerKnowledgeIteration(source) + 1,
             SourceAttitude = source?.SourceAttitude ?? WorkerKnowledgeSourceAttitude.Neutral,
+            OpinionTone = source?.OpinionTone ?? WorkerKnowledgeOpinionTone.Neutral,
+            OpinionScore = source?.OpinionScore ?? 0,
+            OpinionConfidence = source?.OpinionConfidence ?? 0,
+            OpinionReasonRu = source?.OpinionReasonRu ?? string.Empty,
+            OpinionReasonEn = source?.OpinionReasonEn ?? string.Empty,
             FormedFromWorkerId = sharer?.DriverId ?? 0,
             CreatedDay = currentDay,
             CreatedWorldHour = now,

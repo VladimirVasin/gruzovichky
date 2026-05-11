@@ -380,6 +380,7 @@ public partial class GameBootstrap
         public readonly List<WorkerOpinion> Opinions = new();
         public readonly List<WorkerLifeOpinion> LifeOpinions = new();
         public readonly List<WorkerDailyOpinion> DailyOpinions = new();
+        public readonly List<WorkerTopicOpinion> TopicOpinions = new();
         public readonly List<WorkerInventoryEntry> Inventory = new();
         public readonly Dictionary<string, float> WorkerThoughtCooldownWorldHours = new();
         public int LastDailyOpinionDay = -1;
@@ -632,6 +633,28 @@ public partial class GameBootstrap
         public int Score;
         public string ReasonRu = string.Empty;
         public string ReasonEn = string.Empty;
+    }
+
+    private sealed class WorkerTopicOpinion
+    {
+        public string TopicKey = string.Empty;
+        public int RumorRootId;
+        public string OriginalTopic = string.Empty;
+        public string CurrentTopic = string.Empty;
+        public WorkerKnowledgeOpinionTone Tone = WorkerKnowledgeOpinionTone.Neutral;
+        public int Score;
+        public int Confidence;
+        public string ReasonRu = string.Empty;
+        public string ReasonEn = string.Empty;
+        public int TimesHeard;
+        public int PositiveSignalCount;
+        public int NegativeSignalCount;
+        public int ContradictionCount;
+        public int LastSourceWorkerId;
+        public WorkerSocialInteractionKind LastSourceInteractionKind;
+        public int LastKnowledgeIteration;
+        public int LastUpdatedDay;
+        public float LastUpdatedWorldHour;
     }
 
     private sealed class WorkerSocialMemory
