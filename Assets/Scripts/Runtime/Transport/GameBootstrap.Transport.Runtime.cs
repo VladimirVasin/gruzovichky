@@ -247,7 +247,7 @@ public partial class GameBootstrap
     {
         if (driverAgents.Count < 2) return;
         const float minSep = DriverIdlePersonalSpace;
-        float pushStrength = 2.2f * Time.deltaTime * gameSpeedMultiplier;
+        float pushStrength = 2.2f * Time.deltaTime * Mathf.Max(0f, gameSpeedMultiplier);
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent a = driverAgents[i];
@@ -264,15 +264,44 @@ public partial class GameBootstrap
                     ? new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f)).normalized
                     : delta / dist;
                 float push = (minSep - dist) * pushStrength;
-                a.DriverObject.transform.position += dir * (push * 0.5f);
-                b.DriverObject.transform.position -= dir * (push * 0.5f);
+                Vector3 halfNudge = dir * (push * 0.5f);
+                TryApplyDriverSeparationNudge(a, halfNudge);
+                TryApplyDriverSeparationNudge(b, -halfNudge);
             }
         }
     }
 
+    private bool TryApplyDriverSeparationNudge(DriverAgent driver, Vector3 nudge)
+    {
+        if (driver?.DriverObject == null || nudge.sqrMagnitude <= 0.000001f)
+        {
+            return false;
+        }
+
+        Vector3 currentPosition = driver.DriverObject.transform.position;
+        Vector3 proposedPosition = currentPosition + nudge;
+        if (!IsDriverSafeWalkCell(WorldToCell(proposedPosition)) ||
+            DoesWalkSegmentCrossBlockedWalkCell(currentPosition, proposedPosition, driver.WalkPhase))
+        {
+            return false;
+        }
+
+        proposedPosition.y = SampleTerrainHeight(proposedPosition.x, proposedPosition.z);
+        driver.DriverObject.transform.position = proposedPosition;
+        UpdateDriverLastSafeWalkPosition(driver, proposedPosition);
+        return true;
+    }
+
     private static bool IsDriverNudgeable(DriverAgent driver)
     {
-        if (driver == null || driver.DriverObject == null || !driver.DriverObject.activeSelf) return false;
+        if (driver == null ||
+            driver.DriverObject == null ||
+            !driver.DriverObject.activeSelf ||
+            driver.IsInsideBuilding)
+        {
+            return false;
+        }
+
         return driver.WalkPhase == DriverRescuePhase.None ||
                driver.WalkPhase == DriverRescuePhase.IdleWander ||
                driver.WalkPhase == DriverRescuePhase.IdleSmoking ||

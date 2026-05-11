@@ -6,6 +6,10 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-12: Fixed a resident crowd-separation rescue loop found at the end of `debug.log`. `Doru Muren` was repeatedly pushed from safe cell `(61,20)` into unsafe cell `(61,21)`, then rescued back every frame during idle life updates; pedestrian separation nudges now only apply when the proposed position remains on a safe walk cell and the small segment does not cross blocked walk cells. Inside-building residents are no longer considered nudgeable. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.
+
+- 2026-05-12: Added a cinematic start-of-day title. Each day rollover now triggers a large centered white `Day N` / `День N` IMGUI overlay that stays visible for 3 real seconds and then fades out without blocking gameplay or changing Tutorial flow. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
+
 - 2026-05-12: Fixed mirrored words in the fullscreen Noosphere dive scene. The 3D meaning `TextMesh` billboards now use the camera's forward/up rotation so the readable side faces the viewer instead of rendering the back side. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
 
 - 2026-05-12: Fixed Noosphere dive compile wiring after the new fullscreen scene split. The meanings rebuild/apply methods now live in `GameBootstrap.NoosphereDive.Meanings.cs` with the file restored under `Assets/`, and `Assembly-CSharp.csproj` explicitly includes both Noosphere dive partials so `RebuildNoosphereDiveMeanings` resolves during local builds. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.

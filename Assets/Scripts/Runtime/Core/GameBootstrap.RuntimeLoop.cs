@@ -539,10 +539,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (isCitySocialRequestSceneOpen || isBarInteriorSceneOpen)
-        {
-            return;
-        }
+        if (isCitySocialRequestSceneOpen || isBarInteriorSceneOpen) { DrawDayTitleCinematic(); return; }
 
         try
         {
@@ -552,6 +549,7 @@ public partial class GameBootstrap
             if (isTradePanelOpen)
             {
                 DrawTradePolicyHud();
+                DrawDayTitleCinematic();
                 GUI.color = prevColor;
                 GUI.enabled = prevEnabled;
                 return;
@@ -577,6 +575,7 @@ public partial class GameBootstrap
             // Build panel is now Canvas-based (BuildScreenCanvas)
 
             DrawDebugServicePanel();
+            DrawDayTitleCinematic();
 
             GUI.color = prevColor;
             GUI.enabled = prevEnabled;
@@ -711,6 +710,7 @@ public partial class GameBootstrap
             FinalizeWorkerDailyOpinionsForDay(endedDay);
             CollectDailyBuildingTaxes();
             TickWorkerAging();
+            ShowDayTitleCinematic(currentDay);
         }
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;
         float dayHour = normalizedTime * 24f;
