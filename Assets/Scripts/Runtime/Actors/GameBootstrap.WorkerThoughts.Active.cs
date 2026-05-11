@@ -201,6 +201,7 @@ public partial class GameBootstrap
         UpdateWorkerActiveNeedThought(worker, WorkerNeedKind.Meal, worker.LastMealNeedStatus);
         UpdateWorkerActiveNeedThought(worker, WorkerNeedKind.Sleep, worker.LastSleepNeedStatus);
         UpdateWorkerActiveNeedThought(worker, WorkerNeedKind.Leisure, worker.LastLeisureNeedStatus);
+        UpdateWorkerStreetLitterExperience(worker);
         UpdateWorkerLifeOpinionsSnapshot(worker);
     }
 

@@ -384,6 +384,10 @@ public partial class GameBootstrap
         public readonly List<WorkerInventoryEntry> Inventory = new();
         public readonly Dictionary<string, float> WorkerThoughtCooldownWorldHours = new();
         public int LastDailyOpinionDay = -1;
+        public int StreetLitterExposureDay = -1;
+        public float StreetLitterExposureToday;
+        public float StreetLitterPeakToday;
+        public int StreetLitterExposureSamplesToday;
         public int Satisfaction = 70;
         public int UnhappyDays;
         public bool DepartureIntent;
