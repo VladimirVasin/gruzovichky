@@ -21,10 +21,10 @@ public partial class GameBootstrap : MonoBehaviour
         riverDeepTexture = LoadArtTextureAsset("River", "river_deep_channel_lowpoly", riverSurfaceTexture);
         lakeSurfaceTexture = LoadArtTextureAsset("Lake", "lake_calm_shallow_lowpoly", riverSurfaceTexture);
         lakeDeepTexture = LoadArtTextureAsset("Lake", "lake_deep_water_lowpoly", lakeSurfaceTexture);
-        groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(1.00f, 0.96f, 0.84f), 0.1f);
-        grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.92f, 1.00f, 0.86f), 0.08f);
-        shoreSurfaceMaterial = CreateSurfaceMaterial(beachSurfaceTexture, new Color(0.86f, 0.74f, 0.56f), 0.08f);
-        beachSurfaceMaterial = CreateSurfaceMaterial(beachSurfaceTexture, new Color(1.00f, 0.92f, 0.74f), 0.1f);
+        groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.72f, 0.78f, 0.58f), 0.08f);
+        grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.68f, 0.82f, 0.56f), 0.07f);
+        shoreSurfaceMaterial = CreateSurfaceMaterial(beachSurfaceTexture, new Color(0.64f, 0.64f, 0.48f), 0.07f);
+        beachSurfaceMaterial = CreateSurfaceMaterial(beachSurfaceTexture, new Color(0.76f, 0.72f, 0.54f), 0.08f);
         roadSurfaceMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.21f, 0.22f, 0.24f), VisualSmoothnessAsphalt);
         roadShoulderMaterial = CreateSurfaceMaterial(roadShoulderSurfaceTexture, new Color(0.66f, 0.58f, 0.46f), 0.11f);
         highwaySurfaceMaterial = CreateSurfaceMaterial(highwaySurfaceTexture, new Color(0.16f, 0.17f, 0.19f), VisualSmoothnessAsphalt);
@@ -361,27 +361,42 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        bool useForestFloor = IsDenseForestCell(x, y);
-        bool useGrassPatch = !useForestFloor && IsGrassGroundCell(x, y);
-        float tintNoise = Mathf.PerlinNoise((x + 1) * 0.37f, (y + 1) * 0.41f);
-        Color tint = useForestFloor
-            ? Color.Lerp(new Color(0.78f, 0.70f, 0.58f), new Color(0.96f, 0.88f, 0.72f), tintNoise)
-            : useGrassPatch
-                ? Color.Lerp(new Color(0.84f, 0.96f, 0.72f), new Color(1.00f, 1.00f, 0.88f), tintNoise)
-                : Color.Lerp(new Color(0.95f, 0.88f, 0.66f), new Color(1.00f, 0.98f, 0.80f), tintNoise);
-        tint = QuantizeVisualTint(tint, 12f);
+        float forestBlend = GetForestGroundBlend01(x, y);
+        float shorelineBlend = GetShorelineTransition01(new Vector2Int(x, y));
+        bool useForestFloor = forestBlend > 0.68f;
+        bool useForestEdge = !useForestFloor && forestBlend > 0.26f;
+        bool useGrassPatch = useForestEdge || IsGrassGroundCell(x, y);
+        float tintNoise = Mathf.PerlinNoise((x + 1) * 0.18f + 3.7f, (y + 1) * 0.19f + 8.3f);
+
+        Color baseTint = useForestFloor
+            ? Color.Lerp(new Color(0.47f, 0.55f, 0.40f), new Color(0.58f, 0.62f, 0.46f), tintNoise)
+            : useForestEdge
+                ? Color.Lerp(new Color(0.61f, 0.70f, 0.48f), new Color(0.52f, 0.58f, 0.42f), forestBlend)
+                : useGrassPatch
+                    ? Color.Lerp(new Color(0.66f, 0.78f, 0.52f), new Color(0.74f, 0.82f, 0.60f), tintNoise)
+                    : Color.Lerp(new Color(0.68f, 0.74f, 0.54f), new Color(0.76f, 0.78f, 0.60f), tintNoise);
+
+        if (shorelineBlend > 0f)
+        {
+            Color shoreTransition = Color.Lerp(new Color(0.68f, 0.67f, 0.49f), new Color(0.55f, 0.62f, 0.45f), tintNoise);
+            baseTint = Color.Lerp(baseTint, shoreTransition, shorelineBlend * 0.72f);
+        }
+
+        Color tint = QuantizeVisualTint(baseTint, 22f);
         Texture texture = useForestFloor
             ? (forestSurfaceTexture != null ? forestSurfaceTexture : grassSurfaceMaterial.mainTexture)
-            : useGrassPatch
-                ? grassSurfaceMaterial.mainTexture
-                : groundSurfaceMaterial.mainTexture;
+            : useForestEdge
+                ? (forestBlend > 0.46f && forestSurfaceTexture != null ? forestSurfaceTexture : groundSurfaceMaterial.mainTexture)
+                : useGrassPatch
+                    ? grassSurfaceMaterial.mainTexture
+                    : groundSurfaceMaterial.mainTexture;
         Vector2 textureScale = useForestFloor
-            ? new Vector2(0.86f, 0.86f)
-            : useGrassPatch
-                ? new Vector2(0.74f, 0.74f)
-                : new Vector2(0.78f, 0.78f);
-        float smoothness = useGrassPatch ? 0.08f : 0.1f;
-        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, smoothness, textureScale, GetGroundTextureOffset(x, y, useForestFloor ? 17 : useGrassPatch ? 11 : 5));
+            ? new Vector2(0.26f, 0.26f)
+            : useForestEdge
+                ? new Vector2(0.28f, 0.28f)
+                : new Vector2(0.30f, 0.30f);
+        float smoothness = useGrassPatch ? 0.07f : 0.08f;
+        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, smoothness, textureScale, GetGroundMacroTextureOffset(useForestFloor ? 17 : useForestEdge ? 13 : useGrassPatch ? 11 : 5));
     }
 
     private void ApplyBeachGroundMaterial(GameObject target, int x, int y, bool nearWater)
@@ -405,15 +420,22 @@ public partial class GameBootstrap : MonoBehaviour
 
         float tintNoise = Mathf.PerlinNoise((x + 1) * 0.23f + 2.1f, (y + 1) * 0.27f + 4.4f);
         Color tint = nearWater
-            ? Color.Lerp(new Color(0.94f, 0.82f, 0.62f), new Color(1.00f, 0.94f, 0.76f), tintNoise)
-            : Color.Lerp(new Color(0.78f, 0.64f, 0.46f), new Color(0.94f, 0.80f, 0.58f), tintNoise);
-        tint = QuantizeVisualTint(tint, 12f);
+            ? Color.Lerp(new Color(0.62f, 0.62f, 0.46f), new Color(0.76f, 0.72f, 0.54f), tintNoise)
+            : Color.Lerp(new Color(0.55f, 0.60f, 0.44f), new Color(0.68f, 0.66f, 0.50f), tintNoise);
+        tint = QuantizeVisualTint(tint, 22f);
         renderer.sharedMaterial = GetCachedLitMaterial(
             sourceMaterial.mainTexture,
             tint,
-            nearWater ? 0.1f : 0.08f,
-            new Vector2(0.72f, 0.72f),
-            GetGroundTextureOffset(x, y, nearWater ? 23 : 29));
+            nearWater ? 0.08f : 0.07f,
+            new Vector2(0.30f, 0.30f),
+            GetGroundMacroTextureOffset(nearWater ? 23 : 29));
+    }
+
+    private static Vector2 GetGroundMacroTextureOffset(int seed)
+    {
+        return new Vector2(
+            PositiveMod(seed * 37, 97) / 97f,
+            PositiveMod(seed * 53, 89) / 89f);
     }
 
     private static Vector2 GetGroundTextureOffset(int x, int y, int seed)
@@ -526,6 +548,56 @@ public partial class GameBootstrap : MonoBehaviour
 
         float edgeBreakupNoise = Mathf.PerlinNoise((x + 3) * 0.16f + 18.4f, (y + 5) * 0.17f + 29.1f);
         return radialFalloff > 0.18f && edgeBreakupNoise > 0.24f;
+    }
+
+    private float GetForestGroundBlend01(int x, int y)
+    {
+        if (IsWaterOrBeachCell(new Vector2Int(x, y)))
+        {
+            return 0f;
+        }
+
+        float zoneInfluence = GetForestZoneInfluence(x, y);
+        int shoreRow = GridHeight - WaterRiverWidth;
+        float centerX = GridWidth * 0.28f;
+        float centerY = shoreRow * 0.34f;
+        float dx = (x - centerX) / Mathf.Max(1f, GridWidth * 0.18f);
+        float dy = (y - centerY) / Mathf.Max(1f, GridHeight * 0.16f);
+        float radialFalloff = 1f - Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy));
+        float breakupNoise = Mathf.PerlinNoise((x + 3) * 0.12f + 18.4f, (y + 5) * 0.13f + 29.1f);
+        float rawBlend = Mathf.Max(zoneInfluence * 1.12f, radialFalloff * 0.92f) + (breakupNoise - 0.5f) * 0.18f;
+        return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.10f, 0.72f, rawBlend));
+    }
+
+    private float GetShorelineTransition01(Vector2Int cell)
+    {
+        if (waterCells.Contains(cell) || IsNaturalBeachCell(cell))
+        {
+            return 0f;
+        }
+
+        float best = 0f;
+        for (int dx = -2; dx <= 2; dx++)
+        {
+            for (int dy = -2; dy <= 2; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                {
+                    continue;
+                }
+
+                Vector2Int neighbor = new(cell.x + dx, cell.y + dy);
+                if (!IsInsideGrid(neighbor) || (!waterCells.Contains(neighbor) && !IsNaturalBeachCell(neighbor)))
+                {
+                    continue;
+                }
+
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                best = Mathf.Max(best, Mathf.Clamp01(1f - (dist - 0.6f) / 2.4f));
+            }
+        }
+
+        return best;
     }
 
     private float GetDenseForestCellPriority(Vector2Int cell)

@@ -156,8 +156,7 @@ public partial class GameBootstrap : MonoBehaviour
                         foamStrip.transform.position = new Vector3(x + 0.5f, waterSurfaceTop + 0.006f, y + 0.12f);
                         foamStrip.transform.localScale = new Vector3(0.94f, 0.012f, 0.12f);
                         Renderer foamRenderer = foamStrip.GetComponent<Renderer>();
-                        foamRenderer.sharedMaterial = waterShallowMaterial;
-                        foamRenderer.material.color = new Color(0.88f, 0.94f, 0.98f);
+                        foamRenderer.sharedMaterial = CreateTransparentOverlayMaterial(new Color(0.68f, 0.84f, 0.86f, 0.28f));
                         foamRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                         foamRenderer.receiveShadows = false;
                         if (foamStrip.TryGetComponent(out Collider foamCollider)) Object.Destroy(foamCollider);
@@ -287,14 +286,14 @@ public partial class GameBootstrap : MonoBehaviour
         };
         mesh.uv = new[]
         {
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(0f, 1f),
-            new Vector2(1f, 1f),
-            new Vector2(0f, 0f),
-            new Vector2(1f, 0f),
-            new Vector2(0f, 1f),
-            new Vector2(1f, 1f),
+            new Vector2(x0, z0),
+            new Vector2(x1, z0),
+            new Vector2(x0, z1),
+            new Vector2(x1, z1),
+            new Vector2(x0, z0),
+            new Vector2(x1, z0),
+            new Vector2(x0, z1),
+            new Vector2(x1, z1),
         };
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();

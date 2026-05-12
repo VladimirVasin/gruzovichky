@@ -1,7 +1,14 @@
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+using System.Collections.Generic;
 using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private const string ImportedMiscTreeResourcePath = "Nature/Trees";
+    private const float ImportedMiscTreeTargetLocalHeight = 1.46f;
+
     private bool RemoveMiscObjectAtCell(Vector2Int cell)
     {
         bool removed = miscOccupiedCells.Remove(cell);
@@ -105,11 +112,208 @@ public partial class GameBootstrap
         treeRoot.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
         treeRoot.transform.localScale = Vector3.one * Random.Range(1.18f, 1.58f) * MiscTreeWorldScaleMultiplier;
         CreateMiscTreeShadowBlob(treeRoot.transform, variantIndex);
-        CreateTreeVariant(treeRoot.transform, variantIndex);
+        if (!TryCreateImportedTreeVariant(treeRoot.transform, variantIndex))
+        {
+            CreateTreeVariant(treeRoot.transform, variantIndex);
+        }
+
         RegisterLumberTree(cell, treeRoot.transform, variantIndex);
         RegisterMiscTreeSway(treeRoot.transform, cell, variantIndex);
         RegisterMiscTreePerchPoint(treeRoot.transform, cell, variantIndex);
         miscOccupiedCells.Add(cell);
+    }
+
+    private bool TryCreateImportedTreeVariant(Transform parent, int variantIndex)
+    {
+        GameObject prefab = GetImportedTreePrefab(variantIndex);
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        GameObject instance = Instantiate(prefab, parent, false);
+        instance.name = $"ImportedTree_{prefab.name}";
+        instance.transform.localPosition = Vector3.zero;
+        instance.transform.localRotation = Quaternion.identity;
+
+        if (!TryGetTreeRendererBounds(instance, out Bounds initialBounds) || initialBounds.size.y <= 0.001f)
+        {
+            Destroy(instance);
+            return false;
+        }
+
+        float targetWorldHeight = Mathf.Max(parent.lossyScale.y * ImportedMiscTreeTargetLocalHeight * TreeHeightScale, 0.35f);
+        float scaleFactor = Mathf.Clamp(targetWorldHeight / initialBounds.size.y, 0.025f, 12f);
+        instance.transform.localScale *= scaleFactor;
+        AlignImportedTreeToRoot(parent, instance);
+        ConfigureImportedTreeVisuals(instance);
+        return true;
+    }
+
+    private GameObject GetImportedTreePrefab(int variantIndex)
+    {
+        GameObject[] prefabs = GetImportedTreePrefabs();
+        if (prefabs.Length == 0)
+        {
+            return null;
+        }
+
+        return prefabs[System.Math.Abs(variantIndex % prefabs.Length)];
+    }
+
+    private GameObject[] GetImportedTreePrefabs()
+    {
+        if (hasLoadedImportedMiscTreePrefabs)
+        {
+            return importedMiscTreePrefabs ?? System.Array.Empty<GameObject>();
+        }
+
+        importedMiscTreePrefabs = Resources.LoadAll<GameObject>(ImportedMiscTreeResourcePath);
+#if UNITY_EDITOR
+        if (importedMiscTreePrefabs == null || importedMiscTreePrefabs.Length == 0)
+        {
+            AssetDatabase.Refresh();
+            importedMiscTreePrefabs = LoadImportedTreePrefabsFromAssetDatabase();
+        }
+#endif
+        hasLoadedImportedMiscTreePrefabs = true;
+        if (importedMiscTreePrefabs != null && importedMiscTreePrefabs.Length > 0)
+        {
+            SessionDebugLogger.Log("WORLD", $"Loaded {importedMiscTreePrefabs.Length} imported tree assets from Resources/{ImportedMiscTreeResourcePath}.");
+        }
+
+        return importedMiscTreePrefabs ?? System.Array.Empty<GameObject>();
+    }
+
+#if UNITY_EDITOR
+    private static GameObject[] LoadImportedTreePrefabsFromAssetDatabase()
+    {
+        string[] guids = AssetDatabase.FindAssets("t:GameObject", new[] { "Assets/Resources/Nature/Trees" });
+        if (guids == null || guids.Length == 0)
+        {
+            return System.Array.Empty<GameObject>();
+        }
+
+        System.Collections.Generic.List<string> assetPaths = new();
+        for (int i = 0; i < guids.Length; i++)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+            if (!string.IsNullOrEmpty(path))
+            {
+                assetPaths.Add(path);
+            }
+        }
+
+        assetPaths.Sort(System.StringComparer.Ordinal);
+        System.Collections.Generic.List<GameObject> prefabs = new();
+        for (int i = 0; i < assetPaths.Count; i++)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPaths[i]);
+            if (prefab != null)
+            {
+                prefabs.Add(prefab);
+            }
+        }
+
+        return prefabs.ToArray();
+    }
+#endif
+
+    private static bool TryGetTreeRendererBounds(GameObject root, out Bounds bounds)
+    {
+        bounds = default;
+        if (root == null)
+        {
+            return false;
+        }
+
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        bool hasBounds = false;
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            if (!hasBounds)
+            {
+                bounds = renderer.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+        }
+
+        return hasBounds;
+    }
+
+    private static void AlignImportedTreeToRoot(Transform parent, GameObject instance)
+    {
+        if (parent == null || instance == null || !TryGetTreeRendererBounds(instance, out Bounds bounds))
+        {
+            return;
+        }
+
+        Vector3 desiredCenter = parent.position;
+        Vector3 delta = new(
+            desiredCenter.x - bounds.center.x,
+            parent.position.y - bounds.min.y,
+            desiredCenter.z - bounds.center.z);
+        instance.transform.position += delta;
+    }
+
+    private void ConfigureImportedTreeVisuals(GameObject instance)
+    {
+        if (instance == null)
+        {
+            return;
+        }
+
+        Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            ApplyImportedTreeMaterialTone(renderer);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            renderer.receiveShadows = true;
+            RegisterShadowLodRenderer(renderer);
+        }
+    }
+
+    private static void ApplyImportedTreeMaterialTone(Renderer renderer)
+    {
+        if (renderer == null)
+        {
+            return;
+        }
+
+        string materialName = renderer.sharedMaterial != null ? renderer.sharedMaterial.name.ToLowerInvariant() : string.Empty;
+        string rendererName = renderer.name.ToLowerInvariant();
+        bool isLeaf = materialName.Contains("leaf") ||
+                      rendererName.Contains("leaf") ||
+                      rendererName.Contains("crown") ||
+                      rendererName.Contains("needle");
+
+        float seed = Mathf.Abs(renderer.transform.position.x * 13.17f + renderer.transform.position.z * 41.91f + rendererName.Length * 0.37f);
+        float t = Mathf.Repeat(Mathf.Sin(seed) * 43758.5453f, 1f);
+        Color tone = isLeaf
+            ? Color.Lerp(new Color(0.70f, 0.82f, 0.60f), new Color(0.58f, 0.75f, 0.66f), t)
+            : Color.Lerp(new Color(0.82f, 0.74f, 0.62f), new Color(0.68f, 0.62f, 0.54f), t);
+
+        MaterialPropertyBlock block = new();
+        renderer.GetPropertyBlock(block);
+        block.SetColor("_BaseColor", tone);
+        block.SetColor("_Color", tone);
+        renderer.SetPropertyBlock(block);
     }
 
     private void CreateMiscTreeShadowBlob(Transform parent, int variantIndex)
@@ -455,14 +659,31 @@ public partial class GameBootstrap
             CreateWaterLily(cell);
         }
 
-        // Reeds on beach cells — very sparse (1 in 7).
-        int reedIndex = 0;
-        foreach (Vector2Int cell in naturalBeachCells)
+        // Shoreline detail pass: sparse reeds and pebbles soften hard water edges.
+        HashSet<Vector2Int> shorelineCells = new(naturalBeachCells);
+        int shoreRow = GridHeight - WaterRiverWidth;
+        for (int x = 0; x < GridWidth; x++)
         {
-            reedIndex++;
-            if (reedIndex % 7 != 0) continue;
-            if (miscOccupiedCells.Contains(cell)) continue;
-            CreateReedCluster(cell);
+            shorelineCells.Add(new Vector2Int(x, shoreRow - 1));
+            shorelineCells.Add(new Vector2Int(x, shoreRow - 2));
+        }
+
+        foreach (Vector2Int cell in shorelineCells)
+        {
+            if (!IsInsideGrid(cell) || waterCells.Contains(cell) || miscOccupiedCells.Contains(cell))
+            {
+                continue;
+            }
+
+            int hash = GetShorelineDecorationHash(cell);
+            if (hash % 5 == 0)
+            {
+                CreateReedCluster(cell);
+            }
+            else if (hash % 7 == 0)
+            {
+                CreateShorePebbleCluster(cell);
+            }
         }
     }
 
@@ -568,12 +789,55 @@ public partial class GameBootstrap
         });
     }
 
+    private void CreateShorePebbleCluster(Vector2Int cell)
+    {
+        if (miscRoot == null)
+        {
+            return;
+        }
+
+        float groundY = SampleTerrainHeight(cell.x + 0.5f, cell.y + 0.5f);
+        int pebbleCount = 2 + PositiveMod(cell.x * 5 + cell.y * 3, 4);
+        GameObject clusterRoot = new($"ShorePebbles_{cell.x}_{cell.y}");
+        clusterRoot.transform.SetParent(miscRoot, false);
+        clusterRoot.transform.position = new Vector3(cell.x + 0.5f, groundY + 0.012f, cell.y + 0.5f);
+        clusterRoot.transform.rotation = Quaternion.Euler(0f, PositiveMod(cell.x * 37 + cell.y * 19, 360), 0f);
+
+        for (int i = 0; i < pebbleCount; i++)
+        {
+            float ox = Mathf.Lerp(-0.28f, 0.28f, Mathf.Repeat(Mathf.Sin((cell.x + i * 11) * 14.13f) * 43758.5453f, 1f));
+            float oz = Mathf.Lerp(-0.24f, 0.24f, Mathf.Repeat(Mathf.Sin((cell.y + i * 7) * 21.71f) * 24634.6345f, 1f));
+            float size = Mathf.Lerp(0.08f, 0.16f, Mathf.Repeat(Mathf.Sin((cell.x + cell.y + i) * 9.31f) * 15342.521f, 1f));
+
+            GameObject pebble = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            pebble.transform.SetParent(clusterRoot.transform, false);
+            pebble.transform.localPosition = new Vector3(ox, size * 0.15f, oz);
+            pebble.transform.localScale = new Vector3(size * 1.35f, size * 0.28f, size);
+            Color color = Color.Lerp(new Color(0.42f, 0.43f, 0.39f), new Color(0.62f, 0.58f, 0.48f), i / Mathf.Max(1f, pebbleCount - 1f));
+            ApplyColor(pebble, color);
+            ConfigureStaticVisual(pebble);
+            if (pebble.TryGetComponent(out Collider collider))
+            {
+                collider.enabled = false;
+            }
+        }
+    }
+
+    private static int GetShorelineDecorationHash(Vector2Int cell)
+    {
+        unchecked
+        {
+            int hash = cell.x * 73856093 ^ cell.y * 19349663 ^ 0x5A17;
+            return hash & int.MaxValue;
+        }
+    }
+
     private static Color JitterTreeLeafColor(Color baseColor, Transform parent)
     {
         float seed = parent != null ? Mathf.Abs(parent.position.x * 12.9898f + parent.position.z * 78.233f) : Random.value;
         float t = Mathf.Repeat(Mathf.Sin(seed) * 43758.5453f, 1f);
-        float brightness = Mathf.Lerp(0.88f, 1.14f, t);
-        Color huePush = Color.Lerp(new Color(0.9f, 1f, 0.86f), new Color(0.76f, 0.94f, 1f), Mathf.Repeat(t * 1.7f, 1f));
+        float brightness = Mathf.Lerp(0.80f, 1.02f, t);
+        Color huePush = Color.Lerp(new Color(0.84f, 0.94f, 0.76f), new Color(0.68f, 0.86f, 0.80f), Mathf.Repeat(t * 1.7f, 1f));
         return new Color(
             Mathf.Clamp01(baseColor.r * brightness * huePush.r),
             Mathf.Clamp01(baseColor.g * brightness * huePush.g),

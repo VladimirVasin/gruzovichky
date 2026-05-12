@@ -290,6 +290,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 ### `Assets/Scripts/Runtime/World/GameBootstrap.World.MiscDecorations.cs`
 
 - Partial world-decoration split for misc trees, berry bushes, flower patches, tree sway, perch points, and tree primitive variants.
+- Misc trees now first try tree model/prefab assets from `Assets/Resources/Nature/Trees/` via `Resources.LoadAll<GameObject>("Nature/Trees")`; the repository includes generated low-poly OBJ tree variants there, while old procedural primitive trees remain the fallback. The same tree root still drives lumber growth/felling, sway, cleanup, and ambient perch points.
 - Keeps `GameBootstrap.World.cs` focused more on placement/service/city-park construction while preserving existing runtime behavior.
 
 ### `Assets/Scripts/Runtime/World/ServiceDecorationStyleService.cs`

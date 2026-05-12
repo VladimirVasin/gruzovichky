@@ -220,6 +220,7 @@ public partial class GameBootstrap
             UpdateBuildHoverHighlight();
         }
 
+        UpdateGridLineVisualState();
         UpdateWaterVisualLod();
         UpdateCameraVisualLod();
         ProduceForestWood();
@@ -462,7 +463,7 @@ public partial class GameBootstrap
         }
 
         isFarZoomVisualLodActive = active;
-        SetRootActive(gridLinesRoot, !active);
+        SetRootActive(gridLinesRoot, !active && (isBuildPanelOpen || IsBuildingBuildTool(activeBuildTool) || IsRoadBuildTool(activeBuildTool)));
         SetRootActive(ambientAirRoot, !active);
         SetRootActive(ambientFallingLeafRoot, !active);
         SetRootActive(miscBirdRoot, !active);

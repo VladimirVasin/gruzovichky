@@ -36,10 +36,16 @@ public partial class GameBootstrap
         return cost <= 0 || money >= cost;
     }
 
-    private string GetBuildToolCostLabel(BuildTool tool)
+    private string GetBuildToolCostLabel(BuildTool tool, bool unaffordable = false)
     {
         int cost = GetBuildToolCost(tool);
-        return cost > 0 ? $"${cost}" : string.Empty;
+        if (cost <= 0)
+        {
+            return string.Empty;
+        }
+
+        string amountColor = unaffordable ? "#FF6E66" : "#FFFFFF";
+        return $"<color=#F5B53A>$</color> <color={amountColor}>{cost}</color>";
     }
 
     private string GetBuildToolNoFundsStatus(bool ru)
@@ -316,8 +322,8 @@ public partial class GameBootstrap
                 else if (isUnaffordable)
                 {
                     item.StatusBg.gameObject.SetActive(true);
-                    item.StatusBg.color  = new Color(0.52f, 0.10f, 0.09f, 0.97f);
-                    item.StatusText.text = GetBuildToolNoFundsStatus(ru);
+                    item.StatusBg.color  = new Color(0.24f, 0.06f, 0.05f, 0.98f);
+                    item.StatusText.text = GetBuildToolCostLabel(item.Tool, true);
                 }
                 else if (isActive)
                 {

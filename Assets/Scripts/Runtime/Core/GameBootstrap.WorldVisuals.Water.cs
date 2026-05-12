@@ -109,10 +109,10 @@ public partial class GameBootstrap : MonoBehaviour
                 GameObject washPatch = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 washPatch.name = $"WaterWash_r{ring + 1}_{segmentIndex + 1}";
                 washPatch.transform.SetParent(waterEffectsRoot, false);
-                washPatch.transform.localScale = new Vector3(segmentWidth, 0.008f, ring == 0 ? 0.86f : 0.78f);
+                washPatch.transform.localScale = new Vector3(segmentWidth, 0.008f, ring == 0 ? 1.02f : 0.86f);
                 Renderer washRenderer = washPatch.GetComponent<Renderer>();
-                float baseAlpha = ring == 0 ? 0.20f : ring == 1 ? 0.14f : 0.1f;
-                washRenderer.sharedMaterial = CreateTransparentOverlayMaterial(new Color(0.78f, 0.95f, 1f, baseAlpha));
+                float baseAlpha = ring == 0 ? 0.13f : ring == 1 ? 0.09f : 0.07f;
+                washRenderer.sharedMaterial = CreateTransparentOverlayMaterial(new Color(0.62f, 0.78f, 0.74f, baseAlpha));
                 washRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 washRenderer.receiveShadows = false;
                 if (washPatch.TryGetComponent(out Collider washCollider))
@@ -134,7 +134,7 @@ public partial class GameBootstrap : MonoBehaviour
                     BaseY = baseY,
                     BaseZ = baseZ,
                     Width = segmentWidth,
-                    Depth = ring == 0 ? 0.92f : ring == 1 ? 0.78f : 0.46f,
+                    Depth = ring == 0 ? 1.08f : ring == 1 ? 0.86f : 0.52f,
                     ShoreRingIndex = ring,
                     SegmentIndex = segmentIndex,
                     PhaseOffset = Random.Range(0f, 1f)
@@ -148,7 +148,7 @@ public partial class GameBootstrap : MonoBehaviour
             foam.name = $"WaterShoreFoamBand_{i + 1}";
             foam.transform.SetParent(waterEffectsRoot, false);
             foam.transform.localScale = new Vector3(fullWidth, 0.01f, 0.07f + i * 0.02f);
-            ApplyColor(foam, new Color(0.92f, 0.97f, 1f));
+            ApplyColor(foam, new Color(0.74f, 0.86f, 0.86f));
             ConfigureStaticVisual(foam);
             if (foam.TryGetComponent(out Collider foamCollider))
             {

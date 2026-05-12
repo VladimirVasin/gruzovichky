@@ -1,0 +1,48 @@
+newmtl bark_warm
+Kd 0.4300 0.2700 0.1500
+map_Kd Textures/tree_bark_warm_lowpoly.png
+Ka 0.0000 0.0000 0.0000
+Ks 0.0500 0.0500 0.0500
+Ns 24
+
+newmtl bark_dark
+Kd 0.3000 0.1900 0.1100
+map_Kd Textures/tree_bark_dark_lowpoly.png
+Ka 0.0000 0.0000 0.0000
+Ks 0.0500 0.0500 0.0500
+Ns 24
+
+newmtl bark_pale
+Kd 0.7600 0.6900 0.5500
+map_Kd Textures/tree_bark_pale_birch_lowpoly.png
+Ka 0.0000 0.0000 0.0000
+Ks 0.0500 0.0500 0.0500
+Ns 24
+
+newmtl leaf_summer
+Kd 0.1700 0.4400 0.2200
+map_Kd Textures/tree_leaf_summer_lowpoly.png
+Ka 0.0000 0.0000 0.0000
+Ks 0.0500 0.0500 0.0500
+Ns 24
+
+newmtl leaf_fresh
+Kd 0.2600 0.5400 0.3000
+map_Kd Textures/tree_leaf_fresh_lowpoly.png
+Ka 0.0000 0.0000 0.0000
+Ks 0.0500 0.0500 0.0500
+Ns 24
+
+newmtl leaf_shadow
+Kd 0.1000 0.2700 0.1600
+map_Kd Textures/tree_leaf_shadow_lowpoly.png
+Ka 0.0000 0.0000 0.0000
+Ks 0.0500 0.0500 0.0500
+Ns 24
+
+newmtl leaf_pine
+Kd 0.0900 0.2900 0.2000
+map_Kd Textures/tree_leaf_pine_lowpoly.png
+Ka 0.0000 0.0000 0.0000
+Ks 0.0500 0.0500 0.0500
+Ns 24

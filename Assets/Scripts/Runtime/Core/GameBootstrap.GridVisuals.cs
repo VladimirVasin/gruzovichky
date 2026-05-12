@@ -3,6 +3,9 @@ using UnityEngine.Rendering;
 
 public partial class GameBootstrap
 {
+    private static readonly Color GridLineHiddenColor = new(0.34f, 0.38f, 0.28f, 0f);
+    private static readonly Color GridLineBuildColor = new(1.00f, 0.86f, 0.42f, 0.24f);
+
     private System.Collections.IEnumerator SetupGridAsync()
     {
         yield return null; // one-frame defer so callers stay async-compatible
@@ -13,10 +16,37 @@ public partial class GameBootstrap
 
         Material lineMaterial = new(ShaderRefs.Sprites)
         {
-            color = new Color(0f, 0f, 0f, 0.18f)
+            color = GridLineHiddenColor
         };
+        gridLinesMaterial = lineMaterial;
+        isGridBuildModeVisualActive = false;
 
         BuildGridLineMesh(gridRoot.transform, lineMaterial);
+        gridRoot.SetActive(false);
+    }
+
+    private void UpdateGridLineVisualState()
+    {
+        if (gridLinesMaterial == null && gridLinesRoot == null)
+        {
+            return;
+        }
+
+        bool buildModeActive = isBuildPanelOpen || IsBuildingBuildTool(activeBuildTool) || IsRoadBuildTool(activeBuildTool);
+        SetRootActive(gridLinesRoot, buildModeActive && !isFarZoomVisualLodActive);
+
+        if (gridLinesMaterial == null)
+        {
+            return;
+        }
+
+        if (isGridBuildModeVisualActive == buildModeActive)
+        {
+            return;
+        }
+
+        isGridBuildModeVisualActive = buildModeActive;
+        gridLinesMaterial.color = buildModeActive ? GridLineBuildColor : GridLineHiddenColor;
     }
 
     private void BuildGridLineMesh(Transform parent, Material material)

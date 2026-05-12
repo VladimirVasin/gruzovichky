@@ -274,7 +274,13 @@ public partial class GameBootstrap
         badgeRect.anchorMin = new Vector2(1f, 1f);
         badgeRect.anchorMax = new Vector2(1f, 1f);
         badgeRect.pivot = new Vector2(1f, 1f);
+        badgeRect.sizeDelta = new Vector2(76f, 23f);
         badgeRect.anchoredPosition = new Vector2(-6f, -6f);
+        statusBadge.Label.rectTransform.offsetMin = new Vector2(7f, 0f);
+        statusBadge.Label.rectTransform.offsetMax = new Vector2(-7f, 0f);
+        Outline badgeOutline = statusBadge.Background.gameObject.AddComponent<Outline>();
+        badgeOutline.effectColor = new Color(1f, 0.68f, 0.18f, 0.48f);
+        badgeOutline.effectDistance = new Vector2(1f, -1f);
         statusBadge.Label.fontStyle = FontStyle.Bold;
         statusBadge.Label.resizeTextForBestFit = true;
         statusBadge.Label.resizeTextMinSize = 9;
@@ -305,10 +311,6 @@ public partial class GameBootstrap
 
     private void CreateBuildAccentVisual(RectTransform accentStrip, Font font, BuildTool tool, string abbrev)
     {
-        // Accent strip: 68px wide, 72px tall.  Local helpers:
-        // P(ax,ay,bx,by,col) uses anchor-based rects (0..1 range).
-        // R(cx,cy,w,h,col,rot) uses pivot-centered rects with optional rotation.
-
         RectTransform P(float ax, float ay, float bx, float by, Color col)
         {
             GameObject g = new("Ic");

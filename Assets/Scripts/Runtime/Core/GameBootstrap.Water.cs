@@ -329,7 +329,7 @@ public partial class GameBootstrap : MonoBehaviour
             switch (surfaceTile.LayerIndex)
             {
                 case 0:
-                    shoreColor = new Color(0.64f, 0.90f, 0.96f);
+                    shoreColor = new Color(0.46f, 0.72f, 0.78f);
                     deepColor = new Color(0.12f, 0.42f, 0.72f);
                     baseAlpha = Mathf.Lerp(0.16f, 0.09f, nearShoreT);
                     alphaRange = 0.018f;
@@ -337,7 +337,7 @@ public partial class GameBootstrap : MonoBehaviour
                     highlightWave = 0.045f;
                     break;
                 case 1:
-                    shoreColor = new Color(0.34f, 0.70f, 0.84f);
+                    shoreColor = new Color(0.28f, 0.58f, 0.68f);
                     deepColor = new Color(0.08f, 0.28f, 0.56f);
                     baseAlpha = Mathf.Lerp(0.11f, 0.07f, nearShoreT);
                     alphaRange = 0.016f;
@@ -345,7 +345,7 @@ public partial class GameBootstrap : MonoBehaviour
                     highlightWave = 0.03f;
                     break;
                 default:
-                    shoreColor = new Color(0.16f, 0.44f, 0.64f);
+                    shoreColor = new Color(0.14f, 0.36f, 0.52f);
                     deepColor = new Color(0.03f, 0.13f, 0.34f);
                     baseAlpha = Mathf.Lerp(0.15f, 0.09f, nearShoreT);
                     alphaRange = 0.010f;
@@ -413,8 +413,8 @@ public partial class GameBootstrap : MonoBehaviour
                         : (0.7f + waveT * 0.18f)));
 
             Color washColor = isWaterEdgeRing
-                ? Color.Lerp(new Color(0.34f, 0.52f, 0.62f, 0f), new Color(0.9f, 0.98f, 1f, alpha), 0.4f + waveT * 0.6f)
-                : Color.Lerp(new Color(0.28f, 0.38f, 0.48f, 0f), new Color(0.9f, 0.98f, 1f, alpha), 0.5f + waveT * 0.5f);
+                ? Color.Lerp(new Color(0.26f, 0.42f, 0.46f, 0f), new Color(0.70f, 0.86f, 0.84f, alpha), 0.36f + waveT * 0.48f)
+                : Color.Lerp(new Color(0.30f, 0.38f, 0.34f, 0f), new Color(0.74f, 0.84f, 0.78f, alpha), 0.42f + waveT * 0.44f);
             washColor *= waveWashBrightness;
             washColor.a = alpha;
             patch.Material.color = washColor;
@@ -441,7 +441,7 @@ public partial class GameBootstrap : MonoBehaviour
 
             if (foam.Material != null)
             {
-                Color foamColor = Color.Lerp(new Color(0.76f, 0.86f, 0.92f), new Color(0.94f, 0.98f, 1f), currentStylizedDaylight) * (pulse * shorelineGlow);
+                Color foamColor = Color.Lerp(new Color(0.58f, 0.70f, 0.72f), new Color(0.78f, 0.88f, 0.86f), currentStylizedDaylight) * (pulse * shorelineGlow);
                 foamColor.a = 1f;
                 foam.Material.color = foamColor;
             }

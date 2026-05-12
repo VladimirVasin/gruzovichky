@@ -211,6 +211,8 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<ForestTreeWobble> forestTreeWobbles = new();
     private readonly List<MiscTreeSway> miscTreeSways = new();
     private readonly List<Vector3> miscTreePerchPoints = new();
+    private GameObject[] importedMiscTreePrefabs;
+    private bool hasLoadedImportedMiscTreePrefabs;
     private readonly List<MiscBirdData> miscBirds = new();
     private readonly List<Vector3> ambientCatRoamPoints = new();
     private readonly List<AmbientCatData> ambientCats = new();
@@ -271,6 +273,8 @@ public partial class GameBootstrap : MonoBehaviour
     private Transform worldRoot;
     private Transform groundRoot;
     private Transform gridLinesRoot;
+    private Material gridLinesMaterial;
+    private bool isGridBuildModeVisualActive;
     private Transform roadsRoot;
     private Transform unifiedRoadVisualRoot;
     private Transform roadConstructionWaveRoot;
