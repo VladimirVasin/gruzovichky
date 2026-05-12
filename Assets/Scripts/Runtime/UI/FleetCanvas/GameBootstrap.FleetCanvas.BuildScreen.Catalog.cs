@@ -67,7 +67,7 @@ public partial class GameBootstrap
             $"Not enough treasury for {titleEn}: ${money}/${cost}.",
             $"\u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0434\u0435\u043d\u0435\u0433 \u043d\u0430 {titleRu}: ${money}/${cost}.",
             FeedEventType.Warning);
-        PlayUiSound(uiPanelCloseClip, 0.62f);
+        PlayUiSound(uiDeniedClip != null ? uiDeniedClip : uiPanelCloseClip, 0.62f);
         activeBuildTool = BuildTool.None;
         hoveredBuildCell = null;
         HideBuildHoverHighlights();

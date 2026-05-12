@@ -6,6 +6,8 @@ public partial class GameBootstrap
 {
     private const string SoundOptionPrefsPrefix = "sound_fx_minimal_v1_";
     private const string WorkerGrassFootstepOptionId = "footsteps_worker_grass";
+    private const string RelaxedGeneratedAudioFolder = "GeneratedAudio/Relaxed";
+    private const string AsmrMustHaveGeneratedAudioFolder = "GeneratedAudio/ASMRMustHave";
     private const string WorkerGrassFootstepAssetFolder = "Assets/Footsteps - Essentials/Footsteps_Grass/Footsteps_Grass_Walk";
     private const string NatureAmbienceAssetFolder = "Assets/Nature - Essentials";
 
@@ -45,8 +47,12 @@ public partial class GameBootstrap
         menuHoverClip = LoadGeneratedAudioClip("menu_hover", CreateUiPulseClip("Menu_Hover", 356f, 0.1f, 0.028f));
         uiPanelOpenClip = LoadGeneratedAudioClip("ui_open", CreateUiPulseClip("UI_Open", 420f, 0.12f, 0.032f));
         uiPanelCloseClip = LoadGeneratedAudioClip("ui_close", CreateUiPulseClip("UI_Close", 220f, 0.1f, 0.026f));
+        uiConfirmClip = LoadGeneratedAsmrClip("ui_confirm_soft", uiSelectClip);
+        uiDeniedClip = LoadGeneratedAsmrClip("ui_denied_soft", uiPanelCloseClip);
         truckIdleClip = LoadGeneratedAudioClip("truck_idle", CreateTruckIdleClip("Truck_Idle", 2.6f, 0.042f));
         truckRollClip = LoadGeneratedAudioClip("truck_roll", CreateTruckRollClip("Truck_Roll", 1.6f, 0.041f));
+        truckLoadClip = LoadGeneratedAsmrClip("truck_load_soft", uiSelectClip);
+        truckUnloadClip = LoadGeneratedAsmrClip("truck_unload_soft", uiSelectClip);
         boatMotorClip = LoadGeneratedAudioClip("boat_motor", CreateBoatMotorClip("Boat_Motor", 3.8f, 0.038f));
         slotReelTickClip = LoadGeneratedAudioClip("slot_reel_tick", CreateUiPulseClip("Slot_Tick", 820f, 0.038f, 0.048f));
         slotWinClip = LoadGeneratedAudioClip("slot_win", CreatePentatonicMotifClip("Slot_Win", 1.1f, 0.10f,
@@ -58,12 +64,16 @@ public partial class GameBootstrap
         tutorialGoalSuccessClip = LoadGeneratedAudioClip("tutorial_goal_success", CreatePentatonicMotifClip("Tutorial_Goal_Success", 1.1f, 0.10f,
             new[] { PentatonicE4, PentatonicG4, PentatonicA4, PentatonicC5, PentatonicE5 },
             new[] { 0f, 0.13f, 0.27f, 0.43f, 0.61f }));
-        buildingCompleteClip = LoadGeneratedAudioClip("building_complete", CreatePentatonicMotifClip("Building_Complete", 0.65f, 0.08f,
+        buildPlaceStartClip = LoadGeneratedAsmrClip("build_place_start", uiSelectClip);
+        AudioClip buildingCompleteFallback = LoadGeneratedAudioClip("building_complete", CreatePentatonicMotifClip("Building_Complete", 0.65f, 0.08f,
             new[] { PentatonicD4, PentatonicG4, PentatonicC5 },
             new[] { 0f, 0.08f, 0.18f }));
-        roadDragClip = LoadGeneratedAudioClip("road_drag", CreatePentatonicMotifClip("Road_Drag", 0.24f, 0.055f,
+        buildingCompleteClip = LoadGeneratedAsmrClip("build_complete_soft", buildingCompleteFallback);
+        AudioClip roadDragFallback = LoadGeneratedAudioClip("road_drag", CreatePentatonicMotifClip("Road_Drag", 0.24f, 0.055f,
             new[] { PentatonicC4, PentatonicE4 },
             new[] { 0f, 0.06f }));
+        roadDragClip = LoadGeneratedAsmrClip("road_build_wave_soft", roadDragFallback);
+        moneyCollectClip = LoadGeneratedAsmrClip("money_collect_soft", uiSelectClip);
         buildingDemolishClip = LoadGeneratedAudioClip("building_demolish", CreateUiPulseClip("Building_Demolish", 180f, 0.18f, 0.034f));
         workerGrassFootstepClips = LoadWorkerGrassFootstepClips();
         natureCicadasClip = LoadNatureAudioClip("Ambiance_Cicadas_Loop_Stereo");
@@ -90,11 +100,21 @@ public partial class GameBootstrap
 
     private static AudioClip LoadGeneratedAudioClip(string id, AudioClip fallback)
     {
-        AudioClip generated = Resources.Load<AudioClip>($"GeneratedAudio/Relaxed/{id}");
+        return LoadGeneratedAudioClipFromFolder(RelaxedGeneratedAudioFolder, id, fallback);
+    }
+
+    private static AudioClip LoadGeneratedAsmrClip(string id, AudioClip fallback)
+    {
+        return LoadGeneratedAudioClipFromFolder(AsmrMustHaveGeneratedAudioFolder, id, fallback);
+    }
+
+    private static AudioClip LoadGeneratedAudioClipFromFolder(string folder, string id, AudioClip fallback)
+    {
+        AudioClip generated = Resources.Load<AudioClip>($"{folder}/{id}");
 #if UNITY_EDITOR
         if (generated == null)
         {
-            generated = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"Assets/Resources/GeneratedAudio/Relaxed/{id}.wav");
+            generated = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioClip>($"Assets/Resources/{folder}/{id}.wav");
         }
 #endif
 
@@ -146,9 +166,13 @@ public partial class GameBootstrap
         RegisterSoundOption("menu_hover", "UI", "Menu Hover", menuHoverClip, 0.42f);
         RegisterSoundOption("ui_open", "UI", "Panel Open", uiPanelOpenClip, 0.52f);
         RegisterSoundOption("ui_close", "UI", "Panel Close", uiPanelCloseClip, 0.48f);
+        RegisterSoundOption("ui_confirm_soft", "UI", "UI Confirm Soft", uiConfirmClip, 0.50f);
+        RegisterSoundOption("ui_denied_soft", "UI", "UI Denied Soft", uiDeniedClip, 0.46f);
 
         RegisterSoundOption("truck_idle", "Transport", "Truck Idle", truckIdleClip, 0.48f, true, 1.4f);
         RegisterSoundOption("truck_roll", "Transport", "Truck Roll", truckRollClip, 0.50f, true, 1.4f);
+        RegisterSoundOption("truck_load_soft", "Transport", "Truck Load Soft", truckLoadClip, 0.42f);
+        RegisterSoundOption("truck_unload_soft", "Transport", "Truck Unload Soft", truckUnloadClip, 0.42f);
         RegisterSoundOption("boat_motor", "Transport", "Boat Motor", boatMotorClip, 0.42f, true, 1.5f);
 
         RegisterSoundOption("slot_reel_tick", "Gambling", "Slot Reel Tick", slotReelTickClip, 0.34f);
@@ -157,8 +181,10 @@ public partial class GameBootstrap
 
         RegisterSoundOption("tutorial_goal_success", "Tutorial", "Goal Success", tutorialGoalSuccessClip, 0.42f);
 
+        RegisterSoundOption("build_place_start", "Build", "Build Place Start", buildPlaceStartClip, 0.44f);
         RegisterSoundOption("building_complete", "Build", "Building Complete", buildingCompleteClip, 0.42f);
-        RegisterSoundOption("road_drag", "Build", "Road Drag Complete", roadDragClip, 0.36f);
+        RegisterSoundOption("road_build_wave_soft", "Build", "Road Build Wave Soft", roadDragClip, 0.36f);
+        RegisterSoundOption("money_collect_soft", "Economy", "Money Collect Soft", moneyCollectClip, 0.38f);
         RegisterSoundOption("building_demolish", "Build", "Building Demolish", buildingDemolishClip, 0.42f);
 
         AudioClip footstepPreviewClip = workerGrassFootstepClips != null && workerGrassFootstepClips.Length > 0

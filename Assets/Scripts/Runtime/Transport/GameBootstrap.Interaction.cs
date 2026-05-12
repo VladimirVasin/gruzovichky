@@ -245,6 +245,8 @@ public partial class GameBootstrap
             activeTruckInteraction == TruckInteractionType.LoadLogsAtWarehouse ||
             activeTruckInteraction == TruckInteractionType.LoadFurnitureAtWarehouse ||
             activeTruckInteraction == TruckInteractionType.LoadAtDocks;
+        int cargoBeforeAmount = truckCargoAmount;
+        CargoType cargoBeforeType = truckCargoType;
 
         switch (activeTruckInteraction)
         {
@@ -406,6 +408,7 @@ public partial class GameBootstrap
                 break;
         }
 
+        bool cargoChanged = cargoBeforeAmount != truckCargoAmount || cargoBeforeType != truckCargoType;
         isTruckInteracting = false;
         activeTruckInteraction = TruckInteractionType.None;
         truckInteractionTimer = 0f;
@@ -423,8 +426,32 @@ public partial class GameBootstrap
             activeServiceLocation = null;
         }
 
-        _ = completedInteraction;
-        _ = completedLoad;
+        if (cargoChanged)
+        {
+            PlayTruckCargoInteractionSound(completedInteraction, completedLoad);
+        }
+    }
+
+    private void PlayTruckCargoInteractionSound(TruckInteractionType interactionType, bool isLoad)
+    {
+        AudioClip clip = isLoad
+            ? truckLoadClip
+            : IsTruckUnloadInteraction(interactionType)
+                ? truckUnloadClip
+                : null;
+        PlayUiSound(clip, 0.58f);
+    }
+
+    private static bool IsTruckUnloadInteraction(TruckInteractionType interactionType)
+    {
+        return interactionType == TruckInteractionType.UnloadAtSawmill ||
+               interactionType == TruckInteractionType.UnloadAtWarehouse ||
+               interactionType == TruckInteractionType.UnloadBoardsAtFurnitureFactory ||
+               interactionType == TruckInteractionType.UnloadTextileAtFurnitureFactory ||
+               interactionType == TruckInteractionType.UnloadFurnitureAtWarehouse ||
+               interactionType == TruckInteractionType.TradeUnloadAtWarehouse ||
+               interactionType == TruckInteractionType.UnloadAtDocks ||
+               interactionType == TruckInteractionType.UnloadDocksImportAtWarehouse;
     }
 }
 

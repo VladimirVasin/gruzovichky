@@ -194,7 +194,7 @@ public partial class GameBootstrap
 
         activeBuildTool = activeBuildTool == tool ? BuildTool.None : tool;
         LogUiInput($"{source}: switched tool to {activeBuildTool}");
-        PlayUiSound(uiSelectClip, 0.85f);
+        PlayUiSound(activeBuildTool == BuildTool.None ? uiConfirmClip : buildPlaceStartClip, 0.85f);
         SessionDebugLogger.Log("BUILD", $"Build tool switched to {activeBuildTool}.");
         isBuildScreenDirty = true;
         return true;

@@ -859,6 +859,7 @@ public partial class GameBootstrap
                 MoneyAccountKind.BuildingCash,
                 MoneyAccountKind.CityBudget,
                 MoneyTransactionReasonKind.BuildingTax);
+            PlayUiSound(moneyCollectClip, 0.48f);
         }
         else
         {

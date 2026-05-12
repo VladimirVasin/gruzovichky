@@ -10,6 +10,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-12: Added the `Assets/Resources/GeneratedAudio/ASMRMustHave` sound set to runtime audio. New clips are loaded from Resources/Editor fallback, exposed in Sound Options, and hooked into build tool start, build complete, road build wave, build denial, daily tax collection, and truck cargo load/unload events. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.
+
 - 2026-05-12: Fixed persistent white ground grid lines outside Build mode. The always-created `GridLines` world mesh now starts inactive, uses a transparent hidden material state, and is only enabled while the Build panel/tool is active; far-zoom LOD no longer re-enables it during normal gameplay. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.
 
 - 2026-05-12: Tightened Build menu construction cost badges. Build item cards now give the price badge an explicit top-right RectTransform size so it does not spread over the center icon, render costs as a small gold `$` + amount badge, and keep unaffordable items dimmed while showing the red price instead of replacing it with a generic no-funds label. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.

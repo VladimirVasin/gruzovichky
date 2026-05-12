@@ -23,7 +23,7 @@ public partial class GameBootstrap
 
             roadPathStart = cell;
             SetRoadPathStartHighlights(cell, startDirection, true);
-            PlayUiSound(uiSelectClip, 0.65f);
+            PlayUiSound(buildPlaceStartClip != null ? buildPlaceStartClip : uiSelectClip, 0.65f);
             MarkTutorialGoalComplete(TutorialGoalKind.RoadSegmentStart);
             SessionDebugLogger.Log("BUILD_ROAD", $"segment-start accepted tool={activeBuildTool} cell={FormatCell(cell)} dir={FormatCell(startDirection)}.");
             return false;
