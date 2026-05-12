@@ -213,7 +213,16 @@ public partial class GameBootstrap
         string titleEn = GetBuildCatalogTitle(tool, false, tool.ToString());
         string titleRu = GetBuildCatalogTitle(tool, true, titleEn);
         money -= cost;
-        RecordMoneyMovement(-cost, "Treasury", "Construction Crew", $"Construction: {titleEn}", money);
+        RecordMoneyMovement(
+            -cost,
+            "Treasury",
+            "Construction Crew",
+            $"Construction: {titleEn}",
+            money,
+            null,
+            MoneyAccountKind.CityBudget,
+            MoneyAccountKind.External,
+            MoneyTransactionReasonKind.Construction);
         PushFeedEvent(
             $"Built {titleEn}: -${cost}.",
             $"\u041f\u043e\u0441\u0442\u0440\u043e\u0435\u043d\u043e: {titleRu}. -${cost}.",

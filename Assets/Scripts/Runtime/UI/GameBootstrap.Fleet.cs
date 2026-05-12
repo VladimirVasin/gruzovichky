@@ -837,7 +837,16 @@ public partial class GameBootstrap
         }
 
         money += amount;
-        RecordMoneyMovement(amount, fromLabel, "Treasury", reason, money);
+        RecordMoneyMovement(
+            amount,
+            fromLabel,
+            "Treasury",
+            reason,
+            money,
+            recipientBalanceAfter: null,
+            fromAccountKind: MoneyAccountKind.External,
+            toAccountKind: MoneyAccountKind.CityBudget,
+            reasonKind: MoneyTransactionReasonKind.Other);
         moneyPopupAmount = amount;
         moneyPopupTimer = MoneyPopupDuration;
         isFleetScreenDirty = true;

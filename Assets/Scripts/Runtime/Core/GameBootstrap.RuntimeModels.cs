@@ -124,6 +124,25 @@ public partial class GameBootstrap
         Service
     }
 
+    private enum CitizenProfessionKind
+    {
+        Resident,
+        TruckDriver,
+        IntercityDriver,
+        BusDriver,
+        ProductionWorker,
+        Lumberjack,
+        SawmillWorker,
+        Carpenter,
+        WarehouseWorker,
+        DockWorker,
+        ServiceWorker,
+        Cleaner,
+        EmploymentClerk,
+        ChildcareWorker,
+        CarDealer
+    }
+
     private enum WorkerThoughtKind
     {
         Need,
@@ -165,6 +184,14 @@ public partial class GameBootstrap
     {
         ConversationTopic,
         BuildingExistence
+    }
+
+    private enum WorkerCognitionKind
+    {
+        Fact,
+        Experience,
+        Opinion,
+        Rumor
     }
 
     private enum WorkerKnowledgeFormationStage
@@ -222,42 +249,11 @@ public partial class GameBootstrap
         Housing
     }
 
-    private enum SocialSignalTone
-    {
-        Positive,
-        Neutral,
-        Negative
-    }
-
-    private enum SocialSignalCategory
-    {
-        Need,
-        Work,
-        Money,
-        Social,
-        Family,
-        Transport,
-        City,
-        Housing,
-        Litter,
-        Governance,
-        Knowledge,
-        Topic
-    }
-
-    private enum SocialSignalSourceKind
-    {
-        Thought,
-        StreetLitter,
-        TopicOpinion,
-        CityComplaint,
-        CityHallDecision,
-        CityTrust
-    }
-
     private sealed class DriverAgent
     {
         public int DriverId;
+        public int CitizenId;
+        public CitizenProfessionKind CitizenProfession = CitizenProfessionKind.Resident;
         public string DriverName;
         public WorkerGender Gender;
         public WorkerEducationLevel Education;
@@ -421,6 +417,9 @@ public partial class GameBootstrap
         public float StreetLitterExposureToday;
         public float StreetLitterPeakToday;
         public int StreetLitterExposureSamplesToday;
+        public float StreetLitterExposureMemory;
+        public int StreetLitterExposureMemoryDay = -1;
+        public int StreetLitterExposureStreakDays;
         public int Satisfaction = 70;
         public int UnhappyDays;
         public bool DepartureIntent;
@@ -506,7 +505,9 @@ public partial class GameBootstrap
     private sealed class PendingWorkerKnowledge
     {
         public string FormationKey = string.Empty;
+        public WorkerCognitionKind CognitionKind = WorkerCognitionKind.Fact;
         public WorkerMemoryKind Kind;
+        public string ConversationTopicKey = string.Empty;
         public int OtherWorkerId;
         public string Topic = string.Empty;
         public LocationType? BuildingType;
@@ -550,7 +551,9 @@ public partial class GameBootstrap
 
     private sealed class WorkerMemory
     {
+        public WorkerCognitionKind CognitionKind = WorkerCognitionKind.Fact;
         public WorkerMemoryKind Kind;
+        public string ConversationTopicKey = string.Empty;
         public int OtherWorkerId;
         public string Topic = string.Empty;
         public LocationType? BuildingType;
@@ -586,7 +589,9 @@ public partial class GameBootstrap
     private sealed class NoosphereKnowledgeLogEntry
     {
         public NoosphereKnowledgeEventKind EventKind;
+        public WorkerCognitionKind CognitionKind = WorkerCognitionKind.Fact;
         public WorkerMemoryKind MemoryKind;
+        public string ConversationTopicKey = string.Empty;
         public int OwnerWorkerId;
         public int OtherWorkerId;
         public string OwnerName = string.Empty;
@@ -642,6 +647,7 @@ public partial class GameBootstrap
 
     private sealed class WorkerDailyOpinion
     {
+        public WorkerCognitionKind CognitionKind = WorkerCognitionKind.Experience;
         public int Day;
         public WorkerDailyOpinionTone FinalTone;
         public int Score;
@@ -660,6 +666,7 @@ public partial class GameBootstrap
         public int NegativeThoughtCount;
         public int CriticalActiveThoughtCount;
         public int SatisfactionDeltaHint;
+        public int EmittedSocialSignalCount;
         public WorkerDailyOpinionFactorKind DominantKind = WorkerDailyOpinionFactorKind.City;
         public readonly List<WorkerDailyOpinionFactor> Factors = new();
     }
@@ -670,55 +677,6 @@ public partial class GameBootstrap
         public int Score;
         public string ReasonRu = string.Empty;
         public string ReasonEn = string.Empty;
-    }
-
-    private sealed class SocialSignal
-    {
-        public int Id;
-        public int WorkerId;
-        public string WorkerName = string.Empty;
-        public int Day;
-        public float WorldHour;
-        public string TopicKey = string.Empty;
-        public string TopicLabelRu = string.Empty;
-        public string TopicLabelEn = string.Empty;
-        public SocialSignalTone Tone = SocialSignalTone.Neutral;
-        public int Strength;
-        public int Confidence;
-        public SocialSignalCategory Category = SocialSignalCategory.City;
-        public SocialSignalSourceKind SourceKind = SocialSignalSourceKind.Thought;
-        public string SourceKey = string.Empty;
-        public LocationType? LocationType;
-        public int LocationInstanceId;
-        public bool HasCell;
-        public Vector2Int Cell;
-        public string ReasonRu = string.Empty;
-        public string ReasonEn = string.Empty;
-        public int DailyScoreHint;
-        public bool IncludeInDailyExperience = true;
-        public bool PublicForNoosphere = true;
-    }
-
-    private sealed class WorkerTopicOpinion
-    {
-        public string TopicKey = string.Empty;
-        public int RumorRootId;
-        public string OriginalTopic = string.Empty;
-        public string CurrentTopic = string.Empty;
-        public WorkerKnowledgeOpinionTone Tone = WorkerKnowledgeOpinionTone.Neutral;
-        public int Score;
-        public int Confidence;
-        public string ReasonRu = string.Empty;
-        public string ReasonEn = string.Empty;
-        public int TimesHeard;
-        public int PositiveSignalCount;
-        public int NegativeSignalCount;
-        public int ContradictionCount;
-        public int LastSourceWorkerId;
-        public WorkerSocialInteractionKind LastSourceInteractionKind;
-        public int LastKnowledgeIteration;
-        public int LastUpdatedDay;
-        public float LastUpdatedWorldHour;
     }
 
     private sealed class WorkerSocialMemory

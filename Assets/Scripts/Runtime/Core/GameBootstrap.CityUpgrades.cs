@@ -225,7 +225,16 @@ public partial class GameBootstrap
 
         money -= definition.Cost;
         purchasedCityUpgrades.Add(upgradeId);
-        RecordMoneyMovement(-definition.Cost, "Treasury", "City Hall", $"City upgrade: {definition.TitleEn}", money);
+        RecordMoneyMovement(
+            -definition.Cost,
+            "Treasury",
+            "City Hall",
+            $"City upgrade: {definition.TitleEn}",
+            money,
+            null,
+            MoneyAccountKind.CityBudget,
+            MoneyAccountKind.External,
+            MoneyTransactionReasonKind.CityUpgrade);
         moneyPopupAmount = -definition.Cost;
         moneyPopupTimer = MoneyPopupDuration;
 
@@ -295,6 +304,92 @@ public partial class GameBootstrap
         }
 
         return Mathf.Min(-1, Mathf.RoundToInt(basePenalty * 0.60f));
+    }
+
+    private bool IsCityUpgradeProblemRelevant(CityUpgradeDefinition definition, out string reasonRu, out string reasonEn)
+    {
+        reasonRu = string.Empty;
+        reasonEn = string.Empty;
+        if (definition == null)
+        {
+            return false;
+        }
+
+        switch (definition.Branch)
+        {
+            case CityUpgradeBranch.Cleanliness:
+                if (CountVisibleStreetLitterCells() >= 6 ||
+                    HasRecentNegativeSocialSignalCategory(SocialSignalCategory.Litter, 2, 48))
+                {
+                    reasonRu = "\u041d\u043e\u043e\u0441\u0444\u0435\u0440\u0430 \u0432\u0438\u0434\u0438\u0442 \u0440\u043e\u0441\u0442 \u0442\u0435\u043c\u044b \u0433\u0440\u044f\u0437\u0438.";
+                    reasonEn = "Noosphere sees the cleanliness problem growing.";
+                    return true;
+                }
+                break;
+            case CityUpgradeBranch.Economy:
+                if (money < 900 ||
+                    HasRecentNegativeSocialSignalCategory(SocialSignalCategory.Money, 2, 42))
+                {
+                    reasonRu = "\u041a\u0430\u0437\u043d\u0430 \u0438 \u0434\u0435\u043d\u0435\u0436\u043d\u044b\u0435 \u043c\u044b\u0441\u043b\u0438 \u0434\u0430\u0432\u044f\u0442 \u043d\u0430 \u0433\u043e\u0440\u043e\u0434.";
+                    reasonEn = "Treasury pressure and money signals are visible.";
+                    return true;
+                }
+                break;
+            case CityUpgradeBranch.Trust:
+                if (cityTrust < 10 ||
+                    CountOpenCityComplaints() >= 2 ||
+                    CountExpiredCityComplaints() > 0 ||
+                    HasRecentNegativeSocialSignalCategory(SocialSignalCategory.Governance, 1, 36))
+                {
+                    reasonRu = "\u0416\u0438\u0442\u0435\u043b\u0438 \u0447\u0430\u0449\u0435 \u0434\u0430\u0432\u044f\u0442 \u043d\u0430 \u0420\u0430\u0442\u0443\u0448\u0443 \u0438 \u0434\u043e\u0432\u0435\u0440\u0438\u0435.";
+                    reasonEn = "Citizens are putting pressure on City Hall and trust.";
+                    return true;
+                }
+                break;
+        }
+
+        return false;
+    }
+
+    private bool HasRecentNegativeSocialSignalCategory(SocialSignalCategory category, int minCount, int minStrength)
+    {
+        int latestDay = GetLatestSocialSignalDay();
+        if (latestDay <= 0)
+        {
+            return false;
+        }
+
+        int count = 0;
+        int strength = 0;
+        for (int i = 0; i < socialSignals.Count; i++)
+        {
+            SocialSignal signal = socialSignals[i];
+            if (signal == null)
+            {
+                continue;
+            }
+
+            if (signal.Day < latestDay)
+            {
+                break;
+            }
+
+            if (signal.Day != latestDay ||
+                signal.Tone != SocialSignalTone.Negative ||
+                signal.Category != category)
+            {
+                continue;
+            }
+
+            count++;
+            strength += signal.DailyScoreHint != 0 ? Mathf.Abs(signal.DailyScoreHint) : Mathf.Clamp(signal.Strength, 1, 100);
+            if (count >= minCount && strength >= minStrength)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string FormatCityUpgradeSignedValue(int value)

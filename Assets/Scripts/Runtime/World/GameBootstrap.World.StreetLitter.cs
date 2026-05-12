@@ -3,6 +3,18 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private enum StreetLitterSourceKind
+    {
+        PedestrianDensity,
+        TransportStop,
+        TrashCanOverflow,
+        FoodService,
+        Nightlife,
+        StreetCommerce,
+        PublicLeisure,
+        PoorInfrastructure
+    }
+
     private const float StreetLitterScanInterval = 1.35f;
     private const float StreetLitterMaxScanTimeScale = 2f;
     private const float StreetLitterCrowdThreshold = 1.15f;
@@ -19,6 +31,9 @@ public partial class GameBootstrap
 
     private readonly Dictionary<Vector2Int, float> streetLitterByCell = new();
     private readonly Dictionary<Vector2Int, float> streetLitterPressureByCell = new();
+    private readonly Dictionary<Vector2Int, StreetLitterSourceKind> streetLitterSourceByCell = new();
+    private readonly Dictionary<Vector2Int, StreetLitterSourceKind> streetLitterPressureSourceByCell = new();
+    private readonly Dictionary<Vector2Int, float> streetLitterPressureSourceWeightByCell = new();
     private readonly Dictionary<Vector2Int, GameObject> streetLitterVisualsByCell = new();
     private readonly Dictionary<Vector2Int, int> streetLitterReservationsByCell = new();
     private readonly HashSet<Vector2Int> streetLitterTouchedCells = new();
@@ -32,6 +47,9 @@ public partial class GameBootstrap
     {
         streetLitterByCell.Clear();
         streetLitterPressureByCell.Clear();
+        streetLitterSourceByCell.Clear();
+        streetLitterPressureSourceByCell.Clear();
+        streetLitterPressureSourceWeightByCell.Clear();
         streetLitterReservationsByCell.Clear();
         streetLitterTouchedCells.Clear();
         streetLitterScratchCells.Clear();
@@ -71,6 +89,8 @@ public partial class GameBootstrap
     private Dictionary<Vector2Int, float> CollectStreetLitterCrowdPressure()
     {
         streetLitterPressureByCell.Clear();
+        streetLitterPressureSourceByCell.Clear();
+        streetLitterPressureSourceWeightByCell.Clear();
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent driver = driverAgents[i];
@@ -82,13 +102,14 @@ public partial class GameBootstrap
             Vector3 position = driver.DriverObject.transform.position;
             Vector2Int cell = WorldToCell(position);
             float weight = GetStreetLitterDriverPressureWeight(driver);
-            AddStreetLitterPressure(streetLitterPressureByCell, cell, weight);
+            StreetLitterSourceKind source = GetStreetLitterDriverPressureSource(driver, cell);
+            AddStreetLitterPressure(streetLitterPressureByCell, cell, weight, source);
 
             float spillWeight = weight * 0.46f;
-            AddStreetLitterPressure(streetLitterPressureByCell, cell + Vector2Int.left, spillWeight);
-            AddStreetLitterPressure(streetLitterPressureByCell, cell + Vector2Int.right, spillWeight);
-            AddStreetLitterPressure(streetLitterPressureByCell, cell + Vector2Int.up, spillWeight);
-            AddStreetLitterPressure(streetLitterPressureByCell, cell + Vector2Int.down, spillWeight);
+            AddStreetLitterPressure(streetLitterPressureByCell, cell + Vector2Int.left, spillWeight, source);
+            AddStreetLitterPressure(streetLitterPressureByCell, cell + Vector2Int.right, spillWeight, source);
+            AddStreetLitterPressure(streetLitterPressureByCell, cell + Vector2Int.up, spillWeight, source);
+            AddStreetLitterPressure(streetLitterPressureByCell, cell + Vector2Int.down, spillWeight, source);
         }
 
         return streetLitterPressureByCell;
@@ -138,7 +159,35 @@ public partial class GameBootstrap
         };
     }
 
-    private void AddStreetLitterPressure(Dictionary<Vector2Int, float> pressureByCell, Vector2Int cell, float pressure)
+    private StreetLitterSourceKind GetStreetLitterDriverPressureSource(DriverAgent driver, Vector2Int cell)
+    {
+        if (driver == null)
+        {
+            return StreetLitterSourceKind.PedestrianDensity;
+        }
+
+        if (driver.WalkPhase == DriverRescuePhase.WaitingAtLocalBusStop)
+        {
+            return StreetLitterSourceKind.TransportStop;
+        }
+
+        if (driver.WalkPhase == DriverRescuePhase.IdleAtTrashCan || IsStreetLitterNearTrashCan(cell))
+        {
+            return StreetLitterSourceKind.TrashCanOverflow;
+        }
+
+        return driver.WalkPhase switch
+        {
+            DriverRescuePhase.IdleAtBar or DriverRescuePhase.IdleAtGamblingHall or DriverRescuePhase.IdleSmoking => StreetLitterSourceKind.Nightlife,
+            DriverRescuePhase.IdleAtKiosk => StreetLitterSourceKind.StreetCommerce,
+            DriverRescuePhase.IdleAtCanteen => StreetLitterSourceKind.FoodService,
+            DriverRescuePhase.IdleAtCityPark or DriverRescuePhase.IdleSittingOnBench => StreetLitterSourceKind.PublicLeisure,
+            DriverRescuePhase.None => StreetLitterSourceKind.PoorInfrastructure,
+            _ => StreetLitterSourceKind.PedestrianDensity
+        };
+    }
+
+    private void AddStreetLitterPressure(Dictionary<Vector2Int, float> pressureByCell, Vector2Int cell, float pressure, StreetLitterSourceKind source)
     {
         if (pressure <= 0f || !CanStreetLitterOccupyCell(cell))
         {
@@ -147,6 +196,12 @@ public partial class GameBootstrap
 
         pressureByCell.TryGetValue(cell, out float current);
         pressureByCell[cell] = current + pressure;
+        if (!streetLitterPressureSourceWeightByCell.TryGetValue(cell, out float sourceWeight) ||
+            pressure > sourceWeight)
+        {
+            streetLitterPressureSourceByCell[cell] = source;
+            streetLitterPressureSourceWeightByCell[cell] = pressure;
+        }
     }
 
     private void ApplyStreetLitterPressure(Dictionary<Vector2Int, float> pressureByCell)
@@ -179,6 +234,11 @@ public partial class GameBootstrap
             if (!Mathf.Approximately(previousScore, nextScore))
             {
                 streetLitterByCell[cell] = nextScore;
+                if (streetLitterPressureSourceByCell.TryGetValue(cell, out StreetLitterSourceKind source))
+                {
+                    streetLitterSourceByCell[cell] = source;
+                }
+
                 RefreshStreetLitterCell(cell, previousScore, nextScore);
             }
 
@@ -527,6 +587,7 @@ public partial class GameBootstrap
     private bool ClearStreetLitterAtCell(Vector2Int cell)
     {
         streetLitterReservationsByCell.Remove(cell);
+        streetLitterSourceByCell.Remove(cell);
         bool removedScore = streetLitterByCell.Remove(cell);
         bool removedVisual = DestroyStreetLitterVisual(cell);
         return removedScore || removedVisual;
@@ -585,160 +646,6 @@ public partial class GameBootstrap
         }
 
         return count;
-    }
-
-    private bool TryReserveStreetLitterCleanupTarget(DriverAgent worker, Vector3 startWorld, out Vector2Int targetCell, out Vector3 targetWorld)
-    {
-        targetCell = default;
-        targetWorld = default;
-        if (worker == null || streetLitterByCell.Count == 0)
-        {
-            return false;
-        }
-
-        if (!TryGetCleanerCoverageCenter(worker, out Vector3 coverageCenter))
-        {
-            return false;
-        }
-
-        Vector2Int startCell = WorldToCell(startWorld);
-        float bestScore = float.NegativeInfinity;
-        List<Vector2Int> bestPath = null;
-        streetLitterCleanerCandidateCells.Clear();
-        streetLitterCleanerCandidateScores.Clear();
-        foreach (KeyValuePair<Vector2Int, float> pair in streetLitterByCell)
-        {
-            Vector2Int cell = pair.Key;
-            if (GetStreetLitterStage(pair.Value) <= 0 ||
-                !CanStreetLitterOccupyCell(cell) ||
-                !IsCellWithinCleanerCoverage(cell, coverageCenter))
-            {
-                continue;
-            }
-
-            if (streetLitterReservationsByCell.TryGetValue(cell, out int reservedBy) && reservedBy != worker.DriverId)
-            {
-                continue;
-            }
-
-            float candidateScore = pair.Value * 10f - EstimateGridDistance(startCell, cell) * 0.85f;
-            AddStreetLitterCleanerCandidate(cell, candidateScore);
-        }
-
-        for (int i = 0; i < streetLitterCleanerCandidateCells.Count; i++)
-        {
-            Vector2Int cell = streetLitterCleanerCandidateCells[i];
-            if (!streetLitterByCell.TryGetValue(cell, out float litterScore))
-            {
-                continue;
-            }
-
-            List<Vector2Int> path = FindDriverWalkPath(startCell, cell, DriverRescuePhase.CleanerToLitter);
-            if (path == null || path.Count == 0 || (path.Count <= 1 && startCell != cell))
-            {
-                continue;
-            }
-
-            float score = litterScore * 10f - path.Count * 1.35f;
-            if (score <= bestScore)
-            {
-                continue;
-            }
-
-            bestScore = score;
-            targetCell = cell;
-            bestPath = path;
-        }
-
-        if (bestPath == null)
-        {
-            return false;
-        }
-
-        streetLitterReservationsByCell[targetCell] = worker.DriverId;
-        worker.CleanerTargetCell = targetCell;
-        worker.HasCleanerTargetCell = true;
-        targetWorld = GetStreetLitterCleanupWorld(targetCell);
-        return true;
-    }
-
-    private void AddStreetLitterCleanerCandidate(Vector2Int cell, float score)
-    {
-        int insertIndex = streetLitterCleanerCandidateScores.Count;
-        while (insertIndex > 0 && score > streetLitterCleanerCandidateScores[insertIndex - 1])
-        {
-            insertIndex--;
-        }
-
-        if (insertIndex >= CleanerTargetMaxPathChecks)
-        {
-            return;
-        }
-
-        streetLitterCleanerCandidateCells.Insert(insertIndex, cell);
-        streetLitterCleanerCandidateScores.Insert(insertIndex, score);
-        if (streetLitterCleanerCandidateCells.Count > CleanerTargetMaxPathChecks)
-        {
-            int lastIndex = streetLitterCleanerCandidateCells.Count - 1;
-            streetLitterCleanerCandidateCells.RemoveAt(lastIndex);
-            streetLitterCleanerCandidateScores.RemoveAt(lastIndex);
-        }
-    }
-
-    private bool IsStreetLitterCleanupTargetValid(DriverAgent worker)
-    {
-        if (worker == null || !worker.HasCleanerTargetCell)
-        {
-            return false;
-        }
-
-        Vector2Int cell = worker.CleanerTargetCell;
-        if (!streetLitterByCell.TryGetValue(cell, out float score) || GetStreetLitterStage(score) <= 0)
-        {
-            return false;
-        }
-
-        return CanStreetLitterOccupyCell(cell) &&
-               (!streetLitterReservationsByCell.TryGetValue(cell, out int reservedBy) || reservedBy == worker.DriverId);
-    }
-
-    private void ReleaseStreetLitterReservation(DriverAgent worker)
-    {
-        if (worker == null || !worker.HasCleanerTargetCell)
-        {
-            return;
-        }
-
-        Vector2Int cell = worker.CleanerTargetCell;
-        if (streetLitterReservationsByCell.TryGetValue(cell, out int reservedBy) && reservedBy == worker.DriverId)
-        {
-            streetLitterReservationsByCell.Remove(cell);
-        }
-
-        worker.HasCleanerTargetCell = false;
-        worker.CleanerTargetCell = default;
-    }
-
-    private bool CleanReservedStreetLitterTarget(DriverAgent worker)
-    {
-        if (!IsStreetLitterCleanupTargetValid(worker))
-        {
-            ReleaseStreetLitterReservation(worker);
-            return false;
-        }
-
-        Vector2Int cell = worker.CleanerTargetCell;
-        bool removed = ClearStreetLitterAtCell(cell);
-        worker.HasCleanerTargetCell = false;
-        worker.CleanerTargetCell = default;
-        return removed;
-    }
-
-    private Vector3 GetStreetLitterCleanupWorld(Vector2Int cell)
-    {
-        Vector3 center = GetCellCenter(cell);
-        center.y = GetStreetLitterSurfaceY(cell, center.x, center.z) + 0.035f;
-        return center;
     }
 
     private bool DestroyStreetLitterVisual(Vector2Int cell)

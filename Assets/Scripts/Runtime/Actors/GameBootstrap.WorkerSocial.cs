@@ -182,9 +182,12 @@ public partial class GameBootstrap
         }
 
         PruneExpiredWorkerMemories(owner, now);
+        ConversationTopic conversationTopic = EnsureConversationTopic(topic, success);
         WorkerMemory memory = new()
         {
+            CognitionKind = WorkerCognitionKind.Rumor,
             Kind = WorkerMemoryKind.ConversationTopic,
+            ConversationTopicKey = conversationTopic?.Key ?? BuildConversationTopicKey(topic),
             OtherWorkerId = other.DriverId,
             Topic = topic,
             Positive = success,

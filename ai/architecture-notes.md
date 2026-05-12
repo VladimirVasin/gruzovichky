@@ -22,8 +22,13 @@ Purpose: describe the real implemented architecture and current hotspots.
 - This is still fast for prototype iteration.
 - It still couples presentation and simulation, but the runtime is now split into concern-based partial scripts under `Assets/Scripts/Runtime/`.
 - Runtime C# files are kept under the 900-line cleanup target by splitting feature clusters into focused partials such as `Runtime/Racing/`, `Runtime/UI/FleetCanvas/`, `GameBootstrap.Types*.cs`, `GameBootstrap.WorldVisuals.*.cs`, `GameBootstrap.MainMenuHud*.cs`, and `GameBootstrap.Drivers.*.cs`.
+- Recent line-count splits moved local-bus passenger handling to `GameBootstrap.LocalBus.Passengers.cs`, street-litter source/cleanup helpers to `GameBootstrap.World.StreetLitter.Cleanup.cs`, and social runtime data models to `GameBootstrap.RuntimeModels.Social.cs`.
 - Numeric worker skills and temporary worker effects have been removed; `GameBootstrap.WorkerPerks*` owns perk assignment/display, while `GameBootstrap.WorkerEducation.cs` keeps the small Basic/Vocational/Higher gate needed by Labor Exchange staffing.
-- Resident knowledge/social meaning remains in `GameBootstrap` partials for now: `GameBootstrap.WorkerKnowledge*` / `GameBootstrap.WorkerRumors.cs` / `GameBootstrap.WorkerTopicOpinions.cs` / `GameBootstrap.SocialSignals.cs` / `GameBootstrap.CityKnowledgeCanon.cs` / `GameBootstrap.CityDailyExperience.cs` own pending knowledge formation, personal memories, expiry, per-topic resident opinions, structured social signals, opinion/iteration/source/rumor metadata, resident-to-resident sharing, permanent citywide Noosphere canon knowledge, and the citywide daily lived-experience aggregate, while the Residents `Knowledge` tab and Noosphere screen own display.
+- Resident knowledge/social meaning remains in `GameBootstrap` partials for now: `GameBootstrap.WorkerKnowledge*` / `GameBootstrap.WorkerRumors.cs` / `GameBootstrap.WorkerTopicOpinions.cs` / `GameBootstrap.ConversationTopics.cs` / `GameBootstrap.SocialSignals*.cs` / `GameBootstrap.CityKnowledgeCanon.cs` / `GameBootstrap.CityDailyExperience.cs` own pending knowledge formation, personal fact/rumor memories, separate conversation-topic records, per-topic opinions, structured social signals, daily-experience signal emission, opinion/iteration/source/rumor metadata, resident-to-resident sharing, permanent citywide Noosphere canon knowledge, and the citywide daily lived-experience aggregate, while the Residents `Knowledge` tab and Noosphere screen own display.
+- `SocialSignal` is now a cross-system input, not just a display summary: it feeds Noosphere insight aggregation, city trust formula helpers, negative-cluster City Hall requests, arbitrary topic opinions, and upgrade problem relevance.
+- Money movement still uses the prototype treasury/building-bank fields, but ledger entries now carry explicit account kind, owner id, and reason kind so future economy UI can distinguish city budget, resident wallets, building cashboxes, external money, and debug money.
+- City Hall UI actions route through `GameBootstrap.CityHall.Commands.cs`; request acceptance/rejection and upgrade purchases should keep simulation decisions in runtime partials instead of screen builders.
+- Worker identity remains backed by `DriverAgent`, but each active worker now also has a citizen id and derived `CitizenProfessionKind` from current contracts as the MVP bridge toward citizens-with-professions.
 - Building work schedules now route through `GameBootstrap.RuntimeSchedules.cs`; use that partial before editing staff slot counts, service shifts, higher-education office hours, or transport weekend behavior.
 - Runtime audio has a dedicated partial/catalog layer for generated SFX, curated ambience, music, worker footsteps, and Main Menu Sound options.
 - Navigation now starts from `ai/systems-map.md` -> `System Owner Map`; owner cards are maintained when paths, ownership, or responsibilities change.
@@ -118,6 +123,11 @@ Purpose: describe the real implemented architecture and current hotspots.
 
 - Owns resident knowledge creation, pending formation before memory insertion, duplicate checks, expiry/burn handling, source reasons, per-memory opinion/iteration/rumor snapshots, per-resident topic opinions for arbitrary player conversation topics, citywide permanent canonization, citywide daily lived-experience aggregation for Noosphere display/topic-opinion background mood, and sharing through idle dialogue, service co-presence, coworker shifts, City Hall introductions, and family formation.
 - HUD display lives in `GameBootstrap.FleetCanvas.WorkersScreen.Knowledge.cs` and `GameBootstrap.FleetCanvas.NoosphereScreen.cs`; `GameBootstrap.NoosphereDive*.cs` renders the fullscreen 3D Noosphere dive from the same knowledge/opinion/experience data, while dialogue bubble highlighting is still driven from active knowledge but rendered by the relevant world/interior UI partials.
+
+### `Assets/Scripts/Runtime/Actors/GameBootstrap.SocialSignals*.cs`
+
+- Owns structured social signal creation plus daily-experience emission and Noosphere insight formatting.
+- Social signals are consumed by topic opinions, city trust formula helpers, City Hall public-concern generation, Noosphere HUD/dive summaries, and city upgrade relevance highlights.
 
 ### `Assets/Scripts/Runtime/Transport/GameBootstrap.RouteRuntime.cs`
 

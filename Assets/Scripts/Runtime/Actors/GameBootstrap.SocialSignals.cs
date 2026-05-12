@@ -57,6 +57,7 @@ public partial class GameBootstrap
 
         SocialSignal signal = new()
         {
+            CognitionKind = GetSocialSignalCognitionKind(sourceKind),
             Id = nextSocialSignalId++,
             WorkerId = workerId,
             WorkerName = string.IsNullOrWhiteSpace(worker?.DriverName) ? string.Empty : worker.DriverName,
@@ -103,6 +104,15 @@ public partial class GameBootstrap
             "SOCIAL_SIGNAL",
             $"#{signal.Id} worker={signal.WorkerId} topic={signal.TopicKey} tone={signal.Tone} strength={signal.Strength} source={signal.SourceKind}/{signal.SourceKey}.");
         return signal;
+    }
+
+    private static WorkerCognitionKind GetSocialSignalCognitionKind(SocialSignalSourceKind sourceKind)
+    {
+        return sourceKind switch
+        {
+            SocialSignalSourceKind.TopicOpinion => WorkerCognitionKind.Opinion,
+            _ => WorkerCognitionKind.Experience
+        };
     }
 
     private bool HasRecentEquivalentSocialSignal(
@@ -445,7 +455,11 @@ public partial class GameBootstrap
 
             RecordSocialSignal(
                 signer,
-                sourceKind == SocialSignalSourceKind.CityHallDecision ? SocialSignalCategory.Governance : MapCityComplaintCategoryToSocialSignalCategory(complaint.Category),
+                sourceKind == SocialSignalSourceKind.CityHallDecision
+                    ? SocialSignalCategory.Governance
+                    : complaint.Category == CityComplaintCategory.PublicConcern
+                        ? complaint.IssueSignalCategory
+                        : MapCityComplaintCategoryToSocialSignalCategory(complaint.Category),
                 sourceKind,
                 tone,
                 strength,
@@ -465,41 +479,7 @@ public partial class GameBootstrap
 
     private string FormatLatestSocialSignalNoosphereSummary(bool ru)
     {
-        int latestDay = GetLatestSocialSignalDay();
-        if (latestDay <= 0)
-        {
-            return ru
-                ? "\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u0438\u0435 \u0441\u0438\u0433\u043d\u0430\u043b\u044b \u0435\u0449\u0435 \u043d\u0435 \u0441\u043e\u0431\u0440\u0430\u043d\u044b."
-                : "City social signals have not gathered yet.";
-        }
-
-        List<SocialSignalTopicAggregate> aggregates = BuildSocialSignalTopicAggregates(latestDay, publicOnly: true);
-        if (aggregates.Count == 0)
-        {
-            return ru
-                ? "\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u0438\u0435 \u0441\u0438\u0433\u043d\u0430\u043b\u044b \u0437\u0430 \u0434\u0435\u043d\u044c \u0431\u044b\u043b\u0438 \u0442\u0438\u0445\u0438\u043c\u0438."
-                : "City social signals were quiet for the day.";
-        }
-
-        int totalCount = 0;
-        for (int i = 0; i < aggregates.Count; i++)
-        {
-            totalCount += aggregates[i].Count;
-        }
-
-        int limit = Mathf.Min(SocialSignalNoosphereTopicLimit, aggregates.Count);
-        List<string> parts = new();
-        for (int i = 0; i < limit; i++)
-        {
-            SocialSignalTopicAggregate aggregate = aggregates[i];
-            string label = ru ? aggregate.LabelRu : aggregate.LabelEn;
-            string score = $"{aggregate.Score:+#;-#;0}";
-            parts.Add($"{label} {score}");
-        }
-
-        return ru
-            ? $"\u0421\u0438\u0433\u043d\u0430\u043b\u044b \u0434\u043d\u044f {latestDay}: {totalCount}; \u0433\u043b\u0430\u0432\u043d\u044b\u0435 \u0442\u0435\u043c\u044b: {string.Join(", ", parts)}."
-            : $"Day {latestDay} signals: {totalCount}; main topics: {string.Join(", ", parts)}.";
+        return FormatNoosphereSocialSignalInsight(ru);
     }
 
     private void AddNoosphereDiveSocialSignalMeanings(Dictionary<string, NoosphereDiveMeaningModel> meanings, bool ru)
@@ -645,6 +625,7 @@ public partial class GameBootstrap
             CityComplaintCategory.LowMoney => SocialSignalCategory.Money,
             CityComplaintCategory.FamilyStress => SocialSignalCategory.Family,
             CityComplaintCategory.SocialIntroduction => SocialSignalCategory.Social,
+            CityComplaintCategory.PublicConcern => SocialSignalCategory.City,
             _ => SocialSignalCategory.City
         };
     }
@@ -747,6 +728,7 @@ public partial class GameBootstrap
             CityComplaintCategory.LowMoney => "money",
             CityComplaintCategory.FamilyStress => "family",
             CityComplaintCategory.SocialIntroduction => "social:introduction",
+            CityComplaintCategory.PublicConcern when !string.IsNullOrWhiteSpace(complaint.IssueTopicKey) => $"public_concern:{complaint.IssueTopicKey}",
             _ => "city"
         };
     }
@@ -770,6 +752,7 @@ public partial class GameBootstrap
             CityComplaintCategory.LowMoney => IsRussianLanguage() ? "\u0434\u0435\u043d\u044c\u0433\u0438" : "money",
             CityComplaintCategory.FamilyStress => IsRussianLanguage() ? "\u0441\u0435\u043c\u044c\u044f" : "family",
             CityComplaintCategory.SocialIntroduction => IsRussianLanguage() ? "\u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440" : "conversation",
+            CityComplaintCategory.PublicConcern => FormatCityComplaintTargetName(complaint),
             _ => IsRussianLanguage() ? "\u0433\u043e\u0440\u043e\u0434" : "city"
         };
     }
@@ -828,6 +811,11 @@ public partial class GameBootstrap
 
     private static bool DoesSocialSignalAliasMatch(SocialSignal signal, string target)
     {
+        if (DoesConversationTopicAssociationMatchSocialSignal(signal, target))
+        {
+            return true;
+        }
+
         if (signal.Category == SocialSignalCategory.Litter)
         {
             return target.Contains("LITTER", System.StringComparison.Ordinal) ||

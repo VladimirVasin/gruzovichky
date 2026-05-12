@@ -32,6 +32,7 @@ public partial class GameBootstrap
             pending = new PendingWorkerKnowledge
             {
                 FormationKey = BuildWorkerKnowledgeFormationKey(seed),
+                CognitionKind = GetWorkerMemoryCognitionKind(seed),
                 Kind = seed.Kind,
                 StartedDay = currentDay,
                 StartedWorldHour = now,
@@ -72,6 +73,13 @@ public partial class GameBootstrap
         float now)
     {
         pending.OtherWorkerId = seed.OtherWorkerId;
+        pending.CognitionKind = GetWorkerMemoryCognitionKind(seed);
+        pending.ConversationTopicKey = seed.ConversationTopicKey ?? string.Empty;
+        if (seed.Kind == WorkerMemoryKind.ConversationTopic && string.IsNullOrWhiteSpace(pending.ConversationTopicKey))
+        {
+            pending.ConversationTopicKey = BuildConversationTopicKey(GetWorkerRumorOriginalTopic(seed));
+        }
+
         pending.Topic = seed.Topic ?? string.Empty;
         pending.BuildingType = seed.BuildingType;
         pending.BuildingInstanceId = seed.BuildingInstanceId;
@@ -232,7 +240,9 @@ public partial class GameBootstrap
         RefreshPendingWorkerKnowledgeOpinion(worker, pending);
         WorkerMemory memory = new()
         {
+            CognitionKind = GetPendingWorkerKnowledgeCognitionKind(pending),
             Kind = pending.Kind,
+            ConversationTopicKey = pending.ConversationTopicKey ?? string.Empty,
             OtherWorkerId = pending.OtherWorkerId,
             Topic = pending.Topic,
             BuildingType = pending.BuildingType,
@@ -278,7 +288,7 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
         SessionDebugLogger.Log(
             "KNOWLEDGE",
-            $"{GetWorkerDisplayNameSafe(worker)} formed {pending.OpinionTone} opinion about {FormatPendingWorkerKnowledgeDebugLabel(pending)} (score={pending.OpinionScore}, confidence={pending.OpinionConfidence}).");
+            $"{GetWorkerDisplayNameSafe(worker)} formed {GetPendingWorkerKnowledgeCognitionKind(pending)} about {FormatPendingWorkerKnowledgeDebugLabel(pending)} (tone={pending.OpinionTone}, score={pending.OpinionScore}, confidence={pending.OpinionConfidence}).");
         return memory;
     }
 
@@ -286,7 +296,9 @@ public partial class GameBootstrap
     {
         return new WorkerMemory
         {
+            CognitionKind = GetPendingWorkerKnowledgeCognitionKind(pending),
             Kind = pending.Kind,
+            ConversationTopicKey = pending.ConversationTopicKey ?? string.Empty,
             OtherWorkerId = pending.OtherWorkerId,
             Topic = pending.Topic,
             BuildingType = pending.BuildingType,
@@ -310,7 +322,7 @@ public partial class GameBootstrap
 
         if (pending.Kind == WorkerMemoryKind.BuildingExistence)
         {
-            EvaluateBuildingKnowledgeOpinion(worker, pending);
+            EvaluateBuildingKnowledgeFact(pending);
         }
         else
         {
@@ -320,6 +332,20 @@ public partial class GameBootstrap
         pending.OpinionTone = GetWorkerKnowledgeOpinionTone(pending.OpinionScore);
         pending.OpinionScore = Mathf.Clamp(pending.OpinionScore, -100, 100);
         pending.OpinionConfidence = Mathf.Clamp(pending.OpinionConfidence, 1, 100);
+    }
+
+    private static void EvaluateBuildingKnowledgeFact(PendingWorkerKnowledge pending)
+    {
+        if (pending == null)
+        {
+            return;
+        }
+
+        pending.CognitionKind = WorkerCognitionKind.Fact;
+        pending.OpinionScore = 0;
+        pending.OpinionConfidence = 96;
+        pending.OpinionReasonRu = "это факт о наличии места, а не оценка места";
+        pending.OpinionReasonEn = "this is a fact that the place exists, not a judgement about it";
     }
 
     private void EvaluateBuildingKnowledgeOpinion(DriverAgent worker, PendingWorkerKnowledge pending)
@@ -434,6 +460,11 @@ public partial class GameBootstrap
 
     private void EvaluateTopicKnowledgeOpinion(DriverAgent worker, PendingWorkerKnowledge pending)
     {
+        if (pending != null)
+        {
+            pending.CognitionKind = WorkerCognitionKind.Rumor;
+        }
+
         if (TryEvaluateWorkerTopicOpinion(worker, pending))
         {
             return;

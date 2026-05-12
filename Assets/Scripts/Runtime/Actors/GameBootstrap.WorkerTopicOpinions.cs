@@ -60,6 +60,9 @@ public partial class GameBootstrap
         }
 
         opinion.TopicKey = BuildWorkerTopicOpinionKey(pending.RumorRootId, GetWorkerRumorOriginalTopic(pending));
+        opinion.ConversationTopicKey = string.IsNullOrWhiteSpace(pending.ConversationTopicKey)
+            ? BuildConversationTopicKey(GetWorkerRumorOriginalTopic(pending))
+            : pending.ConversationTopicKey;
         opinion.RumorRootId = pending.RumorRootId;
         opinion.OriginalTopic = GetWorkerRumorOriginalTopic(pending);
         opinion.CurrentTopic = GetWorkerRumorTopic(pending);
@@ -105,6 +108,7 @@ public partial class GameBootstrap
             worker.TopicOpinions.RemoveAt(worker.TopicOpinions.Count - 1);
         }
 
+        RecordConversationTopicOpinion(opinion);
         RecordWorkerTopicOpinionSocialSignal(worker, memory, opinion);
         SessionDebugLogger.LogVerbose(
             "TOPIC_OPINION",

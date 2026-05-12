@@ -853,7 +853,11 @@ public partial class GameBootstrap
                 "Building Taxes",
                 "Treasury",
                 $"Daily tax collection from {taxedBuildings} building(s)",
-                money);
+                money,
+                null,
+                MoneyAccountKind.BuildingCash,
+                MoneyAccountKind.CityBudget,
+                MoneyTransactionReasonKind.BuildingTax);
         }
         else
         {

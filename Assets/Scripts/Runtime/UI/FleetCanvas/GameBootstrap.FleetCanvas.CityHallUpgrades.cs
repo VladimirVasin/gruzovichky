@@ -78,7 +78,7 @@ public partial class GameBootstrap
         }
 
         RectTransform card = CreateStyledPanel($"CityUpgradeCard_{definition.Id}", parent, FleetCardMutedColor);
-        SetCityUpgradeRect(card, new Vector2(0.5f, 0.5f), new Vector2(x, y), new Vector2(300f, 160f));
+        SetCityUpgradeRect(card, new Vector2(0.5f, 0.5f), new Vector2(x, y), new Vector2(300f, 174f));
         VerticalLayoutGroup layout = card.gameObject.AddComponent<VerticalLayoutGroup>();
         layout.padding = new RectOffset(12, 12, 10, 10);
         layout.spacing = 4f;
@@ -95,7 +95,7 @@ public partial class GameBootstrap
         title.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
 
         Text description = CreateBodyText("Description", card, font, string.Empty, 11, TextAnchor.UpperLeft, FleetSecondaryTextColor);
-        description.gameObject.AddComponent<LayoutElement>().preferredHeight = 44f;
+        description.gameObject.AddComponent<LayoutElement>().preferredHeight = 56f;
 
         Text meta = CreateBodyText("Meta", card, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetAccentColor);
         meta.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
@@ -171,6 +171,9 @@ public partial class GameBootstrap
             bool trustLocked = !purchased && !parentMissing && cityTrust < definition.RequiredTrust;
             bool noFunds = !purchased && !parentMissing && !trustLocked && money < definition.Cost;
             bool available = !purchased && !parentMissing && !trustLocked && !noFunds;
+            string problemReasonRu = string.Empty;
+            string problemReasonEn = string.Empty;
+            bool problemRelevant = !purchased && IsCityUpgradeProblemRelevant(definition, out problemReasonRu, out problemReasonEn);
 
             card.TitleText.text = ru ? definition.TitleRu : definition.TitleEn;
             card.DescriptionText.text = ru ? definition.DescriptionRu : definition.DescriptionEn;
@@ -178,10 +181,12 @@ public partial class GameBootstrap
                 ? $"${definition.Cost} | доверие {FormatCityUpgradeSignedValue(definition.RequiredTrust)}"
                 : $"${definition.Cost} | trust {FormatCityUpgradeSignedValue(definition.RequiredTrust)}";
 
-            card.StatusText.text = GetCityUpgradeStatusText(definition, purchased, parentMissing, trustLocked, noFunds, available, ru);
+            card.StatusText.text = GetCityUpgradeStatusText(definition, purchased, parentMissing, trustLocked, noFunds, available, problemRelevant, ru);
             card.StatusText.color = purchased
                 ? new Color(0.55f, 0.92f, 0.50f, 1f)
-                : available
+                : problemRelevant
+                    ? new Color(1f, 0.78f, 0.32f, 1f)
+                    : available
                     ? new Color(0.82f, 0.95f, 1f, 1f)
                     : noFunds
                         ? new Color(1f, 0.72f, 0.38f, 1f)
@@ -189,7 +194,9 @@ public partial class GameBootstrap
 
             Color cardColor = purchased
                 ? new Color(0.12f, 0.27f, 0.20f, 1f)
-                : available
+                : problemRelevant
+                    ? new Color(0.24f, 0.20f, 0.12f, 1f)
+                    : available
                     ? new Color(0.14f, 0.22f, 0.32f, 1f)
                     : new Color(0.09f, 0.11f, 0.15f, 1f);
             card.Background.color = cardColor;
@@ -197,9 +204,16 @@ public partial class GameBootstrap
             {
                 card.Outline.effectColor = purchased
                     ? new Color(0.25f, 0.84f, 0.40f, 0.55f)
+                    : problemRelevant
+                        ? new Color(1f, 0.68f, 0.18f, 0.70f)
                     : available
                         ? new Color(0.26f, 0.58f, 0.95f, 0.48f)
                         : new Color(0f, 0f, 0f, 0.22f);
+            }
+
+            if (problemRelevant && !string.IsNullOrWhiteSpace(problemReasonRu))
+            {
+                card.DescriptionText.text += "\n" + (ru ? problemReasonRu : problemReasonEn);
             }
 
             card.BuyButton.interactable = available;
@@ -231,6 +245,7 @@ public partial class GameBootstrap
         bool trustLocked,
         bool noFunds,
         bool available,
+        bool problemRelevant,
         bool ru)
     {
         if (purchased)
@@ -259,7 +274,14 @@ public partial class GameBootstrap
 
         if (available)
         {
-            return ru ? "Доступно" : "Available";
+            return problemRelevant
+                ? (ru ? "Актуально сейчас" : "Relevant now")
+                : (ru ? "Доступно" : "Available");
+        }
+
+        if (problemRelevant)
+        {
+            return ru ? "Проблема уже видна" : "Problem visible";
         }
 
         return ru ? "Недоступно" : "Unavailable";
@@ -302,7 +324,7 @@ public partial class GameBootstrap
 
     private void OnCityUpgradeBuyButtonClicked(CityUpgradeId upgradeId)
     {
-        bool purchased = PurchaseCityUpgrade(upgradeId);
+        bool purchased = TryPurchaseCityUpgradeCommand(upgradeId);
         PlayUiSound(purchased ? uiPanelOpenClip : uiPanelCloseClip, 0.58f);
         isCityHallScreenDirty = true;
     }

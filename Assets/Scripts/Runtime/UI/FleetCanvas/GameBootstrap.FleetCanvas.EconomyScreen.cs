@@ -738,6 +738,7 @@ public partial class GameBootstrap
     private static string BuildEconomyEntryDetail(MoneyLedgerEntry entry)
     {
         string detail = entry.Reason;
+        detail += $" - {entry.FromAccountKind} -> {entry.ToAccountKind}";
         if (entry.RecipientBalanceAfter.HasValue)
         {
             detail += $" - {entry.ToLabel} balance: ${entry.RecipientBalanceAfter.Value}";

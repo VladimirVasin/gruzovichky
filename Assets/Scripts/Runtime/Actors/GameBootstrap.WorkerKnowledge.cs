@@ -34,6 +34,7 @@ public partial class GameBootstrap
 
         WorkerMemory memory = new()
         {
+            CognitionKind = WorkerCognitionKind.Fact,
             Kind = WorkerMemoryKind.BuildingExistence,
             BuildingType = location.Type,
             BuildingInstanceId = location.InstanceId,
@@ -144,6 +145,42 @@ public partial class GameBootstrap
             WorkerMemoryKind.BuildingExistence => memory.BuildingType.HasValue && memory.BuildingInstanceId > 0,
             _ => false
         };
+    }
+
+    private static WorkerCognitionKind GetDefaultWorkerMemoryCognitionKind(WorkerMemoryKind kind)
+    {
+        return kind switch
+        {
+            WorkerMemoryKind.ConversationTopic => WorkerCognitionKind.Rumor,
+            WorkerMemoryKind.BuildingExistence => WorkerCognitionKind.Fact,
+            _ => WorkerCognitionKind.Fact
+        };
+    }
+
+    private static WorkerCognitionKind GetWorkerMemoryCognitionKind(WorkerMemory memory)
+    {
+        if (memory == null)
+        {
+            return WorkerCognitionKind.Fact;
+        }
+
+        WorkerCognitionKind expected = GetDefaultWorkerMemoryCognitionKind(memory.Kind);
+        return memory.CognitionKind == WorkerCognitionKind.Fact && expected != WorkerCognitionKind.Fact
+            ? expected
+            : memory.CognitionKind;
+    }
+
+    private static WorkerCognitionKind GetPendingWorkerKnowledgeCognitionKind(PendingWorkerKnowledge pending)
+    {
+        if (pending == null)
+        {
+            return WorkerCognitionKind.Fact;
+        }
+
+        WorkerCognitionKind expected = GetDefaultWorkerMemoryCognitionKind(pending.Kind);
+        return pending.CognitionKind == WorkerCognitionKind.Fact && expected != WorkerCognitionKind.Fact
+            ? expected
+            : pending.CognitionKind;
     }
 
     private bool HasActiveWorkerConversationTopicKnowledge(DriverAgent worker)

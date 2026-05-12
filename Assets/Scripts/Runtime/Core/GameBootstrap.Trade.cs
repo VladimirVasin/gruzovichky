@@ -723,7 +723,16 @@ public partial class GameBootstrap
         if (selectedTradeOrderType == TradeOrderType.Buy)
         {
             money -= price;
-            RecordMoneyMovement(-price, "Treasury", "Trade Market", $"Dispatch trade buy: {resourceLabel} x{quantity}", money);
+            RecordMoneyMovement(
+                -price,
+                "Treasury",
+                "Trade Market",
+                $"Dispatch trade buy: {resourceLabel} x{quantity}",
+                money,
+                null,
+                MoneyAccountKind.CityBudget,
+                MoneyAccountKind.External,
+                MoneyTransactionReasonKind.Trade);
         }
         // For Sell: resources are consumed at warehouse loading, not here
 

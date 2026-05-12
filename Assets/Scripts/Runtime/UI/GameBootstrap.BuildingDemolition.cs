@@ -224,6 +224,7 @@ public partial class GameBootstrap
                 driver.ContractBuildingInstanceId = 0;
                 driver.ContractSlotIndex = -1;
                 driver.ContractShiftIndex = -1;
+                RefreshCitizenProfession(driver);
             }
         }
 

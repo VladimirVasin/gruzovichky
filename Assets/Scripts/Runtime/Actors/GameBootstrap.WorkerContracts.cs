@@ -216,6 +216,7 @@ public partial class GameBootstrap
         worker.ContractShiftIndex = shiftIndex;
         worker.ContractProfessionalTrack = GetVacancyProfessionalTrack(kind, buildingType);
         worker.ContractRequiredProfessionalLevel = Mathf.Clamp(requiredProfessionalLevel, 1, WorkerProfessionalMaxLevel);
+        RefreshCitizenProfession(worker);
         int workerLevel = GetWorkerProfessionalLevel(worker, worker.ContractProfessionalTrack);
         SessionDebugLogger.Log("CONTRACT", $"{worker.DriverName} signed {kind} contract from {source}: salary=${worker.Salary}, days={worker.ContractTotalWorkDays}, building={buildingType}, instance={worker.ContractBuildingInstanceId}, slot={slotIndex}, shift={shiftIndex}, track={worker.ContractProfessionalTrack}, requiredLevel={worker.ContractRequiredProfessionalLevel}, workerLevel={workerLevel}.");
         if (hadNoContract)
@@ -249,6 +250,7 @@ public partial class GameBootstrap
         worker.ContractShiftIndex = -1;
         worker.ContractProfessionalTrack = WorkerProfessionalTrack.None;
         worker.ContractRequiredProfessionalLevel = 1;
+        RefreshCitizenProfession(worker);
         EvaluateWorkerActiveThoughtRules(worker);
     }
 

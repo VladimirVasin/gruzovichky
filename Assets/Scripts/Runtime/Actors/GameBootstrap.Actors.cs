@@ -491,6 +491,7 @@ public partial class GameBootstrap
         DriverAgent driver = new()
         {
             DriverId = nextDriverId,
+            CitizenId = nextDriverId,
             Gender   = gender,
             DriverName = GenerateWorkerName(gender),
             ShiftStartHour = -1,

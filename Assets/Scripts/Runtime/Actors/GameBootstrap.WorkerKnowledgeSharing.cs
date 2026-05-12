@@ -348,7 +348,11 @@ public partial class GameBootstrap
         WorkerMemory source = transfer?.SourceMemory;
         WorkerMemory received = new()
         {
+            CognitionKind = source != null
+                ? GetWorkerMemoryCognitionKind(source)
+                : GetDefaultWorkerMemoryCognitionKind(WorkerMemoryKind.ConversationTopic),
             Kind = source?.Kind ?? WorkerMemoryKind.ConversationTopic,
+            ConversationTopicKey = source?.ConversationTopicKey ?? string.Empty,
             OtherWorkerId = sharer?.DriverId ?? 0,
             Topic = source?.Topic ?? string.Empty,
             BuildingType = source?.BuildingType,
@@ -370,6 +374,10 @@ public partial class GameBootstrap
             ExpiresWorldHour = now + WorkerPersonalMemoryLifetimeHours
         };
         AdvanceSharedWorkerRumorState(received, source, transfer, now);
+        if (received.Kind == WorkerMemoryKind.ConversationTopic && string.IsNullOrWhiteSpace(received.ConversationTopicKey))
+        {
+            received.ConversationTopicKey = BuildConversationTopicKey(GetWorkerRumorOriginalTopic(received));
+        }
 
         if (received.Kind == WorkerMemoryKind.BuildingExistence &&
             received.BuildingType.HasValue &&

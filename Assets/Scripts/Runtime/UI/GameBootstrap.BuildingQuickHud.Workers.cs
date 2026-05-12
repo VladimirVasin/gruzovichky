@@ -551,6 +551,21 @@ public partial class GameBootstrap
             if (locations.TryGetValue(LocationType.GamblingHall, out LocationData gh))
             {
                 gh.BuildingBank = Mathf.Max(0, gh.BuildingBank - net);
+                if (net != 0)
+                {
+                    RecordMoneyMovement(
+                        0,
+                        net > 0 ? gh.Label : d.DriverName,
+                        net > 0 ? d.DriverName : gh.Label,
+                        net > 0 ? "Gambling payout" : "Gambling loss",
+                        null,
+                        net > 0 ? d.Money : gh.BuildingBank,
+                        net > 0 ? MoneyAccountKind.BuildingCash : MoneyAccountKind.ResidentWallet,
+                        net > 0 ? MoneyAccountKind.ResidentWallet : MoneyAccountKind.BuildingCash,
+                        MoneyTransactionReasonKind.Gambling,
+                        fromOwnerId: net > 0 ? gh.InstanceId : d.DriverId,
+                        toOwnerId: net > 0 ? d.DriverId : gh.InstanceId);
+                }
             }
 
             if (d.DriverObject != null)

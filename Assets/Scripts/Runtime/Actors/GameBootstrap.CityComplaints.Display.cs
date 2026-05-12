@@ -58,6 +58,15 @@ public partial class GameBootstrap
                 : complaint.SocialTargetWorkerName;
         }
 
+        if (complaint != null && complaint.Category == CityComplaintCategory.PublicConcern)
+        {
+            bool ru = IsRussianLanguage();
+            string title = ru ? complaint.IssueTitleRu : complaint.IssueTitleEn;
+            return string.IsNullOrWhiteSpace(title)
+                ? GetSocialSignalCategoryLabel(complaint.IssueSignalCategory, ru)
+                : title;
+        }
+
         string targetName = complaint != null && complaint.LinkedLocationType.HasValue
             ? GetSelectedLocationDisplayName(complaint.LinkedLocationType.Value)
             : (IsRussianLanguage() ? "сервис" : "service");
@@ -83,6 +92,7 @@ public partial class GameBootstrap
             CityComplaintCategory.ServiceMissing => ru ? $"Нужен: {FormatCityComplaintTargetName(complaint)}{countSuffix}" : $"Build: {FormatCityComplaintTargetName(complaint)}{countSuffix}",
             CityComplaintCategory.FamilyStress => ru ? $"Семейный стресс{countSuffix}" : $"Family stress{countSuffix}",
             CityComplaintCategory.SocialIntroduction => ru ? $"Тема для разговора{countSuffix}" : $"Conversation topic{countSuffix}",
+            CityComplaintCategory.PublicConcern => ru ? $"Общая проблема: {FormatCityComplaintTargetName(complaint)}{countSuffix}" : $"Public concern: {FormatCityComplaintTargetName(complaint)}{countSuffix}",
             _ => ru ? $"Городское обращение{countSuffix}" : $"City request{countSuffix}"
         };
     }
@@ -117,6 +127,9 @@ public partial class GameBootstrap
             CityComplaintCategory.SocialIntroduction => ru
                 ? $"{complaint.WorkerName} хочет поговорить с {FormatCityComplaintTargetName(complaint)}, но разговор, как и всякое городское дело, требует бумажки, печати и человека, который скажет первую странную фразу.\n\nЕсли принять обращение, Ратуша попросит вас подсказать тему."
                 : $"{complaint.WorkerName} wants to talk to {FormatCityComplaintTargetName(complaint)} and needs a topic. Accepting will open the conversation scene.",
+            CityComplaintCategory.PublicConcern => ru
+                ? $"Ноосфера и жители поймали повторяющийся негативный сигнал: {FormatCityComplaintPublicConcernReason(complaint, true)}\n\nЭто обращение появилось не случайно, а из похожих переживаний нескольких жителей."
+                : $"The Noosphere and citizens detected a repeated negative signal: {FormatCityComplaintPublicConcernReason(complaint, false)}\n\nThis request came from a cluster of similar lived experiences.",
             _ => string.Empty
         };
 
@@ -220,9 +233,59 @@ public partial class GameBootstrap
             "rejected by player" => ru ? "отклонено" : "rejected",
             "requested service exists" => ru ? "здание построено" : "requested service exists",
             "already satisfied" => ru ? "уже выполнено" : "already satisfied",
+            "public concern eased" => ru ? "напряжение спало" : "public concern eased",
             "social introduction completed" => ru ? "разговор состоялся" : "conversation happened",
             "social participant unavailable" => ru ? "участник недоступен" : "participant unavailable",
             _ => string.IsNullOrWhiteSpace(reason) ? (ru ? "без заметки" : "no note") : reason
         };
+    }
+
+    private static string FormatCityComplaintPublicConcernReason(CityComplaint complaint, bool ru)
+    {
+        if (complaint == null)
+        {
+            return ru ? "городская проблема" : "city issue";
+        }
+
+        string reason = ru ? complaint.IssueReasonRu : complaint.IssueReasonEn;
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            return reason;
+        }
+
+        string title = ru ? complaint.IssueTitleRu : complaint.IssueTitleEn;
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            return title;
+        }
+
+        return GetSocialSignalCategoryLabel(complaint.IssueSignalCategory, ru);
+    }
+
+    private string FormatAcceptedCityComplaintGoalText(CityComplaint complaint, int dueHours, bool ru)
+    {
+        if (complaint == null)
+        {
+            return ru ? $"Обращение принято: срок {dueHours} ч." : $"Request accepted: due in {dueHours}h.";
+        }
+
+        if (complaint.Category == CityComplaintCategory.PublicConcern)
+        {
+            string target = FormatCityComplaintTargetName(complaint);
+            return ru
+                ? $"Обращение принято: снизить напряжение вокруг темы \"{target}\" за {dueHours} ч."
+                : $"Request accepted: ease public concern around \"{target}\" within {dueHours}h.";
+        }
+
+        if (complaint.Category == CityComplaintCategory.ServiceMissing)
+        {
+            return ru
+                ? $"Обращение принято: построить {FormatCityComplaintTargetName(complaint)} за {dueHours} ч."
+                : $"Request accepted: build {FormatCityComplaintTargetName(complaint)} within {dueHours}h.";
+        }
+
+        return ru
+            ? $"Обращение принято: решить \"{FormatCityComplaintTitle(complaint, ru)}\" за {dueHours} ч."
+            : $"Request accepted: resolve \"{FormatCityComplaintTitle(complaint, ru)}\" within {dueHours}h.";
     }
 }

@@ -282,7 +282,7 @@ public partial class GameBootstrap
 
         if (row.TitleText != null)
         {
-            row.TitleText.text = ru ? "\u0424\u043e\u0440\u043c\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u043c\u043d\u0435\u043d\u0438\u0435" : "Opinion forming";
+            row.TitleText.text = FormatPendingWorkerKnowledgeTitle(pending, ru);
         }
 
         if (row.DescriptionText != null)
@@ -549,6 +549,12 @@ public partial class GameBootstrap
             return string.Empty;
         }
 
+        WorkerCognitionKind cognition = GetWorkerMemoryCognitionKind(memory);
+        if (cognition == WorkerCognitionKind.Fact)
+        {
+            return FormatWorkerCognitionKindMeta(cognition, ru);
+        }
+
         return FormatWorkerKnowledgeOpinionMeta(
             memory.OpinionTone,
             memory.OpinionConfidence,
@@ -561,6 +567,12 @@ public partial class GameBootstrap
         if (pending == null)
         {
             return string.Empty;
+        }
+
+        WorkerCognitionKind cognition = GetPendingWorkerKnowledgeCognitionKind(pending);
+        if (cognition == WorkerCognitionKind.Fact)
+        {
+            return FormatWorkerCognitionKindMeta(cognition, ru);
         }
 
         return FormatWorkerKnowledgeOpinionMeta(
@@ -599,6 +611,31 @@ public partial class GameBootstrap
             WorkerKnowledgeOpinionTone.Negative => ru ? "\u043d\u0435\u0433\u0430\u0442\u0438\u0432\u043d\u043e" : "negative",
             _ => ru ? "\u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u043e" : "neutral"
         };
+    }
+
+    private static string FormatPendingWorkerKnowledgeTitle(PendingWorkerKnowledge pending, bool ru)
+    {
+        return GetPendingWorkerKnowledgeCognitionKind(pending) switch
+        {
+            WorkerCognitionKind.Fact => ru ? "\u0424\u043e\u0440\u043c\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u0444\u0430\u043a\u0442" : "Fact forming",
+            WorkerCognitionKind.Rumor => ru ? "\u041e\u0441\u043c\u044b\u0441\u043b\u044f\u0435\u0442 \u0441\u043b\u0443\u0445" : "Rumor forming",
+            WorkerCognitionKind.Experience => ru ? "\u041e\u0441\u043c\u044b\u0441\u043b\u044f\u0435\u0442 \u043e\u043f\u044b\u0442" : "Experience forming",
+            _ => ru ? "\u0421\u043e\u0431\u0438\u0440\u0430\u0435\u0442 \u043c\u043d\u0435\u043d\u0438\u0435" : "Opinion forming"
+        };
+    }
+
+    private static string FormatWorkerCognitionKindMeta(WorkerCognitionKind kind, bool ru)
+    {
+        string label = kind switch
+        {
+            WorkerCognitionKind.Fact => ru ? "\u0444\u0430\u043a\u0442" : "fact",
+            WorkerCognitionKind.Experience => ru ? "\u043e\u043f\u044b\u0442" : "experience",
+            WorkerCognitionKind.Opinion => ru ? "\u043c\u043d\u0435\u043d\u0438\u0435" : "opinion",
+            WorkerCognitionKind.Rumor => ru ? "\u0441\u043b\u0443\u0445" : "rumor",
+            _ => ru ? "\u0437\u0430\u043f\u0438\u0441\u044c" : "record"
+        };
+
+        return ru ? $"\u0422\u0438\u043f: {label}" : $"Type: {label}";
     }
 
     private static Color GetWorkerKnowledgeOpinionColor(WorkerKnowledgeOpinionTone tone)

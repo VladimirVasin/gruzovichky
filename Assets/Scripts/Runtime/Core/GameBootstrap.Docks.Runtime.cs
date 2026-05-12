@@ -120,7 +120,16 @@ public partial class GameBootstrap
         {
             saleMoney = sold * GetDocksSellPrice(sellResource);
             money += saleMoney;
-            RecordMoneyMovement(saleMoney, "River Ship", "Treasury", $"Docks sale: {GetTradeResourceLabel(sellResource)} x{sold}", money);
+            RecordMoneyMovement(
+                saleMoney,
+                "River Ship",
+                "Treasury",
+                $"Docks sale: {GetTradeResourceLabel(sellResource)} x{sold}",
+                money,
+                null,
+                MoneyAccountKind.External,
+                MoneyAccountKind.CityBudget,
+                MoneyTransactionReasonKind.Trade);
         }
 
         bool canBuy = TryFindDocksShipTrade(docks, TradeOrderType.Buy, out TradeResourceType buyResource, out int buyQuantity);
@@ -137,7 +146,16 @@ public partial class GameBootstrap
                 buyMoney = bought * unitPrice;
                 money -= buyMoney;
                 AddDocksImportStoredResource(docks, buyResource, bought);
-                RecordMoneyMovement(-buyMoney, "Treasury", "River Ship", $"Docks purchase: {GetTradeResourceLabel(buyResource)} x{bought}", money);
+                RecordMoneyMovement(
+                    -buyMoney,
+                    "Treasury",
+                    "River Ship",
+                    $"Docks purchase: {GetTradeResourceLabel(buyResource)} x{bought}",
+                    money,
+                    null,
+                    MoneyAccountKind.CityBudget,
+                    MoneyAccountKind.External,
+                    MoneyTransactionReasonKind.Trade);
             }
             else
             {

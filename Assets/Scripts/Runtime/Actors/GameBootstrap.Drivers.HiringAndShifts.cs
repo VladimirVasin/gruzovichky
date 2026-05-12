@@ -643,7 +643,11 @@ public partial class GameBootstrap : MonoBehaviour
                 ? $"Salary payout ({GetProductionWorkRangeLabel()})"
                 : $"Salary payout ({GetShiftRangeLabel(driver.ShiftStartHour)})",
             money,
-            driver.Money);
+            driver.Money,
+            MoneyAccountKind.CityBudget,
+            MoneyAccountKind.ResidentWallet,
+            MoneyTransactionReasonKind.Salary,
+            toOwnerId: driver.DriverId);
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         SessionDebugLogger.Log("PAY", $"{driver.DriverName} paid ${driver.Salary}. Personal balance: ${driver.Money}. Treasury: ${money}.");
@@ -711,7 +715,18 @@ public partial class GameBootstrap : MonoBehaviour
         PayDriverSalary(driver);
     }
 
-    private void RecordMoneyMovement(int treasuryDelta, string fromLabel, string toLabel, string reason, int? treasuryAfter = null, int? recipientBalanceAfter = null)
+    private void RecordMoneyMovement(
+        int treasuryDelta,
+        string fromLabel,
+        string toLabel,
+        string reason,
+        int? treasuryAfter = null,
+        int? recipientBalanceAfter = null,
+        MoneyAccountKind? fromAccountKind = null,
+        MoneyAccountKind? toAccountKind = null,
+        MoneyTransactionReasonKind reasonKind = MoneyTransactionReasonKind.Other,
+        int fromOwnerId = 0,
+        int toOwnerId = 0)
     {
         MoneyLedgerEntry entry = new()
         {
@@ -719,6 +734,11 @@ public partial class GameBootstrap : MonoBehaviour
             TreasuryDelta = treasuryDelta,
             FromLabel = fromLabel,
             ToLabel = toLabel,
+            FromAccountKind = fromAccountKind ?? InferMoneyAccountKind(fromLabel, treasuryDelta < 0),
+            ToAccountKind = toAccountKind ?? InferMoneyAccountKind(toLabel, treasuryDelta > 0),
+            FromOwnerId = Mathf.Max(0, fromOwnerId),
+            ToOwnerId = Mathf.Max(0, toOwnerId),
+            ReasonKind = reasonKind,
             Reason = reason,
             TreasuryAfter = treasuryAfter,
             RecipientBalanceAfter = recipientBalanceAfter
@@ -733,6 +753,26 @@ public partial class GameBootstrap : MonoBehaviour
         LogEconomyMovement(entry);
         isEconomyScreenDirty = true;
         isBuildScreenDirty = true;
+    }
+
+    private static MoneyAccountKind InferMoneyAccountKind(string label, bool treasurySide)
+    {
+        if (string.Equals(label, "Treasury", System.StringComparison.OrdinalIgnoreCase))
+        {
+            return MoneyAccountKind.CityBudget;
+        }
+
+        if (string.Equals(label, "Building Taxes", System.StringComparison.OrdinalIgnoreCase))
+        {
+            return MoneyAccountKind.BuildingCash;
+        }
+
+        if (string.Equals(label, "Debug", System.StringComparison.OrdinalIgnoreCase))
+        {
+            return MoneyAccountKind.Debug;
+        }
+
+        return treasurySide ? MoneyAccountKind.CityBudget : MoneyAccountKind.External;
     }
 
     private void UpdateIdleRecall(DriverAgent driver)

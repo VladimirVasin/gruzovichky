@@ -76,7 +76,7 @@ public partial class GameBootstrap
             CityComplaint complaint = cityComplaints[i];
             if (complaint == null ||
                 complaint.State != CityComplaintState.Accepted ||
-                complaint.Category != CityComplaintCategory.ServiceMissing)
+                complaint.DueWorldHour <= 0f)
             {
                 continue;
             }
@@ -270,8 +270,8 @@ public partial class GameBootstrap
                 ? (ru ? "Доверие +25." : "Trust +25.")
                 : (ru ? "Доверие снизилось на 25." : "Trust -25.");
             cityRequestGoalHud.GoalLabelText.text = success
-                ? (ru ? $"Построено: {target}" : $"Built: {target}")
-                : (ru ? $"Не успели: {target}" : $"Missed: {target}");
+                ? FormatCityRequestGoalFeedbackText(complaint, target, ru, success: true)
+                : FormatCityRequestGoalFeedbackText(complaint, target, ru, success: false);
             cityRequestGoalHud.TimerText.text = success
                 ? (ru ? "Цель закрыта." : "Goal closed.")
                 : (ru ? "Срок вышел." : "Time is up.");
@@ -287,11 +287,44 @@ public partial class GameBootstrap
 
         cityRequestGoalHud.TitleText.text = ru ? "Обращение принято" : "Request accepted";
         cityRequestGoalHud.SubtitleText.text = ru ? "Городская цель" : "City goal";
-        cityRequestGoalHud.GoalLabelText.text = ru ? $"Построить: {target}" : $"Build: {target}";
+        cityRequestGoalHud.GoalLabelText.text = FormatCityRequestGoalActionText(complaint, target, ru);
         cityRequestGoalHud.CheckMarkText.text = string.Empty;
         cityRequestGoalHud.CheckBox.color = new Color(0.03f, 0.05f, 0.08f, 0.95f);
         cityRequestGoalHud.GoalLabelText.color = Color.white;
         cityRequestGoalHud.TimerText.text = FormatCityRequestGoalTimerText(complaint, ru);
+    }
+
+    private static string FormatCityRequestGoalActionText(CityComplaint complaint, string target, bool ru)
+    {
+        if (complaint == null)
+        {
+            return ru ? $"Решить: {target}" : $"Resolve: {target}";
+        }
+
+        return complaint.Category switch
+        {
+            CityComplaintCategory.ServiceMissing => ru ? $"Построить: {target}" : $"Build: {target}",
+            CityComplaintCategory.PublicConcern => ru ? $"Снизить напряжение: {target}" : $"Ease concern: {target}",
+            CityComplaintCategory.NoJob => ru ? $"Найти работу: {target}" : $"Find jobs: {target}",
+            CityComplaintCategory.LowMoney => ru ? $"Поддержать жителей: {target}" : $"Support residents: {target}",
+            CityComplaintCategory.FamilyStress => ru ? $"Снизить семейный стресс: {target}" : $"Ease family stress: {target}",
+            CityComplaintCategory.NeedPressure => ru ? $"Снять давление нужд: {target}" : $"Ease need pressure: {target}",
+            _ => ru ? $"Решить: {target}" : $"Resolve: {target}"
+        };
+    }
+
+    private static string FormatCityRequestGoalFeedbackText(CityComplaint complaint, string target, bool ru, bool success)
+    {
+        if (success)
+        {
+            return complaint?.Category == CityComplaintCategory.ServiceMissing
+                ? (ru ? $"Построено: {target}" : $"Built: {target}")
+                : (ru ? $"Решено: {target}" : $"Resolved: {target}");
+        }
+
+        return complaint?.Category == CityComplaintCategory.ServiceMissing
+            ? (ru ? $"Не успели построить: {target}" : $"Missed build: {target}")
+            : (ru ? $"Не успели решить: {target}" : $"Missed: {target}");
     }
 
     private string FormatCityRequestGoalTimerText(CityComplaint complaint, bool ru)

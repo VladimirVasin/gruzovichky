@@ -56,6 +56,9 @@ public partial class GameBootstrap
         }
 
         pending.RumorRootId = source.RumorRootId;
+        pending.ConversationTopicKey = string.IsNullOrWhiteSpace(source.ConversationTopicKey)
+            ? BuildConversationTopicKey(GetWorkerRumorOriginalTopic(source))
+            : source.ConversationTopicKey;
         pending.OriginalTopic = GetWorkerRumorOriginalTopic(source);
         pending.RumorTopic = GetWorkerRumorTopic(source);
         pending.Topic = pending.RumorTopic;
@@ -72,6 +75,9 @@ public partial class GameBootstrap
         }
 
         memory.RumorRootId = source.RumorRootId;
+        memory.ConversationTopicKey = string.IsNullOrWhiteSpace(source.ConversationTopicKey)
+            ? BuildConversationTopicKey(GetWorkerRumorOriginalTopic(source))
+            : source.ConversationTopicKey;
         memory.OriginalTopic = GetWorkerRumorOriginalTopic(source);
         memory.RumorTopic = GetWorkerRumorTopic(source);
         memory.Topic = memory.RumorTopic;
@@ -88,6 +94,9 @@ public partial class GameBootstrap
         }
 
         entry.RumorRootId = source.RumorRootId;
+        entry.ConversationTopicKey = string.IsNullOrWhiteSpace(source.ConversationTopicKey)
+            ? BuildConversationTopicKey(GetWorkerRumorOriginalTopic(source))
+            : source.ConversationTopicKey;
         entry.OriginalTopic = GetWorkerRumorOriginalTopic(source);
         entry.RumorTopic = GetWorkerRumorTopic(source);
         entry.Topic = entry.RumorTopic;

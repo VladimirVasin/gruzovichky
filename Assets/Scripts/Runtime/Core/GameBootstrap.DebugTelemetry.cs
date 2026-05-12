@@ -220,7 +220,7 @@ public partial class GameBootstrap
             ? $"bus={driver.WalkPhase} Stop#{driver.BusOriginStopNumber}->Stop#{driver.BusDestinationStopNumber} ({driver.BusTravelReason})"
             : "bus=none";
 
-        return $"cell=({cell.x},{cell.y}), duty={driver.DutyMode}, assignment={assignment}, shift={driver.ShiftStartHour}, onShift={driver.IsOnActiveShift}, inside={driver.IsInsideBuilding}, walk={driver.WalkPhase}, rest={driver.RestPhase}, goal={driver.LifeGoal}, money=${driver.Money}, satisfaction={driver.Satisfaction}, unhappyDays={driver.UnhappyDays}, leaving={driver.IsLeavingTown}, needs=[{FormatWorkerNeedsDebug(driver)}], {bus}";
+        return $"cell=({cell.x},{cell.y}), citizen=#{driver.CitizenId}, profession={GetCitizenProfessionLabel(driver)}, duty={driver.DutyMode}, assignment={assignment}, shift={driver.ShiftStartHour}, onShift={driver.IsOnActiveShift}, inside={driver.IsInsideBuilding}, walk={driver.WalkPhase}, rest={driver.RestPhase}, goal={driver.LifeGoal}, money=${driver.Money}, satisfaction={driver.Satisfaction}, unhappyDays={driver.UnhappyDays}, leaving={driver.IsLeavingTown}, needs=[{FormatWorkerNeedsDebug(driver)}], {bus}";
     }
 
     private Vector2Int GetWorkerDebugCell(DriverAgent driver)
@@ -245,6 +245,22 @@ public partial class GameBootstrap
         SessionDebugLogger.Log(
             "BUILDING_BANK",
             $"{location.Label}: +${amount} from {workerLabel}; reason={reason}; workerMoney ${driverMoneyBefore}->{driverMoneyAfter}; bank ${bankBefore}->{location.BuildingBank}; resources logs={location.LogsStored}, boards={location.BoardsStored}, textile={location.TextileStored}, furniture={location.FurnitureStored}.");
+
+        if (driver != null && amount > 0)
+        {
+            RecordMoneyMovement(
+                0,
+                workerLabel,
+                location.Label,
+                reason,
+                null,
+                location.BuildingBank,
+                MoneyAccountKind.ResidentWallet,
+                MoneyAccountKind.BuildingCash,
+                InferBuildingBankTransactionReasonKind(reason),
+                fromOwnerId: driver.DriverId,
+                toOwnerId: location.InstanceId);
+        }
     }
 
     private void LogEconomyMovement(MoneyLedgerEntry entry)
@@ -258,6 +274,32 @@ public partial class GameBootstrap
         string recipientAfter = entry.RecipientBalanceAfter.HasValue ? $" recipientBalanceAfter=${entry.RecipientBalanceAfter.Value};" : string.Empty;
         SessionDebugLogger.Log(
             "ECON",
-            $"ledger delta={entry.TreasuryDelta:+#;-#;0}; from={entry.FromLabel}; to={entry.ToLabel}; reason={entry.Reason};{treasuryAfter}{recipientAfter} time={entry.TimeLabel}.");
+            $"ledger delta={entry.TreasuryDelta:+#;-#;0}; from={entry.FromLabel}({entry.FromAccountKind}#{entry.FromOwnerId}); to={entry.ToLabel}({entry.ToAccountKind}#{entry.ToOwnerId}); reasonKind={entry.ReasonKind}; reason={entry.Reason};{treasuryAfter}{recipientAfter} time={entry.TimeLabel}.");
+    }
+
+    private static MoneyTransactionReasonKind InferBuildingBankTransactionReasonKind(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return MoneyTransactionReasonKind.ServiceFee;
+        }
+
+        string normalized = reason.ToLowerInvariant();
+        if (normalized.Contains("gambl"))
+        {
+            return MoneyTransactionReasonKind.Gambling;
+        }
+
+        if (normalized.Contains("house"))
+        {
+            return MoneyTransactionReasonKind.PropertyPurchase;
+        }
+
+        if (normalized.Contains("car"))
+        {
+            return MoneyTransactionReasonKind.VehiclePurchase;
+        }
+
+        return MoneyTransactionReasonKind.ServiceFee;
     }
 }

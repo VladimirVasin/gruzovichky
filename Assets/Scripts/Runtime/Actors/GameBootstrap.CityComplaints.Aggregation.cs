@@ -243,7 +243,7 @@ public partial class GameBootstrap
             if (!complaint.TrustPenaltyApplied)
             {
                 complaint.TrustPenaltyApplied = true;
-                ApplyCityTrustDelta(GetCityTrustComplaintExpiredPenalty(), $"citizen request #{complaint.Id} expired");
+                ApplyCityTrustPromiseFailed(complaint.Id);
             }
 
             RecordCityComplaintSocialSignals(
@@ -292,6 +292,11 @@ public partial class GameBootstrap
             return DoesCitySocialIntroductionConditionRemain(complaint, out reason);
         }
 
+        if (complaint.Category == CityComplaintCategory.PublicConcern)
+        {
+            return DoesCityPublicConcernConditionRemain(complaint, out reason);
+        }
+
         bool sawAvailableSigner = false;
         for (int i = 0; i < complaint.SignerIds.Count; i++)
         {
@@ -329,6 +334,7 @@ public partial class GameBootstrap
                                                   worker.Satisfaction < 60 &&
                                                   HasCriticalWorkerNeed(worker),
             CityComplaintCategory.SocialIntroduction => DoesCitySocialIntroductionConditionRemain(complaint, out _),
+            CityComplaintCategory.PublicConcern => HasRecentWorkerNegativeSocialSignalForPublicConcern(complaint, worker),
             _ => false
         };
     }
@@ -411,6 +417,16 @@ public partial class GameBootstrap
         return complaint != null &&
                (complaint.State == CityComplaintState.Open ||
                 complaint.State == CityComplaintState.Accepted);
+    }
+
+    private static bool IsCityComplaintResolveReasonSuccessfulPromise(string reason)
+    {
+        return !string.Equals(reason, "deadline expired", System.StringComparison.Ordinal) &&
+               !string.Equals(reason, "rejected by player", System.StringComparison.Ordinal) &&
+               !string.Equals(reason, "social introduction failed", System.StringComparison.Ordinal) &&
+               !string.Equals(reason, "social participant unavailable", System.StringComparison.Ordinal) &&
+               !string.Equals(reason, "worker unavailable", System.StringComparison.Ordinal) &&
+               !string.Equals(reason, "signers unavailable", System.StringComparison.Ordinal);
     }
 
     private int CountExpiredCityComplaints()

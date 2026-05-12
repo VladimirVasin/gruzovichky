@@ -368,7 +368,16 @@ public partial class GameBootstrap
         if (racingBonusEarned > 0)
         {
             money += racingBonusEarned;
-            RecordMoneyMovement(racingBonusEarned, "Racing Bonus", "Treasury", "Intercity racing bonus", money);
+            RecordMoneyMovement(
+                racingBonusEarned,
+                "Racing Bonus",
+                "Treasury",
+                "Intercity racing bonus",
+                money,
+                null,
+                MoneyAccountKind.External,
+                MoneyAccountKind.CityBudget,
+                MoneyTransactionReasonKind.Trade);
             racingBonusEarned = 0;
         }
 
@@ -379,7 +388,16 @@ public partial class GameBootstrap
         if (activeTradeRun.OrderType == TradeOrderType.Sell)
         {
             money += activeTradeRun.Price;
-            RecordMoneyMovement(activeTradeRun.Price, "Trade Market", "Treasury", $"Trade sale: {resourceLabel} x{activeTradeRun.Quantity}", money);
+            RecordMoneyMovement(
+                activeTradeRun.Price,
+                "Trade Market",
+                "Treasury",
+                $"Trade sale: {resourceLabel} x{activeTradeRun.Quantity}",
+                money,
+                null,
+                MoneyAccountKind.External,
+                MoneyAccountKind.CityBudget,
+                MoneyTransactionReasonKind.Trade);
             SessionDebugLogger.Log("TRADE", $"{truckAgent.DisplayName} completed sale of {resourceLabel} x{activeTradeRun.Quantity} for ${activeTradeRun.Price}.");
         }
 

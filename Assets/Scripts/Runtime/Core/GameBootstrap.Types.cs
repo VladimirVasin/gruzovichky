@@ -31,9 +31,40 @@ public partial class GameBootstrap : MonoBehaviour
         public int TreasuryDelta;
         public string FromLabel;
         public string ToLabel;
+        public MoneyAccountKind FromAccountKind = MoneyAccountKind.External;
+        public MoneyAccountKind ToAccountKind = MoneyAccountKind.External;
+        public int FromOwnerId;
+        public int ToOwnerId;
+        public MoneyTransactionReasonKind ReasonKind = MoneyTransactionReasonKind.Other;
         public string Reason;
         public int? TreasuryAfter;
         public int? RecipientBalanceAfter;
+    }
+
+    private enum MoneyAccountKind
+    {
+        CityBudget,
+        ResidentWallet,
+        BuildingCash,
+        External,
+        Debug
+    }
+
+    private enum MoneyTransactionReasonKind
+    {
+        Construction,
+        CityUpgrade,
+        Salary,
+        ServiceFee,
+        BuildingTax,
+        Trade,
+        TransportFare,
+        PropertyPurchase,
+        VehiclePurchase,
+        Gambling,
+        Household,
+        Debug,
+        Other
     }
 
     private sealed class RiverBoatData

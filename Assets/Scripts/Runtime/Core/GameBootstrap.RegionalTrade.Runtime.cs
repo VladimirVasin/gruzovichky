@@ -215,13 +215,31 @@ public partial class GameBootstrap
         {
             money -= trade.Price;
             AddStoredTradeResource(trade.ResourceType, trade.Quantity);
-            RecordMoneyMovement(-trade.Price, "Treasury", trade.City.NameEn, $"Land import: {resourceLabel} x{trade.Quantity}", money);
+            RecordMoneyMovement(
+                -trade.Price,
+                "Treasury",
+                trade.City.NameEn,
+                $"Land import: {resourceLabel} x{trade.Quantity}",
+                money,
+                null,
+                MoneyAccountKind.CityBudget,
+                MoneyAccountKind.External,
+                MoneyTransactionReasonKind.Trade);
             SessionDebugLogger.Log("TRADE_LAND", $"Bought {trade.ResourceType} x{trade.Quantity} from {trade.City.NameEn} for ${trade.Price}; Warehouse now has {GetWarehouseTradeResourceAmount(trade.ResourceType)}.");
         }
         else if (TryConsumeStoredTradeResource(trade.ResourceType, trade.Quantity))
         {
             money += trade.Price;
-            RecordMoneyMovement(trade.Price, trade.City.NameEn, "Treasury", $"Land export: {resourceLabel} x{trade.Quantity}", money);
+            RecordMoneyMovement(
+                trade.Price,
+                trade.City.NameEn,
+                "Treasury",
+                $"Land export: {resourceLabel} x{trade.Quantity}",
+                money,
+                null,
+                MoneyAccountKind.External,
+                MoneyAccountKind.CityBudget,
+                MoneyTransactionReasonKind.Trade);
             SessionDebugLogger.Log("TRADE_LAND", $"Sold {trade.ResourceType} x{trade.Quantity} to {trade.City.NameEn} for ${trade.Price}; Warehouse now has {GetWarehouseTradeResourceAmount(trade.ResourceType)}.");
         }
 

@@ -10,7 +10,9 @@ public partial class GameBootstrap
 
     private sealed class CityKnowledgeCanonEntry
     {
+        public WorkerCognitionKind CognitionKind = WorkerCognitionKind.Fact;
         public WorkerMemoryKind Kind;
+        public string ConversationTopicKey = string.Empty;
         public int OtherWorkerId;
         public string Topic = string.Empty;
         public LocationType? BuildingType;
@@ -178,7 +180,9 @@ public partial class GameBootstrap
 
         CityKnowledgeCanonEntry entry = new()
         {
+            CognitionKind = GetWorkerMemoryCognitionKind(selected),
             Kind = selected.Kind,
+            ConversationTopicKey = selected.ConversationTopicKey ?? string.Empty,
             OtherWorkerId = selected.OtherWorkerId,
             Topic = GetWorkerRumorTopic(selected),
             BuildingType = selected.BuildingType,
@@ -387,7 +391,9 @@ public partial class GameBootstrap
 
         WorkerMemory memory = new()
         {
+            CognitionKind = entry.CognitionKind,
             Kind = entry.Kind,
+            ConversationTopicKey = entry.ConversationTopicKey ?? string.Empty,
             OtherWorkerId = entry.OtherWorkerId,
             Topic = entry.Kind == WorkerMemoryKind.ConversationTopic ? entry.RumorTopic : entry.Topic,
             BuildingType = entry.BuildingType,
@@ -419,6 +425,10 @@ public partial class GameBootstrap
             CreatedWorldHour = entry.CanonizedWorldHour,
             ExpiresWorldHour = 0f
         };
+        if (memory.Kind == WorkerMemoryKind.ConversationTopic && string.IsNullOrWhiteSpace(memory.ConversationTopicKey))
+        {
+            memory.ConversationTopicKey = BuildConversationTopicKey(GetWorkerRumorOriginalTopic(memory));
+        }
 
         return memory;
     }

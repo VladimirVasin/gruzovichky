@@ -24,6 +24,7 @@ public partial class GameBootstrap
             }
 
             WorkerDailyOpinion opinion = BuildWorkerDailyOpinion(worker, endedDay);
+            opinion.EmittedSocialSignalCount = EmitWorkerDailyExperienceSocialSignals(worker, opinion);
             worker.DailyOpinions.Insert(0, opinion);
             while (worker.DailyOpinions.Count > WorkerDailyOpinionHistoryCap)
             {
@@ -54,6 +55,8 @@ public partial class GameBootstrap
         }
 
         FinalizeCityDailyExperienceForDay(endedDay);
+        ApplyDailyCityTrustFormulaFromSocialSignals(endedDay);
+        GenerateCityComplaintsFromNegativeSocialSignalClusters(endedDay);
     }
 
     private WorkerDailyOpinion BuildWorkerDailyOpinion(DriverAgent worker, int day)

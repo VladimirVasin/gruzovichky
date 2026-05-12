@@ -575,10 +575,7 @@ public partial class GameBootstrap
     private void AcceptSelectedCityComplaint()
     {
         int acceptedComplaintId = selectedCityComplaintId;
-        CityComplaint selectedComplaint = GetCityComplaintById(acceptedComplaintId);
-        bool startsSocialScene = selectedComplaint != null &&
-                                 selectedComplaint.Category == CityComplaintCategory.SocialIntroduction;
-        if (AcceptCityComplaint(acceptedComplaintId))
+        if (TryAcceptCityHallRequestCommand(acceptedComplaintId, out bool startsSocialScene))
         {
             PlayUiSound(uiSelectClip, 0.75f);
             isCityHallPanelOpen = false;
@@ -594,7 +591,7 @@ public partial class GameBootstrap
     private void RejectSelectedCityComplaint()
     {
         int rejectedComplaintId = selectedCityComplaintId;
-        if (RejectCityComplaint(selectedCityComplaintId))
+        if (TryRejectCityHallRequestCommand(selectedCityComplaintId))
         {
             PlayUiSound(slotLoseClip != null ? slotLoseClip : uiSelectClip, 0.62f);
             BeginCityHallRejectedRowDismiss(rejectedComplaintId);

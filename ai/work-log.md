@@ -4,7 +4,17 @@ Last updated: 2026-05-12
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20, 2026-05-03, 2026-05-08, and 2026-05-09 to keep agent startup light. Use git history for exact old implementation details.
 
+## Active Queue
+
+- 2026-05-12: Social simulation backlog items 2-15 are implemented in an MVP form. No active items remain in this queue; future work should harden balance, UI copy, tests, and edge cases rather than redoing the slice from scratch.
+
 ## Recent Work
+
+- 2026-05-12: Completed the rest of the social-simulation backlog. Noosphere now aggregates `SocialSignal` into city meaning insights with tone, topic split, recurring reasons, and tension/source summaries. City trust now has formula helpers fed by daily social signals and public promises. Negative signal clusters can generate City Hall public-concern requests, and accepted requests become visible public promises with success/failure trust effects. Money ledger entries now carry account owner/reason fields for city budget, resident wallets, building cashboxes, external, and debug money. Workers gained a citizen/profession layer mapped from contracts. Street litter now tracks dominant sources and residents react to accumulated exposure. Upgrade cards can highlight currently relevant city problems. City Hall request/upgrade UI now routes decisions through runtime command methods instead of owning the simulation logic. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`.
+
+- 2026-05-12: Kept the expanded social/economy/litter work under the project line-count rule by splitting local-bus passenger handling, street-litter cleanup/source helpers, and social runtime models into focused partial files. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`.
+
+- 2026-05-12: Started executing the social-simulation backlog. Runtime models now separate cognition kind as Fact/Experience/Opinion/Rumor: building memories remain factual/neutral, conversation-topic memories are rumors, topic stances are opinions, and daily lived experience/social signals are experiences. End-of-day lived experience now emits capped `DailyExperience` social signals for Noosphere and later topic opinion formation. Added a `ConversationTopic` registry and first topic-association aliases for litter, food, gambling/bar, City Hall/governance, and safety so arbitrary player words can connect to relevant `SocialSignal` categories. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`.
 
 - 2026-05-12: Added the first structured `SocialSignal` layer. Important resident/city events now record topic, tone, strength, confidence, source, place, reason, and day facts through `GameBootstrap.SocialSignals.cs`; thoughts emit non-duplicating signals, street-litter daily exposure creates a litter signal used by "РџРµСЂРµР¶РёС‚С‹Р№ РѕРїС‹С‚", topic opinions record topic signals and can read recent related personal signals, and City Hall complaints/accept/reject/complete/expire decisions emit governance/request signals. The Noosphere HUD and 3D dive now include daily social-signal topic summaries/meaning words. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`.
 

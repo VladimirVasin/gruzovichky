@@ -258,8 +258,10 @@ public partial class GameBootstrap
         }
 
         int severity = GetWorkerStreetLitterDailySeverity(worker.StreetLitterExposureToday, worker.StreetLitterPeakToday);
+        UpdateWorkerStreetLitterExposureMemory(worker, day, severity);
         if (severity <= 0)
         {
+            AddAccumulatedStreetLitterExposureFactor(worker, factors);
             return;
         }
 
@@ -273,6 +275,91 @@ public partial class GameBootstrap
             signal?.DailyScoreHint ?? dailyScore,
             signal?.ReasonRu ?? reasonRu,
             signal?.ReasonEn ?? reasonEn);
+        AddAccumulatedStreetLitterExposureFactor(worker, factors);
+    }
+
+    private static void UpdateWorkerStreetLitterExposureMemory(DriverAgent worker, int day, int severity)
+    {
+        if (worker == null || worker.StreetLitterExposureMemoryDay == day)
+        {
+            return;
+        }
+
+        if (worker.StreetLitterExposureMemoryDay > 0 && day > worker.StreetLitterExposureMemoryDay + 1)
+        {
+            int skippedDays = day - worker.StreetLitterExposureMemoryDay - 1;
+            worker.StreetLitterExposureMemory *= Mathf.Pow(0.72f, skippedDays);
+        }
+
+        if (severity > 0)
+        {
+            worker.StreetLitterExposureStreakDays++;
+            worker.StreetLitterExposureMemory += severity * 0.62f;
+        }
+        else
+        {
+            worker.StreetLitterExposureStreakDays = 0;
+            worker.StreetLitterExposureMemory *= 0.58f;
+        }
+
+        worker.StreetLitterExposureMemory = Mathf.Clamp(worker.StreetLitterExposureMemory, 0f, 8f);
+        worker.StreetLitterExposureMemoryDay = day;
+    }
+
+    private static void AddAccumulatedStreetLitterExposureFactor(DriverAgent worker, List<WorkerDailyOpinionFactor> factors)
+    {
+        if (worker == null || factors == null)
+        {
+            return;
+        }
+
+        int score = GetAccumulatedStreetLitterExposureScore(worker);
+        if (score == 0)
+        {
+            return;
+        }
+
+        AddDailyOpinionFactor(
+            factors,
+            WorkerDailyOpinionFactorKind.City,
+            score,
+            GetAccumulatedStreetLitterExposureReason(worker, true),
+            GetAccumulatedStreetLitterExposureReason(worker, false));
+    }
+
+    private static int GetAccumulatedStreetLitterExposureScore(DriverAgent worker)
+    {
+        if (worker == null)
+        {
+            return 0;
+        }
+
+        if (worker.StreetLitterExposureMemory >= 6f || worker.StreetLitterExposureStreakDays >= 4)
+        {
+            return -12;
+        }
+
+        if (worker.StreetLitterExposureMemory >= 3.2f || worker.StreetLitterExposureStreakDays >= 3)
+        {
+            return -6;
+        }
+
+        return 0;
+    }
+
+    private static string GetAccumulatedStreetLitterExposureReason(DriverAgent worker, bool ru)
+    {
+        bool high = worker != null && (worker.StreetLitterExposureMemory >= 6f || worker.StreetLitterExposureStreakDays >= 4);
+        if (high)
+        {
+            return ru
+                ? "\u0433\u0440\u044f\u0437\u043d\u044b\u0435 \u0443\u043b\u0438\u0446\u044b \u0441\u0442\u0430\u043b\u0438 \u0443\u0441\u0442\u043e\u0439\u0447\u0438\u0432\u043e\u0439 \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u043e\u0439"
+                : "dirty streets became a persistent problem";
+        }
+
+        return ru
+            ? "\u043c\u0443\u0441\u043e\u0440 \u043d\u0430 \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430\u0445 \u043d\u0430\u043a\u0430\u043f\u043b\u0438\u0432\u0430\u043b \u0440\u0430\u0437\u0434\u0440\u0430\u0436\u0435\u043d\u0438\u0435"
+            : "litter on daily routes built up irritation";
     }
 
     private static int GetWorkerStreetLitterDailySeverity(float exposure, float peak)

@@ -120,6 +120,7 @@ public partial class GameBootstrap
         NoosphereKnowledgeLogEntry entry = new()
         {
             EventKind = eventKind,
+            CognitionKind = GetWorkerMemoryCognitionKind(memory),
             MemoryKind = memory.Kind,
             OwnerWorkerId = owner?.DriverId ?? 0,
             OtherWorkerId = memory.OtherWorkerId,
@@ -717,6 +718,11 @@ public partial class GameBootstrap
 
     private static string FormatNoosphereKnowledgeOpinion(NoosphereKnowledgeLogEntry entry, bool ru)
     {
+        if (entry != null && entry.CognitionKind == WorkerCognitionKind.Fact)
+        {
+            return ru ? "\u0442\u0438\u043f: \u0444\u0430\u043a\u0442" : "type: fact";
+        }
+
         string opinion = entry?.OpinionTone switch
         {
             WorkerKnowledgeOpinionTone.Positive => ru ? "\u043c\u043d\u0435\u043d\u0438\u0435: \u043f\u043e\u0437\u0438\u0442\u0438\u0432\u043d\u043e" : "opinion: positive",
