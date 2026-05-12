@@ -27,18 +27,22 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 - The Build menu now lives as a bottom dock with five icon categories and an animated tool tray.
 - New Game starts with only the one-cell road, Warehouse, Motel, and City Hall, then unlocks later buildings in clear construction layers.
 - Newly unlocked buildings pulse in the Build dock and appear in the event feed.
+- Road construction now uses a start/end segment flow with an animated construction wave instead of instant single-click road placement.
+- Buildable buildings now have Treasury costs, price badges, no-funds states, money popups, and ledger/feed feedback when construction succeeds.
 - City Hall construction requests now follow the same staged order and can eventually suggest every available building.
-- Build previews, automatic driveway cells, road visuals, and road markings are easier to read on uneven terrain and at night.
+- City Hall now includes trust-gated city upgrades that can reduce litter growth, improve cleaner coverage, discount construction, extend request deadlines, or soften trust penalties.
+- Build previews, road-access warnings, road visuals, and road markings are easier to read on uneven terrain and at night.
 
 #### Residents And City Life
 
 - Residents now have personal money, education, profession levels, dynamic vacancy salaries, and fixed-term contracts.
 - Food, Sleep, and Leisure are handled by urgency during free time, with fallback activities when a resident cannot afford a normal service.
 - Kiosk Snack and Coffee can be carried in personal inventory and auto-used before needs become critical.
-- Residents now have thoughts, opinions, social links, families, children, and child-care pressure in the Residents screen.
+- Residents now have thoughts, opinions, social links, families, children, child-care pressure, school pressure, and lived-experience summaries in the Residents screen.
+- Children now progress through life stages, and Kindergarten, Primary School, and Secondary School capacity affects family happiness and city complaints.
 - City Hall conversation topics and first visits to buildings now create time-limited personal knowledge shown in the Residents Knowledge tab.
 - Knowledge can spread between residents through idle chats, shared services, coworker shifts, City Hall introductions, and family formation, with highlighted subjects in dialogue bubbles.
-- The Noosphere HUD records citywide knowledge events, including received, expired, and burned memories with remaining-time indicators.
+- The Noosphere HUD records citywide knowledge events, social-signal topic summaries, citywide lived experience, received/expired/burned memories, and deeper 3D meaning-space visuals.
 - Idle residents can chat in the world with readable bubbles and spatial vocalizer sounds.
 - Idle movement is safer: residents should spread out more reliably instead of stacking on one tile.
 
@@ -47,9 +51,11 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 - Labor Exchange now owns vacancy posting, applicants, and automatic staffing, so the permanent Vacancies top-HUD entry is gone in normal play.
 - City Hall accepts citizen requests, turns accepted requests into 24-hour city goals, and changes city Trust on success, rejection, or expiry.
 - City Hall can create a social-introduction request where the player chooses a topic for two residents.
+- Public concerns can now grow out of repeated resident problems, and upgrade cards can highlight problems they help solve.
+- Cleaning Depot and the Cleaner profession add staffed street-litter cleanup, with coverage previews and visible cleanup work in town.
 - Parking automatically provides truck and bus slots; local buses need at least two stops and skip unreachable route targets.
 - Trade moved to policy-based resource controls, while Docks and regional routes drive river and land trade.
-- Motel, Bar, Canteen, Kiosk, and Kindergarten are tied more directly into resident needs, fees, families, and child care.
+- Motel, Bar, Canteen, Kiosk, Kindergarten, Primary School, and Secondary School are tied more directly into resident needs, fees, families, child care, and education.
 
 #### HUD And Interaction
 
@@ -59,15 +65,17 @@ Status: in development. Main Menu version label has been bumped to `Lo-fi Delive
 - Opening a different microHUD closes the current one, and the Event Feed now sits below other HUD panels.
 - The top HUD now shows population and city Trust near Treasury, while compact event messages stay readable without covering the play area.
 - Building demolition now asks for confirmation before removing a structure.
+- Build controls now support clearer keyboard-number selection and right-click/Escape cancellation through menu/tool layers.
 
 #### Atmosphere, Audio, And Map
 
 - The Bar can now be entered as a separate large interior scene that pauses the town and returns with a fade.
 - Bar patrons idle, talk, drink, dance, and use their own room ambience and vocalizer sounds.
 - Entering the Bar interior mutes the outside city soundscape, and the river ambience is now positioned on the map instead of playing everywhere equally.
+- Bar and Gambling Hall world buildings can use imported models with visible seating, animated doors, night lighting, and staged construction pop-ins.
 - Regional Map is a fullscreen pixel-art screen that pauses simulation, shows external cities, and links built routes into Trade.
 - Tutorial text and flow now follow the current build-first start, bottom Build dock, Labor Exchange, services, buses, Docks, and trade policies.
-- Town presentation is warmer and busier: better lighting, smoother roads, richer service details, and more small life in the scene.
+- Town presentation is warmer and busier: imported ground/water/tree textures, generated low-poly tree assets, better lighting, smoother roads, richer service details, new relaxed UI/build/truck sounds, and more small life in the scene.
 
 ## Lo-fi Delivery Co. v.0.0.2
 

@@ -56,7 +56,7 @@ Use this before broad code search. Owner cards are navigation starting points, n
 
 - Files: `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.cs`, `Assets/Scripts/Runtime/Transport/GameBootstrap.Input.BuildRoad*.cs`, `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.cs`, `Assets/Scripts/Runtime/Transport/GameBootstrap.Transport.Road*.cs`, `Assets/Scripts/Runtime/Transport/Services/GridPathService.cs`, `Assets/Scripts/Runtime/Transport/Services/RoadBuildPlacementService.cs`, `Assets/Scripts/Runtime/Transport/Services/RoadLanternPlanner.cs`, `Assets/Scripts/Runtime/Transport/Services/RoadMarkingPlanner.cs`, `Assets/Scripts/Runtime/Transport/Services/TwoLaneRoadGeometry.cs`
 - Includes:
-  - click-to-place roads
+  - click-start/click-finish road segment placement
   - grid snapping
   - occupation blocking on location cells
   - simple road tile stretching toward neighbors
@@ -72,7 +72,7 @@ Use this before broad code search. Owner cards are navigation starting points, n
   - weighted pedestrian pathfinding that prefers established footpath cells
   - smooth cell-to-cell truck motion
   - multi-truck route and refuel flow
-  - automatic `wood` production at Forest
+  - Logs production at Forest / Lumberjack Camp
   - automatic delivery chain `Forest -> Warehouse -> Town`
   - local bus route stop-order decisions
   - deterministic local bus-stop ordering

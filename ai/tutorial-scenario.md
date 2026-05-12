@@ -1,6 +1,6 @@
 # Tutorial Scenario
 
-Last updated: 2026-05-08
+Last updated: 2026-05-13
 
 Purpose: keep a plain-text scenario for the current `Tutorial` game mode so future gameplay, HUD, economy, staffing, transport, trade, or building changes can be checked against the actual teaching flow.
 
@@ -18,8 +18,8 @@ Source of truth: code remains authoritative. This file is the cross-session chec
 ## Current Scenario
 
 1. Start Tutorial mode with an almost empty town, highway/intercity access, starter workers, and locked progression. Show welcome, focus the start area, then require camera controls: zoom in, zoom out, pan, and rotate.
-2. Teach road building. Player opens the bottom-centered Build dock or presses `B`, selects a road tool from the category tray, left-clicks a start cell, then left-clicks an end cell to build the road segment. Roads are currently free and must connect the town to the highway.
-3. Unlock and build the core: Warehouse, Motel, and Parking. Each built core building can show its own explanation. The core goal completes when all three exist; tutorial text warns that road access is required for buildings to work properly.
+2. Teach road building. Player opens the bottom-centered Build dock or presses `B`, selects a road tool from the category tray, left-clicks a start cell, then left-clicks an end cell to build the road segment. Roads are currently free; the first Tutorial road is expected to connect to the Highway so outside traffic can reach town.
+3. Unlock and build the core: Warehouse, Motel, and Parking. Each built core building can show its own explanation. The core goal completes when all three exist; current tutorial copy still broadly warns about road access even though gameplay road-access requirements are narrower than "every building."
 4. Unlock and build Lumberjack Camp near trees. Tutorial temporarily exposes the top-menu `Staffing` entry for early manual assignment. Player opens Staffing, selects the Lumberjack Camp vacancy, and assigns a lumberjack.
 5. Explain production shifts and wages. Then teach freight setup: player assigns a Truck Driver shift through Staffing, and Parking automatically provides the truck from fleet capacity. No separate truck purchase is taught.
 6. Show the first freight run. A staffed truck looks for useful work and can move Logs from Lumberjack Camp to Warehouse.
@@ -43,3 +43,4 @@ Source of truth: code remains authoritative. This file is the cross-session chec
 - Tutorial should not teach removed resources or old direct-hiring flow. Current resource/trade path is Logs/Boards/Cotton/Textile/Furniture, with Textile import taught through river trade and Docks.
 - Parking provides tutorial freight vehicles from capacity; Tutorial should not tell the player to buy a truck separately.
 - Building placement spends Treasury using `build-catalog.json` costs. The current required Tutorial building chain costs `$3740` before optional buildings, below `StartingTreasury = $5000`, so Tutorial should remain passable without a special subsidy.
+- Road-access gameplay is no longer universal for every building. If Tutorial copy is edited, prefer "required production/transport buildings and stops need road access" over broad "every building" wording unless the mechanic changes back.

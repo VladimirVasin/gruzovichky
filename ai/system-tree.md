@@ -47,7 +47,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: night stars, rain, clouds, water LOD, post-processing, graphics settings.
 - [WORLD.Locations] Buildable and generated places
   - Holds `LocationData`, footprints, anchors, storage, service state, and place-specific runtime data.
-- Feature leaves: Parking, Warehouse, Forest, Sawmill, Motel, service buildings, City Hall, Docks, houses, schools.
+  - Feature leaves: Parking, Warehouse, Forest, Sawmill, Motel, service buildings, City Hall, Docks, houses, schools.
 - [WORLD.Placement] Building placement and occupancy
   - Resolves footprints, walk buffers, access cells, previews, blockers, and demolition cleanup.
   - Feature leaves: rotated footprints, placement preview, non-walkable buffers, entrance exceptions, demolition.
@@ -68,7 +68,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: category cards, item cards, cost badges, no-funds states, JSON fallback.
 - [BUILD.Unlocks] Build progression
   - Controls which buildings are available in New Game/Tutorial progression.
-- Feature leaves: starter tools, second layer unlocks, third layer unlocks, child-stage school unlocks, unlock feedback.
+  - Feature leaves: starter tools, second layer unlocks, third layer unlocks, child-stage school unlocks, unlock feedback.
 - [BUILD.Roads] Player road construction
   - Handles click-start/click-finish road segments, previews, validation, and placement.
   - Feature leaves: single-lane road, two-way road, preview footprint, blocked cells, construction spending.
@@ -140,13 +140,13 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: migration arrivals, hire flow, worker contracts, salary, arrival bus/truck handoff.
 - [WORKERS.Professions] Jobs and professions
   - Maps worker capabilities to building roles and duties.
-- Feature leaves: citizen profession kind, driver, lumberjack, clerk, cleaner, teacher, service staff, logistics worker.
+  - Feature leaves: citizen profession kind, driver, lumberjack, clerk, cleaner, teacher, service staff, logistics worker.
 - [WORKERS.Shifts] Shifts, vacancies, and staffing
   - Assigns workers to building slots, transport, logistics, and vacancy flows.
   - Feature leaves: shift screen, vacancy options, assign/remove worker, on-shift counts, Labor Exchange postings.
 - [WORKERS.Needs] Needs and services
   - Drives hunger, rest, leisure, family stress, service visits, and fallback activities.
-- Feature leaves: Motel, Canteen, Bar, Kiosk, Gambling Hall, City Park, Kindergarten, Primary School, Secondary School, Gas Station service.
+  - Feature leaves: Motel, Canteen, Bar, Kiosk, Gambling Hall, City Park, Kindergarten, Primary School, Secondary School, Gas Station service.
 - [WORKERS.Movement] Worker walking and commute
   - Moves residents between work, services, home, parking, bus stops, and idle places.
   - Feature leaves: safe walk target, idle wander, commute path, local bus choice, rescue from unsafe cells.
@@ -155,7 +155,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: Snack, Coffee, item catalog, worker balance, service purchase.
 - [WORKERS.Family] Housing, families, and children
   - Forms households and affects family happiness/upkeep.
-- Feature leaves: personal houses, spouse pairing, family child slots, next-child readiness, child stages/growth, child education coverage, child visuals, family stress, household upkeep.
+  - Feature leaves: personal houses, spouse pairing, family child slots, next-child readiness, child stages/growth, child education coverage, child visuals, family stress, household upkeep.
 - [WORKERS.SocialSignals] Structured social signal layer
   - Records important resident/city events as topic, tone, strength, source, place, reason, and day facts.
   - Feature leaves: thought signals, litter signals, daily-experience signals, topic-opinion signals, City Hall complaint/decision signals, Noosphere insight aggregation.
