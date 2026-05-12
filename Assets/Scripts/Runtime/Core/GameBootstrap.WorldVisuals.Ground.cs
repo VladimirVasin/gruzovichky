@@ -39,9 +39,19 @@ public partial class GameBootstrap : MonoBehaviour
 
                 if (isWater)
                 {
-                    float t = lakeWaterCells.Contains(new Vector2Int(x, y))
+                    Vector2Int waterCell = new(x, y);
+                    bool isLakeWater = lakeWaterCells.Contains(waterCell);
+                    float t = isLakeWater
                         ? GetLakeWaterDepth01(x, y)
                         : (float)(y - shoreRow) / Mathf.Max(WaterRiverWidth - 1, 1);
+                    Texture2D waterBodyTexture = isLakeWater
+                        ? (lakeDeepTexture != null ? lakeDeepTexture : waterDeepMaterial?.mainTexture as Texture2D)
+                        : (riverDeepTexture != null ? riverDeepTexture : waterDeepMaterial?.mainTexture as Texture2D);
+                    Texture2D waterTopTexture = isLakeWater
+                        ? (lakeSurfaceTexture != null ? lakeSurfaceTexture : waterBodyTexture)
+                        : (riverSurfaceTexture != null ? riverSurfaceTexture : waterBodyTexture);
+                    Vector2 waterTextureScale = isLakeWater ? new Vector2(0.58f, 0.58f) : new Vector2(0.74f, 0.42f);
+                    Vector2 waterTextureOffset = GetGroundTextureOffset(x, y, isLakeWater ? 41 : 47);
 
                     // Solid tile: per-tile depth colour (instance material)
                     Color baseWaterColor = Color.Lerp(
@@ -49,7 +59,7 @@ public partial class GameBootstrap : MonoBehaviour
                         new Color(0.03f, 0.14f, 0.38f),
                         t);
                     Renderer r = groundTile.GetComponent<Renderer>();
-                    r.material = CreateSurfaceMaterial(null, baseWaterColor, 0.92f);
+                    r.material = CreateSurfaceMaterial(waterBodyTexture, baseWaterColor, 0.92f);
                     r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     r.receiveShadows = true;
                     float wavePhase = Random.Range(0f, 10f);
@@ -71,7 +81,7 @@ public partial class GameBootstrap : MonoBehaviour
                         new Color(0.14f, 0.44f, 0.78f, 0.055f), t);
                     GameObject waterSurface = CreateWaterSurfaceCellMesh($"WaterSurface_{x}_{y}", x, y, waterSurfaceCenterY, 1f);
                     Renderer surfaceRenderer = waterSurface.GetComponent<Renderer>();
-                    surfaceRenderer.material = CreateTransparentOverlayMaterial(topColor);
+                    surfaceRenderer.material = CreateTransparentOverlayMaterial(topColor, waterTopTexture, waterTextureScale, waterTextureOffset);
                     surfaceRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     surfaceRenderer.receiveShadows = false;
 
@@ -96,7 +106,7 @@ public partial class GameBootstrap : MonoBehaviour
                         new Color(0.07f, 0.28f, 0.58f, 0.055f), t);
                     GameObject waterMidSurface = CreateWaterSurfaceCellMesh($"WaterMidSurface_{x}_{y}", x, y, waterMidSurfaceCenterY, 1.0f);
                     Renderer midSurfaceRenderer = waterMidSurface.GetComponent<Renderer>();
-                    midSurfaceRenderer.material = CreateTransparentOverlayMaterial(midColor);
+                    midSurfaceRenderer.material = CreateTransparentOverlayMaterial(midColor, waterTopTexture, waterTextureScale * 0.82f, waterTextureOffset + new Vector2(0.19f, 0.11f));
                     midSurfaceRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     midSurfaceRenderer.receiveShadows = false;
                     waterSurfaceTiles.Add(new WaterSurfaceTileData
@@ -120,7 +130,7 @@ public partial class GameBootstrap : MonoBehaviour
                         new Color(0.02f, 0.12f, 0.34f, 0.10f), t);
                     GameObject waterLowSurface = CreateWaterSurfaceCellMesh($"WaterLowSurface_{x}_{y}", x, y, waterLowSurfaceCenterY, 1f);
                     Renderer lowSurfaceRenderer = waterLowSurface.GetComponent<Renderer>();
-                    lowSurfaceRenderer.material = CreateTransparentOverlayMaterial(lowColor);
+                    lowSurfaceRenderer.material = CreateTransparentOverlayMaterial(lowColor, waterBodyTexture, waterTextureScale * 0.68f, waterTextureOffset + new Vector2(0.31f, 0.27f));
                     lowSurfaceRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                     lowSurfaceRenderer.receiveShadows = false;
                     waterSurfaceTiles.Add(new WaterSurfaceTileData
@@ -155,14 +165,12 @@ public partial class GameBootstrap : MonoBehaviour
                 }
                 else if (isNearBeach)
                 {
-                    Renderer r = groundTile.GetComponent<Renderer>();
-                    r.sharedMaterial = beachSurfaceMaterial;
+                    ApplyBeachGroundMaterial(groundTile, x, y, true);
                     ConfigureStaticVisual(groundTile);
                 }
                 else if (isFarBeach)
                 {
-                    Renderer r = groundTile.GetComponent<Renderer>();
-                    r.sharedMaterial = shoreSurfaceMaterial;
+                    ApplyBeachGroundMaterial(groundTile, x, y, false);
                     ConfigureStaticVisual(groundTile);
                 }
                 else

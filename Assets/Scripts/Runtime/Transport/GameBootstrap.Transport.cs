@@ -236,8 +236,15 @@ public partial class GameBootstrap
         private readonly int smoothness;
         private readonly int scaleX;
         private readonly int scaleY;
+        private readonly int offsetX;
+        private readonly int offsetY;
 
         public VisualMaterialCacheKey(int shaderKind, Texture texture, Color color, float smoothness, Vector2 scale)
+            : this(shaderKind, texture, color, smoothness, scale, Vector2.zero)
+        {
+        }
+
+        public VisualMaterialCacheKey(int shaderKind, Texture texture, Color color, float smoothness, Vector2 scale, Vector2 offset)
         {
             this.shaderKind = shaderKind;
             textureId = texture != null ? texture.GetHashCode() : 0;
@@ -248,6 +255,8 @@ public partial class GameBootstrap
             this.smoothness = Mathf.RoundToInt(Mathf.Clamp01(smoothness) * 1000f);
             scaleX = Mathf.RoundToInt(scale.x * 1000f);
             scaleY = Mathf.RoundToInt(scale.y * 1000f);
+            offsetX = Mathf.RoundToInt(offset.x * 1000f);
+            offsetY = Mathf.RoundToInt(offset.y * 1000f);
         }
 
         public bool Equals(VisualMaterialCacheKey other)
@@ -260,7 +269,9 @@ public partial class GameBootstrap
                    colorA == other.colorA &&
                    smoothness == other.smoothness &&
                    scaleX == other.scaleX &&
-                   scaleY == other.scaleY;
+                   scaleY == other.scaleY &&
+                   offsetX == other.offsetX &&
+                   offsetY == other.offsetY;
         }
 
         public override bool Equals(object obj)
@@ -281,6 +292,8 @@ public partial class GameBootstrap
                 hash = (hash * 397) ^ smoothness;
                 hash = (hash * 397) ^ scaleX;
                 hash = (hash * 397) ^ scaleY;
+                hash = (hash * 397) ^ offsetX;
+                hash = (hash * 397) ^ offsetY;
                 return hash;
             }
         }
@@ -290,7 +303,12 @@ public partial class GameBootstrap
 
     private static Material GetCachedLitMaterial(Texture texture, Color color, float smoothness, Vector2 textureScale)
     {
-        VisualMaterialCacheKey key = new(0, texture, color, smoothness, textureScale);
+        return GetCachedLitMaterial(texture, color, smoothness, textureScale, Vector2.zero);
+    }
+
+    private static Material GetCachedLitMaterial(Texture texture, Color color, float smoothness, Vector2 textureScale, Vector2 textureOffset)
+    {
+        VisualMaterialCacheKey key = new(0, texture, color, smoothness, textureScale, textureOffset);
         if (visualMaterialCache.TryGetValue(key, out Material cached) && cached != null)
         {
             return cached;
@@ -300,7 +318,8 @@ public partial class GameBootstrap
         {
             color = color,
             mainTexture = texture,
-            mainTextureScale = textureScale
+            mainTextureScale = textureScale,
+            mainTextureOffset = textureOffset
         };
 
         if (material.HasProperty("_BaseColor"))
@@ -311,6 +330,13 @@ public partial class GameBootstrap
         if (material.HasProperty("_Smoothness"))
         {
             material.SetFloat("_Smoothness", smoothness);
+        }
+
+        if (material.HasProperty("_BaseMap"))
+        {
+            material.SetTexture("_BaseMap", texture);
+            material.SetTextureScale("_BaseMap", textureScale);
+            material.SetTextureOffset("_BaseMap", textureOffset);
         }
 
         if (material.HasProperty("_Metallic"))

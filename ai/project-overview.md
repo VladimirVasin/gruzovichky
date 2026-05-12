@@ -1,6 +1,6 @@
 # Project Overview
 
-Last updated: 2026-05-09
+Last updated: 2026-05-12
 
 ## Purpose
 
@@ -22,7 +22,7 @@ Stable high-level map of the current playable prototype. Code remains the source
 ```text
 Assets/
   Editor/Tests/        Unity editor smoke tests
-  Resources/           Localization, game-data JSON, and runtime-loaded assets
+  Resources/           Localization, game-data JSON, runtime-loaded assets, and Art/Textures world PNGs
   Scenes/              SampleScene entry point
   Scripts/Runtime/     Game runtime partials and extracted services
   Settings/            Unity project settings/assets

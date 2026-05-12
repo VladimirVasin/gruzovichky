@@ -1,23 +1,82 @@
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+using System.IO;
 using UnityEngine;
 
 public partial class GameBootstrap : MonoBehaviour
 {
     private void SetupSurfaceMaterials()
     {
-        groundSurfaceTexture = CreateStylizedGroundTexture(128);
-        grassSurfaceTexture = CreateStylizedGrassTexture(128);
-        footpathSurfaceTexture = CreateStylizedFootpathTexture(128);
-        roadSurfaceTexture = CreateStylizedRoadTexture(128);
-        groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.95f, 0.91f, 0.84f), 0.1f);
-        grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.72f, 0.82f, 0.69f), 0.08f);
-        shoreSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.76f, 0.67f, 0.55f), 0.08f);
-        beachSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.92f, 0.84f, 0.70f), 0.1f);
+        groundSurfaceTexture = LoadArtTextureAsset("Ground", "ground_dry_grass_lowpoly", CreateStylizedGroundTexture(128));
+        grassSurfaceTexture = LoadArtTextureAsset("Ground", "ground_fresh_grass_lowpoly", CreateStylizedGrassTexture(128));
+        forestSurfaceTexture = LoadArtTextureAsset("Ground", "ground_forest_floor_lowpoly", grassSurfaceTexture);
+        beachSurfaceTexture = LoadArtTextureAsset("Ground", "ground_sandy_riverbank_lowpoly", groundSurfaceTexture);
+        footpathSurfaceTexture = LoadArtTextureAsset("Ground", "ground_dirt_footpath_lowpoly", CreateStylizedFootpathTexture(128));
+        constructionMudSurfaceTexture = LoadArtTextureAsset("Ground", "ground_muddy_construction_lowpoly", groundSurfaceTexture);
+        roadSurfaceTexture = LoadArtTextureAsset("Road", "road_town_asphalt_lowpoly", CreateStylizedRoadTexture(128));
+        highwaySurfaceTexture = LoadArtTextureAsset("Road", "road_highway_asphalt_lowpoly", roadSurfaceTexture);
+        roadShoulderSurfaceTexture = LoadArtTextureAsset("Road", "road_shoulder_gravel_lowpoly", constructionMudSurfaceTexture);
+        riverSurfaceTexture = LoadArtTextureAsset("River", "river_calm_flow_lowpoly", null);
+        riverDeepTexture = LoadArtTextureAsset("River", "river_deep_channel_lowpoly", riverSurfaceTexture);
+        lakeSurfaceTexture = LoadArtTextureAsset("Lake", "lake_calm_shallow_lowpoly", riverSurfaceTexture);
+        lakeDeepTexture = LoadArtTextureAsset("Lake", "lake_deep_water_lowpoly", lakeSurfaceTexture);
+        groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(1.00f, 0.96f, 0.84f), 0.1f);
+        grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.92f, 1.00f, 0.86f), 0.08f);
+        shoreSurfaceMaterial = CreateSurfaceMaterial(beachSurfaceTexture, new Color(0.86f, 0.74f, 0.56f), 0.08f);
+        beachSurfaceMaterial = CreateSurfaceMaterial(beachSurfaceTexture, new Color(1.00f, 0.92f, 0.74f), 0.1f);
         roadSurfaceMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.21f, 0.22f, 0.24f), VisualSmoothnessAsphalt);
-        roadShoulderMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.54f, 0.49f, 0.41f), 0.11f);
-        highwaySurfaceMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.16f, 0.17f, 0.19f), VisualSmoothnessAsphalt);
-        highwayShoulderMaterial = CreateSurfaceMaterial(roadSurfaceTexture, new Color(0.44f, 0.46f, 0.49f), 0.14f);
+        roadShoulderMaterial = CreateSurfaceMaterial(roadShoulderSurfaceTexture, new Color(0.66f, 0.58f, 0.46f), 0.11f);
+        highwaySurfaceMaterial = CreateSurfaceMaterial(highwaySurfaceTexture, new Color(0.16f, 0.17f, 0.19f), VisualSmoothnessAsphalt);
+        highwayShoulderMaterial = CreateSurfaceMaterial(roadShoulderSurfaceTexture, new Color(0.50f, 0.50f, 0.46f), 0.14f);
         waterShallowMaterial = CreateSurfaceMaterial(null, new Color(0.48f, 0.82f, 0.92f), 0.96f);
         waterDeepMaterial    = CreateSurfaceMaterial(null, new Color(0.09f, 0.31f, 0.62f), 0.99f);
+    }
+
+    private Texture2D LoadArtTextureAsset(string folder, string fileNameWithoutExtension, Texture2D fallback)
+    {
+        string resourcePath = $"Art/Textures/{folder}/{fileNameWithoutExtension}";
+        Texture2D texture = Resources.Load<Texture2D>(resourcePath);
+#if UNITY_EDITOR
+        texture ??= AssetDatabase.LoadAssetAtPath<Texture2D>($"Assets/Resources/{resourcePath}.png");
+        texture ??= AssetDatabase.LoadAssetAtPath<Texture2D>($"Assets/Art/Textures/{folder}/{fileNameWithoutExtension}.png");
+#endif
+
+        if (texture == null)
+        {
+            texture = LoadArtTextureFromFile(Path.Combine(Application.dataPath, "Resources", "Art", "Textures", folder, $"{fileNameWithoutExtension}.png"));
+            texture ??= LoadArtTextureFromFile(Path.Combine(Application.dataPath, "Art", "Textures", folder, $"{fileNameWithoutExtension}.png"));
+        }
+
+        texture ??= fallback;
+        if (texture == null)
+        {
+            return null;
+        }
+
+        texture.name = fileNameWithoutExtension;
+        texture.wrapMode = TextureWrapMode.Repeat;
+        texture.filterMode = FilterMode.Bilinear;
+        texture.anisoLevel = 2;
+        return texture;
+    }
+
+    private Texture2D LoadArtTextureFromFile(string absolutePath)
+    {
+        if (!File.Exists(absolutePath))
+        {
+            return null;
+        }
+
+        byte[] bytes = File.ReadAllBytes(absolutePath);
+        Texture2D loaded = new(2, 2, TextureFormat.RGBA32, false);
+        if (loaded.LoadImage(bytes, false))
+        {
+            return loaded;
+        }
+
+        Destroy(loaded);
+        return null;
     }
 
     private static Shader GetUrpLitShader()
@@ -55,12 +114,27 @@ public partial class GameBootstrap : MonoBehaviour
 
     private Material CreateTransparentOverlayMaterial(Color tint)
     {
+        return CreateTransparentOverlayMaterial(tint, null, Vector2.one, Vector2.zero);
+    }
+
+    private Material CreateTransparentOverlayMaterial(Color tint, Texture2D texture, Vector2 textureScale, Vector2 textureOffset)
+    {
         Shader sh = ShaderRefs.Unlit ?? ShaderRefs.Sprites;
         Material mat = new(sh);
         mat.color = tint;
+        mat.mainTexture = texture;
+        mat.mainTextureScale = textureScale;
+        mat.mainTextureOffset = textureOffset;
         if (mat.HasProperty("_BaseColor"))
         {
             mat.SetColor("_BaseColor", tint);
+        }
+
+        if (mat.HasProperty("_BaseMap"))
+        {
+            mat.SetTexture("_BaseMap", texture);
+            mat.SetTextureScale("_BaseMap", textureScale);
+            mat.SetTextureOffset("_BaseMap", textureOffset);
         }
 
         if (mat.HasProperty("_Surface"))
@@ -287,16 +361,72 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        bool useGrassPatch = IsGrassGroundCell(x, y);
+        bool useForestFloor = IsDenseForestCell(x, y);
+        bool useGrassPatch = !useForestFloor && IsGrassGroundCell(x, y);
         float tintNoise = Mathf.PerlinNoise((x + 1) * 0.37f, (y + 1) * 0.41f);
-        Color tint = useGrassPatch
-            ? Color.Lerp(new Color(0.74f, 0.82f, 0.7f), new Color(0.84f, 0.9f, 0.78f), tintNoise)
-            : Color.Lerp(new Color(0.95f, 0.91f, 0.84f), new Color(1.01f, 0.98f, 0.92f), tintNoise);
+        Color tint = useForestFloor
+            ? Color.Lerp(new Color(0.78f, 0.70f, 0.58f), new Color(0.96f, 0.88f, 0.72f), tintNoise)
+            : useGrassPatch
+                ? Color.Lerp(new Color(0.84f, 0.96f, 0.72f), new Color(1.00f, 1.00f, 0.88f), tintNoise)
+                : Color.Lerp(new Color(0.95f, 0.88f, 0.66f), new Color(1.00f, 0.98f, 0.80f), tintNoise);
         tint = QuantizeVisualTint(tint, 12f);
-        Texture texture = useGrassPatch ? grassSurfaceMaterial.mainTexture : groundSurfaceMaterial.mainTexture;
-        Vector2 textureScale = useGrassPatch ? new Vector2(0.54f, 0.54f) : new Vector2(0.62f, 0.62f);
+        Texture texture = useForestFloor
+            ? (forestSurfaceTexture != null ? forestSurfaceTexture : grassSurfaceMaterial.mainTexture)
+            : useGrassPatch
+                ? grassSurfaceMaterial.mainTexture
+                : groundSurfaceMaterial.mainTexture;
+        Vector2 textureScale = useForestFloor
+            ? new Vector2(0.86f, 0.86f)
+            : useGrassPatch
+                ? new Vector2(0.74f, 0.74f)
+                : new Vector2(0.78f, 0.78f);
         float smoothness = useGrassPatch ? 0.08f : 0.1f;
-        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, smoothness, textureScale);
+        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, smoothness, textureScale, GetGroundTextureOffset(x, y, useForestFloor ? 17 : useGrassPatch ? 11 : 5));
+    }
+
+    private void ApplyBeachGroundMaterial(GameObject target, int x, int y, bool nearWater)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        if (!target.TryGetComponent(out Renderer renderer))
+        {
+            return;
+        }
+
+        Material sourceMaterial = nearWater ? beachSurfaceMaterial : shoreSurfaceMaterial;
+        if (sourceMaterial == null)
+        {
+            ApplyColor(target, nearWater ? new Color(0.92f, 0.84f, 0.70f) : new Color(0.76f, 0.67f, 0.55f));
+            return;
+        }
+
+        float tintNoise = Mathf.PerlinNoise((x + 1) * 0.23f + 2.1f, (y + 1) * 0.27f + 4.4f);
+        Color tint = nearWater
+            ? Color.Lerp(new Color(0.94f, 0.82f, 0.62f), new Color(1.00f, 0.94f, 0.76f), tintNoise)
+            : Color.Lerp(new Color(0.78f, 0.64f, 0.46f), new Color(0.94f, 0.80f, 0.58f), tintNoise);
+        tint = QuantizeVisualTint(tint, 12f);
+        renderer.sharedMaterial = GetCachedLitMaterial(
+            sourceMaterial.mainTexture,
+            tint,
+            nearWater ? 0.1f : 0.08f,
+            new Vector2(0.72f, 0.72f),
+            GetGroundTextureOffset(x, y, nearWater ? 23 : 29));
+    }
+
+    private static Vector2 GetGroundTextureOffset(int x, int y, int seed)
+    {
+        int ox = PositiveMod(x * 37 + y * 17 + seed, 8);
+        int oy = PositiveMod(x * 13 + y * 31 + seed * 3, 8);
+        return new Vector2(ox * 0.125f, oy * 0.125f);
+    }
+
+    private static int PositiveMod(int value, int modulo)
+    {
+        int result = value % modulo;
+        return result < 0 ? result + modulo : result;
     }
 
     private void ApplyStylizedRoadMaterial(GameObject target, int x, int y, bool isHighway, bool isShoulder)
@@ -343,7 +473,10 @@ public partial class GameBootstrap : MonoBehaviour
         tint = QuantizeVisualTint(tint, 10f);
         Vector2 textureScale = isShoulder ? new Vector2(0.52f, 0.9f) : new Vector2(0.7f, 1.15f);
         float smoothness = isShoulder ? 0.12f : VisualSmoothnessAsphalt;
-        renderer.sharedMaterial = GetCachedLitMaterial(sourceMaterial.mainTexture, tint, smoothness, textureScale);
+        int offsetSeed = isHighway
+            ? (isShoulder ? 59 : 53)
+            : (isShoulder ? 43 : 37);
+        renderer.sharedMaterial = GetCachedLitMaterial(sourceMaterial.mainTexture, tint, smoothness, textureScale, GetGroundTextureOffset(x, y, offsetSeed));
     }
 
     private static Color QuantizeVisualTint(Color color, float steps)

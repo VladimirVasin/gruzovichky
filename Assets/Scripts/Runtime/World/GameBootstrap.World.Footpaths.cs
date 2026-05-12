@@ -194,7 +194,7 @@ public partial class GameBootstrap
         Color packed = new(0.50f, 0.40f, 0.26f);
         Color tint = QuantizeVisualTint(Color.Lerp(fresh, packed, wear01), 14f);
         Texture texture = footpathSurfaceTexture != null ? footpathSurfaceTexture : groundSurfaceTexture;
-        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, 0.07f, new Vector2(0.96f, 0.96f));
+        renderer.sharedMaterial = GetCachedLitMaterial(texture, tint, 0.07f, new Vector2(0.96f, 0.96f), GetGroundTextureOffset(cell.x, cell.y, 31));
     }
 
     private bool IsVisibleFootpathCell(Vector2Int cell)
