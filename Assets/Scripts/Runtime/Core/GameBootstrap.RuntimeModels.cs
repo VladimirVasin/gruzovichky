@@ -222,6 +222,39 @@ public partial class GameBootstrap
         Housing
     }
 
+    private enum SocialSignalTone
+    {
+        Positive,
+        Neutral,
+        Negative
+    }
+
+    private enum SocialSignalCategory
+    {
+        Need,
+        Work,
+        Money,
+        Social,
+        Family,
+        Transport,
+        City,
+        Housing,
+        Litter,
+        Governance,
+        Knowledge,
+        Topic
+    }
+
+    private enum SocialSignalSourceKind
+    {
+        Thought,
+        StreetLitter,
+        TopicOpinion,
+        CityComplaint,
+        CityHallDecision,
+        CityTrust
+    }
+
     private sealed class DriverAgent
     {
         public int DriverId;
@@ -637,6 +670,33 @@ public partial class GameBootstrap
         public int Score;
         public string ReasonRu = string.Empty;
         public string ReasonEn = string.Empty;
+    }
+
+    private sealed class SocialSignal
+    {
+        public int Id;
+        public int WorkerId;
+        public string WorkerName = string.Empty;
+        public int Day;
+        public float WorldHour;
+        public string TopicKey = string.Empty;
+        public string TopicLabelRu = string.Empty;
+        public string TopicLabelEn = string.Empty;
+        public SocialSignalTone Tone = SocialSignalTone.Neutral;
+        public int Strength;
+        public int Confidence;
+        public SocialSignalCategory Category = SocialSignalCategory.City;
+        public SocialSignalSourceKind SourceKind = SocialSignalSourceKind.Thought;
+        public string SourceKey = string.Empty;
+        public LocationType? LocationType;
+        public int LocationInstanceId;
+        public bool HasCell;
+        public Vector2Int Cell;
+        public string ReasonRu = string.Empty;
+        public string ReasonEn = string.Empty;
+        public int DailyScoreHint;
+        public bool IncludeInDailyExperience = true;
+        public bool PublicForNoosphere = true;
     }
 
     private sealed class WorkerTopicOpinion

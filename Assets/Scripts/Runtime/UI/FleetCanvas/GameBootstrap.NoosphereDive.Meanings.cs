@@ -33,6 +33,8 @@ public partial class GameBootstrap
                 burned: false);
         }
 
+        AddNoosphereDiveSocialSignalMeanings(meanings, ru);
+
         int logLimit = Mathf.Min(noosphereKnowledgeLog.Count, 56);
         for (int i = 0; i < logLimit; i++)
         {
@@ -278,6 +280,13 @@ public partial class GameBootstrap
             return meaning.Score >= 0
                 ? new Color(0.78f, 1f, 0.44f, 0.92f)
                 : new Color(1f, 0.47f, 0.32f, 0.92f);
+        }
+
+        if (meaning.Kind == NoosphereDiveMeaningKind.SocialSignal)
+        {
+            return meaning.Score >= 0
+                ? new Color(0.42f, 1f, 0.76f, 0.92f)
+                : new Color(1f, 0.48f, 0.22f, 0.92f);
         }
 
         float amount = Mathf.Clamp01(Mathf.Abs(meaning.Score) / 100f);

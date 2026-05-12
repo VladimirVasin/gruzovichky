@@ -263,12 +263,16 @@ public partial class GameBootstrap
             return;
         }
 
+        int dailyScore = GetWorkerStreetLitterDailyScore(severity);
+        string reasonRu = GetWorkerStreetLitterDailyReason(severity, true);
+        string reasonEn = GetWorkerStreetLitterDailyReason(severity, false);
+        SocialSignal signal = RecordWorkerDailyStreetLitterSocialSignal(worker, day, severity, dailyScore, reasonRu, reasonEn);
         AddDailyOpinionFactor(
             factors,
             WorkerDailyOpinionFactorKind.City,
-            GetWorkerStreetLitterDailyScore(severity),
-            GetWorkerStreetLitterDailyReason(severity, true),
-            GetWorkerStreetLitterDailyReason(severity, false));
+            signal?.DailyScoreHint ?? dailyScore,
+            signal?.ReasonRu ?? reasonRu,
+            signal?.ReasonEn ?? reasonEn);
     }
 
     private static int GetWorkerStreetLitterDailySeverity(float exposure, float peak)

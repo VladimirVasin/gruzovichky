@@ -105,6 +105,7 @@ public partial class GameBootstrap
             worker.TopicOpinions.RemoveAt(worker.TopicOpinions.Count - 1);
         }
 
+        RecordWorkerTopicOpinionSocialSignal(worker, memory, opinion);
         SessionDebugLogger.LogVerbose(
             "TOPIC_OPINION",
             $"{GetWorkerDisplayNameSafe(worker)} formed topic opinion root={memory.RumorRootId}, topic='{GetWorkerRumorTopic(memory)}', score={evaluation.Score}, confidence={evaluation.Confidence}, source={GetWorkerDisplayNameSafe(sourceWorker)}.");
@@ -171,6 +172,7 @@ public partial class GameBootstrap
         ApplyTopicOpinionSocialTrust(worker, pending, ref score, ref confidence, ref strongestReasonMagnitude, ref reasonRu, ref reasonEn);
         ApplyTopicOpinionLivedExperience(worker, ref score, ref confidence, ref strongestReasonMagnitude, ref reasonRu, ref reasonEn);
         ApplyTopicOpinionCityExperience(ref score, ref confidence, ref strongestReasonMagnitude, ref reasonRu, ref reasonEn);
+        ApplyTopicOpinionSocialSignals(worker, pending, ref score, ref confidence, ref strongestReasonMagnitude, ref reasonRu, ref reasonEn);
 
         int disposition = CalculateWorkerTopicOpinionDispositionBias(worker, pending);
         AddTopicOpinionComponent(

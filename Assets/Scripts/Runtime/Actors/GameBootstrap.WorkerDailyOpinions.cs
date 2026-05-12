@@ -117,6 +117,7 @@ public partial class GameBootstrap
         AddDailyMoneyFactors(worker, factors);
         AddDailyLifeOpinionFactors(worker, factors);
         AddDailyStreetLitterFactors(worker, day, factors);
+        AddDailySocialSignalFactors(worker, day, factors);
         AddDailyFamilyFactors(worker, factors);
 
         if (factors.Count == 0)

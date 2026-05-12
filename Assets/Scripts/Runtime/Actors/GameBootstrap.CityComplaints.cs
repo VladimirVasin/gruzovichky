@@ -240,6 +240,16 @@ public partial class GameBootstrap
         cityComplaintCooldownByKey[groupKey] = now + CityServiceRequestCooldownWorldHours;
         NotifyCityHallNewRequest(complaint);
         RecordWorkerBuildingKnowledge(signer, LocationType.CityHall, "\u041e\u0431\u0440\u0430\u0442\u0438\u043b\u0441\u044f \u0432 \u0440\u0430\u0442\u0443\u0448\u0443", "Filed a request at City Hall");
+        RecordCityComplaintSocialSignals(
+            complaint,
+            SocialSignalSourceKind.CityComplaint,
+            SocialSignalTone.Negative,
+            Mathf.Clamp(complaint.Severity * 16, 16, 76),
+            56,
+            "filed",
+            "\u0436\u0438\u0442\u0435\u043b\u044c \u0434\u043e\u043d\u0435\u0441 \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0443 \u0434\u043e \u0440\u0430\u0442\u0443\u0448\u0438",
+            "a citizen brought a problem to City Hall",
+            includeInDailyExperience: true);
         SessionDebugLogger.Log(
             "CITY_HALL",
             $"Citizen request #{complaint.Id} filed: target={candidate.Target}, required={complaint.RequiredLocationCount}, signer={complaint.WorkerName}, severity={complaint.Severity}.");
@@ -502,6 +512,16 @@ public partial class GameBootstrap
             : now + GetCityComplaintDueWorldHours();
         complaint.IsUnread = false;
         isCityHallScreenDirty = true;
+        RecordCityComplaintSocialSignals(
+            complaint,
+            SocialSignalSourceKind.CityHallDecision,
+            SocialSignalTone.Positive,
+            36,
+            62,
+            "accepted",
+            "\u0433\u043e\u0440\u043e\u0434 \u043f\u0440\u0438\u043d\u044f\u043b \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u043a\u0430\u043a \u043e\u0431\u0435\u0449\u0430\u043d\u0438\u0435",
+            "the city accepted the request as a public promise",
+            includeInDailyExperience: true);
         if (complaint.Category == CityComplaintCategory.SocialIntroduction)
         {
             PushFeedEvent(
@@ -544,6 +564,16 @@ public partial class GameBootstrap
 
         int rejectedPenalty = GetCityTrustCitizenRequestRejectedPenalty();
         ApplyCityTrustDelta(rejectedPenalty, $"citizen request #{complaint.Id} rejected");
+        RecordCityComplaintSocialSignals(
+            complaint,
+            SocialSignalSourceKind.CityHallDecision,
+            SocialSignalTone.Negative,
+            64,
+            86,
+            "rejected",
+            "\u0433\u043e\u0440\u043e\u0434 \u043e\u0442\u043a\u0430\u0437\u0430\u043b \u0432 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0438",
+            "the city rejected the request",
+            includeInDailyExperience: true);
         isCityHallScreenDirty = true;
         PushFeedEvent(
             "Citizen request rejected.",
@@ -577,7 +607,32 @@ public partial class GameBootstrap
         if (completedAcceptedServiceGoal)
         {
             ApplyCityTrustDelta(CityTrustCitizenRequestCompletedReward, $"citizen request #{complaint.Id} completed");
+            RecordCityComplaintSocialSignals(
+                complaint,
+                SocialSignalSourceKind.CityHallDecision,
+                SocialSignalTone.Positive,
+                86,
+                94,
+                "completed",
+                "\u0433\u043e\u0440\u043e\u0434 \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u043b \u0434\u0430\u043d\u043d\u043e\u0435 \u043e\u0431\u0435\u0449\u0430\u043d\u0438\u0435",
+                "the city completed the accepted promise",
+                includeInDailyExperience: true);
             StartCityRequestGoalFeedback(success: true, complaint);
+        }
+        else
+        {
+            RecordCityComplaintSocialSignals(
+                complaint,
+                SocialSignalSourceKind.CityComplaint,
+                SocialSignalTone.Positive,
+                manually ? 18 : 42,
+                manually ? 42 : 68,
+                manually ? "reviewed" : "resolved",
+                manually
+                    ? "\u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0440\u0430\u0437\u043e\u0431\u0440\u0430\u043d\u043e \u0432\u0440\u0443\u0447\u043d\u0443\u044e"
+                    : "\u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430 \u043e\u0441\u043b\u0430\u0431\u043b\u0430",
+                manually ? "the request was reviewed manually" : "the problem eased",
+                includeInDailyExperience: !manually);
         }
 
         SessionDebugLogger.Log("CITY_HALL", $"Complaint #{complaint.Id} resolved: manual={manually}, reason={complaint.ResolveReason}.");

@@ -451,14 +451,15 @@ public partial class GameBootstrap
         int burnedCount = CountNoosphereEvents(NoosphereKnowledgeEventKind.Burned);
         int receivedCount = CountNoosphereEvents(NoosphereKnowledgeEventKind.Received);
         int canonizedCount = CountNoosphereEvents(NoosphereKnowledgeEventKind.Canonized);
+        int socialSignalCount = CountPublicNoosphereSocialSignals();
 
         noosphereScreenUi.TitleText.text = ru ? "\u041d\u043e\u043e\u0441\u0444\u0435\u0440\u0430" : "Noosphere";
         string knowledgeSummary = ru
             ? $"\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u043e\u0439 \u0441\u043b\u0435\u0434 \u0437\u043d\u0430\u043d\u0438\u0439: \u0430\u043a\u0442\u0438\u0432\u043d\u043e {activeKnowledgeCount}, \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u043e {receivedCount}, \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u043e {canonizedCount}, \u0441\u0433\u043e\u0440\u0435\u043b\u043e {burnedCount}. \u0417\u0434\u0435\u0441\u044c \u0432\u0438\u0434\u043d\u043e, \u043a\u0442\u043e \u0447\u0442\u043e \u0443\u0437\u043d\u0430\u043b, \u043e\u0442 \u043a\u043e\u0433\u043e \u0438 \u043a\u0430\u043a\u0438\u0435 \u0437\u043d\u0430\u043d\u0438\u044f \u0441\u0442\u0430\u043b\u0438 \u0432\u0435\u0447\u043d\u044b\u043c\u0438."
             : $"City knowledge trace: active {activeKnowledgeCount}, received {receivedCount}, canonized {canonizedCount}, burned {burnedCount}. This shows who learned what, from whom, and which knowledge became permanent.";
-        noosphereScreenUi.SummaryText.text = $"{knowledgeSummary}\n{FormatLatestCityDailyExperienceNoosphereSummary(ru)}";
+        noosphereScreenUi.SummaryText.text = $"{knowledgeSummary}\n{FormatLatestCityDailyExperienceNoosphereSummary(ru)}\n{FormatLatestSocialSignalNoosphereSummary(ru)}";
 
-        noosphereScreenUi.EmptyText.gameObject.SetActive(noosphereKnowledgeLog.Count == 0);
+        noosphereScreenUi.EmptyText.gameObject.SetActive(noosphereKnowledgeLog.Count == 0 && socialSignalCount == 0);
         noosphereScreenUi.EmptyText.text = ru
             ? "\u041f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0441\u043e\u0431\u044b\u0442\u0438\u0439. \u041d\u043e\u043e\u0441\u0444\u0435\u0440\u0430 \u043c\u043e\u043b\u0447\u0438\u0442, \u043a\u0430\u043a \u0430\u0440\u0445\u0438\u0432 \u0434\u043e \u043f\u0435\u0440\u0432\u043e\u0439 \u043f\u0430\u043f\u043a\u0438."
             : "No knowledge events yet.";

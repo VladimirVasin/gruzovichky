@@ -90,6 +90,16 @@ public partial class GameBootstrap
         cityComplaintPendingGroups.Remove(groupKey);
         cityComplaintCooldownByKey[groupKey] = now + CityComplaintCooldownWorldHours;
         RecordCityHallKnowledgeForComplaintSigners(complaint, "\u041f\u043e\u0434\u0430\u043b \u0436\u0430\u043b\u043e\u0431\u0443 \u0432 \u0440\u0430\u0442\u0443\u0448\u0443", "Filed a complaint at City Hall");
+        RecordCityComplaintSocialSignals(
+            complaint,
+            SocialSignalSourceKind.CityComplaint,
+            SocialSignalTone.Negative,
+            Mathf.Clamp(complaint.Severity * 18, 18, 80),
+            Mathf.Clamp(42 + complaint.SignerIds.Count * 8, 42, 92),
+            "filed",
+            "\u0436\u0438\u0442\u0435\u043b\u0438 \u0434\u043e\u043d\u0435\u0441\u043b\u0438 \u043e\u0431\u0449\u0443\u044e \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0443 \u0434\u043e \u0440\u0430\u0442\u0443\u0448\u0438",
+            "citizens brought a shared problem to City Hall",
+            includeInDailyExperience: true);
 
         SessionDebugLogger.Log(
             "CITY_HALL",
@@ -236,6 +246,16 @@ public partial class GameBootstrap
                 ApplyCityTrustDelta(GetCityTrustComplaintExpiredPenalty(), $"citizen request #{complaint.Id} expired");
             }
 
+            RecordCityComplaintSocialSignals(
+                complaint,
+                SocialSignalSourceKind.CityHallDecision,
+                SocialSignalTone.Negative,
+                82,
+                92,
+                "expired",
+                "\u0433\u043e\u0440\u043e\u0434 \u043d\u0435 \u0443\u0441\u043f\u0435\u043b \u0432\u044b\u043f\u043e\u043b\u043d\u0438\u0442\u044c \u043e\u0431\u0435\u0449\u0430\u043d\u0438\u0435",
+                "the city failed to keep the accepted promise in time",
+                includeInDailyExperience: true);
             StartCityRequestGoalFeedback(success: false, complaint);
             changed = true;
             SessionDebugLogger.Log("CITY_HALL", $"Citizen request #{complaint.Id} expired after {GetCityComplaintDueWorldHours():0.#}h: key={complaint.GroupKey}.");

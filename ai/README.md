@@ -8,6 +8,8 @@ This folder is intentionally small. Code remains the source of truth. These file
 
 - `project-overview.md`
   Stable high-level map of the project: folders, key modules, and main runtime areas.
+- `system-tree.md`
+  Hierarchical informational tree of project systems, subsystems, feature leaves, and cross-system links.
 - `systems-map.md`
   Active systems and their main files, plus impact hints for future changes.
 - `architecture-notes.md`
@@ -24,6 +26,7 @@ This folder is intentionally small. Code remains the source of truth. These file
 Stable memory:
 
 - `project-overview.md`
+- `system-tree.md`
 - `systems-map.md`
 - `architecture-notes.md`
 
@@ -42,12 +45,13 @@ Rule:
 
 1. Read this file.
 2. Read `project-overview.md`.
-3. Read `systems-map.md`, especially `System Owner Map`, before broad code search.
-4. Read `architecture-notes.md`.
-5. Read `work-log.md`.
-6. Read `release-notes.md` when the task involves version labels, changelogs, release contents, or Patch Notes.
-7. Read `tutorial-scenario.md` when the task touches Tutorial mode or a system currently taught by Tutorial.
-8. Scan only the code relevant to the requested change.
+3. Read `system-tree.md` for broad, architectural, cross-system, or unclear tasks.
+4. Read `systems-map.md`, especially `System Owner Map`, before broad code search.
+5. Read `architecture-notes.md`.
+6. Read `work-log.md`.
+7. Read `release-notes.md` when the task involves version labels, changelogs, release contents, or Patch Notes.
+8. Read `tutorial-scenario.md` when the task touches Tutorial mode or a system currently taught by Tutorial.
+9. Scan only the code relevant to the requested change.
 
 ## Workflow Contract
 
@@ -57,6 +61,7 @@ Rule:
 - Treat memory as a guide, not as authority over code.
 - If memory and code disagree, trust code and update memory after finishing.
 - Identify the affected systems before editing.
+- For broad, architectural, cross-system, or unclear tasks, use `ai/system-tree.md` to understand the conceptual system tree and cross-system links before choosing owner files.
 - Use `ai/systems-map.md` -> `System Owner Map` to pick the first files to inspect.
 - If the affected system is taught by `Обучение` / `GameStartMode.Tutorial`, compare the change against `ai/tutorial-scenario.md` before editing.
 - Write a short plan before changing code.
@@ -88,11 +93,19 @@ Rule:
 ### After implementation
 
 - Update `work-log.md` first.
+- Update `system-tree.md` when system hierarchy, subsystem responsibilities, feature leaves, or cross-system dependencies changed.
 - Update `tutorial-scenario.md` when serious changes alter the Tutorial-mode player path, prerequisites, unlock order, HUD entry points, required buildings/resources, automation/manual-control balance, or goal text.
 - Update `project-overview.md` only if visible project structure or key responsibilities changed.
 - Update `systems-map.md` if system ownership, file involvement, owner-map paths, or owner-map responsibilities changed.
 - Update `architecture-notes.md` only if the real architecture changed or a new hotspot/refactor seam appeared.
 - Prefer `./tools/check-all.ps1` before commits or after risky code edits. Use `-SkipSmokeTests` for a fast local pass when Unity is already open or unavailable; otherwise the script runs runtime/editor builds, line-count, diff whitespace, mojibake scan, and Unity EditMode smoke tests.
+
+### System Tree Maintenance
+
+- Keep `ai/system-tree.md` up to date as the project grows.
+- Update it when adding, removing, renaming, or substantially changing a system, subsystem, player-facing feature, simulation feature, UI surface, or cross-system dependency.
+- Keep file ownership and concrete paths in `ai/systems-map.md`; keep `ai/system-tree.md` conceptual and navigational.
+- If a feature crosses systems, update both the relevant tree leaves and the cross-system links section.
 
 ## Writing Rules
 

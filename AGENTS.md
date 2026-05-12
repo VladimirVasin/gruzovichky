@@ -8,6 +8,7 @@ Main memory files:
 
 - `ai/README.md`
 - `ai/project-overview.md`
+- `ai/system-tree.md`
 - `ai/systems-map.md`
 - `ai/architecture-notes.md`
 - `ai/work-log.md`
@@ -65,13 +66,22 @@ the agent must:
 - Read only the AI memory files relevant to the task.
 - Treat code as source of truth if memory and code disagree.
 - Identify affected systems before editing.
+- For broad, architectural, cross-system, or unclear tasks, consult `ai/system-tree.md` before the owner map.
 - Before broad code searches, consult the System Owner Map in `ai/systems-map.md`.
 - If a change touches `Обучение` / `GameStartMode.Tutorial` or a system taught by that mode, read `ai/tutorial-scenario.md` and compare the planned change against the current Tutorial scenario.
 - Scan only the necessary code.
 - State a short plan before making code changes.
 - Avoid unrelated refactors.
 - Update `ai/work-log.md` after implementation.
+- Update `ai/system-tree.md` when system hierarchy, subsystem responsibilities, feature leaves, or cross-system links change.
 - Update other AI memory files only if they truly need changes.
+
+## System Tree Rules
+
+- Keep `ai/system-tree.md` up to date as the high-level informational tree of the project.
+- Update it when adding, removing, renaming, or substantially changing a system, subsystem, player-facing feature, simulation feature, UI surface, or cross-system dependency.
+- Keep file ownership details in `ai/systems-map.md`; keep `ai/system-tree.md` conceptual and navigational.
+- If a feature crosses systems, update both the relevant tree leaves and the cross-system links section.
 
 ## Owner Map Rules
 

@@ -25,7 +25,8 @@ public partial class GameBootstrap
     {
         Knowledge,
         TopicOpinion,
-        CityExperience
+        CityExperience,
+        SocialSignal
     }
 
     private sealed class NoosphereDiveUiRefs

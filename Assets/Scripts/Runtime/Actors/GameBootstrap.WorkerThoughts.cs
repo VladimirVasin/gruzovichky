@@ -86,6 +86,7 @@ public partial class GameBootstrap
             UpdateWorkerOpinion(worker, opinionSubjectType, opinionSubjectId, opinionSubjectKey, opinionFallbackLabel, opinionDelta, now);
         }
 
+        RecordSocialSignalFromWorkerThought(worker, thought, opinionSubjectType, opinionSubjectId, opinionSubjectKey, opinionFallbackLabel);
         isDriversScreenDirty = true;
         SessionDebugLogger.Log(
             "THOUGHT",
