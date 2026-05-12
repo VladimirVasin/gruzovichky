@@ -57,6 +57,8 @@ public partial class GameBootstrap
         new(BuildTool.CityPark, LocationType.CityPark, WorkerNeedKind.Leisure, 2, 6),
         new(BuildTool.PersonalHouse, LocationType.PersonalHouse, null, 2, 5),
         new(BuildTool.Kindergarten, LocationType.Kindergarten, null, 2, 5),
+        new(BuildTool.PrimarySchool, LocationType.PrimarySchool, null, 2, 5),
+        new(BuildTool.SecondarySchool, LocationType.SecondarySchool, null, 2, 4),
         new(BuildTool.CarMarket, LocationType.CarMarket, null, 2, 4)
     };
 

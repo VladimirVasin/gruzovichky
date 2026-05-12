@@ -384,6 +384,8 @@ public partial class GameBootstrap
             LocationType.GasStation,
             LocationType.GamblingHall,
             LocationType.Kindergarten,
+            LocationType.PrimarySchool,
+            LocationType.SecondarySchool,
             LocationType.CarMarket,
             LocationType.LaborExchange,
             LocationType.CleaningDepot

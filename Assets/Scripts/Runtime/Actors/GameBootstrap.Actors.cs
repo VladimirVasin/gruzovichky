@@ -374,14 +374,19 @@ public partial class GameBootstrap
         }
     }
 
-    private DriverAgent CreateAndRegisterDriverAgent(bool spawnInMotel = true)
+    private DriverAgent CreateAndRegisterDriverAgent(
+        bool spawnInMotel = true,
+        WorkerGender? forcedGender = null,
+        string forcedName = null,
+        int? forcedAge = null,
+        string arrivalReason = null)
     {
-        DriverAgent driver = SetupDriver(spawnInMotel);
+        DriverAgent driver = SetupDriver(spawnInMotel, forcedGender, forcedName, forcedAge);
         driverAgents.Add(driver);
         SessionDebugLogger.Log("DRIVER", spawnInMotel
             ? $"Registered {driver.DriverName} in Motel."
             : $"Registered {driver.DriverName} for bus arrival.");
-        RecordWorkerArrivalThought(driver, spawnInMotel ? "starter worker" : "arrival bus");
+        RecordWorkerArrivalThought(driver, arrivalReason ?? (spawnInMotel ? "starter worker" : "arrival bus"));
         EvaluateWorkerActiveThoughtRules(driver);
         return driver;
     }
@@ -485,20 +490,20 @@ public partial class GameBootstrap
         }
     }
 
-    private DriverAgent SetupDriver(bool spawnInMotel = true)
+    private DriverAgent SetupDriver(bool spawnInMotel = true, WorkerGender? forcedGender = null, string forcedName = null, int? forcedAge = null)
     {
-        WorkerGender gender = Random.value < 0.5f ? WorkerGender.Female : WorkerGender.Male;
+        WorkerGender gender = forcedGender ?? (Random.value < 0.5f ? WorkerGender.Female : WorkerGender.Male);
         DriverAgent driver = new()
         {
             DriverId = nextDriverId,
             CitizenId = nextDriverId,
             Gender   = gender,
-            DriverName = GenerateWorkerName(gender),
+            DriverName = string.IsNullOrWhiteSpace(forcedName) ? GenerateWorkerName(gender) : forcedName,
             ShiftStartHour = -1,
             IsOnActiveShift = false,
             Money = Random.Range(WorkerStartingMoneyMin, WorkerStartingMoneyMax + 1)
         };
-        driver.Age = Random.Range(18, 51);
+        driver.Age = forcedAge.HasValue ? Mathf.Max(18, forcedAge.Value) : Random.Range(18, 51);
         AssignWorkerEducation(driver);
         AssignWorkerPortrait(driver);
         AssignWorkerPerks(driver);

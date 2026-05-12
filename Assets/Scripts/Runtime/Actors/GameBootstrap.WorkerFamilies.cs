@@ -64,6 +64,8 @@ public partial class GameBootstrap
         }
 
         UpdateWorkerFamilyChildBirths(now);
+        UpdateWorkerChildStages();
+        UpdateEducationBuildToolUnlocks();
         UpdateWorkerHouseholdRuntime();
         UpdateWorkerChildVisuals();
     }
@@ -219,6 +221,7 @@ public partial class GameBootstrap
             CreatedDay = currentDay,
             CreatedWorldHour = now,
             NextChildBirthWorldHour = now + Random.Range(WorkerChildBirthMinHours, WorkerChildBirthMaxHours),
+            LastChildBornWorldHour = -WorkerChildBirthMaxHours,
             LastDailyUpdateDay = currentDay,
             LastDailyUpkeepDay = currentDay,
             LastHappinessReason = "New household"
@@ -395,6 +398,16 @@ public partial class GameBootstrap
         workerFamilies.Remove(family);
         isDriversScreenDirty = true;
         SessionDebugLogger.Log("FAMILY", $"Family #{familyId} disbanded: {reason}.");
+    }
+
+    private void RemoveWorkerChildIdFromFamily(WorkerFamily family, int childId)
+    {
+        if (family == null || childId <= 0)
+        {
+            return;
+        }
+
+        family.ChildIds.Remove(childId);
     }
 
     private WorkerFamily GetWorkerFamilyById(int familyId)

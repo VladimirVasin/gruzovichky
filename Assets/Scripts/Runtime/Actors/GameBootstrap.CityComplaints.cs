@@ -330,12 +330,22 @@ public partial class GameBootstrap
 
     private void TryCreateFamilyStressComplaint(DriverAgent worker, ref int createdThisScan)
     {
-        if (worker.FamilyId <= 0 || worker.Satisfaction >= 35 || !HasCriticalWorkerNeed(worker))
+        WorkerFamily family = GetWorkerFamilyById(worker?.FamilyId ?? -1);
+        if (family == null)
         {
             return;
         }
 
-        TryCreateCityComplaint(worker, CityComplaintCategory.FamilyStress, 3, null, LocationType.Kindergarten, ref createdThisScan);
+        int childPressure = GetWorkerFamilyChildPressure(family);
+        bool parentPressure = worker.Satisfaction < 35 && HasCriticalWorkerNeed(worker);
+        if (!parentPressure && childPressure <= 0)
+        {
+            return;
+        }
+
+        int severity = Mathf.Clamp(parentPressure ? 3 + childPressure / 4 : 2 + childPressure / 3, 2, 4);
+        LocationType linkedLocation = GetWorkerFamilyMostNeededEducationLocation(family) ?? LocationType.Kindergarten;
+        TryCreateCityComplaint(worker, CityComplaintCategory.FamilyStress, severity, null, linkedLocation, ref createdThisScan);
     }
 
     private void TryCreateCityComplaint(
@@ -469,7 +479,9 @@ public partial class GameBootstrap
                 }
                 break;
             case CityComplaintCategory.FamilyStress:
-                if (worker.Satisfaction >= 60 || !HasCriticalWorkerNeed(worker))
+                WorkerFamily family = GetWorkerFamilyById(worker.FamilyId);
+                if ((worker.Satisfaction >= 60 || !HasCriticalWorkerNeed(worker)) &&
+                    GetWorkerFamilyChildPressure(family) <= 0)
                 {
                     reason = "family pressure eased";
                     return true;

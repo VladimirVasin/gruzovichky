@@ -663,6 +663,8 @@ public partial class GameBootstrap
             LocationType.Warehouse => "Грузчик склада",
             LocationType.Docks => "Работник доков",
             LocationType.Kindergarten => "Воспитатель",
+            LocationType.PrimarySchool => "Учитель",
+            LocationType.SecondarySchool => "Учитель",
             LocationType.LaborExchange => "Сотрудник биржи труда",
             _ when HasServiceWorkerSlot(type) => "Сервисный работник",
             _ => "Работник"

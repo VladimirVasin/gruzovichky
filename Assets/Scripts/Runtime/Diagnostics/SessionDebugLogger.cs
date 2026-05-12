@@ -12,7 +12,9 @@ public enum SessionDebugLogLevel
 
 public static class SessionDebugLogger
 {
-    private const int BufferedLineFlushThreshold = 24;
+    private const int BufferedLineFlushThreshold = 160;
+    private const int EmergencyBufferedLineFlushThreshold = 480;
+    private const float BufferedLineFlushIntervalSeconds = 0.75f;
 
     private static readonly object SyncRoot = new();
     private static readonly HashSet<string> VerboseCategories = new(StringComparer.OrdinalIgnoreCase);
@@ -21,6 +23,7 @@ public static class SessionDebugLogger
     private static string logFilePath;
     private static bool sessionActive;
     private static bool verboseLogging;
+    private static float lastFlushRealtime;
     private static Func<string> gameTimeProvider;
 
     public static string LogFilePath
@@ -86,6 +89,24 @@ public static class SessionDebugLogger
         }
     }
 
+    public static void FlushIfIntervalElapsed()
+    {
+        lock (SyncRoot)
+        {
+            if (!sessionActive || PendingLines.Count == 0)
+            {
+                return;
+            }
+
+            float now = Time.realtimeSinceStartup;
+            if (PendingLines.Count >= BufferedLineFlushThreshold ||
+                now - lastFlushRealtime >= BufferedLineFlushIntervalSeconds)
+            {
+                FlushPendingLines();
+            }
+        }
+    }
+
     public static void EndSession(string reason)
     {
         lock (SyncRoot)
@@ -122,7 +143,7 @@ public static class SessionDebugLogger
         }
 
         PendingLines.Add($"[{timestamp}]{gameTimePrefix} [{category}] {message}");
-        if (PendingLines.Count >= BufferedLineFlushThreshold)
+        if (PendingLines.Count >= EmergencyBufferedLineFlushThreshold)
         {
             FlushPendingLines();
         }
@@ -137,6 +158,7 @@ public static class SessionDebugLogger
 
         File.AppendAllLines(LogFilePath, PendingLines, LogEncoding);
         PendingLines.Clear();
+        lastFlushRealtime = Time.realtimeSinceStartup;
     }
 
     private static bool ShouldWrite(string category, SessionDebugLogLevel level)

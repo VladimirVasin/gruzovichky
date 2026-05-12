@@ -6,6 +6,7 @@ public partial class GameBootstrap
     {
         None,
         ProductionDay,
+        EducationDay,
         OfficeDay,
         ServiceDayEvening,
         ServiceEveningNight
@@ -21,6 +22,12 @@ public partial class GameBootstrap
         if (IsProductionLocation(buildingType))
         {
             return BuildingWorkScheduleKind.ProductionDay;
+        }
+
+        if (buildingType == LocationType.PrimarySchool ||
+            buildingType == LocationType.SecondarySchool)
+        {
+            return BuildingWorkScheduleKind.EducationDay;
         }
 
         if (buildingType == LocationType.Bar ||
@@ -39,6 +46,7 @@ public partial class GameBootstrap
         return GetBuildingWorkScheduleKind(buildingType) switch
         {
             BuildingWorkScheduleKind.OfficeDay => 1,
+            BuildingWorkScheduleKind.EducationDay => ServiceMaxWorkersPerBuilding,
             BuildingWorkScheduleKind.ProductionDay => buildingType switch
             {
                 LocationType.Warehouse => WarehouseMaxWorkers,
@@ -59,6 +67,7 @@ public partial class GameBootstrap
     private static bool IsDayWorkSchedule(BuildingWorkScheduleKind scheduleKind)
     {
         return scheduleKind == BuildingWorkScheduleKind.ProductionDay ||
+               scheduleKind == BuildingWorkScheduleKind.EducationDay ||
                scheduleKind == BuildingWorkScheduleKind.OfficeDay;
     }
 }

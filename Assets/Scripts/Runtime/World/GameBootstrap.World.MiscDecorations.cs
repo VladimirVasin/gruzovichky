@@ -56,7 +56,7 @@ public partial class GameBootstrap
 
         if (removed)
         {
-            SessionDebugLogger.Log("BUILD", $"Removed misc object at ({cell.x},{cell.y}) for construction.");
+            SessionDebugLogger.LogVerbose("BUILD", $"Removed misc object at ({cell.x},{cell.y}) for construction.");
         }
 
         return removed;

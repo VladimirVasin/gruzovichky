@@ -187,13 +187,11 @@ public partial class GameBootstrap
             ClearEventFeedEntries();
             return;
         }
-
         UpdateTutorialUi();
         if (isTutorialOpen && ShouldPauseSimulationForTutorial())
         {
             return;
         }
-
         if (isRacingActive)
         {
             SetEventFeedVisible(false);
@@ -385,6 +383,7 @@ public partial class GameBootstrap
         UpdateBuildingQuickHud();
         UpdateCellQuickHud();
         UpdateRuntimeLocalizationTick();
+        SessionDebugLogger.FlushIfIntervalElapsed();
     }
 
     private static bool ConsumeThrottledUpdate(ref float accumulator, float interval)

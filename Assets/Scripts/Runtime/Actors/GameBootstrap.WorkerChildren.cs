@@ -14,8 +14,10 @@ public partial class GameBootstrap
                 continue;
             }
 
-            if (family.ChildIds.Count > 0)
+            int childCount = CountWorkerFamilyChildren(family.Id);
+            if (childCount >= MaxWorkerFamilyChildren)
             {
+                family.NextChildBirthWorldHour = 0f;
                 continue;
             }
 
@@ -30,12 +32,28 @@ public partial class GameBootstrap
                 continue;
             }
 
+            if (family.LastChildBornWorldHour > 0f && now - family.LastChildBornWorldHour < WorkerChildBirthMinHours)
+            {
+                family.NextChildBirthWorldHour = family.LastChildBornWorldHour + WorkerChildBirthMinHours;
+                continue;
+            }
+
             if (!IsWorkerFamilyLivingInHouse(family))
             {
                 family.NextChildBirthWorldHour = now + WorkerChildBirthRetryHours;
                 SessionDebugLogger.Log(
                     "FAMILY",
                     $"Family #{family.Id} child birth delayed: family is not settled in house #{family.HouseIndex}; retry in {WorkerChildBirthRetryHours:0}h.");
+                continue;
+            }
+
+            int readiness = CalculateWorkerFamilyNextChildReadiness(family, out string readinessReason);
+            if (readiness < WorkerFamilyNextChildReadinessThreshold)
+            {
+                family.NextChildBirthWorldHour = now + WorkerChildBirthRetryHours;
+                SessionDebugLogger.Log(
+                    "FAMILY",
+                    $"Family #{family.Id} next-child readiness delayed: score={readiness}, threshold={WorkerFamilyNextChildReadinessThreshold}, children={childCount}/{MaxWorkerFamilyChildren}, reason={readinessReason}; retry in {WorkerChildBirthRetryHours:0}h.");
                 continue;
             }
 
@@ -69,28 +87,43 @@ public partial class GameBootstrap
 
     private void CreateWorkerFamilyChild(WorkerFamily family, float now)
     {
-        if (family == null || family.ChildIds.Count > 0 || !IsValidPersonalHouseIndex(family.HouseIndex))
+        if (family == null || !IsValidPersonalHouseIndex(family.HouseIndex))
         {
             return;
         }
 
+        int childSlot = CountWorkerFamilyChildren(family.Id);
+        if (childSlot >= MaxWorkerFamilyChildren)
+        {
+            family.NextChildBirthWorldHour = 0f;
+            return;
+        }
+
         WorkerGender gender = Random.value < 0.5f ? WorkerGender.Female : WorkerGender.Male;
+        float slotT = MaxWorkerFamilyChildren <= 1 ? 0.5f : childSlot / (float)(MaxWorkerFamilyChildren - 1);
         WorkerChild child = new()
         {
             Id = nextWorkerChildId++,
             FamilyId = family.Id,
             HouseIndex = family.HouseIndex,
             Gender = gender,
+            Stage = WorkerChildStage.Baby,
             Name = GenerateWorkerChildName(family, gender),
             BornDay = currentDay,
             BornWorldHour = now,
-            YardLateralOffset = Random.Range(-0.62f, 0.62f),
+            StageStartedDay = currentDay,
+            NextStageDay = currentDay + GetWorkerChildStageDurationDays(WorkerChildStage.Baby),
+            YardLateralOffset = Mathf.Lerp(-0.58f, 0.58f, slotT) + Random.Range(-0.10f, 0.10f),
             YardDepthOffset = Random.Range(-0.16f, 0.34f),
             AnimationPhase = Random.Range(0f, Mathf.PI * 2f)
         };
 
         workerChildren.Add(child);
         family.ChildIds.Add(child.Id);
+        family.LastChildBornWorldHour = now;
+        family.NextChildBirthWorldHour = CountWorkerFamilyChildren(family.Id) < MaxWorkerFamilyChildren
+            ? now + Random.Range(WorkerChildBirthMinHours, WorkerChildBirthMaxHours)
+            : 0f;
         family.BirthJoyUntilDay = currentDay + 2;
         family.Happiness = Mathf.Clamp(family.Happiness + 8, 0, 100);
         family.LastHappinessDelta = 8;
@@ -102,7 +135,7 @@ public partial class GameBootstrap
         isFleetScreenDirty = true;
         SessionDebugLogger.Log(
             "FAMILY",
-            $"Family #{family.Id} welcomed child #{child.Id} {child.Name} in house #{family.HouseIndex} on day {currentDay}.");
+            $"Family #{family.Id} welcomed child #{child.Id} {child.Name} in house #{family.HouseIndex} on day {currentDay}; children={CountWorkerFamilyChildren(family.Id)}/{MaxWorkerFamilyChildren}.");
         PushFeedEvent(
             $"{child.Name} was born in {FormatWorkerFamilyMemberNames(family, false)}'s family.",
             $"\u0412 \u0441\u0435\u043c\u044c\u0435 {FormatWorkerFamilyMemberNames(family, true)} \u043f\u043e\u044f\u0432\u0438\u043b\u0441\u044f \u0440\u0435\u0431\u0435\u043d\u043e\u043a: {child.Name}.",
@@ -143,6 +176,142 @@ public partial class GameBootstrap
                 $"child_born|{child.Id}",
                 72f);
         }
+    }
+
+    private void UpdateWorkerChildStages()
+    {
+        for (int i = workerChildren.Count - 1; i >= 0; i--)
+        {
+            WorkerChild child = workerChildren[i];
+            if (child == null)
+            {
+                workerChildren.RemoveAt(i);
+                continue;
+            }
+
+            EnsureWorkerChildStageSchedule(child);
+            while (child.Stage != WorkerChildStage.YoungAdult &&
+                   child.NextStageDay > 0 &&
+                   currentDay >= child.NextStageDay)
+            {
+                if (AdvanceWorkerChildStage(child))
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    private void EnsureWorkerChildStageSchedule(WorkerChild child)
+    {
+        if (child == null)
+        {
+            return;
+        }
+
+        if (child.StageStartedDay <= 0)
+        {
+            child.StageStartedDay = Mathf.Max(1, child.BornDay);
+        }
+
+        if (child.NextStageDay <= 0 && child.Stage != WorkerChildStage.YoungAdult)
+        {
+            child.NextStageDay = child.StageStartedDay + GetWorkerChildStageDurationDays(child.Stage);
+        }
+    }
+
+    private bool AdvanceWorkerChildStage(WorkerChild child)
+    {
+        WorkerChildStage nextStage = GetNextWorkerChildStage(child.Stage);
+        if (nextStage == WorkerChildStage.YoungAdult)
+        {
+            CompleteWorkerChildYoungAdultTransition(child);
+            return true;
+        }
+
+        child.Stage = nextStage;
+        child.StageStartedDay = currentDay;
+        child.NextStageDay = currentDay + GetWorkerChildStageDurationDays(nextStage);
+        isDriversScreenDirty = true;
+        isFleetScreenDirty = true;
+        SessionDebugLogger.Log(
+            "FAMILY",
+            $"Child #{child.Id} {child.Name} advanced to {nextStage}; next stage day={child.NextStageDay}.");
+        return false;
+    }
+
+    private void CompleteWorkerChildYoungAdultTransition(WorkerChild child)
+    {
+        if (child == null)
+        {
+            return;
+        }
+
+        WorkerFamily family = GetWorkerFamilyById(child.FamilyId);
+        RemoveWorkerChildIdFromFamily(family, child.Id);
+        DestroyWorkerChildVisual(child);
+        workerChildren.Remove(child);
+
+        bool staysInTown = locations.ContainsKey(LocationType.Motel) && Random.value <= WorkerChildStayInTownChance;
+        if (staysInTown)
+        {
+            DriverAgent youngAdult = CreateAndRegisterDriverAgent(
+                true,
+                child.Gender,
+                child.Name,
+                18,
+                "grew up in town");
+            youngAdult.Satisfaction = Mathf.Clamp(youngAdult.Satisfaction + 8, 0, 100);
+            youngAdult.Money = Mathf.Max(youngAdult.Money, Random.Range(18, 36));
+            PushFeedEvent(
+                $"{child.Name} grew up and became a town resident.",
+                $"{child.Name} \u0432\u044b\u0440\u043e\u0441 \u0438 \u0441\u0442\u0430\u043b \u0436\u0438\u0442\u0435\u043b\u0435\u043c \u0433\u043e\u0440\u043e\u0434\u0430.",
+                FeedEventType.Success);
+            SessionDebugLogger.Log(
+                "FAMILY",
+                $"Child #{child.Id} {child.Name} became resident #{youngAdult.DriverId} after growing up.");
+        }
+        else
+        {
+            PushFeedEvent(
+                $"{child.Name} grew up and left for adult life.",
+                $"{child.Name} \u0432\u044b\u0440\u043e\u0441 \u0438 \u0443\u0435\u0445\u0430\u043b \u0432\u043e \u0432\u0437\u0440\u043e\u0441\u043b\u0443\u044e \u0436\u0438\u0437\u043d\u044c.",
+                FeedEventType.Info);
+            SessionDebugLogger.Log("FAMILY", $"Child #{child.Id} {child.Name} left town after growing up.");
+        }
+
+        if (family != null && CountWorkerFamilyChildren(family.Id) < MaxWorkerFamilyChildren)
+        {
+            float now = GetCurrentWorldHour();
+            family.NextChildBirthWorldHour = now + Random.Range(WorkerChildBirthMinHours, WorkerChildBirthMaxHours);
+        }
+
+        isDriversScreenDirty = true;
+        isFleetScreenDirty = true;
+    }
+
+    private static WorkerChildStage GetNextWorkerChildStage(WorkerChildStage stage)
+    {
+        return stage switch
+        {
+            WorkerChildStage.Baby => WorkerChildStage.Toddler,
+            WorkerChildStage.Toddler => WorkerChildStage.Child,
+            WorkerChildStage.Child => WorkerChildStage.Teen,
+            WorkerChildStage.Teen => WorkerChildStage.YoungAdult,
+            _ => WorkerChildStage.YoungAdult
+        };
+    }
+
+    private static int GetWorkerChildStageDurationDays(WorkerChildStage stage)
+    {
+        return stage switch
+        {
+            WorkerChildStage.Baby => WorkerChildBabyStageDays,
+            WorkerChildStage.Toddler => WorkerChildToddlerStageDays,
+            WorkerChildStage.Child => WorkerChildChildStageDays,
+            WorkerChildStage.Teen => WorkerChildTeenStageDays,
+            _ => 0
+        };
     }
 
     private string GenerateWorkerChildName(WorkerFamily family, WorkerGender gender)
@@ -418,6 +587,11 @@ public partial class GameBootstrap
             }
 
             child.RootObject.transform.position = GetWorkerChildWorldPosition(child);
+            if (child.VisualRoot != null)
+            {
+                child.VisualRoot.localScale = Vector3.one * GetWorkerChildStageVisualScale(child.Stage);
+            }
+
             float t = Time.time * 1.7f + child.AnimationPhase;
             if (child.VisualRoot != null)
             {
@@ -468,9 +642,33 @@ public partial class GameBootstrap
         }
 
         Vector3 rightDir = new(roadDir.z, 0f, -roadDir.x);
-        Vector3 position = center + roadDir * (1.45f + child.YardDepthOffset) + rightDir * child.YardLateralOffset;
+        Vector3 position = center + roadDir * (GetWorkerChildStageYardDepth(child.Stage) + child.YardDepthOffset) + rightDir * child.YardLateralOffset;
         position.y = SampleTerrainHeight(position.x, position.z) + 0.02f;
         return position;
+    }
+
+    private static float GetWorkerChildStageVisualScale(WorkerChildStage stage)
+    {
+        return stage switch
+        {
+            WorkerChildStage.Baby => 0.56f,
+            WorkerChildStage.Toddler => 0.74f,
+            WorkerChildStage.Child => 0.92f,
+            WorkerChildStage.Teen => 1.12f,
+            _ => 1f
+        };
+    }
+
+    private static float GetWorkerChildStageYardDepth(WorkerChildStage stage)
+    {
+        return stage switch
+        {
+            WorkerChildStage.Baby => 1.15f,
+            WorkerChildStage.Toddler => 1.32f,
+            WorkerChildStage.Child => 1.48f,
+            WorkerChildStage.Teen => 1.62f,
+            _ => 1.45f
+        };
     }
 
     private void DestroyWorkerChildVisual(WorkerChild child)
@@ -546,5 +744,37 @@ public partial class GameBootstrap
         }
 
         return null;
+    }
+
+    private string FormatWorkerChildStageLabel(WorkerChildStage stage, bool ru)
+    {
+        return stage switch
+        {
+            WorkerChildStage.Baby => ru ? "\u043c\u043b\u0430\u0434\u0435\u043d\u0435\u0446" : "baby",
+            WorkerChildStage.Toddler => ru ? "\u043c\u0430\u043b\u044b\u0448" : "toddler",
+            WorkerChildStage.Child => ru ? "\u0440\u0435\u0431\u0435\u043d\u043e\u043a" : "child",
+            WorkerChildStage.Teen => ru ? "\u043f\u043e\u0434\u0440\u043e\u0441\u0442\u043e\u043a" : "teen",
+            WorkerChildStage.YoungAdult => ru ? "\u0432\u0437\u0440\u043e\u0441\u043b\u044b\u0439" : "young adult",
+            _ => ru ? "\u0440\u0435\u0431\u0435\u043d\u043e\u043a" : "child"
+        };
+    }
+
+    private string FormatWorkerChildAgeAndNextStage(WorkerChild child, bool ru)
+    {
+        if (child == null)
+        {
+            return string.Empty;
+        }
+
+        int ageDays = Mathf.Max(0, currentDay - child.BornDay);
+        if (child.Stage == WorkerChildStage.YoungAdult || child.NextStageDay <= 0)
+        {
+            return ru ? $"{ageDays} \u0434\u043d." : $"{ageDays}d";
+        }
+
+        int daysLeft = Mathf.Max(0, child.NextStageDay - currentDay);
+        return ru
+            ? $"{ageDays} \u0434\u043d., \u0441\u043b\u0435\u0434. \u044d\u0442\u0430\u043f {daysLeft} \u0434."
+            : $"{ageDays}d, next in {daysLeft}d";
     }
 }

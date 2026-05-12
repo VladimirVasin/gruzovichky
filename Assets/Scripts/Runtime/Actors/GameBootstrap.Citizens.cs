@@ -53,6 +53,8 @@ public partial class GameBootstrap
             LocationType.CleaningDepot => CitizenProfessionKind.Cleaner,
             LocationType.LaborExchange => CitizenProfessionKind.EmploymentClerk,
             LocationType.Kindergarten => CitizenProfessionKind.ChildcareWorker,
+            LocationType.PrimarySchool => CitizenProfessionKind.Teacher,
+            LocationType.SecondarySchool => CitizenProfessionKind.Teacher,
             LocationType.CarMarket => CitizenProfessionKind.CarDealer,
             _ => CitizenProfessionKind.ServiceWorker
         };
@@ -80,6 +82,7 @@ public partial class GameBootstrap
             CitizenProfessionKind.Cleaner => "Cleaner",
             CitizenProfessionKind.EmploymentClerk => "Employment clerk",
             CitizenProfessionKind.ChildcareWorker => "Childcare worker",
+            CitizenProfessionKind.Teacher => "Teacher",
             CitizenProfessionKind.CarDealer => "Car dealer",
             _ => "Resident"
         };

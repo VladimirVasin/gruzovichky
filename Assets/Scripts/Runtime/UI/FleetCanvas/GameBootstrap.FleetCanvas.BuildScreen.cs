@@ -191,6 +191,8 @@ public partial class GameBootstrap
                 (BuildTool.Motel,            "MT", "Motel",          new Color(0.24f, 0.48f, 0.36f)),
                 (BuildTool.PersonalHouse,    "PH", "Personal House", new Color(0.55f, 0.42f, 0.30f)),
                 (BuildTool.Kindergarten,     "KG", "Kindergarten",   new Color(0.46f, 0.62f, 0.36f)),
+                (BuildTool.PrimarySchool,    "PS", "Primary School", new Color(0.42f, 0.52f, 0.62f)),
+                (BuildTool.SecondarySchool,  "SS", "Secondary School", new Color(0.36f, 0.42f, 0.56f)),
                 (BuildTool.LaborExchange,    "LE", "Labor Exchange", new Color(0.34f, 0.47f, 0.56f))),
             CreateBuildCategory(dockRoot, itemTray, font, "Services & Leisure", "Сервисы и досуг", false,
                 (BuildTool.Canteen,          "CT", "Canteen",       new Color(0.20f, 0.42f, 0.50f)),

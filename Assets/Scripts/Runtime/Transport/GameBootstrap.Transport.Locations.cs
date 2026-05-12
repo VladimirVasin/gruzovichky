@@ -115,6 +115,12 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
             ApplyColor(baseBlock, new Color(0.42f, 0.46f, 0.44f), VisualSmoothnessAsphalt);
         }
+        else if (type == LocationType.PrimarySchool || type == LocationType.SecondarySchool)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
+            ApplyColor(baseBlock, new Color(0.44f, 0.47f, 0.45f), VisualSmoothnessAsphalt);
+        }
         else if (type == LocationType.Bar || type == LocationType.GamblingHall)
         {
             baseBlock.transform.position = center + new Vector3(0f, -0.26f, 0f);
@@ -213,6 +219,10 @@ public partial class GameBootstrap
         else if (type == LocationType.Kindergarten)
         {
             CreateKindergartenDecoration(root.transform, center, min, max, anchor);
+        }
+        else if (type == LocationType.PrimarySchool || type == LocationType.SecondarySchool)
+        {
+            CreateSchoolDecoration(type, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.CarMarket)
         {
@@ -333,6 +343,8 @@ public partial class GameBootstrap
         LocationType.GasStation   => true,
         LocationType.CityPark     => true,
         LocationType.Kindergarten => true,
+        LocationType.PrimarySchool => true,
+        LocationType.SecondarySchool => true,
         _                         => false
     };
 
@@ -349,6 +361,8 @@ public partial class GameBootstrap
             LocationType.CarMarket     => 3,
             LocationType.CityHall      => 3,
             LocationType.Kindergarten  => 2,
+            LocationType.PrimarySchool => 2,
+            LocationType.SecondarySchool => 3,
             LocationType.CleaningDepot => 2,
             LocationType.Parking       => 3,
             LocationType.Warehouse     => 2,

@@ -331,6 +331,8 @@ public partial class GameBootstrap
             case BuildTool.CityPark:         type = LocationType.CityPark;         return true;
             case BuildTool.PersonalHouse:    type = LocationType.PersonalHouse;    return true;
             case BuildTool.Kindergarten:     type = LocationType.Kindergarten;     return true;
+            case BuildTool.PrimarySchool:    type = LocationType.PrimarySchool;    return true;
+            case BuildTool.SecondarySchool:  type = LocationType.SecondarySchool;  return true;
             case BuildTool.CarMarket:        type = LocationType.CarMarket;        return true;
             case BuildTool.LaborExchange:    type = LocationType.LaborExchange;    return true;
             case BuildTool.CityHall:         type = LocationType.CityHall;         return true;

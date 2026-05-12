@@ -389,7 +389,7 @@ public partial class GameBootstrap
                 : ru ? "сигнал был отрицательным" : "the signal was negative";
         }
 
-        string count = ru ? $"{factor.ResidentCount} жителей" : $"{factor.ResidentCount} residents";
+        string count = ru ? $"{factor.ResidentCount} сигналов" : $"{factor.ResidentCount} signals";
         return ru
             ? $"{label}: {reason} ({count})"
             : $"{label}: {reason} ({count})";

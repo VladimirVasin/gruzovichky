@@ -54,8 +54,17 @@ public partial class GameBootstrap
 
     private int CalculateWorkerFamilyDailyUpkeep(WorkerFamily family)
     {
-        int childCount = CountWorkerFamilyChildren(family?.Id ?? -1);
-        return WorkerFamilyBaseDailyUpkeep + childCount * WorkerFamilyChildDailyUpkeep;
+        int upkeep = WorkerFamilyBaseDailyUpkeep;
+        for (int i = 0; i < workerChildren.Count; i++)
+        {
+            WorkerChild child = workerChildren[i];
+            if (child != null && child.FamilyId == (family?.Id ?? -1))
+            {
+                upkeep += GetWorkerChildDailyUpkeep(child);
+            }
+        }
+
+        return upkeep;
     }
 
     private int CollectWorkerFamilyUpkeep(WorkerFamily family, int amount)
@@ -130,6 +139,7 @@ public partial class GameBootstrap
         int delta = 0;
         List<string> reasons = new();
         int childCount = CountWorkerFamilyChildren(family.Id);
+        int childCareNeedCount = CountWorkerFamilyChildrenNeedingChildCare(family);
         List<DriverAgent> adults = GetWorkerFamilyAdultMembers(family);
         int employedAdults = 0;
         bool hasCriticalNeed = false;
@@ -195,8 +205,18 @@ public partial class GameBootstrap
 
         if (childCount > 0)
         {
+            int childLoadPenalty = Mathf.Min(8, GetWorkerFamilyChildLoadPressure(family));
+            if (childLoadPenalty > 0)
+            {
+                delta -= childLoadPenalty;
+                reasons.Add("child load");
+            }
+        }
+
+        if (childCareNeedCount > 0)
+        {
             int coveredChildren = CountWorkerFamilyChildCareCovered(family);
-            if (coveredChildren >= childCount)
+            if (coveredChildren >= childCareNeedCount)
             {
                 delta += 4;
                 reasons.Add("child care covered");
@@ -206,6 +226,14 @@ public partial class GameBootstrap
                 delta -= locations.ContainsKey(LocationType.Kindergarten) ? 4 : 6;
                 reasons.Add(GetWorkerFamilyChildCareStressReason(family));
             }
+        }
+
+        int schoolPressure = GetWorkerFamilySchoolPressure(family);
+        if (schoolPressure > 0)
+        {
+            delta -= Mathf.Clamp(schoolPressure, 2, 8);
+            LocationType? shortage = GetWorkerFamilyMostNeededSchoolLocation(family);
+            reasons.Add(shortage.HasValue ? $"missing {shortage.Value}" : "school capacity short");
         }
 
         if (family.BirthJoyUntilDay >= currentDay)
@@ -244,6 +272,7 @@ public partial class GameBootstrap
         int delta = 0;
         List<string> reasons = new();
         int childCount = CountWorkerFamilyChildren(family.Id);
+        int childCareNeedCount = CountWorkerFamilyChildrenNeedingChildCare(family);
 
         if (family.Happiness >= 75)
         {
@@ -262,10 +291,15 @@ public partial class GameBootstrap
             reasons.Add("household bills unpaid");
         }
 
-        if (childCount > 0 && !IsWorkerFamilyChildCareCovered(family))
+        if (childCareNeedCount > 0 && !IsWorkerFamilyChildCareCovered(family))
         {
             delta -= 3;
             reasons.Add("missing child care");
+        }
+        else if (GetWorkerFamilySchoolPressure(family) > 0)
+        {
+            delta -= 3;
+            reasons.Add("missing school seats");
         }
         else if (childCount > 0 && family.Happiness >= 55)
         {
@@ -334,6 +368,310 @@ public partial class GameBootstrap
         return count;
     }
 
+    private int CountWorkerFamilyChildrenNeedingChildCare(WorkerFamily family)
+    {
+        if (family == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        for (int i = 0; i < workerChildren.Count; i++)
+        {
+            WorkerChild child = workerChildren[i];
+            if (child != null &&
+                child.FamilyId == family.Id &&
+                IsWorkerChildNeedingChildCare(child))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private int CalculateWorkerFamilyNextChildReadiness(WorkerFamily family, out string reason)
+    {
+        reason = string.Empty;
+        if (family == null)
+        {
+            reason = "family missing";
+            return 0;
+        }
+
+        List<string> reasons = new();
+        int score = 45;
+        int childCount = CountWorkerFamilyChildren(family.Id);
+        if (childCount >= MaxWorkerFamilyChildren)
+        {
+            reason = "child slots full";
+            return 0;
+        }
+
+        List<DriverAgent> adults = GetWorkerFamilyAdultMembers(family);
+        int employedAdults = 0;
+        int adultMoneyTotal = 0;
+        bool hasCriticalNeed = false;
+        for (int i = 0; i < adults.Count; i++)
+        {
+            adultMoneyTotal += adults[i].Money;
+            if (IsWorkerEmployedForMigration(adults[i]))
+            {
+                employedAdults++;
+            }
+
+            if (HasCriticalWorkerNeed(adults[i]))
+            {
+                hasCriticalNeed = true;
+            }
+        }
+
+        family.LastAdultMoneyTotal = adultMoneyTotal;
+
+        if (adults.Count >= 2)
+        {
+            score += 8;
+            reasons.Add("settled parents");
+        }
+        else
+        {
+            score -= 30;
+            reasons.Add("missing parent");
+        }
+
+        if (adults.Count > 0 && employedAdults == adults.Count)
+        {
+            score += 18;
+            reasons.Add("stable work");
+        }
+        else if (employedAdults == 0)
+        {
+            score -= 22;
+            reasons.Add("no stable work");
+        }
+        else
+        {
+            score += 4;
+            reasons.Add("partial work");
+        }
+
+        int relationship = GetWorkerFamilyAdultRelationshipScore(family);
+        if (relationship >= 70)
+        {
+            score += 12;
+            reasons.Add("strong relationship");
+        }
+        else if (relationship >= 55)
+        {
+            score += 6;
+            reasons.Add("steady relationship");
+        }
+        else if (relationship > 0)
+        {
+            score -= 8;
+            reasons.Add("weak relationship");
+        }
+
+        if (family.Happiness >= 75)
+        {
+            score += 16;
+            reasons.Add("high family happiness");
+        }
+        else if (family.Happiness >= 55)
+        {
+            score += 7;
+            reasons.Add("stable family happiness");
+        }
+        else if (family.Happiness <= 35)
+        {
+            score -= 24;
+            reasons.Add("low family happiness");
+        }
+        else
+        {
+            score -= 8;
+            reasons.Add("strained family happiness");
+        }
+
+        if (adultMoneyTotal >= WorkerFamilyComfortSavingsThreshold)
+        {
+            score += 14;
+            reasons.Add("comfortable savings");
+        }
+        else if (adultMoneyTotal < WorkerFamilyLowSavingsThreshold)
+        {
+            score -= 18;
+            reasons.Add("low savings");
+        }
+
+        int childPenalty = GetWorkerFamilyNextChildLoadPenalty(family);
+        if (childPenalty > 0)
+        {
+            score -= childPenalty;
+            reasons.Add($"existing children -{childPenalty}");
+        }
+
+        int globalCareNeed = CountWorkerChildrenNeedingChildCare();
+        int freeCareCapacity = GetKindergartenChildCapacity() - globalCareNeed;
+        if (freeCareCapacity >= 1)
+        {
+            score += 10;
+            reasons.Add("free child-care capacity");
+        }
+        else if (!locations.ContainsKey(LocationType.Kindergarten))
+        {
+            score -= childCount > 0 ? 14 : 8;
+            reasons.Add("no kindergarten");
+        }
+        else
+        {
+            score -= 12;
+            reasons.Add("child-care capacity short");
+        }
+
+        int schoolPenalty = GetWorkerFamilySchoolReadinessPenalty(family, childCount);
+        if (schoolPenalty > 0)
+        {
+            score -= schoolPenalty;
+            reasons.Add($"school readiness -{schoolPenalty}");
+        }
+        else if (childCount > 0 && HasWorkerFamilySchoolCoverage(family))
+        {
+            score += 4;
+            reasons.Add("school path ready");
+        }
+
+        if (family.LastDailyUpkeepShortfall > 0)
+        {
+            score -= 12;
+            reasons.Add("unpaid upkeep");
+        }
+
+        if (hasCriticalNeed)
+        {
+            score -= 14;
+            reasons.Add("parent critical needs");
+        }
+
+        reason = reasons.Count > 0 ? string.Join(", ", reasons) : "neutral";
+        return Mathf.Clamp(score, 0, 100);
+    }
+
+    private int GetWorkerFamilyAdultRelationshipScore(WorkerFamily family)
+    {
+        List<DriverAgent> adults = GetWorkerFamilyAdultMembers(family);
+        if (adults.Count < 2)
+        {
+            return 0;
+        }
+
+        WorkerSocialMemory first = FindWorkerSocialMemory(adults[0], adults[1].DriverId);
+        WorkerSocialMemory second = FindWorkerSocialMemory(adults[1], adults[0].DriverId);
+        int total = 0;
+        int count = 0;
+        if (first != null)
+        {
+            total += first.Relationship;
+            count++;
+        }
+
+        if (second != null)
+        {
+            total += second.Relationship;
+            count++;
+        }
+
+        return count > 0 ? Mathf.RoundToInt(total / (float)count) : WorkerFamilyFormationRelationshipFloor;
+    }
+
+    private int GetWorkerFamilyNextChildLoadPenalty(WorkerFamily family)
+    {
+        int penalty = 0;
+        for (int i = 0; i < workerChildren.Count; i++)
+        {
+            WorkerChild child = workerChildren[i];
+            if (child != null && child.FamilyId == (family?.Id ?? -1))
+            {
+                penalty += child.Stage switch
+                {
+                    WorkerChildStage.Baby => 18,
+                    WorkerChildStage.Toddler => 18,
+                    WorkerChildStage.Child => 10,
+                    WorkerChildStage.Teen => 4,
+                    _ => 0
+                };
+            }
+        }
+
+        return penalty;
+    }
+
+    private int GetWorkerFamilyChildLoadPressure(WorkerFamily family)
+    {
+        int pressure = 0;
+        for (int i = 0; i < workerChildren.Count; i++)
+        {
+            WorkerChild child = workerChildren[i];
+            if (child == null || child.FamilyId != (family?.Id ?? -1))
+            {
+                continue;
+            }
+
+            pressure += child.Stage switch
+            {
+                WorkerChildStage.Baby => 4,
+                WorkerChildStage.Toddler => 4,
+                WorkerChildStage.Child => 2,
+                WorkerChildStage.Teen => -1,
+                _ => 0
+            };
+        }
+
+        int childCareNeedCount = CountWorkerFamilyChildrenNeedingChildCare(family);
+        int childCareShortfall = Mathf.Max(0, childCareNeedCount - CountWorkerFamilyChildCareCovered(family));
+        pressure += childCareShortfall * 3;
+        if (family != null && family.LastDailyUpkeepShortfall > 0)
+        {
+            pressure += 2;
+        }
+
+        return Mathf.Max(0, pressure);
+    }
+
+    private int GetWorkerFamilyChildPressure(WorkerFamily family)
+    {
+        if (family == null)
+        {
+            return 0;
+        }
+
+        int pressure = GetWorkerFamilyChildLoadPressure(family);
+        pressure += GetWorkerFamilySchoolPressure(family);
+        if (family.Happiness <= 35)
+        {
+            pressure += 2;
+        }
+
+        return pressure;
+    }
+
+    private static int GetWorkerChildDailyUpkeep(WorkerChild child)
+    {
+        if (child == null)
+        {
+            return WorkerFamilyChildDailyUpkeep;
+        }
+
+        return child.Stage switch
+        {
+            WorkerChildStage.Baby => 4,
+            WorkerChildStage.Toddler => 4,
+            WorkerChildStage.Child => WorkerFamilyChildDailyUpkeep,
+            WorkerChildStage.Teen => 2,
+            _ => WorkerFamilyChildDailyUpkeep
+        };
+    }
+
     private int CountBuiltKindergartenLocations()
     {
         int count = 0;
@@ -368,7 +706,9 @@ public partial class GameBootstrap
         }
 
         WorkerFamily family = GetWorkerFamilyById(child.FamilyId);
-        return family != null && IsWorkerFamilyLivingInHouse(family);
+        return family != null &&
+               IsWorkerFamilyLivingInHouse(family) &&
+               child.Stage == WorkerChildStage.Toddler;
     }
 
     private int CountWorkerChildrenNeedingChildCare()
@@ -425,8 +765,8 @@ public partial class GameBootstrap
 
     private bool IsWorkerFamilyChildCareCovered(WorkerFamily family)
     {
-        int childCount = CountWorkerFamilyChildren(family?.Id ?? -1);
-        return childCount <= 0 || CountWorkerFamilyChildCareCovered(family) >= childCount;
+        int childCareNeedCount = CountWorkerFamilyChildrenNeedingChildCare(family);
+        return childCareNeedCount <= 0 || CountWorkerFamilyChildCareCovered(family) >= childCareNeedCount;
     }
 
     private string GetWorkerFamilyChildCareStressReason(WorkerFamily family)
@@ -452,8 +792,14 @@ public partial class GameBootstrap
             return "\u2014";
         }
 
+        int childCareNeedCount = CountWorkerFamilyChildrenNeedingChildCare(family);
+        if (childCareNeedCount <= 0)
+        {
+            return ru ? "\u043d\u0435 \u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044f" : "not needed";
+        }
+
         int covered = CountWorkerFamilyChildCareCovered(family);
-        if (covered >= childCount)
+        if (covered >= childCareNeedCount)
         {
             return ru ? "\u043c\u0435\u0441\u0442\u0430 \u0435\u0441\u0442\u044c" : "covered";
         }
@@ -469,17 +815,13 @@ public partial class GameBootstrap
         }
 
         return ru
-            ? $"{covered}/{childCount}, \u043d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043c\u0435\u0441\u0442"
-            : $"{covered}/{childCount}, needs capacity";
+            ? $"{covered}/{childCareNeedCount}, \u043d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043c\u0435\u0441\u0442"
+            : $"{covered}/{childCareNeedCount}, needs capacity";
     }
 
     private string FormatKindergartenCoverageLabel(bool ru)
     {
-        int children = CountWorkerChildrenNeedingChildCare();
-        int covered = CountKindergartenCoveredChildren();
-        return ru
-            ? $"{covered}/{children} \u0434\u0435\u0442\u0435\u0439"
-            : $"{covered}/{children} children";
+        return FormatEducationCoverageLabel(LocationType.Kindergarten, ru);
     }
 
     private string FormatWorkerFamilyHappinessLabel(WorkerFamily family, bool ru)

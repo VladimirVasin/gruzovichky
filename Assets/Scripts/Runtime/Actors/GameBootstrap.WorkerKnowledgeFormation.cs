@@ -445,6 +445,8 @@ public partial class GameBootstrap
             case LocationType.IntercityStop:
             case LocationType.CarMarket:
             case LocationType.Kindergarten:
+            case LocationType.PrimarySchool:
+            case LocationType.SecondarySchool:
                 score += 8;
                 reasonRu = "Пока непонятно, насколько это пригодится лично ему.";
                 reasonEn = "It is not yet clear how personally useful this will be.";

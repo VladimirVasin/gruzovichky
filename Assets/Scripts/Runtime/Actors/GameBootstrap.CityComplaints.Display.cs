@@ -123,7 +123,7 @@ public partial class GameBootstrap
             CityComplaintCategory.ServiceMissing => ru
                 ? $"{GetCityServiceRequestLiteraryBody(complaint.LinkedLocationType)}\n\nПросьба простая, почти официальная: построить {target}."
                 : $"Suggested building: {target}.",
-            CityComplaintCategory.FamilyStress => ru ? "Низкое довольство и критические нужды давят на семьи подписавших жителей." : "Low satisfaction and critical needs are stressing signed families.",
+            CityComplaintCategory.FamilyStress => FormatFamilyStressComplaintReason(complaint, ru),
             CityComplaintCategory.SocialIntroduction => ru
                 ? $"{complaint.WorkerName} хочет поговорить с {FormatCityComplaintTargetName(complaint)}, но разговор, как и всякое городское дело, требует бумажки, печати и человека, который скажет первую странную фразу.\n\nЕсли принять обращение, Ратуша попросит вас подсказать тему."
                 : $"{complaint.WorkerName} wants to talk to {FormatCityComplaintTargetName(complaint)} and needs a topic. Accepting will open the conversation scene.",
@@ -163,8 +163,48 @@ public partial class GameBootstrap
             LocationType.CityPark => "Городу нужна зелень, которую не надо оправдывать производственной пользой. Просто место, где можно посидеть и не быть частью механизма.",
             LocationType.GamblingHall => "Некоторым нужен зал, где удачу можно обвинить официально. Это дешевле, чем спорить с небом на перекрестке.",
             LocationType.GasStation => "Техника тоже хочет пить, только громче и с запахом бензина. Люди называют это инфраструктурой, чтобы звучало менее тревожно.",
+            LocationType.PrimarySchool => "Дети растут быстрее, чем город успевает делать вид, что это потом. Нужна начальная школа, пока семейная тревога не стала расписанием.",
+            LocationType.SecondarySchool => "Подростки уже слишком взрослые для детских ответов и слишком юные для взрослых проблем. Городу нужна средняя школа.",
             _ => "Городу нужно новое здание. Не героическое, не судьбоносное, просто то самое, отсутствие которого начинает скрипеть в каждом дне."
         };
+    }
+
+    private string FormatFamilyStressComplaintReason(CityComplaint complaint, bool ru)
+    {
+        DriverAgent worker = GetDriverAgentById(complaint?.WorkerId ?? 0);
+        WorkerFamily family = GetWorkerFamilyById(worker?.FamilyId ?? -1);
+        if (family == null)
+        {
+            return ru
+                ? "\u0421\u0435\u043c\u044c\u0438 \u0436\u0430\u043b\u0443\u044e\u0442\u0441\u044f \u043d\u0430 \u043d\u0430\u043a\u043e\u043f\u0438\u0432\u0448\u0438\u0439\u0441\u044f \u0441\u0442\u0440\u0435\u0441\u0441."
+                : "Families report accumulated stress.";
+        }
+
+        int totalChildren = CountWorkerFamilyChildren(family.Id);
+        int needingCare = CountWorkerFamilyChildrenNeedingChildCare(family);
+        int covered = CountWorkerFamilyChildCareCovered(family);
+        int shortfall = Mathf.Max(0, needingCare - covered);
+        if (shortfall > 0)
+        {
+            return ru
+                ? $"\u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043c\u0435\u0441\u0442 \u0432 \u0434\u0435\u0442\u0441\u0430\u0434\u0443: {covered}/{needingCare}. \u0412 \u0441\u0435\u043c\u044c\u0435 \u0434\u0435\u0442\u0435\u0439: {totalChildren}."
+                : $"Child-care capacity is short: {covered}/{needingCare}. Children in the family: {totalChildren}.";
+        }
+
+        LocationType? schoolShortage = GetWorkerFamilyMostNeededSchoolLocation(family);
+        if (schoolShortage.HasValue)
+        {
+            int need = CountWorkerFamilyEducationNeed(family, schoolShortage.Value);
+            int schoolCovered = CountWorkerFamilyEducationCovered(family, schoolShortage.Value);
+            string schoolName = FormatEducationLocationName(schoolShortage.Value, ru);
+            return ru
+                ? $"\u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u043c\u0435\u0441\u0442: {schoolName}, {schoolCovered}/{need}. \u0412 \u0441\u0435\u043c\u044c\u0435 \u0434\u0435\u0442\u0435\u0439: {totalChildren}."
+                : $"School seats are short: {schoolName}, {schoolCovered}/{need}. Children in the family: {totalChildren}.";
+        }
+
+        return ru
+            ? $"\u0421\u0435\u043c\u0435\u0439\u043d\u0430\u044f \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0440\u0430\u0441\u0442\u0435\u0442: \u0434\u0435\u0442\u0435\u0439 {totalChildren}, \u0441\u0447\u0430\u0441\u0442\u044c\u0435 \u0441\u0435\u043c\u044c\u0438 {family.Happiness}/100."
+            : $"Family load is rising: {totalChildren} children, family happiness {family.Happiness}/100.";
     }
 
     private string FormatCityComplaintMeta(CityComplaint complaint, bool ru)

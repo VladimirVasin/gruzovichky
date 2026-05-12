@@ -478,6 +478,8 @@ public partial class GameBootstrap
             LocationType.GasStation,
             LocationType.GamblingHall,
             LocationType.Kindergarten,
+            LocationType.PrimarySchool,
+            LocationType.SecondarySchool,
             LocationType.CarMarket,
             LocationType.LaborExchange,
             LocationType.CleaningDepot
@@ -509,6 +511,8 @@ public partial class GameBootstrap
                         Title = L(GetBuildingWorkerSlotTitle(buildingType, slotIndex, location.InstanceId)),
                         Subtitle = buildingType == LocationType.LaborExchange
                             ? (ru ? "\u0441\u0435\u0440\u0432\u0438\u0441, \u043d\u0443\u0436\u043d\u043e \u0432\u044b\u0441\u0448\u0435\u0435 \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435" : "service, higher education required")
+                            : buildingType == LocationType.PrimarySchool || buildingType == LocationType.SecondarySchool
+                                ? (ru ? "\u0443\u0447\u0438\u0442\u0435\u043b\u044c" : "teacher")
                             : slotKind == VacancyKind.Service
                                 ? (ru ? "\u0441\u0435\u0440\u0432\u0438\u0441" : "service")
                                 : (ru ? "\u043f\u0440\u043e\u0438\u0437\u0432\u043e\u0434\u0441\u0442\u0432\u043e" : "production"),

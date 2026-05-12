@@ -52,6 +52,8 @@ public partial class GameBootstrap
             LocationType.CityPark     => IsRussianLanguage() ? "Городской парк — рабочие гуляют и сидят на лавочках." : "City Park — workers stroll and sit on benches.",
             LocationType.PersonalHouse => IsRussianLanguage() ? "Жилой дом — пригородный коттедж." : "Personal House — suburban residential home.",
             LocationType.Kindergarten  => IsRussianLanguage() ? "\u0414\u0435\u0442\u0441\u043a\u0438\u0439 \u0441\u0430\u0434: \u0432\u043e\u0441\u043f\u0438\u0442\u0430\u0442\u0435\u043b\u0438 \u0434\u0430\u044e\u0442 \u043c\u0435\u0441\u0442\u0430 \u0434\u043b\u044f \u0434\u0435\u0442\u0435\u0439 \u0438 \u0441\u043d\u0438\u0436\u0430\u044e\u0442 \u0441\u0442\u0440\u0435\u0441\u0441 \u0441\u0435\u043c\u0435\u0439." : "Kindergarten - caregivers create child-care capacity for families.",
+            LocationType.PrimarySchool => IsRussianLanguage() ? "\u041d\u0430\u0447\u0430\u043b\u044c\u043d\u0430\u044f \u0448\u043a\u043e\u043b\u0430: \u0443\u0447\u0438\u0442\u0435\u043b\u044f \u0434\u0430\u044e\u0442 \u043c\u0435\u0441\u0442\u0430 \u0434\u0435\u0442\u044f\u043c \u0438 \u0441\u043d\u0438\u0436\u0430\u044e\u0442 \u0441\u0435\u043c\u0435\u0439\u043d\u044b\u0439 \u0441\u0442\u0440\u0435\u0441\u0441." : "Primary School - teachers create seats for children and lower family stress.",
+            LocationType.SecondarySchool => IsRussianLanguage() ? "\u0421\u0440\u0435\u0434\u043d\u044f\u044f \u0448\u043a\u043e\u043b\u0430: \u0443\u0447\u0438\u0442\u0435\u043b\u044f \u0434\u0430\u044e\u0442 \u043c\u0435\u0441\u0442\u0430 \u043f\u043e\u0434\u0440\u043e\u0441\u0442\u043a\u0430\u043c." : "Secondary School - teachers create seats for teens.",
             LocationType.CarMarket     => IsRussianLanguage() ? "\u0410\u0432\u0442\u043e\u0440\u044b\u043d\u043e\u043a: \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u043e\u043a\u0443\u043f\u0430\u044e\u0442 \u043b\u0438\u0447\u043d\u044b\u0435 \u0430\u0432\u0442\u043e." : "Car Market - workers buy personal cars here.",
             LocationType.LaborExchange => IsRussianLanguage() ? "\u0411\u0438\u0440\u0436\u0430 \u0442\u0440\u0443\u0434\u0430: \u043a\u043b\u0435\u0440\u043a \u043f\u0443\u0431\u043b\u0438\u043a\u0443\u0435\u0442 \u0432\u0430\u043a\u0430\u043d\u0441\u0438\u0438, \u0440\u0430\u0431\u043e\u0447\u0438\u0435 \u043f\u0440\u0438\u0445\u043e\u0434\u044f\u0442 \u0437\u0430 \u0440\u0430\u0431\u043e\u0442\u043e\u0439." : "Labor Exchange - a clerk posts vacancies and workers apply here.",
             LocationType.CleaningDepot => IsRussianLanguage() ? "\u0421\u043b\u0443\u0436\u0431\u0430 \u0443\u0431\u043e\u0440\u043a\u0438: \u0443\u0431\u043e\u0440\u0449\u0438\u043a\u0438 \u043f\u0430\u0442\u0440\u0443\u043b\u0438\u0440\u0443\u044e\u0442 \u0443\u043b\u0438\u0446\u044b \u0438 \u0443\u0431\u0438\u0440\u0430\u044e\u0442 \u0432\u0438\u0434\u0438\u043c\u044b\u0439 \u043c\u0443\u0441\u043e\u0440." : "Cleaning Depot - cleaners patrol streets and remove visible litter.",
@@ -85,6 +87,8 @@ public partial class GameBootstrap
             LocationType.GamblingHall => GetGamblingHallQuickResourceText(),
             LocationType.CityPark     => GetServiceBuildingQuickResourceText(locationType),
             LocationType.Kindergarten  => GetKindergartenQuickResourceText(),
+            LocationType.PrimarySchool => GetEducationBuildingQuickResourceText(LocationType.PrimarySchool),
+            LocationType.SecondarySchool => GetEducationBuildingQuickResourceText(LocationType.SecondarySchool),
             LocationType.CarMarket    => GetServiceBuildingQuickResourceText(locationType),
             LocationType.LaborExchange => GetLaborExchangeQuickResourceText(),
             LocationType.CleaningDepot => GetCleaningDepotQuickResourceText(),
@@ -155,8 +159,9 @@ public partial class GameBootstrap
         {
             int childCount = CountWorkerFamilyChildren(family.Id);
             return FormatValueLine(ru ? "\u0416\u0438\u043b\u044c\u0446\u043e\u0432" : "Residents", residentCount.ToString()) + "\n" +
-                   FormatValueLine(ru ? "\u0414\u0435\u0442\u0435\u0439" : "Children", childCount.ToString()) + "\n" +
+                   FormatValueLine(ru ? "\u0414\u0435\u0442\u0435\u0439" : "Children", $"{childCount}/{MaxWorkerFamilyChildren}") + "\n" +
                    FormatValueLine(ru ? "\u0414\u0435\u0442\u0441\u0430\u0434" : "Child care", FormatWorkerFamilyChildCareLabel(family, ru)) + "\n" +
+                   FormatValueLine(ru ? "\u041e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u0435" : "Education", FormatWorkerFamilyEducationLabel(family, ru)) + "\n" +
                    FormatValueLine(ru ? "\u0421\u0447\u0430\u0441\u0442\u044c\u0435 \u0441\u0435\u043c\u044c\u0438" : "Family happiness", FormatWorkerFamilyHappinessLabel(family, ru)) + "\n" +
                    FormatValueLine(ru ? "\u041e\u0431\u0449\u0438\u0435 \u0434\u0435\u043d\u044c\u0433\u0438" : "Household money", $"${family.LastAdultMoneyTotal}") + "\n" +
                    FormatValueLine(ru ? "\u0420\u0430\u0441\u0445\u043e\u0434\u044b" : "Upkeep", FormatWorkerFamilyUpkeepLabel(family, ru));
@@ -213,7 +218,7 @@ public partial class GameBootstrap
             {
                 WorkerChild child = children[i - assigned.Count];
                 row.CurrentDriverId = -1;
-                row.NameText.text = ru ? $"{child.Name} (\u0440\u0435\u0431\u0435\u043d\u043e\u043a)" : $"{child.Name} (child)";
+                row.NameText.text = $"{child.Name} - {FormatWorkerChildStageLabel(child.Stage, ru)}, {FormatWorkerChildAgeAndNextStage(child, ru)}, {FormatWorkerChildEducationLabel(child, ru)}";
                 row.NameText.color = FleetAccentColor;
                 row.ActionButton.gameObject.SetActive(false);
             }
@@ -301,11 +306,16 @@ public partial class GameBootstrap
 
     private string GetKindergartenQuickResourceText()
     {
+        return GetEducationBuildingQuickResourceText(LocationType.Kindergarten);
+    }
+
+    private string GetEducationBuildingQuickResourceText(LocationType educationType)
+    {
         bool ru = IsRussianLanguage();
-        string text = FormatValueLine(ru ? "\u0414\u0435\u0442\u0438" : "Children covered", FormatKindergartenCoverageLabel(ru));
-        text += "\n" + FormatValueLine(ru ? "\u041c\u0435\u0441\u0442" : "Capacity", GetKindergartenChildCapacity().ToString());
-        text += "\n" + FormatValueLine(ru ? "\u041f\u0435\u0440\u0441\u043e\u043d\u0430\u043b" : "Staff assigned", $"{CountKindergartenAssignedStaff()} / {GetKindergartenTotalStaffSlots()}");
-        text += "\n" + FormatValueLine(ru ? "\u041d\u0430 \u0441\u043c\u0435\u043d\u0435" : "Staff on shift", $"{CountWorkersOnShiftAt(LocationType.Kindergarten)} / {GetKindergartenTotalStaffSlots()}");
+        string text = FormatValueLine(ru ? "\u0414\u0435\u0442\u0438" : "Children covered", FormatEducationCoverageLabel(educationType, ru));
+        text += "\n" + FormatValueLine(ru ? "\u041c\u0435\u0441\u0442" : "Capacity", GetEducationCapacity(educationType).ToString());
+        text += "\n" + FormatValueLine(ru ? "\u041f\u0435\u0440\u0441\u043e\u043d\u0430\u043b" : "Staff assigned", $"{CountEducationAssignedStaff(educationType)} / {GetEducationTotalStaffSlots(educationType)}");
+        text += "\n" + FormatValueLine(ru ? "\u041d\u0430 \u0441\u043c\u0435\u043d\u0435" : "Staff on shift", $"{CountWorkersOnShiftAt(educationType)} / {GetEducationTotalStaffSlots(educationType)}");
         return text;
     }
 

@@ -177,6 +177,11 @@ public partial class GameBootstrap
             return;
         }
 
+        if (!TryConsumeWorkerShiftCommutePathBudget(driver))
+        {
+            return;
+        }
+
         if (!locations.ContainsKey(LocationType.Parking))
         {
             SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} cannot start local bus shift: Parking is not built.");

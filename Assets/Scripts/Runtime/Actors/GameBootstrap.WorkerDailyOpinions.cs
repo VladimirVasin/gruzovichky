@@ -333,6 +333,11 @@ public partial class GameBootstrap
         {
             AddDailyOpinionFactor(factors, WorkerDailyOpinionFactorKind.Family, -14, "дома накопилось напряжение", "home felt tense");
         }
+        int childPressure = GetWorkerFamilyChildPressure(family);
+        if (childPressure >= 8)
+        {
+            AddDailyOpinionFactor(factors, WorkerDailyOpinionFactorKind.Family, -12, "\u0441 \u0434\u0435\u0442\u044c\u043c\u0438 \u043d\u0430\u043a\u043e\u043f\u0438\u043b\u0430\u0441\u044c \u043d\u0430\u0433\u0440\u0443\u0437\u043a\u0430", "child pressure built up at home");
+        }
     }
 
     private static void AddDailyOpinionFactor(

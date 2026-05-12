@@ -140,6 +140,7 @@ public partial class GameBootstrap
         Cleaner,
         EmploymentClerk,
         ChildcareWorker,
+        Teacher,
         CarDealer
     }
 
@@ -706,6 +707,15 @@ public partial class GameBootstrap
         PlayerPromptedConversationFailed
     }
 
+    private enum WorkerChildStage
+    {
+        Baby,
+        Toddler,
+        Child,
+        Teen,
+        YoungAdult
+    }
+
     private sealed class WorkerFamily
     {
         public int Id;
@@ -713,6 +723,7 @@ public partial class GameBootstrap
         public int CreatedDay;
         public float CreatedWorldHour;
         public float NextChildBirthWorldHour;
+        public float LastChildBornWorldHour;
         public int Happiness = 70;
         public int BirthJoyUntilDay;
         public int LastDailyUpdateDay;
@@ -742,8 +753,11 @@ public partial class GameBootstrap
         public int HouseIndex;
         public string Name;
         public WorkerGender Gender;
+        public WorkerChildStage Stage = WorkerChildStage.Baby;
         public int BornDay;
         public float BornWorldHour;
+        public int StageStartedDay;
+        public int NextStageDay;
         public float YardLateralOffset;
         public float YardDepthOffset;
         public float AnimationPhase;

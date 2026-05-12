@@ -546,7 +546,13 @@ public partial class GameBootstrap : MonoBehaviour
 
     private void StartDriverShiftCommute(DriverAgent driver)
     {
-        if (driver == null || IsDriverBusDriver(driver) || driver.DriverObject == null || !TryReserveAvailableTruckForDriver(driver, out TruckAgent assignedTruck, "freight shift commute"))
+        if (driver == null || IsDriverBusDriver(driver) || driver.DriverObject == null)
+        {
+            return;
+        }
+
+        if (!TryConsumeWorkerShiftCommutePathBudget(driver)) return;
+        if (!TryReserveAvailableTruckForDriver(driver, out TruckAgent assignedTruck, "freight shift commute"))
         {
             return;
         }
@@ -728,11 +734,6 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
-        if (!TryReserveAvailableTruckForDriver(driver, out _, "freight shift start"))
-        {
-            return;
-        }
-
         StartDriverShiftCommute(driver);
     }
 
@@ -749,6 +750,7 @@ public partial class GameBootstrap : MonoBehaviour
             return;
         }
 
+        if (!TryConsumeWorkerShiftCommutePathBudget(driver)) return;
         InterruptDriverIdleActivityForShift(driver, building.Label);
         if (!driver.DriverObject.activeSelf)
         {
