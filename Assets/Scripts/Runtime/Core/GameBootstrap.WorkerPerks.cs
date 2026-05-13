@@ -6,7 +6,7 @@ public partial class GameBootstrap
 {
     private const float WorkerTraitTooltipWidth = 330f;
     private const float WorkerTraitTooltipHeight = 142f;
-    private const int WorkerPerkHudRowCount = 8;
+    private const int WorkerPerkHudRowCount = 7;
     private const int WorkerStartTraitCount = 3;
     private const int WorkerWeaknessChancePercent = 33;
 
@@ -361,12 +361,7 @@ public partial class GameBootstrap
         SetWorkerPersonalityTextRow(
             rowIndex++,
             $"{(ru ? "Состояния" : "States")}: {FormatWorkerAffectsInline(driver, ru, 3)}",
-            FleetSecondaryTextColor);
-
-        SetWorkerPersonalityTextRow(
-            rowIndex++,
-            $"{(ru ? "Главная мысль" : "Main thought")}: {FormatWorkerMainThoughtInline(driver, ru)}",
-            FleetSecondaryTextColor);
+            FleetAccentColor);
 
         for (int i = rowIndex; i < driversScreenUi.DetailPerkTexts.Count; i++)
         {
@@ -515,17 +510,6 @@ public partial class GameBootstrap
             WorkerWeaknessKind.Gambling => new Color(1f, 0.56f, 0.95f, 1f),
             _ => FleetSecondaryTextColor
         };
-    }
-
-    private string FormatWorkerMainThoughtInline(DriverAgent worker, bool ru)
-    {
-        WorkerThought thought = GetMostImportantWorkerThought(worker);
-        if (thought == null)
-        {
-            return ru ? "нет сильной" : "none strong";
-        }
-
-        return TrimWorkerPersonalityLine(RenderWorkerThought(thought, ru), 74);
     }
 
     private static string TrimWorkerPersonalityLine(string text, int maxLength = 96)
