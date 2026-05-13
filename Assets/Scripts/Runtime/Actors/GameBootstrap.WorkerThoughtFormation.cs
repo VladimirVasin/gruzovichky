@@ -113,6 +113,16 @@ public partial class GameBootstrap
             opinionSubjectId,
             opinionSubjectKey,
             pendingPlaceholders);
+        ApplyWorkerThoughtInfluenceRulesToPendingThought(
+            worker,
+            resolvedThoughtKey,
+            resolvedFormationKey,
+            ref tone,
+            ref intensity,
+            ref priority,
+            ref resolvedFormationHours,
+            ref opinionDelta,
+            pendingPlaceholders);
         PendingWorkerThought pending = FindPendingWorkerThought(worker, resolvedFormationKey);
         if (pending == null)
         {
@@ -796,7 +806,8 @@ public partial class GameBootstrap
         }
 
         string text = GetWorkerThoughtTemplate(pending.TemplateKey, ru);
-        bool templateHadOpinionBiasToken = text.Contains("{" + WorkerOpinionBiasPlaceholderKey + "}");
+        bool templateHadOpinionBiasToken = text.Contains("{" + WorkerOpinionBiasPlaceholderKey + "}") ||
+            text.Contains("{" + WorkerThoughtInfluencePlaceholderKey + "}");
         for (int i = 0; i < pending.Placeholders.Count; i++)
         {
             WorkerThoughtPlaceholder placeholder = pending.Placeholders[i];

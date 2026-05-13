@@ -444,25 +444,38 @@ public partial class GameBootstrap
         bool ru,
         bool templateHadOpinionBiasToken)
     {
-        if (templateHadOpinionBiasToken || string.IsNullOrWhiteSpace(text) || placeholders == null)
+        if (string.IsNullOrWhiteSpace(text) || placeholders == null)
         {
             return text ?? string.Empty;
         }
 
+        string result = text;
         for (int i = 0; i < placeholders.Count; i++)
         {
             WorkerThoughtPlaceholder placeholder = placeholders[i];
-            if (placeholder == null ||
-                !string.Equals(placeholder.Key, WorkerOpinionBiasPlaceholderKey, System.StringComparison.Ordinal))
+            if (placeholder == null)
             {
                 continue;
             }
 
-            string suffix = FormatWorkerOpinionBiasPlaceholder(placeholder.SubjectKey, ru);
-            return string.IsNullOrWhiteSpace(suffix) ? text : $"{text} {suffix}";
+            bool isOpinionBias = string.Equals(placeholder.Key, WorkerOpinionBiasPlaceholderKey, System.StringComparison.Ordinal);
+            bool isInfluence = string.Equals(placeholder.Key, WorkerThoughtInfluencePlaceholderKey, System.StringComparison.Ordinal);
+            if ((!isOpinionBias && !isInfluence) ||
+                templateHadOpinionBiasToken && (isOpinionBias || isInfluence))
+            {
+                continue;
+            }
+
+            string suffix = isOpinionBias
+                ? FormatWorkerOpinionBiasPlaceholder(placeholder.SubjectKey, ru)
+                : FormatWorkerThoughtInfluencePlaceholder(placeholder.SubjectKey, ru);
+            if (!string.IsNullOrWhiteSpace(suffix))
+            {
+                result += " " + suffix;
+            }
         }
 
-        return text;
+        return result;
     }
 
     private static string FormatWorkerOpinionBiasPlaceholder(string suffixKey, bool ru)
@@ -491,4 +504,5 @@ public partial class GameBootstrap
         string match = exactMatch ? "exact" : "fallback";
         return $"{match}:{opinion.SubjectType}/{opinion.SubjectId}/{opinion.SubjectKey}";
     }
+
 }

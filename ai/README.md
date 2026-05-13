@@ -25,6 +25,8 @@ Design maps:
 
 - `Design/worker-thought-tree.md`
   Current map of the worker thought system: cause -> affect/status -> thought -> knowledge/opinion -> social signal -> Noosphere/UI. Read it before adding or restructuring worker thoughts, affects, weakness-driven thoughts, WorkerKnowledge/Opinion links, Noosphere thought/state chains, or thought UI cases. Update it in the same task when that chain changes.
+- `Design/worker-thought-influence-matrix.md`
+  Design matrix for explicit thought influence rules: source thought -> WorkerOpinion -> target thought bias. Read it before changing `WorkerOpinion` feedback loops, source/target thought links, influence windows/caps, weakness/trait modifiers, or human-readable influence reasons. Update it in the same task when those rules change.
 
 ## Memory Types
 
@@ -61,7 +63,8 @@ Rule:
 7. Read `release-notes.md` when the task involves version labels, changelogs, release contents, or Patch Notes.
 8. Read `tutorial-scenario.md` when the task touches Tutorial mode or a system currently taught by Tutorial.
 9. Read `Design/worker-thought-tree.md` when the task touches worker thoughts, active/pending thought formation, affect states, worker weaknesses/traits as thought inputs, WorkerKnowledge/Opinion links from thoughts, social signals from thoughts, Noosphere thought/state display, or Workers/F9 thought UI.
-10. Scan only the code relevant to the requested change.
+10. Read `Design/worker-thought-influence-matrix.md` when the task touches explicit thought influence rules, `WorkerOpinion` feedback loops, source-thought -> target-thought bias, influence windows/caps, or human-logic links between thoughts.
+11. Scan only the code relevant to the requested change.
 
 ## Workflow Contract
 
@@ -75,6 +78,7 @@ Rule:
 - Use `ai/systems-map.md` -> `System Owner Map` to pick the first files to inspect.
 - If the affected system is taught by `Обучение` / `GameStartMode.Tutorial`, compare the change against `ai/tutorial-scenario.md` before editing.
 - If the affected system changes worker cognition chain behavior or display, compare the change against `ai/Design/worker-thought-tree.md` before editing.
+- If the affected system changes explicit thought influence behavior, compare the change against `ai/Design/worker-thought-influence-matrix.md` before editing.
 - Write a short plan before changing code.
 - Do not start editing before the plan is stated.
 
@@ -107,6 +111,7 @@ Rule:
 - Update `system-tree.md` when system hierarchy, subsystem responsibilities, feature leaves, or cross-system dependencies changed.
 - Update `tutorial-scenario.md` when serious changes alter the Tutorial-mode player path, prerequisites, unlock order, HUD entry points, required buildings/resources, automation/manual-control balance, or goal text.
 - Update `Design/worker-thought-tree.md` when adding, removing, renaming, reclassifying, or substantially changing worker thought keys, affect-driven thoughts, weakness-driven interpretation, knowledge/opinion effects from thoughts, Noosphere thought/state chains, or Workers/F9 thought display cases.
+- Update `Design/worker-thought-influence-matrix.md` when adding, removing, retuning, or substantially changing explicit thought influence rules, source/target thought links, influence strength, influence windows, safety caps, weakness/trait modifiers, or example wording for thought feedback.
 - Update `project-overview.md` only if visible project structure or key responsibilities changed.
 - Update `systems-map.md` if system ownership, file involvement, owner-map paths, or owner-map responsibilities changed.
 - Update `architecture-notes.md` only if the real architecture changed or a new hotspot/refactor seam appeared.

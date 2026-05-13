@@ -878,9 +878,12 @@ Leisure:
 
 `WorkerOpinion` не является триггером мысли. Он не создаёт новые `WorkerThought` сам по себе и не должен запускать hidden gameplay-бонусы.
 
+Подробная дизайн-матрица конкретных связей `source thought -> target thought` живёт в `ai/Design/worker-thought-influence-matrix.md`. Перед добавлением явных influence-rules сверяться с ней и обновлять её вместе с изменениями.
+
 Текущая реализация:
 - точка входа: `AddOrKeepPendingWorkerThought` в `GameBootstrap.WorkerThoughtFormation.cs`;
 - helper layer: `GameBootstrap.WorkerThoughtBias.cs`;
+- explicit influence layer: `GameBootstrap.WorkerThoughtInfluence.cs`; на этом шаге есть evaluator/data-shape/hook, но каталог конкретных rules ещё пустой;
 - bias применяется только к мысли, которая уже появилась из реального события/условия;
 - используется exact opinion по subject, затем мягкий fallback по веткам `money`, `city_work`, `street_litter`, `Need/Meal`, `Need/Sleep`, `Need/Leisure`, `family`, `gambling`, `local_bus`, `city`;
 - минимальная устойчивость мнения: `Confidence >= 12`;

@@ -21,6 +21,7 @@ Reusable prompt templates live in:
 Design maps live in:
 
 - `ai/Design/worker-thought-tree.md`
+- `ai/Design/worker-thought-influence-matrix.md`
 
 ## Template Selection Logic
 
@@ -73,6 +74,7 @@ the agent must:
 - For broad, architectural, cross-system, or unclear tasks, consult `ai/system-tree.md` before the owner map.
 - Before broad code searches, consult the System Owner Map in `ai/systems-map.md`.
 - If a change touches worker thoughts, active/pending thought formation, affect states, worker weaknesses/traits as thought inputs, WorkerKnowledge/Opinion links from thoughts, social signals from thoughts, Noosphere thought/state display, or Workers/F9 thought UI, read `ai/Design/worker-thought-tree.md` before editing.
+- If a change touches explicit thought influence rules, `WorkerOpinion` feedback loops, source-thought -> target-thought bias, influence windows/caps, or human-logic links between thoughts, also read `ai/Design/worker-thought-influence-matrix.md` before editing.
 - If a change touches `Обучение` / `GameStartMode.Tutorial` or a system taught by that mode, read `ai/tutorial-scenario.md` and compare the planned change against the current Tutorial scenario.
 - Scan only the necessary code.
 - State a short plan before making code changes.
@@ -80,6 +82,7 @@ the agent must:
 - Update `ai/work-log.md` after implementation.
 - Update `ai/system-tree.md` when system hierarchy, subsystem responsibilities, feature leaves, or cross-system links change.
 - Update `ai/Design/worker-thought-tree.md` when adding, removing, renaming, reclassifying, or substantially changing worker thought keys, affect-driven thoughts, weakness-driven interpretation, knowledge/opinion effects from thoughts, Noosphere thought/state chains, or Workers/F9 thought display cases.
+- Update `ai/Design/worker-thought-influence-matrix.md` when adding, removing, retuning, or substantially changing explicit thought influence rules, source/target thought links, influence strength, influence windows, safety caps, weakness/trait modifiers, or example wording for thought feedback.
 - Update other AI memory files only if they truly need changes.
 
 ## System Tree Rules
@@ -110,6 +113,9 @@ the agent must:
 - `ai/Design/worker-thought-tree.md` is the source map for the worker cognition chain: cause -> status/affect -> thought -> knowledge/opinion -> social signal -> Noosphere/UI.
 - Read it before changing worker thoughts, affect states, weakness/trait interpretation hooks, WorkerKnowledge/Opinion effects caused by thoughts or affects, Noosphere thought/state signals, or Workers/F9 thought UI.
 - Update it in the same task when the implemented worker-cognition chain changes.
+- `ai/Design/worker-thought-influence-matrix.md` is the source map for explicit psychological influence rules: source thought -> WorkerOpinion -> target thought bias.
+- Read it before changing `WorkerOpinion` feedback loops, source/target thought influence links, influence windows/caps, weakness/trait modifiers, or human-readable influence reasons.
+- Update it in the same task when those influence links, strengths, safety rules, or example wording change.
 - Keep it conceptual and navigational; do not paste large code blocks into it.
 
 ## Tutorial Scenario Rule
