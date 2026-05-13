@@ -392,16 +392,9 @@ public partial class GameBootstrap
                 break;
             case LocationType.CityPark:
                 ApplyNeedBuildingOpinion(worker.LastLeisureNeedStatus, ref score, ref reasonRu, ref reasonEn, "передохнуть", "take a break", 32);
-                if (HasWorkerLeisurePreference(worker, WorkerLeisurePreferenceKind.NatureWalker))
-                {
-                    score += 16;
-                    confidence += 6;
-                    reasonRu = "Парк совпадает с привычным отдыхом на природе.";
-                    reasonEn = "The park matches their usual nature leisure.";
-                }
                 break;
             case LocationType.Bar:
-                ApplyNeedBuildingOpinion(worker.LastLeisureNeedStatus, ref score, ref reasonRu, ref reasonEn, "отдохнуть", "relax", HasWorkerLeisurePreference(worker, WorkerLeisurePreferenceKind.BarRegular) ? 40 : 24);
+                ApplyNeedBuildingOpinion(worker.LastLeisureNeedStatus, ref score, ref reasonRu, ref reasonEn, "отдохнуть", "relax", HasWorkerWeakness(worker, WorkerWeaknessKind.Alcoholism) ? 40 : 24);
                 if (worker.Money < 10)
                 {
                     score -= 12;
@@ -410,7 +403,7 @@ public partial class GameBootstrap
                 }
                 break;
             case LocationType.GamblingHall:
-                score += HasWorkerLeisurePreference(worker, WorkerLeisurePreferenceKind.RiskPlayer) ? 18 : -8;
+                score += HasWorkerWeakness(worker, WorkerWeaknessKind.Gambling) ? 18 : -8;
                 if (worker.GamblingBroke || worker.Money < 15)
                 {
                     score -= 36;
@@ -620,15 +613,28 @@ public partial class GameBootstrap
         ref int score,
         ref int confidence)
     {
-        if (HasWorkerPerk(worker, WorkerPerkKind.Quicklearner))
+        if (HasWorkerTrait(worker, WorkerTraitKind.Curious))
         {
             confidence += 12;
         }
 
-        if (HasWorkerPerk(worker, WorkerPerkKind.Frugal) &&
+        if (HasWorkerTrait(worker, WorkerTraitKind.Frugal) &&
             pending.BuildingType is LocationType.Bar or LocationType.GamblingHall or LocationType.Motel)
         {
             score -= worker.Money < 25 ? 10 : 4;
+        }
+
+        if (HasWorkerTrait(worker, WorkerTraitKind.Cautious) &&
+            pending.BuildingType is LocationType.Bar or LocationType.GamblingHall or LocationType.Motel)
+        {
+            score -= 6;
+            confidence += 3;
+        }
+
+        if (HasWorkerTrait(worker, WorkerTraitKind.Impulsive))
+        {
+            score += score > 0 ? 5 : score < 0 ? -5 : 0;
+            confidence -= 4;
         }
 
         if (worker?.Education == WorkerEducationLevel.Higher)
@@ -712,7 +718,7 @@ public partial class GameBootstrap
             hours += 0.18f;
         }
 
-        if (HasWorkerPerk(worker, WorkerPerkKind.Quicklearner))
+        if (HasWorkerTrait(worker, WorkerTraitKind.Curious))
         {
             hours *= 0.72f;
         }

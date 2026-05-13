@@ -146,7 +146,7 @@ Status: previous documented prototype baseline.
 
 - Workers can be hired from the Workers HUD.
 - New hires arrive by bus before checking in.
-- Workers have generated low-poly portrait UI, personality traits, leisure preference, salary, balance, and focus controls.
+- Workers have generated low-poly portrait UI, character traits, weaknesses, affect states, salary, balance, and focus controls.
 - Workers have need timers for Food, Sleep, and Leisure shown in the Workers HUD.
 - Worker daily/life behavior can route them through work, Canteen, Bar/leisure, Motel sleep, and idle.
 - Need changes and lifecycle decisions are logged to `debug.log`.

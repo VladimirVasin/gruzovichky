@@ -331,8 +331,6 @@ public partial class GameBootstrap : MonoBehaviour
             case WorkerLifeGoal.Leisure:
                 if (TryStartWeightedLeisureGoal(driver, startPosition))
                     return true;
-                if (TryStartStreetWandererFreeLeisure(driver, startPosition, "no leisure building was available; street wanderer chose free walk"))
-                    return true;
                 if (TryStartWorkerNeedFallback(driver, WorkerNeedKind.Leisure, startPosition, "no paid/free leisure service could be started"))
                 {
                     return true;

@@ -133,19 +133,32 @@ public partial class GameBootstrap
         string family = worker.FamilyId > 0
             ? ru ? $"\u0441\u0435\u043c\u044c\u044f #{worker.FamilyId}" : $"family #{worker.FamilyId}"
             : ru ? "\u0431\u0435\u0437 \u0441\u0435\u043c\u044c\u0438" : "no family";
+        string weakness = FormatNoosphereVisionResidentWeaknessLine(worker, ru);
         string affectLine = FormatNoosphereVisionResidentAffectLine(worker, ru);
 
         if (thought != null)
         {
             string thoughtText = RenderWorkerThought(thought, ru);
             return ru
-                ? $"{tone}, \u0441\u0438\u043b\u0430 {thought.Intensity}\n{affectLine}\n{thoughtText}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, ${worker.Money}, {family}"
-                : $"{tone}, strength {thought.Intensity}\n{affectLine}\n{thoughtText}\nsatisfaction {worker.Satisfaction}, ${worker.Money}, {family}";
+                ? $"{tone}, \u0441\u0438\u043b\u0430 {thought.Intensity}\n{weakness}\n{affectLine}\n{thoughtText}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, ${worker.Money}, {family}"
+                : $"{tone}, strength {thought.Intensity}\n{weakness}\n{affectLine}\n{thoughtText}\nsatisfaction {worker.Satisfaction}, ${worker.Money}, {family}";
         }
 
         return ru
-            ? $"{tone}\n{affectLine}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, \u0434\u0435\u043d\u044c\u0433\u0438 ${worker.Money}\n{family}"
-            : $"{tone}\n{affectLine}\nsatisfaction {worker.Satisfaction}, money ${worker.Money}\n{family}";
+            ? $"{tone}\n{weakness}\n{affectLine}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, \u0434\u0435\u043d\u044c\u0433\u0438 ${worker.Money}\n{family}"
+            : $"{tone}\n{weakness}\n{affectLine}\nsatisfaction {worker.Satisfaction}, money ${worker.Money}\n{family}";
+    }
+
+    private string FormatNoosphereVisionResidentWeaknessLine(DriverAgent worker, bool ru)
+    {
+        if (worker == null || worker.Weakness == WorkerWeaknessKind.None)
+        {
+            return ru ? "\u0441\u043b\u0430\u0431\u043e\u0441\u0442\u044c: \u043d\u0435\u0442" : "weakness: none";
+        }
+
+        return ru
+            ? $"\u0441\u043b\u0430\u0431\u043e\u0441\u0442\u044c: {GetWorkerWeaknessDisplayName(worker.Weakness, true)}"
+            : $"weakness: {GetWorkerWeaknessDisplayName(worker.Weakness, false)}";
     }
 
     private string FormatNoosphereVisionResidentAffectLine(DriverAgent worker, bool ru)

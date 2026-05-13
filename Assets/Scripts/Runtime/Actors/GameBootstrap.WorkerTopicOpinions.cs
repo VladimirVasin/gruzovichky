@@ -181,7 +181,7 @@ public partial class GameBootstrap
         int disposition = CalculateWorkerTopicOpinionDispositionBias(worker, pending);
         AddTopicOpinionComponent(
             disposition,
-            HasWorkerPerk(worker, WorkerPerkKind.Quicklearner) ? 5 : 1,
+            HasWorkerTrait(worker, WorkerTraitKind.Curious) ? 5 : 1,
             disposition >= 0 ? "личная предрасположенность сдвинула оценку в плюс" : "личная предрасположенность сдвинула оценку в минус",
             disposition >= 0 ? "personal disposition nudged the stance positive" : "personal disposition nudged the stance negative",
             ref score,
@@ -196,8 +196,8 @@ public partial class GameBootstrap
         if (previous != null)
         {
             int previousScore = Mathf.Clamp(previous.Score, -100, 100);
-            int previousWeight = Mathf.Clamp(previous.Confidence, 25, 82);
-            int newWeight = Mathf.Clamp(118 - previousWeight, 36, 92);
+            int previousWeight = Mathf.Clamp(previous.Confidence + (HasWorkerTrait(worker, WorkerTraitKind.Stubborn) ? 18 : 0), 25, 94);
+            int newWeight = Mathf.Clamp(118 - previousWeight + (HasWorkerTrait(worker, WorkerTraitKind.Adaptable) ? 18 : 0), 36, 104);
             contradictsPrevious =
                 Mathf.Abs(previousScore) >= WorkerTopicOpinionMinimumFinalMagnitude &&
                 Mathf.Abs(score) >= WorkerTopicOpinionMinimumFinalMagnitude &&
@@ -360,14 +360,24 @@ public partial class GameBootstrap
         }
 
         int bias = PositiveModulo(seed, 25) - 12;
-        if (HasWorkerPerk(worker, WorkerPerkKind.Socialite) && pending?.Positive == true)
+        if (HasWorkerTrait(worker, WorkerTraitKind.Sociable) && pending?.Positive == true)
         {
             bias += 3;
         }
 
-        if (HasWorkerPerk(worker, WorkerPerkKind.Frugal) && pending?.SourceInteractionKind == WorkerSocialInteractionKind.PlayerPromptedConversationFailed)
+        if (HasWorkerTrait(worker, WorkerTraitKind.Frugal) && pending?.SourceInteractionKind == WorkerSocialInteractionKind.PlayerPromptedConversationFailed)
         {
             bias -= 3;
+        }
+
+        if (HasWorkerTrait(worker, WorkerTraitKind.Trusting) && pending?.Positive == true)
+        {
+            bias += 4;
+        }
+
+        if (HasWorkerTrait(worker, WorkerTraitKind.Skeptical) && pending?.KnowledgeIteration <= 1)
+        {
+            bias -= pending?.Positive == true ? 4 : -2;
         }
 
         return Mathf.Clamp(bias, -15, 15);

@@ -771,14 +771,14 @@ public partial class GameBootstrap
 
     private void ResolveWorkerGamblingSpinResult(DriverAgent driver)
     {
-        bool hasGamblingPreference = HasWorkerLeisurePreference(driver, WorkerLeisurePreferenceKind.RiskPlayer);
+        bool hasGamblingWeakness = HasWorkerWeakness(driver, WorkerWeaknessKind.Gambling);
         var rng = new System.Random();
 
         int casinoBank = locations.TryGetValue(LocationType.GamblingHall, out LocationData gh) ? gh.BuildingBank : 0;
 
         int minBet = WorkerGamblingMinBet;
         int maxBet;
-        if (hasGamblingPreference)
+        if (hasGamblingWeakness)
         {
             if (driver.Money < minBet || casinoBank < minBet)
             {
@@ -788,7 +788,7 @@ public partial class GameBootstrap
                 driver.GamblingMultiplier = 0;
                 driver.GamblingMoneyPending = false;
                 RecordWorkerGamblingAffect(driver, 0, broke: true);
-                SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} [GAMBLING_PREF] is broke (money=${driver.Money}, casinoBank=${casinoBank}) - skipping bet.");
+                SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} [GAMBLING_WEAKNESS] is broke (money=${driver.Money}, casinoBank=${casinoBank}) - skipping bet.");
                 return;
             }
             driver.GamblingBroke = false;
@@ -807,7 +807,7 @@ public partial class GameBootstrap
         int multiplier = roll < 0.55f ? 0 : roll < 0.85f ? 1 : roll < 0.97f ? 5 : 10;
 
         int payout;
-        if (hasGamblingPreference)
+        if (hasGamblingWeakness)
         {
             payout = multiplier switch
             {
@@ -832,7 +832,7 @@ public partial class GameBootstrap
         RecordWorkerGamblingAffect(driver, net, broke: false);
 
         string outcomeStr = multiplier == 0 ? "LOSS" : $"WIN x{multiplier}";
-        string gamblerTag = hasGamblingPreference ? $" [GAMBLING_PREF bet#{driver.GamblingBetCount}]" : "";
+        string gamblerTag = hasGamblingWeakness ? $" [GAMBLING_WEAKNESS bet#{driver.GamblingBetCount}]" : "";
         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName}{gamblerTag} gambling; bet=${bet}, roll={roll:0.00}, outcome={outcomeStr}, payout=${payout}, net={net:+#;-#;0}, balance pending=${driver.Money}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
     }
 

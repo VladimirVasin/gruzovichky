@@ -369,7 +369,7 @@ public partial class GameBootstrap
                 WorkerName = worker.DriverName,
                 CitizenProfession = worker.CitizenProfession,
                 Education = worker.Education,
-                LeisurePreference = worker.LeisurePreference,
+                Weakness = worker.Weakness,
                 Satisfaction = worker.Satisfaction,
                 Money = worker.Money,
                 IsInsideBuilding = worker.IsInsideBuilding,
@@ -385,6 +385,7 @@ public partial class GameBootstrap
                 DailyOpinionCount = worker.DailyOpinions.Count
             };
 
+            CopyNoosphereWorkerTraits(worker, copy);
             CopyNoosphereWorkerThoughts(worker, copy);
             CopyNoosphereWorkerAffects(worker, copy, now);
             CopyNoosphereWorkerPendingThoughts(worker, copy);
@@ -448,6 +449,14 @@ public partial class GameBootstrap
                 ReasonRu = affect.ReasonRu ?? string.Empty,
                 ReasonEn = affect.ReasonEn ?? string.Empty
             });
+        }
+    }
+
+    private static void CopyNoosphereWorkerTraits(DriverAgent worker, NoosphereWorkerLayerSnapshot copy)
+    {
+        for (int i = 0; i < worker.Traits.Count; i++)
+        {
+            copy.Traits.Add(worker.Traits[i]);
         }
     }
 

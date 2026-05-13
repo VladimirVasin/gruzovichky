@@ -43,35 +43,32 @@ public partial class GameBootstrap
         driversScreenUi.DetailTraitTooltipRoot.SetActive(false);
     }
 
-    private void ConfigureWorkerPerkTooltip(Text text, WorkerPerkKind perk)
+    private void ConfigureWorkerTraitTooltip(Text text, WorkerTraitKind trait)
     {
         if (text == null)
         {
             return;
         }
 
-        text.raycastTarget = true;
-        EventTrigger trigger = text.TryGetComponent(out EventTrigger existingTrigger)
-            ? existingTrigger
-            : text.gameObject.AddComponent<EventTrigger>();
-        trigger.triggers.Clear();
-
-        EventTrigger.Entry enter = new() { eventID = EventTriggerType.PointerEnter };
-        enter.callback.AddListener(_ => ShowWorkerPerkTooltip(perk, text.rectTransform));
-        trigger.triggers.Add(enter);
-
-        EventTrigger.Entry exit = new() { eventID = EventTriggerType.PointerExit };
-        exit.callback.AddListener(_ => HideWorkerTraitTooltip());
-        trigger.triggers.Add(exit);
+        ConfigureWorkerPersonalityTooltip(
+            text,
+            () => ShowWorkerTraitTooltip(trait, text.rectTransform));
     }
 
-    private void ConfigureWorkerLeisurePreferenceTooltip(Text text, WorkerLeisurePreferenceKind preference)
+    private void ConfigureWorkerWeaknessTooltip(Text text, WorkerWeaknessKind weakness)
     {
         if (text == null)
         {
             return;
         }
 
+        ConfigureWorkerPersonalityTooltip(
+            text,
+            () => ShowWorkerWeaknessTooltip(weakness, text.rectTransform));
+    }
+
+    private void ConfigureWorkerPersonalityTooltip(Text text, UnityEngine.Events.UnityAction onEnter)
+    {
         text.raycastTarget = true;
         EventTrigger trigger = text.TryGetComponent(out EventTrigger existingTrigger)
             ? existingTrigger
@@ -79,7 +76,7 @@ public partial class GameBootstrap
         trigger.triggers.Clear();
 
         EventTrigger.Entry enter = new() { eventID = EventTriggerType.PointerEnter };
-        enter.callback.AddListener(_ => ShowWorkerLeisurePreferenceTooltip(preference, text.rectTransform));
+        enter.callback.AddListener(_ => onEnter());
         trigger.triggers.Add(enter);
 
         EventTrigger.Entry exit = new() { eventID = EventTriggerType.PointerExit };
@@ -101,49 +98,40 @@ public partial class GameBootstrap
         }
     }
 
-    private void ShowWorkerPerkTooltip(WorkerPerkKind perk, RectTransform target)
+    private void ShowWorkerTraitTooltip(WorkerTraitKind trait, RectTransform target)
     {
-        if (driversScreenUi?.DetailTraitTooltipRoot == null || target == null || driversScreenUi.WindowRoot == null)
-        {
-            return;
-        }
-
-        bool ru = IsRussianLanguage();
-        if (driversScreenUi.DetailTraitTooltipTitleText != null)
-        {
-            driversScreenUi.DetailTraitTooltipTitleText.text = GetWorkerPerkDisplayName(perk, ru);
-            driversScreenUi.DetailTraitTooltipTitleText.color = GetWorkerPerkColor();
-        }
-
-        if (driversScreenUi.DetailTraitTooltipBodyText != null)
-        {
-            driversScreenUi.DetailTraitTooltipBodyText.text = GetWorkerPerkDescription(perk, ru);
-            SetWorkerTooltipBodyHeight(88f);
-        }
-
-        SetWorkerTooltipSize(WorkerTraitTooltipWidth, WorkerTraitTooltipHeight);
-        PositionWorkerTooltip(target, WorkerTraitTooltipWidth, WorkerTraitTooltipHeight);
-        driversScreenUi.DetailTraitTooltipRoot.SetActive(true);
-        driversScreenUi.DetailTraitTooltipRoot.transform.SetAsLastSibling();
+        ShowWorkerPersonalityTooltip(
+            GetWorkerTraitDisplayName(trait, IsRussianLanguage()),
+            GetWorkerTraitDescription(trait, IsRussianLanguage()),
+            GetWorkerTraitColor(trait),
+            target);
     }
 
-    private void ShowWorkerLeisurePreferenceTooltip(WorkerLeisurePreferenceKind preference, RectTransform target)
+    private void ShowWorkerWeaknessTooltip(WorkerWeaknessKind weakness, RectTransform target)
+    {
+        ShowWorkerPersonalityTooltip(
+            GetWorkerWeaknessDisplayName(weakness, IsRussianLanguage()),
+            GetWorkerWeaknessDescription(weakness, IsRussianLanguage()),
+            GetWorkerWeaknessColor(weakness),
+            target);
+    }
+
+    private void ShowWorkerPersonalityTooltip(string title, string body, Color color, RectTransform target)
     {
         if (driversScreenUi?.DetailTraitTooltipRoot == null || target == null || driversScreenUi.WindowRoot == null)
         {
             return;
         }
 
-        bool ru = IsRussianLanguage();
         if (driversScreenUi.DetailTraitTooltipTitleText != null)
         {
-            driversScreenUi.DetailTraitTooltipTitleText.text = GetWorkerLeisurePreferenceDisplayName(preference, ru);
-            driversScreenUi.DetailTraitTooltipTitleText.color = GetWorkerLeisurePreferenceColor(preference);
+            driversScreenUi.DetailTraitTooltipTitleText.text = title;
+            driversScreenUi.DetailTraitTooltipTitleText.color = color;
         }
 
         if (driversScreenUi.DetailTraitTooltipBodyText != null)
         {
-            driversScreenUi.DetailTraitTooltipBodyText.text = GetWorkerLeisurePreferenceDescription(preference, ru);
+            driversScreenUi.DetailTraitTooltipBodyText.text = body;
             SetWorkerTooltipBodyHeight(88f);
         }
 

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public partial class GameBootstrap
@@ -353,6 +353,12 @@ public partial class GameBootstrap
             : GetWorkerAffectDisplayName(kind, false);
         string reasonRu = sample?.ReasonRu;
         string reasonEn = sample?.ReasonEn;
+        string weaknessRu = sampleWorker != null && sampleWorker.Weakness != WorkerWeaknessKind.None
+            ? GetWorkerWeaknessDisplayName(sampleWorker.Weakness, true)
+            : "\u043d\u0435\u0442";
+        string weaknessEn = sampleWorker != null && sampleWorker.Weakness != WorkerWeaknessKind.None
+            ? GetWorkerWeaknessDisplayName(sampleWorker.Weakness, false)
+            : "none";
         if (string.IsNullOrWhiteSpace(reasonRu))
         {
             reasonRu = "\u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435 \u0443\u0441\u0438\u043b\u0438\u043b\u043e\u0441\u044c";
@@ -374,8 +380,8 @@ public partial class GameBootstrap
             SummaryEn = $"{count} residents carry this state, average intensity {averageIntensity}.",
             SourceRu = $"\u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reasonRu}.",
             SourceEn = $"Cause: {reasonEn}.",
-            EffectRu = $"\u0426\u0435\u043f\u043e\u0447\u043a\u0430: \u043f\u0440\u0438\u0447\u0438\u043d\u0430 -> \u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435 -> \u043c\u044b\u0441\u043b\u044c «{thoughtRu}» -> \u0442\u0435\u043c\u0430 {GetSocialSignalCategoryLabel(GetWorkerAffectSocialCategory(kind), true)}.",
-            EffectEn = $"Chain: cause -> state -> thought \"{thoughtEn}\" -> topic {GetSocialSignalCategoryLabel(GetWorkerAffectSocialCategory(kind), false)}.",
+            EffectRu = $"\u0426\u0435\u043f\u043e\u0447\u043a\u0430: \u0441\u043b\u0430\u0431\u043e\u0441\u0442\u044c {weaknessRu} -> \u043f\u0440\u0438\u0447\u0438\u043d\u0430 -> \u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435 -> \u043c\u044b\u0441\u043b\u044c \"{thoughtRu}\" -> \u0442\u0435\u043c\u0430 {GetSocialSignalCategoryLabel(GetWorkerAffectSocialCategory(kind), true)}.",
+            EffectEn = $"Chain: weakness {weaknessEn} -> cause -> state -> thought \"{thoughtEn}\" -> topic {GetSocialSignalCategoryLabel(GetWorkerAffectSocialCategory(kind), false)}.",
             ActionRu = "\u0423\u0431\u0435\u0440\u0438 \u043f\u0440\u0438\u0447\u0438\u043d\u0443, \u0435\u0441\u043b\u0438 \u044d\u0442\u043e \u0442\u0440\u0435\u0432\u043e\u0433\u0430, \u0438\u043b\u0438 \u0443\u0441\u0438\u043b\u044c \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a, \u0435\u0441\u043b\u0438 \u044d\u0442\u043e \u043d\u0430\u0434\u0435\u0436\u0434\u0430.",
             ActionEn = "Remove the cause if this is worry, or reinforce the source if this is hope.",
             Tone = GetNoosphereVisionToneFromScore(scoreSign * averageIntensity),

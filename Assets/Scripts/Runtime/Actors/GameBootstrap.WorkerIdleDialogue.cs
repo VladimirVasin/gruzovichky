@@ -227,7 +227,7 @@ public partial class GameBootstrap
 
     private WorkerIdleDialogueContext GetWorkerIdleDialogueContext(DriverAgent first, DriverAgent second)
     {
-        if (HasWorkerPerk(first, WorkerPerkKind.Socialite) || HasWorkerPerk(second, WorkerPerkKind.Socialite))
+        if (HasWorkerTrait(first, WorkerTraitKind.Sociable) || HasWorkerTrait(second, WorkerTraitKind.Sociable))
         {
             return WorkerIdleDialogueContext.Socialite;
         }

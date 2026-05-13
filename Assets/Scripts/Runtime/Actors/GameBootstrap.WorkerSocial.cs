@@ -458,12 +458,12 @@ public partial class GameBootstrap
     private static int GetWorkerSocialitePairCount(DriverAgent first, DriverAgent second)
     {
         int count = 0;
-        if (HasWorkerPerk(first, WorkerPerkKind.Socialite))
+        if (HasWorkerTrait(first, WorkerTraitKind.Sociable))
         {
             count++;
         }
 
-        if (HasWorkerPerk(second, WorkerPerkKind.Socialite))
+        if (HasWorkerTrait(second, WorkerTraitKind.Sociable))
         {
             count++;
         }

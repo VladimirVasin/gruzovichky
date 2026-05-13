@@ -233,7 +233,8 @@ public partial class GameBootstrap
         public string WorkerName = string.Empty;
         public CitizenProfessionKind CitizenProfession;
         public WorkerEducationLevel Education;
-        public WorkerLeisurePreferenceKind LeisurePreference;
+        public WorkerWeaknessKind Weakness;
+        public readonly List<WorkerTraitKind> Traits = new();
         public int Satisfaction;
         public int Money;
         public bool IsInsideBuilding;

@@ -8,20 +8,20 @@ public partial class GameBootstrap : MonoBehaviour
 
     private bool TryStartWeightedLeisureGoal(DriverAgent driver, Vector3 startPosition)
     {
-        WorkerLeisurePreferenceKind preference = GetWorkerLeisurePreference(driver);
+        WorkerWeaknessKind weakness = driver?.Weakness ?? WorkerWeaknessKind.None;
 
         List<LocationType> weightedChoices = new();
         if (CanWorkerConsiderLeisureService(driver, LocationType.CityPark))
         {
-            AddWeightedLeisureChoice(weightedChoices, LocationType.CityPark, GetWorkerLeisureChoiceWeight(preference, LocationType.CityPark));
+            AddWeightedLeisureChoice(weightedChoices, LocationType.CityPark, GetWorkerLeisureChoiceWeight(weakness, LocationType.CityPark));
         }
         if (CanWorkerConsiderLeisureService(driver, LocationType.GamblingHall))
         {
-            AddWeightedLeisureChoice(weightedChoices, LocationType.GamblingHall, GetWorkerLeisureChoiceWeight(preference, LocationType.GamblingHall));
+            AddWeightedLeisureChoice(weightedChoices, LocationType.GamblingHall, GetWorkerLeisureChoiceWeight(weakness, LocationType.GamblingHall));
         }
         if (CanWorkerConsiderLeisureService(driver, LocationType.Bar))
         {
-            AddWeightedLeisureChoice(weightedChoices, LocationType.Bar, GetWorkerLeisureChoiceWeight(preference, LocationType.Bar));
+            AddWeightedLeisureChoice(weightedChoices, LocationType.Bar, GetWorkerLeisureChoiceWeight(weakness, LocationType.Bar));
         }
 
         if (weightedChoices.Count == 0)
@@ -32,7 +32,7 @@ public partial class GameBootstrap : MonoBehaviour
 
         int pickedIndex = Random.Range(0, weightedChoices.Count);
         LocationType picked = weightedChoices[pickedIndex];
-        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} rolled leisure target {picked}; candidates={weightedChoices.Count}, leisurePreference={preference}.");
+        SessionDebugLogger.Log("LIFE", $"{driver.DriverName} rolled leisure target {picked}; candidates={weightedChoices.Count}, weakness={weakness}.");
         if (TryStartLeisureServiceVisit(driver, picked, startPosition))
         {
             return true;
@@ -56,36 +56,22 @@ public partial class GameBootstrap : MonoBehaviour
         return false;
     }
 
-    private static int GetWorkerLeisureChoiceWeight(WorkerLeisurePreferenceKind preference, LocationType type)
+    private static int GetWorkerLeisureChoiceWeight(WorkerWeaknessKind weakness, LocationType type)
     {
-        int weight = preference switch
+        int weight = weakness switch
         {
-            WorkerLeisurePreferenceKind.BarRegular => type switch
+            WorkerWeaknessKind.Alcoholism => type switch
             {
                 LocationType.Bar => 8,
                 LocationType.CityPark => 3,
                 LocationType.GamblingHall => 1,
                 _ => 1
             },
-            WorkerLeisurePreferenceKind.RiskPlayer => type switch
+            WorkerWeaknessKind.Gambling => type switch
             {
                 LocationType.GamblingHall => 8,
                 LocationType.Bar => 2,
                 LocationType.CityPark => 2,
-                _ => 1
-            },
-            WorkerLeisurePreferenceKind.NatureWalker => type switch
-            {
-                LocationType.CityPark => 8,
-                LocationType.Bar => 2,
-                LocationType.GamblingHall => 1,
-                _ => 1
-            },
-            WorkerLeisurePreferenceKind.StreetWanderer => type switch
-            {
-                LocationType.CityPark => 4,
-                LocationType.Bar => 2,
-                LocationType.GamblingHall => 1,
                 _ => 1
             },
             _ => type switch
@@ -121,7 +107,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         if (type == LocationType.GamblingHall &&
-            !HasWorkerLeisurePreference(driver, WorkerLeisurePreferenceKind.RiskPlayer) &&
+            !HasWorkerWeakness(driver, WorkerWeaknessKind.Gambling) &&
             driver.Money < WorkerGamblingMinBalance)
         {
             return false;
@@ -139,19 +125,6 @@ public partial class GameBootstrap : MonoBehaviour
             LocationType.CityPark => TryStartWorkerServiceVisit(driver, LocationType.CityPark, WorkerLifeGoal.Leisure, DriverRescuePhase.IdleWalkToCityPark, WorkerCityParkDuration, startPosition),
             _ => false
         };
-    }
-
-    private bool TryStartStreetWandererFreeLeisure(DriverAgent driver, Vector3 startPosition, string reason)
-    {
-        if (!HasWorkerLeisurePreference(driver, WorkerLeisurePreferenceKind.StreetWanderer))
-        {
-            return false;
-        }
-
-        StartWorkerFreeIdle(driver, startPosition, reason);
-        driver.IdleActivityTimer = Mathf.Max(driver.IdleActivityTimer, WorkerFreeIdleMaxDuration * 1.2f);
-        LogWorkerDecision(driver, "street-wanderer-free-leisure", reason, true);
-        return true;
     }
 
     private bool TryStartWorkerIdleVendorPurchase(DriverAgent driver, Vector3 startPosition)

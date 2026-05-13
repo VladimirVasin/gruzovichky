@@ -489,9 +489,13 @@ public partial class GameBootstrap
         score -= Mathf.Abs(relationship) * 2;
         score -= exposure;
         score -= interactions * 5;
-        if (HasWorkerPerk(requester, WorkerPerkKind.Socialite))
+        if (HasWorkerTrait(requester, WorkerTraitKind.Sociable))
         {
             score += 18;
+        }
+        else if (HasWorkerTrait(requester, WorkerTraitKind.Reserved))
+        {
+            score -= 12;
         }
 
         return score;

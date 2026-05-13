@@ -400,14 +400,22 @@ public partial class GameBootstrap : MonoBehaviour
     private float GetDriverIdleConversationStartChance(DriverAgent driver, DriverAgent partner)
     {
         float chance = DriverIdleConversationStartChance;
-        if (HasWorkerPerk(driver, WorkerPerkKind.Socialite))
+        if (HasWorkerTrait(driver, WorkerTraitKind.Sociable))
         {
             chance += 0.25f;
         }
+        else if (HasWorkerTrait(driver, WorkerTraitKind.Reserved))
+        {
+            chance -= 0.12f;
+        }
 
-        if (HasWorkerPerk(partner, WorkerPerkKind.Socialite))
+        if (HasWorkerTrait(partner, WorkerTraitKind.Sociable))
         {
             chance += 0.2f;
+        }
+        else if (HasWorkerTrait(partner, WorkerTraitKind.Reserved))
+        {
+            chance -= 0.08f;
         }
 
         if (HasActiveWorkerConversationTopicKnowledge(driver))

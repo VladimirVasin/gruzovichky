@@ -96,13 +96,28 @@ public partial class GameBootstrap
         Quicklearner
     }
 
-    private enum WorkerLeisurePreferenceKind
+    private enum WorkerTraitKind
+    {
+        Sociable,
+        Reserved,
+        Frugal,
+        Curious,
+        Anxious,
+        Impulsive,
+        Cautious,
+        Trusting,
+        Skeptical,
+        Stubborn,
+        Adaptable,
+        Meticulous,
+        Dutiful
+    }
+
+    private enum WorkerWeaknessKind
     {
         None,
-        BarRegular,
-        RiskPlayer,
-        NatureWalker,
-        StreetWanderer
+        Alcoholism,
+        Gambling
     }
 
     private enum WorkerAffectKind
@@ -111,11 +126,9 @@ public partial class GameBootstrap
         FamilyAnxiety,
         ReliefAfterRest,
         Hangover,
-        Loneliness,
-        InspiredByNature,
-        IrritatedByLitter,
         GamblingExcitement,
         GamblingRegret,
+        IrritatedByLitter,
         StableRoutine
     }
 
@@ -279,7 +292,8 @@ public partial class GameBootstrap
         public int PortraitAccessory;
         public int PortraitHeadShape;
         public readonly List<WorkerPerkKind> Perks = new();
-        public WorkerLeisurePreferenceKind LeisurePreference = WorkerLeisurePreferenceKind.None;
+        public readonly List<WorkerTraitKind> Traits = new();
+        public WorkerWeaknessKind Weakness = WorkerWeaknessKind.None;
         public readonly List<WorkerAffect> Affects = new();
         public DriverDutyMode DutyMode = DriverDutyMode.Local;
         public int ShiftStartHour = -1;

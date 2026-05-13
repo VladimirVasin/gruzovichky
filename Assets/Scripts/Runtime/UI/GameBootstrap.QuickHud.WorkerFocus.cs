@@ -315,7 +315,7 @@ public partial class GameBootstrap
         EnsureWorkerPerks(driver);
 
         string text = string.Empty;
-        int count = driver.Perks.Count < maxVisible ? driver.Perks.Count : maxVisible;
+        int count = driver.Traits.Count < maxVisible ? driver.Traits.Count : maxVisible;
         for (int i = 0; i < count; i++)
         {
             if (i > 0)
@@ -323,12 +323,12 @@ public partial class GameBootstrap
                 text += ", ";
             }
 
-            text += GetWorkerPerkDisplayName(driver.Perks[i], ru);
+            text += GetWorkerTraitDisplayName(driver.Traits[i], ru);
         }
 
-        if (driver.Perks.Count > count)
+        if (driver.Traits.Count > count)
         {
-            text += ru ? $" +{driver.Perks.Count - count}" : $" +{driver.Perks.Count - count}";
+            text += ru ? $" +{driver.Traits.Count - count}" : $" +{driver.Traits.Count - count}";
         }
 
         if (string.IsNullOrWhiteSpace(text))
@@ -336,9 +336,9 @@ public partial class GameBootstrap
             text = ru ? "\u0431\u0435\u0437 \u0447\u0435\u0440\u0442" : "no traits";
         }
 
-        if (driver.LeisurePreference != WorkerLeisurePreferenceKind.None)
+        if (driver.Weakness != WorkerWeaknessKind.None)
         {
-            text += $" / {GetWorkerLeisurePreferenceDisplayName(driver.LeisurePreference, ru)}";
+            text += $" / {GetWorkerWeaknessDisplayName(driver.Weakness, ru)}";
         }
 
         return text;

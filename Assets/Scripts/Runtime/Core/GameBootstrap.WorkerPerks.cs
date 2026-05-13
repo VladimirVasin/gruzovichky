@@ -6,22 +6,31 @@ public partial class GameBootstrap
 {
     private const float WorkerTraitTooltipWidth = 330f;
     private const float WorkerTraitTooltipHeight = 142f;
-    private const int WorkerPerkHudRowCount = 7;
-    private const int WorkerStartTraitCount = 2;
+    private const int WorkerPerkHudRowCount = 8;
+    private const int WorkerStartTraitCount = 3;
+    private const int WorkerWeaknessChancePercent = 33;
 
-    private static readonly WorkerPerkKind[] WorkerTraitPool =
+    private static readonly WorkerTraitKind[] WorkerTraitPool =
     {
-        WorkerPerkKind.Socialite,
-        WorkerPerkKind.Frugal,
-        WorkerPerkKind.Quicklearner
+        WorkerTraitKind.Sociable,
+        WorkerTraitKind.Reserved,
+        WorkerTraitKind.Frugal,
+        WorkerTraitKind.Curious,
+        WorkerTraitKind.Anxious,
+        WorkerTraitKind.Impulsive,
+        WorkerTraitKind.Cautious,
+        WorkerTraitKind.Trusting,
+        WorkerTraitKind.Skeptical,
+        WorkerTraitKind.Stubborn,
+        WorkerTraitKind.Adaptable,
+        WorkerTraitKind.Meticulous,
+        WorkerTraitKind.Dutiful
     };
 
-    private static readonly WorkerLeisurePreferenceKind[] WorkerLeisurePreferencePool =
+    private static readonly WorkerWeaknessKind[] WorkerWeaknessPool =
     {
-        WorkerLeisurePreferenceKind.BarRegular,
-        WorkerLeisurePreferenceKind.RiskPlayer,
-        WorkerLeisurePreferenceKind.NatureWalker,
-        WorkerLeisurePreferenceKind.StreetWanderer
+        WorkerWeaknessKind.Alcoholism,
+        WorkerWeaknessKind.Gambling
     };
 
     private void AssignWorkerPerks(DriverAgent driver)
@@ -43,7 +52,8 @@ public partial class GameBootstrap
         }
 
         driver.Perks.Clear();
-        driver.LeisurePreference = WorkerLeisurePreferenceKind.None;
+        driver.Traits.Clear();
+        driver.Weakness = WorkerWeaknessKind.None;
         NormalizeWorkerPersonality(driver, rng);
     }
 
@@ -60,22 +70,22 @@ public partial class GameBootstrap
 
     private static bool IsWorkerTraitSetValid(DriverAgent driver)
     {
-        if (driver == null || driver.Perks.Count != Mathf.Min(WorkerStartTraitCount, WorkerTraitPool.Length))
+        if (driver == null || driver.Traits.Count != Mathf.Min(WorkerStartTraitCount, WorkerTraitPool.Length))
         {
             return false;
         }
 
-        for (int i = 0; i < driver.Perks.Count; i++)
+        for (int i = 0; i < driver.Traits.Count; i++)
         {
-            WorkerPerkKind perk = driver.Perks[i];
-            if (!IsWorkerTraitInPool(perk))
+            WorkerTraitKind trait = driver.Traits[i];
+            if (!IsWorkerTraitInPool(trait) || HasConflictingWorkerTrait(driver, trait, i))
             {
                 return false;
             }
 
-            for (int j = i + 1; j < driver.Perks.Count; j++)
+            for (int j = i + 1; j < driver.Traits.Count; j++)
             {
-                if (driver.Perks[j] == perk)
+                if (driver.Traits[j] == trait)
                 {
                     return false;
                 }
@@ -92,97 +102,167 @@ public partial class GameBootstrap
             return;
         }
 
-        if (!IsWorkerLeisurePreferenceInPool(driver.LeisurePreference))
-        {
-            driver.LeisurePreference = WorkerLeisurePreferenceKind.None;
-        }
-
-        bool hadAlcoholism = RemoveWorkerLegacyPerk(driver, WorkerPerkKind.Alcoholism);
-        bool hadGambler = RemoveWorkerLegacyPerk(driver, WorkerPerkKind.Gambler);
-        if (driver.LeisurePreference == WorkerLeisurePreferenceKind.None)
-        {
-            if (hadAlcoholism && hadGambler)
-            {
-                driver.LeisurePreference = rng.Next(2) == 0
-                    ? WorkerLeisurePreferenceKind.BarRegular
-                    : WorkerLeisurePreferenceKind.RiskPlayer;
-            }
-            else if (hadAlcoholism)
-            {
-                driver.LeisurePreference = WorkerLeisurePreferenceKind.BarRegular;
-            }
-            else if (hadGambler)
-            {
-                driver.LeisurePreference = WorkerLeisurePreferenceKind.RiskPlayer;
-            }
-        }
-
+        MigrateLegacyWorkerPerks(driver, rng);
         RemoveInvalidOrDuplicateWorkerTraits(driver);
 
-        WorkerPerkKind[] traitPool = (WorkerPerkKind[])WorkerTraitPool.Clone();
+        WorkerTraitKind[] traitPool = (WorkerTraitKind[])WorkerTraitPool.Clone();
         ShuffleWorkerTraitPool(traitPool, rng);
         int targetCount = Mathf.Min(WorkerStartTraitCount, WorkerTraitPool.Length);
-        for (int i = 0; i < traitPool.Length && driver.Perks.Count < targetCount; i++)
+        for (int i = 0; i < traitPool.Length && driver.Traits.Count < targetCount; i++)
         {
-            if (!driver.Perks.Contains(traitPool[i]))
-            {
-                driver.Perks.Add(traitPool[i]);
-            }
+            TryAddWorkerTrait(driver, traitPool[i]);
         }
 
-        while (driver.Perks.Count > targetCount)
+        while (driver.Traits.Count > targetCount)
         {
-            driver.Perks.RemoveAt(driver.Perks.Count - 1);
+            driver.Traits.RemoveAt(driver.Traits.Count - 1);
         }
 
-        if (driver.LeisurePreference == WorkerLeisurePreferenceKind.None && WorkerLeisurePreferencePool.Length > 0)
+        if (!IsWorkerWeaknessInPool(driver.Weakness))
         {
-            driver.LeisurePreference = WorkerLeisurePreferencePool[rng.Next(WorkerLeisurePreferencePool.Length)];
+            driver.Weakness = WorkerWeaknessKind.None;
+        }
+
+        if (driver.Weakness == WorkerWeaknessKind.None &&
+            WorkerWeaknessPool.Length > 0 &&
+            rng.Next(100) < WorkerWeaknessChancePercent)
+        {
+            driver.Weakness = WorkerWeaknessPool[rng.Next(WorkerWeaknessPool.Length)];
         }
     }
 
-    private static bool RemoveWorkerLegacyPerk(DriverAgent driver, WorkerPerkKind legacyPerk)
+    private static void MigrateLegacyWorkerPerks(DriverAgent driver, System.Random rng)
     {
-        bool removed = false;
+        bool hadAlcoholism = false;
+        bool hadGambler = false;
         for (int i = driver.Perks.Count - 1; i >= 0; i--)
         {
-            if (driver.Perks[i] == legacyPerk)
+            switch (driver.Perks[i])
             {
-                driver.Perks.RemoveAt(i);
-                removed = true;
+                case WorkerPerkKind.Socialite:
+                    TryAddWorkerTrait(driver, WorkerTraitKind.Sociable);
+                    break;
+                case WorkerPerkKind.Frugal:
+                    TryAddWorkerTrait(driver, WorkerTraitKind.Frugal);
+                    break;
+                case WorkerPerkKind.Quicklearner:
+                    TryAddWorkerTrait(driver, WorkerTraitKind.Curious);
+                    break;
+                case WorkerPerkKind.Alcoholism:
+                    hadAlcoholism = true;
+                    break;
+                case WorkerPerkKind.Gambler:
+                    hadGambler = true;
+                    break;
             }
         }
 
-        return removed;
+        driver.Perks.Clear();
+        if (driver.Weakness != WorkerWeaknessKind.None)
+        {
+            return;
+        }
+
+        if (hadAlcoholism && hadGambler)
+        {
+            driver.Weakness = ShouldPreferLegacyGamblingWeakness(driver, rng)
+                ? WorkerWeaknessKind.Gambling
+                : WorkerWeaknessKind.Alcoholism;
+        }
+        else if (hadAlcoholism)
+        {
+            driver.Weakness = WorkerWeaknessKind.Alcoholism;
+        }
+        else if (hadGambler)
+        {
+            driver.Weakness = WorkerWeaknessKind.Gambling;
+        }
+    }
+
+    private static bool ShouldPreferLegacyGamblingWeakness(DriverAgent driver, System.Random rng)
+    {
+        if (driver != null && (driver.GamblingBroke || driver.GamblingBetCount > 0))
+        {
+            return true;
+        }
+
+        return rng.Next(2) == 0;
+    }
+
+    private static bool TryAddWorkerTrait(DriverAgent driver, WorkerTraitKind trait)
+    {
+        if (driver == null || !IsWorkerTraitInPool(trait) || driver.Traits.Contains(trait) || HasConflictingWorkerTrait(driver, trait))
+        {
+            return false;
+        }
+
+        driver.Traits.Add(trait);
+        return true;
     }
 
     private static void RemoveInvalidOrDuplicateWorkerTraits(DriverAgent driver)
     {
-        for (int i = driver.Perks.Count - 1; i >= 0; i--)
+        for (int i = driver.Traits.Count - 1; i >= 0; i--)
         {
-            WorkerPerkKind perk = driver.Perks[i];
-            if (!IsWorkerTraitInPool(perk))
+            WorkerTraitKind trait = driver.Traits[i];
+            if (!IsWorkerTraitInPool(trait) || HasConflictingWorkerTrait(driver, trait, i))
             {
-                driver.Perks.RemoveAt(i);
+                driver.Traits.RemoveAt(i);
                 continue;
             }
 
             for (int j = 0; j < i; j++)
             {
-                if (driver.Perks[j] == perk)
+                if (driver.Traits[j] == trait)
                 {
-                    driver.Perks.RemoveAt(i);
+                    driver.Traits.RemoveAt(i);
                     break;
                 }
             }
         }
     }
 
-    private static bool IsWorkerTraitInPool(WorkerPerkKind perk)
+    private static bool HasConflictingWorkerTrait(DriverAgent driver, WorkerTraitKind trait, int ignoreIndex = -1)
+    {
+        int group = GetWorkerTraitConflictGroup(trait);
+        if (driver == null || group <= 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < driver.Traits.Count; i++)
+        {
+            if (i == ignoreIndex)
+            {
+                continue;
+            }
+
+            if (GetWorkerTraitConflictGroup(driver.Traits[i]) == group)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int GetWorkerTraitConflictGroup(WorkerTraitKind trait)
+    {
+        return trait switch
+        {
+            WorkerTraitKind.Sociable or WorkerTraitKind.Reserved => 1,
+            WorkerTraitKind.Impulsive or WorkerTraitKind.Cautious => 2,
+            WorkerTraitKind.Trusting or WorkerTraitKind.Skeptical => 3,
+            WorkerTraitKind.Stubborn or WorkerTraitKind.Adaptable => 4,
+            _ => 0
+        };
+    }
+
+    private static bool IsWorkerTraitInPool(WorkerTraitKind trait)
     {
         for (int i = 0; i < WorkerTraitPool.Length; i++)
         {
-            if (WorkerTraitPool[i] == perk)
+            if (WorkerTraitPool[i] == trait)
             {
                 return true;
             }
@@ -191,11 +271,16 @@ public partial class GameBootstrap
         return false;
     }
 
-    private static bool IsWorkerLeisurePreferenceInPool(WorkerLeisurePreferenceKind preference)
+    private static bool IsWorkerWeaknessInPool(WorkerWeaknessKind weakness)
     {
-        for (int i = 0; i < WorkerLeisurePreferencePool.Length; i++)
+        if (weakness == WorkerWeaknessKind.None)
         {
-            if (WorkerLeisurePreferencePool[i] == preference)
+            return true;
+        }
+
+        for (int i = 0; i < WorkerWeaknessPool.Length; i++)
+        {
+            if (WorkerWeaknessPool[i] == weakness)
             {
                 return true;
             }
@@ -204,17 +289,17 @@ public partial class GameBootstrap
         return false;
     }
 
-    private static void ShuffleWorkerTraitPool(WorkerPerkKind[] perks, System.Random rng)
+    private static void ShuffleWorkerTraitPool(WorkerTraitKind[] traits, System.Random rng)
     {
-        if (perks == null || rng == null)
+        if (traits == null || rng == null)
         {
             return;
         }
 
-        for (int i = perks.Length - 1; i > 0; i--)
+        for (int i = traits.Length - 1; i > 0; i--)
         {
             int swapIndex = rng.Next(i + 1);
-            (perks[i], perks[swapIndex]) = (perks[swapIndex], perks[i]);
+            (traits[i], traits[swapIndex]) = (traits[swapIndex], traits[i]);
         }
     }
 
@@ -226,10 +311,9 @@ public partial class GameBootstrap
         }
 
         EnsureWorkerPerks(driver);
-
         if (driversScreenUi.DetailPerksTitleText != null)
         {
-            driversScreenUi.DetailPerksTitleText.text = ru ? "\u041b\u0438\u0447\u043d\u043e\u0441\u0442\u044c" : "Personality";
+            driversScreenUi.DetailPerksTitleText.text = ru ? "Личность" : "Personality";
         }
 
         if (driver == null)
@@ -237,7 +321,7 @@ public partial class GameBootstrap
             if (driversScreenUi.DetailPerksEmptyText != null)
             {
                 driversScreenUi.DetailPerksEmptyText.gameObject.SetActive(true);
-                driversScreenUi.DetailPerksEmptyText.text = ru ? "\u0416\u0438\u0442\u0435\u043b\u044c \u043d\u0435 \u0432\u044b\u0431\u0440\u0430\u043d" : "No resident selected";
+                driversScreenUi.DetailPerksEmptyText.text = ru ? "Житель не выбран" : "No resident selected";
             }
 
             for (int i = 0; i < driversScreenUi.DetailPerkTexts.Count; i++)
@@ -255,32 +339,33 @@ public partial class GameBootstrap
         UpdateWorkerAffects(driver);
 
         int rowIndex = 0;
-        string leisureColor = ColorUtility.ToHtmlStringRGB(GetWorkerLeisurePreferenceColor(driver.LeisurePreference));
-        Text leisureText = SetWorkerPersonalityTextRow(
-            rowIndex++,
-            $"{(ru ? "\u0414\u043e\u0441\u0443\u0433" : "Leisure")}: <color=#{leisureColor}>{GetWorkerLeisurePreferenceDisplayName(driver.LeisurePreference, ru)}</color>",
-            FleetSecondaryTextColor);
-        ConfigureWorkerLeisurePreferenceTooltip(leisureText, driver.LeisurePreference);
-
-        for (int i = 0; i < driver.Perks.Count && rowIndex < driversScreenUi.DetailPerkTexts.Count; i++)
+        SetWorkerPersonalityTextRow(rowIndex++, ru ? "Характер:" : "Character:", FleetAccentColor);
+        for (int i = 0; i < driver.Traits.Count && rowIndex < driversScreenUi.DetailPerkTexts.Count; i++)
         {
-            WorkerPerkKind perk = driver.Perks[i];
-            string perkColor = ColorUtility.ToHtmlStringRGB(GetWorkerPerkColor());
+            WorkerTraitKind trait = driver.Traits[i];
+            string traitColor = ColorUtility.ToHtmlStringRGB(GetWorkerTraitColor(trait));
             Text rowText = SetWorkerPersonalityTextRow(
                 rowIndex++,
-                $"{(ru ? "\u0427\u0435\u0440\u0442\u0430" : "Trait")}: <color=#{perkColor}>{GetWorkerPerkDisplayName(perk, ru)}</color> - {GetWorkerPerkShortDescription(perk, ru)}",
+                $"- <color=#{traitColor}>{GetWorkerTraitDisplayName(trait, ru)}</color> - {GetWorkerTraitShortDescription(trait, ru)}",
                 FleetSecondaryTextColor);
-            ConfigureWorkerPerkTooltip(rowText, perk);
+            ConfigureWorkerTraitTooltip(rowText, trait);
         }
+
+        SetWorkerPersonalityTextRow(rowIndex++, ru ? "Слабости:" : "Weaknesses:", FleetAccentColor);
+        Text weaknessText = SetWorkerPersonalityTextRow(
+            rowIndex++,
+            $"- {FormatWorkerWeaknessInline(driver.Weakness, ru)}",
+            FleetSecondaryTextColor);
+        ConfigureWorkerWeaknessTooltip(weaknessText, driver.Weakness);
 
         SetWorkerPersonalityTextRow(
             rowIndex++,
-            $"{(ru ? "\u0421\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u044f" : "States")}: {FormatWorkerAffectsInline(driver, ru, 3)}",
+            $"{(ru ? "Состояния" : "States")}: {FormatWorkerAffectsInline(driver, ru, 3)}",
             FleetSecondaryTextColor);
 
         SetWorkerPersonalityTextRow(
             rowIndex++,
-            $"{(ru ? "\u0413\u043b\u0430\u0432\u043d\u0430\u044f \u043c\u044b\u0441\u043b\u044c" : "Main thought")}: {FormatWorkerMainThoughtInline(driver, ru)}",
+            $"{(ru ? "Главная мысль" : "Main thought")}: {FormatWorkerMainThoughtInline(driver, ru)}",
             FleetSecondaryTextColor);
 
         for (int i = rowIndex; i < driversScreenUi.DetailPerkTexts.Count; i++)
@@ -307,108 +392,128 @@ public partial class GameBootstrap
         return rowText;
     }
 
-    private static bool HasWorkerPerk(DriverAgent driver, WorkerPerkKind perk)
+    private static bool HasWorkerTrait(DriverAgent driver, WorkerTraitKind trait)
     {
-        return driver != null && driver.Perks.Contains(perk);
+        return driver != null && driver.Traits.Contains(trait);
     }
 
-    private static bool HasWorkerLeisurePreference(DriverAgent driver, WorkerLeisurePreferenceKind preference)
+    private static bool HasWorkerWeakness(DriverAgent driver, WorkerWeaknessKind weakness)
     {
-        return GetWorkerLeisurePreference(driver) == preference;
+        return driver != null && driver.Weakness == weakness;
     }
 
-    private static string GetWorkerPerkDisplayName(WorkerPerkKind perk, bool ru)
+    private static string FormatWorkerWeaknessInline(WorkerWeaknessKind weakness, bool ru)
     {
-        return perk switch
+        if (weakness == WorkerWeaknessKind.None)
         {
-            WorkerPerkKind.Socialite    => ru ? "\u041e\u0431\u0449\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0439" : "Socialite",
-            WorkerPerkKind.Frugal       => ru ? "\u042d\u043a\u043e\u043d\u043e\u043c\u043d\u044b\u0439" : "Frugal",
-            WorkerPerkKind.Quicklearner => ru ? "\u0421\u043c\u044b\u0448\u043b\u0435\u043d\u044b\u0439" : "Quick Learner",
-            _ => ru ? "\u0427\u0435\u0440\u0442\u0430" : "Trait"
+            return ru ? "нет устойчивой слабости" : "none";
+        }
+
+        string color = ColorUtility.ToHtmlStringRGB(GetWorkerWeaknessColor(weakness));
+        return $"<color=#{color}>{GetWorkerWeaknessDisplayName(weakness, ru)}</color>";
+    }
+
+    private static string GetWorkerTraitDisplayName(WorkerTraitKind trait, bool ru)
+    {
+        return trait switch
+        {
+            WorkerTraitKind.Sociable => ru ? "Общительный" : "Sociable",
+            WorkerTraitKind.Reserved => ru ? "Замкнутый" : "Reserved",
+            WorkerTraitKind.Frugal => ru ? "Экономный" : "Frugal",
+            WorkerTraitKind.Curious => ru ? "Любознательный" : "Curious",
+            WorkerTraitKind.Anxious => ru ? "Тревожный" : "Anxious",
+            WorkerTraitKind.Impulsive => ru ? "Импульсивный" : "Impulsive",
+            WorkerTraitKind.Cautious => ru ? "Осторожный" : "Cautious",
+            WorkerTraitKind.Trusting => ru ? "Доверчивый" : "Trusting",
+            WorkerTraitKind.Skeptical => ru ? "Скептичный" : "Skeptical",
+            WorkerTraitKind.Stubborn => ru ? "Упрямый" : "Stubborn",
+            WorkerTraitKind.Adaptable => ru ? "Гибкий" : "Adaptable",
+            WorkerTraitKind.Meticulous => ru ? "Аккуратный" : "Meticulous",
+            WorkerTraitKind.Dutiful => ru ? "Ответственный" : "Dutiful",
+            _ => ru ? "Черта" : "Trait"
         };
     }
 
-    private static Color GetWorkerPerkColor()
+    private static string GetWorkerTraitShortDescription(WorkerTraitKind trait, bool ru)
     {
-        return new Color(0.62f, 0.82f, 1f, 1f);
-    }
-
-    private static string GetWorkerPerkDescription(WorkerPerkKind perk, bool ru)
-    {
-        return perk switch
+        return trait switch
         {
-            WorkerPerkKind.Socialite => ru
-                ? "\u041e\u0431\u0449\u0438\u0442\u0435\u043b\u0435\u043d: \u0447\u0430\u0449\u0435 \u0437\u0430\u0432\u043e\u0434\u0438\u0442 idle-\u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440\u044b, \u043b\u0435\u0433\u0447\u0435 \u043f\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442 \u0432\u0441\u0442\u0440\u0435\u0447\u0438 \u0432 \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432\u0430 \u0438 \u0431\u044b\u0441\u0442\u0440\u0435\u0435 \u0443\u043a\u0440\u0435\u043f\u043b\u044f\u0435\u0442 \u0441\u0432\u044f\u0437\u0438."
-                : "Social worker; starts idle conversations more often, turns encounters into acquaintances more easily, and strengthens bonds faster.",
-            WorkerPerkKind.Frugal => ru
-                ? "\u042d\u043a\u043e\u043d\u043e\u043c\u0438\u0442 \u0434\u0435\u043d\u044c\u0433\u0438; \u0431\u043e\u043b\u0435\u0435 \u043f\u043e\u0445\u043e\u0436 \u043d\u0430 \u0436\u0438\u0442\u0435\u043b\u044f, \u043a\u043e\u0442\u043e\u0440\u044b\u0439 \u0441\u043c\u043e\u0436\u0435\u0442 \u043d\u0430\u043a\u043e\u043f\u0438\u0442\u044c \u043d\u0430 \u0434\u043e\u043c."
-                : "Saves money; more likely to become the kind of resident who can afford a home.",
-            WorkerPerkKind.Quicklearner => ru
-                ? "\u0411\u044b\u0441\u0442\u0440\u0435\u0435 \u043d\u0430\u0431\u0438\u0440\u0430\u0435\u0442 \u043f\u0440\u043e\u0444\u043e\u043f\u044b\u0442: \u0443\u0440. 2 \u043f\u043e\u0441\u043b\u0435 2 \u0440\u0430\u0431. \u0434\u043d\u0435\u0439, \u0443\u0440. 3 \u043f\u043e\u0441\u043b\u0435 7."
-                : "Gains professional experience faster: level 2 after 2 workdays, level 3 after 7.",
-            _ => ru ? "\u041f\u043e\u0441\u0442\u043e\u044f\u043d\u043d\u0430\u044f \u0447\u0435\u0440\u0442\u0430 \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e." : "A permanent worker trait."
+            WorkerTraitKind.Sociable => ru ? "сильнее учится через людей" : "learns through people",
+            WorkerTraitKind.Reserved => ru ? "держит дистанцию" : "keeps distance",
+            WorkerTraitKind.Frugal => ru ? "замечает цену решений" : "notices costs",
+            WorkerTraitKind.Curious => ru ? "быстрее собирает знания" : "forms knowledge faster",
+            WorkerTraitKind.Anxious => ru ? "раньше видит угрозы" : "spots threats early",
+            WorkerTraitKind.Impulsive => ru ? "ярче реагирует на новое" : "reacts strongly",
+            WorkerTraitKind.Cautious => ru ? "сначала видит риск" : "sees risk first",
+            WorkerTraitKind.Trusting => ru ? "легче принимает слова" : "accepts framing easier",
+            WorkerTraitKind.Skeptical => ru ? "ждет подтверждений" : "waits for proof",
+            WorkerTraitKind.Stubborn => ru ? "медленнее меняет мнение" : "changes stance slowly",
+            WorkerTraitKind.Adaptable => ru ? "быстрее перестраивается" : "adapts quickly",
+            WorkerTraitKind.Meticulous => ru ? "замечает беспорядок" : "notices disorder",
+            WorkerTraitKind.Dutiful => ru ? "сильно чувствует долг" : "feels obligations",
+            _ => ru ? "черта характера" : "character trait"
         };
     }
 
-    private static string GetWorkerPerkShortDescription(WorkerPerkKind perk, bool ru)
+    private static string GetWorkerTraitDescription(WorkerTraitKind trait, bool ru)
     {
-        return perk switch
+        return trait switch
         {
-            WorkerPerkKind.Socialite => ru ? "\u0431\u044b\u0441\u0442\u0440\u0435\u0435 \u0437\u043d\u0430\u043a\u043e\u043c\u0438\u0442\u0441\u044f" : "faster social bonds",
-            WorkerPerkKind.Frugal => ru ? "\u043a\u043e\u043f\u0438\u0442 \u0434\u0435\u043d\u044c\u0433\u0438" : "saves money",
-            WorkerPerkKind.Quicklearner => ru ? "\u0431\u044b\u0441\u0442\u0440\u0435\u0435 \u0440\u0430\u0441\u0442\u0435\u0442" : "levels faster",
-            _ => ru ? "\u0447\u0435\u0440\u0442\u0430" : "trait"
+            WorkerTraitKind.Sociable => ru ? "Тянется к людям: чаще заводит idle-разговоры, быстрее превращает встречи в знакомства, позитивные разговоры сильнее влияют на знания." : "Drawn to people: starts idle conversations more often, forms acquaintances faster, and positive conversations shape knowledge more strongly.",
+            WorkerTraitKind.Reserved => ru ? "Держит дистанцию: реже вступает в случайные разговоры и слабее зависит от социальных сигналов." : "Keeps distance: enters random conversations less often and depends less on social signals.",
+            WorkerTraitKind.Frugal => ru ? "Сильно замечает цену решений: деньги, мотель, бар, игровые автоматы и платные сервисы сильнее влияют на мысли и знания." : "Notices the price of decisions: money, Motel, Bar, Gambling Hall, and paid services weigh more in thoughts and knowledge.",
+            WorkerTraitKind.Curious => ru ? "Хочет разобраться: быстрее формирует WorkerKnowledge и увереннее обновляет знания о зданиях и темах." : "Wants to understand: forms WorkerKnowledge faster and updates building/topic knowledge with more confidence.",
+            WorkerTraitKind.Anxious => ru ? "Рано замечает угрозы: деньги, критические needs, семья, школы и мусор дают более интенсивные мысли." : "Spots threats early: money, critical needs, family, schools, and litter create more intense thoughts.",
+            WorkerTraitKind.Impulsive => ru ? "Быстро эмоционально реагирует: свежие события сильнее двигают мнение, но уверенность ниже." : "Reacts quickly: fresh events move opinions more strongly, but confidence is lower.",
+            WorkerTraitKind.Cautious => ru ? "Сначала видит риск: дорогие сервисы, малый запас денег, игровой зал и сомнительные слухи получают осторожный минус." : "Sees risk first: expensive services, low money, Gambling Hall, and suspicious rumors receive a cautious penalty.",
+            WorkerTraitKind.Trusting => ru ? "Легче принимает чужие слова и framing игрока: слухи и доверенные источники сильнее двигают мнения." : "Accepts other voices and player framing more easily: rumors and trusted speakers move opinions more.",
+            WorkerTraitKind.Skeptical => ru ? "Не верит сразу: слухи и framing слабее, личный опыт и повторения важнее." : "Does not believe immediately: rumors and framing are weaker, while personal experience and repetition matter more.",
+            WorkerTraitKind.Stubborn => ru ? "Медленно меняет позицию: прежнее мнение имеет больший вес." : "Changes stance slowly: previous opinions have more weight.",
+            WorkerTraitKind.Adaptable => ru ? "Быстрее перестраивается под новые обстоятельства: новые факты легче обновляют мнение." : "Adapts to new circumstances faster: new facts update opinions more easily.",
+            WorkerTraitKind.Meticulous => ru ? "Замечает беспорядок, детали и нарушения нормы: мусор и хаос улиц сильнее попадают в мысли." : "Notices disorder, details, and broken norms: litter and street chaos affect thoughts more.",
+            WorkerTraitKind.Dutiful => ru ? "Сильно реагирует на обязательства: работа, семья, дети, upkeep, школы и незанятость сильнее влияют на мысли." : "Feels obligations strongly: work, family, children, upkeep, schools, and unemployment shape thoughts more.",
+            _ => ru ? "Нейтральная черта характера." : "A neutral character trait."
         };
     }
 
-    private static WorkerLeisurePreferenceKind GetWorkerLeisurePreference(DriverAgent driver)
+    private static Color GetWorkerTraitColor(WorkerTraitKind trait)
     {
-        return driver?.LeisurePreference ?? WorkerLeisurePreferenceKind.None;
-    }
-
-    private static string GetWorkerLeisurePreferenceDisplayName(WorkerLeisurePreferenceKind preference, bool ru)
-    {
-        return preference switch
+        return trait switch
         {
-            WorkerLeisurePreferenceKind.BarRegular => ru ? "\u0411\u0430\u0440\u043d\u044b\u0439 \u043e\u0442\u0434\u044b\u0445" : "Bar regular",
-            WorkerLeisurePreferenceKind.RiskPlayer => ru ? "\u0410\u0437\u0430\u0440\u0442\u043d\u044b\u0439 \u0434\u043e\u0441\u0443\u0433" : "Risk player",
-            WorkerLeisurePreferenceKind.NatureWalker => ru ? "\u041f\u0440\u043e\u0433\u0443\u043b\u043a\u0438 \u043d\u0430 \u043f\u0440\u0438\u0440\u043e\u0434\u0435" : "Nature walker",
-            WorkerLeisurePreferenceKind.StreetWanderer => ru ? "\u0421\u0432\u043e\u0431\u043e\u0434\u043d\u0430\u044f \u043f\u0440\u043e\u0433\u0443\u043b\u043a\u0430" : "Street wanderer",
-            _ => ru ? "\u0411\u0435\u0437 \u043f\u0440\u0438\u0432\u044b\u0447\u043a\u0438" : "No preference"
+            WorkerTraitKind.Frugal or WorkerTraitKind.Cautious or WorkerTraitKind.Meticulous => new Color(0.62f, 0.82f, 1f, 1f),
+            WorkerTraitKind.Sociable or WorkerTraitKind.Trusting or WorkerTraitKind.Adaptable => new Color(0.58f, 0.92f, 0.66f, 1f),
+            WorkerTraitKind.Anxious or WorkerTraitKind.Impulsive or WorkerTraitKind.Stubborn => new Color(1f, 0.78f, 0.42f, 1f),
+            _ => new Color(0.76f, 0.76f, 0.94f, 1f)
         };
     }
 
-    private static string GetWorkerLeisurePreferenceDescription(WorkerLeisurePreferenceKind preference, bool ru)
+    private static string GetWorkerWeaknessDisplayName(WorkerWeaknessKind weakness, bool ru)
     {
-        return preference switch
+        return weakness switch
         {
-            WorkerLeisurePreferenceKind.BarRegular => ru
-                ? "\u0416\u0438\u0442\u0435\u043b\u044c \u0447\u0430\u0449\u0435 \u0432\u044b\u0431\u0438\u0440\u0430\u0435\u0442 \u0431\u0430\u0440, \u043a\u043e\u0433\u0434\u0430 \u0435\u043c\u0443 \u043d\u0443\u0436\u0435\u043d \u0434\u043e\u0441\u0443\u0433. \u0411\u0430\u0440 \u0441\u0438\u043b\u044c\u043d\u0435\u0435 \u0432\u043b\u0438\u044f\u0435\u0442 \u043d\u0430 \u0435\u0433\u043e \u0432\u043f\u0435\u0447\u0430\u0442\u043b\u0435\u043d\u0438\u044f \u043e \u0433\u043e\u0440\u043e\u0434\u0435."
-                : "The resident more often chooses the Bar when they need leisure. The Bar has stronger influence on their city impressions.",
-            WorkerLeisurePreferenceKind.RiskPlayer => ru
-                ? "\u0416\u0438\u0442\u0435\u043b\u044c \u0447\u0430\u0449\u0435 \u0432\u044b\u0431\u0438\u0440\u0430\u0435\u0442 \u0438\u0433\u0440\u043e\u0432\u044b\u0435 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u044b. \u0412\u044b\u0438\u0433\u0440\u044b\u0448 \u0438\u043b\u0438 \u043f\u0440\u043e\u0438\u0433\u0440\u044b\u0448 \u0441\u0438\u043b\u044c\u043d\u0435\u0435 \u043e\u043a\u0440\u0430\u0448\u0438\u0432\u0430\u0435\u0442 \u0435\u0433\u043e \u043c\u044b\u0441\u043b\u0438."
-                : "The resident more often chooses gambling machines. Wins and losses color their thoughts more strongly.",
-            WorkerLeisurePreferenceKind.NatureWalker => ru
-                ? "\u0416\u0438\u0442\u0435\u043b\u044c \u0447\u0430\u0449\u0435 \u0438\u0434\u0435\u0442 \u0432 \u043f\u0430\u0440\u043a \u0438 \u043b\u0443\u0447\u0448\u0435 \u0437\u0430\u043f\u043e\u043c\u0438\u043d\u0430\u0435\u0442 \u0437\u0435\u043b\u0435\u043d\u044b\u0435 \u043c\u0435\u0441\u0442\u0430."
-                : "The resident more often chooses the park and remembers green places more warmly.",
-            WorkerLeisurePreferenceKind.StreetWanderer => ru
-                ? "\u0416\u0438\u0442\u0435\u043b\u044c \u0442\u0435\u0440\u043f\u0438\u043c\u0435\u0435 \u043a \u043e\u0442\u0434\u044b\u0445\u0443 \u0431\u0435\u0437 \u0437\u0434\u0430\u043d\u0438\u044f \u0438 \u0447\u0430\u0449\u0435 \u0437\u0430\u043c\u0435\u0447\u0430\u0435\u0442 \u0443\u043b\u0438\u0447\u043d\u0443\u044e \u0441\u0440\u0435\u0434\u0443."
-                : "The resident tolerates leisure without a building better and notices street conditions more.",
-            _ => ru
-                ? "\u041d\u0435\u0442 \u0443\u0441\u0442\u043e\u0439\u0447\u0438\u0432\u043e\u0439 \u0434\u043e\u0441\u0443\u0433\u043e\u0432\u043e\u0439 \u043f\u0440\u0438\u0432\u044b\u0447\u043a\u0438."
-                : "No steady leisure habit."
+            WorkerWeaknessKind.Alcoholism => ru ? "Алкоголизм" : "Alcoholism",
+            WorkerWeaknessKind.Gambling => ru ? "Азартность" : "Gambling",
+            _ => ru ? "Нет" : "None"
         };
     }
 
-    private static Color GetWorkerLeisurePreferenceColor(WorkerLeisurePreferenceKind preference)
+    private static string GetWorkerWeaknessDescription(WorkerWeaknessKind weakness, bool ru)
     {
-        return preference switch
+        return weakness switch
         {
-            WorkerLeisurePreferenceKind.BarRegular => new Color(1f, 0.72f, 0.42f, 1f),
-            WorkerLeisurePreferenceKind.RiskPlayer => new Color(1f, 0.56f, 0.95f, 1f),
-            WorkerLeisurePreferenceKind.NatureWalker => new Color(0.42f, 0.92f, 0.58f, 1f),
-            WorkerLeisurePreferenceKind.StreetWanderer => new Color(0.72f, 0.86f, 1f, 1f),
-            _ => new Color(0.62f, 0.82f, 1f, 1f)
+            WorkerWeaknessKind.Alcoholism => ru ? "Устойчивый риск-паттерн: житель чаще выбирает бар, бар сильнее окрашивает знания, а после отдыха возможны облегчение или похмелье." : "A steady risk pattern: the resident chooses the Bar more often, Bar knowledge becomes more personal, and rest can leave relief or a hangover.",
+            WorkerWeaknessKind.Gambling => ru ? "Устойчивый риск-паттерн: житель чаще выбирает игровые автоматы, использует рискованную gambling-логику, а выигрыш или проигрыш создают сильные состояния." : "A steady risk pattern: the resident chooses gambling machines more often, uses risky gambling logic, and wins or losses create stronger states.",
+            _ => ru ? "У жителя нет выраженной устойчивой слабости." : "The resident has no steady weakness."
+        };
+    }
+
+    private static Color GetWorkerWeaknessColor(WorkerWeaknessKind weakness)
+    {
+        return weakness switch
+        {
+            WorkerWeaknessKind.Alcoholism => new Color(1f, 0.68f, 0.38f, 1f),
+            WorkerWeaknessKind.Gambling => new Color(1f, 0.56f, 0.95f, 1f),
+            _ => FleetSecondaryTextColor
         };
     }
 
@@ -417,7 +522,7 @@ public partial class GameBootstrap
         WorkerThought thought = GetMostImportantWorkerThought(worker);
         if (thought == null)
         {
-            return ru ? "\u043d\u0435\u0442 \u0441\u0438\u043b\u044c\u043d\u043e\u0439" : "none strong";
+            return ru ? "нет сильной" : "none strong";
         }
 
         return TrimWorkerPersonalityLine(RenderWorkerThought(thought, ru), 74);
@@ -430,7 +535,7 @@ public partial class GameBootstrap
             return text ?? string.Empty;
         }
 
-        return text.Substring(0, Mathf.Max(0, maxLength - 1)).TrimEnd() + "\u2026";
+        return text.Substring(0, Mathf.Max(0, maxLength - 1)).TrimEnd() + "...";
     }
 
     private static int StableWorkerTraitHash(string value)

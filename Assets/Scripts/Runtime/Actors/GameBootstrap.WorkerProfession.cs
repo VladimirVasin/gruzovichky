@@ -5,8 +5,6 @@ public partial class GameBootstrap
     private const int WorkerProfessionalMaxLevel = 3;
     private const int WorkerProfessionalLevel2Days = 3;
     private const int WorkerProfessionalLevel3Days = 9;
-    private const int WorkerProfessionalQuickLearnerLevel2Days = 2;
-    private const int WorkerProfessionalQuickLearnerLevel3Days = 7;
 
     private WorkerProfessionalTrack GetVacancyProfessionalTrack(VacancyKind kind, LocationType buildingType)
     {
@@ -38,19 +36,13 @@ public partial class GameBootstrap
     private int GetWorkerProfessionalLevel(DriverAgent worker, WorkerProfessionalTrack track)
     {
         int days = GetWorkerProfessionalExperienceDays(worker, track);
-        int level2Days = HasWorkerPerk(worker, WorkerPerkKind.Quicklearner)
-            ? WorkerProfessionalQuickLearnerLevel2Days
-            : WorkerProfessionalLevel2Days;
-        int level3Days = HasWorkerPerk(worker, WorkerPerkKind.Quicklearner)
-            ? WorkerProfessionalQuickLearnerLevel3Days
-            : WorkerProfessionalLevel3Days;
 
-        if (days >= level3Days)
+        if (days >= WorkerProfessionalLevel3Days)
         {
             return 3;
         }
 
-        return days >= level2Days ? 2 : 1;
+        return days >= WorkerProfessionalLevel2Days ? 2 : 1;
     }
 
     private void AddWorkerProfessionalExperienceDay(DriverAgent worker, WorkerProfessionalTrack track)

@@ -135,9 +135,9 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 - [WORKERS.Identity] Worker identity and presentation
   - Stores names, portraits, education, profession, visuals, and focus state.
   - Feature leaves: generated names, portrait UI, education label, citizen id, worker focus, driver/worker object.
-- [WORKERS.Personality] Traits, leisure preference, and temporary affects
-  - Separates stable worker traits from one primary leisure preference and temporary emotional states.
-  - Feature leaves: 2 generated traits, one primary leisure preference, legacy trait migration, affect lifetime/intensity/source/reason, affect-created thoughts, affect knowledge bias, Workers/F9 personality UI.
+- [WORKERS.Personality] Character traits, weaknesses, and temporary affects
+  - Separates stable worker traits from at most one steady weakness and temporary emotional states.
+  - Feature leaves: 3 generated non-conflicting traits, optional weakness, legacy perk migration, affect lifetime/intensity/source/reason, affect-created thoughts, affect knowledge bias, Workers/F9 personality UI.
 - [WORKERS.Hiring] Hiring and migration
   - Brings workers into town and assigns contracts.
   - Feature leaves: migration arrivals, hire flow, worker contracts, salary, arrival bus/truck handoff.
@@ -209,7 +209,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: node animation, edge animation, received/burned/canonized color states.
 - [NOOSPHERE.Snapshots] Internal day-start memory archive
   - Silently stores copied Noosphere state at game start/day 1 and each later day start.
-  - Feature leaves: knowledge events, social signals, city experience, canon, resident cognition, resident affects/leisure preference, dive meanings, vision insights, visual-node state.
+  - Feature leaves: knowledge events, social signals, city experience, canon, resident cognition, resident traits/weaknesses/affects, dive meanings, vision insights, visual-node state.
 
 ### [GOVERNANCE] Trust, City Hall, Complaints, And Decisions
 
@@ -329,7 +329,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 | [TRANSPORT.LocalBus] | [TRANSPORT.RoadGrid], [WORKERS.Movement], [WORKERS.Shifts], [ECONOMY.Treasury] | Bus service moves workers and may collect fares. |
 | [ECONOMY.Trade] | [TRANSPORT.Regional], [TRANSPORT.Trucks], [ECONOMY.Resources], [UI.EconomyScreen] | Trade consumes stock, route state, vehicles, and UI orders. |
 | [WORKERS.Needs] | [WORLD.Locations], [WORKERS.Movement], [ECONOMY.Treasury], [WORKERS.Thoughts] | Needs select services, move workers, spend money, create thoughts. |
-| [WORKERS.Personality] | [WORKERS.Needs], [WORKERS.Thoughts], [WORKERS.Knowledge], [NOOSPHERE.Vision], [UI.FleetCanvas] | Traits, leisure preference, and affects steer leisure, create thoughts, bias knowledge, and explain resident state. |
+| [WORKERS.Personality] | [WORKERS.Needs], [WORKERS.Thoughts], [WORKERS.Knowledge], [NOOSPHERE.Vision], [UI.FleetCanvas] | Character traits, weaknesses, and affects steer interpretation, service choice, thoughts, knowledge bias, and resident state display. |
 | [WORKERS.SocialSignals] | [WORKERS.Thoughts], [WORLD.Litter], [WORKERS.Experience], [WORKERS.TopicOpinions], [WORKERS.Complaints], [GOVERNANCE.Trust], [ECONOMY.Upgrades], [NOOSPHERE] | Important resident/city events become shared topic/tone/strength facts. |
 | [WORKERS.Complaints] | [WORKERS.Thoughts], [WORKERS.SocialSignals], [GOVERNANCE.CityHall], [GOVERNANCE.Trust], [UI.FleetCanvas] | Complaints arise from resident state and negative signal clusters, then become city decisions. |
 | [NOOSPHERE.Canon] | [WORKERS.Knowledge], [WORKERS.Rumors], [WORKERS.ConversationTopics], [WORKERS.TopicOpinions] | City knowledge is aggregated from resident facts/rumors/opinions. |

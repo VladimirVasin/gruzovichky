@@ -12,7 +12,7 @@ Stable high-level map of the current playable prototype. Code remains the source
 - Runtime is still scene-local and generated from `Assets/Scenes/SampleScene.unity`.
 - The main playable slice now combines:
   - buildable roads, service buildings, production buildings, and local bus stops
-  - workers with portraits, education, needs, traits, leisure preferences, affects, money, owned-item inventory, jobs, shifts, personal knowledge, social links, families, and life routines
+  - workers with portraits, education, needs, character traits, weaknesses, affect states, money, owned-item inventory, jobs, shifts, personal knowledge, social links, families, and life routines
   - trucks, local buses, warehouse storage/logistics, and intercity trade
   - taxes, building banks, event feed, regional map, tutorial/onboarding, and racing mode
   - procedural terrain, natural zones, water, ambient life, weather/lighting, low-poly visuals, and runtime audio/options

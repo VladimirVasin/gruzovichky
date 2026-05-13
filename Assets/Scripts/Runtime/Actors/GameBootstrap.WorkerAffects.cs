@@ -13,11 +13,9 @@ public partial class GameBootstrap
         WorkerAffectKind.FamilyAnxiety,
         WorkerAffectKind.ReliefAfterRest,
         WorkerAffectKind.Hangover,
-        WorkerAffectKind.Loneliness,
-        WorkerAffectKind.InspiredByNature,
-        WorkerAffectKind.IrritatedByLitter,
         WorkerAffectKind.GamblingExcitement,
         WorkerAffectKind.GamblingRegret,
+        WorkerAffectKind.IrritatedByLitter,
         WorkerAffectKind.StableRoutine
     };
 
@@ -31,7 +29,6 @@ public partial class GameBootstrap
         RemoveExpiredWorkerAffects(worker);
         UpdateWorkerFinancialPressureAffect(worker);
         UpdateWorkerFamilyAnxietyAffect(worker);
-        UpdateWorkerLonelinessAffect(worker);
         UpdateWorkerStreetLitterAffect(worker);
         UpdateWorkerStableRoutineAffect(worker);
         ApplyWorkerAffectThoughts(worker);
@@ -113,26 +110,6 @@ public partial class GameBootstrap
             reasonEn);
     }
 
-    private void UpdateWorkerLonelinessAffect(DriverAgent worker)
-    {
-        if (worker.DaysOnMap < 1 || worker.SocialMemories.Count > 0 || HasWorkerPerk(worker, WorkerPerkKind.Socialite))
-        {
-            ClearWorkerAffect(worker, WorkerAffectKind.Loneliness, "social contact present");
-            return;
-        }
-
-        SetWorkerAffect(
-            worker,
-            WorkerAffectKind.Loneliness,
-            worker.LastLeisureNeedStatus == WorkerNeedStatus.Critical ? 66 : 48,
-            8f,
-            null,
-            0,
-            "social",
-            "\u043d\u0435\u0442 \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432 \u0438 \u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440\u043e\u0432",
-            "no acquaintances or conversations yet");
-    }
-
     private void UpdateWorkerStreetLitterAffect(DriverAgent worker)
     {
         bool irritated = worker.StreetLitterPeakToday >= WorkerStreetLitterMediumThoughtThreshold ||
@@ -196,17 +173,20 @@ public partial class GameBootstrap
         switch (service)
         {
             case LocationType.Bar:
-                if (worker.LastSleepNeedStatus == WorkerNeedStatus.Critical || worker.HoursSinceSleep >= WorkerSleepWarningHours)
+                bool hasAlcoholismWeakness = HasWorkerWeakness(worker, WorkerWeaknessKind.Alcoholism);
+                bool hangover = worker.LastSleepNeedStatus == WorkerNeedStatus.Critical ||
+                    worker.HoursSinceSleep >= WorkerSleepWarningHours ||
+                    hasAlcoholismWeakness && Random.value < 0.35f;
+                if (hangover)
                 {
-                    SetWorkerAffect(worker, WorkerAffectKind.Hangover, 58, 8f, service, instanceId, "bar_hangover", "\u0431\u0430\u0440 \u043f\u043e\u043c\u043e\u0433, \u043d\u043e \u0443\u0441\u0442\u0430\u043b\u043e\u0441\u0442\u044c \u043d\u0430\u043a\u0440\u044b\u043b\u0430", "bar rest helped, but fatigue caught up");
+                    SetWorkerAffect(worker, WorkerAffectKind.Hangover, hasAlcoholismWeakness ? 68 : 58, 8f, service, instanceId, "bar_hangover", "\u0431\u0430\u0440 \u043f\u043e\u043c\u043e\u0433, \u043d\u043e \u0443\u0441\u0442\u0430\u043b\u043e\u0441\u0442\u044c \u043d\u0430\u043a\u0440\u044b\u043b\u0430", "bar rest helped, but fatigue caught up");
                 }
                 else
                 {
-                    SetWorkerAffect(worker, WorkerAffectKind.ReliefAfterRest, 58, 6f, service, instanceId, "bar_relief", "\u0431\u0430\u0440 \u0434\u0430\u043b \u0432\u044b\u0434\u043e\u0445\u043d\u0443\u0442\u044c", "the Bar gave a moment of relief");
+                    SetWorkerAffect(worker, WorkerAffectKind.ReliefAfterRest, hasAlcoholismWeakness ? 64 : 58, 6f, service, instanceId, "bar_relief", "\u0431\u0430\u0440 \u0434\u0430\u043b \u0432\u044b\u0434\u043e\u0445\u043d\u0443\u0442\u044c", "the Bar gave a moment of relief");
                 }
                 break;
             case LocationType.CityPark:
-                SetWorkerAffect(worker, WorkerAffectKind.InspiredByNature, 64, 10f, service, instanceId, "park_nature", "\u043f\u0430\u0440\u043a \u0438 \u0437\u0435\u043b\u0435\u043d\u044c \u043f\u043e\u043c\u043e\u0433\u043b\u0438 \u0441\u043e\u0431\u0440\u0430\u0442\u044c\u0441\u044f", "park and nature helped them reset");
                 break;
         }
 
@@ -222,23 +202,45 @@ public partial class GameBootstrap
 
         if (broke || net < 0)
         {
+            int regretIntensity = broke ? 82 : 66;
+            if (HasWorkerTrait(worker, WorkerTraitKind.Impulsive))
+            {
+                regretIntensity += 8;
+            }
+
             SetWorkerAffect(
                 worker,
                 WorkerAffectKind.GamblingRegret,
-                broke ? 82 : 66,
+                Mathf.Clamp(regretIntensity, 1, 100),
                 12f,
                 LocationType.GamblingHall,
                 worker.PendingServiceLocationInstanceId,
                 "gambling_regret",
                 broke ? "\u0434\u0435\u043d\u0435\u0433 \u043d\u0435 \u0445\u0432\u0430\u0442\u0438\u043b\u043e \u0434\u0430\u0436\u0435 \u043d\u0430 \u0441\u0442\u0430\u0432\u043a\u0443" : "\u0441\u0442\u0430\u0432\u043a\u0430 \u0443\u0448\u043b\u0430 \u0432 \u043c\u0438\u043d\u0443\u0441",
                 broke ? "there was not enough money even to bet" : "the bet ended in a loss");
+            if (broke || worker.Money + net < 15)
+            {
+                SetWorkerAffect(
+                    worker,
+                    WorkerAffectKind.FinancialPressure,
+                    broke ? 84 : 68,
+                    10f,
+                    LocationType.GamblingHall,
+                    worker.PendingServiceLocationInstanceId,
+                    "gambling_money",
+                    "\u0438\u0433\u0440\u0430 \u0431\u044c\u0435\u0442 \u043f\u043e \u0434\u0435\u043d\u044c\u0433\u0430\u043c",
+                    "gambling is hurting the wallet");
+            }
         }
         else if (net > 0)
         {
+            int excitementIntensity = HasWorkerTrait(worker, WorkerTraitKind.Impulsive)
+                ? Mathf.Clamp(64 + net * 2, 64, 92)
+                : Mathf.Clamp(56 + net * 2, 56, 86);
             SetWorkerAffect(
                 worker,
                 WorkerAffectKind.GamblingExcitement,
-                Mathf.Clamp(56 + net * 2, 56, 86),
+                excitementIntensity,
                 8f,
                 LocationType.GamblingHall,
                 worker.PendingServiceLocationInstanceId,
@@ -518,12 +520,13 @@ public partial class GameBootstrap
 
             bool hadActiveThought = FindActiveWorkerThought(worker, thoughtKey) != null;
             bool hadPendingThought = FindPendingWorkerThought(worker, thoughtKey) != null;
+            int intensity = GetWorkerTraitAdjustedAffectIntensity(worker, kind, affect.Intensity);
             AddOrKeepActiveWorkerThought(
                 worker,
                 thoughtKey,
                 GetWorkerAffectThoughtKind(kind),
                 GetWorkerAffectThoughtTone(kind),
-                affect.Intensity,
+                intensity,
                 thoughtKey,
                 new[]
                 {
@@ -541,6 +544,47 @@ public partial class GameBootstrap
                 SessionDebugLogger.Log("AFFECT", $"{worker.DriverName}: affect {kind} created thought {thoughtKey}.");
             }
         }
+    }
+
+    private static int GetWorkerTraitAdjustedAffectIntensity(DriverAgent worker, WorkerAffectKind kind, int intensity)
+    {
+        int result = intensity;
+        if (HasWorkerTrait(worker, WorkerTraitKind.Anxious) &&
+            kind is WorkerAffectKind.FinancialPressure or WorkerAffectKind.FamilyAnxiety or WorkerAffectKind.Hangover)
+        {
+            result += 8;
+        }
+
+        if (HasWorkerTrait(worker, WorkerTraitKind.Meticulous) && kind == WorkerAffectKind.IrritatedByLitter)
+        {
+            result += 10;
+        }
+
+        if (HasWorkerTrait(worker, WorkerTraitKind.Dutiful) && kind == WorkerAffectKind.FamilyAnxiety)
+        {
+            result += 7;
+        }
+
+        if (HasWorkerTrait(worker, WorkerTraitKind.Impulsive) &&
+            kind is WorkerAffectKind.GamblingExcitement or WorkerAffectKind.GamblingRegret or WorkerAffectKind.ReliefAfterRest)
+        {
+            result += 9;
+        }
+
+        if (HasWorkerTrait(worker, WorkerTraitKind.Cautious) &&
+            kind is WorkerAffectKind.FinancialPressure or WorkerAffectKind.GamblingRegret)
+        {
+            result += 5;
+        }
+
+        if (HasWorkerTrait(worker, WorkerTraitKind.Adaptable) &&
+            GetWorkerAffectThoughtTone(kind) == WorkerThoughtTone.Negative &&
+            result < 82)
+        {
+            result -= 5;
+        }
+
+        return Mathf.Clamp(result, 1, 100);
     }
 
     private void ApplyWorkerAffectsToBuildingKnowledge(
@@ -577,15 +621,6 @@ public partial class GameBootstrap
             SessionDebugLogger.Log("AFFECT", $"{worker.DriverName}: FamilyAnxiety influenced knowledge about {type}.");
         }
 
-        if (type == LocationType.CityPark && FindWorkerAffect(worker, WorkerAffectKind.InspiredByNature) != null)
-        {
-            score += 22;
-            confidence += 10;
-            reasonRu = "\u043f\u0440\u0438\u0440\u043e\u0434\u0430 \u0443\u0436\u0435 \u043f\u043e\u043c\u043e\u0433\u043b\u0430, \u043f\u0430\u0440\u043a \u0447\u0443\u0432\u0441\u0442\u0432\u0443\u0435\u0442\u0441\u044f \u043d\u0430\u0434\u0435\u0436\u043d\u044b\u043c \u043c\u0435\u0441\u0442\u043e\u043c";
-            reasonEn = "nature already helped, so the park feels reliable";
-            SessionDebugLogger.Log("AFFECT", $"{worker.DriverName}: InspiredByNature influenced knowledge about CityPark.");
-        }
-
         if (type == LocationType.Bar)
         {
             if (FindWorkerAffect(worker, WorkerAffectKind.Hangover) != null)
@@ -610,13 +645,13 @@ public partial class GameBootstrap
         {
             if (FindWorkerAffect(worker, WorkerAffectKind.GamblingRegret) != null)
             {
-                bool prefersGambling = HasWorkerLeisurePreference(worker, WorkerLeisurePreferenceKind.RiskPlayer);
-                score -= prefersGambling ? 14 : 26;
+                bool hasGamblingWeakness = HasWorkerWeakness(worker, WorkerWeaknessKind.Gambling);
+                score -= hasGamblingWeakness ? 14 : 26;
                 confidence += 10;
-                reasonRu = prefersGambling
+                reasonRu = hasGamblingWeakness
                     ? "\u0442\u044f\u043d\u0435\u0442 \u043a \u0440\u0438\u0441\u043a\u0443, \u043d\u043e \u043f\u0440\u043e\u0438\u0433\u0440\u044b\u0448 \u0441\u0434\u0435\u043b\u0430\u043b \u043e\u0442\u043d\u043e\u0448\u0435\u043d\u0438\u0435 \u043f\u0440\u043e\u0442\u0438\u0432\u043e\u0440\u0435\u0447\u0438\u0432\u044b\u043c"
                     : "\u043f\u0440\u043e\u0438\u0433\u0440\u044b\u0448 \u0441\u0434\u0435\u043b\u0430\u043b \u0438\u0433\u0440\u043e\u0432\u043e\u0439 \u0437\u0430\u043b \u043e\u043f\u0430\u0441\u043d\u044b\u043c";
-                reasonEn = prefersGambling
+                reasonEn = hasGamblingWeakness
                     ? "risk is tempting, but the loss made the opinion conflicted"
                     : "the loss made the Gambling Hall feel dangerous";
                 SessionDebugLogger.Log("AFFECT", $"{worker.DriverName}: GamblingRegret influenced knowledge about GamblingHall.");
@@ -642,8 +677,6 @@ public partial class GameBootstrap
             WorkerAffectKind.FamilyAnxiety => ru ? "\u0421\u0435\u043c\u0435\u0439\u043d\u0430\u044f \u0442\u0440\u0435\u0432\u043e\u0433\u0430" : "Family anxiety",
             WorkerAffectKind.ReliefAfterRest => ru ? "\u041e\u0431\u043b\u0435\u0433\u0447\u0435\u043d\u0438\u0435 \u043f\u043e\u0441\u043b\u0435 \u043e\u0442\u0434\u044b\u0445\u0430" : "Relief after rest",
             WorkerAffectKind.Hangover => ru ? "\u0422\u044f\u0436\u0435\u0441\u0442\u044c \u043f\u043e\u0441\u043b\u0435 \u0431\u0430\u0440\u0430" : "Hangover",
-            WorkerAffectKind.Loneliness => ru ? "\u041e\u0434\u0438\u043d\u043e\u0447\u0435\u0441\u0442\u0432\u043e" : "Loneliness",
-            WorkerAffectKind.InspiredByNature => ru ? "\u0412\u0434\u043e\u0445\u043d\u043e\u0432\u043b\u0451\u043d \u043f\u0440\u0438\u0440\u043e\u0434\u043e\u0439" : "Inspired by nature",
             WorkerAffectKind.IrritatedByLitter => ru ? "\u0420\u0430\u0437\u0434\u0440\u0430\u0436\u0451\u043d \u043c\u0443\u0441\u043e\u0440\u043e\u043c" : "Irritated by litter",
             WorkerAffectKind.GamblingExcitement => ru ? "\u0410\u0437\u0430\u0440\u0442 \u043f\u043e\u0441\u043b\u0435 \u0432\u044b\u0438\u0433\u0440\u044b\u0448\u0430" : "Gambling excitement",
             WorkerAffectKind.GamblingRegret => ru ? "\u0421\u043e\u0436\u0430\u043b\u0435\u043d\u0438\u0435 \u043f\u043e\u0441\u043b\u0435 \u0441\u0442\u0430\u0432\u043a\u0438" : "Gambling regret",
@@ -670,8 +703,6 @@ public partial class GameBootstrap
             WorkerAffectKind.FamilyAnxiety => ru ? "\u0421\u0435\u043c\u044c\u044f, \u0434\u0435\u0442\u0438, \u0441\u0430\u0434\u0438\u043a, \u0448\u043a\u043e\u043b\u044b \u0438\u043b\u0438 \u0441\u0447\u0435\u0442\u0430 \u0434\u0430\u0432\u044f\u0442 \u043d\u0430 \u0436\u0438\u0442\u0435\u043b\u044f. \u0414\u0430\u0451\u0442 family-\u043c\u044b\u0441\u043b\u0438 \u0438 \u0443\u0441\u0438\u043b\u0438\u0432\u0430\u0435\u0442 \u0437\u043d\u0430\u0447\u0438\u043c\u043e\u0441\u0442\u044c \u0441\u0435\u043c\u0435\u0439\u043d\u044b\u0445 \u0437\u043d\u0430\u043d\u0438\u0439." : "Family, children, schools, care, or bills are pressing. Creates family thoughts and raises family-related knowledge importance.",
             WorkerAffectKind.ReliefAfterRest => ru ? "\u041e\u0442\u0434\u044b\u0445 \u0441\u043d\u044f\u043b \u0447\u0430\u0441\u0442\u044c \u043d\u0430\u043f\u0440\u044f\u0436\u0435\u043d\u0438\u044f. \u0414\u0430\u0451\u0442 \u043c\u044f\u0433\u043a\u0438\u0435 \u043f\u043e\u0437\u0438\u0442\u0438\u0432\u043d\u044b\u0435 \u043c\u044b\u0441\u043b\u0438." : "Rest eased pressure. Creates mild positive need thoughts.",
             WorkerAffectKind.Hangover => ru ? "\u0411\u0430\u0440 \u0438\u043b\u0438 \u0442\u044f\u0436\u0451\u043b\u044b\u0439 \u043e\u0442\u0434\u044b\u0445 \u043e\u0441\u0442\u0430\u0432\u0438\u043b \u043d\u0435\u043f\u0440\u0438\u044f\u0442\u043d\u044b\u0439 \u0441\u043b\u0435\u0434. \u0412\u043b\u0438\u044f\u0435\u0442 \u043d\u0430 \u043c\u044b\u0441\u043b\u0438 \u0438 \u043e\u0446\u0435\u043d\u043a\u0443 \u0411\u0430\u0440\u0430." : "Heavy rest left a bad aftertaste. Affects thoughts and Bar judgement.",
-            WorkerAffectKind.Loneliness => ru ? "\u041c\u0430\u043b\u043e \u0437\u043d\u0430\u043a\u043e\u043c\u0441\u0442\u0432 \u0438 \u0441\u043b\u0430\u0431\u0430\u044f \u0441\u043e\u0446\u0438\u0430\u043b\u043a\u0430. \u0414\u0430\u0451\u0442 \u0441\u043e\u0446\u0438\u0430\u043b\u044c\u043d\u044b\u0435 \u043c\u044b\u0441\u043b\u0438." : "Few acquaintances and weak social contact. Creates social thoughts.",
-            WorkerAffectKind.InspiredByNature => ru ? "\u041f\u0430\u0440\u043a \u0438 \u043f\u0440\u0438\u0440\u043e\u0434\u0430 \u0434\u0430\u043b\u0438 \u0445\u043e\u0440\u043e\u0448\u0438\u0439 \u0441\u043b\u0435\u0434. \u0423\u0441\u0438\u043b\u0438\u0432\u0430\u0435\u0442 \u043c\u044b\u0441\u043b\u0438 \u043e \u0433\u043e\u0440\u043e\u0434\u0435 \u0438 \u043e\u0446\u0435\u043d\u043a\u0443 \u043f\u0430\u0440\u043a\u0430." : "Park and nature left a good trace. Strengthens city thoughts and park judgement.",
             WorkerAffectKind.IrritatedByLitter => ru ? "\u041c\u0443\u0441\u043e\u0440 \u043d\u0430 \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430\u0445 \u0441\u043e\u0431\u0438\u0440\u0430\u0435\u0442 \u0440\u0430\u0437\u0434\u0440\u0430\u0436\u0435\u043d\u0438\u0435. \u0414\u0430\u0451\u0442 city-\u043c\u044b\u0441\u043b\u0438 \u0438 \u0441\u0438\u0433\u043d\u0430\u043b \u043d\u043e\u043e\u0441\u0444\u0435\u0440\u0435." : "Street litter builds irritation. Creates city thoughts and a Noosphere signal.",
             WorkerAffectKind.GamblingExcitement => ru ? "\u0412\u044b\u0438\u0433\u0440\u044b\u0448 \u0443\u0441\u0438\u043b\u0438\u043b \u0430\u0437\u0430\u0440\u0442. \u041c\u0435\u043d\u044f\u0435\u0442 \u0442\u043e\u043d \u043c\u044b\u0441\u043b\u0435\u0439 \u0438 \u043e\u0446\u0435\u043d\u043a\u0443 \u0438\u0433\u0440\u043e\u0432\u043e\u0433\u043e \u0437\u0430\u043b\u0430." : "A win increased excitement. Changes thought tone and Gambling Hall judgement.",
             WorkerAffectKind.GamblingRegret => ru ? "\u041f\u0440\u043e\u0438\u0433\u0440\u044b\u0448 \u0438\u043b\u0438 \u0431\u0440\u043e\u0443\u043a \u0434\u0430\u044e\u0442 \u0441\u043b\u043e\u0436\u043d\u043e\u0435 \u043e\u0442\u043d\u043e\u0448\u0435\u043d\u0438\u0435 \u043a \u0438\u0433\u0440\u043e\u0432\u043e\u043c\u0443 \u0437\u0430\u043b\u0443." : "A loss or being broke creates a conflicted view of Gambling Hall.",
@@ -688,8 +719,6 @@ public partial class GameBootstrap
             WorkerAffectKind.FamilyAnxiety => "affect_family_anxiety",
             WorkerAffectKind.ReliefAfterRest => "affect_relief_after_rest",
             WorkerAffectKind.Hangover => "affect_hangover",
-            WorkerAffectKind.Loneliness => "affect_loneliness",
-            WorkerAffectKind.InspiredByNature => "affect_inspired_by_nature",
             WorkerAffectKind.IrritatedByLitter => "affect_litter_irritation",
             WorkerAffectKind.GamblingExcitement => "affect_gambling_excitement",
             WorkerAffectKind.GamblingRegret => "affect_gambling_regret",
@@ -704,7 +733,6 @@ public partial class GameBootstrap
         {
             WorkerAffectKind.FinancialPressure or WorkerAffectKind.GamblingExcitement or WorkerAffectKind.GamblingRegret => WorkerThoughtKind.Money,
             WorkerAffectKind.FamilyAnxiety => WorkerThoughtKind.Family,
-            WorkerAffectKind.Loneliness => WorkerThoughtKind.Social,
             WorkerAffectKind.ReliefAfterRest or WorkerAffectKind.Hangover => WorkerThoughtKind.Need,
             _ => WorkerThoughtKind.City
         };
@@ -714,8 +742,8 @@ public partial class GameBootstrap
     {
         return affect switch
         {
-            WorkerAffectKind.ReliefAfterRest or WorkerAffectKind.InspiredByNature or WorkerAffectKind.GamblingExcitement or WorkerAffectKind.StableRoutine => WorkerThoughtTone.Positive,
-            WorkerAffectKind.FinancialPressure or WorkerAffectKind.FamilyAnxiety or WorkerAffectKind.Hangover or WorkerAffectKind.Loneliness or WorkerAffectKind.IrritatedByLitter or WorkerAffectKind.GamblingRegret => WorkerThoughtTone.Negative,
+            WorkerAffectKind.ReliefAfterRest or WorkerAffectKind.GamblingExcitement or WorkerAffectKind.StableRoutine => WorkerThoughtTone.Positive,
+            WorkerAffectKind.FinancialPressure or WorkerAffectKind.FamilyAnxiety or WorkerAffectKind.Hangover or WorkerAffectKind.IrritatedByLitter or WorkerAffectKind.GamblingRegret => WorkerThoughtTone.Negative,
             _ => WorkerThoughtTone.Neutral
         };
     }
@@ -743,10 +771,8 @@ public partial class GameBootstrap
         {
             WorkerAffectKind.FinancialPressure => "money",
             WorkerAffectKind.FamilyAnxiety => "family",
-            WorkerAffectKind.Loneliness => "social",
             WorkerAffectKind.IrritatedByLitter => "litter",
             WorkerAffectKind.GamblingExcitement or WorkerAffectKind.GamblingRegret => "gambling",
-            WorkerAffectKind.InspiredByNature => "nature",
             _ => "city"
         };
     }
@@ -767,7 +793,6 @@ public partial class GameBootstrap
         {
             WorkerAffectKind.FinancialPressure or WorkerAffectKind.GamblingExcitement or WorkerAffectKind.GamblingRegret => SocialSignalCategory.Money,
             WorkerAffectKind.FamilyAnxiety => SocialSignalCategory.Family,
-            WorkerAffectKind.Loneliness => SocialSignalCategory.Social,
             WorkerAffectKind.ReliefAfterRest or WorkerAffectKind.Hangover => SocialSignalCategory.Need,
             WorkerAffectKind.IrritatedByLitter => SocialSignalCategory.Litter,
             _ => SocialSignalCategory.City
