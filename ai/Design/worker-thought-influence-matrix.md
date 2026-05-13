@@ -20,7 +20,7 @@ WorkerThought -> WorkerOpinion -> bias будущей WorkerThought
 - Запись мысли и обновление lightweight `WorkerOpinion`: `GameBootstrap.WorkerThoughts.cs`.
 - Active/pending formation: `GameBootstrap.WorkerThoughts.Active.cs`, `GameBootstrap.WorkerThoughtFormation.cs`.
 - Generic opinion bias: `GameBootstrap.WorkerThoughtBias.cs`.
-- Explicit influence-rule infrastructure: `GameBootstrap.WorkerThoughtInfluence.cs`; rule catalog is currently present as data shape/evaluator, but contains no enabled rules yet.
+- Explicit influence-rule infrastructure: `GameBootstrap.WorkerThoughtInfluence.cs`; rule catalog currently enables the first implementation slice `Money + Work + Paid Services`.
 - Affect states и affect-thoughts: `GameBootstrap.WorkerAffects.cs`.
 - Knowledge/opinion score по местам и темам: `GameBootstrap.WorkerKnowledgeFormation.cs`.
 - Публичные social signals для Noosphere: `GameBootstrap.SocialSignals.cs`.
@@ -562,10 +562,18 @@ humanReason: "денежная проблема подтвердилась"
 
 ## Итоговая Готовность
 
+Implemented in code:
+
+- Slice `Money + Work + Paid Services`: 23 enabled rules in `GameBootstrap.WorkerThoughtInfluence.cs`.
+- Covered source thoughts: `low_money`, `service_unaffordable`, `salary_paid`, `affect_financial_pressure`, `no_job_warning`, `starter_job_suggestion`, `job_found`.
+- Covered target thoughts include: `service_unaffordable`, `affect_financial_pressure`, `no_job_warning`, `salary_paid`, `low_money`, `starter_job_suggestion`, `job_found`, `affect_stable_routine`.
+- Slice `Needs`: 30 enabled rules for Meal, Sleep, Leisure, `affect_relief_after_rest`, and `affect_hangover`.
+- Total enabled rules: 53.
+- Additional covered source thoughts: `need_meal_critical`, `meal_service_good`, `used_snack`, `need_sleep_critical`, `sleep_service_good`, `home_sleep_good`, `used_coffee`, `need_leisure_critical`, `leisure_service_good`, `affect_relief_after_rest`, `affect_hangover`.
+- Not yet implemented: Family, City/Litter, Social, Transport, Gambling contradiction, and remaining Stability/Recovery rules outside these slices.
+
 Ready for implementation:
 
-- Money + Work + Paid Services.
-- Needs / Meal and Needs / Sleep as relief/dampen loops.
 - Basic Litter -> Irritation loop.
 
 Risky connections:

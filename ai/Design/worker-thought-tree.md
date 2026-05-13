@@ -883,7 +883,7 @@ Leisure:
 Текущая реализация:
 - точка входа: `AddOrKeepPendingWorkerThought` в `GameBootstrap.WorkerThoughtFormation.cs`;
 - helper layer: `GameBootstrap.WorkerThoughtBias.cs`;
-- explicit influence layer: `GameBootstrap.WorkerThoughtInfluence.cs`; на этом шаге есть evaluator/data-shape/hook, но каталог конкретных rules ещё пустой;
+- explicit influence layer: `GameBootstrap.WorkerThoughtInfluence.cs`; evaluator/data-shape/hook включены, пакеты `Money + Work + Paid Services` и `Needs` содержат 53 enabled rules;
 - bias применяется только к мысли, которая уже появилась из реального события/условия;
 - используется exact opinion по subject, затем мягкий fallback по веткам `money`, `city_work`, `street_litter`, `Need/Meal`, `Need/Sleep`, `Need/Leisure`, `family`, `gambling`, `local_bus`, `city`;
 - минимальная устойчивость мнения: `Confidence >= 12`;
