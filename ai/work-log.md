@@ -1,6 +1,6 @@
 # Work Log
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20, 2026-05-03, 2026-05-08, and 2026-05-09 to keep agent startup light. Use git history for exact old implementation details.
 
@@ -9,6 +9,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 - No active queued memory items.
 
 ## Recent Work
+
+- 2026-05-14: Made layered resident portrait animation the standard portrait behavior and added state-aware cartoon expressions. `WorkerPortraitAnimator.cs` now runs on every portrait root created through `DrawWorkerPortraitScaled`, with texture slots and procedural fallback parts tagged through `WorkerPortraitLayerMarker`; head/face layers breathe subtly, hair back/front sway independently, eyes blink, occasionally glance sideways/up/down, and fatigue/anxiety/relief/hangover/financial pressure affect exaggerated brow/mouth motion without per-screen code. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.
 
 - 2026-05-14: Raised texture-backed portrait hair placement after visual review showed the hairline sitting too low on the forehead. `GameBootstrap.WorkerPortraitTextures.cs` now applies a shared upward UI offset to both `hair_back` and `hair_front` slots, leaving head/face/clothes on the original canvas alignment. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.
 

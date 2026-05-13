@@ -1,6 +1,6 @@
 # System Tree
 
-Last updated: 2026-05-13
+Last updated: 2026-05-14
 
 Purpose: stable informational tree of the project systems, subsystems, feature leaves, and the most important cross-system links. Code remains the source of truth; use this file to orient before reading `ai/systems-map.md` and scanning code.
 
@@ -134,7 +134,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 
 - [WORKERS.Identity] Worker identity and presentation
   - Stores names, visual race, cultural heritage, portraits, education, profession, visuals, and focus state.
-  - Feature leaves: generated names, stable race/heritage assignment, heritage HUD badge/catalog, race/gender texture-backed portrait UI with procedural fallback, education label, citizen id, worker focus, driver/worker object.
+  - Feature leaves: generated names, stable race/heritage assignment, heritage HUD badge/catalog, race/gender texture-backed portrait UI with state-aware cartoon layered animation and procedural fallback, education label, citizen id, worker focus, driver/worker object.
 - [WORKERS.Personality] Character traits, weaknesses, and temporary affects
   - Separates stable worker traits from at most one steady weakness and temporary emotional states.
   - Feature leaves: 3 generated non-conflicting traits, optional weakness, legacy perk migration, affect lifetime/intensity/source/reason, affect-created thoughts, affect knowledge bias, Workers/F9 personality UI.

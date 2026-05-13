@@ -381,7 +381,7 @@ public partial class GameBootstrap
         UpdateLocalBusQuickHud();
         UpdateDriverQuickHud();
         UpdateBuildingQuickHud();
-        UpdateCellQuickHud();
+        UpdateCellQuickHud(); UpdateWorkerPortraitAnimationExpressions();
         UpdateRuntimeLocalizationTick();
         SessionDebugLogger.FlushIfIntervalElapsed();
     }

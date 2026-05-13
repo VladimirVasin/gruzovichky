@@ -105,6 +105,7 @@ public partial class GameBootstrap
                 $"PortraitTexture_{parts[i].slot}_{i}",
                 root,
                 sprites[i],
+                parts[i].slot,
                 GetWorkerPortraitLayerOffset(parts[i].slot, scale),
                 portraitSize);
         }
@@ -529,9 +530,9 @@ public partial class GameBootstrap
         return sprite;
     }
 
-    private static Image CreatePortraitSpritePart(string name, RectTransform parent, Sprite sprite, Vector2 anchoredPosition, Vector2 size)
+    private static Image CreatePortraitSpritePart(string name, RectTransform parent, Sprite sprite, string slot, Vector2 anchoredPosition, Vector2 size)
     {
-        Image image = CreatePortraitPart(name, parent, anchoredPosition, size, Color.white);
+        Image image = CreatePortraitPart(name, parent, anchoredPosition, size, Color.white, slot, true);
         image.sprite = sprite;
         image.preserveAspect = true;
         return image;

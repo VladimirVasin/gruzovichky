@@ -32,6 +32,8 @@ public partial class GameBootstrap
 
     private static readonly int[] FemalePortraitHairStyles = { 0, 1, 2, 4, 5 };
     private static readonly int[] FemalePortraitAccessories = { 0, 1, 3, 4, 5 };
+    private readonly System.Collections.Generic.List<WorkerPortraitAnimator> workerPortraitAnimators = new();
+    private float workerPortraitExpressionRefreshTimer;
 
     private void AssignWorkerPortrait(DriverAgent driver)
     {
@@ -92,8 +94,10 @@ public partial class GameBootstrap
             Destroy(root.GetChild(i).gameObject);
 
         EnsureWorkerPortrait(driver);
-        if (TryDrawWorkerTexturePortraitScaled(driver, root, scale))
+        bool textureBacked = TryDrawWorkerTexturePortraitScaled(driver, root, scale);
+        if (textureBacked)
         {
+            ConfigureWorkerPortraitAnimation(root, driver, scale, true);
             return;
         }
 
@@ -140,6 +144,7 @@ public partial class GameBootstrap
         CreatePortraitPart("PNo", root, new Vector2(0f, -1f * scale), new Vector2(5f * scale, 12f * scale), Color.Lerp(skin, Color.black, 0.12f));
         DrawWorkerPortraitMouthScaled(root, driver.PortraitMouthStyle, ink, scale, driver.Gender);
         DrawWorkerPortraitAccessoryScaled(root, driver.PortraitAccessory, hair, ink, scale, driver.Gender);
+        ConfigureWorkerPortraitAnimation(root, driver, scale, false);
     }
 
     private static void DrawWorkerPortraitHairScaled(RectTransform root, int style, Color hair, float headWidth, float headHeight, float s, WorkerGender gender)
@@ -273,7 +278,168 @@ public partial class GameBootstrap
         }
     }
 
-    private static Image CreatePortraitPart(string name, RectTransform parent, Vector2 anchoredPosition, Vector2 size, Color color)
+    private void ConfigureWorkerPortraitAnimation(RectTransform root, DriverAgent driver, float scale, bool textureBacked)
+    {
+        if (root == null || driver == null)
+        {
+            return;
+        }
+
+        WorkerPortraitAnimator animator = root.GetComponent<WorkerPortraitAnimator>();
+        if (animator == null)
+        {
+            animator = root.gameObject.AddComponent<WorkerPortraitAnimator>();
+        }
+
+        animator.Configure(driver.DriverId, scale, driver.Gender == WorkerGender.Female, (int)driver.Race, textureBacked, BuildWorkerPortraitExpression(driver));
+        RegisterWorkerPortraitAnimator(animator);
+    }
+
+    private void RegisterWorkerPortraitAnimator(WorkerPortraitAnimator animator)
+    {
+        if (animator != null && !workerPortraitAnimators.Contains(animator))
+        {
+            workerPortraitAnimators.Add(animator);
+        }
+    }
+
+    private void UpdateWorkerPortraitAnimationExpressions()
+    {
+        if (workerPortraitAnimators.Count == 0)
+        {
+            return;
+        }
+
+        workerPortraitExpressionRefreshTimer += Time.unscaledDeltaTime;
+        if (workerPortraitExpressionRefreshTimer < 0.35f)
+        {
+            return;
+        }
+
+        workerPortraitExpressionRefreshTimer = 0f;
+        for (int i = workerPortraitAnimators.Count - 1; i >= 0; i--)
+        {
+            WorkerPortraitAnimator animator = workerPortraitAnimators[i];
+            if (animator == null)
+            {
+                workerPortraitAnimators.RemoveAt(i);
+                continue;
+            }
+
+            if (!animator.isActiveAndEnabled)
+            {
+                continue;
+            }
+
+            DriverAgent driver = driverAgents.Find(d => d.DriverId == animator.DriverId);
+            if (driver == null)
+            {
+                workerPortraitAnimators.RemoveAt(i);
+                continue;
+            }
+
+            animator.SetExpression(BuildWorkerPortraitExpression(driver));
+        }
+    }
+
+    private WorkerPortraitExpression BuildWorkerPortraitExpression(DriverAgent driver)
+    {
+        WorkerPortraitExpression expression = new();
+        if (driver == null)
+        {
+            return expression;
+        }
+
+        float mealPressure = GetWorkerPortraitNeedPressure(GetWorkerNeedStatus(WorkerNeedKind.Meal, driver.HoursSinceMeal));
+        float sleepPressure = GetWorkerPortraitNeedPressure(GetWorkerNeedStatus(WorkerNeedKind.Sleep, driver.HoursSinceSleep));
+        float leisurePressure = GetWorkerPortraitNeedPressure(GetWorkerNeedStatus(WorkerNeedKind.Leisure, driver.HoursSinceLeisure));
+        expression.Fatigue = sleepPressure;
+        expression.Anxiety = Mathf.Max(mealPressure * 0.28f, leisurePressure * 0.35f);
+        expression.FinancialPressure = driver.Money <= 5 ? 0.82f : driver.Money <= 10 ? 0.56f : driver.Money <= 15 ? 0.28f : 0f;
+
+        bool sleeping = driver.RestPhase == DriverRestPhase.Sleeping || driver.RestPhase == DriverRestPhase.SleepingAtHome;
+        if (sleeping)
+        {
+            expression.Fatigue = Mathf.Max(expression.Fatigue, 0.55f);
+            expression.Calm = Mathf.Max(expression.Calm, 0.55f);
+            expression.Anxiety *= 0.35f;
+        }
+
+        ApplyWorkerPortraitAffectExpression(driver, ref expression);
+
+        if (mealPressure <= 0f && sleepPressure <= 0f && leisurePressure <= 0f && expression.Anxiety < 0.25f)
+        {
+            expression.Calm = Mathf.Max(expression.Calm, 0.22f);
+        }
+
+        return expression;
+    }
+
+    private void ApplyWorkerPortraitAffectExpression(DriverAgent driver, ref WorkerPortraitExpression expression)
+    {
+        if (driver?.Affects == null || driver.Affects.Count == 0)
+        {
+            return;
+        }
+
+        float now = GetCurrentWorldHour();
+        for (int i = 0; i < driver.Affects.Count; i++)
+        {
+            WorkerAffect affect = driver.Affects[i];
+            if (affect == null || affect.ExpiresWorldHour > 0f && now >= affect.ExpiresWorldHour)
+            {
+                continue;
+            }
+
+            float intensity = Mathf.Clamp01(affect.Intensity / 100f);
+            switch (affect.Kind)
+            {
+                case WorkerAffectKind.FinancialPressure:
+                    expression.FinancialPressure = Mathf.Max(expression.FinancialPressure, intensity);
+                    expression.Anxiety = Mathf.Max(expression.Anxiety, intensity * 0.42f);
+                    break;
+                case WorkerAffectKind.FamilyAnxiety:
+                    expression.Anxiety = Mathf.Max(expression.Anxiety, intensity);
+                    break;
+                case WorkerAffectKind.ReliefAfterRest:
+                    expression.Positive = Mathf.Max(expression.Positive, 0.35f + intensity * 0.45f);
+                    expression.Calm = Mathf.Max(expression.Calm, 0.30f + intensity * 0.40f);
+                    break;
+                case WorkerAffectKind.Hangover:
+                    expression.Hangover = Mathf.Max(expression.Hangover, intensity);
+                    expression.Fatigue = Mathf.Max(expression.Fatigue, intensity * 0.78f);
+                    expression.Anxiety = Mathf.Max(expression.Anxiety, intensity * 0.18f);
+                    break;
+                case WorkerAffectKind.GamblingExcitement:
+                    expression.Positive = Mathf.Max(expression.Positive, 0.18f + intensity * 0.46f);
+                    expression.Anxiety = Mathf.Max(expression.Anxiety, intensity * 0.38f);
+                    break;
+                case WorkerAffectKind.GamblingRegret:
+                    expression.Anxiety = Mathf.Max(expression.Anxiety, intensity * 0.74f);
+                    expression.FinancialPressure = Mathf.Max(expression.FinancialPressure, intensity * 0.42f);
+                    break;
+                case WorkerAffectKind.IrritatedByLitter:
+                    expression.Anxiety = Mathf.Max(expression.Anxiety, intensity * 0.62f);
+                    break;
+                case WorkerAffectKind.StableRoutine:
+                    expression.Calm = Mathf.Max(expression.Calm, 0.32f + intensity * 0.50f);
+                    expression.Positive = Mathf.Max(expression.Positive, 0.12f + intensity * 0.25f);
+                    break;
+            }
+        }
+    }
+
+    private static float GetWorkerPortraitNeedPressure(WorkerNeedStatus status)
+    {
+        return status switch
+        {
+            WorkerNeedStatus.Critical => 1f,
+            WorkerNeedStatus.Warning => 0.46f,
+            _ => 0f
+        };
+    }
+
+    private static Image CreatePortraitPart(string name, RectTransform parent, Vector2 anchoredPosition, Vector2 size, Color color, string animationSlot = null, bool textureLayer = false)
     {
         GameObject part = CreateUiObject(name, parent);
         RectTransform rect = part.GetComponent<RectTransform>();
@@ -286,6 +452,9 @@ public partial class GameBootstrap
         Image image = part.AddComponent<Image>();
         image.color = color;
         image.raycastTarget = false;
+
+        WorkerPortraitLayerMarker marker = part.AddComponent<WorkerPortraitLayerMarker>();
+        marker.Configure(animationSlot ?? name, rect, image, textureLayer);
         return image;
     }
 
