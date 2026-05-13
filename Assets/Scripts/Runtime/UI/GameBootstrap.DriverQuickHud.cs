@@ -108,6 +108,7 @@ public partial class GameBootstrap
         driverQuickHud.CloseButton.onClick.AddListener(ClearDriverFocus);
 
         driverQuickHud.OccupationText = CreateBodyText("OccupationText", root, uiFont, string.Empty, 15, TextAnchor.MiddleLeft, new Color(0.64f, 0.74f, 0.90f, 1f));
+        driverQuickHud.OccupationText.supportRichText = true;
         driverQuickHud.OccupationText.fontStyle = FontStyle.Bold;
         driverQuickHud.OccupationText.gameObject.AddComponent<LayoutElement>().preferredHeight = 20f;
 
@@ -207,8 +208,9 @@ public partial class GameBootstrap
             return;
         }
 
+        EnsureWorkerRace(driver);
         driverQuickHud.HeaderText.text = driver.DriverName;
-        driverQuickHud.OccupationText.text = GetWorkerQuickHudOccupationLabelRu(driver);
+        driverQuickHud.OccupationText.text = $"{FormatWorkerRaceBadgeInline(driver.Race, true)} \u00b7 {GetWorkerQuickHudOccupationLabelRu(driver)}";
         driverQuickHud.ActivityText.text = $"Сейчас: {GetWorkerQuickHudActivityLabelRu(driver)}";
 
         int score = GetDriverQuickHudConditionScore(driver);

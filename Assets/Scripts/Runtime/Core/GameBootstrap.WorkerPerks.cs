@@ -6,7 +6,7 @@ public partial class GameBootstrap
 {
     private const float WorkerTraitTooltipWidth = 330f;
     private const float WorkerTraitTooltipHeight = 142f;
-    private const int WorkerPerkHudRowCount = 7;
+    private const int WorkerPerkHudRowCount = 9;
     private const int WorkerStartTraitCount = 3;
     private const int WorkerWeaknessChancePercent = 33;
 
@@ -40,6 +40,7 @@ public partial class GameBootstrap
             return;
         }
 
+        EnsureWorkerRace(driver);
         int seed = StableWorkerTraitHash(driver.DriverName) ^ (driver.DriverId * 19349663);
         AssignWorkerPerks(driver, new System.Random(seed));
     }
@@ -64,6 +65,7 @@ public partial class GameBootstrap
             return;
         }
 
+        EnsureWorkerRace(driver);
         int seed = StableWorkerTraitHash(driver.DriverName) ^ (driver.DriverId * 19349663);
         NormalizeWorkerPersonality(driver, new System.Random(seed));
     }
@@ -339,6 +341,13 @@ public partial class GameBootstrap
         UpdateWorkerAffects(driver);
 
         int rowIndex = 0;
+        SetWorkerPersonalityTextRow(rowIndex++, ru ? "\u0420\u0430\u0441\u0430:" : "Race:", FleetAccentColor);
+        Text raceText = SetWorkerPersonalityTextRow(
+            rowIndex++,
+            $"- {FormatWorkerRaceBadgeInline(driver.Race, ru)} - {GetWorkerRaceShortDescription(driver.Race, ru)}",
+            FleetSecondaryTextColor);
+        ConfigureWorkerRaceTooltip(raceText, driver.Race);
+
         SetWorkerPersonalityTextRow(rowIndex++, ru ? "Характер:" : "Character:", FleetAccentColor);
         for (int i = 0; i < driver.Traits.Count && rowIndex < driversScreenUi.DetailPerkTexts.Count; i++)
         {

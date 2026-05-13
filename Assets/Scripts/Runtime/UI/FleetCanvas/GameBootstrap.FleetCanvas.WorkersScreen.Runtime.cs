@@ -64,10 +64,22 @@ public partial class GameBootstrap
             row.NameText.color = isSelected ? new Color(1f, 0.94f, 0.78f, 1f) : Color.white;
 
             bool ru = IsRussianLanguage();
-            row.SubText.text = d.IsArrivingByBus              ? (ru ? "\u0412 \u043f\u0443\u0442\u0438..." : "On the way...")
+            EnsureWorkerRace(d);
+            string rowStateText = d.IsArrivingByBus              ? (ru ? "\u0412 \u043f\u0443\u0442\u0438..." : "On the way...")
                 : isLogistics && d.AssignedBuildingType.HasValue ? GetSelectedLocationDisplayName(d.AssignedBuildingType.Value)
                 : L(GetWorkerOccupationLabel(d));
-            row.SubText.color = isSelected ? new Color(0.90f, 0.82f, 0.62f, 1f) : FleetSecondaryTextColor;
+            if (row.RaceText != null)
+            {
+                row.RaceText.text = FormatWorkerRaceListBadge(d, ru);
+                row.RaceText.color = isSelected ? new Color(0.90f, 0.82f, 0.62f, 1f) : FleetSecondaryTextColor;
+            }
+
+            if (row.JobText != null)
+            {
+                row.JobText.text = rowStateText;
+                row.JobText.color = isSelected ? new Color(0.90f, 0.82f, 0.62f, 1f) : FleetSecondaryTextColor;
+            }
+
             if (row.BalanceText != null)
             {
                 row.BalanceText.text = $"${d.Money}";

@@ -67,6 +67,18 @@ public partial class GameBootstrap
             () => ShowWorkerWeaknessTooltip(weakness, text.rectTransform));
     }
 
+    private void ConfigureWorkerRaceTooltip(Text text, WorkerRaceKind race)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        ConfigureWorkerPersonalityTooltip(
+            text,
+            () => ShowWorkerRaceTooltip(race, text.rectTransform));
+    }
+
     private void ConfigureWorkerPersonalityTooltip(Text text, UnityEngine.Events.UnityAction onEnter)
     {
         text.raycastTarget = true;
@@ -113,6 +125,15 @@ public partial class GameBootstrap
             GetWorkerWeaknessDisplayName(weakness, IsRussianLanguage()),
             GetWorkerWeaknessDescription(weakness, IsRussianLanguage()),
             GetWorkerWeaknessColor(weakness),
+            target);
+    }
+
+    private void ShowWorkerRaceTooltip(WorkerRaceKind race, RectTransform target)
+    {
+        ShowWorkerPersonalityTooltip(
+            $"{GetWorkerRaceIconGlyph(race)} {GetWorkerRaceDisplayName(race, IsRussianLanguage())}",
+            GetWorkerRaceFullDescription(race, IsRussianLanguage()),
+            GetWorkerRaceColor(race),
             target);
     }
 

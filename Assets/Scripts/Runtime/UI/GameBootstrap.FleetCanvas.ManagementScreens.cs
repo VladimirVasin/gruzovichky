@@ -174,7 +174,8 @@ public partial class GameBootstrap
         public Image         Background;
         public Outline       Outline;
         public Text          NameText;
-        public Text          SubText;
+        public Text          RaceText;
+        public Text          JobText;
         public Text          BalanceText;
         public Button        SelectButton;
     }

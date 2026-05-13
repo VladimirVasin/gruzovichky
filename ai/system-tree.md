@@ -133,8 +133,8 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 ### [WORKERS] Residents, Jobs, Needs, Life, And Social Simulation
 
 - [WORKERS.Identity] Worker identity and presentation
-  - Stores names, portraits, education, profession, visuals, and focus state.
-  - Feature leaves: generated names, portrait UI, education label, citizen id, worker focus, driver/worker object.
+  - Stores names, races, portraits, education, profession, visuals, and focus state.
+  - Feature leaves: generated names, stable race assignment, race HUD badge/catalog, portrait UI, education label, citizen id, worker focus, driver/worker object.
 - [WORKERS.Personality] Character traits, weaknesses, and temporary affects
   - Separates stable worker traits from at most one steady weakness and temporary emotional states.
   - Feature leaves: 3 generated non-conflicting traits, optional weakness, legacy perk migration, affect lifetime/intensity/source/reason, affect-created thoughts, affect knowledge bias, Workers/F9 personality UI.
@@ -203,13 +203,13 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: fade transition, render texture, orbit rings, knowledge words, social signal words, close/escape return.
 - [NOOSPHERE.Vision] Fullscreen city meaning view
   - Shows prioritized city insights from education pressure, family readiness, strong affect states, shared experience, social signals, and canon knowledge.
-  - Feature leaves: slow-time entry, insight cards, source dots, affect cause-state-thought-topic chain, resident clarity overlay, journal bridge, close/escape return.
+  - Feature leaves: slow-time entry, insight cards, source dots, affect cause-state-thought-topic chain, resident race marker in clarity overlay, journal bridge, close/escape return.
 - [NOOSPHERE.Visuals] Noosphere animation
   - Draws pulsing nodes, labels, connections, and state transitions.
   - Feature leaves: node animation, edge animation, received/burned/canonized color states.
 - [NOOSPHERE.Snapshots] Internal day-start memory archive
   - Silently stores copied Noosphere state at game start/day 1 and each later day start.
-  - Feature leaves: knowledge events, social signals, city experience, canon, resident cognition, resident traits/weaknesses/affects, dive meanings, vision insights, visual-node state.
+  - Feature leaves: knowledge events, social signals, city experience, canon, resident cognition, resident race/traits/weaknesses/affects, dive meanings, vision insights, visual-node state.
 
 ### [GOVERNANCE] Trust, City Hall, Complaints, And Decisions
 
@@ -245,7 +245,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: category tray, build cards, costs, unlock pulse, hotkeys.
 - [UI.WorkersScreen] Workers screen
   - Resident list and detail tabs.
-  - Feature leaves: profile, social links, thoughts, knowledge, inventory, daily opinion card.
+  - Feature leaves: profile race/personality card, resident list race badge, social links, thoughts, knowledge, inventory, daily opinion card.
 - [UI.ShiftsScreen] Staffing screens
   - Shift assignment and vacancy management.
   - Feature leaves: transport/logistics tabs, building slots, worker options, vacancy flow.

@@ -83,7 +83,7 @@ public partial class GameBootstrap
         driversScreenUi.DetailProductionSkillTile = CreateWorkerSkillTile("WorkerProductionSkill", skillsRow, font);
         driversScreenUi.DetailServiceSkillTile = CreateWorkerSkillTile("WorkerServiceSkill", skillsRow, font);
 
-        RectTransform conditionRow = CreateLayoutRow("WorkerConditionRow", profileTabRoot, 250f, 14f);
+        RectTransform conditionRow = CreateLayoutRow("WorkerConditionRow", profileTabRoot, 344f, 14f);
 
         RectTransform needsCard = CreateResidentHudPanel("WorkerNeedsCard", conditionRow, ResidentHudCardColor, ResidentHudBorderColor);
         needsCard.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -134,6 +134,7 @@ public partial class GameBootstrap
         for (int i = 0; i < WorkerPerkHudRowCount; i++)
         {
             Text perkText = CreateBodyText($"WorkerPerkRow{i + 1}", perksCard, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+            perkText.supportRichText = true;
             perkText.lineSpacing = 1.08f;
             perkText.gameObject.AddComponent<LayoutElement>().preferredHeight = 24f;
             perkText.gameObject.SetActive(false);

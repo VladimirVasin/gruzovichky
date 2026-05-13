@@ -312,6 +312,7 @@ public partial class GameBootstrap
             return "-";
         }
 
+        EnsureWorkerRace(driver);
         EnsureWorkerPerks(driver);
 
         string text = string.Empty;
@@ -341,6 +342,6 @@ public partial class GameBootstrap
             text += $" / {GetWorkerWeaknessDisplayName(driver.Weakness, ru)}";
         }
 
-        return text;
+        return $"{FormatWorkerRaceBadgeInline(driver.Race, ru)} \u00b7 {text}";
     }
 }

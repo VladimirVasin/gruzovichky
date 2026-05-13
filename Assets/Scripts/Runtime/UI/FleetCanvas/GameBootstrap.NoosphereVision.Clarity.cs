@@ -108,9 +108,12 @@ public partial class GameBootstrap
         }
 
         noosphereVisionResidentTooltipRoot.gameObject.SetActive(true);
-        noosphereVisionResidentTooltipTitleText.text = string.IsNullOrWhiteSpace(noosphereVisionHoveredResident.DriverName)
+        EnsureWorkerRace(noosphereVisionHoveredResident);
+        string residentName = string.IsNullOrWhiteSpace(noosphereVisionHoveredResident.DriverName)
             ? $"#{noosphereVisionHoveredResident.DriverId}"
             : noosphereVisionHoveredResident.DriverName;
+        noosphereVisionResidentTooltipTitleText.text = $"{residentName} \u00b7 {GetWorkerRaceDisplayName(noosphereVisionHoveredResident.Race, IsRussianLanguage())}";
+        noosphereVisionResidentTooltipTitleText.color = GetWorkerRaceColor(noosphereVisionHoveredResident.Race);
         noosphereVisionResidentTooltipBodyText.text = FormatNoosphereVisionResidentTooltip(noosphereVisionHoveredResident);
 
         Vector2 panelSize = noosphereVisionResidentTooltipRoot.sizeDelta;
@@ -133,6 +136,7 @@ public partial class GameBootstrap
         string family = worker.FamilyId > 0
             ? ru ? $"\u0441\u0435\u043c\u044c\u044f #{worker.FamilyId}" : $"family #{worker.FamilyId}"
             : ru ? "\u0431\u0435\u0437 \u0441\u0435\u043c\u044c\u0438" : "no family";
+        string raceLine = FormatNoosphereVisionResidentRaceLine(worker, ru);
         string weakness = FormatNoosphereVisionResidentWeaknessLine(worker, ru);
         string affectLine = FormatNoosphereVisionResidentAffectLine(worker, ru);
 
@@ -140,13 +144,23 @@ public partial class GameBootstrap
         {
             string thoughtText = RenderWorkerThought(thought, ru);
             return ru
-                ? $"{tone}, \u0441\u0438\u043b\u0430 {thought.Intensity}\n{weakness}\n{affectLine}\n{thoughtText}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, ${worker.Money}, {family}"
-                : $"{tone}, strength {thought.Intensity}\n{weakness}\n{affectLine}\n{thoughtText}\nsatisfaction {worker.Satisfaction}, ${worker.Money}, {family}";
+                ? $"{tone}, \u0441\u0438\u043b\u0430 {thought.Intensity}\n{raceLine}\n{weakness}\n{affectLine}\n{thoughtText}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, ${worker.Money}, {family}"
+                : $"{tone}, strength {thought.Intensity}\n{raceLine}\n{weakness}\n{affectLine}\n{thoughtText}\nsatisfaction {worker.Satisfaction}, ${worker.Money}, {family}";
         }
 
         return ru
-            ? $"{tone}\n{weakness}\n{affectLine}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, \u0434\u0435\u043d\u044c\u0433\u0438 ${worker.Money}\n{family}"
-            : $"{tone}\n{weakness}\n{affectLine}\nsatisfaction {worker.Satisfaction}, money ${worker.Money}\n{family}";
+            ? $"{tone}\n{raceLine}\n{weakness}\n{affectLine}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, \u0434\u0435\u043d\u044c\u0433\u0438 ${worker.Money}\n{family}"
+            : $"{tone}\n{raceLine}\n{weakness}\n{affectLine}\nsatisfaction {worker.Satisfaction}, money ${worker.Money}\n{family}";
+    }
+
+    private string FormatNoosphereVisionResidentRaceLine(DriverAgent worker, bool ru)
+    {
+        EnsureWorkerRace(worker);
+        return worker == null
+            ? ru ? "\u0440\u0430\u0441\u0430: -" : "race: -"
+            : ru
+                ? $"\u0440\u0430\u0441\u0430: {GetWorkerRaceIconGlyph(worker.Race)} {GetWorkerRaceDisplayName(worker.Race, true)}"
+                : $"race: {GetWorkerRaceIconGlyph(worker.Race)} {GetWorkerRaceDisplayName(worker.Race, false)}";
     }
 
     private string FormatNoosphereVisionResidentWeaknessLine(DriverAgent worker, bool ru)

@@ -120,6 +120,13 @@ public partial class GameBootstrap
         Gambling
     }
 
+    public enum WorkerRaceKind
+    {
+        Rovian,
+        Zelen,
+        Iskrian
+    }
+
     private enum WorkerAffectKind
     {
         FinancialPressure,
@@ -282,6 +289,8 @@ public partial class GameBootstrap
         public CitizenProfessionKind CitizenProfession = CitizenProfessionKind.Resident;
         public string DriverName;
         public WorkerGender Gender;
+        public WorkerRaceKind Race = WorkerRaceKind.Rovian;
+        public bool HasAssignedRace;
         public WorkerEducationLevel Education;
         public bool HasPortrait;
         public int PortraitSkinTone;

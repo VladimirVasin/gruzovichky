@@ -364,29 +364,37 @@ public partial class GameBootstrap
         infoLayoutElement.flexibleWidth = 1f;
         infoLayoutElement.minWidth = 126f;
         VerticalLayoutGroup infoLayout = infoColumn.gameObject.AddComponent<VerticalLayoutGroup>();
-        infoLayout.spacing = 6f;
+        infoLayout.spacing = 3f;
         infoLayout.childControlWidth = true;
         infoLayout.childControlHeight = true;
         infoLayout.childForceExpandWidth = true;
         infoLayout.childForceExpandHeight = false;
 
-        row.NameText = CreateHeaderText("Name", infoColumn, font, string.Empty, 13, TextAnchor.LowerLeft, Color.white);
+        row.NameText = CreateHeaderText("Name", infoColumn, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
         row.NameText.horizontalOverflow = HorizontalWrapMode.Wrap;
         row.NameText.verticalOverflow = VerticalWrapMode.Truncate;
         row.NameText.resizeTextForBestFit = false;
         row.NameText.raycastTarget = false;
-        row.NameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
+        row.NameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 23f;
 
-        RectTransform metaRow = CreateLayoutRow($"WorkerMetaRow{index}", infoColumn, 24f, 8f);
-        row.SubText = CreateBodyText("SubText", metaRow, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
-        row.SubText.horizontalOverflow = HorizontalWrapMode.Overflow;
-        row.SubText.verticalOverflow = VerticalWrapMode.Truncate;
-        row.SubText.raycastTarget = false;
-        row.SubText.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        row.RaceText = CreateBodyText("Race", infoColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        row.RaceText.supportRichText = true;
+        row.RaceText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        row.RaceText.verticalOverflow = VerticalWrapMode.Truncate;
+        row.RaceText.raycastTarget = false;
+        row.RaceText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
 
-        row.BalanceText = CreateHeaderText("Balance", metaRow, font, string.Empty, 13, TextAnchor.MiddleRight, FleetAccentColor);
+        row.JobText = CreateBodyText("Job", infoColumn, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        row.JobText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        row.JobText.verticalOverflow = VerticalWrapMode.Truncate;
+        row.JobText.raycastTarget = false;
+        row.JobText.gameObject.AddComponent<LayoutElement>().preferredHeight = 18f;
+
+        row.BalanceText = CreateHeaderText("Balance", rowObj.transform, font, string.Empty, 13, TextAnchor.MiddleRight, FleetAccentColor);
         row.BalanceText.raycastTarget = false;
-        row.BalanceText.gameObject.AddComponent<LayoutElement>().preferredWidth = 52f;
+        LayoutElement balanceLayout = row.BalanceText.gameObject.AddComponent<LayoutElement>();
+        balanceLayout.preferredWidth = 58f;
+        balanceLayout.preferredHeight = 60f;
 
         row.SelectButton = rowObj.AddComponent<Button>();
         row.SelectButton.targetGraphic = row.Background;

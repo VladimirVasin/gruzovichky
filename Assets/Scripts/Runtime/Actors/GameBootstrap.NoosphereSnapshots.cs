@@ -362,6 +362,7 @@ public partial class GameBootstrap
             }
 
             UpdateWorkerAffects(worker);
+            EnsureWorkerRace(worker);
             NoosphereWorkerLayerSnapshot copy = new()
             {
                 WorkerId = worker.DriverId,
@@ -369,6 +370,9 @@ public partial class GameBootstrap
                 WorkerName = worker.DriverName,
                 CitizenProfession = worker.CitizenProfession,
                 Education = worker.Education,
+                Race = worker.Race,
+                RaceColor = GetWorkerRaceColor(worker.Race),
+                RaceDisplayName = GetWorkerRaceDisplayName(worker.Race, true),
                 Weakness = worker.Weakness,
                 Satisfaction = worker.Satisfaction,
                 Money = worker.Money,

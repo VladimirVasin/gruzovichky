@@ -504,6 +504,7 @@ public partial class GameBootstrap
             Money = Random.Range(WorkerStartingMoneyMin, WorkerStartingMoneyMax + 1)
         };
         driver.Age = forcedAge.HasValue ? Mathf.Max(18, forcedAge.Value) : Random.Range(18, 51);
+        AssignWorkerRace(driver);
         AssignWorkerEducation(driver);
         AssignWorkerPortrait(driver);
         AssignWorkerPerks(driver);
