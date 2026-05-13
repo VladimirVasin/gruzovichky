@@ -281,6 +281,17 @@ public partial class GameBootstrap
             Rule("social_learned_new_topic", "social_talk_good", WorkerThoughtInfluenceDirection.Amplify, 4, 0, 0.96f, 72f, 1, "a shared topic gives the next talk something to hold onto", "Social",
                 Traits(Trait(WorkerTraitKind.Trusting, 3))),
 
+            Rule("bus_chosen", "bus_unavailable", WorkerThoughtInfluenceDirection.Contradict, 6, 0, 0.92f, 24f, -1, "the expected convenience collided with a failed bus option", "Transport",
+                Traits(Trait(WorkerTraitKind.Cautious, 2))),
+            Rule("bus_chosen", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 5, 0, 0.94f, 72f, 1, "predictable transport supports the daily rhythm", "Transport",
+                Traits(Trait(WorkerTraitKind.Trusting, 2))),
+            Rule("bus_unavailable", "bus_chosen", WorkerThoughtInfluenceDirection.Dampen, -5, 0, 1.04f, 48f, -1, "a recent failed bus option lowers trust in taking it again", "Transport",
+                Traits(Trait(WorkerTraitKind.Cautious, 3))),
+            Rule("bus_unavailable", "no_job_warning", WorkerThoughtInfluenceDirection.Amplify, 5, 0, 0.94f, 24f, -1, "transport trouble threatens the worker's access to work", "Transport",
+                Traits(Trait(WorkerTraitKind.Dutiful, 3))),
+            Rule("bus_unavailable", "need_sleep_critical", WorkerThoughtInfluenceDirection.Amplify, 5, 0, 0.94f, 24f, -1, "bad transport turns into a tiring long walk", "Transport",
+                Traits(Trait(WorkerTraitKind.Anxious, 2))),
+
             Rule("worker_arrived", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 5, 0, 0.94f, 72f, 1, "a smooth start helps the worker accept the town", "CityLitter",
                 Traits(Trait(WorkerTraitKind.Trusting, 2))),
             Rule("worker_arrived", "street_litter_low", WorkerThoughtInfluenceDirection.Amplify, 4, 0, 0.96f, 24f, -1, "first impressions are easily colored by small disorder", "CityLitter",

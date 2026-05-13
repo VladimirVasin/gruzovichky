@@ -571,23 +571,24 @@ Implemented in code:
 - Slice `Family`: 14 enabled rules for `house_bought`, `family_formed`, `child_born`, and `affect_family_anxiety`.
 - Slice `City/Litter`: 21 enabled rules for `worker_arrived`, `stable_life`, `street_litter_low`, `street_litter_medium`, `street_litter_high`, `affect_litter_irritation`, and `affect_stable_routine`.
 - Slice `Social`: 7 enabled rules for `social_talk_good`, `social_shared_place`, and `social_learned_new_topic`.
-- Total enabled rules: 95.
+- Slice `Transport`: 5 enabled rules for `bus_chosen` and `bus_unavailable`.
+- Total enabled rules: 100.
 - Additional covered source thoughts: `need_meal_critical`, `meal_service_good`, `used_snack`, `need_sleep_critical`, `sleep_service_good`, `home_sleep_good`, `used_coffee`, `need_leisure_critical`, `leisure_service_good`, `affect_relief_after_rest`, `affect_hangover`.
 - Additional covered Family source thoughts: `house_bought`, `family_formed`, `child_born`, `affect_family_anxiety`.
 - Additional covered City/Litter source thoughts: `worker_arrived`, `stable_life`, `street_litter_low`, `street_litter_medium`, `street_litter_high`, `affect_litter_irritation`, `affect_stable_routine`.
 - Additional covered Social source thoughts: `social_talk_good`, `social_shared_place`, `social_learned_new_topic`.
-- Not yet implemented: Transport, Gambling contradiction, and remaining Stability/Recovery rules outside these slices.
+- Additional covered Transport source thoughts: `bus_chosen`, `bus_unavailable`.
+- Not yet implemented: Gambling contradiction and remaining Stability/Recovery rules outside these slices.
 
 Ready for implementation:
 
-- Transport direct reliability and fatigue/work-access links.
+- Gambling contradiction links.
 
 Risky connections:
 
 - Gambling contradiction links, because they must feel mixed and not hard-force future gambling.
 - Remaining family-child-school pressure links, because they can become too sticky if confidence decay is weak.
 - Stable/recovery links, because they can accidentally erase real problems.
-- Transport links, because bus reliability should stay local to real transport events.
 
 Document-only for now:
 
