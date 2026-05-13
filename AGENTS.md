@@ -18,6 +18,10 @@ Reusable prompt templates live in:
 
 - `ai/prompt-templates.md`
 
+Design maps live in:
+
+- `ai/Design/worker-thought-tree.md`
+
 ## Template Selection Logic
 
 Primary rule:
@@ -68,12 +72,14 @@ the agent must:
 - Identify affected systems before editing.
 - For broad, architectural, cross-system, or unclear tasks, consult `ai/system-tree.md` before the owner map.
 - Before broad code searches, consult the System Owner Map in `ai/systems-map.md`.
+- If a change touches worker thoughts, active/pending thought formation, affect states, worker weaknesses/traits as thought inputs, WorkerKnowledge/Opinion links from thoughts, social signals from thoughts, Noosphere thought/state display, or Workers/F9 thought UI, read `ai/Design/worker-thought-tree.md` before editing.
 - If a change touches `Обучение` / `GameStartMode.Tutorial` or a system taught by that mode, read `ai/tutorial-scenario.md` and compare the planned change against the current Tutorial scenario.
 - Scan only the necessary code.
 - State a short plan before making code changes.
 - Avoid unrelated refactors.
 - Update `ai/work-log.md` after implementation.
 - Update `ai/system-tree.md` when system hierarchy, subsystem responsibilities, feature leaves, or cross-system links change.
+- Update `ai/Design/worker-thought-tree.md` when adding, removing, renaming, reclassifying, or substantially changing worker thought keys, affect-driven thoughts, weakness-driven interpretation, knowledge/opinion effects from thoughts, Noosphere thought/state chains, or Workers/F9 thought display cases.
 - Update other AI memory files only if they truly need changes.
 
 ## System Tree Rules
@@ -98,6 +104,13 @@ the agent must:
 - Do not paste code into memory files.
 - `ai/work-log.md` is the frequently updated file.
 - Stable memory files should only be updated when project reality actually changes.
+
+## Design Map Rules
+
+- `ai/Design/worker-thought-tree.md` is the source map for the worker cognition chain: cause -> status/affect -> thought -> knowledge/opinion -> social signal -> Noosphere/UI.
+- Read it before changing worker thoughts, affect states, weakness/trait interpretation hooks, WorkerKnowledge/Opinion effects caused by thoughts or affects, Noosphere thought/state signals, or Workers/F9 thought UI.
+- Update it in the same task when the implemented worker-cognition chain changes.
+- Keep it conceptual and navigational; do not paste large code blocks into it.
 
 ## Tutorial Scenario Rule
 

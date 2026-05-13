@@ -24,12 +24,14 @@ Global rules for all templates:
 - Identify affected systems before editing.
 - For broad, architectural, cross-system, or unclear tasks, consult `ai/system-tree.md` before choosing owner files.
 - If the task touches `Обучение` / `GameStartMode.Tutorial` or a system taught by that mode, read `ai/tutorial-scenario.md` and compare the planned change against the current Tutorial scenario.
+- If the task touches worker thoughts, active/pending thought formation, affect states, worker weaknesses/traits as thought inputs, WorkerKnowledge/Opinion links from thoughts, social signals from thoughts, Noosphere thought/state display, or Workers/F9 thought UI, read `ai/Design/worker-thought-tree.md` before editing.
 - Scan only the relevant code.
 - State a short plan before making code changes.
 - Avoid unrelated refactors.
 - Update `ai/work-log.md` after implementation.
 - Update `ai/system-tree.md` when system hierarchy, subsystem responsibilities, feature leaves, or cross-system links change.
 - Update `ai/tutorial-scenario.md` when serious changes alter the Tutorial-mode player path, prerequisites, unlock order, HUD entry points, required buildings/resources, automation/manual-control balance, or goal text.
+- Update `ai/Design/worker-thought-tree.md` when adding, removing, renaming, reclassifying, or substantially changing worker thought keys, affect-driven thoughts, weakness-driven interpretation, knowledge/opinion effects from thoughts, Noosphere thought/state chains, or Workers/F9 thought display cases.
 - Update other AI memory files only if structure, system ownership, or architecture actually changed.
 - At the start of every final response, state which template was used.
 - If the template was explicitly requested by the user, say that explicitly.
