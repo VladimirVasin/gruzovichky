@@ -568,9 +568,11 @@ Implemented in code:
 - Covered source thoughts: `low_money`, `service_unaffordable`, `salary_paid`, `affect_financial_pressure`, `no_job_warning`, `starter_job_suggestion`, `job_found`.
 - Covered target thoughts include: `service_unaffordable`, `affect_financial_pressure`, `no_job_warning`, `salary_paid`, `low_money`, `starter_job_suggestion`, `job_found`, `affect_stable_routine`.
 - Slice `Needs`: 30 enabled rules for Meal, Sleep, Leisure, `affect_relief_after_rest`, and `affect_hangover`.
-- Total enabled rules: 53.
+- Slice `Family`: 14 enabled rules for `house_bought`, `family_formed`, `child_born`, and `affect_family_anxiety`.
+- Total enabled rules: 67.
 - Additional covered source thoughts: `need_meal_critical`, `meal_service_good`, `used_snack`, `need_sleep_critical`, `sleep_service_good`, `home_sleep_good`, `used_coffee`, `need_leisure_critical`, `leisure_service_good`, `affect_relief_after_rest`, `affect_hangover`.
-- Not yet implemented: Family, City/Litter, Social, Transport, Gambling contradiction, and remaining Stability/Recovery rules outside these slices.
+- Additional covered Family source thoughts: `house_bought`, `family_formed`, `child_born`, `affect_family_anxiety`.
+- Not yet implemented: City/Litter, Social, Transport, Gambling contradiction, and remaining Stability/Recovery rules outside these slices.
 
 Ready for implementation:
 
@@ -579,7 +581,7 @@ Ready for implementation:
 Risky connections:
 
 - Gambling contradiction links, because they must feel mixed and not hard-force future gambling.
-- Family long-window links, because they can become too sticky if confidence decay is weak.
+- Remaining family-child-school pressure links, because they can become too sticky if confidence decay is weak.
 - Stable/recovery links, because they can accidentally erase real problems.
 
 Document-only for now:

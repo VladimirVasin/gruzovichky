@@ -232,7 +232,39 @@ public partial class GameBootstrap
             Rule("affect_hangover", "affect_financial_pressure", WorkerThoughtInfluenceDirection.Amplify, 7, 0, 0.9f, 24f, -2, "bad rest plus spending becomes a money sting", "Needs",
                 Traits(Trait(WorkerTraitKind.Frugal, 3))),
             Rule("affect_hangover", "service_unaffordable", WorkerThoughtInfluenceDirection.Amplify, 6, 0, 0.92f, 24f, -1, "after spending on rest, unaffordable services feel deserved", "Needs",
-                Traits(Trait(WorkerTraitKind.Frugal, 3)))
+                Traits(Trait(WorkerTraitKind.Frugal, 3))),
+
+            Rule("house_bought", "family_formed", WorkerThoughtInfluenceDirection.Stabilize, 7, 0, 0.9f, 120f, 2, "a home makes family formation feel grounded", "Family",
+                Traits(Trait(WorkerTraitKind.Dutiful, 2))),
+            Rule("house_bought", "child_born", WorkerThoughtInfluenceDirection.Stabilize, 6, 0, 0.92f, 240f, 2, "a child arrives into a place that already feels settled", "Family",
+                Traits(Trait(WorkerTraitKind.Dutiful, 2))),
+            Rule("house_bought", "affect_family_anxiety", WorkerThoughtInfluenceDirection.Dampen, -6, 0, 1.04f, 120f, 1, "a home gives support but does not erase family pressure", "Family",
+                Traits(Trait(WorkerTraitKind.Anxious, 3))),
+
+            Rule("family_formed", "child_born", WorkerThoughtInfluenceDirection.Stabilize, 7, 0, 0.9f, 240f, 2, "the family growing feels like part of the same path", "Family",
+                Traits(Trait(WorkerTraitKind.Dutiful, 3))),
+            Rule("family_formed", "affect_family_anxiety", WorkerThoughtInfluenceDirection.Amplify, 6, 0, 0.92f, 120f, -1, "family adds responsibility to ordinary pressure", "Family",
+                Traits(Trait(WorkerTraitKind.Anxious, 4), Trait(WorkerTraitKind.Dutiful, 3))),
+            Rule("family_formed", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 6, 0, 0.92f, 120f, 2, "family can become part of the stable routine", "Family",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2))),
+
+            Rule("child_born", "affect_family_anxiety", WorkerThoughtInfluenceDirection.Amplify, 12, 1, 0.82f, 240f, -3, "a child raises the stakes of every unstable detail", "Family",
+                Traits(Trait(WorkerTraitKind.Dutiful, 4), Trait(WorkerTraitKind.Anxious, 5))),
+            Rule("child_born", "low_money", WorkerThoughtInfluenceDirection.Amplify, 9, 1, 0.88f, 168f, -2, "family expenses make low money sharper", "Family",
+                Traits(Trait(WorkerTraitKind.Frugal, 4), Trait(WorkerTraitKind.Dutiful, 3))),
+            Rule("child_born", "no_job_warning", WorkerThoughtInfluenceDirection.Amplify, 8, 1, 0.9f, 168f, -1, "a child makes the need for work feel more urgent", "Family",
+                Traits(Trait(WorkerTraitKind.Dutiful, 4))),
+            Rule("child_born", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 7, 0, 0.92f, 240f, 2, "when routine holds, the child gives it meaning", "Family",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2))),
+            Rule("child_born", "service_unaffordable", WorkerThoughtInfluenceDirection.Amplify, 9, 1, 0.88f, 168f, -2, "an unaffordable service hurts more when it touches the family", "Family",
+                Traits(Trait(WorkerTraitKind.Frugal, 3), Trait(WorkerTraitKind.Dutiful, 4))),
+
+            Rule("affect_family_anxiety", "low_money", WorkerThoughtInfluenceDirection.Amplify, 8, 1, 0.9f, 72f, -1, "family anxiety turns money into a safety question", "Family",
+                Traits(Trait(WorkerTraitKind.Frugal, 3))),
+            Rule("affect_family_anxiety", "stable_life", WorkerThoughtInfluenceDirection.Relief, 6, 0, 0.92f, 96f, 2, "a steady routine relieves some family pressure", "Family",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2))),
+            Rule("affect_family_anxiety", "no_job_warning", WorkerThoughtInfluenceDirection.Amplify, 9, 1, 0.88f, 72f, -2, "without work, family responsibility feels exposed", "Family",
+                Traits(Trait(WorkerTraitKind.Dutiful, 4)))
         };
     }
 
