@@ -333,6 +333,7 @@ public partial class GameBootstrap
         }
 
         string text = GetWorkerThoughtTemplate(thought.TemplateKey, ru);
+        bool templateHadOpinionBiasToken = text.Contains("{" + WorkerOpinionBiasPlaceholderKey + "}");
         for (int i = 0; i < thought.Placeholders.Count; i++)
         {
             WorkerThoughtPlaceholder placeholder = thought.Placeholders[i];
@@ -344,7 +345,7 @@ public partial class GameBootstrap
             text = text.Replace("{" + placeholder.Key + "}", ResolveWorkerThoughtPlaceholder(placeholder, ru));
         }
 
-        return text;
+        return AppendWorkerThoughtOptionalSuffix(text, thought.Placeholders, ru, templateHadOpinionBiasToken);
     }
 
     private string ResolveWorkerThoughtPlaceholder(WorkerThoughtPlaceholder placeholder, bool ru)
@@ -352,6 +353,11 @@ public partial class GameBootstrap
         if (placeholder == null)
         {
             return string.Empty;
+        }
+
+        if (string.Equals(placeholder.Key, WorkerOpinionBiasPlaceholderKey, System.StringComparison.Ordinal))
+        {
+            return FormatWorkerOpinionBiasPlaceholder(placeholder.SubjectKey, ru);
         }
 
         switch (placeholder.SubjectType)

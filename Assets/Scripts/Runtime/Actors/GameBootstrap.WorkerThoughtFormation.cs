@@ -102,6 +102,17 @@ public partial class GameBootstrap
         float resolvedFormationHours = formationHours > 0f
             ? formationHours
             : GetWorkerThoughtFormationHours(worker, priority, intensity, knowledgeContext);
+        ApplyWorkerOpinionBiasToPendingThought(
+            worker,
+            resolvedThoughtKey,
+            ref tone,
+            ref intensity,
+            ref priority,
+            ref resolvedFormationHours,
+            opinionSubjectType,
+            opinionSubjectId,
+            opinionSubjectKey,
+            pendingPlaceholders);
         PendingWorkerThought pending = FindPendingWorkerThought(worker, resolvedFormationKey);
         if (pending == null)
         {
@@ -785,6 +796,7 @@ public partial class GameBootstrap
         }
 
         string text = GetWorkerThoughtTemplate(pending.TemplateKey, ru);
+        bool templateHadOpinionBiasToken = text.Contains("{" + WorkerOpinionBiasPlaceholderKey + "}");
         for (int i = 0; i < pending.Placeholders.Count; i++)
         {
             WorkerThoughtPlaceholder placeholder = pending.Placeholders[i];
@@ -796,7 +808,7 @@ public partial class GameBootstrap
             text = text.Replace("{" + placeholder.Key + "}", ResolveWorkerThoughtPlaceholder(placeholder, ru));
         }
 
-        return text;
+        return AppendWorkerThoughtOptionalSuffix(text, pending.Placeholders, ru, templateHadOpinionBiasToken);
     }
 
     private string FormatPendingWorkerThoughtProgress(PendingWorkerThought pending, bool ru)

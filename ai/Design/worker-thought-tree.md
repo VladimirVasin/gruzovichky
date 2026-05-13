@@ -868,6 +868,40 @@ Leisure:
 - Affect states влияют на `PendingWorkerKnowledge` в `ApplyWorkerAffectsToBuildingKnowledge`.
 - Noosphere Vision отдельно собирает strongest affect state и показывает цепочку `weakness -> cause -> state -> thought -> topic`.
 
+## Feedback Loops
+
+Целевой контролируемый контур:
+
+```text
+событие -> WorkerThought -> WorkerOpinion -> bias будущей WorkerThought
+```
+
+`WorkerOpinion` не является триггером мысли. Он не создаёт новые `WorkerThought` сам по себе и не должен запускать hidden gameplay-бонусы.
+
+Текущая реализация:
+- точка входа: `AddOrKeepPendingWorkerThought` в `GameBootstrap.WorkerThoughtFormation.cs`;
+- helper layer: `GameBootstrap.WorkerThoughtBias.cs`;
+- bias применяется только к мысли, которая уже появилась из реального события/условия;
+- используется exact opinion по subject, затем мягкий fallback по веткам `money`, `city_work`, `street_litter`, `Need/Meal`, `Need/Sleep`, `Need/Leisure`, `family`, `gambling`, `local_bus`, `city`;
+- минимальная устойчивость мнения: `Confidence >= 12`;
+- старые мнения дают меньше веса через effective confidence decay;
+- same-tick guard не даёт только что записанному opinion немедленно разгонять мысль в тот же tick/hour;
+- `starter_job_resolved` исключён из bias как техническая закрывающая мысль.
+
+На что влияет bias:
+- `Intensity`: усиливает совпадающие по тону мысли и мягко снижает противоречащие прошлому опыту;
+- `FormationHours`: совпадающие мысли формируются быстрее, противоречащие чуть медленнее;
+- `Priority`: сильный совпадающий bias может поднять priority на один шаг;
+- `Tone`: только neutral-мысли могут окраситься в positive/negative при сильном и уверенном opinion;
+- `Wording`: при сильном bias добавляется короткий optional suffix `{opinionBias}`.
+
+Ограничения:
+- opinion не создаёт thought;
+- cap усиления intensity: `+15`;
+- minimum formation time: `0.12h`;
+- active thought refresh не пишет новый opinion и не должен самораскачиваться;
+- debug log: `THOUGHT_BIAS`.
+
 ## UI Поверхности
 
 - Workers / Thoughts: current important thought, pending thought progress, recent thoughts, life opinions.
@@ -895,6 +929,7 @@ Leisure:
 5. Указать, нужен ли `opinionDelta`; если да, выбрать subject type/key.
 6. Проверить, не должен ли trigger сначала создавать `Affect State`, а уже affect создавать мысль.
 7. Если мысль опирается на место/тему, проверить связь с `WorkerKnowledge` и `WorkerTopicOpinion`.
-8. Добавить dedicated Workers UI case, если fallback будет плохо читаться.
-9. Проверить, нужен ли F9/States reference или Noosphere Vision chain.
-10. Обновить этот документ: ветка, карточка ключа, source/display paths, known gaps при необходимости.
+8. Проверить, какой `WorkerOpinion` может окрашивать эту мысль через feedback loop, и не создаёт ли это самораскачку.
+9. Добавить dedicated Workers UI case, если fallback будет плохо читаться.
+10. Проверить, нужен ли F9/States reference или Noosphere Vision chain.
+11. Обновить этот документ: ветка, карточка ключа, source/display paths, known gaps при необходимости.
