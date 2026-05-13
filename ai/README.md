@@ -21,6 +21,11 @@ This folder is intentionally small. Code remains the source of truth. These file
 - `tutorial-scenario.md`
   Plain-text scenario for the current `Обучение` / `GameStartMode.Tutorial` flow. Use it to keep Tutorial aligned with serious gameplay, HUD, staffing, economy, transport, trade, and building changes.
 
+Design maps:
+
+- `Design/worker-thought-tree.md`
+  Current map of the worker thought system: cause -> affect/status -> thought -> knowledge/opinion -> social signal -> Noosphere/UI. Read it before adding or restructuring worker thoughts, affects, weakness-driven thoughts, or thought UI cases.
+
 ## Memory Types
 
 Stable memory:

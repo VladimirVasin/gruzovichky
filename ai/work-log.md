@@ -10,6 +10,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-13: Added `ai/Design/worker-thought-tree.md` as the current design map for resident thoughts. The document records the cause -> status/affect -> thought -> opinion/knowledge -> social signal -> Noosphere/UI chain, includes cards for every current thought key/template variant, documents affect states and weaknesses, and captures known gaps around inactive need warning thoughts, `no_job_today`, hidden `starter_job_resolved`, and litter thought UI. `ai/README.md` now points future agents to the design map. Verification: markdown/source scan, `git diff --check`, targeted mojibake scan.
+
 - 2026-05-13: Clarified worker thought status coverage. F9/States reference now marks `need_*_warning` as template/UI-ready but inactive under current active rules, marks `no_job_today` as a legacy alias for `no_job_warning`, and notes that `street_litter_low/medium/high` are active. Workers UI now has dedicated display cases for low/medium/high street-litter thoughts instead of falling back to generic thought rendering. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
 
 - 2026-05-13: Tightened Workers personality card UI after the traits/weaknesses refactor. The `States` row now uses the yellow accent like the other section labels, and the `Main thought` row was removed from the `Personality` block. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`, targeted mojibake scan.
