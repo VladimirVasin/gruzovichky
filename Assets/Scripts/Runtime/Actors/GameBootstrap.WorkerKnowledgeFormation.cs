@@ -392,9 +392,16 @@ public partial class GameBootstrap
                 break;
             case LocationType.CityPark:
                 ApplyNeedBuildingOpinion(worker.LastLeisureNeedStatus, ref score, ref reasonRu, ref reasonEn, "передохнуть", "take a break", 32);
+                if (HasWorkerLeisurePreference(worker, WorkerLeisurePreferenceKind.NatureWalker))
+                {
+                    score += 16;
+                    confidence += 6;
+                    reasonRu = "Парк совпадает с привычным отдыхом на природе.";
+                    reasonEn = "The park matches their usual nature leisure.";
+                }
                 break;
             case LocationType.Bar:
-                ApplyNeedBuildingOpinion(worker.LastLeisureNeedStatus, ref score, ref reasonRu, ref reasonEn, "отдохнуть", "relax", HasWorkerPerk(worker, WorkerPerkKind.Alcoholism) ? 40 : 24);
+                ApplyNeedBuildingOpinion(worker.LastLeisureNeedStatus, ref score, ref reasonRu, ref reasonEn, "отдохнуть", "relax", HasWorkerLeisurePreference(worker, WorkerLeisurePreferenceKind.BarRegular) ? 40 : 24);
                 if (worker.Money < 10)
                 {
                     score -= 12;
@@ -403,8 +410,8 @@ public partial class GameBootstrap
                 }
                 break;
             case LocationType.GamblingHall:
-                score += HasWorkerPerk(worker, WorkerPerkKind.Gambler) ? 18 : -8;
-                if (worker.GamblerBroke || worker.Money < 15)
+                score += HasWorkerLeisurePreference(worker, WorkerLeisurePreferenceKind.RiskPlayer) ? 18 : -8;
+                if (worker.GamblingBroke || worker.Money < 15)
                 {
                     score -= 36;
                     reasonRu = "Место выглядит рискованным для денег.";
@@ -454,6 +461,7 @@ public partial class GameBootstrap
         }
 
         ApplyWorkerKnowledgePersonality(worker, pending, ref score, ref confidence);
+        ApplyWorkerAffectsToBuildingKnowledge(worker, pending, ref score, ref confidence, ref reasonRu, ref reasonEn);
         pending.OpinionScore = score;
         pending.OpinionConfidence = confidence;
         pending.OpinionReasonRu = reasonRu;
@@ -615,13 +623,6 @@ public partial class GameBootstrap
         if (HasWorkerPerk(worker, WorkerPerkKind.Quicklearner))
         {
             confidence += 12;
-        }
-
-        if (HasWorkerPerk(worker, WorkerPerkKind.Trader) &&
-            pending.BuildingType is LocationType.Warehouse or LocationType.Docks or LocationType.CarMarket)
-        {
-            score += 10;
-            confidence += 6;
         }
 
         if (HasWorkerPerk(worker, WorkerPerkKind.Frugal) &&

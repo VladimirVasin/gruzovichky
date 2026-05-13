@@ -76,8 +76,8 @@
             "ru": "Рабочие"
           },
           "body": {
-            "en": "- WOMEN ADDED!!!\n- Workers now have portraits, gender, needs, money, jobs, and perks.\n- Food, sleep, and leisure are now part of the worker life cycle.\n- The Alcoholism and Gambler perks steer leisure behavior without temporary modifiers.",
-            "ru": "- ДОБАВЛЕНЫ ЖЕНЩИНЫ!!!\n- У рабочих появились портреты, пол, потребности, деньги, работа и перки.\n- Еда, сон и досуг стали частью жизненного цикла рабочих.\n- Перки Алкоголизм и Игроман направляют досуг без временных модификаторов."
+            "en": "- WOMEN ADDED!!!\n- Workers now have portraits, gender, needs, money, jobs, and perks.\n- Food, sleep, and leisure are now part of the worker life cycle.\n- Leisure preferences steer Bar, Gambling Hall, and City Park behavior without temporary modifiers.",
+            "ru": "- ДОБАВЛЕНЫ ЖЕНЩИНЫ!!!\n- У рабочих появились портреты, пол, потребности, деньги, работа и перки.\n- Еда, сон и досуг стали частью жизненного цикла рабочих.\n- Досуговые предпочтения направляют бар, игровые автоматы и городской парк без временных модификаторов."
           }
         },
         {

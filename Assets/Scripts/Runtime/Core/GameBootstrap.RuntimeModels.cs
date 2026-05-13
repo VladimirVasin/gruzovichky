@@ -91,20 +91,32 @@ public partial class GameBootstrap
     {
         Alcoholism,
         Gambler,
-        Nightowl,
-        Ironman,
-        Motorhead,
-        Trader,
-        Handyman,
         Socialite,
         Frugal,
         Quicklearner
     }
 
-    private enum WorkerPerkType
+    private enum WorkerLeisurePreferenceKind
     {
-        Positive,
-        Negative
+        None,
+        BarRegular,
+        RiskPlayer,
+        NatureWalker,
+        StreetWanderer
+    }
+
+    private enum WorkerAffectKind
+    {
+        FinancialPressure,
+        FamilyAnxiety,
+        ReliefAfterRest,
+        Hangover,
+        Loneliness,
+        InspiredByNature,
+        IrritatedByLitter,
+        GamblingExcitement,
+        GamblingRegret,
+        StableRoutine
     }
 
     private enum WorkerGender { Male, Female }
@@ -267,6 +279,8 @@ public partial class GameBootstrap
         public int PortraitAccessory;
         public int PortraitHeadShape;
         public readonly List<WorkerPerkKind> Perks = new();
+        public WorkerLeisurePreferenceKind LeisurePreference = WorkerLeisurePreferenceKind.None;
+        public readonly List<WorkerAffect> Affects = new();
         public DriverDutyMode DutyMode = DriverDutyMode.Local;
         public int ShiftStartHour = -1;
         public bool IsOnActiveShift;
@@ -356,8 +370,8 @@ public partial class GameBootstrap
         public int GamblingMultiplier;
         public bool GamblingMoneyPending;
         public int GamblingBetCount;
-        public bool GamblerLostLastTime;
-        public bool GamblerBroke;
+        public bool GamblingLostLastTime;
+        public bool GamblingBroke;
         public bool SleptToday;
         public float HoursSinceMeal = 0f;
         public float HoursSinceSleep = 0f;
@@ -440,6 +454,20 @@ public partial class GameBootstrap
         public int AcquiredDay;
         public string SourceKey = string.Empty;
         public int InstanceId;
+    }
+
+    private sealed class WorkerAffect
+    {
+        public WorkerAffectKind Kind;
+        public int Intensity;
+        public int StartedDay;
+        public float StartedWorldHour;
+        public float ExpiresWorldHour;
+        public LocationType? SourceLocationType;
+        public int SourceInstanceId;
+        public string SourceKey = string.Empty;
+        public string ReasonRu = string.Empty;
+        public string ReasonEn = string.Empty;
     }
 
     private sealed class DebugThrottleStamp

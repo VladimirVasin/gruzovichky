@@ -313,10 +313,6 @@ public partial class GameBootstrap
         }
 
         EnsureWorkerPerks(driver);
-        if (driver.Perks.Count == 0)
-        {
-            return ru ? "\u043d\u0435\u0442" : "none";
-        }
 
         string text = string.Empty;
         int count = driver.Perks.Count < maxVisible ? driver.Perks.Count : maxVisible;
@@ -333,6 +329,16 @@ public partial class GameBootstrap
         if (driver.Perks.Count > count)
         {
             text += ru ? $" +{driver.Perks.Count - count}" : $" +{driver.Perks.Count - count}";
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            text = ru ? "\u0431\u0435\u0437 \u0447\u0435\u0440\u0442" : "no traits";
+        }
+
+        if (driver.LeisurePreference != WorkerLeisurePreferenceKind.None)
+        {
+            text += $" / {GetWorkerLeisurePreferenceDisplayName(driver.LeisurePreference, ru)}";
         }
 
         return text;

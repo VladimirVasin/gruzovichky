@@ -771,30 +771,29 @@ public partial class GameBootstrap
 
     private void ResolveWorkerGamblingSpinResult(DriverAgent driver)
     {
-        bool isGambler = HasWorkerPerk(driver, WorkerPerkKind.Gambler);
+        bool hasGamblingPreference = HasWorkerLeisurePreference(driver, WorkerLeisurePreferenceKind.RiskPlayer);
         var rng = new System.Random();
 
         int casinoBank = locations.TryGetValue(LocationType.GamblingHall, out LocationData gh) ? gh.BuildingBank : 0;
 
         int minBet = WorkerGamblingMinBet;
         int maxBet;
-        if (isGambler)
+        if (hasGamblingPreference)
         {
-            // Gambler goes broke if can't cover minimum bet or casino has no funds
             if (driver.Money < minBet || casinoBank < minBet)
             {
-                driver.GamblerBroke = true;
+                driver.GamblingBroke = true;
                 driver.GamblingBet = 0;
                 driver.GamblingPayout = 0;
                 driver.GamblingMultiplier = 0;
                 driver.GamblingMoneyPending = false;
-                SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} [GAMBLER] is broke (money=${driver.Money}, casinoBank=${casinoBank}) - skipping bet.");
+                RecordWorkerGamblingAffect(driver, 0, broke: true);
+                SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} [GAMBLING_PREF] is broke (money=${driver.Money}, casinoBank=${casinoBank}) - skipping bet.");
                 return;
             }
-            driver.GamblerBroke = false;
-            // Bet full balance, capped by casino bank; 1.5x cap if lost last time (double-down)
+            driver.GamblingBroke = false;
             maxBet = Mathf.Min(driver.Money, casinoBank);
-            if (driver.GamblerLostLastTime)
+            if (driver.GamblingLostLastTime)
                 maxBet = Mathf.Min(driver.Money, Mathf.RoundToInt(maxBet * 1.5f));
             maxBet = Mathf.Max(minBet, maxBet);
         }
@@ -808,7 +807,7 @@ public partial class GameBootstrap
         int multiplier = roll < 0.55f ? 0 : roll < 0.85f ? 1 : roll < 0.97f ? 5 : 10;
 
         int payout;
-        if (isGambler)
+        if (hasGamblingPreference)
         {
             payout = multiplier switch
             {
@@ -817,7 +816,7 @@ public partial class GameBootstrap
                 1  => bet,
                 _  => Mathf.RoundToInt(bet * 0.2f)  // lose only 80%
             };
-            driver.GamblerLostLastTime = (multiplier == 0);
+            driver.GamblingLostLastTime = (multiplier == 0);
         }
         else
         {
@@ -830,9 +829,10 @@ public partial class GameBootstrap
         driver.GamblingMultiplier   = multiplier;
         driver.GamblingMoneyPending = true;
         driver.GamblingBetCount++;
+        RecordWorkerGamblingAffect(driver, net, broke: false);
 
         string outcomeStr = multiplier == 0 ? "LOSS" : $"WIN x{multiplier}";
-        string gamblerTag = isGambler ? $" [GAMBLER bet#{driver.GamblingBetCount}]" : "";
+        string gamblerTag = hasGamblingPreference ? $" [GAMBLING_PREF bet#{driver.GamblingBetCount}]" : "";
         SessionDebugLogger.Log("NEEDS", $"{driver.DriverName}{gamblerTag} gambling; bet=${bet}, roll={roll:0.00}, outcome={outcomeStr}, payout=${payout}, net={net:+#;-#;0}, balance pending=${driver.Money}; need={FormatWorkerNeedDebug(driver, WorkerNeedKind.Leisure)}, snapshot={FormatWorkerNeedsDebug(driver)}.");
     }
 

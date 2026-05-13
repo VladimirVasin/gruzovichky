@@ -21,6 +21,7 @@ public partial class GameBootstrap
         AddNoosphereVisionEducationInsight(target, LocationType.PrimarySchool);
         AddNoosphereVisionEducationInsight(target, LocationType.SecondarySchool);
         AddNoosphereVisionFamilyReadinessInsight(target);
+        AddNoosphereVisionAffectInsight(target);
         AddNoosphereVisionCityExperienceInsight(target);
         AddNoosphereVisionSocialSignalInsights(target);
         AddNoosphereVisionCanonInsight(target);
@@ -278,6 +279,116 @@ public partial class GameBootstrap
         }
     }
 
+    private void AddNoosphereVisionAffectInsight(List<NoosphereVisionInsight> target)
+    {
+        int[] counts = new int[WorkerAffectCatalog.Length];
+        int[] intensityTotals = new int[WorkerAffectCatalog.Length];
+        DriverAgent[] sampleWorkers = new DriverAgent[WorkerAffectCatalog.Length];
+        WorkerAffect[] sampleAffects = new WorkerAffect[WorkerAffectCatalog.Length];
+
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent worker = driverAgents[i];
+            if (worker == null || worker.HasDepartedTown || worker.IsLeavingTown)
+            {
+                continue;
+            }
+
+            UpdateWorkerAffects(worker);
+            WorkerAffect affect = GetStrongestWorkerAffect(worker);
+            if (affect == null || affect.Intensity < WorkerAffectStrongIntensity)
+            {
+                continue;
+            }
+
+            int index = GetWorkerAffectCatalogIndex(affect.Kind);
+            if (index < 0)
+            {
+                continue;
+            }
+
+            counts[index]++;
+            intensityTotals[index] += affect.Intensity;
+            if (sampleAffects[index] == null || affect.Intensity > sampleAffects[index].Intensity)
+            {
+                sampleAffects[index] = affect;
+                sampleWorkers[index] = worker;
+            }
+        }
+
+        int bestIndex = -1;
+        int bestStrength = 0;
+        for (int i = 0; i < counts.Length; i++)
+        {
+            if (counts[i] <= 0)
+            {
+                continue;
+            }
+
+            int average = intensityTotals[i] / Mathf.Max(1, counts[i]);
+            int strength = counts[i] * 18 + average;
+            if (strength > bestStrength)
+            {
+                bestStrength = strength;
+                bestIndex = i;
+            }
+        }
+
+        if (bestIndex < 0)
+        {
+            return;
+        }
+
+        WorkerAffectKind kind = WorkerAffectCatalog[bestIndex];
+        WorkerAffect sample = sampleAffects[bestIndex];
+        DriverAgent sampleWorker = sampleWorkers[bestIndex];
+        int count = counts[bestIndex];
+        int averageIntensity = intensityTotals[bestIndex] / Mathf.Max(1, count);
+        WorkerThought thought = sampleWorker != null ? FindActiveWorkerThought(sampleWorker, GetWorkerAffectThoughtKey(kind)) : null;
+        string thoughtRu = thought != null
+            ? RenderWorkerThought(thought, true)
+            : GetWorkerAffectDisplayName(kind, true);
+        string thoughtEn = thought != null
+            ? RenderWorkerThought(thought, false)
+            : GetWorkerAffectDisplayName(kind, false);
+        string reasonRu = sample?.ReasonRu;
+        string reasonEn = sample?.ReasonEn;
+        if (string.IsNullOrWhiteSpace(reasonRu))
+        {
+            reasonRu = "\u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435 \u0443\u0441\u0438\u043b\u0438\u043b\u043e\u0441\u044c";
+        }
+
+        if (string.IsNullOrWhiteSpace(reasonEn))
+        {
+            reasonEn = "the state grew stronger";
+        }
+
+        int scoreSign = GetWorkerAffectThoughtTone(kind) == WorkerThoughtTone.Positive ? 1 :
+            GetWorkerAffectThoughtTone(kind) == WorkerThoughtTone.Negative ? -1 : 0;
+        NoosphereVisionInsight insight = new()
+        {
+            Key = $"affect_{kind}",
+            TitleRu = $"\u0421\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435: {GetWorkerAffectDisplayName(kind, true)}",
+            TitleEn = $"State: {GetWorkerAffectDisplayName(kind, false)}",
+            SummaryRu = $"{count} \u0436\u0438\u0442. \u0434\u0435\u0440\u0436\u0430\u0442 \u044d\u0442\u043e \u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435, \u0441\u0440\u0435\u0434\u043d\u044f\u044f \u0441\u0438\u043b\u0430 {averageIntensity}.",
+            SummaryEn = $"{count} residents carry this state, average intensity {averageIntensity}.",
+            SourceRu = $"\u041f\u0440\u0438\u0447\u0438\u043d\u0430: {reasonRu}.",
+            SourceEn = $"Cause: {reasonEn}.",
+            EffectRu = $"\u0426\u0435\u043f\u043e\u0447\u043a\u0430: \u043f\u0440\u0438\u0447\u0438\u043d\u0430 -> \u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435 -> \u043c\u044b\u0441\u043b\u044c «{thoughtRu}» -> \u0442\u0435\u043c\u0430 {GetSocialSignalCategoryLabel(GetWorkerAffectSocialCategory(kind), true)}.",
+            EffectEn = $"Chain: cause -> state -> thought \"{thoughtEn}\" -> topic {GetSocialSignalCategoryLabel(GetWorkerAffectSocialCategory(kind), false)}.",
+            ActionRu = "\u0423\u0431\u0435\u0440\u0438 \u043f\u0440\u0438\u0447\u0438\u043d\u0443, \u0435\u0441\u043b\u0438 \u044d\u0442\u043e \u0442\u0440\u0435\u0432\u043e\u0433\u0430, \u0438\u043b\u0438 \u0443\u0441\u0438\u043b\u044c \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a, \u0435\u0441\u043b\u0438 \u044d\u0442\u043e \u043d\u0430\u0434\u0435\u0436\u0434\u0430.",
+            ActionEn = "Remove the cause if this is worry, or reinforce the source if this is hope.",
+            Tone = GetNoosphereVisionToneFromScore(scoreSign * averageIntensity),
+            Category = GetWorkerAffectSocialCategory(kind),
+            Score = scoreSign * Mathf.Clamp(averageIntensity, 0, 100),
+            Strength = Mathf.Clamp(bestStrength, 24, 100),
+            SourceCount = count
+        };
+
+        AddNoosphereVisionAffectSourcePositions(insight, kind, 14);
+        target.Add(insight);
+    }
+
     private void AddNoosphereVisionCanonInsight(List<NoosphereVisionInsight> target)
     {
         int canonCount = GetCityKnowledgeCanonMemoryCount();
@@ -385,6 +496,36 @@ public partial class GameBootstrap
                 }
             }
         }
+    }
+
+    private void AddNoosphereVisionAffectSourcePositions(NoosphereVisionInsight insight, WorkerAffectKind kind, int limit)
+    {
+        for (int i = 0; i < driverAgents.Count && insight.SourceWorldPositions.Count < limit; i++)
+        {
+            DriverAgent worker = driverAgents[i];
+            if (worker == null || worker.HasDepartedTown || worker.IsLeavingTown || !HasWorkerAffect(worker, kind))
+            {
+                continue;
+            }
+
+            if (TryGetNoosphereVisionResidentPosition(worker, out Vector3 position))
+            {
+                insight.SourceWorldPositions.Add(position + Vector3.up * 0.45f);
+            }
+        }
+    }
+
+    private static int GetWorkerAffectCatalogIndex(WorkerAffectKind kind)
+    {
+        for (int i = 0; i < WorkerAffectCatalog.Length; i++)
+        {
+            if (WorkerAffectCatalog[i] == kind)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     private static NoosphereVisionTone GetNoosphereVisionToneFromScore(int score)

@@ -65,6 +65,42 @@ public partial class GameBootstrap
         trigger.triggers.Add(exit);
     }
 
+    private void ConfigureWorkerLeisurePreferenceTooltip(Text text, WorkerLeisurePreferenceKind preference)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        text.raycastTarget = true;
+        EventTrigger trigger = text.TryGetComponent(out EventTrigger existingTrigger)
+            ? existingTrigger
+            : text.gameObject.AddComponent<EventTrigger>();
+        trigger.triggers.Clear();
+
+        EventTrigger.Entry enter = new() { eventID = EventTriggerType.PointerEnter };
+        enter.callback.AddListener(_ => ShowWorkerLeisurePreferenceTooltip(preference, text.rectTransform));
+        trigger.triggers.Add(enter);
+
+        EventTrigger.Entry exit = new() { eventID = EventTriggerType.PointerExit };
+        exit.callback.AddListener(_ => HideWorkerTraitTooltip());
+        trigger.triggers.Add(exit);
+    }
+
+    private static void ClearWorkerTraitTooltip(Text text)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        text.raycastTarget = false;
+        if (text.TryGetComponent(out EventTrigger trigger))
+        {
+            trigger.triggers.Clear();
+        }
+    }
+
     private void ShowWorkerPerkTooltip(WorkerPerkKind perk, RectTransform target)
     {
         if (driversScreenUi?.DetailTraitTooltipRoot == null || target == null || driversScreenUi.WindowRoot == null)
@@ -76,12 +112,38 @@ public partial class GameBootstrap
         if (driversScreenUi.DetailTraitTooltipTitleText != null)
         {
             driversScreenUi.DetailTraitTooltipTitleText.text = GetWorkerPerkDisplayName(perk, ru);
-            driversScreenUi.DetailTraitTooltipTitleText.color = GetWorkerPerkTypeColor(GetWorkerPerkType(perk));
+            driversScreenUi.DetailTraitTooltipTitleText.color = GetWorkerPerkColor();
         }
 
         if (driversScreenUi.DetailTraitTooltipBodyText != null)
         {
             driversScreenUi.DetailTraitTooltipBodyText.text = GetWorkerPerkDescription(perk, ru);
+            SetWorkerTooltipBodyHeight(88f);
+        }
+
+        SetWorkerTooltipSize(WorkerTraitTooltipWidth, WorkerTraitTooltipHeight);
+        PositionWorkerTooltip(target, WorkerTraitTooltipWidth, WorkerTraitTooltipHeight);
+        driversScreenUi.DetailTraitTooltipRoot.SetActive(true);
+        driversScreenUi.DetailTraitTooltipRoot.transform.SetAsLastSibling();
+    }
+
+    private void ShowWorkerLeisurePreferenceTooltip(WorkerLeisurePreferenceKind preference, RectTransform target)
+    {
+        if (driversScreenUi?.DetailTraitTooltipRoot == null || target == null || driversScreenUi.WindowRoot == null)
+        {
+            return;
+        }
+
+        bool ru = IsRussianLanguage();
+        if (driversScreenUi.DetailTraitTooltipTitleText != null)
+        {
+            driversScreenUi.DetailTraitTooltipTitleText.text = GetWorkerLeisurePreferenceDisplayName(preference, ru);
+            driversScreenUi.DetailTraitTooltipTitleText.color = GetWorkerLeisurePreferenceColor(preference);
+        }
+
+        if (driversScreenUi.DetailTraitTooltipBodyText != null)
+        {
+            driversScreenUi.DetailTraitTooltipBodyText.text = GetWorkerLeisurePreferenceDescription(preference, ru);
             SetWorkerTooltipBodyHeight(88f);
         }
 

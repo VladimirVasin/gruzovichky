@@ -71,7 +71,7 @@ public partial class GameBootstrap
         noosphereVisionResidentTooltipRoot.anchorMin = new Vector2(0.5f, 0.5f);
         noosphereVisionResidentTooltipRoot.anchorMax = new Vector2(0.5f, 0.5f);
         noosphereVisionResidentTooltipRoot.pivot = new Vector2(0f, 1f);
-        noosphereVisionResidentTooltipRoot.sizeDelta = new Vector2(302f, 116f);
+        noosphereVisionResidentTooltipRoot.sizeDelta = new Vector2(318f, 132f);
         noosphereVisionResidentTooltipRoot.GetComponent<Image>().raycastTarget = false;
 
         VerticalLayoutGroup layout = noosphereVisionResidentTooltipRoot.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -90,7 +90,7 @@ public partial class GameBootstrap
         noosphereVisionResidentTooltipBodyText.horizontalOverflow = HorizontalWrapMode.Wrap;
         noosphereVisionResidentTooltipBodyText.verticalOverflow = VerticalWrapMode.Truncate;
         noosphereVisionResidentTooltipBodyText.raycastTarget = false;
-        noosphereVisionResidentTooltipBodyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 72f;
+        noosphereVisionResidentTooltipBodyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 88f;
         noosphereVisionResidentTooltipRoot.gameObject.SetActive(false);
     }
 
@@ -133,18 +133,32 @@ public partial class GameBootstrap
         string family = worker.FamilyId > 0
             ? ru ? $"\u0441\u0435\u043c\u044c\u044f #{worker.FamilyId}" : $"family #{worker.FamilyId}"
             : ru ? "\u0431\u0435\u0437 \u0441\u0435\u043c\u044c\u0438" : "no family";
+        string affectLine = FormatNoosphereVisionResidentAffectLine(worker, ru);
 
         if (thought != null)
         {
             string thoughtText = RenderWorkerThought(thought, ru);
             return ru
-                ? $"{tone}, \u0441\u0438\u043b\u0430 {thought.Intensity}\n{thoughtText}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, ${worker.Money}, {family}"
-                : $"{tone}, strength {thought.Intensity}\n{thoughtText}\nsatisfaction {worker.Satisfaction}, ${worker.Money}, {family}";
+                ? $"{tone}, \u0441\u0438\u043b\u0430 {thought.Intensity}\n{affectLine}\n{thoughtText}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, ${worker.Money}, {family}"
+                : $"{tone}, strength {thought.Intensity}\n{affectLine}\n{thoughtText}\nsatisfaction {worker.Satisfaction}, ${worker.Money}, {family}";
         }
 
         return ru
-            ? $"{tone}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, \u0434\u0435\u043d\u044c\u0433\u0438 ${worker.Money}\n{family}"
-            : $"{tone}\nsatisfaction {worker.Satisfaction}, money ${worker.Money}\n{family}";
+            ? $"{tone}\n{affectLine}\n\u0441\u0447\u0430\u0441\u0442\u044c\u0435 {worker.Satisfaction}, \u0434\u0435\u043d\u044c\u0433\u0438 ${worker.Money}\n{family}"
+            : $"{tone}\n{affectLine}\nsatisfaction {worker.Satisfaction}, money ${worker.Money}\n{family}";
+    }
+
+    private string FormatNoosphereVisionResidentAffectLine(DriverAgent worker, bool ru)
+    {
+        WorkerAffect affect = GetStrongestWorkerAffect(worker);
+        if (affect == null)
+        {
+            return ru ? "\u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435: \u0442\u0438\u0445\u043e" : "state: quiet";
+        }
+
+        return ru
+            ? $"\u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435: {GetWorkerAffectDisplayName(affect.Kind, true)}"
+            : $"state: {GetWorkerAffectDisplayName(affect.Kind, false)}";
     }
 
     private string FormatNoosphereVisionResidentTone(DriverAgent worker, bool ru)

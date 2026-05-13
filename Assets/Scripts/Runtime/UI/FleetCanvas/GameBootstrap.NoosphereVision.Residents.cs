@@ -248,6 +248,13 @@ public partial class GameBootstrap
             return IsNoosphereVisionWorkerInSignalFocus(worker, topicKey);
         }
 
+        if (insight.Key.StartsWith("affect_", System.StringComparison.Ordinal))
+        {
+            string affectName = insight.Key.Substring("affect_".Length);
+            return System.Enum.TryParse(affectName, out WorkerAffectKind affectKind) &&
+                   HasWorkerAffect(worker, affectKind);
+        }
+
         return IsNoosphereVisionResidentNearInsightSource(residentLocal, insight);
     }
 

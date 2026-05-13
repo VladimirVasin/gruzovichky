@@ -182,7 +182,7 @@ public partial class GameBootstrap : MonoBehaviour
                     driver.GamblingPayout = 0;
                     driver.GamblingMultiplier = 0;
                     driver.GamblingBetCount = 0;
-                    driver.GamblerBroke = false;
+                    driver.GamblingBroke = false;
                     driver.LifeGoal = WorkerLifeGoal.None;
                     ContinueWorkerLifeCycle(driver, completionPosition);
                     return;

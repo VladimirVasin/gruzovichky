@@ -361,6 +361,7 @@ public partial class GameBootstrap
                 continue;
             }
 
+            UpdateWorkerAffects(worker);
             NoosphereWorkerLayerSnapshot copy = new()
             {
                 WorkerId = worker.DriverId,
@@ -368,6 +369,7 @@ public partial class GameBootstrap
                 WorkerName = worker.DriverName,
                 CitizenProfession = worker.CitizenProfession,
                 Education = worker.Education,
+                LeisurePreference = worker.LeisurePreference,
                 Satisfaction = worker.Satisfaction,
                 Money = worker.Money,
                 IsInsideBuilding = worker.IsInsideBuilding,
@@ -376,6 +378,7 @@ public partial class GameBootstrap
                 FamilyId = worker.FamilyId,
                 SocialMemoryCount = worker.SocialMemories.Count,
                 ActiveThoughtCount = CountActiveNoosphereThoughts(worker),
+                ActiveAffectCount = CountActiveWorkerAffects(worker),
                 MemoryCount = CountActiveNoosphereMemories(worker, now),
                 PendingKnowledgeCount = worker.PendingKnowledge.Count,
                 TopicOpinionCount = worker.TopicOpinions.Count,
@@ -383,6 +386,7 @@ public partial class GameBootstrap
             };
 
             CopyNoosphereWorkerThoughts(worker, copy);
+            CopyNoosphereWorkerAffects(worker, copy, now);
             CopyNoosphereWorkerPendingThoughts(worker, copy);
             CopyNoosphereWorkerPendingKnowledge(worker, copy);
             CopyNoosphereWorkerMemories(worker, copy, now);
@@ -419,6 +423,32 @@ public partial class GameBootstrap
         }
 
         return count;
+    }
+
+    private void CopyNoosphereWorkerAffects(DriverAgent worker, NoosphereWorkerLayerSnapshot copy, float now)
+    {
+        for (int i = 0; i < worker.Affects.Count; i++)
+        {
+            WorkerAffect affect = worker.Affects[i];
+            if (affect == null || affect.ExpiresWorldHour > 0f && now >= affect.ExpiresWorldHour)
+            {
+                continue;
+            }
+
+            copy.Affects.Add(new NoosphereWorkerAffectSnapshot
+            {
+                Kind = affect.Kind,
+                Intensity = affect.Intensity,
+                StartedDay = affect.StartedDay,
+                StartedWorldHour = affect.StartedWorldHour,
+                ExpiresWorldHour = affect.ExpiresWorldHour,
+                SourceLocationType = affect.SourceLocationType,
+                SourceInstanceId = affect.SourceInstanceId,
+                SourceKey = affect.SourceKey ?? string.Empty,
+                ReasonRu = affect.ReasonRu ?? string.Empty,
+                ReasonEn = affect.ReasonEn ?? string.Empty
+            });
+        }
     }
 
     private void CopyNoosphereWorkerThoughts(DriverAgent worker, NoosphereWorkerLayerSnapshot copy)

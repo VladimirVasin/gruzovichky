@@ -497,6 +497,7 @@ public partial class GameBootstrap
                         SessionDebugLogger.Log("IDLE", $"{driver.DriverName} entered Bar.");
                     }
 
+                    RecordWorkerLeisureAffect(driver, LocationType.Bar);
                     EnterWorkerServiceInterior(driver, LocationType.Bar, barData);
                 }
                 else
@@ -615,6 +616,7 @@ public partial class GameBootstrap
                 if (TryStartCityParkPromenade(driver, currentPosition))
                 {
                     RecordWorkerServiceThought(driver, LocationType.CityPark, WorkerNeedKind.Leisure, "leisure_service_good", WorkerThoughtTone.Positive, 38, 3);
+                    RecordWorkerLeisureAffect(driver, LocationType.CityPark);
                     return;
                 }
 
@@ -624,6 +626,7 @@ public partial class GameBootstrap
                 driver.WalkPhase = DriverRescuePhase.IdleAtCityPark;
                 RecordWorkerBuildingKnowledge(driver, LocationType.CityPark, "\u041f\u043e\u0441\u0435\u0442\u0438\u043b \u0433\u043e\u0440\u043e\u0434\u0441\u043a\u043e\u0439 \u043f\u0430\u0440\u043a", "Visited the city park");
                 RecordWorkerServiceThought(driver, LocationType.CityPark, WorkerNeedKind.Leisure, "leisure_service_good", WorkerThoughtTone.Positive, 38, 3);
+                RecordWorkerLeisureAffect(driver, LocationType.CityPark);
                 SessionDebugLogger.Log("IDLE", $"{driver.DriverName} arrived at City Park for Leisure.");
                 return;
 

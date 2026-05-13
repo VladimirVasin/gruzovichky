@@ -233,6 +233,7 @@ public partial class GameBootstrap
         public string WorkerName = string.Empty;
         public CitizenProfessionKind CitizenProfession;
         public WorkerEducationLevel Education;
+        public WorkerLeisurePreferenceKind LeisurePreference;
         public int Satisfaction;
         public int Money;
         public bool IsInsideBuilding;
@@ -241,16 +242,32 @@ public partial class GameBootstrap
         public int FamilyId;
         public int SocialMemoryCount;
         public int ActiveThoughtCount;
+        public int ActiveAffectCount;
         public int MemoryCount;
         public int PendingKnowledgeCount;
         public int TopicOpinionCount;
         public int DailyOpinionCount;
         public readonly List<NoosphereWorkerThoughtSnapshot> Thoughts = new();
+        public readonly List<NoosphereWorkerAffectSnapshot> Affects = new();
         public readonly List<NoospherePendingThoughtSnapshot> PendingThoughts = new();
         public readonly List<NoospherePendingKnowledgeSnapshot> PendingKnowledge = new();
         public readonly List<NoosphereWorkerMemorySnapshot> Memories = new();
         public readonly List<NoosphereWorkerTopicOpinionSnapshot> TopicOpinions = new();
         public readonly List<NoosphereWorkerDailyOpinionSnapshot> DailyOpinions = new();
+    }
+
+    private sealed class NoosphereWorkerAffectSnapshot
+    {
+        public WorkerAffectKind Kind;
+        public int Intensity;
+        public int StartedDay;
+        public float StartedWorldHour;
+        public float ExpiresWorldHour;
+        public LocationType? SourceLocationType;
+        public int SourceInstanceId;
+        public string SourceKey = string.Empty;
+        public string ReasonRu = string.Empty;
+        public string ReasonEn = string.Empty;
     }
 
     private sealed class NoosphereWorkerThoughtSnapshot

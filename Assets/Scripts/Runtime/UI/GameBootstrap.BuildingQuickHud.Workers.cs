@@ -386,7 +386,7 @@ public partial class GameBootstrap
             slot.ActivityText.color = Color.gray;
             slot.ActivityTextLayout.preferredHeight = 14f;
         }
-        else if (d.GamblerBroke)
+        else if (d.GamblingBroke)
         {
             slot.ActivityText.text = ru ? "\u041d\u0430 \u043c\u0435\u043b\u0438" : "Broke";
             slot.ActivityText.color = new Color(0.6f, 0.4f, 0.4f);
