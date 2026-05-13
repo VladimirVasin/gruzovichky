@@ -123,6 +123,16 @@ public partial class GameBootstrap
             ref resolvedFormationHours,
             ref opinionDelta,
             pendingPlaceholders);
+        ApplyWorkerHeritageThoughtBias(
+            worker,
+            resolvedThoughtKey,
+            kind,
+            opinionSubjectType,
+            opinionSubjectKey,
+            ref intensity,
+            ref priority,
+            ref resolvedFormationHours,
+            ref opinionDelta);
         PendingWorkerThought pending = FindPendingWorkerThought(worker, resolvedFormationKey);
         if (pending == null)
         {
@@ -368,7 +378,8 @@ public partial class GameBootstrap
                 pending.ThoughtKey,
                 pending.Priority,
                 pending.Active,
-                pending.ExpiresWorldHour);
+                pending.ExpiresWorldHour,
+                applyHeritageBias: false);
             worker.PendingThoughts.RemoveAt(i);
             changed = true;
         }

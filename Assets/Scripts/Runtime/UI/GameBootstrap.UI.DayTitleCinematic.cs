@@ -5,11 +5,8 @@ public partial class GameBootstrap
     private const float DayTitleCinematicHoldSeconds = 3f;
     private const float DayTitleCinematicFadeSeconds = 1f;
     private const float GameStartSceneFadeSeconds = 4.8f;
-    private const float GameStartTitleHoldAfterSceneSeconds = 0.85f;
-    private const float GameStartTitleFadeSeconds = 1.6f;
     private const float GameStartAudioFadeSeconds = 5.4f;
-    private const float GameStartDayTitleCinematicTotalSeconds =
-        GameStartSceneFadeSeconds + GameStartTitleHoldAfterSceneSeconds + GameStartTitleFadeSeconds;
+    private const float GameStartDayTitleCinematicTotalSeconds = GameStartSceneFadeSeconds;
     private int dayTitleCinematicDay;
     private float dayTitleCinematicStartedAt = -1000f;
     private bool isGameStartDayTitleCinematic;
@@ -87,10 +84,7 @@ public partial class GameBootstrap
                 : 1f - Mathf.Clamp01((elapsed - DayTitleCinematicHoldSeconds) / DayTitleCinematicFadeSeconds);
         }
 
-        float fadeStart = GameStartSceneFadeSeconds + GameStartTitleHoldAfterSceneSeconds;
-        return elapsed <= fadeStart
-            ? 1f
-            : 1f - SmootherStep01((elapsed - fadeStart) / GameStartTitleFadeSeconds);
+        return 1f - SmootherStep01(elapsed / GameStartSceneFadeSeconds);
     }
 
     private void DrawDayTitleText(float alpha)

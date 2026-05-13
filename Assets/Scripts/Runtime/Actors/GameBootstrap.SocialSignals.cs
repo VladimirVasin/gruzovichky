@@ -55,6 +55,7 @@ public partial class GameBootstrap
             return null;
         }
 
+        ApplyWorkerHeritageSocialSignalBias(worker, category, normalizedTopic, ref strength, ref confidence);
         SocialSignal signal = new()
         {
             CognitionKind = GetSocialSignalCognitionKind(sourceKind),

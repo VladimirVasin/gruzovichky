@@ -28,6 +28,8 @@
 
 Новые мысли не добавляются "куда попало".
 
+Heritage link: `ai/Design/worker-heritage-system.md` describes the cultural lens over thoughts, knowledge, social signals, and Noosphere visibility. Heritage does not create thoughts by itself and does not give work bonuses.
+
 Каждая новая мысль должна иметь:
 
 - ветку дерева;

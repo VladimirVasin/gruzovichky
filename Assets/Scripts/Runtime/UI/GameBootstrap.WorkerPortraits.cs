@@ -92,6 +92,10 @@ public partial class GameBootstrap
             Destroy(root.GetChild(i).gameObject);
 
         EnsureWorkerPortrait(driver);
+        if (TryDrawWorkerTexturePortraitScaled(driver, root, scale))
+        {
+            return;
+        }
 
         Color bgA = new(0.09f, 0.12f, 0.17f, 1f);
         Color bgB = new(0.13f, 0.17f, 0.23f, 1f);

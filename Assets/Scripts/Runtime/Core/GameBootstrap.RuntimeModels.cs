@@ -127,6 +127,13 @@ public partial class GameBootstrap
         Iskrian
     }
 
+    private enum WorkerHeritageKind
+    {
+        Rovian,
+        Zelen,
+        Iskrian
+    }
+
     private enum WorkerAffectKind
     {
         FinancialPressure,
@@ -291,6 +298,8 @@ public partial class GameBootstrap
         public WorkerGender Gender;
         public WorkerRaceKind Race = WorkerRaceKind.Rovian;
         public bool HasAssignedRace;
+        public WorkerHeritageKind Heritage = WorkerHeritageKind.Rovian;
+        public bool HasAssignedHeritage;
         public WorkerEducationLevel Education;
         public bool HasPortrait;
         public int PortraitSkinTone;

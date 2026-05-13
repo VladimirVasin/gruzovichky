@@ -329,6 +329,15 @@ public partial class GameBootstrap
             EvaluateTopicKnowledgeOpinion(worker, pending);
         }
 
+        int heritageScore = pending.OpinionScore;
+        int heritageConfidence = pending.OpinionConfidence;
+        string heritageReasonRu = pending.OpinionReasonRu;
+        string heritageReasonEn = pending.OpinionReasonEn;
+        ApplyWorkerHeritageKnowledgeBias(worker, pending, ref heritageScore, ref heritageConfidence, ref heritageReasonRu, ref heritageReasonEn);
+        pending.OpinionScore = heritageScore;
+        pending.OpinionConfidence = heritageConfidence;
+        pending.OpinionReasonRu = heritageReasonRu;
+        pending.OpinionReasonEn = heritageReasonEn;
         pending.OpinionTone = GetWorkerKnowledgeOpinionTone(pending.OpinionScore);
         pending.OpinionScore = Mathf.Clamp(pending.OpinionScore, -100, 100);
         pending.OpinionConfidence = Mathf.Clamp(pending.OpinionConfidence, 1, 100);
@@ -689,7 +698,8 @@ public partial class GameBootstrap
         WorkerMemory seed,
         WorkerKnowledgeFormationStage stage)
     {
-        return GetWorkerKnowledgeFormationStageHours(worker, seed?.Kind ?? WorkerMemoryKind.ConversationTopic, seed?.KnowledgeIteration ?? 1, stage);
+        float hours = GetWorkerKnowledgeFormationStageHours(worker, seed?.Kind ?? WorkerMemoryKind.ConversationTopic, seed?.KnowledgeIteration ?? 1, stage);
+        return ApplyWorkerHeritageKnowledgeFormationBias(worker, seed?.Kind ?? WorkerMemoryKind.ConversationTopic, seed?.BuildingType, GetWorkerMemoryHeritageTopicKey(seed), hours);
     }
 
     private float GetWorkerKnowledgeFormationStageHours(
@@ -697,7 +707,8 @@ public partial class GameBootstrap
         PendingWorkerKnowledge pending,
         WorkerKnowledgeFormationStage stage)
     {
-        return GetWorkerKnowledgeFormationStageHours(worker, pending?.Kind ?? WorkerMemoryKind.ConversationTopic, pending?.KnowledgeIteration ?? 1, stage);
+        float hours = GetWorkerKnowledgeFormationStageHours(worker, pending?.Kind ?? WorkerMemoryKind.ConversationTopic, pending?.KnowledgeIteration ?? 1, stage);
+        return ApplyWorkerHeritageKnowledgeFormationBias(worker, pending?.Kind ?? WorkerMemoryKind.ConversationTopic, pending?.BuildingType, GetPendingWorkerHeritageTopicKey(pending), hours);
     }
 
     private static float GetWorkerKnowledgeFormationStageHours(

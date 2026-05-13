@@ -1,0 +1,3069 @@
+{
+  "version": 7,
+  "canvas": {
+    "width": 256,
+    "height": 256
+  },
+  "anchorPoints": {
+    "centerX": 128,
+    "eyesY": 104,
+    "noseY": 130,
+    "mouthY": 154,
+    "chinY": 184,
+    "neckY": 198,
+    "shouldersY": 222
+  },
+  "layerOrder": [
+    "background",
+    "clothes",
+    "hair_back",
+    "ears",
+    "head",
+    "eyes",
+    "brows",
+    "nose",
+    "mouth",
+    "accessory_face",
+    "hair_front",
+    "accessory_over"
+  ],
+  "profileContract": {
+    "folderPattern": "<Category>/<Gender>/<Race>/<optional Layer>/<variant_##.png>",
+    "requiredPerGenderRace": 4,
+    "genders": [
+      "Male",
+      "Female"
+    ],
+    "races": [
+      "Rovian",
+      "Zelen",
+      "Iskrian"
+    ]
+  },
+  "parts": [
+    {
+      "id": "variant_01",
+      "file": "Heads/Male/Rovian/variant_01.png",
+      "slot": "head",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Heads/Male/Rovian/variant_02.png",
+      "slot": "head",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Heads/Male/Rovian/variant_03.png",
+      "slot": "head",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Heads/Male/Rovian/variant_04.png",
+      "slot": "head",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Heads/Male/Zelen/variant_01.png",
+      "slot": "head",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Heads/Male/Zelen/variant_02.png",
+      "slot": "head",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Heads/Male/Zelen/variant_03.png",
+      "slot": "head",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Heads/Male/Zelen/variant_04.png",
+      "slot": "head",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Heads/Male/Iskrian/variant_01.png",
+      "slot": "head",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Heads/Male/Iskrian/variant_02.png",
+      "slot": "head",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Heads/Male/Iskrian/variant_03.png",
+      "slot": "head",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Heads/Male/Iskrian/variant_04.png",
+      "slot": "head",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 30,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Heads/Female/Rovian/variant_01.png",
+      "slot": "head",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Heads/Female/Rovian/variant_02.png",
+      "slot": "head",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Heads/Female/Rovian/variant_03.png",
+      "slot": "head",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Heads/Female/Rovian/variant_04.png",
+      "slot": "head",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Heads/Female/Zelen/variant_01.png",
+      "slot": "head",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Heads/Female/Zelen/variant_02.png",
+      "slot": "head",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Heads/Female/Zelen/variant_03.png",
+      "slot": "head",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Heads/Female/Zelen/variant_04.png",
+      "slot": "head",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Heads/Female/Iskrian/variant_01.png",
+      "slot": "head",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Heads/Female/Iskrian/variant_02.png",
+      "slot": "head",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Heads/Female/Iskrian/variant_03.png",
+      "slot": "head",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Heads/Female/Iskrian/variant_04.png",
+      "slot": "head",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 30,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Ears/Male/Rovian/variant_01.png",
+      "slot": "ears",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Ears/Male/Rovian/variant_02.png",
+      "slot": "ears",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Ears/Male/Rovian/variant_03.png",
+      "slot": "ears",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Ears/Male/Rovian/variant_04.png",
+      "slot": "ears",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Ears/Male/Zelen/variant_01.png",
+      "slot": "ears",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Ears/Male/Zelen/variant_02.png",
+      "slot": "ears",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Ears/Male/Zelen/variant_03.png",
+      "slot": "ears",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Ears/Male/Zelen/variant_04.png",
+      "slot": "ears",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Ears/Male/Iskrian/variant_01.png",
+      "slot": "ears",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Ears/Male/Iskrian/variant_02.png",
+      "slot": "ears",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Ears/Male/Iskrian/variant_03.png",
+      "slot": "ears",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Ears/Male/Iskrian/variant_04.png",
+      "slot": "ears",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 28,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Ears/Female/Rovian/variant_01.png",
+      "slot": "ears",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Ears/Female/Rovian/variant_02.png",
+      "slot": "ears",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Ears/Female/Rovian/variant_03.png",
+      "slot": "ears",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Ears/Female/Rovian/variant_04.png",
+      "slot": "ears",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Ears/Female/Zelen/variant_01.png",
+      "slot": "ears",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Ears/Female/Zelen/variant_02.png",
+      "slot": "ears",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Ears/Female/Zelen/variant_03.png",
+      "slot": "ears",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Ears/Female/Zelen/variant_04.png",
+      "slot": "ears",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Ears/Female/Iskrian/variant_01.png",
+      "slot": "ears",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Ears/Female/Iskrian/variant_02.png",
+      "slot": "ears",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Ears/Female/Iskrian/variant_03.png",
+      "slot": "ears",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Ears/Female/Iskrian/variant_04.png",
+      "slot": "ears",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 28,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Hair/Male/Rovian/Front/variant_01.png",
+      "slot": "hair_front",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Hair/Male/Rovian/Front/variant_02.png",
+      "slot": "hair_front",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Hair/Male/Rovian/Front/variant_03.png",
+      "slot": "hair_front",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Hair/Male/Rovian/Front/variant_04.png",
+      "slot": "hair_front",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Hair/Male/Zelen/Front/variant_01.png",
+      "slot": "hair_front",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Hair/Male/Zelen/Front/variant_02.png",
+      "slot": "hair_front",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Hair/Male/Zelen/Front/variant_03.png",
+      "slot": "hair_front",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Hair/Male/Zelen/Front/variant_04.png",
+      "slot": "hair_front",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Hair/Male/Iskrian/Front/variant_01.png",
+      "slot": "hair_front",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Hair/Male/Iskrian/Front/variant_02.png",
+      "slot": "hair_front",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Hair/Male/Iskrian/Front/variant_03.png",
+      "slot": "hair_front",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Hair/Male/Iskrian/Front/variant_04.png",
+      "slot": "hair_front",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 90,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Hair/Female/Rovian/Back/variant_01.png",
+      "slot": "hair_back",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Hair/Female/Rovian/Back/variant_02.png",
+      "slot": "hair_back",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Hair/Female/Rovian/Back/variant_03.png",
+      "slot": "hair_back",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Hair/Female/Rovian/Back/variant_04.png",
+      "slot": "hair_back",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Hair/Female/Rovian/Front/variant_01.png",
+      "slot": "hair_front",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Hair/Female/Rovian/Front/variant_02.png",
+      "slot": "hair_front",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Hair/Female/Rovian/Front/variant_03.png",
+      "slot": "hair_front",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Hair/Female/Rovian/Front/variant_04.png",
+      "slot": "hair_front",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Hair/Female/Zelen/Back/variant_01.png",
+      "slot": "hair_back",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Hair/Female/Zelen/Back/variant_02.png",
+      "slot": "hair_back",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Hair/Female/Zelen/Back/variant_03.png",
+      "slot": "hair_back",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Hair/Female/Zelen/Back/variant_04.png",
+      "slot": "hair_back",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Hair/Female/Zelen/Front/variant_01.png",
+      "slot": "hair_front",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Hair/Female/Zelen/Front/variant_02.png",
+      "slot": "hair_front",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Hair/Female/Zelen/Front/variant_03.png",
+      "slot": "hair_front",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Hair/Female/Zelen/Front/variant_04.png",
+      "slot": "hair_front",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Hair/Female/Iskrian/Back/variant_01.png",
+      "slot": "hair_back",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Hair/Female/Iskrian/Back/variant_02.png",
+      "slot": "hair_back",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Hair/Female/Iskrian/Back/variant_03.png",
+      "slot": "hair_back",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Hair/Female/Iskrian/Back/variant_04.png",
+      "slot": "hair_back",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 25,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Hair/Female/Iskrian/Front/variant_01.png",
+      "slot": "hair_front",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Hair/Female/Iskrian/Front/variant_02.png",
+      "slot": "hair_front",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Hair/Female/Iskrian/Front/variant_03.png",
+      "slot": "hair_front",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Hair/Female/Iskrian/Front/variant_04.png",
+      "slot": "hair_front",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 90,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Eyes/Male/Rovian/variant_01.png",
+      "slot": "eyes",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Eyes/Male/Rovian/variant_02.png",
+      "slot": "eyes",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Eyes/Male/Rovian/variant_03.png",
+      "slot": "eyes",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Eyes/Male/Rovian/variant_04.png",
+      "slot": "eyes",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Eyes/Male/Zelen/variant_01.png",
+      "slot": "eyes",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Eyes/Male/Zelen/variant_02.png",
+      "slot": "eyes",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Eyes/Male/Zelen/variant_03.png",
+      "slot": "eyes",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Eyes/Male/Zelen/variant_04.png",
+      "slot": "eyes",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Eyes/Male/Iskrian/variant_01.png",
+      "slot": "eyes",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Eyes/Male/Iskrian/variant_02.png",
+      "slot": "eyes",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Eyes/Male/Iskrian/variant_03.png",
+      "slot": "eyes",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Eyes/Male/Iskrian/variant_04.png",
+      "slot": "eyes",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 50,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Eyes/Female/Rovian/variant_01.png",
+      "slot": "eyes",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Eyes/Female/Rovian/variant_02.png",
+      "slot": "eyes",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Eyes/Female/Rovian/variant_03.png",
+      "slot": "eyes",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Eyes/Female/Rovian/variant_04.png",
+      "slot": "eyes",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Eyes/Female/Zelen/variant_01.png",
+      "slot": "eyes",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Eyes/Female/Zelen/variant_02.png",
+      "slot": "eyes",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Eyes/Female/Zelen/variant_03.png",
+      "slot": "eyes",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Eyes/Female/Zelen/variant_04.png",
+      "slot": "eyes",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Eyes/Female/Iskrian/variant_01.png",
+      "slot": "eyes",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Eyes/Female/Iskrian/variant_02.png",
+      "slot": "eyes",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Eyes/Female/Iskrian/variant_03.png",
+      "slot": "eyes",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Eyes/Female/Iskrian/variant_04.png",
+      "slot": "eyes",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 50,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Brows/Male/Rovian/variant_01.png",
+      "slot": "brows",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Brows/Male/Rovian/variant_02.png",
+      "slot": "brows",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Brows/Male/Rovian/variant_03.png",
+      "slot": "brows",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Brows/Male/Rovian/variant_04.png",
+      "slot": "brows",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Brows/Male/Zelen/variant_01.png",
+      "slot": "brows",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Brows/Male/Zelen/variant_02.png",
+      "slot": "brows",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Brows/Male/Zelen/variant_03.png",
+      "slot": "brows",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Brows/Male/Zelen/variant_04.png",
+      "slot": "brows",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Brows/Male/Iskrian/variant_01.png",
+      "slot": "brows",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Brows/Male/Iskrian/variant_02.png",
+      "slot": "brows",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Brows/Male/Iskrian/variant_03.png",
+      "slot": "brows",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Brows/Male/Iskrian/variant_04.png",
+      "slot": "brows",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 55,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Brows/Female/Rovian/variant_01.png",
+      "slot": "brows",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Brows/Female/Rovian/variant_02.png",
+      "slot": "brows",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Brows/Female/Rovian/variant_03.png",
+      "slot": "brows",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Brows/Female/Rovian/variant_04.png",
+      "slot": "brows",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Brows/Female/Zelen/variant_01.png",
+      "slot": "brows",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Brows/Female/Zelen/variant_02.png",
+      "slot": "brows",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Brows/Female/Zelen/variant_03.png",
+      "slot": "brows",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Brows/Female/Zelen/variant_04.png",
+      "slot": "brows",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Brows/Female/Iskrian/variant_01.png",
+      "slot": "brows",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Brows/Female/Iskrian/variant_02.png",
+      "slot": "brows",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Brows/Female/Iskrian/variant_03.png",
+      "slot": "brows",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Brows/Female/Iskrian/variant_04.png",
+      "slot": "brows",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 55,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Noses/Male/Rovian/variant_01.png",
+      "slot": "nose",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Noses/Male/Rovian/variant_02.png",
+      "slot": "nose",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Noses/Male/Rovian/variant_03.png",
+      "slot": "nose",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Noses/Male/Rovian/variant_04.png",
+      "slot": "nose",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Noses/Male/Zelen/variant_01.png",
+      "slot": "nose",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Noses/Male/Zelen/variant_02.png",
+      "slot": "nose",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Noses/Male/Zelen/variant_03.png",
+      "slot": "nose",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Noses/Male/Zelen/variant_04.png",
+      "slot": "nose",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Noses/Male/Iskrian/variant_01.png",
+      "slot": "nose",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Noses/Male/Iskrian/variant_02.png",
+      "slot": "nose",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Noses/Male/Iskrian/variant_03.png",
+      "slot": "nose",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Noses/Male/Iskrian/variant_04.png",
+      "slot": "nose",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 60,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Noses/Female/Rovian/variant_01.png",
+      "slot": "nose",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Noses/Female/Rovian/variant_02.png",
+      "slot": "nose",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Noses/Female/Rovian/variant_03.png",
+      "slot": "nose",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Noses/Female/Rovian/variant_04.png",
+      "slot": "nose",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Noses/Female/Zelen/variant_01.png",
+      "slot": "nose",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Noses/Female/Zelen/variant_02.png",
+      "slot": "nose",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Noses/Female/Zelen/variant_03.png",
+      "slot": "nose",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Noses/Female/Zelen/variant_04.png",
+      "slot": "nose",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Noses/Female/Iskrian/variant_01.png",
+      "slot": "nose",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Noses/Female/Iskrian/variant_02.png",
+      "slot": "nose",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Noses/Female/Iskrian/variant_03.png",
+      "slot": "nose",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Noses/Female/Iskrian/variant_04.png",
+      "slot": "nose",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 60,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Mouths/Male/Rovian/variant_01.png",
+      "slot": "mouth",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Mouths/Male/Rovian/variant_02.png",
+      "slot": "mouth",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Mouths/Male/Rovian/variant_03.png",
+      "slot": "mouth",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Mouths/Male/Rovian/variant_04.png",
+      "slot": "mouth",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Mouths/Male/Zelen/variant_01.png",
+      "slot": "mouth",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Mouths/Male/Zelen/variant_02.png",
+      "slot": "mouth",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Mouths/Male/Zelen/variant_03.png",
+      "slot": "mouth",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Mouths/Male/Zelen/variant_04.png",
+      "slot": "mouth",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Mouths/Male/Iskrian/variant_01.png",
+      "slot": "mouth",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Mouths/Male/Iskrian/variant_02.png",
+      "slot": "mouth",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Mouths/Male/Iskrian/variant_03.png",
+      "slot": "mouth",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Mouths/Male/Iskrian/variant_04.png",
+      "slot": "mouth",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 70,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Mouths/Female/Rovian/variant_01.png",
+      "slot": "mouth",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Mouths/Female/Rovian/variant_02.png",
+      "slot": "mouth",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Mouths/Female/Rovian/variant_03.png",
+      "slot": "mouth",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Mouths/Female/Rovian/variant_04.png",
+      "slot": "mouth",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Mouths/Female/Zelen/variant_01.png",
+      "slot": "mouth",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Mouths/Female/Zelen/variant_02.png",
+      "slot": "mouth",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Mouths/Female/Zelen/variant_03.png",
+      "slot": "mouth",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Mouths/Female/Zelen/variant_04.png",
+      "slot": "mouth",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Mouths/Female/Iskrian/variant_01.png",
+      "slot": "mouth",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Mouths/Female/Iskrian/variant_02.png",
+      "slot": "mouth",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Mouths/Female/Iskrian/variant_03.png",
+      "slot": "mouth",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Mouths/Female/Iskrian/variant_04.png",
+      "slot": "mouth",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 70,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Accessories/Male/Rovian/variant_01.png",
+      "slot": "accessory_face",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Accessories/Male/Rovian/variant_02.png",
+      "slot": "accessory_face",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Accessories/Male/Rovian/variant_03.png",
+      "slot": "accessory_face",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Accessories/Male/Rovian/variant_04.png",
+      "slot": "accessory_face",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Accessories/Male/Zelen/variant_01.png",
+      "slot": "accessory_face",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Accessories/Male/Zelen/variant_02.png",
+      "slot": "accessory_face",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Accessories/Male/Zelen/variant_03.png",
+      "slot": "accessory_face",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Accessories/Male/Zelen/variant_04.png",
+      "slot": "accessory_face",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Accessories/Male/Iskrian/variant_01.png",
+      "slot": "accessory_face",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Accessories/Male/Iskrian/variant_02.png",
+      "slot": "accessory_face",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Accessories/Male/Iskrian/variant_03.png",
+      "slot": "accessory_face",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Accessories/Male/Iskrian/variant_04.png",
+      "slot": "accessory_face",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 80,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Accessories/Female/Rovian/variant_01.png",
+      "slot": "accessory_face",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Accessories/Female/Rovian/variant_02.png",
+      "slot": "accessory_face",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Accessories/Female/Rovian/variant_03.png",
+      "slot": "accessory_face",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Accessories/Female/Rovian/variant_04.png",
+      "slot": "accessory_face",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Accessories/Female/Zelen/variant_01.png",
+      "slot": "accessory_face",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Accessories/Female/Zelen/variant_02.png",
+      "slot": "accessory_face",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Accessories/Female/Zelen/variant_03.png",
+      "slot": "accessory_face",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Accessories/Female/Zelen/variant_04.png",
+      "slot": "accessory_face",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Accessories/Female/Iskrian/variant_01.png",
+      "slot": "accessory_face",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Accessories/Female/Iskrian/variant_02.png",
+      "slot": "accessory_face",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Accessories/Female/Iskrian/variant_03.png",
+      "slot": "accessory_face",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Accessories/Female/Iskrian/variant_04.png",
+      "slot": "accessory_face",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 80,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Clothes/Male/Rovian/variant_01.png",
+      "slot": "clothes",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Clothes/Male/Rovian/variant_02.png",
+      "slot": "clothes",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Clothes/Male/Rovian/variant_03.png",
+      "slot": "clothes",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Clothes/Male/Rovian/variant_04.png",
+      "slot": "clothes",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Clothes/Male/Zelen/variant_01.png",
+      "slot": "clothes",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Clothes/Male/Zelen/variant_02.png",
+      "slot": "clothes",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Clothes/Male/Zelen/variant_03.png",
+      "slot": "clothes",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Clothes/Male/Zelen/variant_04.png",
+      "slot": "clothes",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Clothes/Male/Iskrian/variant_01.png",
+      "slot": "clothes",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Clothes/Male/Iskrian/variant_02.png",
+      "slot": "clothes",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Clothes/Male/Iskrian/variant_03.png",
+      "slot": "clothes",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Clothes/Male/Iskrian/variant_04.png",
+      "slot": "clothes",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 20,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Clothes/Female/Rovian/variant_01.png",
+      "slot": "clothes",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Clothes/Female/Rovian/variant_02.png",
+      "slot": "clothes",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Clothes/Female/Rovian/variant_03.png",
+      "slot": "clothes",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Clothes/Female/Rovian/variant_04.png",
+      "slot": "clothes",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Clothes/Female/Zelen/variant_01.png",
+      "slot": "clothes",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Clothes/Female/Zelen/variant_02.png",
+      "slot": "clothes",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Clothes/Female/Zelen/variant_03.png",
+      "slot": "clothes",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Clothes/Female/Zelen/variant_04.png",
+      "slot": "clothes",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Clothes/Female/Iskrian/variant_01.png",
+      "slot": "clothes",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Clothes/Female/Iskrian/variant_02.png",
+      "slot": "clothes",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Clothes/Female/Iskrian/variant_03.png",
+      "slot": "clothes",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Clothes/Female/Iskrian/variant_04.png",
+      "slot": "clothes",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 20,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Backgrounds/Male/Rovian/variant_01.png",
+      "slot": "background",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Backgrounds/Male/Rovian/variant_02.png",
+      "slot": "background",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Backgrounds/Male/Rovian/variant_03.png",
+      "slot": "background",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Backgrounds/Male/Rovian/variant_04.png",
+      "slot": "background",
+      "race": "Rovian",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "rovian_structured_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Backgrounds/Male/Zelen/variant_01.png",
+      "slot": "background",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Backgrounds/Male/Zelen/variant_02.png",
+      "slot": "background",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Backgrounds/Male/Zelen/variant_03.png",
+      "slot": "background",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Backgrounds/Male/Zelen/variant_04.png",
+      "slot": "background",
+      "race": "Zelen",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "zelen_soft_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Backgrounds/Male/Iskrian/variant_01.png",
+      "slot": "background",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Backgrounds/Male/Iskrian/variant_02.png",
+      "slot": "background",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Backgrounds/Male/Iskrian/variant_03.png",
+      "slot": "background",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Backgrounds/Male/Iskrian/variant_04.png",
+      "slot": "background",
+      "race": "Iskrian",
+      "gender": "Male",
+      "order": 0,
+      "compatibleProfiles": [
+        "iskrian_expressive_male"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Backgrounds/Female/Rovian/variant_01.png",
+      "slot": "background",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Backgrounds/Female/Rovian/variant_02.png",
+      "slot": "background",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Backgrounds/Female/Rovian/variant_03.png",
+      "slot": "background",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Backgrounds/Female/Rovian/variant_04.png",
+      "slot": "background",
+      "race": "Rovian",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "rovian_structured_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Backgrounds/Female/Zelen/variant_01.png",
+      "slot": "background",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Backgrounds/Female/Zelen/variant_02.png",
+      "slot": "background",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Backgrounds/Female/Zelen/variant_03.png",
+      "slot": "background",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Backgrounds/Female/Zelen/variant_04.png",
+      "slot": "background",
+      "race": "Zelen",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "zelen_soft_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_01",
+      "file": "Backgrounds/Female/Iskrian/variant_01.png",
+      "slot": "background",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_02",
+      "file": "Backgrounds/Female/Iskrian/variant_02.png",
+      "slot": "background",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_03",
+      "file": "Backgrounds/Female/Iskrian/variant_03.png",
+      "slot": "background",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    },
+    {
+      "id": "variant_04",
+      "file": "Backgrounds/Female/Iskrian/variant_04.png",
+      "slot": "background",
+      "race": "Iskrian",
+      "gender": "Female",
+      "order": 0,
+      "compatibleProfiles": [
+        "iskrian_expressive_female"
+      ],
+      "tags": []
+    }
+  ]
+}

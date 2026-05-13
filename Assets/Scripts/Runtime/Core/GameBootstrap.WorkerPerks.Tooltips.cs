@@ -79,6 +79,18 @@ public partial class GameBootstrap
             () => ShowWorkerRaceTooltip(race, text.rectTransform));
     }
 
+    private void ConfigureWorkerHeritageTooltip(Text text, WorkerHeritageKind heritage)
+    {
+        if (text == null)
+        {
+            return;
+        }
+
+        ConfigureWorkerPersonalityTooltip(
+            text,
+            () => ShowWorkerHeritageTooltip(heritage, text.rectTransform));
+    }
+
     private void ConfigureWorkerPersonalityTooltip(Text text, UnityEngine.Events.UnityAction onEnter)
     {
         text.raycastTarget = true;
@@ -134,6 +146,15 @@ public partial class GameBootstrap
             $"{GetWorkerRaceIconGlyph(race)} {GetWorkerRaceDisplayName(race, IsRussianLanguage())}",
             GetWorkerRaceFullDescription(race, IsRussianLanguage()),
             GetWorkerRaceColor(race),
+            target);
+    }
+
+    private void ShowWorkerHeritageTooltip(WorkerHeritageKind heritage, RectTransform target)
+    {
+        ShowWorkerPersonalityTooltip(
+            $"{GetWorkerHeritageIconGlyph(heritage)} {GetWorkerHeritageDisplayName(heritage, IsRussianLanguage())}",
+            GetWorkerHeritageDescription(heritage, IsRussianLanguage()),
+            GetWorkerHeritageColor(heritage),
             target);
     }
 

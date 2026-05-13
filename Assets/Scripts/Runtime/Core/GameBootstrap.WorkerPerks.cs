@@ -40,7 +40,7 @@ public partial class GameBootstrap
             return;
         }
 
-        EnsureWorkerRace(driver);
+        EnsureWorkerHeritage(driver);
         int seed = StableWorkerTraitHash(driver.DriverName) ^ (driver.DriverId * 19349663);
         AssignWorkerPerks(driver, new System.Random(seed));
     }
@@ -65,7 +65,7 @@ public partial class GameBootstrap
             return;
         }
 
-        EnsureWorkerRace(driver);
+        EnsureWorkerHeritage(driver);
         int seed = StableWorkerTraitHash(driver.DriverName) ^ (driver.DriverId * 19349663);
         NormalizeWorkerPersonality(driver, new System.Random(seed));
     }
@@ -341,12 +341,12 @@ public partial class GameBootstrap
         UpdateWorkerAffects(driver);
 
         int rowIndex = 0;
-        SetWorkerPersonalityTextRow(rowIndex++, ru ? "\u0420\u0430\u0441\u0430:" : "Race:", FleetAccentColor);
-        Text raceText = SetWorkerPersonalityTextRow(
+        SetWorkerPersonalityTextRow(rowIndex++, ru ? "\u041f\u0440\u043e\u0438\u0441\u0445\u043e\u0436\u0434\u0435\u043d\u0438\u0435:" : "Heritage:", FleetAccentColor);
+        Text heritageText = SetWorkerPersonalityTextRow(
             rowIndex++,
-            $"- {FormatWorkerRaceBadgeInline(driver.Race, ru)} - {GetWorkerRaceShortDescription(driver.Race, ru)}",
+            $"- {FormatWorkerHeritageBadgeInline(driver.Heritage, ru)} - {GetWorkerHeritageShortDescription(driver.Heritage, ru)}",
             FleetSecondaryTextColor);
-        ConfigureWorkerRaceTooltip(raceText, driver.Race);
+        ConfigureWorkerHeritageTooltip(heritageText, driver.Heritage);
 
         SetWorkerPersonalityTextRow(rowIndex++, ru ? "Характер:" : "Character:", FleetAccentColor);
         for (int i = 0; i < driver.Traits.Count && rowIndex < driversScreenUi.DetailPerkTexts.Count; i++)

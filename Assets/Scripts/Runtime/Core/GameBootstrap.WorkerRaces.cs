@@ -11,6 +11,7 @@ public partial class GameBootstrap
 
         driver.Race = PickWorkerRace(driver.DriverId, driver.DriverName);
         driver.HasAssignedRace = true;
+        AssignWorkerHeritageFromRace(driver);
     }
 
     private static void EnsureWorkerRace(DriverAgent driver)
@@ -22,6 +23,7 @@ public partial class GameBootstrap
 
         driver.Race = PickWorkerRace(driver.DriverId, driver.DriverName);
         driver.HasAssignedRace = true;
+        AssignWorkerHeritageFromRace(driver);
     }
 
     private static WorkerRaceKind PickWorkerRace(int workerId, string workerName)
@@ -145,8 +147,7 @@ public partial class GameBootstrap
 
     private static string FormatWorkerRaceListBadge(DriverAgent driver, bool ru)
     {
-        EnsureWorkerRace(driver);
-        return driver == null ? "-" : FormatWorkerRaceBadgeInline(driver.Race, ru);
+        return FormatWorkerHeritageListBadge(driver, ru);
     }
 
 }

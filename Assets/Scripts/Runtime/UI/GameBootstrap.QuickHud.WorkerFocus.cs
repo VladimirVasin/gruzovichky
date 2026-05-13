@@ -312,7 +312,7 @@ public partial class GameBootstrap
             return "-";
         }
 
-        EnsureWorkerRace(driver);
+        EnsureWorkerHeritage(driver);
         EnsureWorkerPerks(driver);
 
         string text = string.Empty;
@@ -339,9 +339,13 @@ public partial class GameBootstrap
 
         if (driver.Weakness != WorkerWeaknessKind.None)
         {
-            text += $" / {GetWorkerWeaknessDisplayName(driver.Weakness, ru)}";
+            text += $" / {FormatWorkerHeritageBadgeInline(driver.Heritage, ru)} / {GetWorkerWeaknessDisplayName(driver.Weakness, ru)}";
+        }
+        else
+        {
+            text += $" / {FormatWorkerHeritageBadgeInline(driver.Heritage, ru)}";
         }
 
-        return $"{FormatWorkerRaceBadgeInline(driver.Race, ru)} \u00b7 {text}";
+        return text;
     }
 }

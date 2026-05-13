@@ -26,7 +26,8 @@ public partial class GameBootstrap
         string thoughtKey = null,
         WorkerThoughtPriority priority = WorkerThoughtPriority.Normal,
         bool active = false,
-        float expiresWorldHour = 0f)
+        float expiresWorldHour = 0f,
+        bool applyHeritageBias = true)
     {
         if (worker == null || string.IsNullOrWhiteSpace(templateKey) || worker.HasDepartedTown)
         {
@@ -50,13 +51,29 @@ public partial class GameBootstrap
             worker.WorkerThoughtCooldownWorldHours[resolvedCooldownKey] = now + cooldownHours;
         }
 
+        int resolvedIntensity = intensity;
+        float heritageFormationHours = -1f;
+        if (applyHeritageBias)
+        {
+            ApplyWorkerHeritageThoughtBias(
+                worker,
+                resolvedThoughtKey,
+                kind,
+                opinionSubjectType,
+                opinionSubjectKey,
+                ref resolvedIntensity,
+                ref priority,
+                ref heritageFormationHours,
+                ref opinionDelta);
+        }
+
         WorkerThought thought = new()
         {
             Key = resolvedThoughtKey,
             Kind = kind,
             Tone = tone,
             Priority = priority,
-            Intensity = Mathf.Clamp(intensity, 0, 100),
+            Intensity = Mathf.Clamp(resolvedIntensity, 0, 100),
             TemplateKey = templateKey,
             CreatedDay = currentDay,
             CreatedWorldHour = now,
@@ -90,7 +107,7 @@ public partial class GameBootstrap
         isDriversScreenDirty = true;
         SessionDebugLogger.Log(
             "THOUGHT",
-            $"{worker.DriverName}: {RenderWorkerThought(thought, false)}; key={resolvedThoughtKey}; template={templateKey}; active={active}; priority={priority}; tone={tone}; intensity={intensity}; opinion={opinionSubjectType}/{opinionSubjectId}/{opinionSubjectKey}; delta={opinionDelta:+#;-#;0}.");
+            $"{worker.DriverName}: {RenderWorkerThought(thought, false)}; key={resolvedThoughtKey}; template={templateKey}; active={active}; priority={priority}; tone={tone}; intensity={resolvedIntensity}; opinion={opinionSubjectType}/{opinionSubjectId}/{opinionSubjectKey}; delta={opinionDelta:+#;-#;0}.");
         return thought;
     }
 

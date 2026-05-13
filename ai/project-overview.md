@@ -12,7 +12,7 @@ Stable high-level map of the current playable prototype. Code remains the source
 - Runtime is still scene-local and generated from `Assets/Scenes/SampleScene.unity`.
 - The main playable slice now combines:
   - buildable roads, service buildings, production buildings, and local bus stops
-  - workers with portraits, education, needs, character traits, weaknesses, affect states, money, owned-item inventory, jobs, shifts, personal knowledge, social links, families, and life routines
+  - workers with heritage/origin, portraits, education, needs, character traits, weaknesses, affect states, money, owned-item inventory, jobs, shifts, personal knowledge, social links, families, and life routines
   - trucks, local buses, warehouse storage/logistics, and intercity trade
   - taxes, building banks, event feed, regional map, tutorial/onboarding, and racing mode
   - procedural terrain, natural zones, water, ambient life, weather/lighting, low-poly visuals, and runtime audio/options
@@ -22,7 +22,7 @@ Stable high-level map of the current playable prototype. Code remains the source
 ```text
 Assets/
   Editor/Tests/        Unity editor smoke tests
-  Resources/           Localization, game-data JSON, Art/Textures world PNGs, and Nature/Trees tree model/prefab assets
+  Resources/           Localization, game-data JSON, Art/Textures world PNGs, Art/Workers portrait parts, and Nature/Trees tree model/prefab assets
   Scenes/              SampleScene entry point
   Scripts/Runtime/     Game runtime partials and extracted services
   Settings/            Unity project settings/assets

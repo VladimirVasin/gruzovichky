@@ -208,9 +208,9 @@ public partial class GameBootstrap
             return;
         }
 
-        EnsureWorkerRace(driver);
+        EnsureWorkerHeritage(driver);
         driverQuickHud.HeaderText.text = driver.DriverName;
-        driverQuickHud.OccupationText.text = $"{FormatWorkerRaceBadgeInline(driver.Race, true)} \u00b7 {GetWorkerQuickHudOccupationLabelRu(driver)}";
+        driverQuickHud.OccupationText.text = $"{FormatWorkerHeritageBadgeInline(driver.Heritage, true)} \u00b7 {GetWorkerQuickHudOccupationLabelRu(driver)}";
         driverQuickHud.ActivityText.text = $"Сейчас: {GetWorkerQuickHudActivityLabelRu(driver)}";
 
         int score = GetDriverQuickHudConditionScore(driver);

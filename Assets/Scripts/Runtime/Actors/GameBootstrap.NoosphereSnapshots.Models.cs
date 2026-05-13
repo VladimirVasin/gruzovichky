@@ -236,6 +236,9 @@ public partial class GameBootstrap
         public WorkerRaceKind Race;
         public Color RaceColor;
         public string RaceDisplayName = string.Empty;
+        public WorkerHeritageKind Heritage;
+        public Color HeritageColor;
+        public string HeritageDisplayName = string.Empty;
         public WorkerWeaknessKind Weakness;
         public readonly List<WorkerTraitKind> Traits = new();
         public int Satisfaction;

@@ -118,10 +118,16 @@ public partial class GameBootstrap
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         statesScreenUi.TitleText.text = ru ? "\u0421\u043f\u0440\u0430\u0432\u043a\u0430: \u043b\u0438\u0447\u043d\u043e\u0441\u0442\u044c \u0438 \u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u044f" : "Stats: personality and states";
         statesScreenUi.SubtitleText.text = ru
-            ? "Характер, слабости и состояния влияют на мысли, знания и ноосферу, но не дают скрытых бонусов к работе."
-            : "Character, weaknesses, and affect states feed thoughts, knowledge, and the Noosphere without hidden work bonuses.";
+            ? "\u041f\u0440\u043e\u0438\u0441\u0445\u043e\u0436\u0434\u0435\u043d\u0438\u0435, \u0445\u0430\u0440\u0430\u043a\u0442\u0435\u0440, \u0441\u043b\u0430\u0431\u043e\u0441\u0442\u0438 \u0438 \u0441\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u044f \u0432\u043b\u0438\u044f\u044e\u0442 \u043d\u0430 \u043c\u044b\u0441\u043b\u0438, \u0437\u043d\u0430\u043d\u0438\u044f \u0438 \u043d\u043e\u043e\u0441\u0444\u0435\u0440\u0443, \u043d\u043e \u043d\u0435 \u0434\u0430\u044e\u0442 \u0441\u043a\u0440\u044b\u0442\u044b\u0445 \u0431\u043e\u043d\u0443\u0441\u043e\u0432 \u043a \u0440\u0430\u0431\u043e\u0442\u0435."
+            : "Heritage, character, weaknesses, and affect states feed thoughts, knowledge, and the Noosphere without hidden work bonuses.";
 
         ClearUiChildren(statesScreenUi.ContentRoot);
+        AddStatesSectionHeader(font, ru ? "\u041f\u0440\u043e\u0438\u0441\u0445\u043e\u0436\u0434\u0435\u043d\u0438\u044f" : "Heritages");
+        for (int i = 0; i < WorkerHeritageCatalog.Length; i++)
+        {
+            WorkerHeritageKind heritage = WorkerHeritageCatalog[i];
+            AddStatesReferenceRow(font, GetWorkerHeritagePeopleName(heritage, ru), GetWorkerHeritageDescription(heritage, ru), GetWorkerHeritageColor(heritage));
+        }
         AddStatesSectionHeader(font, ru ? "Характер" : "Character");
         for (int i = 0; i < WorkerTraitPool.Length; i++)
         {
