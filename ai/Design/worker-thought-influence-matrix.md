@@ -569,20 +569,23 @@ Implemented in code:
 - Covered target thoughts include: `service_unaffordable`, `affect_financial_pressure`, `no_job_warning`, `salary_paid`, `low_money`, `starter_job_suggestion`, `job_found`, `affect_stable_routine`.
 - Slice `Needs`: 30 enabled rules for Meal, Sleep, Leisure, `affect_relief_after_rest`, and `affect_hangover`.
 - Slice `Family`: 14 enabled rules for `house_bought`, `family_formed`, `child_born`, and `affect_family_anxiety`.
-- Total enabled rules: 67.
+- Slice `City/Litter`: 21 enabled rules for `worker_arrived`, `stable_life`, `street_litter_low`, `street_litter_medium`, `street_litter_high`, `affect_litter_irritation`, and `affect_stable_routine`.
+- Total enabled rules: 88.
 - Additional covered source thoughts: `need_meal_critical`, `meal_service_good`, `used_snack`, `need_sleep_critical`, `sleep_service_good`, `home_sleep_good`, `used_coffee`, `need_leisure_critical`, `leisure_service_good`, `affect_relief_after_rest`, `affect_hangover`.
 - Additional covered Family source thoughts: `house_bought`, `family_formed`, `child_born`, `affect_family_anxiety`.
-- Not yet implemented: City/Litter, Social, Transport, Gambling contradiction, and remaining Stability/Recovery rules outside these slices.
+- Additional covered City/Litter source thoughts: `worker_arrived`, `stable_life`, `street_litter_low`, `street_litter_medium`, `street_litter_high`, `affect_litter_irritation`, `affect_stable_routine`.
+- Not yet implemented: Social, Transport, Gambling contradiction, and remaining Stability/Recovery rules outside these slices.
 
 Ready for implementation:
 
-- Basic Litter -> Irritation loop.
+- Social conversation influence.
 
 Risky connections:
 
 - Gambling contradiction links, because they must feel mixed and not hard-force future gambling.
 - Remaining family-child-school pressure links, because they can become too sticky if confidence decay is weak.
 - Stable/recovery links, because they can accidentally erase real problems.
+- Transport links, because bus reliability should stay local to real transport events.
 
 Document-only for now:
 

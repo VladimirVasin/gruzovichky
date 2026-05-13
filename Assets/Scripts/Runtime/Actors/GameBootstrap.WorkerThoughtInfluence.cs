@@ -264,7 +264,55 @@ public partial class GameBootstrap
             Rule("affect_family_anxiety", "stable_life", WorkerThoughtInfluenceDirection.Relief, 6, 0, 0.92f, 96f, 2, "a steady routine relieves some family pressure", "Family",
                 Traits(Trait(WorkerTraitKind.Adaptable, 2))),
             Rule("affect_family_anxiety", "no_job_warning", WorkerThoughtInfluenceDirection.Amplify, 9, 1, 0.88f, 72f, -2, "without work, family responsibility feels exposed", "Family",
-                Traits(Trait(WorkerTraitKind.Dutiful, 4)))
+                Traits(Trait(WorkerTraitKind.Dutiful, 4))),
+
+            Rule("worker_arrived", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 5, 0, 0.94f, 72f, 1, "a smooth start helps the worker accept the town", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Trusting, 2))),
+            Rule("worker_arrived", "street_litter_low", WorkerThoughtInfluenceDirection.Amplify, 4, 0, 0.96f, 24f, -1, "first impressions are easily colored by small disorder", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Meticulous, 3))),
+
+            Rule("stable_life", "low_money", WorkerThoughtInfluenceDirection.Dampen, -7, 0, 1.06f, 72f, 1, "stable memory lowers catastrophic money thoughts", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Adaptable, 3), Trait(WorkerTraitKind.Stubborn, 3))),
+            Rule("stable_life", "no_job_warning", WorkerThoughtInfluenceDirection.Dampen, -7, 0, 1.06f, 72f, 1, "the town has provided support before", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Adaptable, 3))),
+            Rule("stable_life", "affect_financial_pressure", WorkerThoughtInfluenceDirection.Relief, -8, -1, 1.08f, 72f, 2, "good routine gives a reserve against money pressure", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Stubborn, 3))),
+            Rule("stable_life", "affect_family_anxiety", WorkerThoughtInfluenceDirection.Relief, -7, 0, 1.06f, 72f, 2, "stable daily life supports the family", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Dutiful, 3))),
+            Rule("stable_life", "affect_stable_routine", WorkerThoughtInfluenceDirection.Stabilize, 8, 0, 0.9f, 120f, 2, "stable thought confirms the stable-routine affect", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2))),
+
+            Rule("street_litter_low", "street_litter_medium", WorkerThoughtInfluenceDirection.Amplify, 5, 0, 0.94f, 48f, -1, "small litter starts to look like a pattern", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Meticulous, 4))),
+            Rule("street_litter_low", "affect_litter_irritation", WorkerThoughtInfluenceDirection.Amplify, 4, 0, 0.96f, 48f, -1, "first irritants begin to accumulate", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Meticulous, 4))),
+            Rule("street_litter_medium", "street_litter_high", WorkerThoughtInfluenceDirection.Amplify, 7, 0, 0.9f, 48f, -2, "noticeable litter makes high litter feel expected", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Meticulous, 4))),
+            Rule("street_litter_medium", "affect_litter_irritation", WorkerThoughtInfluenceDirection.Amplify, 7, 0, 0.9f, 48f, -2, "disorder now interrupts the day instead of just being visible", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Meticulous, 5))),
+
+            Rule("street_litter_high", "affect_litter_irritation", WorkerThoughtInfluenceDirection.Amplify, 13, 1, 0.8f, 72f, -3, "high litter confirms irritation with the town environment", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Meticulous, 6), Trait(WorkerTraitKind.Anxious, 3))),
+            Rule("street_litter_high", "stable_life", WorkerThoughtInfluenceDirection.Contradict, -8, 0, 1.08f, 72f, -2, "dirty streets make stable life harder to believe", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Meticulous, -4))),
+            Rule("street_litter_high", "worker_arrived", WorkerThoughtInfluenceDirection.Amplify, 6, 0, 0.92f, 24f, -1, "the town's first impression is dirtier", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Trusting, -2), Trait(WorkerTraitKind.Skeptical, 2))),
+            Rule("street_litter_high", "social_talk_good", WorkerThoughtInfluenceDirection.Dampen, -4, 0, 1.02f, 24f, 0, "an unpleasant environment spoils a good talk slightly", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Sociable, 2))),
+            Rule("street_litter_high", "bus_unavailable", WorkerThoughtInfluenceDirection.Amplify, 5, 0, 0.94f, 24f, -1, "dirty routes and bad transport stack into city frustration", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Meticulous, 3))),
+
+            Rule("affect_litter_irritation", "street_litter_high", WorkerThoughtInfluenceDirection.Amplify, 10, 1, 0.84f, 48f, -2, "irritation makes high litter feel louder", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Meticulous, 5))),
+            Rule("affect_litter_irritation", "stable_life", WorkerThoughtInfluenceDirection.Dampen, -6, 0, 1.05f, 48f, -1, "litter irritation makes a steady day feel less convincing", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2))),
+
+            Rule("affect_stable_routine", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 8, 0, 0.9f, 96f, 2, "a stable-routine state confirms the stable-life thought", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2))),
+            Rule("affect_stable_routine", "low_money", WorkerThoughtInfluenceDirection.Dampen, -5, 0, 1.04f, 72f, 1, "a steady period gives some reserve before money panic", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Stubborn, 3))),
+            Rule("affect_stable_routine", "affect_family_anxiety", WorkerThoughtInfluenceDirection.Dampen, -5, 0, 1.04f, 72f, 1, "stable daily life lowers family anxiety a little", "CityLitter",
+                Traits(Trait(WorkerTraitKind.Dutiful, 3)))
         };
     }
 
