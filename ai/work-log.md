@@ -10,6 +10,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-13: Enabled the final `Stability / Recovery` explicit worker thought influence package. `GameBootstrap.WorkerThoughtInfluence.cs` now contains all 119 described rules, adding 9 final rules for `salary_paid`, `job_found`, `meal_service_good`, `home_sleep_good`, `stable_life`, `affect_family_anxiety`, `affect_litter_irritation`, and `affect_stable_routine`. The full worker thought influence matrix is now implemented in code. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted whitespace/mojibake scan.
+
 - 2026-05-13: Enabled the `Gambling contradiction` explicit worker thought influence package. `GameBootstrap.WorkerThoughtInfluence.cs` now contains 110 enabled rules total, adding 10 rules for `low_money`, `affect_gambling_regret`, and `affect_gambling_excitement` with Gambling weakness and Frugal/Impulsive/Cautious trait modifiers. Remaining matrix branch is Stability/Recovery. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted whitespace/mojibake scan.
 
 - 2026-05-13: Enabled the `Transport` explicit worker thought influence package. `GameBootstrap.WorkerThoughtInfluence.cs` now contains 100 enabled rules total, adding 5 rules for `bus_chosen` and `bus_unavailable` with Cautious/Trusting/Dutiful/Anxious trait modifiers. Remaining matrix branches are Gambling contradiction and remaining Stability/Recovery. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted whitespace/mojibake scan.

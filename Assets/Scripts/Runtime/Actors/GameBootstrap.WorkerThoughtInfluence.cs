@@ -164,6 +164,10 @@ public partial class GameBootstrap
                 Traits(Trait(WorkerTraitKind.Frugal, 2))),
             Rule("salary_paid", "service_unaffordable", WorkerThoughtInfluenceDirection.Contradict, 4, 0, 0.95f, 24f, -1, "the service is still expensive even after payday", "MoneyWorkPaidServices",
                 Traits(Trait(WorkerTraitKind.Frugal, 3))),
+            Rule("salary_paid", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 7, 0, 0.9f, 72f, 2, "regular pay supports a sense of order", "StabilityRecovery",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2))),
+            Rule("salary_paid", "affect_stable_routine", WorkerThoughtInfluenceDirection.Stabilize, 7, 0, 0.9f, 72f, 2, "pay confirms that the work rhythm is holding", "StabilityRecovery",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2))),
 
             Rule("affect_financial_pressure", "service_unaffordable", WorkerThoughtInfluenceDirection.Amplify, 11, 1, 0.84f, 48f, -2, "financial pressure is confirmed by another unaffordable service", "MoneyWorkPaidServices",
                 Traits(Trait(WorkerTraitKind.Frugal, 4))),
@@ -196,6 +200,8 @@ public partial class GameBootstrap
                 Traits(Trait(WorkerTraitKind.Dutiful, 2))),
             Rule("job_found", "affect_financial_pressure", WorkerThoughtInfluenceDirection.Relief, -7, 0, 1.05f, 72f, 1, "having work gives a visible path through money pressure", "MoneyWorkPaidServices",
                 Traits(Trait(WorkerTraitKind.Dutiful, 2))),
+            Rule("job_found", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 7, 0, 0.9f, 96f, 2, "work makes the daily rhythm understandable", "StabilityRecovery",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2))),
 
             Rule("need_meal_critical", "meal_service_good", WorkerThoughtInfluenceDirection.Relief, 9, 0, 0.84f, 24f, 2, "critical hunger makes a real meal feel valuable", "Needs",
                 Traits(Trait(WorkerTraitKind.Adaptable, 2))),
@@ -206,6 +212,8 @@ public partial class GameBootstrap
             Rule("meal_service_good", "need_meal_critical", WorkerThoughtInfluenceDirection.Dampen, -7, 0, 1.05f, 48f, 1, "remembering a place to eat lowers panic", "Needs",
                 Traits(Trait(WorkerTraitKind.Adaptable, 2))),
             Rule("meal_service_good", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 5, 0, 0.94f, 48f, 1, "regular food makes daily life feel organized", "Needs",
+                Traits(Trait(WorkerTraitKind.Meticulous, 1))),
+            Rule("meal_service_good", "affect_stable_routine", WorkerThoughtInfluenceDirection.Stabilize, 4, 0, 0.96f, 48f, 1, "closed meal needs make routine feel functional", "StabilityRecovery",
                 Traits(Trait(WorkerTraitKind.Meticulous, 1))),
             Rule("used_snack", "need_meal_critical", WorkerThoughtInfluenceDirection.Dampen, -4, 0, 1.02f, 12f, 0, "a snack is remembered as a short-term fallback", "Needs",
                 Traits(Trait(WorkerTraitKind.Impulsive, 1))),
@@ -225,6 +233,8 @@ public partial class GameBootstrap
             Rule("home_sleep_good", "need_sleep_critical", WorkerThoughtInfluenceDirection.Dampen, -9, 0, 1.08f, 72f, 2, "having a place to sleep softens fatigue panic", "Needs",
                 Traits(Trait(WorkerTraitKind.Adaptable, 2))),
             Rule("home_sleep_good", "affect_family_anxiety", WorkerThoughtInfluenceDirection.Dampen, -5, 0, 1.04f, 48f, 1, "home as a base softens family pressure", "Needs",
+                Traits(Trait(WorkerTraitKind.Dutiful, 2))),
+            Rule("home_sleep_good", "affect_stable_routine", WorkerThoughtInfluenceDirection.Stabilize, 6, 0, 0.92f, 72f, 2, "sleep at home strongly anchors routine", "StabilityRecovery",
                 Traits(Trait(WorkerTraitKind.Dutiful, 2))),
             Rule("used_coffee", "need_sleep_critical", WorkerThoughtInfluenceDirection.Contradict, 5, 0, 0.96f, 12f, -1, "coffee was only a temporary workaround", "Needs",
                 Traits(Trait(WorkerTraitKind.Anxious, 2))),
@@ -294,6 +304,8 @@ public partial class GameBootstrap
                 Traits(Trait(WorkerTraitKind.Adaptable, 2))),
             Rule("affect_family_anxiety", "no_job_warning", WorkerThoughtInfluenceDirection.Amplify, 9, 1, 0.88f, 72f, -2, "without work, family responsibility feels exposed", "Family",
                 Traits(Trait(WorkerTraitKind.Dutiful, 4))),
+            Rule("affect_family_anxiety", "affect_stable_routine", WorkerThoughtInfluenceDirection.Dampen, -7, 0, 1.06f, 72f, -1, "family anxiety keeps routine from feeling fully calm", "StabilityRecovery",
+                Traits(Trait(WorkerTraitKind.Dutiful, 3))),
 
             Rule("social_talk_good", "social_shared_place", WorkerThoughtInfluenceDirection.Amplify, 5, 0, 0.94f, 72f, 1, "a good talk makes the next shared place feel meaningful", "Social",
                 Traits(Trait(WorkerTraitKind.Sociable, 4), Trait(WorkerTraitKind.Reserved, -3))),
@@ -336,6 +348,8 @@ public partial class GameBootstrap
                 Traits(Trait(WorkerTraitKind.Dutiful, 3))),
             Rule("stable_life", "affect_stable_routine", WorkerThoughtInfluenceDirection.Stabilize, 8, 0, 0.9f, 120f, 2, "stable thought confirms the stable-routine affect", "CityLitter",
                 Traits(Trait(WorkerTraitKind.Adaptable, 2))),
+            Rule("stable_life", "service_unaffordable", WorkerThoughtInfluenceDirection.Dampen, -4, 0, 1.02f, 48f, 1, "stable memory lowers the general drama without cancelling the price", "StabilityRecovery",
+                Traits(Trait(WorkerTraitKind.Frugal, 3))),
 
             Rule("street_litter_low", "street_litter_medium", WorkerThoughtInfluenceDirection.Amplify, 5, 0, 0.94f, 48f, -1, "small litter starts to look like a pattern", "CityLitter",
                 Traits(Trait(WorkerTraitKind.Meticulous, 4))),
@@ -361,13 +375,17 @@ public partial class GameBootstrap
                 Traits(Trait(WorkerTraitKind.Meticulous, 5))),
             Rule("affect_litter_irritation", "stable_life", WorkerThoughtInfluenceDirection.Dampen, -6, 0, 1.05f, 48f, -1, "litter irritation makes a steady day feel less convincing", "CityLitter",
                 Traits(Trait(WorkerTraitKind.Adaptable, 2))),
+            Rule("affect_litter_irritation", "worker_arrived", WorkerThoughtInfluenceDirection.Amplify, 5, 0, 0.94f, 24f, -1, "the town's first impression carries an irritating background", "StabilityRecovery",
+                Traits(Trait(WorkerTraitKind.Meticulous, 3))),
 
             Rule("affect_stable_routine", "stable_life", WorkerThoughtInfluenceDirection.Stabilize, 8, 0, 0.9f, 96f, 2, "a stable-routine state confirms the stable-life thought", "CityLitter",
                 Traits(Trait(WorkerTraitKind.Adaptable, 2))),
             Rule("affect_stable_routine", "low_money", WorkerThoughtInfluenceDirection.Dampen, -5, 0, 1.04f, 72f, 1, "a steady period gives some reserve before money panic", "CityLitter",
                 Traits(Trait(WorkerTraitKind.Stubborn, 3))),
             Rule("affect_stable_routine", "affect_family_anxiety", WorkerThoughtInfluenceDirection.Dampen, -5, 0, 1.04f, 72f, 1, "stable daily life lowers family anxiety a little", "CityLitter",
-                Traits(Trait(WorkerTraitKind.Dutiful, 3)))
+                Traits(Trait(WorkerTraitKind.Dutiful, 3))),
+            Rule("affect_stable_routine", "affect_financial_pressure", WorkerThoughtInfluenceDirection.Dampen, -5, 0, 1.04f, 72f, 1, "stable rhythm creates reserve before financial pressure turns into panic", "StabilityRecovery",
+                Traits(Trait(WorkerTraitKind.Adaptable, 2)))
         };
     }
 
