@@ -12,9 +12,9 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
     private const float CartoonGlanceDurationSeconds = 0.82f;
     private const float CartoonGlanceMinIntervalSeconds = 4.8f;
     private const float CartoonGlanceIntervalSpreadSeconds = 3.1f;
-    private const float CartoonExpressionDurationSeconds = 0.68f;
-    private const float CartoonExpressionMinIntervalSeconds = 5.9f;
-    private const float CartoonExpressionIntervalSpreadSeconds = 2.6f;
+    private const float CartoonExpressionDurationSeconds = 0.92f;
+    private const float CartoonExpressionMinIntervalSeconds = 4.2f;
+    private const float CartoonExpressionIntervalSpreadSeconds = 2.1f;
 
     private readonly List<LayerState> layers = new();
 
@@ -94,7 +94,8 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
                 BaseScale = marker.BaseLocalScale,
                 BaseRotation = marker.BaseLocalRotation,
                 BaseColor = marker.BaseColor,
-                TextureLayer = marker.TextureLayer
+                TextureLayer = marker.TextureLayer,
+                Side = ResolveLayerSide(marker.Slot, rect.gameObject.name)
             });
         }
     }
@@ -129,8 +130,15 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
             expression.Hangover * 0.16f -
             expression.Calm * 0.10f);
         float cartoonExpression = GetCartoonExpressionPulse(t) * cartoonMood;
+        float actingBeat = GetActingBeat(t) * Mathf.Clamp01(
+            0.24f +
+            expression.Positive * 0.32f +
+            expression.Anxiety * 0.34f +
+            expression.FinancialPressure * 0.20f +
+            expression.Hangover * 0.14f -
+            expression.Calm * 0.10f);
         float happyPop = cartoonExpression * Mathf.Clamp01(
-            0.42f +
+            0.50f +
             expression.Positive * 0.90f -
             expression.Anxiety * 0.25f -
             expression.FinancialPressure * 0.20f);
@@ -140,17 +148,21 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
             expression.Hangover * 0.34f -
             expression.Positive * 0.18f);
         float eyePop = Mathf.Max(
-            cartoonExpression * 0.55f,
+            cartoonExpression * 0.78f,
             glancePulse * Mathf.Clamp(0.24f + expression.Anxiety * 0.24f + expression.Positive * 0.12f, 0.20f, 0.58f));
+        float squint = Mathf.Clamp01(expression.Fatigue * 0.20f + expression.Hangover * 0.24f + expression.FinancialPressure * 0.10f - happyPop * 0.10f);
         float breath = Mathf.Sin(t * (isFemale ? 1.22f : 1.14f) + phaseSeed * 0.07f);
         Vector2 headOffset = new(
             Mathf.Sin(t * 0.48f + phaseSeed * 0.13f) * 0.20f * s + anxiousJitter,
             breath * 0.42f * s * breathStrength - postureDrop + postureLift);
+        Vector2 actingHeadOffset = new(
+            Mathf.Sin(t * 2.15f + phaseSeed * 0.19f) * actingBeat * 0.05f * s,
+            (happyPop * 0.13f - worriedPop * 0.08f + actingBeat * 0.05f) * s);
         Vector2 chestOffset = new(0f, breath * 0.16f * s);
         Vector2 gazeOffset = new(
             Mathf.Sin(t * 0.31f + phaseSeed * 0.41f) * 0.46f * s * gazeStrength + anxiousJitter * 0.85f,
             Mathf.Sin(t * 0.27f + phaseSeed * 0.23f) * 0.12f * s * gazeStrength);
-        headOffset += cartoonGlanceOffset * 0.07f;
+        headOffset += cartoonGlanceOffset * 0.07f + actingHeadOffset;
         gazeOffset += cartoonGlanceOffset;
         Vector2 hairBackOffset = new(
             Mathf.Sin(t * 0.91f + phaseSeed * 0.37f) * 0.52f * s * hairStrength,
@@ -162,7 +174,8 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
         float browTension = expression.Anxiety * 0.34f - expression.Fatigue * 0.16f - expression.FinancialPressure * 0.14f + expression.Positive * 0.12f;
         float mouthLift = expression.Positive * 0.20f - expression.Fatigue * 0.12f - expression.Hangover * 0.12f - expression.FinancialPressure * 0.10f;
         browTension += cartoonExpression * (0.20f + expression.Anxiety * 0.16f + expression.Positive * 0.08f) + worriedPop * 0.16f;
-        mouthLift += happyPop * 0.34f - worriedPop * 0.22f;
+        mouthLift += happyPop * 0.42f - worriedPop * 0.28f + actingBeat * 0.08f;
+        float browAsymmetry = Mathf.Sin(t * 1.63f + phaseSeed * 0.71f) * (cartoonExpression * 0.38f + actingBeat * 0.18f);
 
         for (int i = 0; i < layers.Count; i++)
         {
@@ -195,23 +208,30 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
                     offset = headOffset;
                     break;
                 case PortraitLayerGroup.Eyes:
+                    float eyeSide = GetLayerSideSign(layer.Side);
                     offset = headOffset + gazeOffset;
-                    localScale.x *= 1f + eyePop * 0.045f;
-                    localScale.y *= 1f + eyePop * 0.060f;
+                    offset.x += eyeSide * (eyePop * 0.08f + actingBeat * 0.035f) * s;
+                    offset.y += eyeSide * browAsymmetry * 0.12f * s;
+                    localScale.x *= 1f + eyePop * 0.075f + actingBeat * 0.020f;
+                    localScale.y *= 1f + eyePop * 0.105f - squint * 0.095f + worriedPop * 0.050f;
                     ApplyBlinkToEyes(layer, blink, ref offset, ref localScale, ref color);
                     break;
                 case PortraitLayerGroup.Brows:
+                    float browSide = GetLayerSideSign(layer.Side);
                     offset = headOffset + gazeOffset * 0.28f + new Vector2(0f, browTension * s - blink * 0.26f * s);
-                    localScale.x *= 1f + cartoonExpression * 0.045f;
-                    localScale.y *= 1f + cartoonExpression * 0.030f;
+                    offset.x += browSide * (actingBeat * 0.05f + cartoonExpression * 0.03f) * s;
+                    offset.y += browSide * browAsymmetry * 0.34f * s;
+                    localScale.x *= 1f + cartoonExpression * 0.085f + actingBeat * 0.030f;
+                    localScale.y *= 1f + cartoonExpression * 0.060f + worriedPop * 0.045f;
+                    rotation = ApplyBrowRotation(layer, rotation, browSide, cartoonExpression, actingBeat, worriedPop);
                     break;
                 case PortraitLayerGroup.Nose:
                     offset = headOffset * 0.96f;
                     break;
                 case PortraitLayerGroup.Mouth:
                     offset = headOffset * 0.88f + new Vector2(0f, mouthLift * s - Mathf.Abs(breath) * 0.06f * s);
-                    localScale.x *= 1f + expression.Positive * 0.045f - expression.FinancialPressure * 0.025f + happyPop * 0.120f + worriedPop * 0.045f;
-                    localScale.y *= 1f + expression.Positive * 0.025f - expression.Fatigue * 0.035f - happyPop * 0.030f + worriedPop * 0.100f;
+                    localScale.x *= 1f + expression.Positive * 0.055f - expression.FinancialPressure * 0.025f + happyPop * 0.220f + worriedPop * 0.070f + actingBeat * 0.040f;
+                    localScale.y *= 1f + expression.Positive * 0.030f - expression.Fatigue * 0.035f - happyPop * 0.070f + worriedPop * 0.210f + actingBeat * 0.040f;
                     break;
                 case PortraitLayerGroup.AccessoryFace:
                     offset = headOffset * 0.95f;
@@ -244,6 +264,23 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
 
         float angle = Mathf.Sin(t * 0.82f + phaseSeed * 0.17f) * amplitude * (1f + expression.Anxiety * 0.35f - expression.Calm * 0.12f);
         return layer.BaseRotation * Quaternion.Euler(0f, 0f, angle);
+    }
+
+    private static Quaternion ApplyBrowRotation(
+        LayerState layer,
+        Quaternion rotation,
+        float sideSign,
+        float cartoonExpression,
+        float actingBeat,
+        float worriedPop)
+    {
+        if (layer.TextureLayer || Mathf.Approximately(sideSign, 0f))
+        {
+            return rotation;
+        }
+
+        float angle = sideSign * (cartoonExpression * 2.4f + actingBeat * 1.1f + worriedPop * 2.0f);
+        return rotation * Quaternion.Euler(0f, 0f, angle);
     }
 
     private void ApplyBlinkToEyes(
@@ -322,6 +359,13 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
         return GetTimedPulse(t + phaseSeed * 0.29f, interval, CartoonExpressionDurationSeconds);
     }
 
+    private float GetActingBeat(float t)
+    {
+        float interval = 1.45f + Mathf.Repeat(phaseSeed * 0.23f, 0.82f);
+        float duration = 0.42f + Mathf.Repeat(phaseSeed * 0.17f, 0.18f);
+        return GetTimedPulse(t + phaseSeed * 0.47f, interval, duration) * 0.72f;
+    }
+
     private static float GetTimedPulse(float timeline, float interval, float duration)
     {
         if (interval <= 0f || duration <= 0f)
@@ -364,6 +408,40 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
     {
         int result = value % modulo;
         return result < 0 ? result + modulo : result;
+    }
+
+    private static PortraitLayerSide ResolveLayerSide(string slot, string objectName)
+    {
+        string value = $"{slot} {objectName}";
+        if (value.IndexOf("Left", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            value.IndexOf("PBL", StringComparison.Ordinal) >= 0 ||
+            value.IndexOf("PEL", StringComparison.Ordinal) >= 0 ||
+            value.IndexOf("PLE", StringComparison.Ordinal) >= 0 ||
+            value.IndexOf("PChL", StringComparison.Ordinal) >= 0)
+        {
+            return PortraitLayerSide.Left;
+        }
+
+        if (value.IndexOf("Right", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            value.IndexOf("PBR", StringComparison.Ordinal) >= 0 ||
+            value.IndexOf("PER", StringComparison.Ordinal) >= 0 ||
+            value.IndexOf("PRE", StringComparison.Ordinal) >= 0 ||
+            value.IndexOf("PChR", StringComparison.Ordinal) >= 0)
+        {
+            return PortraitLayerSide.Right;
+        }
+
+        return PortraitLayerSide.Center;
+    }
+
+    private static float GetLayerSideSign(PortraitLayerSide side)
+    {
+        return side switch
+        {
+            PortraitLayerSide.Left => -1f,
+            PortraitLayerSide.Right => 1f,
+            _ => 0f
+        };
     }
 
     private void ResetLayers()
@@ -517,6 +595,13 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
         AccessoryOver
     }
 
+    private enum PortraitLayerSide
+    {
+        Center,
+        Left,
+        Right
+    }
+
     private sealed class LayerState
     {
         public RectTransform Rect;
@@ -527,6 +612,7 @@ internal sealed class WorkerPortraitAnimator : MonoBehaviour
         public Quaternion BaseRotation;
         public Color BaseColor;
         public bool TextureLayer;
+        public PortraitLayerSide Side;
     }
 }
 
