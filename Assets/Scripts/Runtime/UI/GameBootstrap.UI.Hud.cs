@@ -6,11 +6,6 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
-    private const float DayTitleCinematicHoldSeconds = 3f;
-    private const float DayTitleCinematicFadeSeconds = 1f;
-    private int dayTitleCinematicDay;
-    private float dayTitleCinematicStartedAt = -1000f;
-
     private void DrawParkingHud()
     {
         Rect panelRect = GetParkingHudRect();
@@ -523,66 +518,6 @@ public partial class GameBootstrap
         };
 
         GUI.Label(overlayRect, L("PAUSE"), pausedStyle);
-        GUI.color = previousColor;
-    }
-
-    private void ShowDayTitleCinematic(int day)
-    {
-        if (day <= 0)
-        {
-            return;
-        }
-
-        dayTitleCinematicDay = day;
-        dayTitleCinematicStartedAt = Time.unscaledTime;
-    }
-
-    private void DrawDayTitleCinematic()
-    {
-        if (dayTitleCinematicDay <= 0)
-        {
-            return;
-        }
-
-        float elapsed = Time.unscaledTime - dayTitleCinematicStartedAt;
-        float totalDuration = DayTitleCinematicHoldSeconds + DayTitleCinematicFadeSeconds;
-        if (elapsed < 0f || elapsed >= totalDuration)
-        {
-            return;
-        }
-
-        float alpha = elapsed <= DayTitleCinematicHoldSeconds
-            ? 1f
-            : 1f - Mathf.Clamp01((elapsed - DayTitleCinematicHoldSeconds) / DayTitleCinematicFadeSeconds);
-        if (alpha <= 0f)
-        {
-            return;
-        }
-
-        Color previousColor = GUI.color;
-        Color previousContentColor = GUI.contentColor;
-        GUI.color = new Color(1f, 1f, 1f, alpha);
-        GUI.contentColor = GUI.color;
-
-        int fontSize = Mathf.Clamp(Mathf.RoundToInt(Screen.height * 0.095f), 54, 112);
-        GUIStyle titleStyle = new(GUI.skin.label)
-        {
-            alignment = TextAnchor.MiddleCenter,
-            fontSize = fontSize,
-            fontStyle = FontStyle.Bold
-        };
-        titleStyle.normal.textColor = GUI.contentColor;
-        titleStyle.hover.textColor = GUI.contentColor;
-        titleStyle.active.textColor = GUI.contentColor;
-        titleStyle.focused.textColor = GUI.contentColor;
-
-        string title = IsRussianLanguage()
-            ? $"\u0414\u0435\u043d\u044c {dayTitleCinematicDay}"
-            : $"Day {dayTitleCinematicDay}";
-        Rect titleRect = new(0f, Screen.height * 0.36f, Screen.width, Mathf.Max(118f, fontSize * 1.5f));
-        GUI.Label(titleRect, title, titleStyle);
-
-        GUI.contentColor = previousContentColor;
         GUI.color = previousColor;
     }
 

@@ -2,11 +2,14 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private const float NightLightActivationDarkness = 0.64f;
+    private const float NightLightFullDarkness = 0.94f;
+
     private void UpdateLocationNightLights(float stylizedDaylight)
     {
         float darkness = 1f - stylizedDaylight;
-        bool lightsOn = darkness > 0.5f;
-        float nightT = lightsOn ? Mathf.InverseLerp(0.5f, 1f, darkness) : 0f;
+        bool lightsOn = darkness > NightLightActivationDarkness;
+        float nightT = lightsOn ? Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(NightLightActivationDarkness, NightLightFullDarkness, darkness)) : 0f;
 
         for (int i = 0; i < locationNightLights.Count; i++)
         {
@@ -115,8 +118,8 @@ public partial class GameBootstrap
                 continue;
             }
 
-            float activationThreshold = 0.43f + roadLantern.ActivationOffset;
-            float baseActivation = Mathf.InverseLerp(activationThreshold, activationThreshold + 0.18f, darkness);
+            float activationThreshold = NightLightActivationDarkness + roadLantern.ActivationOffset * 0.35f;
+            float baseActivation = Mathf.InverseLerp(activationThreshold, NightLightFullDarkness, darkness);
             baseActivation = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(baseActivation));
 
             bool lightsOn = baseActivation > 0.01f;
@@ -149,17 +152,19 @@ public partial class GameBootstrap
                 flickerBlend = softPulse * randomPulse * blinkPulse;
             }
 
-            float lightIntensity = Mathf.Lerp(0.35f, 2.35f, baseActivation) * flickerBlend;
+            NightLightProfile lanternProfile = GetRoadLanternLightProfile();
+            float lightIntensity = Mathf.Lerp(0.35f, lanternProfile.UnityIntensity, baseActivation) * flickerBlend;
             float glowStrength = Mathf.Lerp(0.18f, 1.18f, baseActivation) * Mathf.Lerp(0.92f, 1f, flickerBlend);
             Color lanternColor = Color.Lerp(
                 new Color(0.26f, 0.16f, 0.08f),
-                new Color(1f, 0.78f, 0.42f),
+                lanternProfile.Color,
                 Mathf.Clamp01(glowStrength));
 
             bool realLightOn = lightsOn;
             roadLantern.Light.enabled = realLightOn;
             roadLantern.Light.intensity = realLightOn ? lightIntensity : 0f;
             roadLantern.Light.color = lanternColor;
+            roadLantern.Light.range = lanternProfile.UnityRange;
             roadLantern.GlowMaterial.color = lanternColor;
         }
     }

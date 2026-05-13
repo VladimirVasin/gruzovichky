@@ -200,6 +200,9 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<float> locationNightPointLightRanges = new();
     private readonly List<Vector3> locationTrashCanMealTargets = new();
     private readonly List<RoadLanternData> roadLanterns = new();
+    private readonly CellLightData[,] cellLighting = new CellLightData[GridWidth, GridHeight];
+    private bool isCellLightingDirty = true;
+    private float lastCellLightingNightStrength = -1f;
     private readonly Dictionary<Vector2Int, (GameObject Root, RoadLanternData Data)> roadCellLanternMap = new();
     private readonly Dictionary<Vector2Int, (GameObject Root, Vector2Int SideCell)> roadCellBenchMap = new();
     private readonly HashSet<Vector2Int> benchSideCells = new();

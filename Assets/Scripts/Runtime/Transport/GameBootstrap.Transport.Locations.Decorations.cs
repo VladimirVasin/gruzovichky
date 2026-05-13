@@ -557,6 +557,11 @@ public partial class GameBootstrap
 
     private void CreateLocationNightLight(LocationData owner, Transform parent, Vector3 localPosition, Color offColor, Color onColor, float maxIntensity, float range)
     {
+        if (owner != null)
+        {
+            range = ExpandLocationNightLightRange(owner.Type, range);
+        }
+
         GameObject lampVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         lampVisual.name = "NightLampVisual";
         lampVisual.transform.SetParent(parent, false);
@@ -594,6 +599,7 @@ public partial class GameBootstrap
         locationNightPointLightOnColors.Add(onColor);
         locationNightPointLightMaxIntensities.Add(maxIntensity);
         locationNightPointLightRanges.Add(range);
+        MarkCellLightingDirty();
     }
 
     private void CreateLocationWindowLanguage(LocationData owner, LocationType type, Transform parent, Vector3 center, Vector2Int size)

@@ -740,12 +740,12 @@ public partial class GameBootstrap
         StartCityMusic();
         UpdateDayNightCycle(0f);
         RecordNoosphereDayStartSnapshot(NoosphereDayStartSnapshotTrigger.GameStart);
-        ShowDayTitleCinematic(currentDay);
+        ShowGameStartDayTitleCinematic(currentDay);
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.9f);
         if (selectedGameStartMode == GameStartMode.Tutorial)
         {
-            ScheduleTutorial(TutorialTrigger.UserWelcome, 2f);
+            ScheduleTutorial(TutorialTrigger.UserWelcome, GameStartDayTitleCinematicTotalSeconds + 0.2f);
         }
     }
 

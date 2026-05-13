@@ -17,7 +17,7 @@ Source of truth: code remains authoritative. This file is the cross-session chec
 
 ## Current Scenario
 
-1. Start Tutorial mode with an almost empty town, highway/intercity access, starter workers, and locked progression. Show the generic day title for day 1, then show welcome, focus the start area, and require camera controls: zoom in, zoom out, pan, and rotate.
+1. Start Tutorial mode with an almost empty town, highway/intercity access, starter workers, and locked progression. Show the generic day title for day 1 over a black screen, fade in the scene/audio first, then fade the title out before showing welcome, focusing the start area, and requiring camera controls: zoom in, zoom out, pan, and rotate.
 2. Teach road building. Player opens the bottom-centered Build dock or presses `B`, selects a road tool from the category tray, left-clicks a start cell, then left-clicks an end cell to build the road segment. Roads are currently free; the first Tutorial road is expected to connect to the Highway so outside traffic can reach town.
 3. Unlock and build the core: Warehouse, Motel, and Parking. Each built core building can show its own explanation. The core goal completes when all three exist; current tutorial copy still broadly warns about road access even though gameplay road-access requirements are narrower than "every building."
 4. Unlock and build Lumberjack Camp near trees. Tutorial temporarily exposes the top-menu `Staffing` entry for early manual assignment. Player opens Staffing, selects the Lumberjack Camp vacancy, and assigns a lumberjack.

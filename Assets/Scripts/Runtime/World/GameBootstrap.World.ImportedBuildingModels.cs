@@ -299,6 +299,11 @@ public partial class GameBootstrap
         float maxIntensity,
         float range)
     {
+        if (owner != null)
+        {
+            range = ExpandLocationNightLightRange(owner.Type, range);
+        }
+
         GameObject lightObject = new(lightName);
         lightObject.transform.SetParent(parent, false);
         lightObject.transform.position = worldPosition;
@@ -316,6 +321,7 @@ public partial class GameBootstrap
         locationNightPointLightOnColors.Add(onColor);
         locationNightPointLightMaxIntensities.Add(maxIntensity);
         locationNightPointLightRanges.Add(range);
+        MarkCellLightingDirty();
     }
 
     private static bool IsImportedWindowGlassRenderer(Renderer renderer)

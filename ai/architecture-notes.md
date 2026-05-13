@@ -107,6 +107,7 @@ Purpose: describe the real implemented architecture and current hotspots.
 ### `Assets/Scripts/Runtime/Core/GameBootstrap.WorldVisuals*.cs`
 
 - World visual setup is split into focused partials for material/texture helpers, ground/diorama meshes, water cells/effects/fish, atmosphere/weather/post-processing, and graphics-option application.
+- `Assets/Scripts/Runtime/World/GameBootstrap.World.CellLighting.cs` owns the event-dirtied per-cell night lighting map as internal data only; visible night lighting comes from realtime point lights and glow materials.
 - World materials now prefer imported PNGs from `Assets/Resources/Art/Textures/` for ground, roads, shorelines, lakes, and rivers through `Resources.Load`, and fall back to generated procedural textures if an asset is missing.
 - Road meshes and road-side visuals still live under the transport road partials.
 

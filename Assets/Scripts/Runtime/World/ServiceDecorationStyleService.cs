@@ -27,10 +27,10 @@ public static class ServiceDecorationStyleService
     {
         return kind switch
         {
-            ServiceDecorationKind.Bar => new ServiceDecorationLightStyle(new Color(1f, 0.85f, 0.5f), 0.35f, 3f),
-            ServiceDecorationKind.Canteen => new ServiceDecorationLightStyle(new Color(1f, 0.78f, 0.42f), 0.32f, 2.8f),
-            ServiceDecorationKind.GamblingHall => new ServiceDecorationLightStyle(new Color(1f, 0.48f, 0.82f), 0.48f, 4.2f),
-            _ => new ServiceDecorationLightStyle(new Color(1f, 0.82f, 0.55f), 0.3f, 3f)
+            ServiceDecorationKind.Bar => new ServiceDecorationLightStyle(new Color(1f, 0.85f, 0.5f), 0.42f, 5.8f),
+            ServiceDecorationKind.Canteen => new ServiceDecorationLightStyle(new Color(1f, 0.78f, 0.42f), 0.38f, 5.2f),
+            ServiceDecorationKind.GamblingHall => new ServiceDecorationLightStyle(new Color(1f, 0.48f, 0.82f), 0.58f, 7.2f),
+            _ => new ServiceDecorationLightStyle(new Color(1f, 0.82f, 0.55f), 0.34f, 5.4f)
         };
     }
 }

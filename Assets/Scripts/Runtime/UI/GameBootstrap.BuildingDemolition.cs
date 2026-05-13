@@ -194,6 +194,7 @@ public partial class GameBootstrap
 
         CloseDemolishConfirm(false);
         RefreshSelectionVisuals();
+        MarkCellLightingDirty();
         MarkRuntimeScreensDirtyAfterDemolition();
         PlayUiSound(buildingDemolishClip, 0.9f);
         PushFeedEvent(

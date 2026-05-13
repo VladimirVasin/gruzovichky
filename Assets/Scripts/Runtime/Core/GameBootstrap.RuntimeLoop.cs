@@ -179,7 +179,7 @@ public partial class GameBootstrap
     private void Update()
     {
         bool shouldUpdateWaterEffects = ConsumeThrottledUpdate(ref waterEffectsUpdateTimer, GetWaterEffectsUpdateInterval());
-        UpdateMainMenuHud();
+        UpdateMainMenuHud(); UpdateGameStartAudioFade();
         if (isLoadingWorld || isMainMenuOpen)
         {
             SetEventFeedVisible(false);
@@ -678,7 +678,6 @@ public partial class GameBootstrap
         keyLight.shadowBias = 0.038f;
         keyLight.shadowNormalBias = 0.28f;
         keyLight.shadowNearPlane = 0.2f;
-        // shadowResolution is Built-In RP only - shadow quality in URP is set via the renderer asset
 
         Light[] allLights = FindObjectsByType<Light>();
         foreach (Light lightComponent in allLights)
@@ -780,6 +779,7 @@ public partial class GameBootstrap
         UpdateDioramaPostProcessing(stylizedDaylight, lowSun, sunArc, backgroundColor);
         ApplyWeatherToPostProcessing(stylizedDaylight);
         UpdateLocationNightLights(stylizedDaylight);
+        UpdateCellLightingRuntime(stylizedDaylight);
 
         for (int i = 0; i < truckAgents.Count; i++)
         {

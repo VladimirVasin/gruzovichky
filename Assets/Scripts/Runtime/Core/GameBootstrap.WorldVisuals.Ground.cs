@@ -183,6 +183,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         CreateDioramaBase();
+        SetupCellLightingSystem();
     }
 
     private GameObject CreateTerrainCellMesh(string name, int x, int y, float bottomY, float lift)

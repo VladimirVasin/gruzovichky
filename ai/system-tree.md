@@ -17,7 +17,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 
 - [CORE.Startup] Startup and mode selection
   - Builds the generated world, initial roads, locations, UI canvases, audio, and starting state.
-  - Feature leaves: Main Menu start, Tutorial start, New Game start, loading overlay, scene bootstrap completion.
+  - Feature leaves: Main Menu start, Tutorial start, New Game start, loading overlay, day-1 black-screen scene/audio fade, scene bootstrap completion.
 - [CORE.Loop] Main runtime loop
   - Ticks world simulation, actors, transport, trade, UI, audio, and visual runtime updates.
   - Feature leaves: day/night clock, game speed, daily rollover, start-of-day title, day-start Noosphere snapshot trigger, update ordering.
@@ -44,7 +44,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: generated/imported/fallback trees, berries, flowers, birds, cats, bees, frogs, moths, leaves, fireflies, river/lake fish.
 - [WORLD.Weather] Atmosphere and weather
   - Controls sky, lighting feel, rain/night visuals, water visuals, and graphics-option presentation.
-  - Feature leaves: night stars, rain, clouds, water LOD, post-processing, graphics settings.
+  - Feature leaves: night stars, rain, clouds, water LOD, post-processing, graphics settings, internal cell lighting map.
 - [WORLD.Locations] Buildable and generated places
   - Holds `LocationData`, footprints, anchors, storage, service state, and place-specific runtime data.
   - Feature leaves: Parking, Warehouse, Forest, Sawmill, Motel, service buildings, City Hall, Docks, houses, schools.
@@ -53,7 +53,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: rotated footprints, placement preview, non-walkable buffers, entrance exceptions, demolition.
 - [WORLD.Decor] Building and service visuals
   - Adds low-poly details and imported/fallback service-building visuals.
-  - Feature leaves: building boxes/cylinders, lighting, imported Bar/Gambling Hall interactions, construction pop-ins.
+  - Feature leaves: building boxes/cylinders, lighting profiles, imported Bar/Gambling Hall interactions, construction pop-ins.
 - [WORLD.Footpaths] Pedestrian ground traces
   - Tracks visible footpath wear and preferred pedestrian walking surfaces.
   - Feature leaves: footpath cells, wear, clear-on-building, path preference.
@@ -233,7 +233,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 
 - [UI.TopHud] Always-visible HUD
   - Shows money, population, trust, time/speed, weather/day titles, and quick overlays.
-  - Feature leaves: money panel, trust panel, population panel, speed controls, day title.
+  - Feature leaves: money panel, trust panel, population panel, speed controls, day title, game-start title fade.
 - [UI.QuickHud] Context quick HUDs
   - Shows focused data for selected trucks, buses, buildings, workers, and cells.
   - Feature leaves: truck quick HUD, local bus quick HUD, driver quick HUD, building quick HUD, cell quick HUD.

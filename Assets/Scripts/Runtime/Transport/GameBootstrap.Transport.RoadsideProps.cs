@@ -35,6 +35,7 @@ public partial class GameBootstrap
 
         RebuildEdgeHighwayLanterns();
         RefreshAmbientLanternMoths();
+        MarkCellLightingDirty();
     }
 
     private void RefreshRoadsideDecorationsAround(Vector2Int cell)
@@ -109,6 +110,7 @@ public partial class GameBootstrap
         {
             RefreshAmbientLanternMoths();
         }
+        MarkCellLightingDirty();
     }
     private void CreateRoadLanternForCell(Vector2Int cell, Vector3 worldPosition, Quaternion worldRotation)
     {
@@ -822,10 +824,11 @@ public partial class GameBootstrap
         lightObject.transform.SetParent(lanternRoot.transform, false);
         lightObject.transform.localPosition = new Vector3(0.26f, 1.02f, 0f);
 
+        NightLightProfile lanternProfile = GetRoadLanternLightProfile();
         Light lanternLight = lightObject.AddComponent<Light>();
         lanternLight.type = LightType.Point;
-        lanternLight.color = new Color(1f, 0.78f, 0.42f);
-        lanternLight.range = 6.2f;
+        lanternLight.color = lanternProfile.Color;
+        lanternLight.range = lanternProfile.UnityRange;
         lanternLight.intensity = 0f;
         lanternLight.shadows = LightShadows.None;
         lanternLight.enabled = false;
@@ -841,5 +844,6 @@ public partial class GameBootstrap
             FlickerStrength = Random.Range(0.18f, 0.42f),
             FlickerThreshold = Random.Range(0.72f, 0.9f)
         });
+        MarkCellLightingDirty();
     }
 }
