@@ -344,7 +344,8 @@ public partial class GameBootstrap
 
         if (IsVacancyUnlockedForCurrentTutorial(VacancyKind.BusDriver) &&
             locations.ContainsKey(LocationType.Parking) &&
-            HasAvailableBusInParking())
+            HasAvailableBusInParking() &&
+            HasWorkingLocalBusStopNetwork())
         {
             for (int i = 0; i < ShiftPresetHours.Length; i++)
             {
@@ -617,7 +618,8 @@ public partial class GameBootstrap
                 posting.ShiftIndex >= 0 &&
                 posting.ShiftIndex < ShiftPresetHours.Length &&
                 GetBusAssignedDriver(posting.ShiftIndex) == null &&
-                HasAvailableBusInParking(),
+                HasAvailableBusInParking() &&
+                HasWorkingLocalBusStopNetwork(),
             _ => false
         };
     }
@@ -643,7 +645,8 @@ public partial class GameBootstrap
                 posting.ShiftIndex < 0 ||
                 posting.ShiftIndex >= ShiftPresetHours.Length ||
                 GetBusAssignedDriver(posting.ShiftIndex) != null ||
-                !HasAvailableBusInParking(),
+                !HasAvailableBusInParking() ||
+                !HasWorkingLocalBusStopNetwork(),
             _ => true
         };
     }

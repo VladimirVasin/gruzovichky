@@ -55,7 +55,8 @@ public partial class GameBootstrap
 
         if (option.Kind == VacancyFlowOptionKind.Shift && vacancy.Kind == VacancyKind.BusDriver)
         {
-            return GetBusAssignedDriver(option.ShiftIndex) != null;
+            return !HasWorkingLocalBusStopNetwork() ||
+                   GetBusAssignedDriver(option.ShiftIndex) != null;
         }
 
         if (option.Kind == VacancyFlowOptionKind.Shift && vacancy.Kind == VacancyKind.TruckDriver)
@@ -202,6 +203,13 @@ public partial class GameBootstrap
 
         if (vacancy.Kind == VacancyKind.BusDriver)
         {
+            if (!HasWorkingLocalBusStopNetwork())
+            {
+                reason = ru
+                    ? "\u043d\u0435\u0442 \u0440\u0430\u0431\u043e\u0447\u0435\u0433\u043e \u0430\u0432\u0442\u043e\u0431\u0443\u0441\u043d\u043e\u0433\u043e \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430"
+                    : "no working bus route";
+                return false;
+            }
             if (selectedVacancyShiftIndex < 0)
             {
                 return false;

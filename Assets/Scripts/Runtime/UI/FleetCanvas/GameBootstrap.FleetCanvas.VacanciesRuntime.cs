@@ -358,7 +358,8 @@ public partial class GameBootstrap
             });
         }
 
-        if (IsVacancyUnlockedForCurrentTutorial(VacancyKind.BusDriver))
+        if (IsVacancyUnlockedForCurrentTutorial(VacancyKind.BusDriver) &&
+            HasWorkingLocalBusStopNetwork())
         {
             vacancyViewModels.Add(new VacancyViewModel
             {
@@ -674,6 +675,7 @@ public partial class GameBootstrap
         int maxVehicleCount = isBusDriverVacancy ? GetBusParkingCapacity() : GetTruckParkingCapacity();
         bool hasParking = locations.ContainsKey(LocationType.Parking);
         bool hasSelectedShift = HasSelectedVacancyShift(selectedVacancy);
+        bool hasWorkingBusRoute = !isBusDriverVacancy || HasWorkingLocalBusStopNetwork();
         bool hasAvailableVehicle = isBusDriverVacancy ? HasAvailableBusForVacancy(selectedVacancy) : HasAvailableTruckForVacancy(selectedVacancy);
 
         if (shiftsScreenUi.VacancyTransportParkTitleText != null)
@@ -699,7 +701,11 @@ public partial class GameBootstrap
             string vehicleRu = isBusDriverVacancy ? "\u0430\u0432\u0442\u043e\u0431\u0443\u0441" : "\u0433\u0440\u0443\u0437\u043e\u0432\u0438\u043a";
             string vehicleEn = isBusDriverVacancy ? "bus" : "truck";
             string vehicleRuStart = isBusDriverVacancy ? "\u0410\u0432\u0442\u043e\u0431\u0443\u0441" : "\u0413\u0440\u0443\u0437\u043e\u0432\u0438\u043a";
-            string summary = !hasSelectedShift
+            string summary = isBusDriverVacancy && !hasWorkingBusRoute
+                ? (ru
+                    ? "\u041d\u0443\u0436\u043d\u044b \u0434\u0432\u0435 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u043d\u044b\u0435 \u0433\u043e\u0440\u043e\u0434\u0441\u043a\u0438\u0435 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438 \u0438 \u0434\u043e\u0440\u043e\u0433\u0430 \u043e\u0442 Parking."
+                    : "Two connected local bus stops and a road from Parking are required.")
+                : !hasSelectedShift
                 ? (ru
                     ? $"\u0421\u043d\u0430\u0447\u0430\u043b\u0430 \u0432\u044b\u0431\u0435\u0440\u0438 \u0441\u043c\u0435\u043d\u0443. {vehicleRuStart} \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u0438\u0437 \u0441\u043b\u043e\u0442\u0430 Parking \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438."
                     : $"Choose a shift first. A {vehicleEn} will be provisioned automatically from a Parking slot.")
@@ -715,7 +721,7 @@ public partial class GameBootstrap
                         ? $"\u041d\u0443\u0436\u0435\u043d \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439 \u0441\u043b\u043e\u0442 Parking \u0434\u043b\u044f {vehicleRu}."
                         : $"A free Parking slot is needed for this {vehicleEn}.");
             shiftsScreenUi.VacancyTransportParkSummaryText.text = summary;
-            shiftsScreenUi.VacancyTransportParkSummaryText.color = !hasAvailableVehicle
+            shiftsScreenUi.VacancyTransportParkSummaryText.color = !hasAvailableVehicle || !hasWorkingBusRoute
                 ? new Color(0.96f, 0.72f, 0.42f, 1f)
                 : FleetSecondaryTextColor;
         }
@@ -739,7 +745,7 @@ public partial class GameBootstrap
         if (shiftsScreenUi.VacancyBuyTruckStatusText != null)
         {
             shiftsScreenUi.VacancyBuyTruckStatusText.text = isBusDriverVacancy ? GetBusBuyStatusLabel() : GetFleetBuyStatusLabel();
-            shiftsScreenUi.VacancyBuyTruckStatusText.color = hasParking && hasAvailableVehicle
+            shiftsScreenUi.VacancyBuyTruckStatusText.color = hasParking && hasAvailableVehicle && hasWorkingBusRoute
                 ? FleetSecondaryTextColor
                 : new Color(0.96f, 0.72f, 0.42f, 1f);
         }
@@ -777,7 +783,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        return HasAvailableBusInParking();
+        return HasWorkingLocalBusStopNetwork() && HasAvailableBusInParking();
     }
 
     private void RenderVacancyFlowOptions(VacancyViewModel vacancy)

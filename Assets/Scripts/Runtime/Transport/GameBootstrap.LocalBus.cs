@@ -527,6 +527,79 @@ public partial class GameBootstrap
         return TryBeginFirstReachableLocalBusStop(orderedStops, parking);
     }
 
+    private bool HasWorkingLocalBusStopNetwork()
+    {
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
+        {
+            return false;
+        }
+
+        NormalizeLocalStopNumbers();
+        List<LocationData> orderedStops = GetOrderedLocalStops();
+        if (orderedStops.Count < 2)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < orderedStops.Count; i++)
+        {
+            LocationData firstStop = orderedStops[i];
+            if (!HasPath(parking.Anchor, firstStop.Anchor))
+            {
+                continue;
+            }
+
+            int travelDirection = i >= orderedStops.Count - 1 ? -1 : 1;
+            if (HasReachableLocalBusStopAfter(orderedStops, i, travelDirection))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        return false;
+    }
+
+    private bool HasReachableLocalBusStopAfter(List<LocationData> orderedStops, int originIndex, int travelDirection)
+    {
+        if (orderedStops == null || orderedStops.Count < 2 || originIndex < 0 || originIndex >= orderedStops.Count)
+        {
+            return false;
+        }
+
+        Vector2Int originAnchor = orderedStops[originIndex].Anchor;
+        int scanIndex = originIndex;
+        int scanDirection = travelDirection;
+        int maxAttempts = Mathf.Max(1, orderedStops.Count * 2);
+
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            LocalBusNextStopDecision decision = LocalBusRoutePlanner.GetNextStop(
+                orderedStops.Count,
+                scanIndex,
+                scanDirection);
+            if (!decision.HasNextStop)
+            {
+                return false;
+            }
+
+            scanDirection = decision.TravelDirection;
+            scanIndex = decision.NextStopIndex;
+            if (scanIndex == originIndex)
+            {
+                continue;
+            }
+
+            if (HasPath(originAnchor, orderedStops[scanIndex].Anchor))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool TryBeginNextLocalBusStopSegment()
     {
         List<LocationData> orderedStops = GetOrderedLocalStops();

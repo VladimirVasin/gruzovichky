@@ -515,12 +515,20 @@ public partial class GameBootstrap
         }
 
         bool ru = IsRussianLanguage();
+        bool hasWorkingBusRoute = HasWorkingLocalBusStopNetwork();
         if (shiftsScreenUi.BusDriverGroupTitleText != null)
         {
             shiftsScreenUi.BusDriverGroupTitleText.text = ru ? "Водитель автобуса" : "Bus Driver";
         }
 
-        if (shiftsScreenUi.BusDriverGroupSummaryText != null)
+        if (shiftsScreenUi.BusDriverGroupSummaryText != null && !hasWorkingBusRoute)
+        {
+            shiftsScreenUi.BusDriverGroupSummaryText.text = ru
+                ? "\u041d\u0443\u0436\u043d\u044b \u0434\u0432\u0435 \u0441\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u043d\u044b\u0435 \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0438 \u0438 \u0434\u043e\u0440\u043e\u0433\u0430 \u043e\u0442 Parking."
+                : "Two connected local bus stops and a road from Parking are required.";
+        }
+
+        if (shiftsScreenUi.BusDriverGroupSummaryText != null && hasWorkingBusRoute)
         {
             shiftsScreenUi.BusDriverGroupSummaryText.text = ru
                 ? "Одна должность, три смены. Водители сменяют друг друга."
@@ -528,6 +536,7 @@ public partial class GameBootstrap
         }
 
         bool selectedIsAvailable = selectedDriver != null &&
+                                   hasWorkingBusRoute &&
                                    !selectedDriver.IsArrivingByBus &&
                                    !selectedDriver.IsLeavingTown &&
                                    !selectedDriver.HasDepartedTown &&
@@ -555,6 +564,8 @@ public partial class GameBootstrap
                     ? (ru ? "Занято" : "Occupied")
                     : selectedAlreadyBusDriver
                         ? (ru ? "Уже назначен" : "Already assigned")
+                        : !hasWorkingBusRoute
+                            ? (ru ? "\u041d\u0435\u0442 \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430" : "No route")
                         : !selectedIsAvailable
                             ? (ru ? "Недоступен" : "Unavailable")
                             : (ru ? "Назначить" : "Assign");
@@ -628,6 +639,13 @@ public partial class GameBootstrap
 
         if (driver.AssignedTruckNumber > 0 || driver.DutyMode == DriverDutyMode.Logistics || IsDriverIntercity(driver))
         {
+            return;
+        }
+
+        if (!HasWorkingLocalBusStopNetwork())
+        {
+            SessionDebugLogger.Log("BUS_SHIFT", $"{driver.DriverName} bus assignment blocked: no working local bus route.");
+            LogDriverReaction(driver, "cannot start bus duty: no working local bus route");
             return;
         }
 

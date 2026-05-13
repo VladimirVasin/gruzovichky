@@ -99,9 +99,8 @@ public partial class GameBootstrap
 
     private bool HasLocalBusLogisticsPressure()
     {
-        return locations.ContainsKey(LocationType.Parking) &&
-               HasAvailableBusInParking() &&
-               localStops.Count >= 2;
+        return HasAvailableBusInParking() &&
+               HasWorkingLocalBusStopNetwork();
     }
 
     private bool HasAnyAssignedTruckDriver()
