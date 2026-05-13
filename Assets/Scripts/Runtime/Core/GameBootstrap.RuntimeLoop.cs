@@ -1,7 +1,6 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
-
 public partial class GameBootstrap
 {
     private int GetCurrentHour()
@@ -204,7 +203,7 @@ public partial class GameBootstrap
             return;
         }
 
-        bool blockPlayerInputForOverlay = isTutorialOpen || isCitySocialRequestSceneOpen || isBarInteriorSceneOpen || IsNoosphereDiveInputBlocking();
+        bool blockPlayerInputForOverlay = isTutorialOpen || isCitySocialRequestSceneOpen || isBarInteriorSceneOpen || IsNoosphereDiveInputBlocking() || IsNoosphereVisionInputBlocking();
         if (!blockPlayerInputForOverlay)
         {
             HandleHotkeys();
@@ -371,6 +370,7 @@ public partial class GameBootstrap
         UpdateNoosphereScreenUi();
         UpdateNoosphereDiveRuntime();
         UpdateNoosphereVisualsRuntime();
+        UpdateNoosphereVisionRuntime();
         UpdateEventFeedUi();
         UpdateTutorialGoalsRuntime();
         UpdateCityRequestGoalHudRuntime();
@@ -555,7 +555,7 @@ public partial class GameBootstrap
                 return;
             }
 
-            if (!isRacingActive && !isWorldMapPanelOpen)
+            if (!isRacingActive && !isWorldMapPanelOpen && !IsNoosphereVisionInputBlocking())
             {
                 DrawMoneyHud();
                 DrawCityTrustHud();
@@ -710,6 +710,7 @@ public partial class GameBootstrap
             FinalizeWorkerDailyOpinionsForDay(endedDay);
             CollectDailyBuildingTaxes();
             TickWorkerAging();
+            RecordNoosphereDayStartSnapshot(NoosphereDayStartSnapshotTrigger.DayStart);
             ShowDayTitleCinematic(currentDay);
         }
         float normalizedTime = dayNightCycleTimer / DayNightCycleDuration;

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public partial class GameBootstrap
@@ -120,6 +120,7 @@ public partial class GameBootstrap
                isSocialGraphPanelOpen ||
                isCityHallPanelOpen ||
                isNoospherePanelOpen ||
+               IsNoosphereVisionInputBlocking() ||
                isBarInteriorSceneOpen ||
                activeBuildTool != BuildTool.None;
     }
@@ -487,6 +488,7 @@ public partial class GameBootstrap
             !isSocialGraphPanelOpen &&
             !isCityHallPanelOpen &&
             !isNoospherePanelOpen &&
+            !IsNoosphereVisionInputBlocking() &&
             !isBarInteriorSceneOpen;
 
         if (buildingQuickHud.CanvasRoot.activeSelf != shouldShow)

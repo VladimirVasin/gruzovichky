@@ -739,6 +739,8 @@ public partial class GameBootstrap
         mainMenuMusicSource?.Pause();
         StartCityMusic();
         UpdateDayNightCycle(0f);
+        RecordNoosphereDayStartSnapshot(NoosphereDayStartSnapshotTrigger.GameStart);
+        ShowDayTitleCinematic(currentDay);
         UpdateMainMenuHud();
         PlayUiSound(uiPanelOpenClip, 0.9f);
         if (selectedGameStartMode == GameStartMode.Tutorial)

@@ -1,6 +1,6 @@
 # System Tree
 
-Last updated: 2026-05-12
+Last updated: 2026-05-13
 
 Purpose: stable informational tree of the project systems, subsystems, feature leaves, and the most important cross-system links. Code remains the source of truth; use this file to orient before reading `ai/systems-map.md` and scanning code.
 
@@ -20,7 +20,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: Main Menu start, Tutorial start, New Game start, loading overlay, scene bootstrap completion.
 - [CORE.Loop] Main runtime loop
   - Ticks world simulation, actors, transport, trade, UI, audio, and visual runtime updates.
-  - Feature leaves: day/night clock, game speed, daily rollover, start-of-day title, update ordering.
+  - Feature leaves: day/night clock, game speed, daily rollover, start-of-day title, day-start Noosphere snapshot trigger, update ordering.
 - [CORE.State] Shared runtime state
   - Scene-local state still owned by `GameBootstrap` partials.
   - Feature leaves: money, city trust, locations, roads, workers, trucks, buses, world roots, UI dirty flags.
@@ -198,9 +198,15 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 - [NOOSPHERE.Dive] Fullscreen 3D Noosphere dive
   - Shows a deeper animated 3D meaning space from the same knowledge/opinion/social-signal data.
   - Feature leaves: fade transition, render texture, orbit rings, knowledge words, social signal words, close/escape return.
+- [NOOSPHERE.Vision] Fullscreen city meaning view
+  - Shows prioritized city insights from education pressure, family readiness, shared experience, social signals, and canon knowledge.
+  - Feature leaves: slow-time entry, insight cards, source dots, resident clarity overlay, journal bridge, close/escape return.
 - [NOOSPHERE.Visuals] Noosphere animation
   - Draws pulsing nodes, labels, connections, and state transitions.
   - Feature leaves: node animation, edge animation, received/burned/canonized color states.
+- [NOOSPHERE.Snapshots] Internal day-start memory archive
+  - Silently stores copied Noosphere state at game start/day 1 and each later day start.
+  - Feature leaves: knowledge events, social signals, city experience, canon, resident cognition, dive meanings, vision insights, visual-node state.
 
 ### [GOVERNANCE] Trust, City Hall, Complaints, And Decisions
 
@@ -260,7 +266,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: tutorial windows, goal HUD, camera focus, panel actions, goal completion.
 - [TUTORIAL.Building] Build-first tutorial path
   - Teaches required buildings and roads in sequence.
-  - Feature leaves: road building, Warehouse/Forest/Sawmill/Furniture Factory/Motel chain, build unlocks.
+  - Feature leaves: road building, Warehouse/Motel/Parking core, Lumberjack Camp, service buildings, local bus stops, Docks, build unlocks.
 - [TUTORIAL.Hiring] Worker hiring and assignments
   - Teaches hiring/shift assignment/vacancy controls.
   - Feature leaves: hire worker, assign worker, transport/logistics flow.
@@ -305,6 +311,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 - [WORLD.Litter] is produced by [WORKERS.Movement]/crowds, perceived by [WORKERS.Thoughts]/[WORKERS.SocialSignals]/[WORKERS.Experience], cleaned by [WORKERS.Professions]/Cleaner, and tuned by [ECONOMY.Upgrades].
 - [WORKERS.SocialSignals] is written by [WORKERS.Thoughts], [WORLD.Litter], [WORKERS.Experience], [WORKERS.TopicOpinions], and [WORKERS.Complaints]; it feeds [WORKERS.TopicOpinions], [GOVERNANCE.Trust], [WORKERS.Complaints], [ECONOMY.Upgrades], [NOOSPHERE.Screen], and [NOOSPHERE.Dive].
 - [WORKERS.Knowledge], [WORKERS.Rumors], [WORKERS.ConversationTopics], [WORKERS.TopicOpinions], [WORKERS.SocialSignals], and [WORKERS.Experience] feed [NOOSPHERE.Screen], [NOOSPHERE.Canon], and [NOOSPHERE.Dive].
+- [NOOSPHERE.Snapshots] is triggered by [CORE.Loop] and reads [WORKERS] cognition/social state plus [NOOSPHERE] derived layers without showing player-facing output.
 - [TUTORIAL.Flow] depends on [BUILD], [WORKERS.Shifts], [TRANSPORT], [ECONOMY], and [UI]; any serious gameplay change should be checked against `ai/tutorial-scenario.md`.
 - [UI.FleetCanvas] displays and mutates many systems, but should not own simulation rules when a pure service or runtime partial already exists.
 

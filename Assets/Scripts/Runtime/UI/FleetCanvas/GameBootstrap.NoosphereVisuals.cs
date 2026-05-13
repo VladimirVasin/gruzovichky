@@ -177,7 +177,17 @@ public partial class GameBootstrap
 
     private void BuildNoosphereVisualNodeStates(float now, Vector2 fieldSize, Vector2 core)
     {
-        noosphereVisualNodeStates.Clear();
+        BuildNoosphereVisualNodeStates(now, fieldSize, core, noosphereVisualNodeStates);
+    }
+
+    private void BuildNoosphereVisualNodeStates(float now, Vector2 fieldSize, Vector2 core, List<NoosphereVisualNodeState> target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        target.Clear();
         int canonCount = GetCityKnowledgeCanonMemoryCount();
         List<DriverAgent> workers = new();
         for (int i = 0; i < driverAgents.Count && workers.Count < NoosphereVisualMaxResidentNodes; i++)
@@ -205,7 +215,7 @@ public partial class GameBootstrap
             Color color = hasCanon
                 ? Color.Lerp(GetNoosphereVisualToneColor(tone), new Color(0.72f, 0.91f, 1f, 0.95f), 0.50f)
                 : GetNoosphereVisualToneColor(tone);
-            noosphereVisualNodeStates.Add(new NoosphereVisualNodeState
+            target.Add(new NoosphereVisualNodeState
             {
                 Worker = worker,
                 WorkerId = worker.DriverId,

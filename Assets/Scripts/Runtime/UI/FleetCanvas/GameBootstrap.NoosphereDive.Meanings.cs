@@ -6,7 +6,18 @@ public partial class GameBootstrap
 {
     private void RebuildNoosphereDiveMeanings()
     {
-        noosphereDiveMeanings.Clear();
+        BuildNoosphereDiveMeaningModels(noosphereDiveMeanings);
+        ApplyNoosphereDiveStats();
+    }
+
+    private void BuildNoosphereDiveMeaningModels(List<NoosphereDiveMeaningModel> target)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        target.Clear();
         Dictionary<string, NoosphereDiveMeaningModel> meanings = new();
         bool ru = IsRussianLanguage();
 
@@ -88,16 +99,14 @@ public partial class GameBootstrap
         foreach (NoosphereDiveMeaningModel meaning in meanings.Values)
         {
             FinalizeNoosphereDiveMeaningOrbit(meaning);
-            noosphereDiveMeanings.Add(meaning);
+            target.Add(meaning);
         }
 
-        noosphereDiveMeanings.Sort((a, b) => b.Weight.CompareTo(a.Weight));
-        while (noosphereDiveMeanings.Count > NoosphereDiveMaxMeanings)
+        target.Sort((a, b) => b.Weight.CompareTo(a.Weight));
+        while (target.Count > NoosphereDiveMaxMeanings)
         {
-            noosphereDiveMeanings.RemoveAt(noosphereDiveMeanings.Count - 1);
+            target.RemoveAt(target.Count - 1);
         }
-
-        ApplyNoosphereDiveStats();
     }
 
     private void AddNoosphereDiveMeaning(

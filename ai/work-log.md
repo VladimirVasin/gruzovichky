@@ -6,9 +6,13 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Active Queue
 
-- 2026-05-12: Social simulation backlog items 2-15 are implemented in an MVP form. No active items remain in this queue; future work should harden balance, UI copy, tests, and edge cases rather than redoing the slice from scratch.
+- No active queued memory items.
 
 ## Recent Work
+
+- 2026-05-13: Added silent Noosphere day-start snapshots and day-1 title display. `GameBootstrap.NoosphereSnapshots*.cs` now stores copied internal state for knowledge events, social signals/insights, city experience, canon, conversation topics, resident cognition, dive meanings, vision insights, and visual-node state at game start/day 1 and each later day start. `FinishGameStart()` now shows the existing `Day 1` cinematic title, day rollover records the snapshot before showing the next day title, and Noosphere Vision builder/UI code is split into focused partials for the line-count rule. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted diff mojibake scan.
+
+- 2026-05-13: Cleaned AI memory consistency after an `ai/` review. `system-tree.md` no longer uses outdated production-chain wording for the Tutorial build path, `README.md` separates release memory from volatile work memory, and `work-log.md` Active Queue now reflects that no queued memory items are active. Verification: `git diff --check`, targeted mojibake scan.
 
 - 2026-05-13: Reduced likely day-2 morning performance spikes found in `debug.log`. Runtime debug logging now flushes buffered lines by interval/larger batches instead of small synchronous bursts, shift commute path starts are capped to two expensive starts per frame so 08:00 worker commutes are spread across frames, construction misc-object removal is verbose-only while the existing build-site summary remains visible, and citywide lived-experience factor counts now say signals instead of residents. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
 

@@ -89,7 +89,15 @@ public partial class GameBootstrap
 
         if (Keyboard.current.f9Key.wasPressedThisFrame)
         {
-            ToggleDebugServicePanel();
+            bool debugModifier = Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+            if (debugModifier)
+            {
+                ToggleDebugServicePanel();
+            }
+            else
+            {
+                ToggleNoosphereJournalPanel();
+            }
         }
 
         if (Keyboard.current.bKey.wasPressedThisFrame)
@@ -420,6 +428,7 @@ public partial class GameBootstrap
             isCityHallPanelOpen ||
             isNoospherePanelOpen ||
             IsNoosphereDiveInputBlocking() ||
+            IsNoosphereVisionInputBlocking() ||
             isTruckDetailsOpen ||
             isLocalBusDetailsOpen ||
             isDriverDetailsOpen ||
@@ -438,6 +447,7 @@ public partial class GameBootstrap
         isCityHallPanelOpen = false;
         isNoospherePanelOpen = false;
         CloseNoosphereDiveImmediate();
+        CloseNoosphereVisionImmediate();
         isTruckDetailsOpen = false;
         isLocalBusDetailsOpen = false;
         isDriverDetailsOpen = false;
@@ -595,7 +605,7 @@ public partial class GameBootstrap
 
             float scroll = Mouse.current.scroll.ReadValue().y;
             bool blockingHudOpen = isFleetPanelOpen || isShiftsPanelOpen || isDriversPanelOpen ||
-                isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isWorldMapPanelOpen || isStatesPanelOpen || isSocialGraphPanelOpen || isNoospherePanelOpen;
+                isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isWorldMapPanelOpen || isStatesPanelOpen || isSocialGraphPanelOpen || isNoospherePanelOpen || IsNoosphereVisionInputBlocking();
             if (Mathf.Abs(scroll) > 0.01f && !blockingHudOpen && !IsPointerOverHud(mousePosition))
             {
                 float currentDistance = cameraOffset.magnitude;

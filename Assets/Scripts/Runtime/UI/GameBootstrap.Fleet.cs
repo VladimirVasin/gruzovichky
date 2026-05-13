@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -57,6 +57,12 @@ public partial class GameBootstrap
         if (panelName == "Map")
         {
             ToggleWorldMapPanel();
+            return;
+        }
+
+        if (panelName == "Noosphere")
+        {
+            BeginNoosphereVision();
             return;
         }
 

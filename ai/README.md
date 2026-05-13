@@ -30,14 +30,18 @@ Stable memory:
 - `systems-map.md`
 - `architecture-notes.md`
 
+Release memory:
+
+- `release-notes.md`
+
 Volatile memory:
 
 - `work-log.md`
-- `release-notes.md`
 
 Rule:
 
 - stable memory is updated rarely
+- release memory is updated when version labels, changelogs, release contents, or Patch Notes change
 - volatile memory is updated often
 - do not edit stable memory unless project reality actually changed
 
