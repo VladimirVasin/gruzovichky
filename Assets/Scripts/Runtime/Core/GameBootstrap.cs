@@ -522,6 +522,8 @@ public partial class GameBootstrap : MonoBehaviour
     private int lastActiveGameSpeedMultiplier = 1;
     private int nextDriverId = 1;
     private TripType currentAssignedTrip = TripType.None;
+    private int currentTripPickupLocationInstanceId;
+    private int currentTripDropoffLocationInstanceId;
     private BuildTool activeBuildTool = BuildTool.None;
     private HashSet<BuildTool> unlockedBuildTools;
     private bool areTutorialVacanciesFullyUnlocked;

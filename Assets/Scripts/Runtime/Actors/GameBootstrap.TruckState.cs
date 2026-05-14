@@ -41,6 +41,8 @@ public partial class GameBootstrap
         truckFuel = truckAgent.TruckFuel;
         currentAssignedTripReward = truckAgent.CurrentAssignedTripReward;
         currentAssignedTrip = truckAgent.CurrentAssignedTrip;
+        currentTripPickupLocationInstanceId = truckAgent.CurrentTripPickupLocationInstanceId;
+        currentTripDropoffLocationInstanceId = truckAgent.CurrentTripDropoffLocationInstanceId;
         currentTripPhase = truckAgent.CurrentTripPhase;
         currentRefuelPhase = truckAgent.CurrentRefuelPhase;
         activeTruckInteraction = truckAgent.ActiveTruckInteraction;
@@ -49,6 +51,8 @@ public partial class GameBootstrap
         truckInteractionBuildingPoint = truckAgent.TruckInteractionBuildingPoint;
         activeServiceLocation = truckAgent.ActiveServiceLocation;
         queuedServiceLocation = truckAgent.QueuedServiceLocation;
+        activeServiceLocationInstanceId = truckAgent.ActiveServiceLocationInstanceId;
+        queuedServiceLocationInstanceId = truckAgent.QueuedServiceLocationInstanceId;
         activePath.Clear();
         activePath.AddRange(truckAgent.ActivePath);
         truckWheels.Clear();
@@ -99,6 +103,8 @@ public partial class GameBootstrap
         truckAgent.TruckFuel = truckFuel;
         truckAgent.CurrentAssignedTripReward = currentAssignedTripReward;
         truckAgent.CurrentAssignedTrip = currentAssignedTrip;
+        truckAgent.CurrentTripPickupLocationInstanceId = currentTripPickupLocationInstanceId;
+        truckAgent.CurrentTripDropoffLocationInstanceId = currentTripDropoffLocationInstanceId;
         truckAgent.CurrentTripPhase = currentTripPhase;
         truckAgent.CurrentRefuelPhase = currentRefuelPhase;
         truckAgent.ActiveTruckInteraction = activeTruckInteraction;
@@ -107,6 +113,8 @@ public partial class GameBootstrap
         truckAgent.TruckInteractionBuildingPoint = truckInteractionBuildingPoint;
         truckAgent.ActiveServiceLocation = activeServiceLocation;
         truckAgent.QueuedServiceLocation = queuedServiceLocation;
+        truckAgent.ActiveServiceLocationInstanceId = activeServiceLocationInstanceId;
+        truckAgent.QueuedServiceLocationInstanceId = queuedServiceLocationInstanceId;
         truckAgent.ActivePath.Clear();
         truckAgent.ActivePath.AddRange(activePath);
     }
@@ -158,11 +166,15 @@ public partial class GameBootstrap
         currentAssignedTrip = TripType.None;
         currentTripPhase = TripPhase.None;
         currentAssignedTripReward = 0;
+        currentTripPickupLocationInstanceId = 0;
+        currentTripDropoffLocationInstanceId = 0;
         currentRefuelPhase = RefuelPhase.None;
         activeTruckInteraction = TruckInteractionType.None;
         queuedTruckInteraction = TruckInteractionType.None;
         activeServiceLocation = null;
         queuedServiceLocation = null;
+        activeServiceLocationInstanceId = 0;
+        queuedServiceLocationInstanceId = 0;
         truckInteractionTimer = 0f;
         isTruckInteracting = false;
         isTruckWaitingForService = false;

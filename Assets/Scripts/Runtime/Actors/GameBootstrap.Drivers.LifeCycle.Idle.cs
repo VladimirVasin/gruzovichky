@@ -170,14 +170,7 @@ public partial class GameBootstrap : MonoBehaviour
                 {
                     ResetWorkerNeedTimer(driver, WorkerNeedKind.Leisure);
                     driver.HadLeisureToday = true;
-                    // Fallback: apply gambling money if animation never completed (HUD was closed)
-                    if (driver.GamblingMoneyPending)
-                    {
-                        driver.GamblingMoneyPending = false;
-                        int net = driver.GamblingPayout - driver.GamblingBet;
-                        driver.Money = Mathf.Max(0, driver.Money + net);
-                        SessionDebugLogger.Log("NEEDS", $"{driver.DriverName} gambling fallback applied: net={net:+#;-#;0}, balance=${driver.Money}.");
-                    }
+                    TryApplyPendingGamblingResult(driver, showWorldPopup: false, "fallback applied");
                     driver.GamblingBet = 0;
                     driver.GamblingPayout = 0;
                     driver.GamblingMultiplier = 0;

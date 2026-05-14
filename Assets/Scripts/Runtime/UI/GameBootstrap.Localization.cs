@@ -152,6 +152,7 @@ public partial class GameBootstrap
         { "Per transaction", "За транзакцию" },
         { "receiver pays", "платит получатель" },
         { "payer pays", "платит плательщик" },
+        { "city pays", "платит город" },
         { "ON", "ВКЛ" },
         { "OFF", "ВЫКЛ" },
         { "Next collection", "Следующий сбор" },

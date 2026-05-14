@@ -26,6 +26,24 @@ public partial class GameBootstrap
             }
         }
 
+        for (int i = 0; i < localStops.Count; i++)
+        {
+            LocationData location = localStops[i];
+            if (location != null && location.InstanceId == instanceId)
+            {
+                return location;
+            }
+        }
+
+        for (int i = 0; i < personalHouses.Count; i++)
+        {
+            LocationData location = personalHouses[i];
+            if (location != null && location.InstanceId == instanceId)
+            {
+                return location;
+            }
+        }
+
         return null;
     }
 
@@ -100,6 +118,30 @@ public partial class GameBootstrap
             if (location != null && location.Type == locationType)
             {
                 yield return location;
+            }
+        }
+
+        if (locationType == LocationType.Stop)
+        {
+            for (int i = 0; i < localStops.Count; i++)
+            {
+                LocationData location = localStops[i];
+                if (location != null)
+                {
+                    yield return location;
+                }
+            }
+        }
+
+        if (locationType == LocationType.PersonalHouse)
+        {
+            for (int i = 0; i < personalHouses.Count; i++)
+            {
+                LocationData location = personalHouses[i];
+                if (location != null)
+                {
+                    yield return location;
+                }
             }
         }
     }

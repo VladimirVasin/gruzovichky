@@ -48,6 +48,8 @@ public partial class GameBootstrap
         public float TruckFuel = TruckFuelCapacity;
         public int CurrentAssignedTripReward;
         public TripType CurrentAssignedTrip = TripType.None;
+        public int CurrentTripPickupLocationInstanceId;
+        public int CurrentTripDropoffLocationInstanceId;
         public TripPhase CurrentTripPhase = TripPhase.None;
         public RefuelPhase CurrentRefuelPhase = RefuelPhase.None;
         public TruckInteractionType ActiveTruckInteraction = TruckInteractionType.None;
@@ -56,6 +58,8 @@ public partial class GameBootstrap
         public Vector3 TruckInteractionBuildingPoint;
         public LocationType? ActiveServiceLocation;
         public LocationType? QueuedServiceLocation;
+        public int ActiveServiceLocationInstanceId;
+        public int QueuedServiceLocationInstanceId;
         public int ParkingSlotIndex;
         public float ExhaustEmitTimer;
         public float DirtDustEmitTimer;

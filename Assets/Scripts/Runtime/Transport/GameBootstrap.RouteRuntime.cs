@@ -57,9 +57,9 @@ public partial class GameBootstrap
                 return;
 
             case TruckTripRuntimeActionKind.StartLoading:
-                if (TryStartTruckInteraction(GetLoadInteraction(currentAssignedTrip), pickupLocation))
+                if (TryStartTruckInteraction(GetLoadInteraction(currentAssignedTrip), pickup))
                 {
-                    SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} started loading at {pickupLocation} for trip {GetTripTitle(currentAssignedTrip)}.");
+                    SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} started loading at {GetBuildingInstanceDisplayName(pickup.Type, pickup.InstanceId)} for trip {GetTripTitle(currentAssignedTrip)}.");
                     currentTripPhase = TripPhase.Loading;
                 }
                 return;
@@ -70,9 +70,9 @@ public partial class GameBootstrap
                 return;
 
             case TruckTripRuntimeActionKind.StartUnloading:
-                if (TryStartTruckInteraction(GetUnloadInteraction(currentAssignedTrip), dropoffLocation))
+                if (TryStartTruckInteraction(GetUnloadInteraction(currentAssignedTrip), dropoff))
                 {
-                    SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} started unloading at {dropoffLocation} for trip {GetTripTitle(currentAssignedTrip)}.");
+                    SessionDebugLogger.Log("TRIP", $"{GetLoadedTruckDisplayName()} started unloading at {GetBuildingInstanceDisplayName(dropoff.Type, dropoff.InstanceId)} for trip {GetTripTitle(currentAssignedTrip)}.");
                     currentTripPhase = TripPhase.Unloading;
                 }
                 return;
@@ -86,6 +86,8 @@ public partial class GameBootstrap
                 currentAssignedTrip = TripType.None;
                 currentTripPhase = TripPhase.None;
                 currentAssignedTripReward = 0;
+                currentTripPickupLocationInstanceId = 0;
+                currentTripDropoffLocationInstanceId = 0;
 
                 if (driver.NeedsShiftEndReturn && GetCurrentTruckForDriver(driver) is TruckAgent truckAgent)
                 {

@@ -141,6 +141,8 @@ public partial class GameBootstrap
                         truckAgent.CurrentAssignedTrip = selectedTrip.Type;
                         truckAgent.CurrentTripPhase = TripPhase.ToPickup;
                         truckAgent.CurrentAssignedTripReward = selectedTrip.Reward;
+                        truckAgent.CurrentTripPickupLocationInstanceId = selectedTrip.PickupLocationInstanceId;
+                        truckAgent.CurrentTripDropoffLocationInstanceId = selectedTrip.DropoffLocationInstanceId;
                         LogTruckReaction(truckAgent, $"queued auto trip '{selectedTrip.Title}' for ${selectedTrip.Reward}");
                     }
                 }
@@ -213,6 +215,8 @@ public partial class GameBootstrap
         truckAgent.CurrentAssignedTrip = trip.Type;
         truckAgent.CurrentTripPhase = TripPhase.ToPickup;
         truckAgent.CurrentAssignedTripReward = trip.Reward;
+        truckAgent.CurrentTripPickupLocationInstanceId = trip.PickupLocationInstanceId;
+        truckAgent.CurrentTripDropoffLocationInstanceId = trip.DropoffLocationInstanceId;
         PlayUiSound(uiSelectClip, 0.82f);
         SessionDebugLogger.Log("ORDER", $"{truckAgent.DisplayName} assigned trip '{trip.Title}' with reward ${trip.Reward}.");
         LogTruckReaction(truckAgent, $"accepted trip '{trip.Title}' with reward ${trip.Reward}");
@@ -226,6 +230,26 @@ public partial class GameBootstrap
         }
 
         if (!TryGetTripLocations(tripType, out LocationData pickupLocation, out LocationData dropoffLocation, out LocationData parkingLocation))
+        {
+            return 0;
+        }
+
+        return GetTripReward(tripType, pickupLocation, dropoffLocation, parkingLocation);
+    }
+
+    private int GetTripReward(TripType tripType, LocationData pickupLocation, LocationData dropoffLocation)
+    {
+        if (!locations.TryGetValue(LocationType.Parking, out LocationData parkingLocation))
+        {
+            return 0;
+        }
+
+        return GetTripReward(tripType, pickupLocation, dropoffLocation, parkingLocation);
+    }
+
+    private int GetTripReward(TripType tripType, LocationData pickupLocation, LocationData dropoffLocation, LocationData parkingLocation)
+    {
+        if (tripType == TripType.None || pickupLocation == null || dropoffLocation == null || parkingLocation == null)
         {
             return 0;
         }
@@ -256,6 +280,23 @@ public partial class GameBootstrap
 
     private bool TryGetTripLocations(TripType tripType, out LocationData pickup, out LocationData dropoff, out LocationData parking)
     {
+        return TryGetTripLocations(
+            tripType,
+            currentTripPickupLocationInstanceId,
+            currentTripDropoffLocationInstanceId,
+            out pickup,
+            out dropoff,
+            out parking);
+    }
+
+    private bool TryGetTripLocations(
+        TripType tripType,
+        int pickupInstanceId,
+        int dropoffInstanceId,
+        out LocationData pickup,
+        out LocationData dropoff,
+        out LocationData parking)
+    {
         pickup = null;
         dropoff = null;
         parking = null;
@@ -264,9 +305,29 @@ public partial class GameBootstrap
             return false;
         }
 
-        return locations.TryGetValue(LocationType.Parking, out parking) &&
-               locations.TryGetValue(GetPickupLocation(tripType), out pickup) &&
-               locations.TryGetValue(GetDropoffLocation(tripType), out dropoff);
+        if (!locations.TryGetValue(LocationType.Parking, out parking))
+        {
+            return false;
+        }
+
+        LocationType pickupType = GetPickupLocation(tripType);
+        LocationType dropoffType = GetDropoffLocation(tripType);
+        pickup = ResolveTripLocationInstance(pickupType, pickupInstanceId);
+        dropoff = ResolveTripLocationInstance(dropoffType, dropoffInstanceId);
+        return pickup != null && dropoff != null;
+    }
+
+    private LocationData ResolveTripLocationInstance(LocationType locationType, int instanceId)
+    {
+        LocationData requested = FindLocationByInstanceId(instanceId);
+        if (requested != null && requested.Type == locationType)
+        {
+            return requested;
+        }
+
+        return locations.TryGetValue(locationType, out LocationData primary)
+            ? primary
+            : null;
     }
 
     private bool DoesTripUseLocation(TripType tripType, LocationType locationType)

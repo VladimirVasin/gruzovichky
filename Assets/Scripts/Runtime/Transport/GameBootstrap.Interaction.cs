@@ -38,25 +38,38 @@ public partial class GameBootstrap
 
     private bool TryStartTruckInteraction(TruckInteractionType interactionType, LocationType locationType)
     {
+        LocationData location = ResolveTripLocationInstance(locationType, 0);
+        return TryStartTruckInteraction(interactionType, location);
+    }
+
+    private bool TryStartTruckInteraction(TruckInteractionType interactionType, LocationData location)
+    {
         if (interactionType == TruckInteractionType.None)
         {
             return false;
         }
 
-        if (!TryAcquireServiceLocation(locationType))
+        if (location == null)
+        {
+            return false;
+        }
+
+        if (!TryAcquireServiceLocation(location))
         {
             isTruckWaitingForService = true;
             queuedTruckInteraction = interactionType;
-            queuedServiceLocation = locationType;
-            SessionDebugLogger.Log("SERVICE", $"{GetLoadedTruckDisplayName()} is waiting for service slot at {locationType}.");
+            queuedServiceLocation = location.Type;
+            queuedServiceLocationInstanceId = location.InstanceId;
+            SessionDebugLogger.Log("SERVICE", $"{GetLoadedTruckDisplayName()} is waiting for service slot at {GetBuildingInstanceDisplayName(location.Type, location.InstanceId)}.");
             return false;
         }
 
         isTruckWaitingForService = false;
         queuedTruckInteraction = TruckInteractionType.None;
         queuedServiceLocation = null;
-        SessionDebugLogger.Log("SERVICE", $"{GetLoadedTruckDisplayName()} acquired service slot at {locationType} for {interactionType}.");
-        StartTruckInteraction(interactionType, locationType);
+        queuedServiceLocationInstanceId = 0;
+        SessionDebugLogger.Log("SERVICE", $"{GetLoadedTruckDisplayName()} acquired service slot at {GetBuildingInstanceDisplayName(location.Type, location.InstanceId)} for {interactionType}.");
+        StartTruckInteraction(interactionType, location);
         return true;
     }
 
@@ -67,12 +80,14 @@ public partial class GameBootstrap
             return false;
         }
 
-        return TryStartTruckInteraction(queuedTruckInteraction, queuedServiceLocation.Value);
+        LocationData location = ResolveTripLocationInstance(queuedServiceLocation.Value, queuedServiceLocationInstanceId);
+        return TryStartTruckInteraction(queuedTruckInteraction, location);
     }
 
-    private bool TryAcquireServiceLocation(LocationType locationType)
+    private bool TryAcquireServiceLocation(LocationData location)
     {
-        return ServiceSlotCoordinator.TryAcquire(occupiedServiceLocations, locationType);
+        return location != null &&
+               ServiceSlotCoordinator.TryAcquire(occupiedServiceLocations, location.Type);
     }
 
     private void ReleaseServiceLocation(LocationType locationType)
@@ -80,9 +95,9 @@ public partial class GameBootstrap
         ServiceSlotCoordinator.Release(occupiedServiceLocations, locationType);
     }
 
-    private void StartTruckInteraction(TruckInteractionType interactionType, LocationType locationType)
+    private void StartTruckInteraction(TruckInteractionType interactionType, LocationData location)
     {
-        if (isTruckInteracting)
+        if (isTruckInteracting || location == null)
         {
             return;
         }
@@ -90,14 +105,12 @@ public partial class GameBootstrap
         isTruckMoving = false;
         isTruckInteracting = true;
         activeTruckInteraction = interactionType;
-        activeServiceLocation = locationType;
+        activeServiceLocation = location.Type;
+        activeServiceLocationInstanceId = location.InstanceId;
         truckInteractionTimer = 0f;
-        if (locations.TryGetValue(locationType, out LocationData activeLocation))
-        {
-            RecordWorkerBuildingKnowledge(GetLoadedTruckDriver(), activeLocation, "\u0412\u044b\u043f\u043e\u043b\u043d\u0438\u043b \u0440\u0435\u0439\u0441 \u0443 \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438", "Handled a truck stop at this building");
-        }
+        RecordWorkerBuildingKnowledge(GetLoadedTruckDriver(), location, "\u0412\u044b\u043f\u043e\u043b\u043d\u0438\u043b \u0440\u0435\u0439\u0441 \u0443 \u043f\u043e\u0441\u0442\u0440\u043e\u0439\u043a\u0438", "Handled a truck stop at this building");
 
-        Vector3 buildingCenter = GetLocationCenter(locationType);
+        Vector3 buildingCenter = GetLocationCenter(location);
         Vector3 directionToBuilding = buildingCenter - truckObject.transform.position;
         directionToBuilding.y = 0f;
         if (directionToBuilding.sqrMagnitude < 0.0001f)
@@ -131,7 +144,7 @@ public partial class GameBootstrap
         {
             case TripType.WarehouseToFurnitureFactoryBoards:
                 if (cargoType == CargoType.Boards &&
-                    locations.TryGetValue(LocationType.FurnitureFactory, out LocationData boardFactory))
+                    ResolveTripLocationInstance(LocationType.FurnitureFactory, currentTripDropoffLocationInstanceId) is LocationData boardFactory)
                 {
                     amount = Mathf.Min(amount, Mathf.Max(0, FurnitureFactoryMaxBoardsStorage - boardFactory.BoardsStored));
                 }
@@ -139,7 +152,7 @@ public partial class GameBootstrap
 
             case TripType.WarehouseToFurnitureFactoryTextile:
                 if (cargoType == CargoType.Textile &&
-                    locations.TryGetValue(LocationType.FurnitureFactory, out LocationData textileFactory))
+                    ResolveTripLocationInstance(LocationType.FurnitureFactory, currentTripDropoffLocationInstanceId) is LocationData textileFactory)
                 {
                     amount = Mathf.Min(amount, Mathf.Max(0, FurnitureFactoryMaxTextileStorage - textileFactory.TextileStored));
                 }
@@ -166,34 +179,64 @@ public partial class GameBootstrap
         if (cargoType == CargoType.Boards &&
             currentAssignedTrip == TripType.WarehouseToDocksBoards &&
             IsTradeResourceNeededByProduction(TradeResourceType.Boards) &&
-            locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory) &&
+            TryFindFactoryNeedingResource(TradeResourceType.Boards, out LocationData furnitureFactory) &&
             HasPath(truckCell, furnitureFactory.Anchor))
         {
             currentAssignedTrip = TripType.WarehouseToFurnitureFactoryBoards;
+            currentTripDropoffLocationInstanceId = furnitureFactory.InstanceId;
             currentAssignedTripReward = GetTripReward(currentAssignedTrip);
             SessionDebugLogger.Log("AUTO", $"{GetLoadedTruckDisplayName()} reprioritized loaded Boards to Furniture Factory because production needs input before Docks export.");
         }
     }
 
-    private int GetDocksExportTripLoadLimit(CargoType cargoType)
+    private bool TryFindFactoryNeedingResource(TradeResourceType resourceType, out LocationData factory)
     {
-        if (!locations.TryGetValue(LocationType.Docks, out LocationData docks))
+        factory = null;
+        foreach (LocationData candidate in EnumerateLocationsOfType(LocationType.FurnitureFactory))
         {
-            return 0;
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            bool needsResource = resourceType switch
+            {
+                TradeResourceType.Boards => candidate.BoardsStored < FurnitureFactoryMaxBoardsStorage,
+                TradeResourceType.Textile => candidate.TextileStored < FurnitureFactoryMaxTextileStorage,
+                _ => false
+            };
+
+            if (needsResource)
+            {
+                factory = candidate;
+                return true;
+            }
         }
 
+        return false;
+    }
+
+    private int GetDocksExportTripLoadLimit(CargoType cargoType)
+    {
         TradeResourceType resourceType = CargoTypeToTradeResourceType(cargoType);
         return GetDocksExportTripLoadLimit(resourceType);
     }
 
     private int GetDocksExportTripLoadLimit(TradeResourceType resourceType)
     {
-        if (!locations.TryGetValue(LocationType.Docks, out LocationData docks))
+        LocationData docks = ResolveTripLocationInstance(LocationType.Docks, currentTripDropoffLocationInstanceId);
+        LocationData warehouse = ResolveTripLocationInstance(LocationType.Warehouse, currentTripPickupLocationInstanceId);
+        return GetDocksExportTripLoadLimit(docks, resourceType, warehouse);
+    }
+
+    private int GetDocksExportTripLoadLimit(LocationData docks, TradeResourceType resourceType, LocationData warehouse)
+    {
+        if (docks == null || warehouse == null)
         {
             return 0;
         }
 
-        int surplusLimit = Mathf.Max(0, GetWarehouseExportResourceAmount(resourceType) - GetTradePolicyTarget(resourceType));
+        int surplusLimit = Mathf.Max(0, GetWarehouseTripResourceAmount(warehouse, resourceType) - GetTradePolicyTarget(resourceType));
         surplusLimit = Mathf.Max(0, surplusLimit - GetProductionReserveForWarehouseExport(resourceType));
         int dockRoom = Mathf.Max(0, DocksResourceCapacity - GetDocksExportStoredResource(docks, resourceType));
         return Mathf.Min(surplusLimit, dockRoom);
@@ -201,17 +244,23 @@ public partial class GameBootstrap
 
     private int GetProductionReserveForWarehouseExport(TradeResourceType resourceType)
     {
-        if (!locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
+        int reserve = 0;
+        foreach (LocationData furnitureFactory in EnumerateLocationsOfType(LocationType.FurnitureFactory))
         {
-            return 0;
+            if (furnitureFactory == null)
+            {
+                continue;
+            }
+
+            reserve += resourceType switch
+            {
+                TradeResourceType.Boards => Mathf.Max(0, FurnitureFactoryMaxBoardsStorage - furnitureFactory.BoardsStored),
+                TradeResourceType.Textile => Mathf.Max(0, FurnitureFactoryMaxTextileStorage - furnitureFactory.TextileStored),
+                _ => 0
+            };
         }
 
-        return resourceType switch
-        {
-            TradeResourceType.Boards => Mathf.Max(0, FurnitureFactoryMaxBoardsStorage - furnitureFactory.BoardsStored),
-            TradeResourceType.Textile => Mathf.Max(0, FurnitureFactoryMaxTextileStorage - furnitureFactory.TextileStored),
-            _ => 0
-        };
+        return reserve;
     }
 
     private void SetTruckCargo(CargoType cargoType, int amount)
@@ -230,6 +279,118 @@ public partial class GameBootstrap
     {
         truckCargoAmount = 0;
         truckCargoType = CargoType.None;
+    }
+
+    private LocationData GetActiveTruckInteractionLocation(LocationType expectedType)
+    {
+        return ResolveTripLocationInstance(expectedType, activeServiceLocationInstanceId);
+    }
+
+    private void AddWarehouseTripResource(LocationData warehouse, TradeResourceType resourceType, int amount)
+    {
+        if (warehouse == null || amount <= 0)
+        {
+            return;
+        }
+
+        switch (resourceType)
+        {
+            case TradeResourceType.Logs:
+                warehouse.LogsStored += amount;
+                break;
+            case TradeResourceType.Boards:
+                warehouse.BoardsStored += amount;
+                break;
+            case TradeResourceType.Cotton:
+                warehouse.CottonStored += amount;
+                break;
+            case TradeResourceType.Textile:
+                warehouse.TextileStored += amount;
+                break;
+            case TradeResourceType.Furniture:
+                warehouse.FurnitureStored += amount;
+                break;
+        }
+    }
+
+    private int ConsumeWarehouseTripResource(LocationData warehouse, TradeResourceType resourceType, int amount)
+    {
+        if (warehouse == null || amount <= 0)
+        {
+            return 0;
+        }
+
+        int consumed = 0;
+        int localAvailable = resourceType switch
+        {
+            TradeResourceType.Logs      => warehouse.LogsStored,
+            TradeResourceType.Boards    => warehouse.BoardsStored,
+            TradeResourceType.Cotton    => warehouse.CottonStored,
+            TradeResourceType.Textile   => warehouse.TextileStored,
+            TradeResourceType.Furniture => warehouse.FurnitureStored,
+            _                           => 0
+        };
+
+        int fromLocal = Mathf.Min(amount, Mathf.Max(0, localAvailable));
+        if (fromLocal > 0)
+        {
+            switch (resourceType)
+            {
+                case TradeResourceType.Logs:
+                    warehouse.LogsStored -= fromLocal;
+                    break;
+                case TradeResourceType.Boards:
+                    warehouse.BoardsStored -= fromLocal;
+                    break;
+                case TradeResourceType.Cotton:
+                    warehouse.CottonStored -= fromLocal;
+                    break;
+                case TradeResourceType.Textile:
+                    warehouse.TextileStored -= fromLocal;
+                    break;
+                case TradeResourceType.Furniture:
+                    warehouse.FurnitureStored -= fromLocal;
+                    break;
+            }
+
+            consumed += fromLocal;
+        }
+
+        int remaining = amount - consumed;
+        bool isPrimaryWarehouse = locations.TryGetValue(LocationType.Warehouse, out LocationData primaryWarehouse) &&
+                                  primaryWarehouse == warehouse;
+        if (remaining <= 0 || !isPrimaryWarehouse)
+        {
+            return consumed;
+        }
+
+        int fromLegacy = resourceType switch
+        {
+            TradeResourceType.Cotton    => Mathf.Min(remaining, cottonStored),
+            TradeResourceType.Textile   => Mathf.Min(remaining, textileStored),
+            TradeResourceType.Furniture => Mathf.Min(remaining, furnitureStored),
+            _                           => 0
+        };
+
+        if (fromLegacy <= 0)
+        {
+            return consumed;
+        }
+
+        switch (resourceType)
+        {
+            case TradeResourceType.Cotton:
+                cottonStored -= fromLegacy;
+                break;
+            case TradeResourceType.Textile:
+                textileStored -= fromLegacy;
+                break;
+            case TradeResourceType.Furniture:
+                furnitureStored -= fromLegacy;
+                break;
+        }
+
+        return consumed + fromLegacy;
     }
 
     private void CompleteTruckInteraction()
@@ -252,18 +413,19 @@ public partial class GameBootstrap
         {
             case TruckInteractionType.LoadAtForest:
             {
-                if (locations.TryGetValue(LocationType.Forest, out LocationData forest))
+                LocationData forest = GetActiveTruckInteractionLocation(LocationType.Forest);
+                if (forest != null)
                 {
                     int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Logs, forest.LogsStored);
                     forest.LogsStored = Mathf.Max(0, forest.LogsStored - amount);
-                    RefreshForestStoredLogsVisual();
+                    RefreshForestStoredLogsVisual(forest);
                     SetTruckCargo(CargoType.Logs, amount);
                 }
                 break;
             }
 
             case TruckInteractionType.UnloadAtSawmill:
-                if (locations.TryGetValue(LocationType.Sawmill, out LocationData sawmillUnload))
+                if (GetActiveTruckInteractionLocation(LocationType.Sawmill) is LocationData sawmillUnload)
                 {
                     sawmillUnload.LogsStored += truckCargoAmount;
                 }
@@ -272,7 +434,8 @@ public partial class GameBootstrap
 
             case TruckInteractionType.LoadAtSawmill:
             {
-                if (locations.TryGetValue(LocationType.Sawmill, out LocationData sawmillLoad))
+                LocationData sawmillLoad = GetActiveTruckInteractionLocation(LocationType.Sawmill);
+                if (sawmillLoad != null)
                 {
                     int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Boards, sawmillLoad.BoardsStored);
                     sawmillLoad.BoardsStored = Mathf.Max(0, sawmillLoad.BoardsStored - amount);
@@ -282,15 +445,15 @@ public partial class GameBootstrap
             }
 
             case TruckInteractionType.UnloadAtWarehouse:
-                if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouseUnload))
+                if (GetActiveTruckInteractionLocation(LocationType.Warehouse) is LocationData warehouseUnload)
                 {
                     if (truckCargoType == CargoType.Logs)
                     {
-                        warehouseUnload.LogsStored += truckCargoAmount;
+                        AddWarehouseTripResource(warehouseUnload, TradeResourceType.Logs, truckCargoAmount);
                     }
                     else
                     {
-                        warehouseUnload.BoardsStored += truckCargoAmount;
+                        AddWarehouseTripResource(warehouseUnload, TradeResourceType.Boards, truckCargoAmount);
                     }
                 }
                 ClearTruckCargo();
@@ -298,10 +461,11 @@ public partial class GameBootstrap
 
             case TruckInteractionType.LoadBoardsAtWarehouse:
             {
-                if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouseBoards))
+                LocationData warehouseBoards = GetActiveTruckInteractionLocation(LocationType.Warehouse);
+                if (warehouseBoards != null)
                 {
-                    int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Boards, warehouseBoards.BoardsStored);
-                    warehouseBoards.BoardsStored = Mathf.Max(0, warehouseBoards.BoardsStored - amount);
+                    int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Boards, GetWarehouseTripResourceAmount(warehouseBoards, TradeResourceType.Boards));
+                    amount = ConsumeWarehouseTripResource(warehouseBoards, TradeResourceType.Boards, amount);
                     SetTruckCargo(CargoType.Boards, amount);
                 }
                 break;
@@ -309,18 +473,20 @@ public partial class GameBootstrap
 
             case TruckInteractionType.LoadTextileAtWarehouse:
             {
-                int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Textile, textileStored);
-                textileStored = Mathf.Max(0, textileStored - amount);
+                LocationData warehouseTextile = GetActiveTruckInteractionLocation(LocationType.Warehouse);
+                int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Textile, GetWarehouseTripResourceAmount(warehouseTextile, TradeResourceType.Textile));
+                amount = ConsumeWarehouseTripResource(warehouseTextile, TradeResourceType.Textile, amount);
                 SetTruckCargo(CargoType.Textile, amount);
                 break;
             }
 
             case TruckInteractionType.LoadLogsAtWarehouse:
             {
-                if (locations.TryGetValue(LocationType.Warehouse, out LocationData warehouseLogs))
+                LocationData warehouseLogs = GetActiveTruckInteractionLocation(LocationType.Warehouse);
+                if (warehouseLogs != null)
                 {
-                    int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Logs, warehouseLogs.LogsStored);
-                    warehouseLogs.LogsStored = Mathf.Max(0, warehouseLogs.LogsStored - amount);
+                    int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Logs, GetWarehouseTripResourceAmount(warehouseLogs, TradeResourceType.Logs));
+                    amount = ConsumeWarehouseTripResource(warehouseLogs, TradeResourceType.Logs, amount);
                     SetTruckCargo(CargoType.Logs, amount);
                 }
                 break;
@@ -328,14 +494,15 @@ public partial class GameBootstrap
 
             case TruckInteractionType.LoadFurnitureAtWarehouse:
             {
-                int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Furniture, furnitureStored);
-                furnitureStored = Mathf.Max(0, furnitureStored - amount);
+                LocationData warehouseFurniture = GetActiveTruckInteractionLocation(LocationType.Warehouse);
+                int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Furniture, GetWarehouseTripResourceAmount(warehouseFurniture, TradeResourceType.Furniture));
+                amount = ConsumeWarehouseTripResource(warehouseFurniture, TradeResourceType.Furniture, amount);
                 SetTruckCargo(CargoType.Furniture, amount);
                 break;
             }
 
             case TruckInteractionType.UnloadBoardsAtFurnitureFactory:
-                if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData factoryBoards))
+                if (GetActiveTruckInteractionLocation(LocationType.FurnitureFactory) is LocationData factoryBoards)
                 {
                     factoryBoards.BoardsStored += truckCargoAmount;
                 }
@@ -343,7 +510,7 @@ public partial class GameBootstrap
                 break;
 
             case TruckInteractionType.UnloadTextileAtFurnitureFactory:
-                if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData factoryTextile))
+                if (GetActiveTruckInteractionLocation(LocationType.FurnitureFactory) is LocationData factoryTextile)
                 {
                     factoryTextile.TextileStored += truckCargoAmount;
                 }
@@ -352,7 +519,8 @@ public partial class GameBootstrap
 
             case TruckInteractionType.LoadAtFurnitureFactory:
             {
-                if (locations.TryGetValue(LocationType.FurnitureFactory, out LocationData factoryLoad))
+                LocationData factoryLoad = GetActiveTruckInteractionLocation(LocationType.FurnitureFactory);
+                if (factoryLoad != null)
                 {
                     int amount = GetTruckLoadAmountForCurrentTrip(CargoType.Furniture, factoryLoad.FurnitureStored);
                     factoryLoad.FurnitureStored = Mathf.Max(0, factoryLoad.FurnitureStored - amount);
@@ -362,7 +530,7 @@ public partial class GameBootstrap
             }
 
             case TruckInteractionType.UnloadFurnitureAtWarehouse:
-                furnitureStored += truckCargoAmount;
+                AddWarehouseTripResource(GetActiveTruckInteractionLocation(LocationType.Warehouse), TradeResourceType.Furniture, truckCargoAmount);
                 ClearTruckCargo();
                 break;
 
@@ -379,7 +547,7 @@ public partial class GameBootstrap
                 break;
 
             case TruckInteractionType.UnloadAtDocks:
-                if (locations.TryGetValue(LocationType.Docks, out LocationData docksUnload))
+                if (GetActiveTruckInteractionLocation(LocationType.Docks) is LocationData docksUnload)
                 {
                     AddDocksExportStoredResource(docksUnload, CargoTypeToTradeResourceType(truckCargoType), truckCargoAmount);
                 }
@@ -387,7 +555,7 @@ public partial class GameBootstrap
                 break;
 
             case TruckInteractionType.LoadAtDocks:
-                if (locations.TryGetValue(LocationType.Docks, out LocationData docksLoad))
+                if (GetActiveTruckInteractionLocation(LocationType.Docks) is LocationData docksLoad)
                 {
                     TradeResourceType resource = GetDocksLoadResourceForTrip(currentAssignedTrip);
                     int amount = GetTruckLoadAmountForCurrentTrip(TradeResourceTypeToCargoType(resource), GetDocksImportStoredResource(docksLoad, resource));
@@ -399,7 +567,7 @@ public partial class GameBootstrap
                 break;
 
             case TruckInteractionType.UnloadDocksImportAtWarehouse:
-                AddStoredTradeResource(CargoTypeToTradeResourceType(truckCargoType), truckCargoAmount);
+                AddWarehouseTripResource(GetActiveTruckInteractionLocation(LocationType.Warehouse), CargoTypeToTradeResourceType(truckCargoType), truckCargoAmount);
                 ClearTruckCargo();
                 break;
 
@@ -415,6 +583,7 @@ public partial class GameBootstrap
         isTruckWaitingForService = false;
         queuedTruckInteraction = TruckInteractionType.None;
         queuedServiceLocation = null;
+        queuedServiceLocationInstanceId = 0;
         if (cargoTransferCrate != null)
         {
             cargoTransferCrate.SetActive(false);
@@ -424,6 +593,7 @@ public partial class GameBootstrap
         {
             ReleaseServiceLocation(activeServiceLocation.Value);
             activeServiceLocation = null;
+            activeServiceLocationInstanceId = 0;
         }
 
         if (cargoChanged)

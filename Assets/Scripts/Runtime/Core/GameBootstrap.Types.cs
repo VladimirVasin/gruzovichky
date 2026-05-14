@@ -173,6 +173,8 @@ public partial class GameBootstrap : MonoBehaviour
     private Vector3 truckInteractionBuildingPoint;
     private LocationType? activeServiceLocation;
     private LocationType? queuedServiceLocation;
+    private int activeServiceLocationInstanceId;
+    private int queuedServiceLocationInstanceId;
     private AudioClip uiSelectClip;
     private AudioClip menuHoverClip;
     private AudioClip uiPanelOpenClip;
@@ -656,6 +658,8 @@ public partial class GameBootstrap : MonoBehaviour
         public string Description;
         public int Reward;
         public int Priority; // Higher values are selected first by auto logistics.
+        public int PickupLocationInstanceId;
+        public int DropoffLocationInstanceId;
     }
 
     private enum ForestWorkerState

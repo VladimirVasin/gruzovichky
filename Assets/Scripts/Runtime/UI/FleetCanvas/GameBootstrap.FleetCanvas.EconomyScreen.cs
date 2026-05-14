@@ -78,8 +78,6 @@ public partial class GameBootstrap
             isEconomyScreenDirty = true;
             PlayUiSound(uiSelectClip, 0.8f);
         });
-        tabRow.gameObject.SetActive(false);
-
         RectTransform taxesPanel = CreateUiObject("EconomyTaxesPanel", windowRoot.transform).GetComponent<RectTransform>();
         LayoutElement taxesPanelElement = taxesPanel.gameObject.AddComponent<LayoutElement>();
         taxesPanelElement.preferredHeight = 560f;
@@ -197,7 +195,7 @@ public partial class GameBootstrap
         policyScroll.content = policyRowsRoot;
         economyScreenUi.TaxPoliciesContent = policyRowsRoot;
 
-        for (int i = 0; i < MaxTaxPolicyRows; i++)
+        for (int i = 0; i < taxPolicies.Count; i++)
         {
             TaxPolicyRowUi row = CreateTaxPolicyRow(policyRowsRoot, font, i);
             row.ToggleButton.onClick.AddListener(() => ToggleTaxPolicy(row.PolicyId));
@@ -561,7 +559,6 @@ public partial class GameBootstrap
         if (!shouldShow) return;
         bool forceLayoutRebuild = isEconomyScreenDirty;
 
-        isEconomyTaxesTabActive = true;
         EnsureTradeHudSelectionValid();
         int taxableBankTotal = GetCurrentTaxableBuildingBankTotal();
         if (economyScreenUi.TaxesPanel != null) economyScreenUi.TaxesPanel.gameObject.SetActive(isEconomyTaxesTabActive);
@@ -654,6 +651,8 @@ public partial class GameBootstrap
         {
             return;
         }
+
+        EnsureTaxPolicyRowCapacity(taxPolicies.Count);
 
         for (int i = 0; i < economyScreenUi.TaxPolicyRows.Count; i++)
         {

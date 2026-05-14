@@ -564,45 +564,7 @@ public partial class GameBootstrap
 
     private void TriggerHudGamblingResult(DriverAgent d)
     {
-        if (d.GamblingMoneyPending)
-        {
-            d.GamblingMoneyPending = false;
-            int net = d.GamblingPayout - d.GamblingBet;
-            d.Money = Mathf.Max(0, d.Money + net);
-
-            if (locations.TryGetValue(LocationType.GamblingHall, out LocationData gh))
-            {
-                gh.BuildingBank = Mathf.Max(0, gh.BuildingBank - net);
-                if (net != 0)
-                {
-                    RecordMoneyMovement(
-                        0,
-                        net > 0 ? gh.Label : d.DriverName,
-                        net > 0 ? d.DriverName : gh.Label,
-                        net > 0 ? "Gambling payout" : "Gambling loss",
-                        null,
-                        net > 0 ? d.Money : gh.BuildingBank,
-                        net > 0 ? MoneyAccountKind.BuildingCash : MoneyAccountKind.ResidentWallet,
-                        net > 0 ? MoneyAccountKind.ResidentWallet : MoneyAccountKind.BuildingCash,
-                        MoneyTransactionReasonKind.Gambling,
-                        fromOwnerId: net > 0 ? gh.InstanceId : d.DriverId,
-                        toOwnerId: net > 0 ? d.DriverId : gh.InstanceId);
-                }
-
-                if (net < 0)
-                {
-                    ApplyGamblingRevenueTaxes(d, gh, -net, "Gambling loss");
-                }
-            }
-
-            if (d.DriverObject != null)
-            {
-                Vector3 pos = d.DriverObject.transform.position;
-                if (d.GamblingMultiplier == 0) SpawnMoneySpendPopup(pos, d.GamblingBet - d.GamblingPayout);
-                else if (net > 0) SpawnMoneyEarnPopup(pos, net);
-            }
-            SessionDebugLogger.Log("NEEDS", $"{d.DriverName} gambling resolved: net={net:+#;-#;0}, balance=${d.Money}.");
-        }
+        TryApplyPendingGamblingResult(d, showWorldPopup: true, "resolved");
 
         bool hudVisible = IsGamblingHallQuickHudVisible();
         if (!hudVisible)
@@ -625,6 +587,60 @@ public partial class GameBootstrap
             hudShakeDuration = 0f;
             hudShakeTimer = 0f;
         }
+    }
+
+    private bool TryApplyPendingGamblingResult(DriverAgent d, bool showWorldPopup, string logContext)
+    {
+        if (d == null || !d.GamblingMoneyPending)
+        {
+            return false;
+        }
+
+        d.GamblingMoneyPending = false;
+        int bet = d.GamblingBet;
+        int payout = d.GamblingPayout;
+        int multiplier = d.GamblingMultiplier;
+        int net = payout - bet;
+        d.Money = Mathf.Max(0, d.Money + net);
+
+        if (locations.TryGetValue(LocationType.GamblingHall, out LocationData gh))
+        {
+            gh.BuildingBank = Mathf.Max(0, gh.BuildingBank - net);
+            if (net != 0)
+            {
+                RecordMoneyMovement(
+                    0,
+                    net > 0 ? gh.Label : d.DriverName,
+                    net > 0 ? d.DriverName : gh.Label,
+                    net > 0 ? "Gambling payout" : "Gambling loss",
+                    null,
+                    net > 0 ? d.Money : gh.BuildingBank,
+                    net > 0 ? MoneyAccountKind.BuildingCash : MoneyAccountKind.ResidentWallet,
+                    net > 0 ? MoneyAccountKind.ResidentWallet : MoneyAccountKind.BuildingCash,
+                    MoneyTransactionReasonKind.Gambling,
+                    fromOwnerId: net > 0 ? gh.InstanceId : d.DriverId,
+                    toOwnerId: net > 0 ? d.DriverId : gh.InstanceId);
+            }
+
+            if (net < 0)
+            {
+                ApplyGamblingRevenueTaxes(d, gh, -net, "Gambling loss");
+            }
+        }
+        else
+        {
+            SessionDebugLogger.Log("NEEDS", $"{d.DriverName} gambling result had no Gambling Hall bank to settle against.");
+        }
+
+        if (showWorldPopup && d.DriverObject != null)
+        {
+            Vector3 pos = d.DriverObject.transform.position;
+            if (multiplier == 0) SpawnMoneySpendPopup(pos, bet - payout);
+            else if (net > 0) SpawnMoneyEarnPopup(pos, net);
+        }
+
+        SessionDebugLogger.Log("NEEDS", $"{d.DriverName} gambling {logContext}: net={net:+#;-#;0}, balance=${d.Money}.");
+        return true;
     }
 
     private bool IsGamblingHallQuickHudVisible()

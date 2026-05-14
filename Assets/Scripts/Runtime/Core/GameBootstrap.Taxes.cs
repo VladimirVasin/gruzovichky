@@ -26,7 +26,8 @@ public partial class GameBootstrap
     private enum TaxIncidence
     {
         TakenFromReceiver,
-        AddedToPayerCost
+        AddedToPayerCost,
+        CityBudgetCost
     }
 
     private sealed class TaxPolicy
@@ -74,7 +75,7 @@ public partial class GameBootstrap
         public DriverAgent ReceiverWorker;
         public LocationData PayerLocation;
         public LocationData ReceiverLocation;
-        public string ExternalPayerLabel;
+        public string ExternalRecipientLabel;
         public string Reason;
     }
 
@@ -153,28 +154,28 @@ public partial class GameBootstrap
             "Import Tariff",
             TaxSourceKind.TradeImport,
             TaxFrequency.PerTransaction,
-            TaxIncidence.AddedToPayerCost,
+            TaxIncidence.CityBudgetCost,
             0,
             isEnabled: false,
-            "Customs revenue generated when the town imports resources.");
+            "Extra customs cost paid by the town when it imports resources.");
 
         AddTaxPolicy(
             "Export Duty",
             TaxSourceKind.TradeExport,
             TaxFrequency.PerTransaction,
-            TaxIncidence.AddedToPayerCost,
+            TaxIncidence.CityBudgetCost,
             0,
             isEnabled: false,
-            "Customs revenue generated when the town exports resources.");
+            "Duty paid out of export revenue when the town sells resources.");
 
         AddTaxPolicy(
             "Construction Permit Fee",
             TaxSourceKind.ConstructionPermit,
             TaxFrequency.PerTransaction,
-            TaxIncidence.AddedToPayerCost,
+            TaxIncidence.CityBudgetCost,
             0,
             isEnabled: false,
-            "Permit revenue generated when new buildings or roads are constructed.");
+            "Extra administrative cost paid when new buildings or roads are constructed.");
 
         SyncPrimaryTaxRateField();
     }
@@ -407,7 +408,7 @@ public partial class GameBootstrap
             Amount = amount,
             Quantity = Mathf.Max(1, quantity),
             ResourceType = resourceType,
-            ExternalPayerLabel = string.IsNullOrWhiteSpace(counterpartyLabel) ? "Trade Counterparty" : counterpartyLabel,
+            ExternalRecipientLabel = string.IsNullOrWhiteSpace(counterpartyLabel) ? "Trade Counterparty" : counterpartyLabel,
             Reason = reason
         });
     }
@@ -420,7 +421,7 @@ public partial class GameBootstrap
             Amount = amount,
             Quantity = Mathf.Max(1, quantity),
             ResourceType = resourceType,
-            ExternalPayerLabel = string.IsNullOrWhiteSpace(counterpartyLabel) ? "Trade Counterparty" : counterpartyLabel,
+            ExternalRecipientLabel = string.IsNullOrWhiteSpace(counterpartyLabel) ? "Trade Counterparty" : counterpartyLabel,
             Reason = reason
         });
     }
@@ -432,7 +433,7 @@ public partial class GameBootstrap
             SourceKind = TaxSourceKind.ConstructionPermit,
             Amount = amount,
             Quantity = 1,
-            ExternalPayerLabel = string.IsNullOrWhiteSpace(counterpartyLabel) ? "Construction Crew" : counterpartyLabel,
+            ExternalRecipientLabel = string.IsNullOrWhiteSpace(counterpartyLabel) ? "Construction Crew" : counterpartyLabel,
             Reason = reason
         });
     }
@@ -527,6 +528,28 @@ public partial class GameBootstrap
         MoneyAccountKind fromKind = MoneyAccountKind.External;
         int fromOwnerId = 0;
 
+        if (policy.Incidence == TaxIncidence.CityBudgetCost)
+        {
+            string toLabel = string.IsNullOrWhiteSpace(taxableEvent.ExternalRecipientLabel)
+                ? "External Fees"
+                : taxableEvent.ExternalRecipientLabel;
+            money -= requestedTaxAmount;
+            RecordMoneyMovement(
+                -requestedTaxAmount,
+                "Treasury",
+                toLabel,
+                $"Tax cost: {policy.Name} - {taxableEvent.Reason}",
+                money,
+                null,
+                MoneyAccountKind.CityBudget,
+                MoneyAccountKind.External,
+                MoneyTransactionReasonKind.BuildingTax);
+            SessionDebugLogger.Log(
+                "TAX_EVENT",
+                $"{policy.Name}: source={taxableEvent.SourceKind}, base=${taxableEvent.Amount}, paid=${requestedTaxAmount}, to={toLabel}, treasury=${money}.");
+            return requestedTaxAmount;
+        }
+
         if (policy.Incidence == TaxIncidence.TakenFromReceiver)
         {
             if (taxableEvent.ReceiverLocation != null && taxableEvent.ReceiverLocation.BuildingBank > 0)
@@ -565,12 +588,6 @@ public partial class GameBootstrap
                 fromLabel = taxableEvent.PayerLocation.Label;
                 fromKind = MoneyAccountKind.BuildingCash;
                 fromOwnerId = taxableEvent.PayerLocation.InstanceId;
-            }
-            else if (!string.IsNullOrWhiteSpace(taxableEvent.ExternalPayerLabel))
-            {
-                collected = requestedTaxAmount;
-                fromLabel = taxableEvent.ExternalPayerLabel;
-                fromKind = MoneyAccountKind.External;
             }
         }
 
@@ -654,7 +671,12 @@ public partial class GameBootstrap
 
     private string GetTaxIncidenceLabel(TaxIncidence incidence)
     {
-        return incidence == TaxIncidence.TakenFromReceiver ? L("receiver pays") : L("payer pays");
+        return incidence switch
+        {
+            TaxIncidence.TakenFromReceiver => L("receiver pays"),
+            TaxIncidence.CityBudgetCost    => L("city pays"),
+            _                              => L("payer pays")
+        };
     }
 
     private IEnumerable<LocationData> EnumerateTaxableBuildingBankLocations()
