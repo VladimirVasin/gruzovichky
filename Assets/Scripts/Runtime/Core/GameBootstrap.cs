@@ -292,6 +292,7 @@ public partial class GameBootstrap : MonoBehaviour
     private Transform roadConstructionWaveRoot;
     private Coroutine roadConstructionWaveCoroutine;
     private bool suppressUnifiedRoadVisualRebuild;
+    private bool surfaceTransitionOverlayRebuildPending;
     private bool suppressRoadsideRefresh;
     private readonly HashSet<Vector2Int> pendingRoadsideRefreshCells = new();
     private Transform lanternsRoot;

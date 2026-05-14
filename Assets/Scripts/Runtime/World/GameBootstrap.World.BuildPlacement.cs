@@ -118,7 +118,7 @@ public partial class GameBootstrap
         float x1 = cell.x + 1f;
         float z0 = cell.y;
         float z1 = cell.y + 1f;
-        const float lift = 0.01f;
+        float lift = GetTerrainCellSurfaceLift(cell);
         const float bottomY = -0.30f;
 
         Mesh mesh = filter.sharedMesh;

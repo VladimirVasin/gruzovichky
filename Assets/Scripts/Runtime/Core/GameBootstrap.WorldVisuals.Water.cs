@@ -184,6 +184,8 @@ public partial class GameBootstrap : MonoBehaviour
                 PhaseOffset = Random.Range(0f, 10f)
             });
         }
+
+        CreateWaterShoreTransitionOverlays();
     }
 
     private void SetupRiverFish()

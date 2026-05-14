@@ -211,6 +211,9 @@ public partial class GameBootstrap
             return;
         }
 
+        RefreshTerrainCellVisual(cell);
+        RefreshGroundCellSurfaceMaterial(cell);
+
         GameObject road = new($"Road_{cell.x}_{cell.y}");
         road.name = $"Road_{cell.x}_{cell.y}";
         road.transform.SetParent(roadsRoot, false);
@@ -231,6 +234,7 @@ public partial class GameBootstrap
         {
             RebuildUnifiedRoadVisuals();
         }
+        QueueSurfaceTransitionOverlayRebuild();
         UpdateRoadAccessWarningMarkers();
         if (SessionDebugLogger.IsVerboseEnabled("ROAD_TRACE"))
         {
@@ -251,6 +255,9 @@ public partial class GameBootstrap
             Destroy(road);
         }
 
+        RefreshTerrainCellVisual(cell);
+        RefreshGroundCellSurfaceMaterial(cell);
+
         foreach (Vector2Int neighbor in GridPathService.GetCardinalNeighbors(cell))
         {
             if (roadVisuals.ContainsKey(neighbor))
@@ -264,6 +271,7 @@ public partial class GameBootstrap
         {
             RebuildUnifiedRoadVisuals();
         }
+        QueueSurfaceTransitionOverlayRebuild();
         UpdateRoadAccessWarningMarkers();
         SessionDebugLogger.Log("ROAD", $"Removed road at cell ({cell.x},{cell.y}).");
     }

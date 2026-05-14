@@ -6,6 +6,11 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap : MonoBehaviour
 {
+    private const float EdgeHighwayCellBaseLift = 0.022f;
+    private const float EdgeHighwayShoulderLift = 0.040f;
+    private const float EdgeHighwaySurfaceLift = 0.058f;
+    private const float EdgeHighwayMarkingLift = 0.076f;
+
     private void SetupEdgeHighway()
     {
         if (worldRoot == null)
@@ -25,7 +30,10 @@ public partial class GameBootstrap : MonoBehaviour
             CreateEdgeHighwayTile(highwayRoot, new Vector2Int(x, upperLaneY), horizontal: true, vertical: false);
         }
 
+        CreateEdgeHighwayCellBaseStrip(highwayRoot, bottomLaneY, upperLaneY);
         CreateEdgeHighwayCenterLine(highwayRoot, bottomLaneY, upperLaneY);
+        surfaceTransitionOverlayRebuildPending = true;
+        FlushSurfaceTransitionOverlayRebuild();
     }
 
     private void SetupEdgeHighwayBuses()
@@ -54,14 +62,46 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         edgeHighwayCells.Add(cell);
+        RefreshTerrainCellVisual(cell);
+        RefreshGroundCellSurfaceMaterial(cell);
+        HideEdgeHighwayGroundCellVisual(cell);
 
         GameObject road = new($"EdgeHighway_{cell.x}_{cell.y}");
         road.name = $"EdgeHighway_{cell.x}_{cell.y}";
         road.transform.SetParent(parent, false);
         road.transform.localPosition = Vector3.zero;
 
-        CreateEdgeHighwaySurface(road.transform, "EdgeHighwayShoulder", cell, horizontal ? 1.12f : 0.94f, vertical ? 1.12f : 0.94f, 0.012f, isShoulder: true);
-        CreateEdgeHighwaySurface(road.transform, "EdgeHighwaySurface", cell, horizontal ? 0.94f : 0.74f, vertical ? 0.94f : 0.74f, 0.018f, isShoulder: false);
+        CreateEdgeHighwaySurface(road.transform, "EdgeHighwayShoulder", cell, horizontal ? 1.12f : 0.94f, vertical ? 1.12f : 0.94f, EdgeHighwayShoulderLift, isShoulder: true);
+        CreateEdgeHighwaySurface(road.transform, "EdgeHighwaySurface", cell, horizontal ? 0.94f : 0.74f, vertical ? 0.94f : 0.74f, EdgeHighwaySurfaceLift, isShoulder: false);
+    }
+
+    private void HideEdgeHighwayGroundCellVisual(Vector2Int cell)
+    {
+        if (groundRoot == null)
+        {
+            return;
+        }
+
+        Transform tile = groundRoot.Find($"Ground_{cell.x}_{cell.y}");
+        if (tile != null && tile.TryGetComponent(out Renderer renderer))
+        {
+            renderer.enabled = false;
+        }
+    }
+
+    private void CreateEdgeHighwayCellBaseStrip(Transform parent, int lowerLaneY, int upperLaneY)
+    {
+        GameObject baseStrip = new("EdgeHighwayCellBase");
+        baseStrip.transform.SetParent(parent, false);
+        baseStrip.transform.localPosition = Vector3.zero;
+
+        float x0 = -0.02f;
+        float x1 = GridWidth + 0.02f;
+        float z0 = lowerLaneY - 0.02f;
+        float z1 = upperLaneY + 1.02f;
+        CreateSampledRoadRectMesh(baseStrip, x0, x1, z0, z1, EdgeHighwayCellBaseLift, GridWidth, Mathf.Max(2, upperLaneY - lowerLaneY + 1));
+        ApplyStylizedRoadMaterial(baseStrip, 0, lowerLaneY, isHighway: true, isShoulder: false);
+        ConfigureStaticVisual(baseStrip, VisualSmoothnessAsphalt);
     }
 
     private void CreateEdgeHighwaySurface(Transform parent, string name, Vector2Int cell, float sizeX, float sizeZ, float lift, bool isShoulder)
@@ -86,7 +126,7 @@ public partial class GameBootstrap : MonoBehaviour
             dash.name = $"EdgeHighwayCenterDash_{x}";
             dash.transform.SetParent(parent, false);
             dash.transform.localPosition = Vector3.zero;
-            CreateFlatRoadQuadMesh(dash, x + 0.5f, centerZ, 0.68f, 0.08f, 0.038f);
+            CreateFlatRoadQuadMesh(dash, x + 0.5f, centerZ, 0.68f, 0.08f, EdgeHighwayMarkingLift);
             ApplyColor(dash, new Color(0.92f, 0.92f, 0.9f));
             ConfigureStaticVisual(dash, VisualSmoothnessAsphalt);
         }
@@ -118,6 +158,69 @@ public partial class GameBootstrap : MonoBehaviour
             new Vector2(0f, 1f),
             new Vector2(1f, 1f),
         };
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        MeshFilter filter = target.AddComponent<MeshFilter>();
+        filter.sharedMesh = mesh;
+        target.AddComponent<MeshRenderer>();
+    }
+
+    private void CreateSampledRoadRectMesh(
+        GameObject target,
+        float x0,
+        float x1,
+        float z0,
+        float z1,
+        float lift,
+        int xSegments,
+        int zSegments)
+    {
+        xSegments = Mathf.Max(1, xSegments);
+        zSegments = Mathf.Max(1, zSegments);
+        int columns = xSegments + 1;
+        int rows = zSegments + 1;
+        Vector3[] vertices = new Vector3[columns * rows];
+        Vector2[] uvs = new Vector2[vertices.Length];
+        int[] triangles = new int[xSegments * zSegments * 6];
+
+        int vi = 0;
+        for (int z = 0; z <= zSegments; z++)
+        {
+            float tz = z / (float)zSegments;
+            float worldZ = Mathf.Lerp(z0, z1, tz);
+            for (int x = 0; x <= xSegments; x++)
+            {
+                float tx = x / (float)xSegments;
+                float worldX = Mathf.Lerp(x0, x1, tx);
+                vertices[vi] = new Vector3(worldX, SampleRoadSurfaceHeight(worldX, worldZ) + lift, worldZ);
+                uvs[vi] = new Vector2(worldX, worldZ);
+                vi++;
+            }
+        }
+
+        int ti = 0;
+        for (int z = 0; z < zSegments; z++)
+        {
+            for (int x = 0; x < xSegments; x++)
+            {
+                int i0 = z * columns + x;
+                int i1 = i0 + 1;
+                int i2 = i0 + columns;
+                int i3 = i2 + 1;
+                triangles[ti++] = i0;
+                triangles[ti++] = i2;
+                triangles[ti++] = i1;
+                triangles[ti++] = i1;
+                triangles[ti++] = i2;
+                triangles[ti++] = i3;
+            }
+        }
+
+        Mesh mesh = new() { name = $"{target.name}_Mesh" };
+        mesh.vertices = vertices;
+        mesh.uv = uvs;
+        mesh.triangles = triangles;
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
 

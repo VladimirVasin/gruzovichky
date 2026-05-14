@@ -71,6 +71,7 @@ public partial class GameBootstrap
         isFarZoomVisualLodActive = false;
         shadowLodRenderers.Clear();
         gridLinesRoot = null;
+        surfaceTransitionOverlayRebuildPending = false;
         ResetSquirrelMemorialWorldState();
         ResetFootpathSystem();
         ResetStreetLitterSystem();

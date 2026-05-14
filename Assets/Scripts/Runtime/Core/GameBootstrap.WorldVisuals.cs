@@ -584,6 +584,24 @@ public partial class GameBootstrap : MonoBehaviour
         return result < 0 ? result + modulo : result;
     }
 
+    private bool IsRoadGroundReplacementCell(Vector2Int cell)
+    {
+        return roadCells.Contains(cell) || edgeHighwayCells.Contains(cell);
+    }
+
+    private bool TryApplyRoadGroundReplacementMaterial(GameObject target, Vector2Int cell)
+    {
+        if (!IsRoadGroundReplacementCell(cell))
+        {
+            return false;
+        }
+
+        bool isHighway = edgeHighwayCells.Contains(cell);
+        ApplyStylizedRoadMaterial(target, cell.x, cell.y, isHighway, isShoulder: isHighway);
+        ConfigureStaticVisual(target, VisualSmoothnessAsphalt);
+        return true;
+    }
+
     private void ApplyStylizedRoadMaterial(GameObject target, int x, int y, bool isHighway, bool isShoulder)
     {
         if (target == null)

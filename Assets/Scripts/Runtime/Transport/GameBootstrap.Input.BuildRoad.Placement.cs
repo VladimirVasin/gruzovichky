@@ -137,6 +137,11 @@ public partial class GameBootstrap
             {
                 RebuildUnifiedRoadVisuals();
             }
+
+            if (built)
+            {
+                FlushSurfaceTransitionOverlayRebuild();
+            }
         }
 
         return built;

@@ -24,8 +24,9 @@ public partial class GameBootstrap : MonoBehaviour
         {
             for (int y = 0; y < GridHeight; y++)
             {
-                bool isWater = waterCells.Contains(new Vector2Int(x, y));
-                bool isNearBeach = y == beachNearRow || naturalBeachCells.Contains(new Vector2Int(x, y));
+                Vector2Int cell = new(x, y);
+                bool isWater = waterCells.Contains(cell);
+                bool isNearBeach = y == beachNearRow || naturalBeachCells.Contains(cell);
                 bool isFarBeach = y == beachFarRow;
                 bool isBeach = isNearBeach || isFarBeach;
 
@@ -35,11 +36,11 @@ public partial class GameBootstrap : MonoBehaviour
                 float bottomY = terrainHeight - thickness - 0.02f;
                 GameObject groundTile = isWater
                     ? CreateWaterBodyCellMesh($"Water_{x}_{y}", x, y, waterBaseTopHeight, bottomY)
-                    : CreateTerrainCellMesh($"Ground_{x}_{y}", x, y, bottomY, 0.01f);
+                    : CreateTerrainCellMesh($"Ground_{x}_{y}", x, y, bottomY, GetTerrainCellSurfaceLift(cell));
 
                 if (isWater)
                 {
-                    Vector2Int waterCell = new(x, y);
+                    Vector2Int waterCell = cell;
                     bool isLakeWater = lakeWaterCells.Contains(waterCell);
                     float t = isLakeWater
                         ? GetLakeWaterDepth01(x, y)
@@ -169,6 +170,10 @@ public partial class GameBootstrap : MonoBehaviour
                         if (foamStrip.TryGetComponent(out Collider foamCollider)) Object.Destroy(foamCollider);
                     }
                 }
+                else if (TryApplyRoadGroundReplacementMaterial(groundTile, cell))
+                {
+                    // Road cells use a full-cell asphalt base so terrain never peeks through the road mesh.
+                }
                 else if (isNearBeach)
                 {
                     ApplyBeachGroundMaterial(groundTile, x, y, true);
@@ -189,8 +194,14 @@ public partial class GameBootstrap : MonoBehaviour
             if (x % 8 == 7) yield return null;
         }
 
+        CreateGroundTextureTransitionOverlays();
         CreateDioramaBase();
         SetupCellLightingSystem();
+    }
+
+    private float GetTerrainCellSurfaceLift(Vector2Int cell)
+    {
+        return IsRoadGroundReplacementCell(cell) ? 0.0145f : 0.01f;
     }
 
     private GameObject CreateTerrainCellMesh(string name, int x, int y, float bottomY, float lift)

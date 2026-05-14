@@ -151,6 +151,11 @@ public partial class GameBootstrap
     private void ApplyGroundCellSurfaceMaterial(GameObject target, int x, int y)
     {
         Vector2Int cell = new(x, y);
+        if (TryApplyRoadGroundReplacementMaterial(target, cell))
+        {
+            return;
+        }
+
         if (IsVisibleFootpathCell(cell))
         {
             ApplyFootpathGroundMaterial(target, cell);
