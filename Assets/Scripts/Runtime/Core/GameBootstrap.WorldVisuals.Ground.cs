@@ -272,42 +272,105 @@ public partial class GameBootstrap : MonoBehaviour
     {
         Mesh mesh = new();
         mesh.name = $"{target.name}_Mesh";
-        mesh.vertices = new[]
-        {
-            new Vector3(x0, h00, z0),
-            new Vector3(x1, h10, z0),
-            new Vector3(x0, h01, z1),
-            new Vector3(x1, h11, z1),
-            new Vector3(x0, bottomY, z0),
-            new Vector3(x1, bottomY, z0),
-            new Vector3(x0, bottomY, z1),
-            new Vector3(x1, bottomY, z1),
-        };
-        mesh.triangles = new[]
-        {
-            0, 2, 1, 1, 2, 3,
-            4, 5, 6, 5, 7, 6,
-            0, 1, 4, 1, 5, 4,
-            2, 6, 3, 3, 6, 7,
-            0, 4, 2, 2, 4, 6,
-            1, 3, 5, 3, 7, 5,
-        };
-        mesh.uv = new[]
-        {
-            new Vector2(x0, z0),
-            new Vector2(x1, z0),
-            new Vector2(x0, z1),
-            new Vector2(x1, z1),
-            new Vector2(x0, z0),
-            new Vector2(x1, z0),
-            new Vector2(x0, z1),
-            new Vector2(x1, z1),
-        };
+        mesh.vertices = CreateCellBoxVertices(x0, x1, z0, z1, h00, h10, h01, h11, bottomY);
+        mesh.triangles = CellBoxTriangles;
+        mesh.uv = CreateCellBoxUvs(x0, x1, z0, z1);
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
 
         target.AddComponent<MeshFilter>().sharedMesh = mesh;
         target.AddComponent<MeshRenderer>();
+    }
+
+    private static readonly int[] CellBoxTriangles =
+    {
+        0, 2, 1, 1, 2, 3,
+        4, 5, 6, 5, 7, 6,
+        8, 9, 10, 9, 11, 10,
+        12, 14, 13, 13, 14, 15,
+        16, 17, 18, 18, 17, 19,
+        20, 21, 22, 21, 23, 22,
+    };
+
+    private static Vector3[] CreateCellBoxVertices(
+        float x0,
+        float x1,
+        float z0,
+        float z1,
+        float h00,
+        float h10,
+        float h01,
+        float h11,
+        float bottomY)
+    {
+        return new[]
+        {
+            new Vector3(x0, h00, z0),
+            new Vector3(x1, h10, z0),
+            new Vector3(x0, h01, z1),
+            new Vector3(x1, h11, z1),
+
+            new Vector3(x0, bottomY, z0),
+            new Vector3(x1, bottomY, z0),
+            new Vector3(x0, bottomY, z1),
+            new Vector3(x1, bottomY, z1),
+
+            new Vector3(x0, h00, z0),
+            new Vector3(x1, h10, z0),
+            new Vector3(x0, bottomY, z0),
+            new Vector3(x1, bottomY, z0),
+
+            new Vector3(x0, h01, z1),
+            new Vector3(x1, h11, z1),
+            new Vector3(x0, bottomY, z1),
+            new Vector3(x1, bottomY, z1),
+
+            new Vector3(x0, h00, z0),
+            new Vector3(x0, bottomY, z0),
+            new Vector3(x0, h01, z1),
+            new Vector3(x0, bottomY, z1),
+
+            new Vector3(x1, h10, z0),
+            new Vector3(x1, h11, z1),
+            new Vector3(x1, bottomY, z0),
+            new Vector3(x1, bottomY, z1),
+        };
+    }
+
+    private static Vector2[] CreateCellBoxUvs(float x0, float x1, float z0, float z1)
+    {
+        return new[]
+        {
+            new Vector2(x0, z0),
+            new Vector2(x1, z0),
+            new Vector2(x0, z1),
+            new Vector2(x1, z1),
+
+            new Vector2(x0, z0),
+            new Vector2(x1, z0),
+            new Vector2(x0, z1),
+            new Vector2(x1, z1),
+
+            new Vector2(x0, z0),
+            new Vector2(x1, z0),
+            new Vector2(x0, z0),
+            new Vector2(x1, z0),
+
+            new Vector2(x0, z1),
+            new Vector2(x1, z1),
+            new Vector2(x0, z1),
+            new Vector2(x1, z1),
+
+            new Vector2(x0, z0),
+            new Vector2(x0, z0),
+            new Vector2(x0, z1),
+            new Vector2(x0, z1),
+
+            new Vector2(x1, z0),
+            new Vector2(x1, z1),
+            new Vector2(x1, z0),
+            new Vector2(x1, z1),
+        };
     }
 
 

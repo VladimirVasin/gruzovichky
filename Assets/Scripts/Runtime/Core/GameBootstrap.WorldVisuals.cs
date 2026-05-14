@@ -57,10 +57,8 @@ public partial class GameBootstrap : MonoBehaviour
             return null;
         }
 
-        texture.name = fileNameWithoutExtension;
-        texture.wrapMode = TextureWrapMode.Repeat;
-        texture.filterMode = FilterMode.Bilinear;
-        texture.anisoLevel = 2;
+        texture = PrepareRepeatableArtTexture(texture, folder, fileNameWithoutExtension);
+        ConfigureRepeatableArtTexture(texture, fileNameWithoutExtension);
         return texture;
     }
 
@@ -80,6 +78,138 @@ public partial class GameBootstrap : MonoBehaviour
 
         Destroy(loaded);
         return null;
+    }
+
+    private static void ConfigureRepeatableArtTexture(Texture2D texture, string textureName)
+    {
+        if (texture == null)
+        {
+            return;
+        }
+
+        texture.name = textureName;
+        texture.wrapMode = TextureWrapMode.Repeat;
+        texture.filterMode = FilterMode.Bilinear;
+        texture.anisoLevel = 2;
+    }
+
+    private Texture2D PrepareRepeatableArtTexture(Texture2D texture, string folder, string textureName)
+    {
+        if (texture == null || !ShouldTrimRepeatTextureBorder(folder))
+        {
+            return texture;
+        }
+
+        Texture2D readable = CreateReadableTextureCopy(texture);
+        if (readable == null)
+        {
+            return texture;
+        }
+
+        int border = Mathf.Clamp(Mathf.RoundToInt(Mathf.Min(readable.width, readable.height) * 0.022f), 4, 14);
+        if (readable.width <= border * 3 || readable.height <= border * 3)
+        {
+            return readable;
+        }
+
+        Texture2D trimmed = ResampleTextureWithoutOuterBorder(readable, border, $"{textureName}_tile_safe");
+        Destroy(readable);
+        return trimmed != null ? trimmed : texture;
+    }
+
+    private static bool ShouldTrimRepeatTextureBorder(string folder)
+    {
+        return !string.IsNullOrWhiteSpace(folder);
+    }
+
+    private static Texture2D CreateReadableTextureCopy(Texture2D source)
+    {
+        if (source == null)
+        {
+            return null;
+        }
+
+        RenderTexture previous = RenderTexture.active;
+        RenderTexture temporary = RenderTexture.GetTemporary(source.width, source.height, 0, RenderTextureFormat.ARGB32);
+        try
+        {
+            Graphics.Blit(source, temporary);
+            RenderTexture.active = temporary;
+            Texture2D copy = new(source.width, source.height, TextureFormat.RGBA32, false);
+            copy.ReadPixels(new Rect(0, 0, source.width, source.height), 0, 0);
+            copy.Apply(false, false);
+            return copy;
+        }
+        finally
+        {
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(temporary);
+        }
+    }
+
+    private static Texture2D ResampleTextureWithoutOuterBorder(Texture2D source, int border, string textureName)
+    {
+        int width = source.width;
+        int height = source.height;
+        Texture2D result = new(width, height, TextureFormat.RGBA32, false)
+        {
+            name = textureName
+        };
+
+        float minU = border / (float)width;
+        float maxU = 1f - minU;
+        float minV = border / (float)height;
+        float maxV = 1f - minV;
+        for (int y = 0; y < height; y++)
+        {
+            float v = Mathf.Lerp(minV, maxV, height <= 1 ? 0f : y / (float)(height - 1));
+            for (int x = 0; x < width; x++)
+            {
+                float u = Mathf.Lerp(minU, maxU, width <= 1 ? 0f : x / (float)(width - 1));
+                result.SetPixel(x, y, source.GetPixelBilinear(u, v));
+            }
+        }
+
+        BlendTextureWrapEdges(result, Mathf.Clamp(border, 4, 18));
+        result.Apply(false, false);
+        return result;
+    }
+
+    private static void BlendTextureWrapEdges(Texture2D texture, int blendWidth)
+    {
+        int width = texture.width;
+        int height = texture.height;
+        Color[] pixels = texture.GetPixels();
+        Color[] original = (Color[])pixels.Clone();
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < blendWidth; x++)
+            {
+                float t = (x + 1f) / (blendWidth + 1f);
+                int left = y * width + x;
+                int right = y * width + (width - 1 - x);
+                Color seamColor = Color.Lerp(original[right], original[left], 0.5f);
+                pixels[left] = Color.Lerp(seamColor, original[left], t);
+                pixels[right] = Color.Lerp(seamColor, original[right], t);
+            }
+        }
+
+        for (int y = 0; y < blendWidth; y++)
+        {
+            float t = (y + 1f) / (blendWidth + 1f);
+            int oppositeY = height - 1 - y;
+            for (int x = 0; x < width; x++)
+            {
+                int bottom = y * width + x;
+                int top = oppositeY * width + x;
+                Color seamColor = Color.Lerp(pixels[top], pixels[bottom], 0.5f);
+                pixels[bottom] = Color.Lerp(seamColor, pixels[bottom], t);
+                pixels[top] = Color.Lerp(seamColor, pixels[top], t);
+            }
+        }
+
+        texture.SetPixels(pixels);
     }
 
     private static Shader GetUrpLitShader()

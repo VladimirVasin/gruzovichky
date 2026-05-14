@@ -122,17 +122,16 @@ public partial class GameBootstrap
         const float bottomY = -0.30f;
 
         Mesh mesh = filter.sharedMesh;
-        mesh.vertices = new[]
-        {
-            new Vector3(x0, SampleTerrainHeight(x0, z0) + lift, z0),
-            new Vector3(x1, SampleTerrainHeight(x1, z0) + lift, z0),
-            new Vector3(x0, SampleTerrainHeight(x0, z1) + lift, z1),
-            new Vector3(x1, SampleTerrainHeight(x1, z1) + lift, z1),
-            new Vector3(x0, bottomY, z0),
-            new Vector3(x1, bottomY, z0),
-            new Vector3(x0, bottomY, z1),
-            new Vector3(x1, bottomY, z1),
-        };
+        mesh.vertices = CreateCellBoxVertices(
+            x0,
+            x1,
+            z0,
+            z1,
+            SampleTerrainHeight(x0, z0) + lift,
+            SampleTerrainHeight(x1, z0) + lift,
+            SampleTerrainHeight(x0, z1) + lift,
+            SampleTerrainHeight(x1, z1) + lift,
+            bottomY);
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
     }
