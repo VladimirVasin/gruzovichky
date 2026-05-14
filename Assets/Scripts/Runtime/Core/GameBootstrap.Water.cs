@@ -361,6 +361,13 @@ public partial class GameBootstrap : MonoBehaviour
             tileColor = Color.Lerp(tileColor, new Color(0.9f, 0.97f, 1f), highlight);
             tileColor.a = Mathf.Clamp01(baseAlpha + localWaveHeight * alphaRange);
             surfaceTile.Material.color = tileColor;
+            Vector2 layerDrift = surfaceTile.LayerIndex switch
+            {
+                0 => new Vector2(time * 0.026f, time * 0.014f),
+                1 => new Vector2(time * 0.015f, -time * 0.008f),
+                _ => new Vector2(-time * 0.006f, time * 0.004f)
+            };
+            SetOverlayTextureOffset(surfaceTile.Material, GetGroundTextureOffset(surfaceTile.Cell.x, surfaceTile.Cell.y, 71 + surfaceTile.LayerIndex * 7) + layerDrift);
         }
 
         for (int i = waterShoreWashPatches.Count - 1; i >= 0; i--)
@@ -418,6 +425,11 @@ public partial class GameBootstrap : MonoBehaviour
             washColor *= waveWashBrightness;
             washColor.a = alpha;
             patch.Material.color = washColor;
+            SetOverlayTextureOffset(
+                patch.Material,
+                new Vector2(
+                    patch.SegmentIndex * 0.17f + time * (0.032f + patch.ShoreRingIndex * 0.007f),
+                    patch.ShoreRingIndex * 0.23f - time * 0.018f));
         }
 
         float centerX = GridWidth * 0.5f;
@@ -444,7 +456,31 @@ public partial class GameBootstrap : MonoBehaviour
                 Color foamColor = Color.Lerp(new Color(0.58f, 0.70f, 0.72f), new Color(0.78f, 0.88f, 0.86f), currentStylizedDaylight) * (pulse * shorelineGlow);
                 foamColor.a = 1f;
                 foam.Material.color = foamColor;
+                SetOverlayTextureOffset(
+                    foam.Material,
+                    new Vector2(
+                        foam.DriftOffset * 0.07f + time * foam.DriftSpeed * 0.18f,
+                        foam.PhaseOffset * 0.03f + time * 0.025f));
             }
+        }
+    }
+
+    private static void SetOverlayTextureOffset(Material material, Vector2 offset)
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        material.mainTextureOffset = offset;
+        if (material.HasProperty("_BaseMap"))
+        {
+            material.SetTextureOffset("_BaseMap", offset);
+        }
+
+        if (material.HasProperty("_MainTex"))
+        {
+            material.SetTextureOffset("_MainTex", offset);
         }
     }
 

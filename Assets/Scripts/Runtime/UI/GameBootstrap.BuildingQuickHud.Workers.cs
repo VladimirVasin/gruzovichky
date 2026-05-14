@@ -15,7 +15,7 @@ public partial class GameBootstrap
         public bool IsGamblingVisitor;
     }
 
-    private void UpdateBuildingServiceWorkerSlots(LocationType locationType, bool ru)
+    private void UpdateBuildingServiceWorkerSlots(LocationData location, LocationType locationType, bool ru)
     {
         if (buildingQuickHud?.WorkerSlots == null)
         {
@@ -29,7 +29,7 @@ public partial class GameBootstrap
             return;
         }
 
-        List<BuildingHudWorkerEntry> entries = CollectBuildingQuickHudWorkerEntries(locationType, ru);
+        List<BuildingHudWorkerEntry> entries = CollectBuildingQuickHudWorkerEntries(location, locationType, ru);
         EnsureBuildingWorkerSlotCount(entries.Count);
 
         buildingQuickHud.WorkerSlotsSectionHeader.text = locationType == LocationType.Warehouse
@@ -82,7 +82,7 @@ public partial class GameBootstrap
                locationType == LocationType.LaborExchange;
     }
 
-    private List<BuildingHudWorkerEntry> CollectBuildingQuickHudWorkerEntries(LocationType locationType, bool ru)
+    private List<BuildingHudWorkerEntry> CollectBuildingQuickHudWorkerEntries(LocationData location, LocationType locationType, bool ru)
     {
         List<BuildingHudWorkerEntry> entries = new();
         HashSet<int> added = new();
@@ -94,12 +94,12 @@ public partial class GameBootstrap
                 continue;
             }
 
-            if (IsWorkerAssignedAroundBuilding(d, locationType))
+            if (IsWorkerAssignedAroundBuilding(d, location))
             {
                 entries.Add(new BuildingHudWorkerEntry
                 {
                     Driver = d,
-                    ActivityText = GetAssignedBuildingWorkerActivityLabel(d, locationType, ru)
+                    ActivityText = GetAssignedBuildingWorkerActivityLabel(d, location, ru)
                 });
                 added.Add(d.DriverId);
             }
@@ -112,7 +112,7 @@ public partial class GameBootstrap
                 continue;
             }
 
-            if (!TryGetBuildingVisitorEntry(d, locationType, ru, out BuildingHudWorkerEntry entry))
+            if (!TryGetBuildingVisitorEntry(d, location, locationType, ru, out BuildingHudWorkerEntry entry))
             {
                 continue;
             }
@@ -124,18 +124,35 @@ public partial class GameBootstrap
         return entries;
     }
 
-    private bool IsWorkerAssignedAroundBuilding(DriverAgent driver, LocationType locationType)
+    private bool IsWorkerAssignedAroundBuilding(DriverAgent driver, LocationData location)
     {
-        if (driver == null || driver.AssignedBuildingType != locationType)
+        if (driver == null ||
+            location == null ||
+            !IsDriverAssignedToBuildingSlot(driver, location.Type, location.InstanceId))
         {
             return false;
         }
 
-        return driver.IsInsideBuilding ||
-               driver.IsOnActiveShift ||
+        bool insideThisBuilding = IsDriverInsideQuickHudLocation(driver, location);
+        bool insideAnotherBuilding = driver.IsInsideBuilding && !insideThisBuilding;
+        return insideThisBuilding ||
+               driver.IsOnActiveShift && !insideAnotherBuilding ||
                driver.WalkPhase == DriverRescuePhase.ToBuildingForShift ||
                driver.WalkPhase == DriverRescuePhase.ToMotelFromBuilding ||
-               IsWorkerProductionFieldPhase(driver.WalkPhase);
+               location.Type == LocationType.Forest && IsWorkerProductionFieldPhase(driver.WalkPhase);
+    }
+
+    private bool IsDriverInsideQuickHudLocation(DriverAgent driver, LocationData location)
+    {
+        if (driver == null ||
+            location == null ||
+            !driver.IsInsideBuilding ||
+            driver.InsideBuildingType != location.Type)
+        {
+            return false;
+        }
+
+        return ResolveBuildingInstanceId(location.Type, driver.InsideBuildingInstanceId) == location.InstanceId;
     }
 
     private static bool IsWorkerProductionFieldPhase(DriverRescuePhase phase)
@@ -148,7 +165,7 @@ public partial class GameBootstrap
                phase == DriverRescuePhase.LumberReturnToBuilding;
     }
 
-    private bool TryGetBuildingVisitorEntry(DriverAgent driver, LocationType locationType, bool ru, out BuildingHudWorkerEntry entry)
+    private bool TryGetBuildingVisitorEntry(DriverAgent driver, LocationData location, LocationType locationType, bool ru, out BuildingHudWorkerEntry entry)
     {
         entry = null;
 
@@ -170,6 +187,11 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (driver.IsInsideBuilding && !IsDriverInsideQuickHudLocation(driver, location))
+        {
+            return false;
+        }
+
         entry = new BuildingHudWorkerEntry
         {
             Driver = driver,
@@ -182,7 +204,7 @@ public partial class GameBootstrap
         return true;
     }
 
-    private string GetAssignedBuildingWorkerActivityLabel(DriverAgent driver, LocationType locationType, bool ru)
+    private string GetAssignedBuildingWorkerActivityLabel(DriverAgent driver, LocationData location, bool ru)
     {
         if (driver.WalkPhase == DriverRescuePhase.ToBuildingForShift)
         {
@@ -194,7 +216,7 @@ public partial class GameBootstrap
             return ru ? "\u0417\u0430\u043a\u043e\u043d\u0447\u0438\u043b \u0441\u043c\u0435\u043d\u0443" : "Leaving shift";
         }
 
-        if (locationType == LocationType.Forest && IsWorkerProductionFieldPhase(driver.WalkPhase))
+        if (location != null && location.Type == LocationType.Forest && IsWorkerProductionFieldPhase(driver.WalkPhase))
         {
             return driver.WalkPhase switch
             {
@@ -205,7 +227,7 @@ public partial class GameBootstrap
             };
         }
 
-        if (driver.IsInsideBuilding)
+        if (IsDriverInsideQuickHudLocation(driver, location))
         {
             return ru ? "\u041d\u0430 \u0441\u043c\u0435\u043d\u0435 \u0432\u043d\u0443\u0442\u0440\u0438" : "On shift inside";
         }

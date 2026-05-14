@@ -641,10 +641,10 @@ public partial class GameBootstrap
 
     private Vector2Int GetPlacedBuildingConnectionCell(BuildTool placedTool, Vector2Int fallbackCell)
     {
-        if (placedTool == BuildTool.Docks &&
-            locations.TryGetValue(LocationType.Docks, out LocationData docks))
+        if (TryGetBuildToolLocationType(placedTool, out LocationType locationType) &&
+            TryFindNewestBuiltLocation(locationType, fallbackCell, out LocationData location))
         {
-            return docks.RoadAccess;
+            return location.RoadAccess;
         }
 
         return fallbackCell;

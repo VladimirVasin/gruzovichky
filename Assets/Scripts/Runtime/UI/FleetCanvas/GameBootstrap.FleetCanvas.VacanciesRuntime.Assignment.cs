@@ -68,7 +68,7 @@ public partial class GameBootstrap
         {
             return option.ShiftIndex < 0 ||
                    option.ShiftIndex >= WarehouseMaxWorkers ||
-                   GetNthLogisticsWorker(LocationType.Warehouse, option.ShiftIndex) != null;
+                   GetNthLogisticsWorker(LocationType.Warehouse, option.ShiftIndex, vacancy.LocationInstanceId) != null;
         }
 
         if (option.Kind == VacancyFlowOptionKind.Truck)
@@ -161,7 +161,7 @@ public partial class GameBootstrap
             if (IsGroupedWarehouseVacancy(vacancy) &&
                 (selectedVacancyShiftIndex < 0 ||
                  selectedVacancyShiftIndex >= WarehouseMaxWorkers ||
-                 GetNthLogisticsWorker(LocationType.Warehouse, selectedVacancyShiftIndex) != null))
+                 GetNthLogisticsWorker(LocationType.Warehouse, selectedVacancyShiftIndex, vacancy.LocationInstanceId) != null))
             {
                 return false;
             }
@@ -511,7 +511,7 @@ public partial class GameBootstrap
 
             if (IsGroupedWarehouseVacancy(vacancyViewModels[i]) &&
                 worker.DutyMode == DriverDutyMode.Logistics &&
-                worker.AssignedBuildingType == LocationType.Warehouse)
+                IsDriverAssignedToBuildingSlot(worker, LocationType.Warehouse, vacancyViewModels[i].LocationInstanceId))
             {
                 return i;
             }

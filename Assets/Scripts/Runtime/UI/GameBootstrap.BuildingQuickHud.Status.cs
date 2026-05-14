@@ -13,7 +13,7 @@ public partial class GameBootstrap
             return roadWarning;
         }
 
-        if (locationType != LocationType.Docks && IsProductionLocation(locationType) && !IsLocationOperational(locationType))
+        if (locationType != LocationType.Docks && IsProductionLocation(locationType) && !IsLocationOperational(location))
         {
             return locationType switch
             {
@@ -32,7 +32,7 @@ public partial class GameBootstrap
             LocationType.Forest           => "Lumberyard operations",
             LocationType.Sawmill          => "Processing logs into boards",
             LocationType.FurnitureFactory => "Crafting furniture from boards and textile",
-            LocationType.Docks            => GetDocksQuickStatusText(),
+            LocationType.Docks            => GetDocksQuickStatusText(location),
             LocationType.Warehouse        => IsLocationOperational(LocationType.Warehouse)
                 ? HasActiveTradeRun() &&
                   activeTradeRun.OrderType == TradeOrderType.Buy &&
@@ -64,17 +64,21 @@ public partial class GameBootstrap
         };
     }
 
-    private string GetBuildingQuickResourceText(LocationType locationType)
+    private string GetBuildingQuickResourceText(LocationData location, LocationType locationType)
     {
-        locations.TryGetValue(locationType, out LocationData location);
+        if (location == null)
+        {
+            locations.TryGetValue(locationType, out location);
+        }
+
         return locationType switch
         {
             LocationType.Parking => $"{FormatValueLine("Truck Slots", $"{GetOwnedTruckCount()} / {GetTruckParkingCapacity()}")}\n{FormatValueLine("Bus Slots", $"{GetOwnedBusCount()} / {GetBusParkingCapacity()}")}\n{FormatValueLine(IsRussianLanguage() ? "Казна парковки" : "Parking Treasury", $"${location?.BuildingBank ?? 0}")}",
-            LocationType.Forest => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Forest)} / {GetMaxBuildingWorkerSlots(LocationType.Forest)}")}\n{FormatValueLine("Logs", $"{location?.LogsStored ?? 0} / {ForestMaxLogsStorage}")}",
-            LocationType.Sawmill => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Sawmill)} / {GetMaxBuildingWorkerSlots(LocationType.Sawmill)}")}\n{FormatValueLine("Logs", (location?.LogsStored ?? 0).ToString())}\n{FormatValueLine("Boards", (location?.BoardsStored ?? 0).ToString())}",
-            LocationType.FurnitureFactory => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.FurnitureFactory)} / {GetMaxBuildingWorkerSlots(LocationType.FurnitureFactory)}")}\n{FormatValueLine("Boards", $"{location?.BoardsStored ?? 0} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{location?.TextileStored ?? 0} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{location?.FurnitureStored ?? 0} / {FurnitureFactoryMaxFurnitureStorage}")}",
-            LocationType.Warehouse => GetWarehouseQuickResourceText(),
-            LocationType.Docks => GetDocksQuickResourceText(),
+            LocationType.Forest => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(location)} / {GetMaxBuildingWorkerSlots(LocationType.Forest)}")}\n{FormatValueLine("Logs", $"{location?.LogsStored ?? 0} / {ForestMaxLogsStorage}")}",
+            LocationType.Sawmill => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(location)} / {GetMaxBuildingWorkerSlots(LocationType.Sawmill)}")}\n{FormatValueLine("Logs", (location?.LogsStored ?? 0).ToString())}\n{FormatValueLine("Boards", (location?.BoardsStored ?? 0).ToString())}",
+            LocationType.FurnitureFactory => $"{FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(location)} / {GetMaxBuildingWorkerSlots(LocationType.FurnitureFactory)}")}\n{FormatValueLine("Boards", $"{location?.BoardsStored ?? 0} / {FurnitureFactoryMaxBoardsStorage}")}\n{FormatValueLine("Textile", $"{location?.TextileStored ?? 0} / {FurnitureFactoryMaxTextileStorage}")}\n{FormatValueLine("Furniture", $"{location?.FurnitureStored ?? 0} / {FurnitureFactoryMaxFurnitureStorage}")}",
+            LocationType.Warehouse => GetWarehouseQuickResourceText(location),
+            LocationType.Docks => GetDocksQuickResourceText(location),
             LocationType.GasStation => GetGasStationQuickResourceText(),
             LocationType.IntercityStop    => IsRussianLanguage()
                 ? FormatValueLine("Статус", "Готова к приёму")
@@ -346,6 +350,11 @@ public partial class GameBootstrap
         return FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(LocationType.Warehouse)} / {WarehouseMaxWorkers}");
     }
 
+    private string GetWarehouseQuickResourceText(LocationData warehouse)
+    {
+        return FormatValueLine("Worker on shift", $"{CountWorkersOnShiftAt(warehouse)} / {WarehouseMaxWorkers}");
+    }
+
     private int CountWorkersOnShiftAt(LocationType locationType)
     {
         int count = 0;
@@ -355,6 +364,34 @@ public partial class GameBootstrap
             if (driver == null ||
                 driver.DutyMode != DriverDutyMode.Logistics ||
                 driver.AssignedBuildingType != locationType ||
+                !driver.IsOnActiveShift ||
+                !IsLogisticsWorkerWorkHour(driver) ||
+                driver.RestPhase != DriverRestPhase.None ||
+                driver.IsArrivingByBus)
+            {
+                continue;
+            }
+
+            count++;
+        }
+
+        return count;
+    }
+
+    private int CountWorkersOnShiftAt(LocationData location)
+    {
+        if (location == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (driver == null ||
+                !IsDriverAssignedToBuildingSlot(driver, location.Type, location.InstanceId) ||
+                !driver.IsOnActiveShift ||
                 !IsLogisticsWorkerWorkHour(driver) ||
                 driver.RestPhase != DriverRestPhase.None ||
                 driver.IsArrivingByBus)

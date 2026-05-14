@@ -393,22 +393,26 @@ public partial class GameBootstrap
         if (locations.ContainsKey(LocationType.Warehouse) &&
             IsVacancyUnlockedForCurrentTutorial(VacancyKind.Production, LocationType.Warehouse))
         {
-            int assignedWarehouseLoaders = CountLogisticsWorkers(LocationType.Warehouse);
-            vacancyViewModels.Add(new VacancyViewModel
+            foreach (LocationData warehouse in EnumerateAssignableBuildingLocations(LocationType.Warehouse))
             {
-                Kind = VacancyKind.Production,
-                Title = ru ? "\u0421\u043a\u043b\u0430\u0434\u0441\u043a\u043e\u0439 \u0433\u0440\u0443\u0437\u0447\u0438\u043a" : "Warehouse Loader",
-                Subtitle = ru ? "\u0441\u043a\u043b\u0430\u0434" : "warehouse",
-                Schedule = ru
-                    ? $"{assignedWarehouseLoaders}/{WarehouseMaxWorkers} \u0441\u043c\u0435\u043d"
-                    : $"{assignedWarehouseLoaders}/{WarehouseMaxWorkers} shifts",
-                IsOccupied = false,
-                BuildingType = LocationType.Warehouse,
-                SlotIndex = -1,
-                IsGroupedWarehouse = true,
-                FilledSlots = assignedWarehouseLoaders,
-                MaxSlots = WarehouseMaxWorkers
-            });
+                int assignedWarehouseLoaders = CountLogisticsWorkers(LocationType.Warehouse, warehouse.InstanceId);
+                vacancyViewModels.Add(new VacancyViewModel
+                {
+                    Kind = VacancyKind.Production,
+                    Title = ru ? $"\u0421\u043a\u043b\u0430\u0434\u0441\u043a\u043e\u0439 \u0433\u0440\u0443\u0437\u0447\u0438\u043a: {GetBuildingInstanceDisplayName(LocationType.Warehouse, warehouse.InstanceId)}" : $"Warehouse Loader: {GetBuildingInstanceDisplayName(LocationType.Warehouse, warehouse.InstanceId)}",
+                    Subtitle = ru ? "\u0441\u043a\u043b\u0430\u0434" : "warehouse",
+                    Schedule = ru
+                        ? $"{assignedWarehouseLoaders}/{WarehouseMaxWorkers} \u0441\u043c\u0435\u043d"
+                        : $"{assignedWarehouseLoaders}/{WarehouseMaxWorkers} shifts",
+                    IsOccupied = false,
+                    BuildingType = LocationType.Warehouse,
+                    LocationInstanceId = warehouse.InstanceId,
+                    SlotIndex = -1,
+                    IsGroupedWarehouse = true,
+                    FilledSlots = assignedWarehouseLoaders,
+                    MaxSlots = WarehouseMaxWorkers
+                });
+            }
         }
 
         AddVacancyModelsForAssignableBuildings(ru);
@@ -542,7 +546,7 @@ public partial class GameBootstrap
         {
             for (int i = 0; i < WarehouseMaxWorkers; i++)
             {
-                DriverAgent assigned = GetNthLogisticsWorker(LocationType.Warehouse, i);
+                DriverAgent assigned = GetNthLogisticsWorker(LocationType.Warehouse, i, vacancy.LocationInstanceId);
                 vacancyFlowOptions.Add(new VacancyFlowOption
                 {
                     Kind = VacancyFlowOptionKind.Shift,

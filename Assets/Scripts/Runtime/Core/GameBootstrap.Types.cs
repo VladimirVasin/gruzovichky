@@ -313,6 +313,10 @@ public partial class GameBootstrap : MonoBehaviour
         !IsProductionLocation(type) ||
         (locations.TryGetValue(type, out LocationData d) && d.Workers > 0);
 
+    private static bool IsLocationOperational(LocationData location) =>
+        location != null &&
+        (!IsProductionLocation(location.Type) || location.Workers > 0);
+
     private enum CargoType
     {
         None,
@@ -580,6 +584,7 @@ public partial class GameBootstrap : MonoBehaviour
         public int CottonStored;
         public int TextileStored;
         public int FurnitureStored;
+        public float ProductionProcessingTimer;
         public int DocksImportLogsStored;
         public int DocksImportBoardsStored;
         public int DocksImportCottonStored;

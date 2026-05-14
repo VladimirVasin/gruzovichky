@@ -127,11 +127,19 @@ public partial class GameBootstrap
 
     private int CountLogisticsWorkers(LocationType buildingType)
     {
+        return CountLogisticsWorkers(buildingType, 0);
+    }
+
+    private int CountLogisticsWorkers(LocationType buildingType, int locationInstanceId)
+    {
         int count = 0;
+        int resolvedInstanceId = ResolveBuildingInstanceId(buildingType, locationInstanceId);
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent d = driverAgents[i];
-            if (d.DutyMode == DriverDutyMode.Logistics && d.AssignedBuildingType == buildingType)
+            if (d.DutyMode == DriverDutyMode.Logistics &&
+                d.AssignedBuildingType == buildingType &&
+                (locationInstanceId <= 0 || d.AssignedBuildingInstanceId == resolvedInstanceId))
             {
                 count++;
             }

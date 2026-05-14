@@ -49,7 +49,7 @@ public partial class GameBootstrap
             selectedLocationLabelRoot,
             selectedLocationLabelText,
             selectedLocationLabelOutlines,
-            GetSelectedLocationDisplayName(locationType),
+            GetBuildingInstanceDisplayName(locationType, location.InstanceId),
             labelPosition,
             mainCamera.transform.position,
             34f,

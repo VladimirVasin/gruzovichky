@@ -363,12 +363,15 @@ public partial class GameBootstrap
         if (locations.ContainsKey(LocationType.Warehouse) &&
             IsVacancyUnlockedForCurrentTutorial(VacancyKind.Production, LocationType.Warehouse))
         {
-            for (int i = 0; i < WarehouseMaxWorkers; i++)
+            foreach (LocationData warehouse in EnumerateAssignableBuildingLocations(LocationType.Warehouse))
             {
-                if (GetNthLogisticsWorker(LocationType.Warehouse, i) == null &&
-                    !HasLaborExchangePosting(VacancyKind.Production, LocationType.Warehouse, 0, i, -1))
+                for (int i = 0; i < WarehouseMaxWorkers; i++)
                 {
-                    candidates.Add(new LaborExchangeCandidate(VacancyKind.Production, LocationType.Warehouse, 0, i, -1, 0, 15));
+                    if (GetNthLogisticsWorker(LocationType.Warehouse, i, warehouse.InstanceId) == null &&
+                        !HasLaborExchangePosting(VacancyKind.Production, LocationType.Warehouse, warehouse.InstanceId, i, -1))
+                    {
+                        candidates.Add(new LaborExchangeCandidate(VacancyKind.Production, LocationType.Warehouse, warehouse.InstanceId, i, -1, 0, 15));
+                    }
                 }
             }
         }

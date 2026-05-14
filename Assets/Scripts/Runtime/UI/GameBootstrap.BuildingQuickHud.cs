@@ -515,15 +515,16 @@ public partial class GameBootstrap
         bool isCityHall = selectedBuildingType == LocationType.CityHall;
         bool isMotel = selectedBuildingType == LocationType.Motel;
         bool isWarehouse = selectedBuildingType == LocationType.Warehouse;
+        string buildingDisplayName = GetBuildingInstanceDisplayName(selectedBuildingType, location.InstanceId);
         ConfigureBuildingQuickHudMode(isCityHall, isMotel, isWarehouse);
         buildingQuickHud.HeaderText.text = isCityHall
             ? "\u0420\u0430\u0442\u0443\u0448\u0430 (\u0421\u0435\u0440\u0432\u0438\u0441)"
             : isMotel
                 ? "\u041c\u043e\u0442\u0435\u043b\u044c"
             : isWarehouse
-                ? "\u0421\u043a\u043b\u0430\u0434"
-                : selectedBuildingType == LocationType.Docks
-                    ? GetSelectedLocationDisplayName(selectedBuildingType)
+                ? buildingDisplayName
+            : selectedBuildingType == LocationType.Docks
+                    ? buildingDisplayName
                     : location.Label;
         buildingQuickHud.HeaderText.fontSize = isMotel || isCityHall || isWarehouse ? 22 : 21;
         string categoryTag = IsProductionLocation(selectedBuildingType) ? "  [Production]"
@@ -543,11 +544,11 @@ public partial class GameBootstrap
         }
         else
         {
-            buildingQuickHud.TypeText.text = GetSelectedLocationDisplayName(selectedBuildingType) + categoryTag;
+            buildingQuickHud.TypeText.text = buildingDisplayName + categoryTag;
             string quickStatus = GetBuildingQuickStatusText(location, selectedBuildingType);
             string quickResource = selectedBuildingType == LocationType.PersonalHouse
                 ? GetPersonalHouseQuickResourceText()
-                : GetBuildingQuickResourceText(selectedBuildingType);
+                : GetBuildingQuickResourceText(location, selectedBuildingType);
             buildingQuickHud.StatusText.text = quickStatus;
             buildingQuickHud.StatusText.color = TryGetRoadAccessQuickWarning(location, out _, out Color roadWarningColor)
                 ? roadWarningColor
@@ -589,7 +590,7 @@ public partial class GameBootstrap
         }
         else
         {
-            UpdateBuildingServiceWorkerSlots(selectedBuildingType, ru);
+            UpdateBuildingServiceWorkerSlots(location, selectedBuildingType, ru);
             if (isWarehouse)
             {
                 UpdateWarehouseBuildingWorkerSectionChrome();
@@ -859,7 +860,7 @@ public partial class GameBootstrap
                 break;
             case LocationType.Docks:
                 LogUiInput("Quick HUD: cycled Dock orders");
-                if (locations.TryGetValue(LocationType.Docks, out LocationData docks))
+                if (TryGetSelectedBuilding(out LocationData docks, out _, out _))
                 {
                     CycleDocksOrders(docks);
                 }

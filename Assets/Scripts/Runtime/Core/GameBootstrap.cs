@@ -355,8 +355,11 @@ public partial class GameBootstrap : MonoBehaviour
     private Texture2D highwaySurfaceTexture;
     private Texture2D riverSurfaceTexture;
     private Texture2D riverDeepTexture;
+    private Texture2D riverRippleTexture;
+    private Texture2D riverFoamTexture;
     private Texture2D lakeSurfaceTexture;
     private Texture2D lakeDeepTexture;
+    private Texture2D lakeRippleTexture;
     private Light mainDirectionalLight;
     private Volume dioramaVolume;
     private VolumeProfile dioramaVolumeProfile;

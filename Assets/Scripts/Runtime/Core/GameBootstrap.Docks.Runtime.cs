@@ -4,12 +4,20 @@ public partial class GameBootstrap
 {
     private void UpdateDocksRuntime()
     {
-        if (!locations.TryGetValue(LocationType.Docks, out LocationData docks))
+        float dt = Time.deltaTime * gameSpeedMultiplier;
+        foreach (LocationData docks in EnumerateLocationsOfType(LocationType.Docks))
+        {
+            UpdateDocksRuntime(docks, dt);
+        }
+    }
+
+    private void UpdateDocksRuntime(LocationData docks, float dt)
+    {
+        if (docks == null)
         {
             return;
         }
 
-        float dt = Time.deltaTime * gameSpeedMultiplier;
         switch (docks.DocksShipPhase)
         {
             case DocksShipPhase.Arriving:
@@ -329,6 +337,16 @@ public partial class GameBootstrap
             return string.Empty;
         }
 
+        return GetDocksQuickStatusText(docks);
+    }
+
+    private string GetDocksQuickStatusText(LocationData docks)
+    {
+        if (docks == null)
+        {
+            return string.Empty;
+        }
+
         bool ru = IsRussianLanguage();
         string workerStatus = docks.Workers > 0
             ? (ru ? "Рабочий на смене" : "Worker on shift")
@@ -343,6 +361,11 @@ public partial class GameBootstrap
             return string.Empty;
         }
 
+        return GetDocksQuickResourceText(docks);
+    }
+
+    private string GetDocksQuickResourceText(LocationData docks)
+    {
         return GetDocksQuickCargoLines(docks);
     }
 

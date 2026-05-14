@@ -30,7 +30,15 @@ public partial class GameBootstrap
 
         GeneratedWorldLayout layout = WorldLayoutGenerator.Generate(GridWidth, GridHeight, waterCells, HasRequiredLayoutRoads);
 
-        CreateLocation(LocationType.IntercityStop, "Intercity Stop", layout.BusStop.Min, layout.BusStop.Max, layout.BusStop.Anchor, new Color(0.82f, 0.24f, 0.22f), layout.BusStop.RoadAccess);
+        CreateLocation(
+            LocationType.IntercityStop,
+            "Intercity Stop",
+            layout.BusStop.Min,
+            layout.BusStop.Max,
+            layout.BusStop.Anchor,
+            new Color(0.82f, 0.24f, 0.22f),
+            animateConstruction: false,
+            roadAccess: layout.BusStop.RoadAccess);
 
         SessionDebugLogger.Log(
             "WORLD",
@@ -213,12 +221,6 @@ public partial class GameBootstrap
 
     private bool TryPlaceFurnitureFactoryAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.FurnitureFactory))
-        {
-            SessionDebugLogger.Log("BUILD", "Furniture Factory placement rejected: factory already exists.");
-            return false;
-        }
-
         if (!TryGetFurnitureFactoryPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Furniture Factory placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
@@ -262,12 +264,6 @@ public partial class GameBootstrap
 
     private bool TryPlaceWarehouseAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.Warehouse))
-        {
-            SessionDebugLogger.Log("BUILD", "Warehouse placement rejected: warehouse already exists.");
-            return false;
-        }
-
         if (!TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Warehouse, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Warehouse placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
@@ -287,12 +283,6 @@ public partial class GameBootstrap
 
     private bool TryPlaceForestAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.Forest))
-        {
-            SessionDebugLogger.Log("BUILD", "Lumberjack Camp placement rejected: camp already exists.");
-            return false;
-        }
-
         if (!TryGetForestPlacement(anchorCell, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Lumberjack Camp placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
@@ -318,8 +308,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        LocationData bar = CreateLocation(LocationType.Bar, "Bar", min, max, anchorCell, new Color(0.46f, 0.16f, 0.11f));
-        StartBarConstructionAnimation(bar);
+        CreateLocation(LocationType.Bar, "Bar", min, max, anchorCell, new Color(0.46f, 0.16f, 0.11f));
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
@@ -398,8 +387,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        LocationData gamblingHall = CreateLocation(LocationType.GamblingHall, "Gambling Hall", min, max, anchorCell, new Color(0.34f, 0.16f, 0.46f));
-        StartGamblingHallConstructionAnimation(gamblingHall);
+        CreateLocation(LocationType.GamblingHall, "Gambling Hall", min, max, anchorCell, new Color(0.34f, 0.16f, 0.46f));
         isBuildScreenDirty = true;
         isFleetScreenDirty = true;
         RebuildRoadLanterns();
@@ -485,12 +473,6 @@ public partial class GameBootstrap
 
     private bool TryPlaceSawmillAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.Sawmill))
-        {
-            SessionDebugLogger.Log("BUILD", "Sawmill placement rejected: sawmill already exists.");
-            return false;
-        }
-
         if (!TryGetTwoByTwoBuildingPlacement(anchorCell, LocationType.Sawmill, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Sawmill placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
@@ -611,7 +593,7 @@ public partial class GameBootstrap
     {
         GetRotatedBuildingFootprint(anchorCell, width, depth, out min, out max);
 
-        if (locations.ContainsKey(type) && !IsMultiInstanceServiceBuildType(type))
+        if (locations.ContainsKey(type) && !IsMultiInstanceLocationType(type))
         {
             return false;
         }

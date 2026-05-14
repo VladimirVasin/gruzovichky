@@ -112,7 +112,11 @@ public partial class GameBootstrap : MonoBehaviour
                 washPatch.transform.localScale = new Vector3(segmentWidth, 0.008f, ring == 0 ? 1.02f : 0.86f);
                 Renderer washRenderer = washPatch.GetComponent<Renderer>();
                 float baseAlpha = ring == 0 ? 0.13f : ring == 1 ? 0.09f : 0.07f;
-                washRenderer.sharedMaterial = CreateTransparentOverlayMaterial(new Color(0.62f, 0.78f, 0.74f, baseAlpha));
+                washRenderer.sharedMaterial = CreateTransparentOverlayMaterial(
+                    new Color(0.62f, 0.78f, 0.74f, baseAlpha),
+                    riverFoamTexture,
+                    new Vector2(1.15f + ring * 0.18f, 0.42f + ring * 0.12f),
+                    new Vector2(segmentIndex * 0.17f, ring * 0.23f));
                 washRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 washRenderer.receiveShadows = false;
                 if (washPatch.TryGetComponent(out Collider washCollider))
@@ -148,7 +152,15 @@ public partial class GameBootstrap : MonoBehaviour
             foam.name = $"WaterShoreFoamBand_{i + 1}";
             foam.transform.SetParent(waterEffectsRoot, false);
             foam.transform.localScale = new Vector3(fullWidth, 0.01f, 0.07f + i * 0.02f);
-            ApplyColor(foam, new Color(0.74f, 0.86f, 0.86f));
+            Renderer foamRenderer = foam.GetComponent<Renderer>();
+            if (foamRenderer != null)
+            {
+                foamRenderer.sharedMaterial = CreateTransparentOverlayMaterial(
+                    new Color(0.74f, 0.86f, 0.86f, 0.58f),
+                    riverFoamTexture,
+                    new Vector2(2.8f + i * 0.38f, 0.36f + i * 0.08f),
+                    new Vector2(i * 0.21f, i * 0.09f));
+            }
             ConfigureStaticVisual(foam);
             if (foam.TryGetComponent(out Collider foamCollider))
             {
@@ -158,12 +170,11 @@ public partial class GameBootstrap : MonoBehaviour
             float z = shoreRow + 0.12f + i * 0.06f;
             foam.transform.position = new Vector3(centerX, 0.236f + i * 0.0025f, z);
 
-            Renderer foamRenderer = foam.GetComponent<Renderer>();
             waterShoreFoams.Add(new WaterShoreFoamData
             {
                 RootTransform = foam.transform,
                 Renderer = foamRenderer,
-                Material = foamRenderer != null ? foamRenderer.material : null,
+                Material = foamRenderer != null ? foamRenderer.sharedMaterial : null,
                 BaseY = 0.236f + i * 0.0025f,
                 BaseZ = z,
                 Width = fullWidth,

@@ -4,8 +4,8 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
-    private const float ServiceConstructionDuration = 3f;
-    private const float ServiceConstructionPartDuration = 0.68f;
+    private const float LocationConstructionDuration = 3f;
+    private const float LocationConstructionPartDuration = 0.68f;
 
     private sealed class ConstructionAnimationPart
     {
@@ -37,27 +37,30 @@ public partial class GameBootstrap
         public float Duration;
     }
 
-    private void StartBarConstructionAnimation(LocationData location)
+    private sealed class ConstructionMudPatch
     {
-        StartImportedServiceConstructionAnimation(location);
+        public Transform Transform;
+        public Material Material;
+        public Vector3 LocalPosition;
+        public Vector3 LocalScale;
+        public Vector2 TextureOffset;
+        public Vector2 TextureDrift;
+        public Color Color;
+        public float Delay;
+        public float Duration;
     }
 
-    private void StartGamblingHallConstructionAnimation(LocationData location)
-    {
-        StartImportedServiceConstructionAnimation(location);
-    }
-
-    private void StartImportedServiceConstructionAnimation(LocationData location)
+    private void StartLocationConstructionAnimation(LocationData location)
     {
         if (location?.RootObject == null)
         {
             return;
         }
 
-        StartCoroutine(AnimateImportedServiceConstruction(location));
+        StartCoroutine(AnimateLocationConstruction(location));
     }
 
-    private IEnumerator AnimateImportedServiceConstruction(LocationData location)
+    private IEnumerator AnimateLocationConstruction(LocationData location)
     {
         Transform root = location.RootObject != null ? location.RootObject.transform : null;
         if (root == null)
@@ -72,6 +75,7 @@ public partial class GameBootstrap
         }
 
         List<ConstructionAnimationLight> lights = CollectConstructionLights(root);
+        List<ConstructionMudPatch> mudPatches = CreateConstructionMudPatches(root, location);
         List<ConstructionDustPuff> puffs = CreateConstructionDustPuffs(root, location);
 
         for (int i = 0; i < lights.Count; i++)
@@ -86,7 +90,7 @@ public partial class GameBootstrap
         }
 
         float elapsed = 0f;
-        while (elapsed < ServiceConstructionDuration)
+        while (elapsed < LocationConstructionDuration)
         {
             if (root == null)
             {
@@ -99,6 +103,7 @@ public partial class GameBootstrap
             }
 
             ApplyConstructionLightFrame(lights, elapsed);
+            ApplyConstructionMudFrame(mudPatches, elapsed);
             ApplyConstructionDustFrame(puffs, elapsed);
             elapsed += Time.unscaledDeltaTime;
             yield return null;
@@ -106,6 +111,7 @@ public partial class GameBootstrap
 
         RestoreConstructionParts(parts);
         RestoreConstructionLights(lights);
+        DestroyConstructionMudPatches(mudPatches);
         DestroyConstructionDustPuffs(puffs);
         RequestImportedBuildingDoorOpen(location);
     }
@@ -260,7 +266,7 @@ public partial class GameBootstrap
             return;
         }
 
-        float p = Mathf.Clamp01((elapsed - part.Delay) / ServiceConstructionPartDuration);
+        float p = Mathf.Clamp01((elapsed - part.Delay) / LocationConstructionPartDuration);
         if (p <= 0f)
         {
             part.Transform.localPosition = part.LocalPosition + Vector3.down * part.Drop;
@@ -377,6 +383,188 @@ public partial class GameBootstrap
         }
     }
 
+    private List<ConstructionMudPatch> CreateConstructionMudPatches(Transform root, LocationData location)
+    {
+        List<ConstructionMudPatch> patches = new();
+        if (root == null || location == null)
+        {
+            return patches;
+        }
+
+        int width = Mathf.Max(1, location.Max.x - location.Min.x + 1);
+        int depth = Mathf.Max(1, location.Max.y - location.Min.y + 1);
+        Vector3 center = new(
+            (location.Min.x + location.Max.x + 1) * 0.5f,
+            0.025f,
+            (location.Min.y + location.Max.y + 1) * 0.5f);
+
+        AddConstructionMudPatch(
+            patches,
+            root,
+            $"{location.Type}ConstructionMud",
+            center,
+            new Vector3(width * 1.04f, 0.012f, depth * 1.04f),
+            new Vector2(width * 0.72f, depth * 0.72f),
+            GetGroundTextureOffset(location.Min.x, location.Min.y, 79 + (int)location.Type * 3),
+            new Vector2(0.018f, 0.011f),
+            GetConstructionMudColor(location.Type, 0.25f),
+            0f,
+            LocationConstructionDuration);
+
+        AddConstructionMudPatch(
+            patches,
+            root,
+            "ConstructionMudTrackA",
+            center + new Vector3(width * 0.18f, 0.004f, -depth * 0.19f),
+            new Vector3(width * 0.62f, 0.010f, Mathf.Max(0.26f, depth * 0.18f)),
+            new Vector2(width * 0.92f, 0.36f),
+            GetGroundTextureOffset(location.Max.x, location.Min.y, 89),
+            new Vector2(0.025f, -0.006f),
+            new Color(0.30f, 0.24f, 0.18f, 0.18f),
+            0.12f,
+            LocationConstructionDuration * 0.9f);
+
+        AddConstructionMudPatch(
+            patches,
+            root,
+            "ConstructionMudTrackB",
+            center + new Vector3(-width * 0.20f, 0.006f, depth * 0.16f),
+            new Vector3(width * 0.54f, 0.010f, Mathf.Max(0.24f, depth * 0.16f)),
+            new Vector2(width * 0.82f, 0.32f),
+            GetGroundTextureOffset(location.Min.x, location.Max.y, 97),
+            new Vector2(-0.018f, 0.009f),
+            new Color(0.34f, 0.25f, 0.18f, 0.15f),
+            0.22f,
+            LocationConstructionDuration * 0.82f);
+
+        return patches;
+    }
+
+    private static Color GetConstructionMudColor(LocationType type, float alpha)
+    {
+        return type switch
+        {
+            LocationType.GamblingHall => new Color(0.42f, 0.30f, 0.44f, alpha),
+            LocationType.CityPark or LocationType.Forest => new Color(0.30f, 0.34f, 0.18f, alpha),
+            LocationType.Parking
+                or LocationType.Warehouse
+                or LocationType.Sawmill
+                or LocationType.FurnitureFactory
+                or LocationType.Docks
+                or LocationType.GasStation
+                or LocationType.CleaningDepot
+                or LocationType.CarMarket => new Color(0.34f, 0.31f, 0.25f, alpha),
+            _ => new Color(0.46f, 0.36f, 0.22f, alpha)
+        };
+    }
+
+    private void AddConstructionMudPatch(
+        List<ConstructionMudPatch> patches,
+        Transform root,
+        string name,
+        Vector3 localPosition,
+        Vector3 localScale,
+        Vector2 textureScale,
+        Vector2 textureOffset,
+        Vector2 textureDrift,
+        Color color,
+        float delay,
+        float duration)
+    {
+        GameObject patch = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        patch.name = name;
+        patch.transform.SetParent(root, false);
+        patch.transform.localPosition = localPosition;
+        patch.transform.localScale = new Vector3(localScale.x, 0.001f, localScale.z);
+
+        Renderer renderer = patch.GetComponent<Renderer>();
+        if (renderer != null)
+        {
+            Color startColor = color;
+            startColor.a = 0f;
+            renderer.sharedMaterial = CreateTransparentOverlayMaterial(startColor, constructionMudSurfaceTexture, textureScale, textureOffset);
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        if (patch.TryGetComponent(out Collider collider))
+        {
+            Destroy(collider);
+        }
+
+        patches.Add(new ConstructionMudPatch
+        {
+            Transform = patch.transform,
+            Material = renderer != null ? renderer.sharedMaterial : null,
+            LocalPosition = localPosition,
+            LocalScale = localScale,
+            TextureOffset = textureOffset,
+            TextureDrift = textureDrift,
+            Color = color,
+            Delay = delay,
+            Duration = duration
+        });
+    }
+
+    private static void ApplyConstructionMudFrame(List<ConstructionMudPatch> patches, float elapsed)
+    {
+        for (int i = 0; i < patches.Count; i++)
+        {
+            ConstructionMudPatch patch = patches[i];
+            if (patch?.Transform == null)
+            {
+                continue;
+            }
+
+            float p = Mathf.Clamp01((elapsed - patch.Delay) / Mathf.Max(0.01f, patch.Duration));
+            float appear = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(p / 0.20f));
+            float fade = 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.72f, 1f, p));
+            float alpha = patch.Color.a * appear * fade;
+            float settle = 0.92f + appear * 0.08f + Mathf.Sin(p * Mathf.PI) * 0.025f;
+            patch.Transform.localPosition = patch.LocalPosition + Vector3.up * (0.006f * appear);
+            patch.Transform.localScale = new Vector3(patch.LocalScale.x * settle, patch.LocalScale.y, patch.LocalScale.z * settle);
+
+            if (patch.Material != null)
+            {
+                Color color = patch.Color;
+                color.a = alpha;
+                SetConstructionOverlayMaterialColor(patch.Material, color);
+                SetOverlayTextureOffset(patch.Material, patch.TextureOffset + patch.TextureDrift * elapsed);
+            }
+        }
+    }
+
+    private static void SetConstructionOverlayMaterialColor(Material material, Color color)
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        material.color = color;
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", color);
+        }
+
+        if (material.HasProperty("_Color"))
+        {
+            material.SetColor("_Color", color);
+        }
+    }
+
+    private static void DestroyConstructionMudPatches(List<ConstructionMudPatch> patches)
+    {
+        for (int i = 0; i < patches.Count; i++)
+        {
+            ConstructionMudPatch patch = patches[i];
+            if (patch?.Transform != null)
+            {
+                UnityEngine.Object.Destroy(patch.Transform.gameObject);
+            }
+        }
+    }
+
     private List<ConstructionDustPuff> CreateConstructionDustPuffs(Transform root, LocationData location)
     {
         List<ConstructionDustPuff> puffs = new();
@@ -386,7 +574,8 @@ public partial class GameBootstrap
             (location.Min.y + location.Max.y + 1) * 0.5f);
         float radiusX = Mathf.Max(0.65f, (location.Max.x - location.Min.x + 1) * 0.48f);
         float radiusZ = Mathf.Max(0.65f, (location.Max.y - location.Min.y + 1) * 0.48f);
-        int puffCount = location.Type == LocationType.GamblingHall ? 11 : 9;
+        int footprintArea = Mathf.Max(1, (location.Max.x - location.Min.x + 1) * (location.Max.y - location.Min.y + 1));
+        int puffCount = Mathf.Clamp(6 + footprintArea / 4, 7, 14);
         Color color = GetConstructionDustColor(location.Type);
 
         for (int i = 0; i < puffCount; i++)
@@ -394,9 +583,7 @@ public partial class GameBootstrap
             float angle = i / (float)puffCount * Mathf.PI * 2f + 0.28f;
             Vector3 offset = new(Mathf.Cos(angle) * radiusX, 0f, Mathf.Sin(angle) * radiusZ);
             GameObject puff = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            puff.name = location.Type == LocationType.GamblingHall
-                ? "GamblingHallConstructionDustPuff"
-                : "BarConstructionDustPuff";
+            puff.name = $"{location.Type}ConstructionDustPuff";
             puff.transform.SetParent(root, false);
             puff.transform.localPosition = center + offset;
             puff.transform.localScale = Vector3.zero;
@@ -427,9 +614,20 @@ public partial class GameBootstrap
 
     private static Color GetConstructionDustColor(LocationType type)
     {
-        return type == LocationType.GamblingHall
-            ? new Color(0.86f, 0.58f, 0.92f, 0.25f)
-            : new Color(0.86f, 0.74f, 0.52f, 0.28f);
+        return type switch
+        {
+            LocationType.GamblingHall => new Color(0.86f, 0.58f, 0.92f, 0.25f),
+            LocationType.CityPark or LocationType.Forest => new Color(0.58f, 0.72f, 0.38f, 0.22f),
+            LocationType.Parking
+                or LocationType.Warehouse
+                or LocationType.Sawmill
+                or LocationType.FurnitureFactory
+                or LocationType.Docks
+                or LocationType.GasStation
+                or LocationType.CleaningDepot
+                or LocationType.CarMarket => new Color(0.72f, 0.68f, 0.60f, 0.25f),
+            _ => new Color(0.86f, 0.74f, 0.52f, 0.28f)
+        };
     }
 
     private static void ApplyConstructionDustFrame(List<ConstructionDustPuff> puffs, float elapsed)

@@ -340,7 +340,7 @@ public partial class GameBootstrap
     private Material CreateRoadConstructionWaveMaterial(Vector2Int cell)
     {
         Material material = CreateTransparentOverlayMaterial(new Color(0.10f, 0.11f, 0.12f, 0f));
-        Material sourceMaterial = highwaySurfaceMaterial != null ? highwaySurfaceMaterial : roadSurfaceMaterial;
+        Material sourceMaterial = roadSurfaceMaterial != null ? roadSurfaceMaterial : highwaySurfaceMaterial;
         if (sourceMaterial != null && sourceMaterial.mainTexture != null)
         {
             material.mainTexture = sourceMaterial.mainTexture;

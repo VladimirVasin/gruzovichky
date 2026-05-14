@@ -165,7 +165,7 @@ public partial class GameBootstrap
         filter.sharedMesh = mesh;
         cap.AddComponent<MeshRenderer>();
         cap.name = $"UnifiedRoad_Cap_{cell.x}_{cell.y}";
-        ApplyStylizedRoadMaterial(cap, cell.x, cell.y, isHighway: true, isShoulder: false);
+        ApplyStylizedRoadMaterial(cap, cell.x, cell.y, isHighway: false, isShoulder: false);
         ConfigureStaticVisual(cap);
     }
     private void CreateUnifiedRoadSurfaceStrip(string name, Vector2Int startCell, int length, bool horizontal)
@@ -187,8 +187,8 @@ public partial class GameBootstrap
 
         for (int i = 0; i <= segmentCount; i++)
         {
-            float u = i / (float)segmentCount;
-            float distance = u * length;
+            float distance = i / (float)subdivisionsPerCell;
+            float u = distance;
             if (horizontal)
             {
                 float x = startCell.x + distance;
@@ -231,7 +231,7 @@ public partial class GameBootstrap
         MeshFilter filter = strip.AddComponent<MeshFilter>();
         filter.sharedMesh = mesh;
         strip.AddComponent<MeshRenderer>();
-        ApplyStylizedRoadMaterial(strip, startCell.x, startCell.y, isHighway: true, isShoulder: false);
+        ApplyStylizedRoadMaterial(strip, startCell.x, startCell.y, isHighway: false, isShoulder: false);
         ConfigureStaticVisual(strip);
     }
 
@@ -433,7 +433,6 @@ public partial class GameBootstrap
             surfaceObject.transform.localPosition = Vector3.zero;
             filter = surfaceObject.AddComponent<MeshFilter>();
             surfaceObject.AddComponent<MeshRenderer>();
-            ApplyStylizedRoadMaterial(surfaceObject, cell.x, cell.y, isHighway: true, isShoulder: false);
             ConfigureStaticVisual(surfaceObject, VisualSmoothnessAsphalt);
         }
         else
@@ -445,6 +444,8 @@ public partial class GameBootstrap
                 filter = surfaceObject.AddComponent<MeshFilter>();
             }
         }
+
+        ApplyStylizedRoadMaterial(surfaceObject, cell.x, cell.y, isHighway: false, isShoulder: false);
 
         float halfX = (horizontal || isCorner) ? 0.56f : 0.41f;
         float halfZ = (vertical || isCorner) ? 0.56f : 0.41f;

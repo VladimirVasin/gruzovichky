@@ -19,8 +19,11 @@ public partial class GameBootstrap : MonoBehaviour
         roadShoulderSurfaceTexture = LoadArtTextureAsset("Road", "road_shoulder_gravel_lowpoly", constructionMudSurfaceTexture);
         riverSurfaceTexture = LoadArtTextureAsset("River", "river_calm_flow_lowpoly", null);
         riverDeepTexture = LoadArtTextureAsset("River", "river_deep_channel_lowpoly", riverSurfaceTexture);
+        riverRippleTexture = LoadArtTextureAsset("River", "river_wave_ripples_lowpoly", riverSurfaceTexture);
+        riverFoamTexture = LoadArtTextureAsset("River", "river_whitewater_foam_waves_lowpoly", riverRippleTexture);
         lakeSurfaceTexture = LoadArtTextureAsset("Lake", "lake_calm_shallow_lowpoly", riverSurfaceTexture);
         lakeDeepTexture = LoadArtTextureAsset("Lake", "lake_deep_water_lowpoly", lakeSurfaceTexture);
+        lakeRippleTexture = LoadArtTextureAsset("Lake", "lake_sunlit_ripples_lowpoly", lakeSurfaceTexture);
         groundSurfaceMaterial = CreateSurfaceMaterial(groundSurfaceTexture, new Color(0.72f, 0.78f, 0.58f), 0.08f);
         grassSurfaceMaterial = CreateSurfaceMaterial(grassSurfaceTexture, new Color(0.68f, 0.82f, 0.56f), 0.07f);
         shoreSurfaceMaterial = CreateSurfaceMaterial(beachSurfaceTexture, new Color(0.64f, 0.64f, 0.48f), 0.07f);

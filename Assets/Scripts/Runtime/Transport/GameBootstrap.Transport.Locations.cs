@@ -8,6 +8,11 @@ public partial class GameBootstrap
 {
     private LocationData CreateLocation(LocationType type, string label, Vector2Int min, Vector2Int max, Vector2Int anchor, Color baseColor, Vector2Int? roadAccess = null)
     {
+        return CreateLocation(type, label, min, max, anchor, baseColor, animateConstruction: true, roadAccess: roadAccess);
+    }
+
+    private LocationData CreateLocation(LocationType type, string label, Vector2Int min, Vector2Int max, Vector2Int anchor, Color baseColor, bool animateConstruction, Vector2Int? roadAccess = null)
+    {
         Vector2Int accessCell = roadAccess ?? anchor;
         PrepareBuildSiteForLocation(type, min, max, accessCell);
 
@@ -166,7 +171,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Forest)
         {
-            CreateForestDecoration(root.transform, min, max, anchor);
+            CreateForestDecoration(data, root.transform, min, max, anchor);
         }
         else if (type == LocationType.Warehouse)
         {
@@ -291,7 +296,7 @@ public partial class GameBootstrap
                     ConfigureStaticVisual));
             }
         }
-        else if (locations.ContainsKey(type) && IsMultiInstanceServiceBuildType(type))
+        else if (locations.ContainsKey(type) && IsMultiInstanceLocationType(type))
         {
             extraServiceLocations.Add(data);
             root.transform.position = new Vector3(0f, GetLocationBaseHeight(data), 0f);
@@ -318,6 +323,11 @@ public partial class GameBootstrap
         UpdateRoadAccessWarningMarkers();
         NotifyNewGameBuildUnlockProgressionBuilt(type);
         NotifyCityComplaintServiceBuilt(type);
+        if (animateConstruction)
+        {
+            StartLocationConstructionAnimation(data);
+        }
+
         return data;
     }
 
@@ -334,19 +344,26 @@ public partial class GameBootstrap
         _                             => false
     };
 
-    private static bool IsMultiInstanceServiceBuildType(LocationType type) => type switch
+    private static bool IsMultiInstanceLocationType(LocationType type) => type switch
     {
-        LocationType.Bar          => true,
-        LocationType.Canteen      => true,
-        LocationType.Kiosk        => true,
-        LocationType.GamblingHall => true,
-        LocationType.GasStation   => true,
-        LocationType.CityPark     => true,
-        LocationType.Kindergarten => true,
-        LocationType.PrimarySchool => true,
+        LocationType.Bar              => true,
+        LocationType.Canteen          => true,
+        LocationType.Kiosk            => true,
+        LocationType.GamblingHall     => true,
+        LocationType.GasStation       => true,
+        LocationType.CityPark         => true,
+        LocationType.Kindergarten     => true,
+        LocationType.PrimarySchool    => true,
         LocationType.SecondarySchool => true,
-        _                         => false
+        LocationType.Forest           => true,
+        LocationType.Sawmill          => true,
+        LocationType.FurnitureFactory => true,
+        LocationType.Warehouse        => true,
+        LocationType.Docks            => true,
+        _                             => false
     };
+
+    private static bool IsMultiInstanceServiceBuildType(LocationType type) => IsMultiInstanceLocationType(type);
 
     private void CreateLocationTrashCans(LocationType type, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
@@ -536,7 +553,7 @@ public partial class GameBootstrap
         EnhanceBusStopModel(parent, center, min, max, anchor);
     }
 
-    private void CreateForestDecoration(Transform parent, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateForestDecoration(LocationData forestLocation, Transform parent, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         forestWorkPoints.Clear();
         forestWorkTargetTrees.Clear();
@@ -598,8 +615,8 @@ public partial class GameBootstrap
         ApplyColor(marker, new Color(0.47f, 0.31f, 0.18f), VisualSmoothnessWood);
         ConfigureStaticVisual(marker, VisualSmoothnessWood);
 
-        CreateForestStoredLogsVisuals(parent, depotPos + new Vector3(0f, 0.08f, 0.58f));
-        RefreshForestStoredLogsVisual();
+        CreateForestStoredLogsVisuals(forestLocation, parent, depotPos + new Vector3(0f, 0.08f, 0.58f));
+        RefreshForestStoredLogsVisual(forestLocation);
         TryCreateSquirrelMemorialSign(parent, center + new Vector3(-1.05f, 0.06f, -1.26f), Quaternion.identity);
         EnhanceForestCampModel(parent, center, min, max, anchor);
 
@@ -734,9 +751,9 @@ public partial class GameBootstrap
         return result;
     }
 
-    private void CreateForestStoredLogsVisuals(Transform parent, Vector3 basePosition)
+    private void CreateForestStoredLogsVisuals(LocationData forestLocation, Transform parent, Vector3 basePosition)
     {
-        if (!locations.TryGetValue(LocationType.Forest, out LocationData forestLocation))
+        if (forestLocation == null)
         {
             return;
         }
@@ -761,6 +778,16 @@ public partial class GameBootstrap
     private void RefreshForestStoredLogsVisual()
     {
         if (!locations.TryGetValue(LocationType.Forest, out LocationData forestLocation))
+        {
+            return;
+        }
+
+        RefreshForestStoredLogsVisual(forestLocation);
+    }
+
+    private void RefreshForestStoredLogsVisual(LocationData forestLocation)
+    {
+        if (forestLocation == null)
         {
             return;
         }

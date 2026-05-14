@@ -76,68 +76,73 @@ public partial class GameBootstrap
 
     private void UpdateSawmillProcessing()
     {
-        if (!locations.TryGetValue(LocationType.Sawmill, out LocationData sawmill))
+        foreach (LocationData sawmill in EnumerateLocationsOfType(LocationType.Sawmill))
         {
-            return;
-        }
+            if (sawmill == null)
+            {
+                continue;
+            }
 
-        if (sawmill.LogsStored <= 0)
-        {
-            sawmillProcessingTimer = 0f;
-            return;
-        }
+            if (sawmill.LogsStored <= 0)
+            {
+                sawmill.ProductionProcessingTimer = 0f;
+                continue;
+            }
 
-        if (!IsLocationOperational(LocationType.Sawmill))
-        {
-            return;
-        }
+            if (!IsLocationOperational(sawmill))
+            {
+                continue;
+            }
 
-        sawmillProcessingTimer += Time.deltaTime * gameSpeedMultiplier;
-        if (sawmillProcessingTimer < 4.5f)
-        {
-            return;
-        }
+            sawmill.ProductionProcessingTimer += Time.deltaTime * gameSpeedMultiplier;
+            if (sawmill.ProductionProcessingTimer < 4.5f)
+            {
+                continue;
+            }
 
-        sawmillProcessingTimer = 0f;
-        sawmill.LogsStored = Mathf.Max(0, sawmill.LogsStored - 1);
-        sawmill.BoardsStored += 1;
-        SessionDebugLogger.Log("SAWMILL", $"Sawmill processed 1 Logs into Boards. Logs={sawmill.LogsStored}, Boards={sawmill.BoardsStored}.");
+            sawmill.ProductionProcessingTimer = 0f;
+            sawmill.LogsStored = Mathf.Max(0, sawmill.LogsStored - 1);
+            sawmill.BoardsStored += 1;
+            SessionDebugLogger.Log("SAWMILL", $"{GetBuildingInstanceDisplayName(LocationType.Sawmill, sawmill.InstanceId)} processed 1 Logs into Boards. Logs={sawmill.LogsStored}, Boards={sawmill.BoardsStored}.");
+        }
     }
 
     private void UpdateFurnitureFactoryProcessing()
     {
-        if (!locations.TryGetValue(LocationType.FurnitureFactory, out LocationData furnitureFactory))
+        foreach (LocationData furnitureFactory in EnumerateLocationsOfType(LocationType.FurnitureFactory))
         {
-            furnitureFactoryProcessingTimer = 0f;
-            return;
-        }
+            if (furnitureFactory == null)
+            {
+                continue;
+            }
 
-        if (furnitureFactory.BoardsStored <= 0 ||
-            furnitureFactory.TextileStored <= 0 ||
-            furnitureFactory.FurnitureStored >= FurnitureFactoryMaxFurnitureStorage)
-        {
-            furnitureFactoryProcessingTimer = 0f;
-            return;
-        }
+            if (furnitureFactory.BoardsStored <= 0 ||
+                furnitureFactory.TextileStored <= 0 ||
+                furnitureFactory.FurnitureStored >= FurnitureFactoryMaxFurnitureStorage)
+            {
+                furnitureFactory.ProductionProcessingTimer = 0f;
+                continue;
+            }
 
-        if (!IsLocationOperational(LocationType.FurnitureFactory))
-        {
-            return;
-        }
+            if (!IsLocationOperational(furnitureFactory))
+            {
+                continue;
+            }
 
-        furnitureFactoryProcessingTimer += Time.deltaTime * gameSpeedMultiplier;
-        if (furnitureFactoryProcessingTimer < FurnitureFactoryProcessingDuration)
-        {
-            return;
-        }
+            furnitureFactory.ProductionProcessingTimer += Time.deltaTime * gameSpeedMultiplier;
+            if (furnitureFactory.ProductionProcessingTimer < FurnitureFactoryProcessingDuration)
+            {
+                continue;
+            }
 
-        furnitureFactoryProcessingTimer = 0f;
-        furnitureFactory.BoardsStored = Mathf.Max(0, furnitureFactory.BoardsStored - 1);
-        furnitureFactory.TextileStored = Mathf.Max(0, furnitureFactory.TextileStored - 1);
-        furnitureFactory.FurnitureStored = Mathf.Min(FurnitureFactoryMaxFurnitureStorage, furnitureFactory.FurnitureStored + 1);
-        SessionDebugLogger.Log(
-            "FACTORY",
-            $"Furniture Factory produced 1 Furniture. Boards={furnitureFactory.BoardsStored}, Textile={furnitureFactory.TextileStored}, Furniture={furnitureFactory.FurnitureStored}.");
+            furnitureFactory.ProductionProcessingTimer = 0f;
+            furnitureFactory.BoardsStored = Mathf.Max(0, furnitureFactory.BoardsStored - 1);
+            furnitureFactory.TextileStored = Mathf.Max(0, furnitureFactory.TextileStored - 1);
+            furnitureFactory.FurnitureStored = Mathf.Min(FurnitureFactoryMaxFurnitureStorage, furnitureFactory.FurnitureStored + 1);
+            SessionDebugLogger.Log(
+                "FACTORY",
+                $"{GetBuildingInstanceDisplayName(LocationType.FurnitureFactory, furnitureFactory.InstanceId)} produced 1 Furniture. Boards={furnitureFactory.BoardsStored}, Textile={furnitureFactory.TextileStored}, Furniture={furnitureFactory.FurnitureStored}.");
+        }
     }
 
     private void UpdateTruckMovement()

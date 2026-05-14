@@ -21,12 +21,6 @@ public partial class GameBootstrap
 
     private bool TryPlaceDocksAtAnchor(Vector2Int anchorCell)
     {
-        if (locations.ContainsKey(LocationType.Docks))
-        {
-            SessionDebugLogger.Log("BUILD", "Docks placement rejected: docks already exist.");
-            return false;
-        }
-
         if (!TryGetDocksPlacement(anchorCell, out Vector2Int min, out Vector2Int max, out Vector2Int placementAnchor, out Vector2Int roadAccess))
         {
             SessionDebugLogger.Log("BUILD", $"Docks placement rejected at anchor ({anchorCell.x},{anchorCell.y}); needs a clear river bank.");
@@ -149,11 +143,6 @@ public partial class GameBootstrap
 
     private bool IsDocksPlacementClear(Vector2Int roadAccess, Vector2Int min, Vector2Int max)
     {
-        if (locations.ContainsKey(LocationType.Docks))
-        {
-            return false;
-        }
-
         if (!IsInsideGrid(roadAccess) ||
             edgeHighwayCells.Contains(roadAccess) ||
             IsLocationCell(roadAccess) ||

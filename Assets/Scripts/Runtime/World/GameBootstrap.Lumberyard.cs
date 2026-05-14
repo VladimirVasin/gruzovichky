@@ -226,7 +226,8 @@ public partial class GameBootstrap
 
     private void TryDispatchForestWorkerFromBuilding(DriverAgent driver, LumberWorkerTaskData task)
     {
-        if (!locations.TryGetValue(LocationType.Forest, out LocationData forestLocation))
+        LocationData forestLocation = GetAssignedBuildingLocation(driver);
+        if (forestLocation == null || forestLocation.Type != LocationType.Forest)
         {
             return;
         }
@@ -240,15 +241,15 @@ public partial class GameBootstrap
         bool shouldPlant = false;
         int carryLogId = -1;
 
-        if (TryFindTreeWithPendingGroundLog(out targetTree, out LumberGroundLogData groundLog))
+        if (TryFindTreeWithPendingGroundLog(forestLocation, out targetTree, out LumberGroundLogData groundLog))
         {
             carryLogId = groundLog.Id;
         }
-        else if (TryFindTreeNeedingPlanting(out targetTree))
+        else if (TryFindTreeNeedingPlanting(forestLocation, out targetTree))
         {
             shouldPlant = true;
         }
-        else if (forestLocation.LogsStored < ForestMaxLogsStorage && TryFindMatureTree(out targetTree))
+        else if (forestLocation.LogsStored < ForestMaxLogsStorage && TryFindMatureTree(forestLocation, out targetTree))
         {
         }
 
@@ -262,7 +263,7 @@ public partial class GameBootstrap
         task.CarryLogId = carryLogId;
         task.PendingPlanting = shouldPlant;
 
-        Vector3 target = GetLumberTreeWorkPoint(targetTree);
+        Vector3 target = GetLumberTreeWorkPoint(targetTree, forestLocation);
         driver.WalkTargetWorld = target;
         driver.WalkPhase = shouldPlant ? DriverRescuePhase.LumberReturnToTreeForPlanting : DriverRescuePhase.LumberToTree;
         BuildDriverWalkPath(driver, driver.DriverObject.transform.position, target);
@@ -278,7 +279,8 @@ public partial class GameBootstrap
             return;
         }
 
-        if (!locations.TryGetValue(LocationType.Forest, out LocationData forestLocation))
+        LocationData forestLocation = GetAssignedBuildingLocation(driver);
+        if (forestLocation == null || forestLocation.Type != LocationType.Forest)
         {
             return;
         }
@@ -293,11 +295,11 @@ public partial class GameBootstrap
         ApplyDriverPose(driver, 0f, 0f);
     }
 
-    private bool TryFindMatureTree(out LumberTreeRuntimeData result)
+    private bool TryFindMatureTree(LocationData forestLocation, out LumberTreeRuntimeData result)
     {
         result = null;
         float bestDistance = float.MaxValue;
-        Vector3 forestCenter = GetLocationCenter(LocationType.Forest);
+        Vector3 forestCenter = GetLocationCenter(forestLocation);
 
         foreach (LumberTreeRuntimeData tree in lumberTrees.Values)
         {
@@ -319,12 +321,12 @@ public partial class GameBootstrap
         return result != null;
     }
 
-    private bool TryFindTreeWithPendingGroundLog(out LumberTreeRuntimeData resultTree, out LumberGroundLogData resultLog)
+    private bool TryFindTreeWithPendingGroundLog(LocationData forestLocation, out LumberTreeRuntimeData resultTree, out LumberGroundLogData resultLog)
     {
         resultTree = null;
         resultLog = null;
         float bestDistance = float.MaxValue;
-        Vector3 forestCenter = GetLocationCenter(LocationType.Forest);
+        Vector3 forestCenter = GetLocationCenter(forestLocation);
 
         foreach (LumberTreeRuntimeData tree in lumberTrees.Values)
         {
@@ -356,11 +358,11 @@ public partial class GameBootstrap
         return resultTree != null && resultLog != null;
     }
 
-    private bool TryFindTreeNeedingPlanting(out LumberTreeRuntimeData result)
+    private bool TryFindTreeNeedingPlanting(LocationData forestLocation, out LumberTreeRuntimeData result)
     {
         result = null;
         float bestDistance = float.MaxValue;
-        Vector3 forestCenter = GetLocationCenter(LocationType.Forest);
+        Vector3 forestCenter = GetLocationCenter(forestLocation);
 
         foreach (LumberTreeRuntimeData tree in lumberTrees.Values)
         {
@@ -617,7 +619,8 @@ public partial class GameBootstrap
             log.RootObject.SetActive(false);
         }
 
-        if (!locations.TryGetValue(LocationType.Forest, out LocationData forestLocation))
+        LocationData forestLocation = GetAssignedBuildingLocation(driver);
+        if (forestLocation == null || forestLocation.Type != LocationType.Forest)
         {
             ReturnForestWorkerInside(driver, "forest building no longer exists");
             return;
@@ -693,8 +696,14 @@ public partial class GameBootstrap
 
     private Vector3 GetLumberTreeWorkPoint(LumberTreeRuntimeData tree)
     {
+        locations.TryGetValue(LocationType.Forest, out LocationData forestLocation);
+        return GetLumberTreeWorkPoint(tree, forestLocation);
+    }
+
+    private Vector3 GetLumberTreeWorkPoint(LumberTreeRuntimeData tree, LocationData forestLocation)
+    {
         Vector3 treeCenter = GetCellCenter(tree.Cell);
-        Vector3 forestCenter = GetLocationCenter(LocationType.Forest);
+        Vector3 forestCenter = forestLocation != null ? GetLocationCenter(forestLocation) : treeCenter;
         Vector3 away = (treeCenter - forestCenter);
         away.y = 0f;
         if (away.sqrMagnitude < 0.0001f)
@@ -785,10 +794,11 @@ public partial class GameBootstrap
     private void DeliverForestWorkerLog(DriverAgent driver, LumberWorkerTaskData task)
     {
         HideForestCarryVisual(driver);
-        if (locations.TryGetValue(LocationType.Forest, out LocationData forestLocation))
+        LocationData forestLocation = GetAssignedBuildingLocation(driver);
+        if (forestLocation != null && forestLocation.Type == LocationType.Forest)
         {
             forestLocation.LogsStored = Mathf.Min(ForestMaxLogsStorage, forestLocation.LogsStored + 1);
-            RefreshForestStoredLogsVisual();
+            RefreshForestStoredLogsVisual(forestLocation);
             SessionDebugLogger.Log("LUMBER", $"{driver.DriverName} delivered 1 log to Lumberyard. Stored={forestLocation.LogsStored}/{ForestMaxLogsStorage}.");
         }
 
@@ -799,7 +809,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (!locations.TryGetValue(LocationType.Forest, out forestLocation))
+        if (forestLocation == null || forestLocation.Type != LocationType.Forest)
         {
             ReturnForestWorkerInside(driver, "forest building no longer exists after delivery");
             return;
@@ -807,7 +817,7 @@ public partial class GameBootstrap
 
         if (HasUncollectedGroundLogs(tree) && forestLocation.LogsStored < ForestMaxLogsStorage)
         {
-            Vector3 target = GetLumberTreeWorkPoint(tree);
+            Vector3 target = GetLumberTreeWorkPoint(tree, forestLocation);
             driver.WalkTargetWorld = target;
             driver.WalkPhase = DriverRescuePhase.LumberToTree;
             BuildDriverWalkPath(driver, GetCellCenter(forestLocation.Anchor) + new Vector3(0f, 0.05f, 0f), target);
@@ -817,7 +827,7 @@ public partial class GameBootstrap
         if (tree.NeedsReplant)
         {
             task.PendingPlanting = true;
-            Vector3 target = GetLumberTreeWorkPoint(tree);
+            Vector3 target = GetLumberTreeWorkPoint(tree, forestLocation);
             driver.WalkTargetWorld = target;
             driver.WalkPhase = DriverRescuePhase.LumberReturnToTreeForPlanting;
             BuildDriverWalkPath(driver, GetCellCenter(forestLocation.Anchor) + new Vector3(0f, 0.05f, 0f), target);
@@ -844,7 +854,8 @@ public partial class GameBootstrap
 
     private void StartForestWorkerReturnToBuildingWalk(DriverAgent driver, string reason)
     {
-        if (driver?.DriverObject == null || !locations.TryGetValue(LocationType.Forest, out LocationData forestLocation))
+        LocationData forestLocation = GetAssignedBuildingLocation(driver);
+        if (driver?.DriverObject == null || forestLocation == null || forestLocation.Type != LocationType.Forest)
         {
             ReturnForestWorkerInside(driver, reason);
             return;

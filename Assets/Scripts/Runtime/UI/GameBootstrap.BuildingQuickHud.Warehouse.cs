@@ -129,8 +129,8 @@ public partial class GameBootstrap
             locations.TryGetValue(LocationType.Warehouse, out warehouse);
         }
 
-        int loadersOnShift = CountWorkersOnShiftAt(LocationType.Warehouse);
-        int assignedLoaders = CountLogisticsWorkers(LocationType.Warehouse);
+        int loadersOnShift = CountWorkersOnShiftAt(warehouse);
+        int assignedLoaders = CountLogisticsWorkers(LocationType.Warehouse, warehouse?.InstanceId ?? 0);
         if (!TryGetRoadAccessQuickWarning(warehouse, out string statusText, out Color statusColor))
         {
             GetWarehouseQuickHudStatus(loadersOnShift, assignedLoaders, out statusText, out statusColor);
@@ -167,7 +167,7 @@ public partial class GameBootstrap
             string.Empty,
             string.Empty);
 
-        UpdateWarehouseQuickHudRootHeight();
+        UpdateWarehouseQuickHudRootHeight(warehouse);
     }
 
     private void UpdateWarehouseBuildingQuickHudChrome()
@@ -221,14 +221,14 @@ public partial class GameBootstrap
         }
     }
 
-    private void UpdateWarehouseQuickHudRootHeight()
+    private void UpdateWarehouseQuickHudRootHeight(LocationData location)
     {
         if (buildingQuickHud?.Root == null)
         {
             return;
         }
 
-        int workerEntries = CollectBuildingQuickHudWorkerEntries(LocationType.Warehouse, true).Count;
+        int workerEntries = CollectBuildingQuickHudWorkerEntries(location, LocationType.Warehouse, true).Count;
         float height = workerEntries <= 0
             ? 430f
             : Mathf.Min(536f, 430f + workerEntries * 54f);
