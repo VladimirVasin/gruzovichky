@@ -306,8 +306,8 @@ public partial class GameBootstrap
         MeshFilter filter = mask.AddComponent<MeshFilter>();
         filter.sharedMesh = mesh;
         mask.AddComponent<MeshRenderer>();
-        ApplyStylizedGroundMaterial(mask, cell.x, cell.y);
-        ConfigureStaticVisual(mask);
+        ApplyStylizedRoadMaterial(mask, cell.x, cell.y, isHighway: false, isShoulder: false);
+        ConfigureStaticVisual(mask, VisualSmoothnessAsphalt);
     }
 
     private void CreateUnifiedRoadCornerShoulderArc(Vector2Int cell, int horizontalSign, int verticalSign)

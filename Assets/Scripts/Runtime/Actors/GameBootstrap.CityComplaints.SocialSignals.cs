@@ -6,6 +6,7 @@ public partial class GameBootstrap
     private const int CityComplaintSocialClusterMinSigners = 2;
     private const int CityComplaintSocialClusterMinStrength = 72;
     private const int CityComplaintSocialClusterMaxCreatedPerDay = 2;
+    private const int CityComplaintSocialClusterPositiveMinStrength = 8;
     private const float CityComplaintPublicConcernCooldownWorldHours = 20f;
     private const float CityComplaintPublicConcernResolutionGraceWorldHours = 12f;
 
@@ -20,6 +21,11 @@ public partial class GameBootstrap
         public SocialSignalCategory Category = SocialSignalCategory.City;
         public int SignalCount;
         public int Strength;
+        public int PositiveStrength;
+        public int PositiveSignalCount;
+        public int PositiveSignerCount;
+        public int ActiveSignerCount;
+        public int NetStrength;
         public int ConfidenceTotal;
         public int StrongestSignalStrength;
         public readonly List<int> SignerIds = new();
@@ -71,10 +77,19 @@ public partial class GameBootstrap
         foreach (KeyValuePair<string, CityComplaintSocialSignalCluster> pair in clusters)
         {
             CityComplaintSocialSignalCluster cluster = pair.Value;
+            ApplyPublicConcernSignalBalanceForDay(cluster, endedDay);
             if (IsCityComplaintSocialClusterMature(cluster) &&
                 CanCreatePublicConcernCityComplaint(cluster))
             {
                 matureClusters.Add(cluster);
+            }
+            else if (cluster != null &&
+                     cluster.PositiveStrength > 0 &&
+                     cluster.Strength >= CityComplaintSocialClusterMinStrength)
+            {
+                SessionDebugLogger.Log(
+                    "CITY_HALL",
+                    $"Public concern suppressed by balanced signals: key={cluster.GroupKey}, negative={cluster.Strength}, positive={cluster.PositiveStrength}, net={GetCityComplaintSocialClusterNetStrength(cluster)}, activeSigners={GetCityComplaintSocialClusterActiveSignerCount(cluster)}/{cluster.SignerIds.Count}.");
             }
         }
 
@@ -99,13 +114,12 @@ public partial class GameBootstrap
         }
     }
 
-    private static bool IsNegativeSocialSignalComplaintCandidate(SocialSignal signal)
+    private static bool IsSocialSignalComplaintCandidate(SocialSignal signal)
     {
         if (signal == null ||
             signal.WorkerId <= 0 ||
             !signal.PublicForNoosphere ||
-            signal.Tone != SocialSignalTone.Negative ||
-            signal.Strength < 12)
+            signal.Tone == SocialSignalTone.Neutral)
         {
             return false;
         }
@@ -120,6 +134,20 @@ public partial class GameBootstrap
         return signal.SourceKind != SocialSignalSourceKind.DailyExperience ||
                string.IsNullOrWhiteSpace(signal.SourceKey) ||
                !signal.SourceKey.Contains(":summary");
+    }
+
+    private static bool IsNegativeSocialSignalComplaintCandidate(SocialSignal signal)
+    {
+        return IsSocialSignalComplaintCandidate(signal) &&
+               signal.Tone == SocialSignalTone.Negative &&
+               signal.Strength >= 12;
+    }
+
+    private static bool IsPositiveSocialSignalComplaintBalancer(SocialSignal signal)
+    {
+        return IsSocialSignalComplaintCandidate(signal) &&
+               signal.Tone == SocialSignalTone.Positive &&
+               signal.Strength >= CityComplaintSocialClusterPositiveMinStrength;
     }
 
     private CityComplaintSocialSignalCluster CreateCityComplaintSocialSignalCluster(SocialSignal signal, string groupKey)
@@ -148,12 +176,10 @@ public partial class GameBootstrap
             return;
         }
 
-        int strength = signal.DailyScoreHint != 0
-            ? Mathf.Abs(signal.DailyScoreHint)
-            : signal.Strength;
-        strength = Mathf.Clamp(strength, 1, 100);
+        int strength = GetCityComplaintSocialSignalStrength(signal);
         cluster.SignalCount++;
         cluster.Strength += strength;
+        cluster.NetStrength = Mathf.Max(0, cluster.Strength - cluster.PositiveStrength);
         cluster.ConfidenceTotal += Mathf.Clamp(signal.Confidence, 0, 100);
 
         if (!cluster.SignerIds.Contains(signal.WorkerId))
@@ -161,6 +187,7 @@ public partial class GameBootstrap
             cluster.SignerIds.Add(signal.WorkerId);
             cluster.SignerNames.Add(string.IsNullOrWhiteSpace(signal.WorkerName) ? $"#{signal.WorkerId}" : signal.WorkerName);
         }
+        cluster.ActiveSignerCount = cluster.SignerIds.Count;
 
         if (strength >= cluster.StrongestSignalStrength)
         {
@@ -172,19 +199,21 @@ public partial class GameBootstrap
 
     private bool IsCityComplaintSocialClusterMature(CityComplaintSocialSignalCluster cluster)
     {
+        int activeSignerCount = GetCityComplaintSocialClusterActiveSignerCount(cluster);
+        int netStrength = GetCityComplaintSocialClusterNetStrength(cluster);
         if (cluster == null ||
-            cluster.SignerIds.Count < CityComplaintSocialClusterMinSigners ||
-            cluster.Strength < CityComplaintSocialClusterMinStrength)
+            activeSignerCount < CityComplaintSocialClusterMinSigners ||
+            netStrength < CityComplaintSocialClusterMinStrength)
         {
             return false;
         }
 
         if (cluster.Category == SocialSignalCategory.Litter)
         {
-            return cluster.Strength >= 60;
+            return netStrength >= 60;
         }
 
-        return cluster.SignerIds.Count >= 3 || cluster.Strength >= 120;
+        return activeSignerCount >= 3 || netStrength >= 120;
     }
 
     private bool CanCreatePublicConcernCityComplaint(CityComplaintSocialSignalCluster cluster)
@@ -213,6 +242,7 @@ public partial class GameBootstrap
 
         float now = GetCurrentWorldHour();
         int severity = CalculatePublicConcernCityComplaintSeverity(cluster);
+        int netStrength = GetCityComplaintSocialClusterNetStrength(cluster);
         int primaryWorkerId = cluster.SignerIds.Count > 0 ? cluster.SignerIds[0] : 0;
         string primaryName = cluster.SignerNames.Count > 0
             ? cluster.SignerNames[0]
@@ -236,7 +266,7 @@ public partial class GameBootstrap
             IssueReasonEn = string.IsNullOrWhiteSpace(cluster.ReasonEn) ? cluster.TitleEn : cluster.ReasonEn,
             IssueSignalCategory = cluster.Category,
             IssueSourceDay = sourceDay,
-            IssueSourceStrength = cluster.Strength,
+            IssueSourceStrength = netStrength,
             IsUnread = true
         };
 
@@ -262,7 +292,7 @@ public partial class GameBootstrap
         NotifyCityHallNewRequest(complaint);
         SessionDebugLogger.Log(
             "CITY_HALL",
-            $"Public concern #{complaint.Id} filed from social signals: key={cluster.GroupKey}, signers={cluster.SignerIds.Count}, strength={cluster.Strength}, severity={severity}.");
+            $"Public concern #{complaint.Id} filed from social signals: key={cluster.GroupKey}, signers={GetCityComplaintSocialClusterActiveSignerCount(cluster)}/{cluster.SignerIds.Count}, negative={cluster.Strength}, positive={cluster.PositiveStrength}, net={netStrength}, severity={severity}.");
         return true;
     }
 
@@ -360,7 +390,124 @@ public partial class GameBootstrap
             AddSocialSignalToCityComplaintCluster(cluster, signal);
         }
 
+        if (cluster != null)
+        {
+            ApplyPublicConcernSignalBalanceSince(cluster, sinceWorldHour);
+        }
+
         return cluster != null;
+    }
+
+    private void ApplyPublicConcernSignalBalanceForDay(CityComplaintSocialSignalCluster cluster, int sourceDay)
+    {
+        ApplyPublicConcernSignalBalance(cluster, sourceDay, 0f);
+    }
+
+    private void ApplyPublicConcernSignalBalanceSince(CityComplaintSocialSignalCluster cluster, float sinceWorldHour)
+    {
+        ApplyPublicConcernSignalBalance(cluster, 0, sinceWorldHour);
+    }
+
+    private void ApplyPublicConcernSignalBalance(CityComplaintSocialSignalCluster cluster, int sourceDay, float sinceWorldHour)
+    {
+        if (cluster == null || string.IsNullOrWhiteSpace(cluster.GroupKey))
+        {
+            return;
+        }
+
+        int positiveStrength = 0;
+        int positiveSignalCount = 0;
+        HashSet<int> positiveSignerIds = new();
+        for (int i = 0; i < socialSignals.Count; i++)
+        {
+            SocialSignal signal = socialSignals[i];
+            if (signal == null)
+            {
+                continue;
+            }
+
+            if (sourceDay > 0)
+            {
+                if (signal.Day < sourceDay)
+                {
+                    break;
+                }
+
+                if (signal.Day != sourceDay)
+                {
+                    continue;
+                }
+            }
+            else if (signal.WorldHour < sinceWorldHour)
+            {
+                break;
+            }
+
+            if (!IsPositiveSocialSignalComplaintBalancer(signal) ||
+                !string.Equals(BuildCityComplaintSocialClusterKey(signal), cluster.GroupKey, System.StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            positiveStrength += GetCityComplaintSocialSignalStrength(signal);
+            positiveSignalCount++;
+            if (signal.WorkerId > 0)
+            {
+                positiveSignerIds.Add(signal.WorkerId);
+            }
+        }
+
+        int activeSignerCount = 0;
+        for (int i = 0; i < cluster.SignerIds.Count; i++)
+        {
+            if (!positiveSignerIds.Contains(cluster.SignerIds[i]))
+            {
+                activeSignerCount++;
+            }
+        }
+
+        cluster.PositiveStrength = positiveStrength;
+        cluster.PositiveSignalCount = positiveSignalCount;
+        cluster.PositiveSignerCount = positiveSignerIds.Count;
+        cluster.ActiveSignerCount = activeSignerCount;
+        cluster.NetStrength = Mathf.Max(0, cluster.Strength - positiveStrength);
+    }
+
+    private static int GetCityComplaintSocialSignalStrength(SocialSignal signal)
+    {
+        if (signal == null)
+        {
+            return 0;
+        }
+
+        int strength = signal.DailyScoreHint != 0
+            ? Mathf.Abs(signal.DailyScoreHint)
+            : signal.Strength;
+        return Mathf.Clamp(strength, 1, 100);
+    }
+
+    private static int GetCityComplaintSocialClusterNetStrength(CityComplaintSocialSignalCluster cluster)
+    {
+        if (cluster == null)
+        {
+            return 0;
+        }
+
+        return cluster.PositiveStrength > 0 || cluster.NetStrength > 0
+            ? Mathf.Max(0, cluster.NetStrength)
+            : Mathf.Max(0, cluster.Strength);
+    }
+
+    private static int GetCityComplaintSocialClusterActiveSignerCount(CityComplaintSocialSignalCluster cluster)
+    {
+        if (cluster == null)
+        {
+            return 0;
+        }
+
+        return cluster.ActiveSignerCount > 0 || cluster.PositiveSignerCount > 0
+            ? Mathf.Max(0, cluster.ActiveSignerCount)
+            : cluster.SignerIds.Count;
     }
 
     private static int CompareCityComplaintSocialSignalClusters(CityComplaintSocialSignalCluster a, CityComplaintSocialSignalCluster b)
@@ -368,9 +515,11 @@ public partial class GameBootstrap
         if (a == null && b == null) return 0;
         if (a == null) return 1;
         if (b == null) return -1;
+        int netCompare = GetCityComplaintSocialClusterNetStrength(b).CompareTo(GetCityComplaintSocialClusterNetStrength(a));
+        if (netCompare != 0) return netCompare;
         int strengthCompare = b.Strength.CompareTo(a.Strength);
         if (strengthCompare != 0) return strengthCompare;
-        return b.SignerIds.Count.CompareTo(a.SignerIds.Count);
+        return GetCityComplaintSocialClusterActiveSignerCount(b).CompareTo(GetCityComplaintSocialClusterActiveSignerCount(a));
     }
 
     private static int CalculatePublicConcernCityComplaintSeverity(CityComplaintSocialSignalCluster cluster)
@@ -380,12 +529,14 @@ public partial class GameBootstrap
             return 1;
         }
 
-        if (cluster.Strength >= 260 || cluster.SignerIds.Count >= 6)
+        int netStrength = GetCityComplaintSocialClusterNetStrength(cluster);
+        int activeSignerCount = GetCityComplaintSocialClusterActiveSignerCount(cluster);
+        if (netStrength >= 260 || activeSignerCount >= 6)
         {
             return 4;
         }
 
-        if (cluster.Strength >= 150 || cluster.SignerIds.Count >= 4)
+        if (netStrength >= 150 || activeSignerCount >= 4)
         {
             return 3;
         }

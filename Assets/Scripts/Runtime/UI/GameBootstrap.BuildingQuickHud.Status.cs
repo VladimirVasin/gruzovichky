@@ -105,16 +105,19 @@ public partial class GameBootstrap
     {
         status = string.Empty;
         color = BuildingQuickHudRoadWarningColor;
-        if (location == null ||
-            !DoesLocationRequireRoadAccess(location.Type) ||
-            IsRequiredLocationRoadConnected(location))
+        if (!TryGetRequiredLocationRoadAccessIssue(location, out RoadAccessConnectionIssue issue))
         {
             return false;
         }
 
-        status = IsRussianLanguage()
-            ? "\u041d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u043e \u043a \u0434\u043e\u0440\u043e\u0433\u0435\n\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0434\u043e\u0440\u043e\u0433\u0443 \u043a \u0432\u044a\u0435\u0437\u0434\u0443"
-            : "No road connection\nBuild a road to the entrance";
+        bool ru = IsRussianLanguage();
+        status = issue == RoadAccessConnectionIssue.MissingHighwayConnection
+            ? ru
+                ? "\u0414\u043e\u0440\u043e\u0433\u0430 \u043d\u0435 \u0432\u0435\u0434\u0451\u0442 \u043a \u043c\u0430\u0433\u0438\u0441\u0442\u0440\u0430\u043b\u0438\n\u0421\u043e\u0435\u0434\u0438\u043d\u0438 \u0441\u0435\u0442\u044c \u0441 \u043c\u0430\u0433\u0438\u0441\u0442\u0440\u0430\u043b\u044c\u044e"
+                : "Road network not linked to highway\nConnect this road to the highway"
+            : ru
+                ? "\u041d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u043e \u043a \u0434\u043e\u0440\u043e\u0433\u0435\n\u041f\u043e\u0441\u0442\u0440\u043e\u0439 \u0434\u043e\u0440\u043e\u0433\u0443 \u043a \u0432\u044a\u0435\u0437\u0434\u0443"
+                : "No road connection\nBuild a road to the entrance";
         return true;
     }
 

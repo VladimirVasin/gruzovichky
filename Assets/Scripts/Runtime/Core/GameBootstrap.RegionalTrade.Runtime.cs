@@ -211,6 +211,7 @@ public partial class GameBootstrap
     private void CompleteRegionalLandWarehouseTrade(ActiveRegionalLandTrade trade)
     {
         string resourceLabel = GetTradeResourceLabel(trade.ResourceType);
+        bool completed = false;
         if (trade.OrderType == TradeOrderType.Buy)
         {
             money -= trade.Price;
@@ -227,6 +228,7 @@ public partial class GameBootstrap
                 MoneyTransactionReasonKind.Trade);
             ApplyTradeImportTaxes(trade.Price, trade.Quantity, trade.ResourceType, trade.City.NameEn, $"Land import: {resourceLabel} x{trade.Quantity}");
             SessionDebugLogger.Log("TRADE_LAND", $"Bought {trade.ResourceType} x{trade.Quantity} from {trade.City.NameEn} for ${trade.Price}; Warehouse now has {GetWarehouseTradeResourceAmount(trade.ResourceType)}.");
+            completed = true;
         }
         else if (TryConsumeStoredTradeResource(trade.ResourceType, trade.Quantity))
         {
@@ -243,16 +245,20 @@ public partial class GameBootstrap
                 MoneyTransactionReasonKind.Trade);
             ApplyTradeExportTaxes(trade.Price, trade.Quantity, trade.ResourceType, trade.City.NameEn, $"Land export: {resourceLabel} x{trade.Quantity}");
             SessionDebugLogger.Log("TRADE_LAND", $"Sold {trade.ResourceType} x{trade.Quantity} to {trade.City.NameEn} for ${trade.Price}; Warehouse now has {GetWarehouseTradeResourceAmount(trade.ResourceType)}.");
+            completed = true;
         }
 
-        PushFeedEvent(
-            trade.OrderType == TradeOrderType.Buy
-                ? $"Land trade: bought {resourceLabel} x{trade.Quantity} from {trade.City.NameEn}."
-                : $"Land trade: sold {resourceLabel} x{trade.Quantity} to {trade.City.NameEn}.",
-            trade.OrderType == TradeOrderType.Buy
-                ? $"Сухопутная торговля: куплено {L(resourceLabel)} x{trade.Quantity}."
-                : $"Сухопутная торговля: продано {L(resourceLabel)} x{trade.Quantity}.",
-            FeedEventType.Money);
+        if (completed)
+        {
+            PushFeedEvent(
+                trade.OrderType == TradeOrderType.Buy
+                    ? $"Land trade: bought {resourceLabel} x{trade.Quantity} from {trade.City.NameEn} for ${trade.Price}."
+                    : $"Land trade: sold {resourceLabel} x{trade.Quantity} to {trade.City.NameEn} for ${trade.Price}.",
+                trade.OrderType == TradeOrderType.Buy
+                    ? $"Сухопутная торговля: куплено {L(resourceLabel)} x{trade.Quantity} за ${trade.Price}."
+                    : $"Сухопутная торговля: продано {L(resourceLabel)} x{trade.Quantity}, выручка ${trade.Price}.",
+                FeedEventType.Money);
+        }
         isTradeScreenDirty = true;
         isEconomyScreenDirty = true;
         isFleetScreenDirty = true;

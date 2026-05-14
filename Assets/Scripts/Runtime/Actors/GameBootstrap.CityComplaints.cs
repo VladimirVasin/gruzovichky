@@ -406,12 +406,11 @@ public partial class GameBootstrap
                 continue;
             }
 
-            DriverAgent worker = GetDriverAgentById(complaint.WorkerId);
-            if (ShouldResolveCityComplaint(complaint, worker, out string reason))
+            if (IsCityConstructionRequestSatisfied(complaint))
             {
                 ResolveCityComplaint(
                     complaint,
-                    string.IsNullOrWhiteSpace(reason) ? "requested service exists" : reason,
+                    "requested service exists",
                     manually: false);
                 changed = true;
             }
@@ -632,10 +631,10 @@ public partial class GameBootstrap
             complaint.ResolvedWorldHour + CityComplaintCooldownWorldHours;
 
         ApplyCityComplaintSatisfactionDelta(complaint, manually ? 1 : Mathf.Clamp(complaint.Severity, 1, 4));
-        bool completedAcceptedPromise = wasAccepted &&
-                                        !manually &&
-                                        IsCityComplaintResolveReasonSuccessfulPromise(reason);
-        if (completedAcceptedPromise)
+        bool completedCityRequest = !manually &&
+                                    IsCityComplaintResolveReasonSuccessfulPromise(reason) &&
+                                    (wasAccepted || IsAutoCompletedCityServiceRequest(complaint, reason));
+        if (completedCityRequest)
         {
             ApplyCityTrustPromiseCompleted(complaint.Id);
             RecordCityComplaintSocialSignals(
@@ -667,6 +666,14 @@ public partial class GameBootstrap
         }
 
         SessionDebugLogger.Log("CITY_HALL", $"Complaint #{complaint.Id} resolved: manual={manually}, reason={complaint.ResolveReason}.");
+    }
+
+    private bool IsAutoCompletedCityServiceRequest(CityComplaint complaint, string reason)
+    {
+        return complaint != null &&
+               complaint.Category == CityComplaintCategory.ServiceMissing &&
+               string.Equals(reason, "requested service exists", System.StringComparison.Ordinal) &&
+               IsCityConstructionRequestSatisfied(complaint);
     }
 
     private void PruneResolvedCityComplaints()

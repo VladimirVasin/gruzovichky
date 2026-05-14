@@ -34,6 +34,7 @@ public partial class GameBootstrap : MonoBehaviour
         CreateEdgeHighwayCenterLine(highwayRoot, bottomLaneY, upperLaneY);
         surfaceTransitionOverlayRebuildPending = true;
         FlushSurfaceTransitionOverlayRebuild();
+        UpdateRoadAccessWarningMarkers();
     }
 
     private void SetupEdgeHighwayBuses()

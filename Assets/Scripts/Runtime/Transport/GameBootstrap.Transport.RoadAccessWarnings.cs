@@ -9,6 +9,13 @@ public partial class GameBootstrap
     private const float RoadAccessWarningPulseSpeed = 4.6f;
     private const float RoadAccessWarningPulseScale = 0.08f;
 
+    private enum RoadAccessConnectionIssue
+    {
+        None,
+        MissingRoad,
+        MissingHighwayConnection
+    }
+
     private void UpdateRoadAccessWarningMarkers()
     {
         UpdateRoadAccessWarningMarkers(locations.Values);
@@ -104,37 +111,78 @@ public partial class GameBootstrap
 
     private bool IsRequiredLocationRoadConnected(LocationData location)
     {
+        return !TryGetRequiredLocationRoadAccessIssue(location, out _);
+    }
+
+    private bool TryGetRequiredLocationRoadAccessIssue(LocationData location, out RoadAccessConnectionIssue issue)
+    {
+        issue = RoadAccessConnectionIssue.None;
         if (location == null || !DoesLocationRequireRoadAccess(location.Type))
+        {
+            return false;
+        }
+
+        Vector2Int access = location.RoadAccess;
+        if (!IsInsideGrid(access) ||
+            IsWaterOrBeachCell(access) ||
+            (!roadCells.Contains(access) && !edgeHighwayCells.Contains(access)))
+        {
+            issue = RoadAccessConnectionIssue.MissingRoad;
+            return true;
+        }
+
+        if (!IsRoadAccessCellConnectedToHighway(access))
+        {
+            issue = RoadAccessConnectionIssue.MissingHighwayConnection;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsRoadAccessCellConnectedToHighway(Vector2Int access)
+    {
+        if (!IsInsideGrid(access) || (!roadCells.Contains(access) && !edgeHighwayCells.Contains(access)))
+        {
+            return false;
+        }
+
+        if (edgeHighwayCells.Contains(access))
         {
             return true;
         }
 
-        Vector2Int access = location.RoadAccess;
-        if (!IsInsideGrid(access) || IsWaterOrBeachCell(access))
-        {
-            return false;
-        }
+        Queue<Vector2Int> frontier = new();
+        HashSet<Vector2Int> visited = new();
+        frontier.Enqueue(access);
+        visited.Add(access);
 
-        bool accessIsRoad = roadCells.Contains(access) || edgeHighwayCells.Contains(access);
-        if (!accessIsRoad)
+        while (frontier.Count > 0)
         {
-            return false;
-        }
-
-        foreach (Vector2Int neighbor in GridPathService.GetCardinalNeighbors(access))
-        {
-            if (!IsInsideGrid(neighbor))
+            Vector2Int current = frontier.Dequeue();
+            foreach (Vector2Int neighbor in GridPathService.GetCardinalNeighbors(current))
             {
-                continue;
-            }
+                if (!IsInsideGrid(neighbor) || visited.Contains(neighbor))
+                {
+                    continue;
+                }
 
-            if (roadCells.Contains(neighbor) || edgeHighwayCells.Contains(neighbor))
-            {
-                return true;
+                if (edgeHighwayCells.Contains(neighbor))
+                {
+                    return true;
+                }
+
+                if (!roadCells.Contains(neighbor))
+                {
+                    continue;
+                }
+
+                visited.Add(neighbor);
+                frontier.Enqueue(neighbor);
             }
         }
 
-        return edgeHighwayCells.Contains(access);
+        return false;
     }
 
     private static Vector3 GetRoadAccessWarningBaseLocalPosition(LocationData location)

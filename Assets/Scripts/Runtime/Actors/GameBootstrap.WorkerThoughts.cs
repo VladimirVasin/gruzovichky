@@ -257,7 +257,7 @@ public partial class GameBootstrap
 
     private void RecordWorkerServiceThought(DriverAgent worker, LocationType service, WorkerNeedKind need, string templateKey, WorkerThoughtTone tone, int intensity, int opinionDelta)
     {
-        RecordWorkerThought(
+        WorkerThought thought = RecordWorkerThought(
             worker,
             WorkerThoughtKind.Need,
             tone,
@@ -275,6 +275,53 @@ public partial class GameBootstrap
             opinionDelta,
             $"{templateKey}|{service}",
             3f);
+
+        if (thought != null)
+        {
+            RecordWorkerServiceNeedRelief(worker, service, need, templateKey, tone, intensity, opinionDelta);
+        }
+    }
+
+    private void RecordWorkerServiceNeedRelief(DriverAgent worker, LocationType service, WorkerNeedKind need, string templateKey, WorkerThoughtTone tone, int intensity, int opinionDelta)
+    {
+        if (worker == null || tone != WorkerThoughtTone.Positive || opinionDelta <= 0)
+        {
+            return;
+        }
+
+        float now = GetCurrentWorldHour();
+        string needKey = need.ToString();
+        string needLabelEn = FormatWorkerThoughtNeed(needKey, false);
+        string needLabelRu = FormatWorkerThoughtNeed(needKey, true);
+        string serviceLabelRu = GetSelectedLocationDisplayName(service);
+        string serviceLabelEn = service.ToString();
+
+        UpdateWorkerOpinion(
+            worker,
+            WorkerThoughtSubjectType.Need,
+            0,
+            needKey,
+            needLabelEn,
+            opinionDelta,
+            now);
+
+        RecordSocialSignal(
+            worker,
+            SocialSignalCategory.Need,
+            SocialSignalSourceKind.Thought,
+            SocialSignalTone.Positive,
+            Mathf.Clamp(intensity + 24, 1, 100),
+            Mathf.Clamp(58 + intensity / 6, 1, 100),
+            $"Need:{needKey}",
+            needLabelRu,
+            needLabelEn,
+            $"{serviceLabelRu} \u043f\u043e\u043c\u043e\u0433 \u0437\u0430\u043a\u0440\u044b\u0442\u044c \u043f\u043e\u0442\u0440\u0435\u0431\u043d\u043e\u0441\u0442\u044c: {needLabelRu}.",
+            $"{serviceLabelEn} covered the {needLabelEn} need.",
+            sourceKey: $"thought:{templateKey}:need:{needKey}",
+            locationType: service,
+            includeInDailyExperience: false,
+            publicForNoosphere: true,
+            dedupeHours: 3f);
     }
 
     private void RecordWorkerServiceMissingThought(DriverAgent worker, LocationType service, WorkerNeedKind need, string reason)

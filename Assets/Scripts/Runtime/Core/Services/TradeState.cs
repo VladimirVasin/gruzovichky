@@ -13,7 +13,7 @@ public sealed class TradeState
 
     public readonly List<GameBootstrap.TradeHudOrder> ActiveHudOrders = new();
     public GameBootstrap.TradePolicyMode[] PolicyModes { get; } = new GameBootstrap.TradePolicyMode[5];
-    public int[] PolicyTargets { get; } = { 0, 0, 5, 5, 0 };
+    public int[] PolicyTargets { get; } = { 0, 0, 0, 0, 0 };
 
     public int GetStoredResourceAmount(GameBootstrap.TradeResourceType resourceType, int warehouseLogs, int warehouseBoards)
     {
@@ -52,22 +52,6 @@ public sealed class TradeState
 
         PolicyModes[index] = mode;
         return true;
-    }
-
-    public int EnsurePolicyTargetAtLeast(GameBootstrap.TradeResourceType resourceType, GameBootstrap.TradeResourceType[] resources, int minimumTarget)
-    {
-        int index = GetPolicyIndex(resourceType, resources);
-        if (index < 0)
-        {
-            return 0;
-        }
-
-        if (PolicyTargets[index] < minimumTarget)
-        {
-            PolicyTargets[index] = minimumTarget;
-        }
-
-        return PolicyTargets[index];
     }
 
     public int AdjustPolicyTarget(GameBootstrap.TradeResourceType resourceType, int delta, int minTarget, int maxTarget, GameBootstrap.TradeResourceType[] resources)

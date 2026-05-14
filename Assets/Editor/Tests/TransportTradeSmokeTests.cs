@@ -146,7 +146,8 @@ public sealed class TransportTradeSmokeTests
 
         Assert.That(state.TrySetPolicyMode(GameBootstrap.TradeResourceType.Textile, GameBootstrap.TradePolicyMode.BuyUpTo, resources), Is.True);
         Assert.That(state.GetPolicyMode(GameBootstrap.TradeResourceType.Textile, resources), Is.EqualTo(GameBootstrap.TradePolicyMode.BuyUpTo));
-        Assert.That(state.AdjustPolicyTarget(GameBootstrap.TradeResourceType.Textile, 3, 0, 99, resources), Is.EqualTo(8));
+        Assert.That(state.GetPolicyTarget(GameBootstrap.TradeResourceType.Textile, resources), Is.EqualTo(0));
+        Assert.That(state.AdjustPolicyTarget(GameBootstrap.TradeResourceType.Textile, 3, 0, 99, resources), Is.EqualTo(3));
     }
 
     [Test]

@@ -249,10 +249,6 @@ public partial class GameBootstrap
         }
 
         isTradeScreenDirty = true;
-        if (mode != TradePolicyMode.None)
-        {
-            tradeState.EnsurePolicyTargetAtLeast(resourceType, TradeHudResources, 5);
-        }
 
         SessionDebugLogger.Log("TRADE_POLICY", $"{resourceType} policy set to {mode}, target={GetTradePolicyTarget(resourceType)}.");
         NotifyTutorialTradePolicyChanged(resourceType);
