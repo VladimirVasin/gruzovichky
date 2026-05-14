@@ -138,6 +138,7 @@ public partial class GameBootstrap
                 MoneyAccountKind.External,
                 MoneyAccountKind.CityBudget,
                 MoneyTransactionReasonKind.Trade);
+            ApplyTradeExportTaxes(saleMoney, sold, sellResource, "River Ship", $"Docks sale: {GetTradeResourceLabel(sellResource)} x{sold}");
         }
 
         bool canBuy = TryFindDocksShipTrade(docks, TradeOrderType.Buy, out TradeResourceType buyResource, out int buyQuantity);
@@ -164,6 +165,7 @@ public partial class GameBootstrap
                     MoneyAccountKind.CityBudget,
                     MoneyAccountKind.External,
                     MoneyTransactionReasonKind.Trade);
+                ApplyTradeImportTaxes(buyMoney, bought, buyResource, "River Ship", $"Docks purchase: {GetTradeResourceLabel(buyResource)} x{bought}");
             }
             else
             {

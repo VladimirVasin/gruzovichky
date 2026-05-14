@@ -804,8 +804,21 @@ public partial class GameBootstrap
 
     private void CollectDailyBuildingTaxes()
     {
+        EnsureDefaultTaxPolicies();
+        EnsureTaxDayStatsCurrent();
         if (lastTaxCollectionDay == currentDay)
         {
+            return;
+        }
+
+        TaxPolicy policy = GetTaxPolicy(TaxSourceKind.BuildingCashReserve);
+        if (policy == null || !policy.IsEnabled || policy.RatePercent <= 0)
+        {
+            lastTaxCollectionDay = currentDay;
+            lastTaxCollectedAmount = 0;
+            lastTaxedBuildingCount = 0;
+            isEconomyScreenDirty = true;
+            SessionDebugLogger.Log("TAX", $"Daily building cash reserve tax skipped on day {currentDay}: policy disabled or zero rate.");
             return;
         }
 
@@ -815,9 +828,8 @@ public partial class GameBootstrap
         int taxableBankTotal = 0;
         List<string> taxedBreakdown = new();
 
-        foreach (KeyValuePair<LocationType, LocationData> pair in locations)
+        foreach (LocationData location in EnumerateTaxableBuildingBankLocations())
         {
-            LocationData location = pair.Value;
             if (location == null || location.RootObject == null || location.BuildingBank <= 0)
             {
                 continue;
@@ -825,12 +837,12 @@ public partial class GameBootstrap
 
             taxableBankTotal += location.BuildingBank;
             int bankBefore = location.BuildingBank;
-            int taxAmount = Mathf.FloorToInt(location.BuildingBank * (dailyBuildingTaxPercent / 100f));
+            int taxAmount = CalculateTaxAmount(policy, location.BuildingBank, 1);
             if (taxAmount <= 0)
             {
                 SessionDebugLogger.Log(
                     "TAX_DETAIL",
-                    $"{location.Label}: bank=${bankBefore}, rate={dailyBuildingTaxPercent}%, tax=$0 (below rounding threshold).");
+                    $"{location.Label}: bank=${bankBefore}, rate={policy.RatePercent}%, tax=$0 (below rounding threshold).");
                 continue;
             }
 
@@ -840,7 +852,7 @@ public partial class GameBootstrap
             taxedBreakdown.Add($"{location.Label} ${taxAmount}");
             SessionDebugLogger.Log(
                 "TAX_DETAIL",
-                $"{location.Label}: bank ${bankBefore}->{location.BuildingBank}, rate={dailyBuildingTaxPercent}%, collected=${taxAmount}.");
+                $"{location.Label}: bank ${bankBefore}->{location.BuildingBank}, rate={policy.RatePercent}%, collected=${taxAmount}.");
         }
 
         money += totalCollected;
@@ -849,9 +861,10 @@ public partial class GameBootstrap
         lastTaxedBuildingCount = taxedBuildings;
         if (totalCollected > 0)
         {
+            TrackTaxCollected(totalCollected);
             RecordMoneyMovement(
                 totalCollected,
-                "Building Taxes",
+                policy.Name,
                 "Treasury",
                 $"Daily tax collection from {taxedBuildings} building(s)",
                 money,
@@ -883,9 +896,8 @@ public partial class GameBootstrap
     private int GetCurrentTaxableBuildingBankTotal()
     {
         int total = 0;
-        foreach (KeyValuePair<LocationType, LocationData> pair in locations)
+        foreach (LocationData location in EnumerateTaxableBuildingBankLocations())
         {
-            LocationData location = pair.Value;
             if (location == null || location.RootObject == null || location.BuildingBank <= 0)
             {
                 continue;

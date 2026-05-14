@@ -588,6 +588,11 @@ public partial class GameBootstrap
                         fromOwnerId: net > 0 ? gh.InstanceId : d.DriverId,
                         toOwnerId: net > 0 ? d.DriverId : gh.InstanceId);
                 }
+
+                if (net < 0)
+                {
+                    ApplyGamblingRevenueTaxes(d, gh, -net, "Gambling loss");
+                }
             }
 
             if (d.DriverObject != null)

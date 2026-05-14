@@ -248,6 +248,7 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<AmbientAirParticleData> ambientAirParticles = new();
     private readonly List<ShadowLodRendererData> shadowLodRenderers = new();
     private readonly List<MoneyLedgerEntry> moneyLedgerEntries = new();
+    private readonly List<TaxPolicy> taxPolicies = new();
     private readonly HashSet<LocationType> occupiedServiceLocations = new();
     private readonly Dictionary<LocationType, GameObject> locationSelectionHighlights = new();
     private readonly List<GameObject> localStopSelectionHighlights = new();
@@ -265,6 +266,7 @@ public partial class GameBootstrap : MonoBehaviour
     private int nextWorkerChildId = 1;
     private int nextLaborExchangePostingId = 1;
     private int nextLocationInstanceId = 1;
+    private int nextTaxPolicyId = 1;
     private float laborExchangePostingTimer;
     private int laborExchangeApplicantsToday;
     private int laborExchangeApplicantDay = -1;
@@ -436,6 +438,11 @@ public partial class GameBootstrap : MonoBehaviour
     private int   lastTaxCollectionDay;
     private int   lastTaxCollectedAmount;
     private int   lastTaxedBuildingCount;
+    private int   taxStatsDay;
+    private int   taxCollectedToday;
+    private int   taxEventsToday;
+    private int   taxCollectedPreviousDay;
+    private int   taxEventsPreviousDay;
     private float currentStylizedDaylight = 1f;
     private float forestProductionProgress;
     private float sawmillProcessingTimer;

@@ -733,6 +733,7 @@ public partial class GameBootstrap
                 MoneyAccountKind.CityBudget,
                 MoneyAccountKind.External,
                 MoneyTransactionReasonKind.Trade);
+            ApplyTradeImportTaxes(price, quantity, selectedTradeResourceType, "Trade Market", $"Dispatch trade buy: {resourceLabel} x{quantity}");
         }
         // For Sell: resources are consumed at warehouse loading, not here
 

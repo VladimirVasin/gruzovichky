@@ -656,6 +656,7 @@ public partial class GameBootstrap : MonoBehaviour
             MoneyAccountKind.ResidentWallet,
             MoneyTransactionReasonKind.Salary,
             toOwnerId: driver.DriverId);
+        ApplySalaryIncomeTaxes(driver, driver.Salary, "Salary payout");
         isFleetScreenDirty = true;
         isDriversScreenDirty = true;
         SessionDebugLogger.Log("PAY", $"{driver.DriverName} paid ${driver.Salary}. Personal balance: ${driver.Money}. Treasury: ${money}.");

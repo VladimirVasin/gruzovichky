@@ -151,6 +151,7 @@ public partial class GameBootstrap
         SetLoadingProgress(++step / (float)totalSteps, "Vehicles..."); yield return null;
         SetupTruck();
         money = StartingTreasury;
+        EnsureDefaultTaxPolicies();
         SetupCargoTransferVisual();
 
         SetLoadingProgress(++step / (float)totalSteps, "Audio..."); yield return null;

@@ -225,6 +225,7 @@ public partial class GameBootstrap
             MoneyAccountKind.CityBudget,
             MoneyAccountKind.External,
             MoneyTransactionReasonKind.Construction);
+        ApplyConstructionPermitTaxes(cost, "Construction Crew", $"Construction: {titleEn}");
         PushFeedEvent(
             $"Built {titleEn}: -${cost}.",
             $"\u041f\u043e\u0441\u0442\u0440\u043e\u0435\u043d\u043e: {titleRu}. -${cost}.",

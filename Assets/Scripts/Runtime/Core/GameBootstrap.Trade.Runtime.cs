@@ -398,6 +398,7 @@ public partial class GameBootstrap
                 MoneyAccountKind.External,
                 MoneyAccountKind.CityBudget,
                 MoneyTransactionReasonKind.Trade);
+            ApplyTradeExportTaxes(activeTradeRun.Price, activeTradeRun.Quantity, activeTradeRun.ResourceType, "Trade Market", $"Trade sale: {resourceLabel} x{activeTradeRun.Quantity}");
             SessionDebugLogger.Log("TRADE", $"{truckAgent.DisplayName} completed sale of {resourceLabel} x{activeTradeRun.Quantity} for ${activeTradeRun.Price}.");
         }
 

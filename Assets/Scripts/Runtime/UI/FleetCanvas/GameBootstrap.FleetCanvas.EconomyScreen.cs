@@ -10,6 +10,7 @@ public partial class GameBootstrap
     {
         if (economyScreenUi != null) return;
 
+        EnsureDefaultTaxPolicies();
         EnsureFleetEventSystem();
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         economyScreenUi = new EconomyScreenUiRefs();
@@ -81,8 +82,8 @@ public partial class GameBootstrap
 
         RectTransform taxesPanel = CreateUiObject("EconomyTaxesPanel", windowRoot.transform).GetComponent<RectTransform>();
         LayoutElement taxesPanelElement = taxesPanel.gameObject.AddComponent<LayoutElement>();
-        taxesPanelElement.preferredHeight = 182f;
-        taxesPanelElement.flexibleHeight = 0f;
+        taxesPanelElement.preferredHeight = 560f;
+        taxesPanelElement.flexibleHeight = 1f;
         VerticalLayoutGroup taxesPanelLayout = taxesPanel.gameObject.AddComponent<VerticalLayoutGroup>();
         taxesPanelLayout.spacing = 12f;
         taxesPanelLayout.childControlWidth = true;
@@ -118,10 +119,7 @@ public partial class GameBootstrap
         taxMinusLayout.preferredHeight = 40f;
         economyScreenUi.TaxesRateMinusButton.onClick.AddListener(() =>
         {
-            dailyBuildingTaxPercent = Mathf.Max(MinDailyBuildingTaxPercent, dailyBuildingTaxPercent - 1);
-            isEconomyScreenDirty = true;
-            CheckTutorialTaxRateGoal();
-            PlayUiSound(uiSelectClip, 0.75f);
+            AdjustPrimaryTaxRate(-1);
         });
         economyScreenUi.TaxesRateValueText = CreateHeaderText("TaxesRateValue", rateControlsRow, font, string.Empty, 18, TextAnchor.MiddleCenter, FleetAccentColor);
         LayoutElement taxRateValueLayout = economyScreenUi.TaxesRateValueText.gameObject.AddComponent<LayoutElement>();
@@ -134,10 +132,7 @@ public partial class GameBootstrap
         taxPlusLayout.preferredHeight = 40f;
         economyScreenUi.TaxesRatePlusButton.onClick.AddListener(() =>
         {
-            dailyBuildingTaxPercent = Mathf.Min(MaxDailyBuildingTaxPercent, dailyBuildingTaxPercent + 1);
-            isEconomyScreenDirty = true;
-            CheckTutorialTaxRateGoal();
-            PlayUiSound(uiSelectClip, 0.75f);
+            AdjustPrimaryTaxRate(1);
         });
         CreateSpacer("TaxesRateRightSpacer", rateControlsRow, flexibleWidth: 1f);
 
@@ -160,6 +155,56 @@ public partial class GameBootstrap
         economyScreenUi.TaxesTimerSummaryText.lineSpacing = 1.08f;
         LayoutElement timerLayout = economyScreenUi.TaxesTimerSummaryText.gameObject.AddComponent<LayoutElement>();
         timerLayout.flexibleHeight = 1f;
+
+        RectTransform policyFrame = CreateSectionCard(taxesPanel, font, "Tax policies", out RectTransform policyBody);
+        LayoutElement policyFrameLayout = policyFrame.gameObject.AddComponent<LayoutElement>();
+        policyFrameLayout.preferredHeight = 340f;
+        policyFrameLayout.flexibleHeight = 1f;
+
+        economyScreenUi.TaxesPolicySummaryText = CreateBodyText("TaxesPolicySummary", policyBody, font, string.Empty, 12, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        economyScreenUi.TaxesPolicySummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 28f;
+
+        GameObject policyScrollObj = CreateUiObject("TaxPolicyScrollView", policyBody);
+        RectTransform policyScrollRoot = policyScrollObj.GetComponent<RectTransform>();
+        policyScrollRoot.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        Image policyScrollImage = policyScrollObj.AddComponent<Image>();
+        policyScrollImage.color = new Color(0f, 0f, 0f, 0f);
+        ScrollRect policyScroll = policyScrollObj.AddComponent<ScrollRect>();
+        policyScroll.horizontal = false;
+        policyScroll.scrollSensitivity = 24f;
+
+        GameObject policyViewportObj = CreateUiObject("Viewport", policyScrollObj.transform);
+        StretchRect(policyViewportObj.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
+        Image policyViewportImage = policyViewportObj.AddComponent<Image>();
+        policyViewportImage.color = new Color(0f, 0f, 0f, 0.04f);
+        policyViewportObj.AddComponent<Mask>().showMaskGraphic = false;
+
+        GameObject policyRowsObj = CreateUiObject("TaxPolicyRows", policyViewportObj.transform);
+        RectTransform policyRowsRoot = policyRowsObj.GetComponent<RectTransform>();
+        policyRowsRoot.anchorMin = new Vector2(0f, 1f);
+        policyRowsRoot.anchorMax = new Vector2(1f, 1f);
+        policyRowsRoot.pivot = new Vector2(0.5f, 1f);
+        policyRowsRoot.anchoredPosition = Vector2.zero;
+        policyRowsRoot.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup policyRowsLayout = policyRowsObj.AddComponent<VerticalLayoutGroup>();
+        policyRowsLayout.spacing = 6f;
+        policyRowsLayout.childControlWidth = true;
+        policyRowsLayout.childControlHeight = true;
+        policyRowsLayout.childForceExpandWidth = true;
+        policyRowsLayout.childForceExpandHeight = false;
+        policyRowsObj.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        policyScroll.viewport = policyViewportObj.GetComponent<RectTransform>();
+        policyScroll.content = policyRowsRoot;
+        economyScreenUi.TaxPoliciesContent = policyRowsRoot;
+
+        for (int i = 0; i < MaxTaxPolicyRows; i++)
+        {
+            TaxPolicyRowUi row = CreateTaxPolicyRow(policyRowsRoot, font, i);
+            row.ToggleButton.onClick.AddListener(() => ToggleTaxPolicy(row.PolicyId));
+            row.RateMinusButton.onClick.AddListener(() => AdjustTaxPolicyRate(row.PolicyId, -1, checkTutorialGoal: true));
+            row.RatePlusButton.onClick.AddListener(() => AdjustTaxPolicyRate(row.PolicyId, 1, checkTutorialGoal: true));
+            economyScreenUi.TaxPolicyRows.Add(row);
+        }
 
         RectTransform tradePanel = CreateUiObject("EconomyTradePanel", windowRoot.transform).GetComponent<RectTransform>();
         tradePanel.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
@@ -452,10 +497,60 @@ public partial class GameBootstrap
         return row;
     }
 
+    private static TaxPolicyRowUi CreateTaxPolicyRow(RectTransform parent, Font font, int rowIndex)
+    {
+        TaxPolicyRowUi row = new();
+        RectTransform card = CreateStyledPanel($"TaxPolicyRow{rowIndex}", parent, new Color(0.055f, 0.090f, 0.125f, 0.96f));
+        row.Root = card;
+        card.gameObject.AddComponent<LayoutElement>().preferredHeight = 48f;
+
+        HorizontalLayoutGroup layout = card.gameObject.AddComponent<HorizontalLayoutGroup>();
+        layout.padding = new RectOffset(8, 8, 5, 5);
+        layout.spacing = 8f;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+        layout.childAlignment = TextAnchor.MiddleCenter;
+
+        row.ToggleButton = CreateButton($"TaxPolicyToggle{rowIndex}", card, font, out Text toggleText, string.Empty, 12, new Color(0.14f, 0.18f, 0.23f, 1f), Color.white);
+        row.ToggleText = toggleText;
+        row.ToggleText.fontStyle = FontStyle.Bold;
+        row.ToggleButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 58f;
+
+        RectTransform textStack = CreateUiObject($"TaxPolicyText{rowIndex}", card).GetComponent<RectTransform>();
+        textStack.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        VerticalLayoutGroup textLayout = textStack.gameObject.AddComponent<VerticalLayoutGroup>();
+        textLayout.spacing = 2f;
+        textLayout.childControlWidth = true;
+        textLayout.childControlHeight = true;
+        textLayout.childForceExpandWidth = true;
+        textLayout.childForceExpandHeight = false;
+
+        row.NameText = CreateHeaderText("Name", textStack, font, string.Empty, 13, TextAnchor.MiddleLeft, Color.white);
+        row.NameText.gameObject.AddComponent<LayoutElement>().preferredHeight = 19f;
+        row.MetaText = CreateBodyText("Meta", textStack, font, string.Empty, 11, TextAnchor.MiddleLeft, FleetSecondaryTextColor);
+        row.MetaText.gameObject.AddComponent<LayoutElement>().preferredHeight = 17f;
+
+        row.RateMinusButton = CreateButton($"TaxPolicyMinus{rowIndex}", card, font, out Text minusText, "-", 16, new Color(0.18f, 0.21f, 0.27f, 1f), Color.white);
+        minusText.fontStyle = FontStyle.Bold;
+        row.RateMinusButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 34f;
+
+        row.RateText = CreateHeaderText("Rate", card, font, string.Empty, 14, TextAnchor.MiddleCenter, FleetAccentColor);
+        row.RateText.gameObject.AddComponent<LayoutElement>().preferredWidth = 54f;
+
+        row.RatePlusButton = CreateButton($"TaxPolicyPlus{rowIndex}", card, font, out Text plusText, "+", 16, new Color(0.18f, 0.21f, 0.27f, 1f), Color.white);
+        plusText.fontStyle = FontStyle.Bold;
+        row.RatePlusButton.gameObject.AddComponent<LayoutElement>().preferredWidth = 34f;
+        return row;
+    }
+
     private void UpdateEconomyScreenUi()
     {
         if (economyScreenUi == null) return;
 
+        EnsureDefaultTaxPolicies();
+        EnsureTaxDayStatsCurrent();
         bool shouldShow = isEconomyPanelOpen;
         if (economyScreenUi.CanvasRoot.activeSelf != shouldShow)
         {
@@ -526,19 +621,63 @@ public partial class GameBootstrap
         }
 
         LocalizeCanvas(economyScreenUi.CanvasRoot);
+        TaxPolicy primaryPolicy = GetPrimaryTaxPolicy();
         economyScreenUi.HeaderCountText.text = $"{L("Treasury")}: {FormatTreasuryAmount()}";
         economyScreenUi.HeaderCountText.color = money < 0 ? GetTreasuryDisplayColor() : FleetSecondaryTextColor;
-        economyScreenUi.TaxesRateValueText.text = $"{dailyBuildingTaxPercent}%";
+        economyScreenUi.TaxesRateValueText.text = primaryPolicy != null ? $"{primaryPolicy.RatePercent}%" : "0%";
         economyScreenUi.TaxesIncomeSummaryText.text =
             $"{L("Current taxable bank")}: ${taxableBankTotal}\n" +
-            $"{L("Last collected")}: ${lastTaxCollectedAmount}\n" +
-            $"{L("Taxed buildings")}: {lastTaxedBuildingCount}";
+            $"{L("Taxes today")}: ${taxCollectedToday} / {taxEventsToday}\n" +
+            $"{L("Previous day")}: ${taxCollectedPreviousDay} / {taxEventsPreviousDay}";
         economyScreenUi.TaxesTimerSummaryText.text =
             $"{L("Next collection")}: 00:00\n" +
-            $"{L("Day")}: {currentDay} ({GetWeekDayLabel()})";
-        economyScreenUi.TaxesRateMinusButton.interactable = dailyBuildingTaxPercent > MinDailyBuildingTaxPercent;
-        economyScreenUi.TaxesRatePlusButton.interactable = dailyBuildingTaxPercent < MaxDailyBuildingTaxPercent;
+            $"{L("Day")}: {currentDay} ({GetWeekDayLabel()})\n" +
+            $"{L("Last daily reserve tax")}: ${lastTaxCollectedAmount} / {lastTaxedBuildingCount}";
+        if (economyScreenUi.TaxesPolicySummaryText != null)
+        {
+            int enabledPolicies = 0;
+            for (int i = 0; i < taxPolicies.Count; i++)
+                if (taxPolicies[i].IsEnabled) enabledPolicies++;
+            economyScreenUi.TaxesPolicySummaryText.text =
+                $"{L("Enabled policies")}: {enabledPolicies}/{taxPolicies.Count}  -  {L("Primary rate controls service sales tax")}";
+        }
+
+        economyScreenUi.TaxesRateMinusButton.interactable = primaryPolicy != null && primaryPolicy.RatePercent > MinDailyBuildingTaxPercent;
+        economyScreenUi.TaxesRatePlusButton.interactable = primaryPolicy != null && primaryPolicy.RatePercent < MaxDailyBuildingTaxPercent;
+        UpdateTaxPolicyRows();
         isEconomyScreenDirty = false;
+    }
+
+    private void UpdateTaxPolicyRows()
+    {
+        if (economyScreenUi == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < economyScreenUi.TaxPolicyRows.Count; i++)
+        {
+            TaxPolicyRowUi row = economyScreenUi.TaxPolicyRows[i];
+            bool active = i < taxPolicies.Count;
+            row.Root.gameObject.SetActive(active);
+            if (!active)
+            {
+                row.PolicyId = 0;
+                continue;
+            }
+
+            TaxPolicy policy = taxPolicies[i];
+            row.PolicyId = policy.Id;
+            row.ToggleText.text = policy.IsEnabled ? L("ON") : L("OFF");
+            row.ToggleButton.image.color = policy.IsEnabled
+                ? new Color(0.18f, 0.42f, 0.24f, 1f)
+                : new Color(0.17f, 0.19f, 0.23f, 1f);
+            row.NameText.text = L(policy.Name);
+            row.MetaText.text = $"{GetTaxSourceLabel(policy.SourceKind)} - {GetTaxFrequencyLabel(policy.Frequency)} - {GetTaxIncidenceLabel(policy.Incidence)}";
+            row.RateText.text = $"{policy.RatePercent}%";
+            row.RateMinusButton.interactable = policy.RatePercent > MinDailyBuildingTaxPercent;
+            row.RatePlusButton.interactable = policy.RatePercent < MaxDailyBuildingTaxPercent;
+        }
     }
 
     private void EnsureTradeHudSelectionValid()

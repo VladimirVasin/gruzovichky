@@ -739,6 +739,7 @@ public partial class GameBootstrap
                 MoneyAccountKind.BuildingCash,
                 MoneyTransactionReasonKind.TransportFare,
                 toOwnerId: parking.InstanceId);
+            ApplyTransportFareTaxes(parking, transferredBank, "Local bus fares delivered to Parking cash");
             SpawnMoneyEarnPopup(GetLocationCenter(LocationType.Parking), transferredBank);
             SessionDebugLogger.Log("BUS_ECON", $"{driver.DriverName} delivered ${transferredBank} from the local bus bank to Parking treasury. Parking treasury=${parking.BuildingBank}.");
         }

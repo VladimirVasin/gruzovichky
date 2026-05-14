@@ -20,6 +20,7 @@ public partial class GameBootstrap
     private const int MaxShiftDriverSlots = 32;
     private const int MaxVacancyOptionRows = 18;
     private const int MaxEconomyRowSlots = 64;
+    private const int MaxTaxPolicyRows = 10;
     private static readonly Color ShiftsScreenTint = new(0.06f, 0.08f, 0.11f, 0.76f);
     private static readonly Color ShiftsCardColor = new(0.13f, 0.16f, 0.21f, 0.98f);
     private static readonly Color ShiftsCardSelected = new(0.29f, 0.25f, 0.13f, 0.98f);
@@ -528,6 +529,9 @@ public partial class GameBootstrap
         public Text TaxesRateValueText;
         public Text TaxesIncomeSummaryText;
         public Text TaxesTimerSummaryText;
+        public Text TaxesPolicySummaryText;
+        public RectTransform TaxPoliciesContent;
+        public readonly List<TaxPolicyRowUi> TaxPolicyRows = new();
         public Text TradeResourceText;
         public Button TradeResourceDropdownButton;
         public RectTransform TradeResourceOptionsPanel;
@@ -558,6 +562,19 @@ public partial class GameBootstrap
         public Text RegionText;
         public Button RemoveButton;
         public int OrderId;
+    }
+
+    private sealed class TaxPolicyRowUi
+    {
+        public RectTransform Root;
+        public int PolicyId;
+        public Button ToggleButton;
+        public Text ToggleText;
+        public Text NameText;
+        public Text MetaText;
+        public Button RateMinusButton;
+        public Text RateText;
+        public Button RatePlusButton;
     }
 
     private sealed class TradePolicyRowUi

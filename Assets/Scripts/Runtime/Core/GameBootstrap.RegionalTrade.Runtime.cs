@@ -225,6 +225,7 @@ public partial class GameBootstrap
                 MoneyAccountKind.CityBudget,
                 MoneyAccountKind.External,
                 MoneyTransactionReasonKind.Trade);
+            ApplyTradeImportTaxes(trade.Price, trade.Quantity, trade.ResourceType, trade.City.NameEn, $"Land import: {resourceLabel} x{trade.Quantity}");
             SessionDebugLogger.Log("TRADE_LAND", $"Bought {trade.ResourceType} x{trade.Quantity} from {trade.City.NameEn} for ${trade.Price}; Warehouse now has {GetWarehouseTradeResourceAmount(trade.ResourceType)}.");
         }
         else if (TryConsumeStoredTradeResource(trade.ResourceType, trade.Quantity))
@@ -240,6 +241,7 @@ public partial class GameBootstrap
                 MoneyAccountKind.External,
                 MoneyAccountKind.CityBudget,
                 MoneyTransactionReasonKind.Trade);
+            ApplyTradeExportTaxes(trade.Price, trade.Quantity, trade.ResourceType, trade.City.NameEn, $"Land export: {resourceLabel} x{trade.Quantity}");
             SessionDebugLogger.Log("TRADE_LAND", $"Sold {trade.ResourceType} x{trade.Quantity} to {trade.City.NameEn} for ${trade.Price}; Warehouse now has {GetWarehouseTradeResourceAmount(trade.ResourceType)}.");
         }
 
