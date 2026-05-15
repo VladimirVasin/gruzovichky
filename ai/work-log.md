@@ -10,6 +10,8 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 
 ## Recent Work
 
+- 2026-05-15: Split the edge-highway bus visual/runtime helpers out of `GameBootstrap.EdgeHighway.cs` into `GameBootstrap.EdgeHighway.Buses.cs` so the edge-highway partial is back under the 900-line class/file limit without changing behavior. Updated `Assembly-CSharp.csproj` and owner memory for the new runtime partial. Verification: `tools/check-line-count.ps1`, `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`.
+
 - 2026-05-14: Fixed City Hall public concerns filing service-building complaints for already built need services. Public-concern social clusters with `Need` + `BuildingType:<service>` are now suppressed when the targeted need-service building already exists, and existing matching public concerns are treated as resolved by the same rule. This keeps pre-build `service_missing` and later known-place hunger signals visible in social/Noosphere data without turning an existing Canteen/Motel/Bar/Kiosk/Gambling Hall/City Park into a repeat construction complaint. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`.
 
 - 2026-05-14: Fixed stale day-end recovered warnings creating City Hall public concerns. `BuildWorkerDailyOpinion` now skips resolved same-day active negative thoughts when their end-of-day condition has recovered: job/no-job warnings, need warnings/critical needs, low money, and financial pressure. Residents who still have the problem keep contributing real pressure signals. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`.
