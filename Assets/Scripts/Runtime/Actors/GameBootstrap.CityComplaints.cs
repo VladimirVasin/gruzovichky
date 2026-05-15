@@ -297,7 +297,9 @@ public partial class GameBootstrap
 
     private void TryCreateNoJobComplaint(DriverAgent worker, ref int createdThisScan)
     {
-        if (currentDay < 2 || !IsWorkerVacantForVacancyAssignment(worker))
+        if (currentDay < 2 ||
+            !IsWorkerVacantForVacancyAssignment(worker) ||
+            HasAvailableWorkOpportunityForWorker(worker))
         {
             return;
         }
@@ -364,7 +366,7 @@ public partial class GameBootstrap
 
     private void ResolveSatisfiedCityComplaints()
     {
-        bool changed = false;
+        bool changed = ResolveDuplicatePublicConcernCityComplaints();
         for (int i = 0; i < cityComplaints.Count; i++)
         {
             CityComplaint complaint = cityComplaints[i];
@@ -457,9 +459,10 @@ public partial class GameBootstrap
                 }
                 break;
             case CityComplaintCategory.NoJob:
-                if (!IsWorkerVacantForVacancyAssignment(worker))
+                bool hasAvailableWork = HasAvailableWorkOpportunityForWorker(worker);
+                if (!IsWorkerVacantForVacancyAssignment(worker) || hasAvailableWork)
                 {
-                    reason = "worker found an assignment";
+                    reason = hasAvailableWork ? "work is available" : "worker found an assignment";
                     return true;
                 }
                 break;

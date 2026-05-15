@@ -274,6 +274,7 @@ public partial class GameBootstrap
             "requested service exists" => ru ? "здание построено" : "requested service exists",
             "already satisfied" => ru ? "уже выполнено" : "already satisfied",
             "public concern eased" => ru ? "напряжение спало" : "public concern eased",
+            "duplicate public concern" => ru ? "дублирующее обращение склеено" : "duplicate request merged",
             "social introduction completed" => ru ? "разговор состоялся" : "conversation happened",
             "social participant unavailable" => ru ? "участник недоступен" : "participant unavailable",
             _ => string.IsNullOrWhiteSpace(reason) ? (ru ? "без заметки" : "no note") : reason

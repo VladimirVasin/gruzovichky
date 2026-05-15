@@ -90,10 +90,29 @@ public partial class GameBootstrap
                 continue;
             }
 
-            if (IsCityComplaintSocialClusterMature(cluster) &&
-                CanCreatePublicConcernCityComplaint(cluster))
+            if (IsPublicConcernBlockedByAvailableWork(cluster, out int availableWork, out int unassignedWorkers))
             {
-                matureClusters.Add(cluster);
+                if (cluster.Strength >= CityComplaintSocialClusterMinStrength)
+                {
+                    SessionDebugLogger.Log(
+                        "CITY_HALL",
+                        $"Public concern suppressed because work is available: key={cluster.GroupKey}, availableWork={availableWork}, unassignedWorkers={unassignedWorkers}, negative={cluster.Strength}, positive={cluster.PositiveStrength}, net={GetCityComplaintSocialClusterNetStrength(cluster)}, activeSigners={GetCityComplaintSocialClusterActiveSignerCount(cluster)}/{cluster.SignerIds.Count}.");
+                }
+
+                continue;
+            }
+
+            if (IsCityComplaintSocialClusterMature(cluster))
+            {
+                if (TryMergePublicConcernClusterIntoActiveComplaint(cluster))
+                {
+                    continue;
+                }
+
+                if (CanCreatePublicConcernCityComplaint(cluster))
+                {
+                    matureClusters.Add(cluster);
+                }
             }
             else if (cluster != null &&
                      cluster.PositiveStrength > 0 &&
@@ -164,12 +183,15 @@ public partial class GameBootstrap
 
     private CityComplaintSocialSignalCluster CreateCityComplaintSocialSignalCluster(SocialSignal signal, string groupKey)
     {
-        SocialSignalCategory category = signal?.Category ?? SocialSignalCategory.City;
-        string topicKey = string.IsNullOrWhiteSpace(signal?.TopicKey)
-            ? category.ToString()
-            : signal.TopicKey;
-        string titleRu = ResolveCityComplaintSocialSignalTitle(signal, true);
-        string titleEn = ResolveCityComplaintSocialSignalTitle(signal, false);
+        bool streetLitter = IsStreetLitterPublicConcernSignal(signal);
+        SocialSignalCategory category = streetLitter ? SocialSignalCategory.Litter : signal?.Category ?? SocialSignalCategory.City;
+        string topicKey = streetLitter
+            ? "street_litter"
+            : string.IsNullOrWhiteSpace(signal?.TopicKey)
+                ? category.ToString()
+                : signal.TopicKey;
+        string titleRu = streetLitter ? "\u043c\u0443\u0441\u043e\u0440 \u043d\u0430 \u0443\u043b\u0438\u0446\u0430\u0445" : ResolveCityComplaintSocialSignalTitle(signal, true);
+        string titleEn = streetLitter ? "street litter" : ResolveCityComplaintSocialSignalTitle(signal, false);
 
         return new CityComplaintSocialSignalCluster
         {
@@ -240,7 +262,17 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (FindActivePublicConcernBySemanticKey(GetPublicConcernSemanticKey(cluster)) != null)
+        {
+            return false;
+        }
+
         if (IsPublicConcernBlockedByExistingServiceBuilding(cluster, out _))
+        {
+            return false;
+        }
+
+        if (IsPublicConcernBlockedByAvailableWork(cluster, out _, out _))
         {
             return false;
         }
@@ -332,6 +364,17 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (IsPublicConcernBlockedByAvailableWork(
+                complaint.IssueSignalCategory,
+                complaint.IssueTopicKey,
+                complaint.GroupKey,
+                out _,
+                out _))
+        {
+            reason = "work is available";
+            return false;
+        }
+
         if (complaint.State == CityComplaintState.Open)
         {
             return true;
@@ -419,6 +462,54 @@ public partial class GameBootstrap
             LocationType.Bar or
             LocationType.GamblingHall or
             LocationType.CityPark;
+    }
+
+    private bool IsPublicConcernBlockedByAvailableWork(
+        CityComplaintSocialSignalCluster cluster,
+        out int availableWork,
+        out int unassignedWorkers)
+    {
+        availableWork = 0;
+        unassignedWorkers = 0;
+        return cluster != null &&
+               IsPublicConcernBlockedByAvailableWork(
+                   cluster.Category,
+                   cluster.TopicKey,
+                   cluster.GroupKey,
+                   out availableWork,
+                   out unassignedWorkers);
+    }
+
+    private bool IsPublicConcernBlockedByAvailableWork(
+        SocialSignalCategory category,
+        string topicKey,
+        string groupKey,
+        out int availableWork,
+        out int unassignedWorkers)
+    {
+        availableWork = 0;
+        unassignedWorkers = 0;
+        return category == SocialSignalCategory.Work &&
+               IsCityWorkPublicConcernTopic(topicKey, groupKey) &&
+               HasSufficientAvailableWorkForUnassignedWorkers(out availableWork, out unassignedWorkers);
+    }
+
+    private static bool IsCityWorkPublicConcernTopic(string topicKey, string groupKey)
+    {
+        return IsCityWorkPublicConcernTopic(topicKey) ||
+               IsCityWorkPublicConcernTopic(groupKey);
+    }
+
+    private static bool IsCityWorkPublicConcernTopic(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        string normalized = NormalizeWorkerKnowledgeTopicKey(key);
+        return normalized == "TEXT:CITY_WORK" ||
+               normalized.EndsWith(":TEXT:CITY_WORK", System.StringComparison.Ordinal);
     }
 
     private bool HasRecentWorkerNegativeSocialSignalForPublicConcern(CityComplaint complaint, DriverAgent worker)
@@ -640,12 +731,12 @@ public partial class GameBootstrap
 
     private static string BuildCityComplaintSocialClusterKey(SocialSignal signal)
     {
-        SocialSignalCategory category = signal?.Category ?? SocialSignalCategory.City;
-        if (category == SocialSignalCategory.Litter)
+        if (IsStreetLitterPublicConcernSignal(signal))
         {
             return "social_cluster:litter:street_litter";
         }
 
+        SocialSignalCategory category = signal?.Category ?? SocialSignalCategory.City;
         string topic = NormalizeSocialSignalTopicKey(signal?.TopicKey, signal?.TopicLabelEn, category);
         return $"social_cluster:{category}:{topic}";
     }
@@ -670,4 +761,5 @@ public partial class GameBootstrap
 
         return GetSocialSignalCategoryLabel(signal.Category, ru);
     }
+
 }
