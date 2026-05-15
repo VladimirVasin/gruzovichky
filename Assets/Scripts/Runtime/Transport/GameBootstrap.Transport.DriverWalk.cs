@@ -828,6 +828,24 @@ public partial class GameBootstrap
 
     private void HandleBlockedDriverWalkArrival(DriverAgent driver, DriverRescuePhase blockedPhase)
     {
+        if (driver != null &&
+            blockedPhase == DriverRescuePhase.ToMotelFromBusStop &&
+            driver.IsArrivingByBus)
+        {
+            driver.IsArrivingByBus = false;
+            driver.WalkTargetWorld = driver.DriverObject != null
+                ? driver.DriverObject.transform.position
+                : driver.MotelIdlePosition;
+            driver.IdleWanderPauseTimer = Random.Range(0.8f, 1.8f);
+            driver.IdleWanderPointIndex = -1;
+            LogWorkerDecision(
+                driver,
+                "arrival-walk-halted",
+                "ToMotelFromBusStop: no valid path; arrival state completed",
+                true);
+            return;
+        }
+
         if (driver == null ||
             !TryGetWorkerNeedForBlockedWalkPhase(blockedPhase, driver.LifeGoal, out WorkerNeedKind need))
         {

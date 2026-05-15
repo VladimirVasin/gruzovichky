@@ -1,6 +1,6 @@
 # Work Log
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20, 2026-05-03, 2026-05-08, and 2026-05-09 to keep agent startup light. Use git history for exact old implementation details.
 
@@ -9,6 +9,12 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 - No active queued memory items.
 
 ## Recent Work
+
+- 2026-05-15: Temporarily gated City Hall requests to Social Introduction only. Non-social request generators (`ServiceMissing`, grouped worker complaints, and social-signal `PublicConcern`s) now return early, and any already active non-social City Hall requests are silently resolved without trust penalties while the temporary gate is enabled. Added `GameBootstrap.CityComplaints.TemporaryGate.cs`; `SocialIntroduction` remains active. Verification: `tools/check-line-count.ps1`, `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`.
+
+- 2026-05-15: Fixed money-pressure City Hall public concerns ignoring existing income paths. `Money:TEXT:MONEY` public concerns are now suppressed/resolved when every active signer either already has assigned work or has a suitable work opportunity covered by Labor Exchange/open vacancies, while the underlying `low_money` and `affect_financial_pressure` thoughts still remain available for resident state/social signal visibility. Added `GameBootstrap.CityComplaints.MoneyPressure.cs` for the focused public-concern filter. Verification: `tools/check-line-count.ps1`, `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`.
+
+- 2026-05-15: Fixed arrival-bus residents getting stuck after unsafe-cell rescue. Rescuing a worker from `ToMotelFromBusStop` now completes the stale arrival state by clearing `IsArrivingByBus`, and a no-path halt for the same phase also clears the arrival blocker so idle life, vacancies, and migration counts can see the resident again. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`.
 
 - 2026-05-15: Fixed duplicate City Hall litter public concerns. Street-litter daily signals and city/affect litter thought signals now share the canonical public-concern key `social_cluster:litter:street_litter`, use the same `street litter` / `мусор на улицах` title, and active duplicate public concerns are merged/resolved without trust side effects. Added `GameBootstrap.CityComplaints.PublicConcernDedup.cs` for semantic duplicate handling. Verification: `tools/check-line-count.ps1`, `dotnet build Assembly-CSharp.csproj -v:minimal`, `git diff --check`.
 

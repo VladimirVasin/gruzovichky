@@ -371,6 +371,7 @@ public partial class GameBootstrap
 
         rescuePosition.y = SampleTerrainHeight(rescuePosition.x, rescuePosition.z);
         DriverRescuePhase oldPhase = driver.WalkPhase;
+        bool completedArrivalAfterRescue = oldPhase == DriverRescuePhase.ToMotelFromBusStop && driver.IsArrivingByBus;
         ReleaseBench(driver);
         ReleaseCatInteraction(driver);
         if (oldPhase == DriverRescuePhase.IdleSmoking)
@@ -384,14 +385,22 @@ public partial class GameBootstrap
         driver.WalkPath.Clear();
         driver.WalkWaypointIndex = 0;
         driver.WalkAnimationTime = 0f;
+        driver.WalkTargetWorld = rescuePosition;
         driver.IdleActivityTimer = 0f;
         driver.IdleWanderPauseTimer = Random.Range(1.5f, 3.5f);
         driver.LastSafeWalkPosition = rescuePosition;
         driver.HasLastSafeWalkPosition = true;
+        if (completedArrivalAfterRescue)
+        {
+            driver.IsArrivingByBus = false;
+            driver.IdleWanderPointIndex = -1;
+        }
+
         ApplyDriverPose(driver, 0f, 0f);
+        string arrivalSuffix = completedArrivalAfterRescue ? " Arrival bus state completed after rescue." : string.Empty;
         SessionDebugLogger.Log(
             "DRIVER",
-            $"{driver.DriverName} rescued from unsafe walk cell ({currentCell.x},{currentCell.y}) to ({WorldToCell(rescuePosition).x},{WorldToCell(rescuePosition).y}); oldPhase={oldPhase}; reason={reason}.");
+            $"{driver.DriverName} rescued from unsafe walk cell ({currentCell.x},{currentCell.y}) to ({WorldToCell(rescuePosition).x},{WorldToCell(rescuePosition).y}); oldPhase={oldPhase}; reason={reason}.{arrivalSuffix}");
         return true;
     }
 

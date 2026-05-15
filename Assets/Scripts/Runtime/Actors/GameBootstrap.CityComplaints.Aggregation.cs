@@ -36,6 +36,11 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (!IsCityComplaintCategoryTemporarilyEnabled(category))
+        {
+            return false;
+        }
+
         string groupKey = GetCityComplaintGroupKey(category, linkedNeed, linkedLocationType);
         CityComplaint openComplaint = FindActiveCityComplaintByGroupKey(groupKey);
         if (openComplaint != null)

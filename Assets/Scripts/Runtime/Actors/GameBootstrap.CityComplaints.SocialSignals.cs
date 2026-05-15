@@ -34,7 +34,10 @@ public partial class GameBootstrap
 
     private void GenerateCityComplaintsFromNegativeSocialSignalClusters(int endedDay)
     {
-        if (endedDay <= 0 || !locations.ContainsKey(LocationType.CityHall) || socialSignals.Count == 0)
+        if (endedDay <= 0 ||
+            !IsCityComplaintCategoryTemporarilyEnabled(CityComplaintCategory.PublicConcern) ||
+            !locations.ContainsKey(LocationType.CityHall) ||
+            socialSignals.Count == 0)
         {
             return;
         }
@@ -85,6 +88,23 @@ public partial class GameBootstrap
                     SessionDebugLogger.Log(
                         "CITY_HALL",
                         $"Public concern suppressed because service building exists: key={cluster.GroupKey}, service={existingService}, negative={cluster.Strength}, positive={cluster.PositiveStrength}, net={GetCityComplaintSocialClusterNetStrength(cluster)}, activeSigners={GetCityComplaintSocialClusterActiveSignerCount(cluster)}/{cluster.SignerIds.Count}.");
+                }
+
+                continue;
+            }
+
+            if (IsPublicConcernBlockedByWorkIncomePath(
+                    cluster,
+                    out int incomePathSigners,
+                    out int activeMoneySigners,
+                    out int moneyAvailableWork,
+                    out int moneyUnassignedWorkers))
+            {
+                if (cluster.Strength >= CityComplaintSocialClusterMinStrength)
+                {
+                    SessionDebugLogger.Log(
+                        "CITY_HALL",
+                        $"Public concern suppressed because money pressure has work income path: key={cluster.GroupKey}, incomePathSigners={incomePathSigners}/{activeMoneySigners}, availableWork={moneyAvailableWork}, unassignedWorkers={moneyUnassignedWorkers}, negative={cluster.Strength}, positive={cluster.PositiveStrength}, net={GetCityComplaintSocialClusterNetStrength(cluster)}, activeSigners={GetCityComplaintSocialClusterActiveSignerCount(cluster)}/{cluster.SignerIds.Count}.");
                 }
 
                 continue;
@@ -257,6 +277,11 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (!IsCityComplaintCategoryTemporarilyEnabled(CityComplaintCategory.PublicConcern))
+        {
+            return false;
+        }
+
         if (FindActiveCityComplaintByGroupKey(cluster.GroupKey) != null)
         {
             return false;
@@ -268,6 +293,11 @@ public partial class GameBootstrap
         }
 
         if (IsPublicConcernBlockedByExistingServiceBuilding(cluster, out _))
+        {
+            return false;
+        }
+
+        if (IsPublicConcernBlockedByWorkIncomePath(cluster, out _, out _, out _, out _))
         {
             return false;
         }
@@ -361,6 +391,12 @@ public partial class GameBootstrap
                 out LocationType existingService))
         {
             reason = $"{existingService} already exists";
+            return false;
+        }
+
+        if (IsPublicConcernBlockedByWorkIncomePath(complaint, out _, out _, out _, out _))
+        {
+            reason = "work income path is available";
             return false;
         }
 

@@ -117,6 +117,8 @@ public partial class GameBootstrap
             return;
         }
 
+        ResolveTemporarilyDisabledCityComplaints();
+
         cityComplaintScanTimer -= Time.deltaTime * Mathf.Max(0f, gameSpeedMultiplier);
         if (cityComplaintScanTimer > 0f)
         {
@@ -134,7 +136,10 @@ public partial class GameBootstrap
     private void ScanCityComplaints()
     {
         int createdThisScan = 0;
-        TryCreateMissingServiceBuildingRequest(ref createdThisScan);
+        if (IsCityComplaintCategoryTemporarilyEnabled(CityComplaintCategory.ServiceMissing))
+        {
+            TryCreateMissingServiceBuildingRequest(ref createdThisScan);
+        }
 
         PruneStaleCityComplaintPendingGroups();
 
@@ -146,6 +151,11 @@ public partial class GameBootstrap
 
     private void TryCreateMissingServiceBuildingRequest(ref int createdThisScan)
     {
+        if (!IsCityComplaintCategoryTemporarilyEnabled(CityComplaintCategory.ServiceMissing))
+        {
+            return;
+        }
+
         if (cityHallRuntimeStartedWorldHour < 0f)
         {
             cityHallRuntimeStartedWorldHour = GetCurrentWorldHour();
@@ -218,7 +228,9 @@ public partial class GameBootstrap
 
     private bool CreateServiceBuildingRequest(DriverAgent signer, CityServiceRequestCandidate candidate)
     {
-        if (signer == null || candidate == null)
+        if (signer == null ||
+            candidate == null ||
+            !IsCityComplaintCategoryTemporarilyEnabled(CityComplaintCategory.ServiceMissing))
         {
             return false;
         }
