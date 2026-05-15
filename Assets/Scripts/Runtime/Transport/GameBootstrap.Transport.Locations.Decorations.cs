@@ -297,8 +297,13 @@ public partial class GameBootstrap
         EnhanceFurnitureFactoryModel(parent, center, min, max, anchor);
     }
 
-    private void CreateMotelDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateMotelDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedMotelModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         // Oriented root: local +Z faces anchor, local -Z faces away (back of building).
         // Snap to nearest cardinal axis to avoid diagonal rotations.
         Vector3 anchorWorld = new Vector3(anchor.x + 0.5f, center.y, anchor.y + 0.5f);

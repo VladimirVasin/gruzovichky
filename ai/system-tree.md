@@ -1,6 +1,6 @@
 # System Tree
 
-Last updated: 2026-05-15
+Last updated: 2026-05-16
 
 Purpose: stable informational tree of the project systems, subsystems, feature leaves, and the most important cross-system links. Code remains the source of truth; use this file to orient before reading `ai/systems-map.md` and scanning code.
 
@@ -41,7 +41,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: terrain height sampling, building pads, water cells, beaches, ground visual layers.
 - [WORLD.Nature] Natural zones and ambience
   - Owns forests, hills, lakes, misc vegetation, and ambient animals/particles.
-  - Feature leaves: generated/imported/fallback trees, berries, flowers, birds, cats, bees, frogs, moths, leaves, fireflies, river/lake fish.
+  - Feature leaves: generated/imported/fallback trees, berries, flowers, birds, imported/procedural cats, bees, frogs, moths, leaves, fireflies, river/lake fish.
 - [WORLD.Weather] Atmosphere and weather
   - Controls sky, lighting feel, rain/night visuals, water visuals, and graphics-option presentation.
   - Feature leaves: night stars, rain, clouds, water LOD, post-processing, graphics settings, internal cell lighting map.
@@ -53,7 +53,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: rotated footprints, placement preview, non-walkable buffers, entrance exceptions, demolition.
 - [WORLD.Decor] Building and service visuals
   - Adds low-poly details and imported/fallback service-building visuals.
-  - Feature leaves: building boxes/cylinders, lighting profiles, imported Bar/Gambling Hall/Warehouse visuals and interactions, construction pop-ins.
+  - Feature leaves: building boxes/cylinders, lighting profiles, imported Bar/Gambling Hall/Warehouse/Motel/City Hall visuals and interactions, construction pop-ins.
 - [WORLD.Footpaths] Pedestrian ground traces
   - Tracks visible footpath wear and preferred pedestrian walking surfaces.
   - Feature leaves: footpath cells, wear, clear-on-building, path preference.
@@ -134,7 +134,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 
 - [WORKERS.Identity] Worker identity and presentation
   - Stores names, visual race, cultural heritage, portraits, education, profession, visuals, and focus state.
-  - Feature leaves: generated names, stable race/heritage assignment, heritage HUD badge/catalog, race/gender texture-backed portrait UI with state-aware cartoon layered animation and procedural fallback, two stable procedural world-model variants per race, education label, citizen id, worker focus, driver/worker object.
+  - Feature leaves: generated names, stable race/heritage assignment, heritage HUD badge/catalog, race/gender texture-backed portrait UI with state-aware cartoon layered animation and procedural fallback, imported Iskrian/Zelen/Rovian race+gender world models with secondary animation and procedural fallback, two stable procedural world-model variants per race, education label, citizen id, worker focus, driver/worker object.
 - [WORKERS.Personality] Character traits, weaknesses, and temporary affects
   - Separates stable worker traits from at most one steady weakness and temporary emotional states.
   - Feature leaves: 3 generated non-conflicting traits, optional weakness, legacy perk migration, affect lifetime/intensity/source/reason, affect-created thoughts, affect knowledge bias, Workers/F9 personality UI.

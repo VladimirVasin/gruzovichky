@@ -450,6 +450,8 @@ public partial class GameBootstrap
             driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-5f, 0f, 0f);
         if (driver.DriverRightLegTransform != null)
             driver.DriverRightLegTransform.localRotation = Quaternion.Euler(5f, 0f, 0f);
+
+        ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.TrashMeal);
     }
 
     private void ApplyDriverSittingPose(DriverAgent driver)
@@ -472,6 +474,8 @@ public partial class GameBootstrap
             driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-85f, 0f, 0f);
         if (driver.DriverRightLegTransform != null)
             driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-85f, 0f, 0f);
+
+        ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.Sitting);
     }
 
     private void ApplyDriverCityParkPose(DriverAgent driver)
@@ -498,6 +502,7 @@ public partial class GameBootstrap
                     driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-4f, 0f, 0f);
                 if (driver.DriverRightLegTransform != null)
                     driver.DriverRightLegTransform.localRotation = Quaternion.Euler(4f, 0f, 0f);
+                ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.CityParkExercise);
                 return;
 
             case 3:
@@ -515,6 +520,7 @@ public partial class GameBootstrap
                     driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(2f, 0f, 0f);
                 if (driver.DriverRightLegTransform != null)
                     driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-2f, 0f, 0f);
+                ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.CityParkLookAround);
                 return;
 
             case 4:
@@ -532,6 +538,7 @@ public partial class GameBootstrap
                     driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-70f, 0f, 0f);
                 if (driver.DriverRightLegTransform != null)
                     driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-52f, 0f, 0f);
+                ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.CityParkRest);
                 return;
 
             default:
@@ -562,6 +569,7 @@ public partial class GameBootstrap
         if (driver.DriverRightLegTransform != null)
             driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-3f, 0f, 0f);
 
+        ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.Smoking);
         UpdateDriverSmokingParticles(driver);
     }
 
@@ -681,6 +689,8 @@ public partial class GameBootstrap
             driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(10f, 0f, 0f);
         if (driver.DriverRightLegTransform != null)
             driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-10f, 0f, 0f);
+
+        ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.PettingCat);
     }
 
     private void ApplyDriverPhoneCallPose(DriverAgent driver)
@@ -703,6 +713,8 @@ public partial class GameBootstrap
             driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(3f, 0f, 0f);
         if (driver.DriverRightLegTransform != null)
             driver.DriverRightLegTransform.localRotation = Quaternion.Euler(-3f, 0f, 0f);
+
+        ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.PhoneCall);
     }
 
     private void ApplyDriverPose(DriverAgent driver, float swing, float bob)
@@ -772,6 +784,13 @@ public partial class GameBootstrap
             driver.DriverFlashlightTransform.localPosition = new Vector3(0.24f, 0.57f - bob * 0.12f, 0.1f);
             driver.DriverFlashlightTransform.localRotation = Quaternion.Euler(16f + swing * 10f, swing * 5f, 0f);
         }
+
+        ImportedDriverPoseKind poseKind = isConversing
+            ? ImportedDriverPoseKind.Conversation
+            : Mathf.Abs(swing) > 0.001f || Mathf.Abs(bob) > 0.001f
+                ? ImportedDriverPoseKind.Walk
+                : ImportedDriverPoseKind.Neutral;
+        ApplyImportedDriverPoseMotion(driver, poseKind, swing: swing, bob: bob);
     }
 
     private void ResolveWorkerGamblingSpinResult(DriverAgent driver)

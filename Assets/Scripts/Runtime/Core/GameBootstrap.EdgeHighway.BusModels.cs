@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 public partial class GameBootstrap
 {
     private const string ImportedBusResourcePath = "Vehicles/Bus/Bus";
-    private static readonly Vector3 ImportedBusTargetSize = new(1.52f, 0.72f, 0.56f);
+    private static readonly Vector3 ImportedBusTargetSize = new(2.08f, 0.98f, 0.78f);
     private const float ImportedBusBottomY = 0.02f;
 
     private bool hasLoggedImportedBusVisualInfo;
@@ -56,18 +57,19 @@ public partial class GameBootstrap
             return false;
         }
 
+        CreateImportedBusWheelPivots(imported.transform);
         CreateImportedBusShadowBlob(parent);
         CreateImportedBusHeadlightVisual(
             parent,
             leftLightName,
-            new Vector3(0.78f, 0.29f, -0.16f),
+            new Vector3(1.05f, 0.39f, -0.22f),
             out headlightLeftRenderer,
             out headlightLeftMaterial,
             out leftLight);
         CreateImportedBusHeadlightVisual(
             parent,
             rightLightName,
-            new Vector3(0.78f, 0.29f, 0.16f),
+            new Vector3(1.05f, 0.39f, 0.22f),
             out headlightRightRenderer,
             out headlightRightMaterial,
             out rightLight);
@@ -89,7 +91,7 @@ public partial class GameBootstrap
         shadowBlob.name = "ImportedBusShadowBlob";
         shadowBlob.transform.SetParent(parent, false);
         shadowBlob.transform.localPosition = new Vector3(0f, -0.01f, 0f);
-        shadowBlob.transform.localScale = new Vector3(1.56f, 0.008f, 0.6f);
+        shadowBlob.transform.localScale = new Vector3(2.12f, 0.008f, 0.82f);
         Renderer renderer = shadowBlob.GetComponent<Renderer>();
         renderer.material = CreateTransparentOverlayMaterial(new Color(0f, 0f, 0f, 0.14f));
         renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -111,7 +113,7 @@ public partial class GameBootstrap
         GameObject headlightVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
         headlightVisual.transform.SetParent(parent, false);
         headlightVisual.transform.localPosition = localPosition;
-        headlightVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
+        headlightVisual.transform.localScale = new Vector3(0.052f, 0.078f, 0.105f);
         ApplyColor(headlightVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
         ConfigureShadowVisual(headlightVisual, VisualSmoothnessGlass);
 
@@ -211,6 +213,27 @@ public partial class GameBootstrap
         {
             Object.Destroy(colliders[i]);
         }
+    }
+
+    private static void CreateImportedBusWheelPivots(Transform importedRoot)
+    {
+        List<Transform> wheelParts = FindImportedVehicleParts(importedRoot, IsImportedBusWheelPartName);
+        for (int i = 0; i < wheelParts.Count; i++)
+        {
+            CreateImportedVehicleWheelPivot(wheelParts[i], "ImportedBusWheelPivot_" + i);
+        }
+    }
+
+    private static bool IsImportedBusWheelPartName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        string lower = name.ToLowerInvariant();
+        return (lower.Contains("wheel") || lower.Contains("tire") || lower.Contains("tyre")) &&
+            !lower.Contains("fender");
     }
 
     private bool FitImportedBusModel(

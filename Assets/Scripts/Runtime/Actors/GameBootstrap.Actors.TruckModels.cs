@@ -1,11 +1,13 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 public partial class GameBootstrap
 {
     private const string ImportedTruckResourcePath = "Vehicles/Trucks/Truck";
-    private static readonly Vector3 ImportedTruckTargetSize = new(0.88f, 0.72f, 1.18f);
+    private static readonly Vector3 ImportedTruckTargetSize = new(1.20f, 0.96f, 1.60f);
     private const float ImportedTruckBottomY = 0.02f;
+    private static readonly Quaternion TruckProceduralWheelBaseRotation = Quaternion.Euler(0f, 0f, 90f);
 
     private Transform BuildTruckVisualModel()
     {
@@ -49,13 +51,14 @@ public partial class GameBootstrap
             return false;
         }
 
+        CreateImportedTruckWheelPivots(imported.transform);
         CreateTruckShadowBlob();
-        CreateTruckHeadlightVisual(new Vector3(-0.18f, 0.39f, 0.46f), true);
-        CreateTruckHeadlightVisual(new Vector3(0.18f, 0.39f, 0.46f), false);
-        CreateTruckHeadlightBeam(new Vector3(-0.18f, 0.39f, 0.5f));
-        CreateTruckHeadlightBeam(new Vector3(0.18f, 0.39f, 0.5f));
+        CreateTruckHeadlightVisual(new Vector3(-0.25f, 0.51f, 0.64f), true);
+        CreateTruckHeadlightVisual(new Vector3(0.25f, 0.51f, 0.64f), false);
+        CreateTruckHeadlightBeam(new Vector3(-0.25f, 0.51f, 0.69f));
+        CreateTruckHeadlightBeam(new Vector3(0.25f, 0.51f, 0.69f));
 
-        cargoVisualRoot = CreateTruckCargoVisualRoot(new Vector3(0f, 0.47f, -0.24f));
+        cargoVisualRoot = CreateTruckCargoVisualRoot(new Vector3(0f, 0.62f, -0.33f));
         SessionDebugLogger.Log("TRUCK", $"Loaded imported truck model from Resources/{ImportedTruckResourcePath}.");
         return true;
     }
@@ -111,7 +114,7 @@ public partial class GameBootstrap
             GameObject wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             wheel.transform.SetParent(truckVisualRoot, false);
             wheel.transform.localPosition = wheelOffsets[i];
-            wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            wheel.transform.localRotation = TruckProceduralWheelBaseRotation;
             wheel.transform.localScale = new Vector3(0.12f, 0.05f, 0.12f);
             ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f), VisualSmoothnessRubber);
             ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
@@ -150,7 +153,7 @@ public partial class GameBootstrap
         shadow.name = "TruckShadowBlob";
         shadow.transform.SetParent(truckVisualRoot, false);
         shadow.transform.localPosition = new Vector3(0f, -0.01f, 0f);
-        shadow.transform.localScale = new Vector3(0.88f, 0.01f, 1.16f);
+        shadow.transform.localScale = new Vector3(1.20f, 0.01f, 1.58f);
         Renderer renderer = shadow.GetComponent<Renderer>();
         renderer.material = CreateTransparentOverlayMaterial(new Color(0f, 0f, 0f, 0.14f));
         renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -239,6 +242,112 @@ public partial class GameBootstrap
         {
             Object.Destroy(colliders[i]);
         }
+    }
+
+    private void CreateImportedTruckWheelPivots(Transform importedRoot)
+    {
+        List<Transform> wheelParts = FindImportedVehicleParts(importedRoot, IsImportedTruckWheelPartName);
+        for (int i = 0; i < wheelParts.Count; i++)
+        {
+            Transform pivot = CreateImportedVehicleWheelPivot(wheelParts[i], "ImportedTruckWheelPivot_" + i);
+            if (pivot == null)
+            {
+                continue;
+            }
+
+            truckWheels.Add(pivot);
+            if (IsImportedTruckFrontWheelPartName(wheelParts[i].name))
+            {
+                truckFrontWheels.Add(pivot);
+            }
+        }
+    }
+
+    private static Transform CreateImportedVehicleWheelPivot(Transform part, string name)
+    {
+        if (part == null || part.parent == null || !TryGetWorldRendererBounds(new List<Transform> { part }, out Bounds bounds))
+        {
+            return null;
+        }
+
+        Transform originalParent = part.parent;
+        Transform pivot = new GameObject(name).transform;
+        pivot.SetParent(originalParent, false);
+        pivot.position = bounds.center;
+        pivot.localRotation = Quaternion.identity;
+        pivot.localScale = Vector3.one;
+        part.SetParent(pivot, true);
+        return pivot;
+    }
+
+    private static List<Transform> FindImportedVehicleParts(Transform root, System.Predicate<string> matchName)
+    {
+        List<Transform> parts = new();
+        if (root == null || matchName == null)
+        {
+            return parts;
+        }
+
+        Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform current = transforms[i];
+            if (current == null || current == root || !matchName(current.name))
+            {
+                continue;
+            }
+
+            if (HasImportedVehicleAncestor(current, root, matchName))
+            {
+                continue;
+            }
+
+            if (current.GetComponentsInChildren<Renderer>(true).Length > 0)
+            {
+                parts.Add(current);
+            }
+        }
+
+        return parts;
+    }
+
+    private static bool HasImportedVehicleAncestor(Transform current, Transform root, System.Predicate<string> matchName)
+    {
+        Transform parent = current.parent;
+        while (parent != null && parent != root)
+        {
+            if (matchName(parent.name))
+            {
+                return true;
+            }
+
+            parent = parent.parent;
+        }
+
+        return false;
+    }
+
+    private static bool IsImportedTruckWheelPartName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        string lower = name.ToLowerInvariant();
+        return (lower.Contains("wheel") || lower.Contains("tire") || lower.Contains("tyre")) &&
+            !lower.Contains("fender");
+    }
+
+    private static bool IsImportedTruckFrontWheelPartName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        string lower = name.ToLowerInvariant();
+        return lower.Contains("front") || lower.Contains("wheel 1") || lower.Contains("wheel_1");
     }
 
     private bool FitImportedTruckModel(Transform boundsRoot, GameObject imported, Vector3 targetSize, float bottomY)

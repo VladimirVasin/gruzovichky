@@ -41,8 +41,13 @@ public partial class GameBootstrap
         return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.CityHall, 4, 3, out previewPosition, out previewScale);
     }
 
-    private void CreateCityHallDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateCityHallDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedCityHallModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         Transform root = CreateAnchorOrientedBuildingRoot(parent, "CityHallDetailRoot", center, min, max, anchor, BuildingDecorScale);
         Color wall = new(0.56f, 0.62f, 0.72f);
         Color trim = new(0.82f, 0.78f, 0.66f);

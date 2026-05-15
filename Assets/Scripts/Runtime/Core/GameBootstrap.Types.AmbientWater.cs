@@ -131,6 +131,12 @@ public partial class GameBootstrap : MonoBehaviour
         public Transform BodyTransform;
         public Transform HeadTransform;
         public Transform TailTransform;
+        public bool UsesImportedModel;
+        public Vector3 BodyBaseScale = Vector3.one;
+        public Quaternion HeadBaseRotation = Quaternion.identity;
+        public Quaternion TailBaseRotation = Quaternion.identity;
+        public Transform[] LegTransforms;
+        public Quaternion[] LegBaseRotations;
         public Vector3 CurrentPosition;
         public Vector3 StartPosition;
         public Vector3 TargetPosition;

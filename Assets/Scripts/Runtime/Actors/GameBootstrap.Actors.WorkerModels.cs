@@ -1,8 +1,17 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 public partial class GameBootstrap
 {
+    private const string IskrianMaleImportedDriverResourcePath = "Citizens/IskryaninMale";
+    private const string IskrianFemaleImportedDriverResourcePath = "Citizens/IskryaninFemale";
+    private const string ZelenMaleImportedDriverResourcePath = "Citizens/ZeleninMale";
+    private const string ZelenFemaleImportedDriverResourcePath = "Citizens/ZeleninFemale";
+    private const string RovianMaleImportedDriverResourcePath = "Citizens/RovianMale";
+    private const string RovianFemaleImportedDriverResourcePath = "Citizens/RovianFemale";
+    private const float ImportedDriverTargetHeight = 1.38f;
+
     private struct DriverVisualRecipe
     {
         public Color ShirtColor;
@@ -35,11 +44,18 @@ public partial class GameBootstrap
             return;
         }
 
+        ResetImportedDriverVisualAnimationHooks(driver);
         EnsureWorkerRace(driver);
         int variant = GetDriverVisualModelVariant(driver);
         DriverVisualRecipe recipe = CreateDriverVisualRecipe(driver, variant);
 
         CreateDriverShadowBlob(driver.DriverVisualRoot, recipe);
+
+        if (TryCreateImportedDriverVisualModel(driver))
+        {
+            CreateDriverCarryProps(driver);
+            return;
+        }
 
         Transform bodyAnchor = CreateDriverVisualAnchor("DriverBody", driver.DriverVisualRoot, recipe.BodyPosition);
         driver.DriverBodyTransform = bodyAnchor;
@@ -61,6 +77,474 @@ public partial class GameBootstrap
         driver.DriverRightLegTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverRightLeg", recipe.RightLegPosition, recipe.LegScale, recipe.TrouserColor);
 
         CreateDriverCarryProps(driver);
+    }
+
+    private bool TryCreateImportedDriverVisualModel(DriverAgent driver)
+    {
+        if (!TryGetImportedDriverVisualConfig(driver, out string resourcePath, out string modelName, out string rootName))
+        {
+            return false;
+        }
+
+        bool isFemale = driver.Gender == WorkerGender.Female;
+        GameObject prefab = Resources.Load<GameObject>(resourcePath);
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        GameObject model = Instantiate(prefab, driver.DriverVisualRoot);
+        model.name = modelName;
+        driver.DriverImportedCitizenVisual = true;
+        driver.DriverImportedCitizenFemaleVisual = isFemale;
+        driver.DriverImportedModelTransform = model.transform;
+        model.transform.localPosition = Vector3.zero;
+        model.transform.localRotation = Quaternion.identity;
+        model.transform.localScale = Vector3.one;
+
+        Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+        if (renderers.Length == 0)
+        {
+            ResetImportedDriverVisualAnimationHooks(driver);
+            Destroy(model);
+            return false;
+        }
+
+        ConfigureImportedDriverVisual(model, renderers);
+        model.transform.localRotation = SelectImportedDriverUprightRotation(driver.DriverVisualRoot, model.transform, renderers);
+
+        if (!TryGetLocalRendererBounds(driver.DriverVisualRoot, renderers, out Bounds bounds))
+        {
+            ResetImportedDriverVisualAnimationHooks(driver);
+            Destroy(model);
+            return false;
+        }
+
+        float scale = ImportedDriverTargetHeight / Mathf.Max(bounds.size.y, 0.01f);
+        if (scale <= 0f || float.IsNaN(scale) || float.IsInfinity(scale))
+        {
+            ResetImportedDriverVisualAnimationHooks(driver);
+            Destroy(model);
+            return false;
+        }
+
+        model.transform.localScale = Vector3.one * scale;
+        if (TryGetLocalRendererBounds(driver.DriverVisualRoot, renderers, out Bounds scaledBounds))
+        {
+            model.transform.localPosition = new Vector3(
+                -scaledBounds.center.x,
+                -scaledBounds.min.y,
+                -scaledBounds.center.z);
+        }
+
+        BuildImportedDriverAnimationRig(driver, model.transform, rootName, isFemale);
+        return true;
+    }
+
+    private static bool TryGetImportedDriverVisualConfig(
+        DriverAgent driver,
+        out string resourcePath,
+        out string modelName,
+        out string rootName)
+    {
+        resourcePath = null;
+        modelName = null;
+        rootName = null;
+        if (driver == null)
+        {
+            return false;
+        }
+
+        bool isFemale = driver.Gender == WorkerGender.Female;
+        switch (driver.Race)
+        {
+            case WorkerRaceKind.Rovian:
+                resourcePath = isFemale ? RovianFemaleImportedDriverResourcePath : RovianMaleImportedDriverResourcePath;
+                modelName = isFemale ? "RovianFemaleImportedModel" : "RovianMaleImportedModel";
+                rootName = isFemale ? "RovianFemale_Root" : "RovianMale_Root";
+                return true;
+            case WorkerRaceKind.Zelen:
+                resourcePath = isFemale ? ZelenFemaleImportedDriverResourcePath : ZelenMaleImportedDriverResourcePath;
+                modelName = isFemale ? "ZelenFemaleImportedModel" : "ZelenMaleImportedModel";
+                rootName = isFemale ? "ZelenkaFemale_Root" : "ZeleninMale_Root";
+                return true;
+            case WorkerRaceKind.Iskrian:
+                resourcePath = isFemale ? IskrianFemaleImportedDriverResourcePath : IskrianMaleImportedDriverResourcePath;
+                modelName = isFemale ? "IskrianFemaleImportedModel" : "IskrianMaleImportedModel";
+                rootName = isFemale ? "IskryaninFemale_Root" : "IskryaninMale_Root";
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void ConfigureImportedDriverVisual(GameObject model, Renderer[] renderers)
+    {
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null)
+            {
+                continue;
+            }
+
+            if (IsImportedDriverHelperRenderer(renderer))
+            {
+                renderer.enabled = false;
+                continue;
+            }
+
+            renderer.shadowCastingMode = ShadowCastingMode.On;
+            renderer.receiveShadows = true;
+            ApplyMaterialSmoothness(renderer, GuessImportedDriverSmoothness(renderer.name));
+            NormalizeImportedBuildingMaterial(renderer);
+            RegisterShadowLodRenderer(renderer);
+        }
+
+        Collider[] colliders = model.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            colliders[i].enabled = false;
+        }
+
+        Camera[] cameras = model.GetComponentsInChildren<Camera>(true);
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            cameras[i].enabled = false;
+        }
+
+        Light[] lights = model.GetComponentsInChildren<Light>(true);
+        for (int i = 0; i < lights.Length; i++)
+        {
+            lights[i].enabled = false;
+        }
+
+        Animator[] animators = model.GetComponentsInChildren<Animator>(true);
+        for (int i = 0; i < animators.Length; i++)
+        {
+            animators[i].enabled = false;
+        }
+
+        Animation[] animations = model.GetComponentsInChildren<Animation>(true);
+        for (int i = 0; i < animations.Length; i++)
+        {
+            animations[i].enabled = false;
+        }
+    }
+
+    private static bool IsImportedDriverHelperRenderer(Renderer renderer)
+    {
+        Transform current = renderer != null ? renderer.transform : null;
+        while (current != null)
+        {
+            string name = current.name;
+            if (DriverPartNameStartsWith(name, "P_") ||
+                DriverPartNameContains(name, "Marker") ||
+                DriverPartNameContains(name, "Helper"))
+            {
+                return true;
+            }
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
+    private static Quaternion SelectImportedDriverUprightRotation(Transform root, Transform model, Renderer[] renderers)
+    {
+        Quaternion[] candidateRotations =
+        {
+            Quaternion.identity,
+            Quaternion.Euler(-90f, 0f, 0f),
+            Quaternion.Euler(90f, 0f, 0f),
+            Quaternion.Euler(0f, 0f, -90f),
+            Quaternion.Euler(0f, 0f, 90f)
+        };
+
+        Quaternion bestRotation = Quaternion.identity;
+        float bestScore = float.NegativeInfinity;
+        for (int i = 0; i < candidateRotations.Length; i++)
+        {
+            Quaternion rotation = candidateRotations[i];
+            model.localRotation = rotation;
+            if (!TryGetLocalRendererBounds(root, renderers, out Bounds bounds))
+            {
+                continue;
+            }
+
+            Vector3 size = bounds.size;
+            float horizontal = Mathf.Max(size.x, size.z);
+            float score = (size.y * 2f) - horizontal;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestRotation = rotation;
+            }
+        }
+
+        model.localRotation = bestRotation;
+        return bestRotation;
+    }
+
+    private void BuildImportedDriverAnimationRig(DriverAgent driver, Transform modelRoot, string rootName, bool isFemale)
+    {
+        Transform rigRoot = FindImportedTransform(modelRoot, rootName) ?? modelRoot;
+        List<Transform> bodyParts = FindImportedDriverParts(rigRoot, IsImportedDriverBodyPartName);
+        List<Transform> headParts = FindImportedDriverParts(rigRoot, IsImportedDriverHeadPartName);
+        List<Transform> leftArmParts = FindImportedDriverParts(rigRoot, IsImportedDriverLeftArmPartName);
+        List<Transform> rightArmParts = FindImportedDriverParts(rigRoot, IsImportedDriverRightArmPartName);
+        List<Transform> leftLegParts = FindImportedDriverParts(rigRoot, IsImportedDriverLeftLegPartName);
+        List<Transform> rightLegParts = FindImportedDriverParts(rigRoot, IsImportedDriverRightLegPartName);
+
+        Transform bodyPivot = CreateImportedDriverRigPivot(rigRoot, "DriverBody", bodyParts, 0.50f);
+        Transform headPivot = CreateImportedDriverRigPivot(rigRoot, "DriverHead", headParts, 0.28f);
+        driver.DriverBodyTransform = bodyPivot ?? modelRoot;
+        driver.DriverHeadTransform = headPivot;
+        driver.DriverCapTransform = null;
+        driver.DriverLeftArmTransform = CreateImportedDriverRigPivot(rigRoot, "DriverLeftArm", leftArmParts, 0.92f);
+        driver.DriverRightArmTransform = CreateImportedDriverRigPivot(rigRoot, "DriverRightArm", rightArmParts, 0.92f);
+        driver.DriverLeftLegTransform = CreateImportedDriverRigPivot(rigRoot, "DriverLeftLeg", leftLegParts, 0.94f);
+        driver.DriverRightLegTransform = CreateImportedDriverRigPivot(rigRoot, "DriverRightLeg", rightLegParts, 0.94f);
+        driver.DriverImportedHairFlowTransforms = CreateImportedDriverFlowPivots(
+            driver.DriverHeadTransform ?? rigRoot,
+            rigRoot,
+            GetImportedDriverHairFlowPrefixes(driver.Race, isFemale),
+            0.85f);
+        driver.DriverImportedClothFlowTransforms = CreateImportedDriverFlowPivots(
+            driver.DriverBodyTransform ?? rigRoot,
+            rigRoot,
+            GetImportedDriverClothFlowPrefixes(driver.Race, isFemale),
+            0.90f);
+        driver.DriverImportedGlowTransforms = CreateImportedDriverFlowPivots(
+            driver.DriverBodyTransform ?? rigRoot,
+            rigRoot,
+            GetImportedDriverGlowPrefixes(driver.Race, isFemale),
+            0.50f);
+    }
+
+    private static Transform CreateImportedDriverRigPivot(Transform rigRoot, string name, List<Transform> parts, float verticalPivot)
+    {
+        if (rigRoot == null || parts == null || parts.Count == 0 || !TryGetWorldRendererBounds(parts, out Bounds bounds))
+        {
+            return null;
+        }
+
+        Transform pivot = new GameObject(name).transform;
+        pivot.SetParent(rigRoot, false);
+        Vector3 worldPivot = new(
+            bounds.center.x,
+            Mathf.Lerp(bounds.min.y, bounds.max.y, Mathf.Clamp01(verticalPivot)),
+            bounds.center.z);
+        pivot.localPosition = rigRoot.InverseTransformPoint(worldPivot);
+        pivot.localRotation = Quaternion.identity;
+        pivot.localScale = Vector3.one;
+
+        for (int i = 0; i < parts.Count; i++)
+        {
+            Transform part = parts[i];
+            if (part != null)
+            {
+                part.SetParent(pivot, true);
+            }
+        }
+
+        return pivot;
+    }
+
+    private static bool TryGetWorldRendererBounds(List<Transform> parts, out Bounds bounds)
+    {
+        bounds = default;
+        bool hasBounds = false;
+        for (int i = 0; i < parts.Count; i++)
+        {
+            Transform part = parts[i];
+            if (part == null)
+            {
+                continue;
+            }
+
+            Renderer[] renderers = part.GetComponentsInChildren<Renderer>(true);
+            for (int r = 0; r < renderers.Length; r++)
+            {
+                Renderer renderer = renderers[r];
+                if (renderer == null || !renderer.enabled)
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+        }
+
+        return hasBounds;
+    }
+
+    private static List<Transform> FindImportedDriverParts(Transform root, System.Predicate<string> matchName)
+    {
+        List<Transform> parts = new();
+        if (root == null || matchName == null)
+        {
+            return parts;
+        }
+
+        Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform current = transforms[i];
+            if (current == null || current == root || !matchName(current.name))
+            {
+                continue;
+            }
+
+            if (current.GetComponentsInChildren<Renderer>(true).Length > 0)
+            {
+                parts.Add(current);
+            }
+        }
+
+        return parts;
+    }
+
+    private static float GuessImportedDriverSmoothness(string rendererName)
+    {
+        if (DriverPartNameContains(rendererName, "Eye") ||
+            DriverPartNameContains(rendererName, "InnerSpark") ||
+            DriverPartNameContains(rendererName, "Copper") ||
+            DriverPartNameContains(rendererName, "Buckle"))
+        {
+            return VisualSmoothnessVehicleMetal;
+        }
+
+        if (DriverPartNameContains(rendererName, "Skin") ||
+            DriverPartNameContains(rendererName, "Head") ||
+            DriverPartNameContains(rendererName, "Face") ||
+            DriverPartNameContains(rendererName, "Hand"))
+        {
+            return VisualSmoothnessSkin;
+        }
+
+        return VisualSmoothnessFabric;
+    }
+
+    private static bool IsImportedDriverBodyPartName(string name)
+    {
+        return DriverPartNameEquals(name, "Body") ||
+            DriverPartNameEquals(name, "Neck") ||
+            DriverPartNameEquals(name, "Pelvis") ||
+            DriverPartNameStartsWith(name, "Apron") ||
+            DriverPartNameStartsWith(name, "Belt") ||
+            DriverPartNameStartsWith(name, "ChestBadge") ||
+            DriverPartNameStartsWith(name, "Collar") ||
+            DriverPartNameStartsWith(name, "FieldShirt") ||
+            DriverPartNameStartsWith(name, "FieldTunic") ||
+            DriverPartNameStartsWith(name, "GlowTrim_Collar") ||
+            DriverPartNameStartsWith(name, "InnerSpark") ||
+            DriverPartNameStartsWith(name, "Jacket") ||
+            DriverPartNameStartsWith(name, "LeafBadge") ||
+            DriverPartNameStartsWith(name, "LightCloak") ||
+            DriverPartNameStartsWith(name, "LongVest") ||
+            DriverPartNameStartsWith(name, "RouteStripe") ||
+            DriverPartNameStartsWith(name, "Satchel") ||
+            DriverPartNameStartsWith(name, "Shawl") ||
+            DriverPartNameStartsWith(name, "Shirt_FrontVisible") ||
+            DriverPartNameStartsWith(name, "ShortJacket") ||
+            DriverPartNameStartsWith(name, "Shoulder") ||
+            DriverPartNameStartsWith(name, "SideSatchel") ||
+            DriverPartNameStartsWith(name, "SkinLine_Collarbone") ||
+            DriverPartNameStartsWith(name, "SkinLine_Neck") ||
+            DriverPartNameStartsWith(name, "Torso_Tunic") ||
+            DriverPartNameStartsWith(name, "Tunic") ||
+            DriverPartNameStartsWith(name, "Vest");
+    }
+
+    private static bool IsImportedDriverHeadPartName(string name)
+    {
+        return DriverPartNameEquals(name, "Head") ||
+            DriverPartNameStartsWith(name, "Hair") ||
+            DriverPartNameStartsWith(name, "Brow") ||
+            DriverPartNameStartsWith(name, "Cheek") ||
+            DriverPartNameStartsWith(name, "Chin") ||
+            DriverPartNameStartsWith(name, "Ear") ||
+            DriverPartNameStartsWith(name, "Eye") ||
+            DriverPartNameStartsWith(name, "Headband") ||
+            DriverPartNameStartsWith(name, "Hood") ||
+            DriverPartNameStartsWith(name, "Mouth") ||
+            DriverPartNameStartsWith(name, "Nose") ||
+            DriverPartNameStartsWith(name, "SkinLine_Temple") ||
+            DriverPartNameStartsWith(name, "SoftCap") ||
+            DriverPartNameStartsWith(name, "WorkCap");
+    }
+
+    private static bool IsImportedDriverLeftArmPartName(string name)
+    {
+        return DriverPartNameStartsWith(name, "Arm_Forearm_Left") ||
+            DriverPartNameStartsWith(name, "Arm_Upper_Left") ||
+            DriverPartNameEquals(name, "Hand_Left") ||
+            DriverPartNameStartsWith(name, "Cuff_Left") ||
+            DriverPartNameStartsWith(name, "GlowTrim_Cuff_Left") ||
+            DriverPartNameStartsWith(name, "SkinLine_Arm_Left") ||
+            DriverPartNameStartsWith(name, "SkinLine_Forearm_Left") ||
+            DriverPartNameStartsWith(name, "SkinLine_Hand_Left") ||
+            DriverPartNameStartsWith(name, "SleeveLeaf_Branch_Left") ||
+            DriverPartNameStartsWith(name, "SleeveLeaf_Line_Left");
+    }
+
+    private static bool IsImportedDriverRightArmPartName(string name)
+    {
+        return DriverPartNameStartsWith(name, "Arm_Forearm_Right") ||
+            DriverPartNameStartsWith(name, "Arm_Upper_Right") ||
+            DriverPartNameEquals(name, "Hand_Right") ||
+            DriverPartNameStartsWith(name, "Cuff_Right") ||
+            DriverPartNameStartsWith(name, "GlowTrim_Cuff_Right") ||
+            DriverPartNameStartsWith(name, "SkinLine_Arm_Right") ||
+            DriverPartNameStartsWith(name, "SkinLine_Forearm_Right") ||
+            DriverPartNameStartsWith(name, "SkinLine_Hand_Right") ||
+            DriverPartNameStartsWith(name, "SleeveLeaf_Branch_Right") ||
+            DriverPartNameStartsWith(name, "SleeveLeaf_Line_Right");
+    }
+
+    private static bool IsImportedDriverLeftLegPartName(string name)
+    {
+        return DriverPartNameStartsWith(name, "Leg_Left") ||
+            DriverPartNameStartsWith(name, "Boot_Left") ||
+            DriverPartNameStartsWith(name, "Knee_Left") ||
+            (DriverPartNameStartsWith(name, "Boot") && DriverPartNameContains(name, "_Left")) ||
+            (DriverPartNameStartsWith(name, "Knee") && DriverPartNameContains(name, "_Left"));
+    }
+
+    private static bool IsImportedDriverRightLegPartName(string name)
+    {
+        return DriverPartNameStartsWith(name, "Leg_Right") ||
+            DriverPartNameStartsWith(name, "Boot_Right") ||
+            DriverPartNameStartsWith(name, "Knee_Right") ||
+            (DriverPartNameStartsWith(name, "Boot") && DriverPartNameContains(name, "_Right")) ||
+            (DriverPartNameStartsWith(name, "Knee") && DriverPartNameContains(name, "_Right"));
+    }
+
+    private static bool DriverPartNameEquals(string name, string expected)
+    {
+        return string.Equals(name, expected, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool DriverPartNameStartsWith(string name, string prefix)
+    {
+        return !string.IsNullOrEmpty(name) &&
+            name.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool DriverPartNameContains(string name, string value)
+    {
+        return !string.IsNullOrEmpty(name) &&
+            name.IndexOf(value, System.StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private static int GetDriverVisualModelVariant(DriverAgent driver)
@@ -360,6 +844,10 @@ public partial class GameBootstrap
         driver.DriverFlashlightTransform = flashlight.transform;
         driver.DriverFlashlightRenderer = flashlight.GetComponent<Renderer>();
         driver.DriverFlashlightMaterial = driver.DriverFlashlightRenderer != null ? driver.DriverFlashlightRenderer.material : null;
+        if (driver.DriverImportedCitizenVisual && driver.DriverFlashlightRenderer != null)
+        {
+            driver.DriverFlashlightRenderer.enabled = false;
+        }
 
         GameObject flashlightBeamObject = new("DriverFlashlight");
         flashlightBeamObject.transform.SetParent(driver.DriverFlashlightTransform, false);

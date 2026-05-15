@@ -103,6 +103,7 @@ public partial class GameBootstrap
         nextPosition = WithRoadVehicleHeight(nextPosition, TruckSegmentStartLift);
         truckAgent.TruckObject.transform.position = nextPosition;
         SpinTruckArrivalWheels(truckAgent, speed * dt);
+        ApplyTruckArrivalVisualMotion(truckAgent, speed, true);
 
         if ((truckAgent.TruckObject.transform.position - target).sqrMagnitude > 0.035f)
         {
@@ -124,6 +125,7 @@ public partial class GameBootstrap
         truckAgent.TruckSmoothedForward = Vector3.forward;
         truckAgent.IsTruckMoving = false;
         truckAgent.IsPurchaseArrivalActive = false;
+        ApplyTruckArrivalVisualMotion(truckAgent, 0f, false);
         truckAgent.PurchaseArrivalWaypoints.Clear();
         truckAgent.PurchaseArrivalWaypointIndex = 0;
         SessionDebugLogger.Log("TRUCK", $"{truckAgent.DisplayName} purchase arrival completed and parked.");
@@ -156,7 +158,37 @@ public partial class GameBootstrap
         float spin = distance * 260f;
         for (int i = 0; i < truckAgent.TruckWheels.Count; i++)
         {
-            truckAgent.TruckWheels[i].Rotate(Vector3.right, spin, Space.Self);
+            Transform wheel = truckAgent.TruckWheels[i];
+            if (wheel == null)
+            {
+                continue;
+            }
+
+            bool importedWheel = wheel.name.StartsWith("ImportedTruckWheelPivot_", System.StringComparison.Ordinal);
+            wheel.Rotate(importedWheel ? Vector3.forward : Vector3.up, spin, Space.Self);
+        }
+    }
+
+    private static void ApplyTruckArrivalVisualMotion(TruckAgent truckAgent, float speed, bool moving)
+    {
+        if (truckAgent == null || truckAgent.TruckVisualRoot == null)
+        {
+            return;
+        }
+
+        float normalizedSpeed = Mathf.Clamp01(speed / Mathf.Max(0.01f, TruckCruiseSpeed));
+        float bob = moving ? Mathf.Sin(Time.time * 10f + truckAgent.TruckNumber * 0.37f) * 0.038f * normalizedSpeed : 0f;
+        float pitch = moving ? Mathf.Sin(Time.time * 7.3f + truckAgent.TruckNumber * 0.19f) * 0.55f * normalizedSpeed : 0f;
+        float roll = moving ? Mathf.Sin(Time.time * 8.6f + truckAgent.TruckNumber * 0.31f) * 0.38f * normalizedSpeed : 0f;
+        truckAgent.TruckVisualRoot.localPosition = new Vector3(0f, bob, 0f);
+        if (truckAgent.TruckBodyTransform != null)
+        {
+            truckAgent.TruckBodyTransform.localRotation = Quaternion.Euler(pitch, 0f, roll);
+        }
+
+        if (truckAgent.TruckCabinTransform != null)
+        {
+            truckAgent.TruckCabinTransform.localRotation = Quaternion.Euler(pitch * 0.72f, 0f, roll * 0.48f);
         }
     }
 }

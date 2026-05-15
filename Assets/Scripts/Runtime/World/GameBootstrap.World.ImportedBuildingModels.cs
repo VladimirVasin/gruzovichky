@@ -6,12 +6,20 @@ public partial class GameBootstrap
     private const string BarImportedModelResourcePath = "Buildings/bar";
     private const string GamblingHallImportedModelResourcePath = "Buildings/casino";
     private const string WarehouseImportedModelResourcePath = "Buildings/warehouse";
+    private const string MotelImportedModelResourcePath = "Buildings/motel";
+    private const string CityHallImportedModelResourcePath = "Buildings/cityhall";
     private const float BarImportedModelFootprintFill = 2.45f;
     private const float GamblingHallImportedModelFootprintFill = 2.45f;
     private const float WarehouseImportedModelFootprintFill = 2.45f;
+    private const float MotelImportedModelFootprintFill = 2.95f;
+    private const float CityHallImportedModelFootprintFill = 2.45f;
     private const float ImportedBuildingModelGroundY = -0.20f;
     private const float WarehouseImportedModelGroundY = -0.35f;
+    private const float MotelImportedModelGroundY = -0.35f;
+    private const float CityHallImportedModelGroundY = -0.35f;
     private const float WarehouseImportedModelPitch = -90f;
+    private const float MotelImportedModelPitch = 0f;
+    private const float CityHallImportedModelPitch = 0f;
 
     private bool TryCreateImportedBarModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
@@ -65,6 +73,42 @@ public partial class GameBootstrap
             WarehouseImportedModelFootprintFill,
             new Color(1f, 0.82f, 0.42f, 1f),
             new Color(1f, 0.74f, 0.28f));
+    }
+
+    private bool TryCreateImportedMotelModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        return TryCreateImportedServiceModel(
+            owner,
+            parent,
+            center,
+            min,
+            max,
+            anchor,
+            LocationType.Motel,
+            MotelImportedModelResourcePath,
+            "MotelImportedModelRoot",
+            "MotelImportedModel",
+            MotelImportedModelFootprintFill,
+            new Color(1f, 0.88f, 0.56f, 1f),
+            new Color(1f, 0.74f, 0.34f));
+    }
+
+    private bool TryCreateImportedCityHallModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        return TryCreateImportedServiceModel(
+            owner,
+            parent,
+            center,
+            min,
+            max,
+            anchor,
+            LocationType.CityHall,
+            CityHallImportedModelResourcePath,
+            "CityHallImportedModelRoot",
+            "CityHallImportedModel",
+            CityHallImportedModelFootprintFill,
+            new Color(1f, 0.88f, 0.58f, 1f),
+            new Color(1f, 0.78f, 0.32f));
     }
 
     private bool TryCreateImportedServiceModel(
@@ -135,23 +179,31 @@ public partial class GameBootstrap
 
     private static float GetImportedBuildingModelGroundY(LocationType type)
     {
-        return type == LocationType.Warehouse
-            ? WarehouseImportedModelGroundY
-            : ImportedBuildingModelGroundY;
+        return type switch
+        {
+            LocationType.Warehouse => WarehouseImportedModelGroundY,
+            LocationType.Motel     => MotelImportedModelGroundY,
+            LocationType.CityHall  => CityHallImportedModelGroundY,
+            _                      => ImportedBuildingModelGroundY
+        };
     }
 
     private static Quaternion GetImportedBuildingModelLocalRotation(LocationType type)
     {
-        return type == LocationType.Warehouse
-            ? Quaternion.Euler(WarehouseImportedModelPitch, 0f, 0f)
-            : Quaternion.identity;
+        return type switch
+        {
+            LocationType.Warehouse => Quaternion.Euler(WarehouseImportedModelPitch, 0f, 0f),
+            LocationType.Motel     => Quaternion.Euler(MotelImportedModelPitch, 0f, 0f),
+            LocationType.CityHall  => Quaternion.Euler(CityHallImportedModelPitch, 0f, 0f),
+            _                      => Quaternion.identity
+        };
     }
 
     private static bool TryGetImportedBuildingGroundingBounds(LocationType type, Transform root, Renderer[] renderers, out Bounds bounds)
     {
-        if (type == LocationType.Warehouse)
+        if (type == LocationType.Warehouse || type == LocationType.Motel || type == LocationType.CityHall)
         {
-            return TryGetLocalRendererBounds(root, renderers, out bounds, IsWarehouseImportedGroundingRenderer);
+            return TryGetLocalRendererBounds(root, renderers, out bounds, IsFoundationImportedGroundingRenderer);
         }
 
         bounds = default;
@@ -163,7 +215,9 @@ public partial class GameBootstrap
         return parent != null &&
             (parent.Find("BarImportedModelRoot") != null ||
              parent.Find("GamblingHallImportedModelRoot") != null ||
-             parent.Find("WarehouseImportedModelRoot") != null);
+             parent.Find("WarehouseImportedModelRoot") != null ||
+             parent.Find("MotelImportedModelRoot") != null ||
+             parent.Find("CityHallImportedModelRoot") != null);
     }
 
     private static void HideImportedBuildingPlatformRenderers(Renderer[] renderers, LocationType type)
@@ -458,6 +512,11 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (name.IndexOf("WindowGlow", System.StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            return true;
+        }
+
         return name.IndexOf("Window", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
             (name.IndexOf("Glass", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
              name.IndexOf("Pane", System.StringComparison.OrdinalIgnoreCase) >= 0);
@@ -567,14 +626,16 @@ public partial class GameBootstrap
         return hasBounds;
     }
 
-    private static bool IsWarehouseImportedGroundingRenderer(Renderer renderer)
+    private static bool IsFoundationImportedGroundingRenderer(Renderer renderer)
     {
         Transform transform = renderer != null ? renderer.transform : null;
         while (transform != null)
         {
             string name = transform.name;
             if (name.StartsWith("MainBuilding_ConcretePlinth", System.StringComparison.OrdinalIgnoreCase) ||
-                name.StartsWith("OfficeBlock_ConcreteBase", System.StringComparison.OrdinalIgnoreCase))
+                name.StartsWith("OfficeBlock_ConcreteBase", System.StringComparison.OrdinalIgnoreCase) ||
+                name.StartsWith("MainBuilding_Foundation", System.StringComparison.OrdinalIgnoreCase) ||
+                name.StartsWith("OfficeBlock_Foundation", System.StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
@@ -599,6 +660,7 @@ public partial class GameBootstrap
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = true;
             ApplyMaterialSmoothness(renderer, GuessVisualSmoothness(renderer.name, VisualSmoothnessBuildingWall));
+            NormalizeImportedBuildingMaterial(renderer);
         }
 
         Collider[] colliders = model.GetComponentsInChildren<Collider>(true);
@@ -606,5 +668,117 @@ public partial class GameBootstrap
         {
             colliders[i].enabled = false;
         }
+    }
+
+    private static void NormalizeImportedBuildingMaterial(Renderer renderer)
+    {
+        if (renderer == null)
+        {
+            return;
+        }
+
+        bool translucentSurface = IsImportedWindowGlassRenderer(renderer);
+        Material material = renderer.material;
+        if (material == null)
+        {
+            return;
+        }
+
+        if (!translucentSurface)
+        {
+            ForceImportedMaterialAlpha(material, 1f);
+            ForceImportedMaterialOpaque(material);
+        }
+
+        ForceImportedMaterialDoubleSided(material);
+    }
+
+    private static void ForceImportedMaterialAlpha(Material material, float alpha)
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        Color color = material.color;
+        color.a = alpha;
+        material.color = color;
+        if (material.HasProperty("_BaseColor"))
+        {
+            Color baseColor = material.GetColor("_BaseColor");
+            baseColor.a = alpha;
+            material.SetColor("_BaseColor", baseColor);
+        }
+
+        if (material.HasProperty("_Color"))
+        {
+            Color legacyColor = material.GetColor("_Color");
+            legacyColor.a = alpha;
+            material.SetColor("_Color", legacyColor);
+        }
+    }
+
+    private static void ForceImportedMaterialOpaque(Material material)
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        material.SetOverrideTag("RenderType", "Opaque");
+        if (material.HasProperty("_Surface"))
+        {
+            material.SetFloat("_Surface", 0f);
+        }
+
+        if (material.HasProperty("_Blend"))
+        {
+            material.SetFloat("_Blend", 0f);
+        }
+
+        if (material.HasProperty("_SrcBlend"))
+        {
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
+        }
+
+        if (material.HasProperty("_DstBlend"))
+        {
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.Zero);
+        }
+
+        if (material.HasProperty("_ZWrite"))
+        {
+            material.SetFloat("_ZWrite", 1f);
+        }
+
+        if (material.HasProperty("_AlphaClip"))
+        {
+            material.SetFloat("_AlphaClip", 0f);
+        }
+
+        material.DisableKeyword("_ALPHATEST_ON");
+        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        material.renderQueue = (int)RenderQueue.Geometry;
+    }
+
+    private static void ForceImportedMaterialDoubleSided(Material material)
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        if (material.HasProperty("_Cull"))
+        {
+            material.SetFloat("_Cull", (float)CullMode.Off);
+        }
+
+        if (material.HasProperty("_CullMode"))
+        {
+            material.SetFloat("_CullMode", (float)CullMode.Off);
+        }
+
+        material.doubleSidedGI = true;
     }
 }

@@ -3,6 +3,9 @@ using UnityEngine.Rendering;
 
 public partial class GameBootstrap : MonoBehaviour
 {
+    private const string SharedBusVisualMotionRootName = "BusVisualMotionRoot";
+    private static readonly Quaternion SharedBusProceduralWheelBaseRotation = Quaternion.Euler(90f, 0f, 0f);
+
     private void BuildSharedBusVisual(
         Transform parent,
         Color bodyColor,
@@ -15,8 +18,9 @@ public partial class GameBootstrap : MonoBehaviour
         out Light leftLight,
         out Light rightLight)
     {
+        Transform visualRoot = CreateSharedBusVisualMotionRoot(parent);
         if (TryBuildImportedBusVisual(
-            parent,
+            visualRoot,
             bodyColor,
             leftLightName,
             rightLightName,
@@ -31,7 +35,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         BuildProceduralSharedBusVisual(
-            parent,
+            visualRoot,
             bodyColor,
             leftLightName,
             rightLightName,
@@ -41,6 +45,74 @@ public partial class GameBootstrap : MonoBehaviour
             out headlightRightMaterial,
             out leftLight,
             out rightLight);
+    }
+
+    private static Transform CreateSharedBusVisualMotionRoot(Transform parent)
+    {
+        Transform visualRoot = new GameObject(SharedBusVisualMotionRootName).transform;
+        visualRoot.SetParent(parent, false);
+        visualRoot.localPosition = Vector3.zero;
+        visualRoot.localRotation = Quaternion.identity;
+        visualRoot.localScale = Vector3.one;
+        return visualRoot;
+    }
+
+    private static Transform GetSharedBusVisualMotionRoot(Transform busRoot)
+    {
+        return busRoot != null ? busRoot.Find(SharedBusVisualMotionRootName) : null;
+    }
+
+    private static void ApplySharedBusMotionAnimation(Transform busRoot, float speed01, bool moving, float phase, float turnLean = 0f)
+    {
+        Transform visualRoot = GetSharedBusVisualMotionRoot(busRoot);
+        if (visualRoot == null)
+        {
+            return;
+        }
+
+        float speed = Mathf.Clamp01(speed01);
+        float activity = moving ? Mathf.Max(0.22f, speed) : 0.08f;
+        float time = Time.time;
+        float bounce = moving
+            ? (Mathf.Sin(time * 6.4f + phase) * 0.024f + Mathf.Sin(time * 12.8f + phase * 0.7f) * 0.006f) * activity
+            : Mathf.Sin(time * 1.45f + phase) * 0.004f;
+        float pitch = moving
+            ? Mathf.Sin(time * 4.8f + phase) * 1.25f * activity
+            : Mathf.Sin(time * 1.2f + phase) * 0.22f;
+        float roll = moving
+            ? (Mathf.Sin(time * 5.7f + phase * 1.3f) * 0.85f * activity) - turnLean * 0.35f
+            : Mathf.Sin(time * 1.1f + phase) * 0.16f;
+
+        visualRoot.localPosition = new Vector3(0f, bounce, 0f);
+        visualRoot.localRotation = Quaternion.Euler(pitch, 0f, roll);
+        SpinSharedBusWheels(visualRoot, speed, moving, phase);
+    }
+
+    private static void SpinSharedBusWheels(Transform visualRoot, float speed01, bool moving, float phase)
+    {
+        Transform[] transforms = visualRoot.GetComponentsInChildren<Transform>(true);
+        float spin = moving
+            ? Time.time * Mathf.Lerp(180f, 760f, Mathf.Clamp01(speed01)) + phase * 21f
+            : Mathf.Sin(Time.time * 1.2f + phase) * 2f;
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            Transform wheel = transforms[i];
+            if (wheel == null)
+            {
+                continue;
+            }
+
+            bool imported = wheel.name.StartsWith("ImportedBusWheelPivot_", System.StringComparison.Ordinal);
+            bool procedural = wheel.name.StartsWith("SharedBusWheel_", System.StringComparison.Ordinal);
+            if (imported)
+            {
+                wheel.localRotation = Quaternion.AngleAxis(spin, Vector3.forward);
+            }
+            else if (procedural)
+            {
+                wheel.localRotation = SharedBusProceduralWheelBaseRotation * Quaternion.AngleAxis(spin, Vector3.up);
+            }
+        }
     }
 
     private void BuildProceduralSharedBusVisual(
@@ -150,14 +222,16 @@ public partial class GameBootstrap : MonoBehaviour
 
         float[] wheelX = { -0.38f, 0.38f };
         float[] wheelZ = { -0.18f, 0.18f };
+        int wheelIndex = 0;
         foreach (float wx in wheelX)
         {
             foreach (float wz in wheelZ)
             {
                 GameObject wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                wheel.name = "SharedBusWheel_" + wheelIndex++;
                 wheel.transform.SetParent(parent, false);
                 wheel.transform.localPosition = new Vector3(wx, 0.1f, wz);
-                wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                wheel.transform.localRotation = SharedBusProceduralWheelBaseRotation;
                 wheel.transform.localScale = new Vector3(0.1f, 0.05f, 0.1f);
                 ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f), VisualSmoothnessRubber);
                 ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
@@ -302,10 +376,16 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         float laneZ = GetEdgeHighwayBusLaneWorldZ(isCitySideLane: false);
-        float bob = Mathf.Sin(Time.time * 3.2f + hiringDriverArrival.BobPhase) * 0.015f;
-        float y = SampleTerrainHeight(hiringDriverArrival.BusWorldX, laneZ) + RoadHeight + EdgeHighwayBusLift + bob;
+        float y = SampleTerrainHeight(hiringDriverArrival.BusWorldX, laneZ) + RoadHeight + EdgeHighwayBusLift;
         hiringDriverArrival.BusRootTransform.position = new Vector3(hiringDriverArrival.BusWorldX, y, laneZ);
         hiringDriverArrival.BusRootTransform.rotation = Quaternion.identity;
+        bool moving = hiringDriverArrival.Phase == HiringDriverArrivalPhase.ApproachingStop ||
+            hiringDriverArrival.Phase == HiringDriverArrivalPhase.Departing;
+        ApplySharedBusMotionAnimation(
+            hiringDriverArrival.BusRootTransform,
+            hiringDriverArrival.BusSpeed / Mathf.Max(0.01f, EdgeHighwayBusSpeed),
+            moving,
+            hiringDriverArrival.BobPhase);
 
         float darkness = 1f - currentStylizedDaylight;
         bool headlightsOn = darkness > 0.55f;

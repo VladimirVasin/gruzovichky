@@ -179,7 +179,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Motel)
         {
-            CreateMotelDecoration(root.transform, center, min, max, anchor);
+            CreateMotelDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.Sawmill)
         {
@@ -243,7 +243,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.CityHall)
         {
-            CreateCityHallDecoration(root.transform, center, min, max, anchor);
+            CreateCityHallDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.Docks)
         {
@@ -251,7 +251,7 @@ public partial class GameBootstrap
         }
         else
         {
-            CreateMotelDecoration(root.transform, center, min, max, anchor);
+            CreateMotelDecoration(data, root.transform, center, min, max, anchor);
         }
 
         if (HasImportedBuildingModel(root.transform) &&

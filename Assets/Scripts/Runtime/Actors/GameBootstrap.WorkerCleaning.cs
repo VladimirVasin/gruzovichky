@@ -327,5 +327,7 @@ public partial class GameBootstrap
             driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-6f, 0f, 0f);
         if (driver.DriverRightLegTransform != null)
             driver.DriverRightLegTransform.localRotation = Quaternion.Euler(7f, 0f, 0f);
+
+        ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.CleanerSweep, phase);
     }
 }

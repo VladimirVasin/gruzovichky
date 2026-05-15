@@ -3,6 +3,11 @@ using UnityEngine;
 
 public partial class GameBootstrap : MonoBehaviour
 {
+    private const string AmbientCatModelResourcePath = "Misc/cat";
+    private const float AmbientCatImportedTargetWidth = 0.34f;
+    private const float AmbientCatImportedTargetHeight = 0.30f;
+    private const float AmbientCatImportedTargetLength = 0.56f;
+
     private void SetupAmbientCats()
     {
         ambientCats.Clear();
@@ -136,8 +141,280 @@ public partial class GameBootstrap : MonoBehaviour
         GameObject catRoot = new($"AmbientCat_{catIndex + 1}");
         catRoot.transform.SetParent(ambientCatRoot, false);
 
+        bool usesImportedModel = TryCreateImportedAmbientCatModel(
+            catRoot.transform,
+            catIndex,
+            out Transform bodyTransform,
+            out Transform headTransform,
+            out Transform tailTransform,
+            out Vector3 bodyBaseScale,
+            out Quaternion headBaseRotation,
+            out Quaternion tailBaseRotation,
+            out Transform[] legTransforms,
+            out Quaternion[] legBaseRotations);
+
+        if (!usesImportedModel)
+        {
+            CreateProceduralAmbientCatModel(
+                catRoot.transform,
+                catIndex,
+                out bodyTransform,
+                out headTransform,
+                out tailTransform,
+                out bodyBaseScale,
+                out headBaseRotation,
+                out tailBaseRotation,
+                out legTransforms,
+                out legBaseRotations);
+        }
+
+        int pointIndex = Mathf.Abs(catIndex * 2) % ambientCatRoamPoints.Count;
+        Vector3 position = ambientCatRoamPoints[pointIndex];
+        float yaw = Random.Range(0f, 360f);
+        catRoot.transform.position = position;
+        catRoot.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+        ambientCats.Add(new AmbientCatData
+        {
+            RootTransform = catRoot.transform,
+            BodyTransform = bodyTransform,
+            HeadTransform = headTransform,
+            TailTransform = tailTransform,
+            UsesImportedModel = usesImportedModel,
+            BodyBaseScale = bodyBaseScale,
+            HeadBaseRotation = headBaseRotation,
+            TailBaseRotation = tailBaseRotation,
+            LegTransforms = legTransforms,
+            LegBaseRotations = legBaseRotations,
+            CurrentPosition = position,
+            StartPosition = position,
+            TargetPosition = position,
+            CurrentPointIndex = pointIndex,
+            TargetPointIndex = pointIndex,
+            StateTimer = Random.Range(5.2f, 11.5f),
+            MoveDuration = 0f,
+            MoveProgress = 0f,
+            AnimationPhase = Random.Range(0f, 10f),
+            TailPhase = Random.Range(0f, 10f),
+            Yaw = yaw,
+            State = AmbientCatState.Lazing
+        });
+    }
+
+    private bool TryCreateImportedAmbientCatModel(
+        Transform catRoot,
+        int catIndex,
+        out Transform bodyTransform,
+        out Transform headTransform,
+        out Transform tailTransform,
+        out Vector3 bodyBaseScale,
+        out Quaternion headBaseRotation,
+        out Quaternion tailBaseRotation,
+        out Transform[] legTransforms,
+        out Quaternion[] legBaseRotations)
+    {
+        bodyTransform = null;
+        headTransform = null;
+        tailTransform = null;
+        bodyBaseScale = Vector3.one;
+        headBaseRotation = Quaternion.identity;
+        tailBaseRotation = Quaternion.identity;
+        legTransforms = System.Array.Empty<Transform>();
+        legBaseRotations = System.Array.Empty<Quaternion>();
+
+        GameObject prefab = Resources.Load<GameObject>(AmbientCatModelResourcePath);
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        GameObject model = Instantiate(prefab, catRoot);
+        model.name = "AmbientCatImportedModel";
+        model.transform.localPosition = Vector3.zero;
+        model.transform.localRotation = Quaternion.identity;
+        model.transform.localScale = Vector3.one;
+
+        Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+        if (!TryGetLocalRendererBounds(catRoot, renderers, out Bounds bounds))
+        {
+            Destroy(model);
+            return false;
+        }
+
+        float scale = Mathf.Min(
+            AmbientCatImportedTargetWidth / Mathf.Max(bounds.size.x, 0.001f),
+            AmbientCatImportedTargetHeight / Mathf.Max(bounds.size.y, 0.001f),
+            AmbientCatImportedTargetLength / Mathf.Max(bounds.size.z, 0.001f));
+        model.transform.localScale = Vector3.one * scale;
+
+        if (TryGetLocalRendererBounds(catRoot, renderers, out Bounds scaledBounds))
+        {
+            model.transform.localPosition = new Vector3(
+                -scaledBounds.center.x,
+                -scaledBounds.min.y,
+                -scaledBounds.center.z);
+        }
+
+        ConfigureImportedAmbientCatModel(model, renderers, catIndex);
+        BuildImportedCatAnimationRig(
+            model.transform,
+            out Transform importedBodyRig,
+            out Transform importedHeadRig,
+            out Transform importedTailRig,
+            out legTransforms,
+            out legBaseRotations);
+        bodyTransform = importedBodyRig ?? model.transform;
+        headTransform = importedHeadRig;
+        tailTransform = importedTailRig;
+        bodyBaseScale = bodyTransform != null ? bodyTransform.localScale : Vector3.one;
+        headBaseRotation = headTransform != null ? headTransform.localRotation : Quaternion.identity;
+        tailBaseRotation = tailTransform != null ? tailTransform.localRotation : Quaternion.identity;
+        return true;
+    }
+
+    private void ConfigureImportedAmbientCatModel(GameObject model, Renderer[] renderers, int catIndex)
+    {
+        Color fur = Color.Lerp(new Color(0.25f, 0.23f, 0.21f), new Color(0.86f, 0.53f, 0.18f), (catIndex % 3) * 0.38f);
+        Color stripes = Color.Lerp(fur * 0.58f, new Color(0.24f, 0.12f, 0.05f), 0.36f);
+        Color patches = Color.Lerp(new Color(0.92f, 0.82f, 0.62f), Color.white, (catIndex % 2) * 0.18f);
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled)
+            {
+                continue;
+            }
+
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = true;
+            ApplyMaterialSmoothness(renderer, VisualSmoothnessFabric);
+            NormalizeImportedBuildingMaterial(renderer);
+            TintImportedCatRenderer(renderer, fur, stripes, patches);
+        }
+
+        Collider[] colliders = model.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            colliders[i].enabled = false;
+        }
+
+        Camera[] cameras = model.GetComponentsInChildren<Camera>(true);
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            Destroy(cameras[i]);
+        }
+
+        Light[] lights = model.GetComponentsInChildren<Light>(true);
+        for (int i = 0; i < lights.Length; i++)
+        {
+            Destroy(lights[i]);
+        }
+
+        Animator[] animators = model.GetComponentsInChildren<Animator>(true);
+        for (int i = 0; i < animators.Length; i++)
+        {
+            Destroy(animators[i]);
+        }
+
+        Animation[] animations = model.GetComponentsInChildren<Animation>(true);
+        for (int i = 0; i < animations.Length; i++)
+        {
+            Destroy(animations[i]);
+        }
+    }
+
+    private static void TintImportedCatRenderer(Renderer renderer, Color fur, Color stripes, Color patches)
+    {
+        string surfaceName = GetImportedCatSurfaceName(renderer != null ? renderer.transform : null);
+        bool stripeSurface = surfaceName.IndexOf("FurStripe", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        bool patchSurface = surfaceName.IndexOf("FurPatch", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        bool furSurface =
+            !surfaceName.Contains("_Inner") &&
+            (surfaceName.StartsWith("Body", System.StringComparison.OrdinalIgnoreCase) ||
+             surfaceName.StartsWith("Head", System.StringComparison.OrdinalIgnoreCase) ||
+             surfaceName.StartsWith("Tail", System.StringComparison.OrdinalIgnoreCase) ||
+             surfaceName.StartsWith("Leg_", System.StringComparison.OrdinalIgnoreCase) ||
+             surfaceName.StartsWith("Ear_", System.StringComparison.OrdinalIgnoreCase));
+        Material[] materials = renderer.materials;
+        for (int i = 0; i < materials.Length; i++)
+        {
+            Material material = materials[i];
+            if (material == null)
+            {
+                continue;
+            }
+
+            string materialName = material.name;
+            if (stripeSurface ||
+                materialName.IndexOf("Fur Stripes", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                SetImportedCatMaterialColor(material, stripes);
+            }
+            else if (patchSurface ||
+                     materialName.IndexOf("Fur Patches", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                SetImportedCatMaterialColor(material, patches);
+            }
+            else if (furSurface ||
+                     materialName.IndexOf("Cat Fur", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                SetImportedCatMaterialColor(material, fur);
+            }
+        }
+    }
+
+    private static string GetImportedCatSurfaceName(Transform transform)
+    {
+        while (transform != null)
+        {
+            if (!string.IsNullOrEmpty(transform.name) &&
+                !transform.name.StartsWith("AmbientCatImportedModel", System.StringComparison.OrdinalIgnoreCase) &&
+                !transform.name.StartsWith("Cat_Root", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return transform.name;
+            }
+
+            transform = transform.parent;
+        }
+
+        return string.Empty;
+    }
+
+    private static void SetImportedCatMaterialColor(Material material, Color color)
+    {
+        if (material == null)
+        {
+            return;
+        }
+
+        color.a = 1f;
+        material.color = color;
+        if (material.HasProperty("_BaseColor"))
+        {
+            material.SetColor("_BaseColor", color);
+        }
+
+        if (material.HasProperty("_Color"))
+        {
+            material.SetColor("_Color", color);
+        }
+    }
+
+    private void CreateProceduralAmbientCatModel(
+        Transform catRoot,
+        int catIndex,
+        out Transform bodyTransform,
+        out Transform headTransform,
+        out Transform tailTransform,
+        out Vector3 bodyBaseScale,
+        out Quaternion headBaseRotation,
+        out Quaternion tailBaseRotation,
+        out Transform[] legTransforms,
+        out Quaternion[] legBaseRotations)
+    {
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        body.transform.SetParent(catRoot.transform, false);
+        body.transform.SetParent(catRoot, false);
         body.transform.localPosition = new Vector3(0f, 0.12f, 0f);
         body.transform.localScale = new Vector3(0.16f, 0.12f, 0.26f);
         ApplyColor(body, Color.Lerp(new Color(0.24f, 0.22f, 0.2f), new Color(0.82f, 0.54f, 0.18f), (catIndex % 3) * 0.35f), VisualSmoothnessFabric);
@@ -148,7 +425,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        head.transform.SetParent(catRoot.transform, false);
+        head.transform.SetParent(catRoot, false);
         head.transform.localPosition = new Vector3(0f, 0.18f, 0.16f);
         head.transform.localScale = new Vector3(0.14f, 0.12f, 0.13f);
         ApplyColor(head, body.GetComponent<Renderer>().material.color * 1.02f, VisualSmoothnessFabric);
@@ -183,7 +460,7 @@ public partial class GameBootstrap : MonoBehaviour
         }
 
         GameObject tail = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        tail.transform.SetParent(catRoot.transform, false);
+        tail.transform.SetParent(catRoot, false);
         tail.transform.localPosition = new Vector3(0f, 0.16f, -0.14f);
         tail.transform.localRotation = Quaternion.Euler(68f, 0f, 0f);
         tail.transform.localScale = new Vector3(0.028f, 0.16f, 0.028f);
@@ -194,31 +471,14 @@ public partial class GameBootstrap : MonoBehaviour
             tailCollider.enabled = false;
         }
 
-        int pointIndex = Mathf.Abs(catIndex * 2) % ambientCatRoamPoints.Count;
-        Vector3 position = ambientCatRoamPoints[pointIndex];
-        float yaw = Random.Range(0f, 360f);
-        catRoot.transform.position = position;
-        catRoot.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-
-        ambientCats.Add(new AmbientCatData
-        {
-            RootTransform = catRoot.transform,
-            BodyTransform = body.transform,
-            HeadTransform = head.transform,
-            TailTransform = tail.transform,
-            CurrentPosition = position,
-            StartPosition = position,
-            TargetPosition = position,
-            CurrentPointIndex = pointIndex,
-            TargetPointIndex = pointIndex,
-            StateTimer = Random.Range(5.2f, 11.5f),
-            MoveDuration = 0f,
-            MoveProgress = 0f,
-            AnimationPhase = Random.Range(0f, 10f),
-            TailPhase = Random.Range(0f, 10f),
-            Yaw = yaw,
-            State = AmbientCatState.Lazing
-        });
+        bodyTransform = body.transform;
+        headTransform = head.transform;
+        tailTransform = tail.transform;
+        bodyBaseScale = body.transform.localScale;
+        headBaseRotation = head.transform.localRotation;
+        tailBaseRotation = tail.transform.localRotation;
+        legTransforms = System.Array.Empty<Transform>();
+        legBaseRotations = System.Array.Empty<Quaternion>();
     }
 
     private void UpdateAmbientCats()
@@ -254,30 +514,56 @@ public partial class GameBootstrap : MonoBehaviour
                             5f * Time.deltaTime);
                         if (cat.BodyTransform != null)
                         {
-                            cat.BodyTransform.localScale = catsShouldSleep
-                                ? new Vector3(0.19f, 0.085f, 0.28f)
-                                : new Vector3(0.16f, 0.11f + Mathf.Sin(time * 1.7f + cat.AnimationPhase) * 0.01f, 0.26f);
+                            if (cat.UsesImportedModel)
+                            {
+                                float breathing = catsShouldSleep
+                                    ? 0.96f + Mathf.Sin(time * 0.8f + cat.AnimationPhase) * 0.015f
+                                    : 1f + Mathf.Sin(time * 1.7f + cat.AnimationPhase) * 0.035f;
+                                float stretch = catsShouldSleep ? 1.04f : 1f - (breathing - 1f) * 0.35f;
+                                cat.BodyTransform.localScale = Vector3.Scale(cat.BodyBaseScale, new Vector3(stretch, breathing, stretch));
+                            }
+                            else
+                            {
+                                cat.BodyTransform.localScale = catsShouldSleep
+                                    ? new Vector3(0.19f, 0.085f, 0.28f)
+                                    : new Vector3(0.16f, 0.11f + Mathf.Sin(time * 1.7f + cat.AnimationPhase) * 0.01f, 0.26f);
+                            }
                         }
 
                         if (cat.HeadTransform != null)
                         {
-                            cat.HeadTransform.localRotation = catsShouldSleep
+                            Quaternion headMotion = catsShouldSleep
                                 ? Quaternion.Euler(-18f, 0f, 0f)
                                 : Quaternion.Euler(
                                     Mathf.Sin(time * 1.6f + cat.AnimationPhase) * 4f,
                                     Mathf.Sin(time * 0.9f + cat.AnimationPhase) * 8f,
                                     0f);
+                            cat.HeadTransform.localRotation = cat.UsesImportedModel
+                                ? cat.HeadBaseRotation * headMotion
+                                : headMotion;
                         }
 
                         if (cat.TailTransform != null)
                         {
-                            cat.TailTransform.localRotation = catsShouldSleep
-                                ? Quaternion.Euler(34f, -22f, 0f)
-                                : Quaternion.Euler(
-                                    64f + Mathf.Sin(time * 2.4f + cat.TailPhase) * 8f,
-                                    Mathf.Sin(time * 2.1f + cat.TailPhase) * 10f,
-                                    0f);
+                            Quaternion tailMotion = cat.UsesImportedModel
+                                ? catsShouldSleep
+                                    ? Quaternion.Euler(0f, -20f, 14f)
+                                    : Quaternion.Euler(
+                                        Mathf.Sin(time * 1.9f + cat.TailPhase) * 6f,
+                                        Mathf.Sin(time * 2.2f + cat.TailPhase) * 20f,
+                                        Mathf.Sin(time * 1.3f + cat.TailPhase) * 8f)
+                                : catsShouldSleep
+                                    ? Quaternion.Euler(34f, -22f, 0f)
+                                    : Quaternion.Euler(
+                                        64f + Mathf.Sin(time * 2.4f + cat.TailPhase) * 8f,
+                                        Mathf.Sin(time * 2.1f + cat.TailPhase) * 10f,
+                                        0f);
+                            cat.TailTransform.localRotation = cat.UsesImportedModel
+                                ? cat.TailBaseRotation * tailMotion
+                                : tailMotion;
                         }
+
+                        AnimateImportedCatLegs(cat, time, catsShouldSleep ? 1.6f : 2.4f, catsShouldSleep ? 1.2f : 2.1f, catsShouldSleep ? -8f : -2f);
                     }
 
                     if (cat.StateTimer <= 0f)
@@ -346,21 +632,39 @@ public partial class GameBootstrap : MonoBehaviour
 
                     if (cat.BodyTransform != null)
                     {
-                        cat.BodyTransform.localScale = new Vector3(0.15f, 0.12f, 0.25f);
+                        cat.BodyTransform.localScale = cat.UsesImportedModel
+                            ? Vector3.Scale(cat.BodyBaseScale, new Vector3(
+                                1.02f + Mathf.Sin(time * 9f + cat.AnimationPhase) * 0.025f,
+                                0.98f + Mathf.Abs(Mathf.Sin(time * 9f + cat.AnimationPhase)) * 0.06f,
+                                1.01f))
+                            : new Vector3(0.15f, 0.12f, 0.25f);
                     }
 
                     if (cat.HeadTransform != null)
                     {
-                        cat.HeadTransform.localRotation = Quaternion.Euler(Mathf.Sin(time * 10f + cat.AnimationPhase) * 6f, 0f, 0f);
+                        Quaternion headMotion = Quaternion.Euler(Mathf.Sin(time * 10f + cat.AnimationPhase) * 6f, 0f, 0f);
+                        cat.HeadTransform.localRotation = cat.UsesImportedModel
+                            ? cat.HeadBaseRotation * headMotion
+                            : headMotion;
                     }
 
                     if (cat.TailTransform != null)
                     {
-                        cat.TailTransform.localRotation = Quaternion.Euler(
-                            72f + Mathf.Sin(time * 8.5f + cat.TailPhase) * 12f,
-                            Mathf.Sin(time * 6.2f + cat.TailPhase) * 14f,
-                            0f);
+                        Quaternion tailMotion = cat.UsesImportedModel
+                            ? Quaternion.Euler(
+                                -8f + Mathf.Sin(time * 9f + cat.TailPhase) * 5f,
+                                Mathf.Sin(time * 7.4f + cat.TailPhase) * 24f,
+                                12f)
+                            : Quaternion.Euler(
+                                72f + Mathf.Sin(time * 8.5f + cat.TailPhase) * 12f,
+                                Mathf.Sin(time * 6.2f + cat.TailPhase) * 14f,
+                                0f);
+                        cat.TailTransform.localRotation = cat.UsesImportedModel
+                            ? cat.TailBaseRotation * tailMotion
+                            : tailMotion;
                     }
+
+                    AnimateImportedCatLegs(cat, time, 10.5f, 28f, 0f);
 
                     if (walkT >= 1f)
                     {
@@ -405,11 +709,29 @@ public partial class GameBootstrap : MonoBehaviour
 
                     cat.RootTransform.position = cat.CurrentPosition;
                     if (cat.BodyTransform != null)
-                        cat.BodyTransform.localScale = new Vector3(0.16f, 0.13f, 0.22f);
+                        cat.BodyTransform.localScale = cat.UsesImportedModel
+                            ? Vector3.Scale(cat.BodyBaseScale, new Vector3(1f, 1.05f, 0.96f))
+                            : new Vector3(0.16f, 0.13f, 0.22f);
                     if (cat.HeadTransform != null)
-                        cat.HeadTransform.localRotation = Quaternion.Euler(-10f, Mathf.Sin(time * 1.5f + cat.AnimationPhase) * 6f, 0f);
+                    {
+                        Quaternion headMotion = Quaternion.Euler(-10f, Mathf.Sin(time * 1.5f + cat.AnimationPhase) * 6f, 0f);
+                        cat.HeadTransform.localRotation = cat.UsesImportedModel
+                            ? cat.HeadBaseRotation * headMotion
+                            : headMotion;
+                    }
                     if (cat.TailTransform != null)
-                        cat.TailTransform.localRotation = Quaternion.Euler(30f + Mathf.Sin(time * 3f + cat.TailPhase) * 10f, 0f, 0f);
+                    {
+                        Quaternion tailMotion = cat.UsesImportedModel
+                            ? Quaternion.Euler(
+                                Mathf.Sin(time * 3.8f + cat.TailPhase) * 5f,
+                                Mathf.Sin(time * 4.2f + cat.TailPhase) * 24f,
+                                18f)
+                            : Quaternion.Euler(30f + Mathf.Sin(time * 3f + cat.TailPhase) * 10f, 0f, 0f);
+                        cat.TailTransform.localRotation = cat.UsesImportedModel
+                            ? cat.TailBaseRotation * tailMotion
+                            : tailMotion;
+                    }
+                    AnimateImportedCatLegs(cat, time, 2.4f, 3.5f, -10f);
                     break;
                 }
             }

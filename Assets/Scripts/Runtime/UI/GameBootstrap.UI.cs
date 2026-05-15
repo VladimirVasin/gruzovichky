@@ -689,8 +689,13 @@ public partial class GameBootstrap
 
         float normalizedSpeed = Mathf.Clamp01(speed / TruckCruiseSpeed);
         float idleServiceBob = isTruckInteracting ? Mathf.Sin(Time.time * 8f) * 0.02f : 0f;
-        float bob = moving ? Mathf.Sin(Time.time * 10f) * TruckSuspensionBobAmount * normalizedSpeed : idleServiceBob;
-        float pitch = moving ? -Mathf.Sin(Mathf.Clamp01(truckSegmentProgress) * Mathf.PI) * 2.2f * normalizedSpeed : 0f;
+        float roadRattle = Mathf.Sin(Time.time * 17f + truckWheelSpinAngle * 0.018f) * 0.008f * normalizedSpeed;
+        float bob = moving
+            ? (Mathf.Sin(Time.time * 10f) * TruckSuspensionBobAmount + roadRattle) * normalizedSpeed
+            : idleServiceBob;
+        float pitch = moving
+            ? (-Mathf.Sin(Mathf.Clamp01(truckSegmentProgress) * Mathf.PI) * 3.0f + Mathf.Sin(Time.time * 7.3f) * 0.55f) * normalizedSpeed
+            : 0f;
 
         truckVisualRoot.localPosition = new Vector3(0f, bob, 0f);
 
@@ -703,17 +708,23 @@ public partial class GameBootstrap
         }
 
         truckSteerAngle = Mathf.Lerp(truckSteerAngle, targetSteer, 8f * Time.deltaTime);
-        float roll = moving ? -truckSteerAngle * 0.18f * normalizedSpeed : 0f;
+        float roll = moving
+            ? (-truckSteerAngle * 0.22f + Mathf.Sin(Time.time * 8.6f + truckWheelSpinAngle * 0.01f) * 0.45f) * normalizedSpeed
+            : 0f;
+        float yaw = moving ? truckSteerAngle * 0.045f * normalizedSpeed : 0f;
 
-        truckBodyTransform.localRotation = Quaternion.Euler(pitch, 0f, roll);
-        truckCabinTransform.localRotation = Quaternion.Euler(pitch * 0.6f, 0f, roll * 0.55f);
+        truckBodyTransform.localRotation = Quaternion.Euler(pitch, yaw, roll);
+        truckCabinTransform.localRotation = Quaternion.Euler(pitch * 0.72f, -yaw * 0.35f, roll * 0.48f);
         truckWheelSpinAngle += moving ? speed / Mathf.Max(TruckWheelRadius, 0.01f) * Mathf.Rad2Deg * Time.deltaTime : 0f;
 
         foreach (Transform wheel in truckWheels)
         {
             bool isFrontWheel = truckFrontWheels.Contains(wheel);
             float steer = isFrontWheel ? truckSteerAngle : 0f;
-            wheel.localRotation = Quaternion.Euler(90f + truckWheelSpinAngle, steer, 0f);
+            bool importedWheel = wheel.name.StartsWith("ImportedTruckWheelPivot_", System.StringComparison.Ordinal);
+            wheel.localRotation = importedWheel
+                ? Quaternion.Euler(0f, steer, 0f) * Quaternion.AngleAxis(truckWheelSpinAngle, Vector3.forward)
+                : Quaternion.Euler(0f, steer, 0f) * TruckProceduralWheelBaseRotation * Quaternion.AngleAxis(truckWheelSpinAngle, Vector3.up);
         }
     }
 

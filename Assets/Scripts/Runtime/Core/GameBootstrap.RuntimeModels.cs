@@ -335,6 +335,12 @@ public partial class GameBootstrap
         public Transform DriverRightArmTransform;
         public Transform DriverLeftLegTransform;
         public Transform DriverRightLegTransform;
+        public bool DriverImportedCitizenVisual;
+        public bool DriverImportedCitizenFemaleVisual;
+        public Transform DriverImportedModelTransform;
+        public Transform[] DriverImportedHairFlowTransforms;
+        public Transform[] DriverImportedClothFlowTransforms;
+        public Transform[] DriverImportedGlowTransforms;
         public Transform DriverFuelCanTransform;
         public Transform DriverFlashlightTransform;
         public Light DriverFlashlightLight;

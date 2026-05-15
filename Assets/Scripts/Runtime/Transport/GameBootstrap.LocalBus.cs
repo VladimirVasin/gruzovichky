@@ -678,9 +678,15 @@ public partial class GameBootstrap
         }
 
         Vector3 position = localBusRoute.RootTransform.position;
-        float bob = Mathf.Sin(Time.time * 3.2f + localBusRoute.BobPhase) * 0.015f;
-        position.y = SampleRoadSurfaceHeight(position.x, position.z) + LocalBusRoadSurfaceLift + bob;
+        position.y = SampleRoadSurfaceHeight(position.x, position.z) + LocalBusRoadSurfaceLift;
         localBusRoute.RootTransform.position = position;
+        bool moving = localBusRoute.Phase == LocalBusPhase.DrivingRoute ||
+            localBusRoute.Phase == LocalBusPhase.ReturningToParking;
+        ApplySharedBusMotionAnimation(
+            localBusRoute.RootTransform,
+            localBusRoute.Speed / Mathf.Max(0.01f, EdgeHighwayBusSpeed * LocalBusSpeedMultiplier),
+            moving,
+            localBusRoute.BobPhase);
 
         float darkness = 1f - currentStylizedDaylight;
         bool headlightsOn = darkness > 0.55f;

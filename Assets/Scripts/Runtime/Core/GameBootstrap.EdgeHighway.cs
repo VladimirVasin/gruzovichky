@@ -301,12 +301,16 @@ public partial class GameBootstrap : MonoBehaviour
             }
 
             float laneZ = GetEdgeHighwayBusLaneWorldZ(bus.IsCitySideLane);
-            float bob = Mathf.Sin(Time.time * 3.2f + bus.BobPhase) * 0.015f;
-            float y = SampleTerrainHeight(bus.WorldX, laneZ) + RoadHeight + EdgeHighwayBusLift + bob;
+            float y = SampleTerrainHeight(bus.WorldX, laneZ) + RoadHeight + EdgeHighwayBusLift;
             bus.RootTransform.position = new Vector3(bus.WorldX, y, laneZ);
             bus.RootTransform.rotation = bus.TravelDirection > 0f
                 ? Quaternion.identity
                 : Quaternion.Euler(0f, 180f, 0f);
+            ApplySharedBusMotionAnimation(
+                bus.RootTransform,
+                bus.Speed / Mathf.Max(0.01f, EdgeHighwayBusSpeed * 1.1f),
+                true,
+                bus.BobPhase);
 
             float darkness = 1f - currentStylizedDaylight;
             bool headlightsOn = darkness > 0.55f;

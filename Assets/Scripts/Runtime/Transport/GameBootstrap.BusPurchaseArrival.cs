@@ -73,6 +73,11 @@ public partial class GameBootstrap
         Vector3 nextPosition = Vector3.MoveTowards(current, target, speed * dt);
         nextPosition = WithRoadVehicleHeight(nextPosition, LocalBusRoadSurfaceLift);
         busAgent.BusObject.transform.position = nextPosition;
+        ApplySharedBusMotionAnimation(
+            busAgent.BusObject.transform,
+            speed / Mathf.Max(0.01f, EdgeHighwayBusSpeed * LocalBusSpeedMultiplier),
+            true,
+            busAgent.BusNumber * 0.61f);
 
         if ((busAgent.BusObject.transform.position - target).sqrMagnitude > 0.035f)
         {
@@ -87,6 +92,7 @@ public partial class GameBootstrap
 
         busAgent.BusObject.transform.position = GetBusParkingSlotWorldPosition(busAgent.ParkingSlotIndex);
         busAgent.BusObject.transform.rotation = Quaternion.identity;
+        ApplySharedBusMotionAnimation(busAgent.BusObject.transform, 0f, false, busAgent.BusNumber * 0.61f);
         busAgent.IsPurchaseArrivalActive = false;
         busAgent.PurchaseArrivalWaypoints.Clear();
         busAgent.PurchaseArrivalWaypointIndex = 0;

@@ -753,6 +753,8 @@ public partial class GameBootstrap
             driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-8f, 0f, 0f);
         if (driver.DriverRightLegTransform != null)
             driver.DriverRightLegTransform.localRotation = Quaternion.Euler(10f, 0f, 0f);
+
+        ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.LumberChop, phase);
     }
 
     private void ApplyDriverLumberPlantPose(DriverAgent driver, float phase)
@@ -775,6 +777,8 @@ public partial class GameBootstrap
             driver.DriverLeftLegTransform.localRotation = Quaternion.Euler(-6f, 0f, 0f);
         if (driver.DriverRightLegTransform != null)
             driver.DriverRightLegTransform.localRotation = Quaternion.Euler(6f, 0f, 0f);
+
+        ApplyImportedDriverPoseMotion(driver, ImportedDriverPoseKind.LumberPlant, phase);
     }
 
     private void SpawnLumberWoodChips(Vector3 position)
