@@ -161,7 +161,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: personal houses, spouse pairing, family child slots, next-child readiness, child stages/growth, child education coverage, child visuals, family stress, household upkeep.
 - [WORKERS.SocialSignals] Structured social signal layer
   - Records important resident/city events as topic, tone, strength, source, place, reason, and day facts.
-  - Feature leaves: thought signals, litter signals, daily-experience signals, topic-opinion signals, City Hall complaint/decision signals, Noosphere insight aggregation.
+  - Feature leaves: thought signals, litter signals, daily-experience signals, topic-opinion signals, City Hall complaint/decision signals, Noosphere insight aggregation, current social-leadership score/status from city links.
 - [WORKERS.Thoughts] Active thoughts
   - Records current worries/reactions and priority life thoughts, while emitting non-duplicating social signals.
   - Feature leaves: need thoughts, litter thoughts, work thoughts, service thoughts, family thoughts, affect thoughts.
@@ -239,7 +239,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: truck quick HUD, local bus quick HUD, driver quick HUD, building quick HUD, cell quick HUD.
 - [UI.FleetCanvas] Management screens
   - Full-screen/overlay management UI for fleet, workers, shifts, build, resources, economy, map, social graph, City Hall, Noosphere.
-  - Feature leaves: tab rows, cards, scroll lists, buttons, selection rows, shared UI factory.
+  - Feature leaves: tab rows, cards, scroll lists, buttons, selection rows, shared UI factory, leader-centered city social graph.
 - [UI.BuildScreen] Build screen
   - Player build catalog and placement command UI.
   - Feature leaves: category tray, build cards, costs, unlock pulse, hotkeys.

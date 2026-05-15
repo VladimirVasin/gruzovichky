@@ -4,23 +4,14 @@ public partial class GameBootstrap
 {
     private void PrepareBuildSiteForLocation(LocationType type, Vector2Int min, Vector2Int max, Vector2Int openingCell)
     {
-        int removedMiscCount = 0;
+        int removedMiscCount = ClearMiscObjectsInFootprint(min, max);
         int removedFootpathCount = ClearFootpathsInFootprint(min, max);
         int removedLitterCount = ClearStreetLitterInFootprint(min, max);
         if (ShouldLocationHaveBuildingWalkBuffer(type))
         {
+            removedMiscCount += ClearMiscObjectsAroundBuildingFootprint(min, max);
             removedFootpathCount += ClearFootpathsInBuildingWalkBuffer(min, max, openingCell);
             removedLitterCount += ClearStreetLitterInBuildingWalkBuffer(min, max, openingCell);
-        }
-        for (int x = min.x; x <= max.x; x++)
-        {
-            for (int y = min.y; y <= max.y; y++)
-            {
-                if (RemoveMiscObjectAtCell(new Vector2Int(x, y)))
-                {
-                    removedMiscCount++;
-                }
-            }
         }
 
         bool flattened = FlattenTerrainForBuildingFootprint(min, max, out float flatHeight);
@@ -30,6 +21,46 @@ public partial class GameBootstrap
                 "BUILD",
                 $"Prepared build site for {type}: footprint=({min.x},{min.y})-({max.x},{max.y}), removedMisc={removedMiscCount}, removedFootpaths={removedFootpathCount}, removedLitter={removedLitterCount}, flattened={flattened}, height={flatHeight:0.00}.");
         }
+    }
+
+    private int ClearMiscObjectsInFootprint(Vector2Int min, Vector2Int max)
+    {
+        int removed = 0;
+        for (int x = min.x; x <= max.x; x++)
+        {
+            for (int y = min.y; y <= max.y; y++)
+            {
+                if (RemoveMiscObjectAtCell(new Vector2Int(x, y)))
+                {
+                    removed++;
+                }
+            }
+        }
+
+        return removed;
+    }
+
+    private int ClearMiscObjectsAroundBuildingFootprint(Vector2Int min, Vector2Int max)
+    {
+        int removed = 0;
+        for (int x = min.x - 1; x <= max.x + 1; x++)
+        {
+            for (int y = min.y - 1; y <= max.y + 1; y++)
+            {
+                Vector2Int cell = new(x, y);
+                if (x >= min.x && x <= max.x && y >= min.y && y <= max.y)
+                {
+                    continue;
+                }
+
+                if (RemoveMiscObjectAtCell(cell))
+                {
+                    removed++;
+                }
+            }
+        }
+
+        return removed;
     }
 
     private bool FlattenTerrainForBuildingFootprint(Vector2Int min, Vector2Int max, out float flatHeight)

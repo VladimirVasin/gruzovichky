@@ -78,6 +78,18 @@ public partial class GameBootstrap
         {
             CityComplaintSocialSignalCluster cluster = pair.Value;
             ApplyPublicConcernSignalBalanceForDay(cluster, endedDay);
+            if (IsPublicConcernBlockedByExistingServiceBuilding(cluster, out LocationType existingService))
+            {
+                if (cluster.Strength >= CityComplaintSocialClusterMinStrength)
+                {
+                    SessionDebugLogger.Log(
+                        "CITY_HALL",
+                        $"Public concern suppressed because service building exists: key={cluster.GroupKey}, service={existingService}, negative={cluster.Strength}, positive={cluster.PositiveStrength}, net={GetCityComplaintSocialClusterNetStrength(cluster)}, activeSigners={GetCityComplaintSocialClusterActiveSignerCount(cluster)}/{cluster.SignerIds.Count}.");
+                }
+
+                continue;
+            }
+
             if (IsCityComplaintSocialClusterMature(cluster) &&
                 CanCreatePublicConcernCityComplaint(cluster))
             {
@@ -228,6 +240,11 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (IsPublicConcernBlockedByExistingServiceBuilding(cluster, out _))
+        {
+            return false;
+        }
+
         float now = GetCurrentWorldHour();
         return !cityComplaintCooldownByKey.TryGetValue(cluster.GroupKey, out float nextAllowedWorldHour) ||
                now >= nextAllowedWorldHour;
@@ -305,6 +322,16 @@ public partial class GameBootstrap
             return false;
         }
 
+        if (IsPublicConcernBlockedByExistingServiceBuilding(
+                complaint.IssueSignalCategory,
+                complaint.IssueTopicKey,
+                complaint.GroupKey,
+                out LocationType existingService))
+        {
+            reason = $"{existingService} already exists";
+            return false;
+        }
+
         if (complaint.State == CityComplaintState.Open)
         {
             return true;
@@ -325,6 +352,73 @@ public partial class GameBootstrap
 
         reason = "public concern eased";
         return false;
+    }
+
+    private bool IsPublicConcernBlockedByExistingServiceBuilding(
+        CityComplaintSocialSignalCluster cluster,
+        out LocationType existingService)
+    {
+        existingService = default;
+        return cluster != null &&
+               IsPublicConcernBlockedByExistingServiceBuilding(
+                   cluster.Category,
+                   cluster.TopicKey,
+                   cluster.GroupKey,
+                   out existingService);
+    }
+
+    private bool IsPublicConcernBlockedByExistingServiceBuilding(
+        SocialSignalCategory category,
+        string topicKey,
+        string groupKey,
+        out LocationType existingService)
+    {
+        existingService = default;
+        if (category != SocialSignalCategory.Need)
+        {
+            return false;
+        }
+
+        if (!TryExtractBuildingTypeFromPublicConcernTopic(topicKey, out existingService) &&
+            !TryExtractBuildingTypeFromPublicConcernTopic(groupKey, out existingService))
+        {
+            return false;
+        }
+
+        return IsNeedServiceBuilding(existingService) &&
+               locations.ContainsKey(existingService);
+    }
+
+    private static bool TryExtractBuildingTypeFromPublicConcernTopic(string topic, out LocationType buildingType)
+    {
+        buildingType = default;
+        if (string.IsNullOrWhiteSpace(topic))
+        {
+            return false;
+        }
+
+        string[] parts = topic.Split(':');
+        for (int i = 0; i < parts.Length - 1; i++)
+        {
+            if (!string.Equals(parts[i].Trim(), "BUILDINGTYPE", System.StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return System.Enum.TryParse(parts[i + 1].Trim(), true, out buildingType);
+        }
+
+        return false;
+    }
+
+    private static bool IsNeedServiceBuilding(LocationType type)
+    {
+        return type is LocationType.Canteen or
+            LocationType.Kiosk or
+            LocationType.Motel or
+            LocationType.Bar or
+            LocationType.GamblingHall or
+            LocationType.CityPark;
     }
 
     private bool HasRecentWorkerNegativeSocialSignalForPublicConcern(CityComplaint complaint, DriverAgent worker)

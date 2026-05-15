@@ -78,24 +78,33 @@ public partial class GameBootstrap
 
             if (thought.CreatedDay == day)
             {
-                int thoughtScore = CalculateWorkerDailyThoughtScore(thought);
-                if (thought.Tone == WorkerThoughtTone.Positive)
+                if (ShouldSkipWorkerThoughtForDailyOpinion(worker, thought, day))
                 {
-                    positiveThoughts++;
+                    SessionDebugLogger.LogVerbose(
+                        "DAILY_OPINION",
+                        $"{worker.DriverName} skipped settled active thought for day {day}: key={thought.Key}, resolved={thought.ResolveReason}.");
                 }
-                else if (thought.Tone == WorkerThoughtTone.Negative)
+                else
                 {
-                    negativeThoughts++;
-                }
+                    int thoughtScore = CalculateWorkerDailyThoughtScore(thought);
+                    if (thought.Tone == WorkerThoughtTone.Positive)
+                    {
+                        positiveThoughts++;
+                    }
+                    else if (thought.Tone == WorkerThoughtTone.Negative)
+                    {
+                        negativeThoughts++;
+                    }
 
-                if (thoughtScore != 0)
-                {
-                    AddDailyOpinionFactor(
-                        factors,
-                        MapWorkerThoughtKindToDailyFactorKind(thought.Kind),
-                        thoughtScore,
-                        NormalizeDailyOpinionReason(RenderWorkerThought(thought, true), GetDailyThoughtFallbackReason(thought, true)),
-                        NormalizeDailyOpinionReason(RenderWorkerThought(thought, false), GetDailyThoughtFallbackReason(thought, false)));
+                    if (thoughtScore != 0)
+                    {
+                        AddDailyOpinionFactor(
+                            factors,
+                            MapWorkerThoughtKindToDailyFactorKind(thought.Kind),
+                            thoughtScore,
+                            NormalizeDailyOpinionReason(RenderWorkerThought(thought, true), GetDailyThoughtFallbackReason(thought, true)),
+                            NormalizeDailyOpinionReason(RenderWorkerThought(thought, false), GetDailyThoughtFallbackReason(thought, false)));
+                    }
                 }
             }
 
@@ -194,6 +203,85 @@ public partial class GameBootstrap
         }
 
         return thought.Tone == WorkerThoughtTone.Positive ? magnitude : -magnitude;
+    }
+
+    private bool ShouldSkipWorkerThoughtForDailyOpinion(DriverAgent worker, WorkerThought thought, int day)
+    {
+        return IsSettledSameDayRecoveredWorkerThought(worker, thought, day);
+    }
+
+    private bool IsSettledSameDayRecoveredWorkerThought(DriverAgent worker, WorkerThought thought, int day)
+    {
+        if (worker == null ||
+            thought == null ||
+            thought.Active ||
+            thought.Tone != WorkerThoughtTone.Negative ||
+            thought.ResolvedDay != day ||
+            thought.ResolvedDay <= 0)
+        {
+            return false;
+        }
+
+        return GetWorkerThoughtRecoveryKey(thought) switch
+        {
+            "no_job_warning" => IsWorkerEmployedForMigration(worker) && !IsWorkerUnemployedForThoughts(worker),
+            "no_job_today" => IsWorkerEmployedForMigration(worker) && !IsWorkerUnemployedForThoughts(worker),
+            "need_meal_warning" => IsWorkerNeedRecoveredForDailyOpinion(worker, WorkerNeedKind.Meal, criticalThought: false),
+            "need_sleep_warning" => IsWorkerNeedRecoveredForDailyOpinion(worker, WorkerNeedKind.Sleep, criticalThought: false),
+            "need_leisure_warning" => IsWorkerNeedRecoveredForDailyOpinion(worker, WorkerNeedKind.Leisure, criticalThought: false),
+            "need_meal_critical" => IsWorkerNeedRecoveredForDailyOpinion(worker, WorkerNeedKind.Meal, criticalThought: true),
+            "need_sleep_critical" => IsWorkerNeedRecoveredForDailyOpinion(worker, WorkerNeedKind.Sleep, criticalThought: true),
+            "need_leisure_critical" => IsWorkerNeedRecoveredForDailyOpinion(worker, WorkerNeedKind.Leisure, criticalThought: true),
+            "low_money" => worker.Money >= 15,
+            "affect_financial_pressure" => worker.Money > 15 && !IsWorkerDueButBlockedByMoney(worker),
+            _ => false
+        };
+    }
+
+    private static string GetWorkerThoughtRecoveryKey(WorkerThought thought)
+    {
+        if (thought == null)
+        {
+            return string.Empty;
+        }
+
+        string key = string.IsNullOrWhiteSpace(thought.Key) ? thought.TemplateKey : thought.Key;
+        if (string.Equals(thought.TemplateKey, "no_job_warning_known_place", System.StringComparison.Ordinal))
+        {
+            return "no_job_warning";
+        }
+
+        if (string.Equals(thought.TemplateKey, "need_meal_critical_known_place", System.StringComparison.Ordinal))
+        {
+            return "need_meal_critical";
+        }
+
+        if (string.Equals(thought.TemplateKey, "need_sleep_critical_known_place", System.StringComparison.Ordinal))
+        {
+            return "need_sleep_critical";
+        }
+
+        if (string.Equals(thought.TemplateKey, "need_leisure_critical_known_place", System.StringComparison.Ordinal))
+        {
+            return "need_leisure_critical";
+        }
+
+        return key ?? string.Empty;
+    }
+
+    private bool IsWorkerNeedRecoveredForDailyOpinion(DriverAgent worker, WorkerNeedKind need, bool criticalThought)
+    {
+        WorkerNeedStatus status = need switch
+        {
+            WorkerNeedKind.Meal => worker.LastMealNeedStatus,
+            WorkerNeedKind.Sleep => worker.LastSleepNeedStatus,
+            WorkerNeedKind.Leisure => worker.LastLeisureNeedStatus,
+            _ => WorkerNeedStatus.Ok
+        };
+
+        return criticalThought
+            ? status != WorkerNeedStatus.Critical
+            : status == WorkerNeedStatus.Ok;
     }
 
     private void AddDailyNeedFactors(DriverAgent worker, List<WorkerDailyOpinionFactor> factors)

@@ -124,6 +124,12 @@ public partial class GameBootstrap
         Gambling
     }
 
+    private enum WorkerSocialLeadershipStatus
+    {
+        None,
+        SocialLeader
+    }
+
     public enum WorkerRaceKind
     {
         Rovian,
@@ -452,6 +458,10 @@ public partial class GameBootstrap
         public bool IsInsideBuilding;
         public LocationType? InsideBuildingType;
         public int InsideBuildingInstanceId;
+        public WorkerSocialLeadershipStatus SocialLeadershipStatus = WorkerSocialLeadershipStatus.None;
+        public float SocialLeadershipScore;
+        public int SocialLeadershipRank;
+        public int SocialLeadershipLinkCount;
         public readonly List<WorkerSocialMemory> SocialMemories = new();
         public readonly List<WorkerThought> Thoughts = new();
         public readonly List<PendingWorkerThought> PendingThoughts = new();

@@ -400,12 +400,19 @@ public partial class GameBootstrap
     private void CreateSocialGraphNode(DriverAgent worker, Vector2 position, SocialRelationViewModel relation, Font font, bool ru)
     {
         bool selected = worker.DriverId == selectedSocialGraphWorkerId;
+        bool cityOverview = selectedSocialGraphWorkerId <= 0;
+        bool socialLeader = cityOverview &&
+                            worker.SocialLeadershipStatus == WorkerSocialLeadershipStatus.SocialLeader;
         bool hovered = worker.DriverId == hoveredSocialGraphWorkerId ||
                        (relation != null && hoveredSocialGraphEdgeKey == relation.EdgeKey);
         bool dimmed = (hoveredSocialGraphWorkerId > 0 || hoveredSocialGraphEdgeKey != 0) && !selected && !hovered;
         float size = selected
             ? 104f
-            : Mathf.Lerp(58f, 88f, relation != null ? relation.Importance : 0.35f);
+            : socialLeader
+                ? 126f
+                : cityOverview
+                    ? Mathf.Lerp(46f, 96f, Mathf.Clamp01(worker.SocialLeadershipScore))
+                    : Mathf.Lerp(58f, 88f, relation != null ? relation.Importance : 0.35f);
 
         GameObject nodeObject = CreateUiObject($"SocialGraphNode_{worker.DriverId}", socialGraphScreenUi.GraphCanvas);
         RectTransform nodeRect = nodeObject.GetComponent<RectTransform>();
@@ -418,6 +425,7 @@ public partial class GameBootstrap
         background.sprite = GetSocialGraphCircleSprite();
         background.color = selected
             ? new Color(0.97f, 0.80f, 0.30f, 1f)
+            : socialLeader ? new Color(0.98f, 0.68f, 0.28f, 1f)
             : hovered ? new Color(0.36f, 0.48f, 0.66f, 1f)
                       : dimmed ? new Color(0.12f, 0.14f, 0.18f, 0.48f)
                                : new Color(0.24f, 0.30f, 0.40f, 0.94f);
@@ -425,9 +433,10 @@ public partial class GameBootstrap
         Outline outline = nodeObject.AddComponent<Outline>();
         outline.effectColor = selected
             ? FleetAccentColor
+            : socialLeader ? new Color(1f, 0.90f, 0.46f, 1f)
             : hovered ? GetWorkerSocialRelationshipColor(relation?.Relationship ?? 0)
                       : new Color(0f, 0f, 0f, 0.45f);
-        outline.effectDistance = selected || hovered ? new Vector2(3f, -3f) : new Vector2(1f, -1f);
+        outline.effectDistance = selected || hovered || socialLeader ? new Vector2(3f, -3f) : new Vector2(1f, -1f);
 
         Button button = nodeObject.AddComponent<Button>();
         button.targetGraphic = background;
@@ -471,15 +480,17 @@ public partial class GameBootstrap
         labelRect.anchorMin = labelRect.anchorMax = new Vector2(0.5f, 0f);
         labelRect.pivot = new Vector2(0.5f, 1f);
         labelRect.anchoredPosition = new Vector2(0f, -4f);
-        labelRect.sizeDelta = new Vector2(Mathf.Max(96f, size + 26f), 20f);
+        labelRect.sizeDelta = new Vector2(Mathf.Max(96f, size + 26f), socialLeader ? 34f : 20f);
         Text label = labelObject.AddComponent<Text>();
         label.font = font;
-        label.fontSize = selected ? 12 : 10;
-        label.fontStyle = selected ? FontStyle.Bold : FontStyle.Normal;
+        label.fontSize = selected || socialLeader ? 12 : 10;
+        label.fontStyle = selected || socialLeader ? FontStyle.Bold : FontStyle.Normal;
         label.alignment = TextAnchor.UpperCenter;
-        label.color = dimmed ? FleetMutedTextColor : Color.white;
+        label.color = dimmed ? FleetMutedTextColor : socialLeader ? new Color(1f, 0.94f, 0.66f, 1f) : Color.white;
         label.raycastTarget = false;
-        label.text = GetSocialGraphShortName(worker.DriverName, ru);
+        label.text = socialLeader
+            ? $"{GetSocialGraphShortName(worker.DriverName, ru)}\n{(ru ? "\u041b\u0438\u0434\u0435\u0440 \u0441\u0432\u044f\u0437\u0435\u0439" : "Social leader")}"
+            : GetSocialGraphShortName(worker.DriverName, ru);
         RegisterSocialGraphAnimatedNode(worker, nodeRect, selected, relation);
     }
 
@@ -489,9 +500,12 @@ public partial class GameBootstrap
         {
             socialGraphScreenUi.InspectorNameText.text = ru ? "\u0412\u0435\u0441\u044c \u0433\u043e\u0440\u043e\u0434" : "Whole city";
             socialGraphScreenUi.InspectorStatusText.text = ru ? "\u041e\u0431\u0437\u043e\u0440 \u0441\u0432\u044f\u0437\u0435\u0439" : "Relationship overview";
+            string leaderText = stats.SocialLeader != null
+                ? $"{stats.SocialLeader.DriverName} ({Mathf.RoundToInt(stats.SocialLeaderScore * 100f)}, {stats.SocialLeaderLinkCount})"
+                : "\u2014";
             socialGraphScreenUi.InspectorSummaryText.text = ru
-                ? $"\u0421\u043e\u0446\u0438\u0430\u043b\u044c\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u0430:\n\u0412\u0441\u0435\u0433\u043e \u0441\u0432\u044f\u0437\u0435\u0439: {stats.TotalKnownLinks}   \u041f\u043e\u043a\u0430\u0437\u0430\u043d\u043e: {stats.ShownLinks}\n\u0421\u043a\u0440\u044b\u0442\u043e \u0444\u0438\u043b\u044c\u0442\u0440\u043e\u043c: {stats.FilteredOutLinks}\n\u041f\u043e\u0437\u0438\u0442\u0438\u0432\u043d\u044b\u0445: {stats.PositiveLinks}   \u041d\u0435\u0439\u0442\u0440.: {stats.NeutralLinks}   \u041d\u0430\u043f\u0440.: {stats.TenseLinks}\n\u041a\u043b\u0438\u043a \u043f\u043e \u0436\u0438\u0442\u0435\u043b\u044e \u0432\u043a\u043b\u044e\u0447\u0438\u0442 \u0444\u043e\u043a\u0443\u0441."
-                : $"Social map:\nTotal links: {stats.TotalKnownLinks}   Shown: {stats.ShownLinks}\nHidden by filter: {stats.FilteredOutLinks}\nPositive: {stats.PositiveLinks}   Neutral: {stats.NeutralLinks}   Tense: {stats.TenseLinks}\nClick a citizen to focus.";
+                ? $"\u0421\u043e\u0446\u0438\u0430\u043b\u044c\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u0430:\n\u0421\u043e\u0446. \u043b\u0438\u0434\u0435\u0440: {leaderText}\n\u0412\u0441\u0435\u0433\u043e \u0441\u0432\u044f\u0437\u0435\u0439: {stats.TotalKnownLinks}   \u041f\u043e\u043a\u0430\u0437\u0430\u043d\u043e: {stats.ShownLinks}\n\u0421\u043a\u0440\u044b\u0442\u043e \u0444\u0438\u043b\u044c\u0442\u0440\u043e\u043c: {stats.FilteredOutLinks}\n\u041f\u043e\u0437\u0438\u0442\u0438\u0432\u043d\u044b\u0445: {stats.PositiveLinks}   \u041d\u0435\u0439\u0442\u0440.: {stats.NeutralLinks}   \u041d\u0430\u043f\u0440.: {stats.TenseLinks}"
+                : $"Social map:\nSocial leader: {leaderText}\nTotal links: {stats.TotalKnownLinks}   Shown: {stats.ShownLinks}\nHidden by filter: {stats.FilteredOutLinks}\nPositive: {stats.PositiveLinks}   Neutral: {stats.NeutralLinks}   Tense: {stats.TenseLinks}";
             SocialRelationViewModel hoveredCityRelation = GetHoveredSocialGraphRelation(visibleRelations);
             socialGraphScreenUi.InspectorHintText.text = hoveredCityRelation != null
                 ? FormatSocialGraphRelationDetail(null, hoveredCityRelation, ru)

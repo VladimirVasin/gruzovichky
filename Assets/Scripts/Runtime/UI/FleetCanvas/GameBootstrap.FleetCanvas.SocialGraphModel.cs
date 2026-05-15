@@ -56,6 +56,9 @@ public partial class GameBootstrap
         public int NeutralLinks;
         public int TenseLinks;
         public SocialRelationViewModel StrongestRelation;
+        public DriverAgent SocialLeader;
+        public float SocialLeaderScore;
+        public int SocialLeaderLinkCount;
     }
 
     private List<SocialRelationViewModel> BuildSocialGraphVisibleRelations(
@@ -134,6 +137,7 @@ public partial class GameBootstrap
         List<SocialRelationViewModel> allRelations = new(relationByKey.Values);
         allRelations.Sort(CompareSocialGraphRelationsByImportance);
         stats = BuildSocialGraphStats(allRelations);
+        UpdateCitySocialLeadershipFromRelations(allRelations, stats);
 
         List<SocialRelationViewModel> filteredRelations = new();
         for (int i = 0; i < allRelations.Count; i++)
@@ -453,18 +457,37 @@ public partial class GameBootstrap
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent worker = driverAgents[i];
-            if (IsSocialGraphWorkerVisible(worker))
+            if (!IsSocialGraphWorkerVisible(worker))
             {
-                workers.Add(worker);
+                continue;
             }
+
+            degreeByWorkerId.TryGetValue(worker.DriverId, out int visibleDegree);
+            bool isSocialLeader = worker.SocialLeadershipStatus == WorkerSocialLeadershipStatus.SocialLeader &&
+                                  worker.SocialLeadershipLinkCount > 0;
+            if (visibleDegree <= 0 && !isSocialLeader)
+            {
+                continue;
+            }
+
+            workers.Add(worker);
         }
 
         workers.Sort((a, b) =>
         {
+            bool aLeader = a.SocialLeadershipStatus == WorkerSocialLeadershipStatus.SocialLeader;
+            bool bLeader = b.SocialLeadershipStatus == WorkerSocialLeadershipStatus.SocialLeader;
+            if (aLeader != bLeader) return bLeader.CompareTo(aLeader);
+
+            int rank = GetSocialLeadershipSortRank(a).CompareTo(GetSocialLeadershipSortRank(b));
+            if (rank != 0) return rank;
+
             degreeByWorkerId.TryGetValue(a.DriverId, out int aDegree);
             degreeByWorkerId.TryGetValue(b.DriverId, out int bDegree);
             int degree = bDegree.CompareTo(aDegree);
             if (degree != 0) return degree;
+            int score = b.SocialLeadershipScore.CompareTo(a.SocialLeadershipScore);
+            if (score != 0) return score;
             return a.DriverId.CompareTo(b.DriverId);
         });
         return workers;
@@ -481,39 +504,41 @@ public partial class GameBootstrap
             return positions;
         }
 
-        Dictionary<int, int> degreeByWorkerId = new();
-        for (int i = 0; i < visibleRelations.Count; i++)
+        DriverAgent leader = null;
+        for (int i = 0; i < visibleWorkers.Count; i++)
         {
-            SocialRelationViewModel relation = visibleRelations[i];
-            degreeByWorkerId.TryGetValue(relation.FocusWorkerId, out int focusDegree);
-            degreeByWorkerId[relation.FocusWorkerId] = focusDegree + 1;
-            degreeByWorkerId.TryGetValue(relation.OtherWorkerId, out int otherDegree);
-            degreeByWorkerId[relation.OtherWorkerId] = otherDegree + 1;
+            DriverAgent worker = visibleWorkers[i];
+            if (worker != null && worker.SocialLeadershipStatus == WorkerSocialLeadershipStatus.SocialLeader)
+            {
+                leader = worker;
+                positions[worker.DriverId] = Vector2.zero;
+                break;
+            }
         }
 
         float outerRadiusX = Mathf.Max(210f, canvasSize.x * 0.39f);
         float outerRadiusY = Mathf.Max(150f, canvasSize.y * 0.35f);
-        float innerRadiusX = outerRadiusX * 0.58f;
-        float innerRadiusY = outerRadiusY * 0.58f;
-        int innerCount = visibleWorkers.Count > 14 ? Mathf.Min(8, visibleWorkers.Count / 3) : 0;
-        int outerCount = Mathf.Max(1, visibleWorkers.Count - innerCount);
+        float innerRadiusX = Mathf.Max(150f, outerRadiusX * 0.48f);
+        float innerRadiusY = Mathf.Max(112f, outerRadiusY * 0.48f);
+        int otherCount = Mathf.Max(1, visibleWorkers.Count - (leader != null ? 1 : 0));
+        int otherIndex = 0;
 
         for (int i = 0; i < visibleWorkers.Count; i++)
         {
             DriverAgent worker = visibleWorkers[i];
-            bool innerRing = i < innerCount;
-            int ringIndex = innerRing ? i : i - innerCount;
-            int ringCount = innerRing ? innerCount : outerCount;
-            float t = ringCount <= 1 ? 0f : ringIndex / (float)ringCount;
+            if (worker == null || worker == leader)
+            {
+                continue;
+            }
+
+            float t = otherCount <= 1 ? 0f : otherIndex / (float)otherCount;
             float angle = t * Mathf.PI * 2f - Mathf.PI * 0.5f;
-            float radiusX = innerRing ? innerRadiusX : outerRadiusX;
-            float radiusY = innerRing ? innerRadiusY : outerRadiusY;
-            degreeByWorkerId.TryGetValue(worker.DriverId, out int degree);
-            float degreePull = Mathf.Clamp01(degree / 8f);
-            radiusX = Mathf.Lerp(radiusX, radiusX * 0.82f, degreePull);
-            radiusY = Mathf.Lerp(radiusY, radiusY * 0.82f, degreePull);
+            float socialPull = Mathf.Clamp01(worker.SocialLeadershipScore);
+            float radiusX = Mathf.Lerp(outerRadiusX, innerRadiusX, socialPull);
+            float radiusY = Mathf.Lerp(outerRadiusY, innerRadiusY, socialPull);
             Vector2 position = new(Mathf.Cos(angle) * radiusX, Mathf.Sin(angle) * radiusY);
             positions[worker.DriverId] = ClampSocialGraphPosition(position, canvasSize, 72f);
+            otherIndex++;
         }
 
         return positions;
