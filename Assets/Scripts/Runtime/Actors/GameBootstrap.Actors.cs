@@ -161,82 +161,7 @@ public partial class GameBootstrap
         truckVisualRoot = new GameObject("VisualRoot").transform;
         truckVisualRoot.SetParent(truckObject.transform, false);
 
-        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        body.transform.SetParent(truckVisualRoot, false);
-        body.transform.localPosition = new Vector3(0f, 0.25f, 0f);
-        body.transform.localScale = new Vector3(0.7f, 0.35f, 1f);
-        ApplyColor(body, new Color(0.85f, 0.2f, 0.18f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(body, VisualSmoothnessVehicleMetal);
-        truckBodyTransform = body.transform;
-
-        GameObject bodyStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        bodyStripe.transform.SetParent(truckVisualRoot, false);
-        bodyStripe.transform.localPosition = new Vector3(0f, 0.28f, 0f);
-        bodyStripe.transform.localScale = new Vector3(0.74f, 0.05f, 1.02f);
-        ApplyColor(bodyStripe, new Color(0.96f, 0.9f, 0.72f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(bodyStripe, VisualSmoothnessVehicleMetal);
-
-        GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        cabin.transform.SetParent(truckVisualRoot, false);
-        cabin.transform.localPosition = new Vector3(0f, 0.4f, 0.2f);
-        cabin.transform.localScale = new Vector3(0.55f, 0.4f, 0.45f);
-        ApplyColor(cabin, new Color(0.95f, 0.82f, 0.28f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(cabin, VisualSmoothnessVehicleMetal);
-        truckCabinTransform = cabin.transform;
-
-        GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        windshield.transform.SetParent(truckVisualRoot, false);
-        windshield.transform.localPosition = new Vector3(0f, 0.43f, 0.42f);
-        windshield.transform.localScale = new Vector3(0.42f, 0.18f, 0.04f);
-        ApplyColor(windshield, new Color(0.68f, 0.86f, 0.94f), VisualSmoothnessGlass);
-        ConfigureShadowVisual(windshield, VisualSmoothnessGlass);
-
-        GameObject truckShadowBlob = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        truckShadowBlob.transform.SetParent(truckVisualRoot, false);
-        truckShadowBlob.transform.localPosition = new Vector3(0f, -0.01f, 0f);
-        truckShadowBlob.transform.localScale = new Vector3(0.88f, 0.01f, 1.16f);
-        Renderer truckShadowRenderer = truckShadowBlob.GetComponent<Renderer>();
-        truckShadowRenderer.material = CreateTransparentOverlayMaterial(new Color(0f, 0f, 0f, 0.14f));
-        truckShadowRenderer.shadowCastingMode = ShadowCastingMode.Off;
-        truckShadowRenderer.receiveShadows = false;
-        if (truckShadowBlob.TryGetComponent(out Collider truckShadowCollider))
-        {
-            Object.Destroy(truckShadowCollider);
-        }
-
-        CreateTruckHeadlightVisual(new Vector3(-0.18f, 0.39f, 0.46f), true);
-        CreateTruckHeadlightVisual(new Vector3(0.18f, 0.39f, 0.46f), false);
-        CreateTruckHeadlightBeam(new Vector3(-0.18f, 0.39f, 0.5f));
-        CreateTruckHeadlightBeam(new Vector3(0.18f, 0.39f, 0.5f));
-
-        GameObject cargoVisualRoot = new("CargoVisualRoot");
-        cargoVisualRoot.transform.SetParent(truckVisualRoot, false);
-        cargoVisualRoot.transform.localPosition = new Vector3(0f, 0.47f, -0.24f);
-        cargoVisualRoot.SetActive(false);
-
-        Vector3[] wheelOffsets =
-        {
-            new(-0.28f, 0.08f, 0.32f),
-            new(0.28f, 0.08f, 0.32f),
-            new(-0.28f, 0.08f, -0.32f),
-            new(0.28f, 0.08f, -0.32f)
-        };
-
-        for (int i = 0; i < wheelOffsets.Length; i++)
-        {
-            GameObject wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            wheel.transform.SetParent(truckVisualRoot, false);
-            wheel.transform.localPosition = wheelOffsets[i];
-            wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            wheel.transform.localScale = new Vector3(0.12f, 0.05f, 0.12f);
-            ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f), VisualSmoothnessRubber);
-            ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
-            truckWheels.Add(wheel.transform);
-            if (i < 2)
-            {
-                truckFrontWheels.Add(wheel.transform);
-            }
-        }
+        Transform cargoVisualRoot = BuildTruckVisualModel();
 
         truckObject.transform.position = truckTargetWorld;
         truckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
@@ -251,7 +176,7 @@ public partial class GameBootstrap
             EngineAudioPitchBias = Random.Range(0.965f, 1.04f),
             EngineAudioVolumeBias = Random.Range(0.94f, 1.08f)
         };
-        truckAgent.TruckCargoVisualRoot = cargoVisualRoot.transform;
+        truckAgent.TruckCargoVisualRoot = cargoVisualRoot;
 
         SaveTruckState(truckAgent);
         UpdateTruckCargoVisual(truckAgent, forceRebuild: true);
@@ -515,134 +440,7 @@ public partial class GameBootstrap
         driver.DriverVisualRoot = new GameObject("DriverVisualRoot").transform;
         driver.DriverVisualRoot.SetParent(driver.DriverObject.transform, false);
 
-        GameObject driverShadowBlob = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        driverShadowBlob.transform.SetParent(driver.DriverVisualRoot, false);
-        driverShadowBlob.transform.localPosition = new Vector3(0f, -0.01f, 0f);
-        driverShadowBlob.transform.localScale = new Vector3(0.34f, 0.008f, 0.34f);
-        Renderer driverShadowRenderer = driverShadowBlob.GetComponent<Renderer>();
-        driverShadowRenderer.material = CreateTransparentOverlayMaterial(new Color(0f, 0f, 0f, 0.16f));
-        driverShadowRenderer.shadowCastingMode = ShadowCastingMode.Off;
-        driverShadowRenderer.receiveShadows = false;
-        if (driverShadowBlob.TryGetComponent(out Collider driverShadowCollider))
-        {
-            Object.Destroy(driverShadowCollider);
-        }
-
-        bool isFemale = driver.Gender == WorkerGender.Female;
-
-        Color[] femaleShirts =
-        {
-            new Color(0.2f, 0.56f, 0.52f),
-            new Color(0.78f, 0.42f, 0.34f),
-            new Color(0.58f, 0.34f, 0.72f),
-            new Color(0.36f, 0.6f, 0.28f)
-        };
-        Color[] maleShirts =
-        {
-            new Color(0.22f, 0.44f, 0.88f),
-            new Color(0.82f, 0.38f, 0.22f),
-            new Color(0.28f, 0.6f, 0.34f),
-            new Color(0.68f, 0.52f, 0.2f)
-        };
-        Color[] femaleTrousers =
-        {
-            new Color(0.14f, 0.26f, 0.28f),
-            new Color(0.28f, 0.2f, 0.2f),
-            new Color(0.2f, 0.18f, 0.32f),
-            new Color(0.16f, 0.28f, 0.18f)
-        };
-        Color[] maleTrousers =
-        {
-            new Color(0.18f, 0.22f, 0.36f),
-            new Color(0.24f, 0.18f, 0.18f),
-            new Color(0.16f, 0.26f, 0.18f),
-            new Color(0.3f, 0.24f, 0.14f)
-        };
-
-        Color shirtColor = isFemale
-            ? femaleShirts[(driver.DriverId - 1) % femaleShirts.Length]
-            : maleShirts[(driver.DriverId - 1) % maleShirts.Length];
-        Color trouserColor = isFemale
-            ? femaleTrousers[(driver.DriverId - 1) % femaleTrousers.Length]
-            : maleTrousers[(driver.DriverId - 1) % maleTrousers.Length];
-
-        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        body.transform.SetParent(driver.DriverVisualRoot, false);
-        body.transform.localPosition = new Vector3(0f, 0.38f, 0f);
-        body.transform.localScale = isFemale ? new Vector3(0.20f, 0.34f, 0.20f) : new Vector3(0.22f, 0.34f, 0.22f);
-        ApplyColor(body, shirtColor, VisualSmoothnessFabric);
-        ConfigureShadowVisual(body, VisualSmoothnessFabric);
-        driver.DriverBodyTransform = body.transform;
-
-        GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        head.transform.SetParent(driver.DriverVisualRoot, false);
-        head.transform.localPosition = new Vector3(0f, 0.88f, 0f);
-        head.transform.localScale = new Vector3(0.24f, 0.24f, 0.24f);
-        ApplyColor(head, new Color(0.96f, 0.82f, 0.68f), VisualSmoothnessSkin);
-        ConfigureShadowVisual(head, VisualSmoothnessSkin);
-        driver.DriverHeadTransform = head.transform;
-
-        if (isFemale)
-        {
-            // Hair bun instead of flat cap
-            GameObject bun = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            bun.transform.SetParent(driver.DriverVisualRoot, false);
-            bun.transform.localPosition = new Vector3(0f, 1.02f, -0.04f);
-            bun.transform.localScale = new Vector3(0.14f, 0.14f, 0.14f);
-            ApplyColor(bun, new Color(0.31f, 0.18f, 0.09f), VisualSmoothnessFabric);
-            ConfigureShadowVisual(bun, VisualSmoothnessFabric);
-            driver.DriverCapTransform = bun.transform;
-        }
-        else
-        {
-            // Flat cap for men
-            GameObject cap = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            cap.transform.SetParent(driver.DriverVisualRoot, false);
-            cap.transform.localPosition = new Vector3(0f, 1.02f, 0f);
-            cap.transform.localScale = new Vector3(0.26f, 0.08f, 0.26f);
-            ApplyColor(cap, new Color(0.84f, 0.22f, 0.18f), VisualSmoothnessFabric);
-            ConfigureShadowVisual(cap, VisualSmoothnessFabric);
-            driver.DriverCapTransform = cap.transform;
-        }
-
-        driver.DriverLeftArmTransform  = CreateDriverLimb(driver.DriverVisualRoot, "DriverLeftArm",  new Vector3(-0.2f,  0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), shirtColor);
-        driver.DriverRightArmTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverRightArm", new Vector3( 0.2f,  0.56f, 0f), new Vector3(0.09f, 0.34f, 0.09f), shirtColor);
-        driver.DriverLeftLegTransform  = CreateDriverLimb(driver.DriverVisualRoot, "DriverLeftLeg",  new Vector3(-0.09f, 0.15f, 0f), new Vector3(0.1f,  0.42f, 0.1f),  trouserColor);
-        driver.DriverRightLegTransform = CreateDriverLimb(driver.DriverVisualRoot, "DriverRightLeg", new Vector3( 0.09f, 0.15f, 0f), new Vector3(0.1f,  0.42f, 0.1f),  trouserColor);
-
-        GameObject fuelCan = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        fuelCan.transform.SetParent(driver.DriverVisualRoot, false);
-        fuelCan.transform.localPosition = new Vector3(0.18f, 0.42f, 0f);
-        fuelCan.transform.localScale = new Vector3(0.14f, 0.2f, 0.1f);
-        ApplyColor(fuelCan, new Color(0.9f, 0.76f, 0.18f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(fuelCan, VisualSmoothnessVehicleMetal);
-        driver.DriverFuelCanTransform = fuelCan.transform;
-        driver.DriverFuelCanTransform.gameObject.SetActive(false);
-
-        GameObject flashlight = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        flashlight.transform.SetParent(driver.DriverVisualRoot, false);
-        flashlight.transform.localPosition = new Vector3(0.24f, 0.57f, 0.1f);
-        flashlight.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
-        flashlight.transform.localScale = new Vector3(0.06f, 0.06f, 0.18f);
-        ApplyColor(flashlight, new Color(0.24f, 0.24f, 0.26f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(flashlight, VisualSmoothnessVehicleMetal);
-        driver.DriverFlashlightTransform = flashlight.transform;
-        driver.DriverFlashlightRenderer = flashlight.GetComponent<Renderer>();
-        driver.DriverFlashlightMaterial = driver.DriverFlashlightRenderer != null ? driver.DriverFlashlightRenderer.material : null;
-
-        GameObject flashlightBeamObject = new("DriverFlashlight");
-        flashlightBeamObject.transform.SetParent(driver.DriverFlashlightTransform, false);
-        flashlightBeamObject.transform.localPosition = new Vector3(0f, 0f, 0.14f);
-        flashlightBeamObject.transform.localRotation = Quaternion.Euler(10f, 0f, 0f);
-        driver.DriverFlashlightLight = flashlightBeamObject.AddComponent<Light>();
-        driver.DriverFlashlightLight.type = LightType.Spot;
-        driver.DriverFlashlightLight.color = new Color(1f, 0.88f, 0.66f);
-        driver.DriverFlashlightLight.range = 4.2f;
-        driver.DriverFlashlightLight.spotAngle = 40f;
-        driver.DriverFlashlightLight.innerSpotAngle = 18f;
-        driver.DriverFlashlightLight.shadows = LightShadows.None;
-        driver.DriverFlashlightLight.intensity = 0f;
-        driver.DriverFlashlightLight.enabled = false;
+        BuildDriverVisualModel(driver);
 
         driver.MotelIdlePosition = GetDriverIdleMotelPosition(driver.DriverId - 1, driver);
         driver.DriverObject.transform.position = driver.MotelIdlePosition;

@@ -113,16 +113,26 @@ public partial class GameBootstrap
             opinionSubjectId,
             opinionSubjectKey,
             pendingPlaceholders);
-        ApplyWorkerThoughtInfluenceRulesToPendingThought(
-            worker,
-            resolvedThoughtKey,
-            resolvedFormationKey,
-            ref tone,
-            ref intensity,
-            ref priority,
-            ref resolvedFormationHours,
-            ref opinionDelta,
-            pendingPlaceholders);
+        PendingWorkerThought existingPending = FindPendingWorkerThought(worker, resolvedFormationKey);
+        bool influenceAlreadyApplied = existingPending != null && existingPending.HasThoughtInfluenceApplied;
+        bool influenceApplied = false;
+        if (!influenceAlreadyApplied)
+        {
+            influenceApplied = ApplyWorkerThoughtInfluenceRulesToPendingThought(
+                worker,
+                resolvedThoughtKey,
+                resolvedFormationKey,
+                ref tone,
+                ref intensity,
+                ref priority,
+                ref resolvedFormationHours,
+                ref opinionDelta,
+                pendingPlaceholders);
+        }
+        else
+        {
+            PreservePendingWorkerThoughtInfluenceState(existingPending, ref opinionDelta, pendingPlaceholders);
+        }
         ApplyWorkerHeritageThoughtBias(
             worker,
             resolvedThoughtKey,
@@ -133,7 +143,7 @@ public partial class GameBootstrap
             ref priority,
             ref resolvedFormationHours,
             ref opinionDelta);
-        PendingWorkerThought pending = FindPendingWorkerThought(worker, resolvedFormationKey);
+        PendingWorkerThought pending = existingPending;
         if (pending == null)
         {
             pending = new PendingWorkerThought
@@ -169,6 +179,7 @@ public partial class GameBootstrap
         pending.ExpiresWorldHour = expiresWorldHour;
         pending.LastRefreshedWorldHour = now;
         pending.FormationReason = formationReason ?? string.Empty;
+        pending.HasThoughtInfluenceApplied |= influenceAlreadyApplied || influenceApplied;
         pending.Placeholders.Clear();
         pending.Placeholders.AddRange(pendingPlaceholders);
         SnapshotPendingWorkerThoughtKnowledge(pending, knowledgeContext);
@@ -563,6 +574,43 @@ public partial class GameBootstrap
         }
 
         placeholders.Add(placeholder);
+    }
+
+    private static void PreservePendingWorkerThoughtInfluenceState(
+        PendingWorkerThought existingPending,
+        ref int opinionDelta,
+        List<WorkerThoughtPlaceholder> placeholders)
+    {
+        if (existingPending == null || !existingPending.HasThoughtInfluenceApplied)
+        {
+            return;
+        }
+
+        opinionDelta = existingPending.OpinionDelta;
+        if (placeholders == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < existingPending.Placeholders.Count; i++)
+        {
+            WorkerThoughtPlaceholder placeholder = existingPending.Placeholders[i];
+            if (placeholder == null ||
+                !string.Equals(placeholder.Key, WorkerThoughtInfluencePlaceholderKey, System.StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            UpsertWorkerThoughtPlaceholder(placeholders, new WorkerThoughtPlaceholder
+            {
+                Key = placeholder.Key,
+                SubjectType = placeholder.SubjectType,
+                SubjectId = placeholder.SubjectId,
+                SubjectKey = placeholder.SubjectKey,
+                FallbackLabel = placeholder.FallbackLabel
+            });
+            return;
+        }
     }
 
     private void QueueWorkerKnowledgeReflectionThought(DriverAgent owner, DriverAgent other, WorkerMemory memory, float now)

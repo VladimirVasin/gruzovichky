@@ -448,7 +448,7 @@ public partial class GameBootstrap
         return modifiers;
     }
 
-    private void ApplyWorkerThoughtInfluenceRulesToPendingThought(
+    private bool ApplyWorkerThoughtInfluenceRulesToPendingThought(
         DriverAgent worker,
         string targetThoughtKey,
         string formationKey,
@@ -464,13 +464,13 @@ public partial class GameBootstrap
             WorkerThoughtInfluenceRules.Length == 0 ||
             string.IsNullOrWhiteSpace(targetThoughtKey))
         {
-            return;
+            return false;
         }
 
         string normalizedTargetKey = NormalizeWorkerThoughtInfluenceKey(targetThoughtKey);
         if (string.Equals(normalizedTargetKey, "starter_job_resolved", System.StringComparison.Ordinal))
         {
-            return;
+            return false;
         }
 
         float now = GetCurrentWorldHour();
@@ -500,7 +500,7 @@ public partial class GameBootstrap
 
         if (candidates.Count == 0)
         {
-            return;
+            return false;
         }
 
         candidates.Sort((left, right) => right.Strength.CompareTo(left.Strength));
@@ -539,6 +539,7 @@ public partial class GameBootstrap
         SessionDebugLogger.Log(
             "THOUGHT_INFLUENCE",
             $"{worker.DriverName} / {NormalizeWorkerThoughtInfluenceKey(strongest.Rule.SourceThoughtKey)} -> {normalizedTargetKey} / formation={formationKey} / rules={appliedCount} / I {intensity - oldIntensity:+#;-#;0} / O {opinionDelta - oldOpinionDelta:+#;-#;0} / P {oldPriority}->{priority} / F {oldFormationHours:0.00}->{formationHours:0.00}h / reason={strongest.Rule.HumanReasonEn}.");
+        return true;
     }
 
     private WorkerThought FindWorkerThoughtInfluenceSource(DriverAgent worker, WorkerThoughtInfluenceRule rule, float now)

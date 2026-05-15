@@ -564,6 +564,7 @@ public partial class GameBootstrap
         public float LastRefreshedWorldHour;
         public string FormationReason;
         public bool HasKnowledgeSnapshot;
+        public bool HasThoughtInfluenceApplied;
         public WorkerMemoryKind KnowledgeKind;
         public int KnowledgeOtherWorkerId;
         public string KnowledgeTopic = string.Empty;

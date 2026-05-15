@@ -125,8 +125,13 @@ public partial class GameBootstrap
         ConfigureStaticVisual(drivewayTop, VisualSmoothnessAsphalt);
     }
 
-    private void CreateWarehouseDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateWarehouseDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedWarehouseModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
         Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
 
@@ -609,7 +614,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if ((type == LocationType.Bar || type == LocationType.GamblingHall) && HasImportedBuildingModel(parent))
+        if (HasImportedBuildingModel(parent))
         {
             return;
         }

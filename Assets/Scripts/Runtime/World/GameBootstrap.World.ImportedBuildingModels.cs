@@ -5,9 +5,13 @@ public partial class GameBootstrap
 {
     private const string BarImportedModelResourcePath = "Buildings/bar";
     private const string GamblingHallImportedModelResourcePath = "Buildings/casino";
+    private const string WarehouseImportedModelResourcePath = "Buildings/warehouse";
     private const float BarImportedModelFootprintFill = 2.45f;
     private const float GamblingHallImportedModelFootprintFill = 2.45f;
+    private const float WarehouseImportedModelFootprintFill = 2.45f;
     private const float ImportedBuildingModelGroundY = -0.20f;
+    private const float WarehouseImportedModelGroundY = -0.35f;
+    private const float WarehouseImportedModelPitch = -90f;
 
     private bool TryCreateImportedBarModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
@@ -45,6 +49,24 @@ public partial class GameBootstrap
             new Color(1f, 0.48f, 0.95f));
     }
 
+    private bool TryCreateImportedWarehouseModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        return TryCreateImportedServiceModel(
+            owner,
+            parent,
+            center,
+            min,
+            max,
+            anchor,
+            LocationType.Warehouse,
+            WarehouseImportedModelResourcePath,
+            "WarehouseImportedModelRoot",
+            "WarehouseImportedModel",
+            WarehouseImportedModelFootprintFill,
+            new Color(1f, 0.82f, 0.42f, 1f),
+            new Color(1f, 0.74f, 0.28f));
+    }
+
     private bool TryCreateImportedServiceModel(
         LocationData owner,
         Transform parent,
@@ -70,7 +92,7 @@ public partial class GameBootstrap
         GameObject model = Instantiate(prefab, root);
         model.name = modelName;
         model.transform.localPosition = Vector3.zero;
-        model.transform.localRotation = Quaternion.identity;
+        model.transform.localRotation = GetImportedBuildingModelLocalRotation(type);
         model.transform.localScale = Vector3.one;
 
         Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
@@ -92,9 +114,16 @@ public partial class GameBootstrap
 
         if (TryGetLocalRendererBounds(root, renderers, out Bounds scaledBounds))
         {
+            float groundY = GetImportedBuildingModelGroundY(type);
+            Bounds groundingBounds = scaledBounds;
+            if (TryGetImportedBuildingGroundingBounds(type, root, renderers, out Bounds typeGroundingBounds))
+            {
+                groundingBounds = typeGroundingBounds;
+            }
+
             model.transform.localPosition = new Vector3(
                 -scaledBounds.center.x,
-                ImportedBuildingModelGroundY - scaledBounds.min.y,
+                groundY - groundingBounds.min.y,
                 -scaledBounds.center.z);
         }
 
@@ -104,11 +133,37 @@ public partial class GameBootstrap
         return true;
     }
 
+    private static float GetImportedBuildingModelGroundY(LocationType type)
+    {
+        return type == LocationType.Warehouse
+            ? WarehouseImportedModelGroundY
+            : ImportedBuildingModelGroundY;
+    }
+
+    private static Quaternion GetImportedBuildingModelLocalRotation(LocationType type)
+    {
+        return type == LocationType.Warehouse
+            ? Quaternion.Euler(WarehouseImportedModelPitch, 0f, 0f)
+            : Quaternion.identity;
+    }
+
+    private static bool TryGetImportedBuildingGroundingBounds(LocationType type, Transform root, Renderer[] renderers, out Bounds bounds)
+    {
+        if (type == LocationType.Warehouse)
+        {
+            return TryGetLocalRendererBounds(root, renderers, out bounds, IsWarehouseImportedGroundingRenderer);
+        }
+
+        bounds = default;
+        return false;
+    }
+
     private static bool HasImportedBuildingModel(Transform parent)
     {
         return parent != null &&
             (parent.Find("BarImportedModelRoot") != null ||
-             parent.Find("GamblingHallImportedModelRoot") != null);
+             parent.Find("GamblingHallImportedModelRoot") != null ||
+             parent.Find("WarehouseImportedModelRoot") != null);
     }
 
     private static void HideImportedBuildingPlatformRenderers(Renderer[] renderers, LocationType type)
@@ -161,7 +216,12 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (name.StartsWith("Base_Grass_Tile", System.StringComparison.OrdinalIgnoreCase) ||
+        if (name.StartsWith("Base_Grass_Tile", System.StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (type != LocationType.Warehouse &&
             name.IndexOf("Platform", System.StringComparison.OrdinalIgnoreCase) >= 0)
         {
             return true;
@@ -184,7 +244,12 @@ public partial class GameBootstrap
             }
 
             string materialName = material.name;
-            if (materialName.IndexOf("Grass_Base", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+            if (materialName.IndexOf("Grass_Base", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            if (type != LocationType.Warehouse &&
                 materialName.IndexOf("Platform", System.StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return true;
@@ -457,14 +522,19 @@ public partial class GameBootstrap
         return fallback;
     }
 
-    private static bool TryGetLocalRendererBounds(Transform root, Renderer[] renderers, out Bounds bounds)
+    private static bool TryGetLocalRendererBounds(
+        Transform root,
+        Renderer[] renderers,
+        out Bounds bounds,
+        System.Predicate<Renderer> includeRenderer = null)
     {
         bounds = default;
         bool hasBounds = false;
         for (int i = 0; i < renderers.Length; i++)
         {
             Renderer renderer = renderers[i];
-            if (renderer == null || !renderer.enabled)
+            if (renderer == null || !renderer.enabled ||
+                (includeRenderer != null && !includeRenderer(renderer)))
             {
                 continue;
             }
@@ -495,6 +565,24 @@ public partial class GameBootstrap
         }
 
         return hasBounds;
+    }
+
+    private static bool IsWarehouseImportedGroundingRenderer(Renderer renderer)
+    {
+        Transform transform = renderer != null ? renderer.transform : null;
+        while (transform != null)
+        {
+            string name = transform.name;
+            if (name.StartsWith("MainBuilding_ConcretePlinth", System.StringComparison.OrdinalIgnoreCase) ||
+                name.StartsWith("OfficeBlock_ConcreteBase", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            transform = transform.parent;
+        }
+
+        return false;
     }
 
     private void ConfigureImportedBuildingModel(GameObject model)

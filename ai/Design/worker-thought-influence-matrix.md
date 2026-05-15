@@ -564,6 +564,7 @@ humanReason: "денежная проблема подтвердилась"
 
 Implemented in code:
 
+- Pending-thought refresh guard: explicit influence can apply once per pending `FormationKey`; repeated active-condition refreshes preserve the first influence state without emitting another `THOUGHT_INFLUENCE` log line.
 - Slice `Money + Work + Paid Services`: 23 enabled rules in `GameBootstrap.WorkerThoughtInfluence.cs`.
 - Covered source thoughts: `low_money`, `service_unaffordable`, `salary_paid`, `affect_financial_pressure`, `no_job_warning`, `starter_job_suggestion`, `job_found`.
 - Covered target thoughts include: `service_unaffordable`, `affect_financial_pressure`, `no_job_warning`, `salary_paid`, `low_money`, `starter_job_suggestion`, `job_found`, `affect_stable_routine`.

@@ -1,6 +1,6 @@
 # System Tree
 
-Last updated: 2026-05-14
+Last updated: 2026-05-15
 
 Purpose: stable informational tree of the project systems, subsystems, feature leaves, and the most important cross-system links. Code remains the source of truth; use this file to orient before reading `ai/systems-map.md` and scanning code.
 
@@ -53,7 +53,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: rotated footprints, placement preview, non-walkable buffers, entrance exceptions, demolition.
 - [WORLD.Decor] Building and service visuals
   - Adds low-poly details and imported/fallback service-building visuals.
-  - Feature leaves: building boxes/cylinders, lighting profiles, imported Bar/Gambling Hall interactions, construction pop-ins.
+  - Feature leaves: building boxes/cylinders, lighting profiles, imported Bar/Gambling Hall/Warehouse visuals and interactions, construction pop-ins.
 - [WORLD.Footpaths] Pedestrian ground traces
   - Tracks visible footpath wear and preferred pedestrian walking surfaces.
   - Feature leaves: footpath cells, wear, clear-on-building, path preference.
@@ -92,13 +92,13 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: road path, safe walk cells, rescue paths, footpath preference, building buffer avoidance.
 - [TRANSPORT.Trucks] Truck runtime
   - Moves trucks through assigned trips, parking, loading/unloading, refuel, and route completion.
-  - Feature leaves: truck agents, active path, cargo state, trip phases, refuel phases, parking return.
+  - Feature leaves: truck agents, imported/procedural truck visuals, active path, cargo state, trip phases, refuel phases, parking return.
 - [TRANSPORT.Infrastructure] Parking and vehicle capacity
   - Provides truck/bus slots and automatic vehicle provisioning.
   - Feature leaves: parking slots, bus slots, provisionable vehicles, assignment capacity.
 - [TRANSPORT.LocalBus] Local city bus
   - Runs local stop ordering, route movement, boarding, dwell, fares, and disconnected-stop skipping.
-  - Feature leaves: bus stops, stop numbers, route planner, passengers, fare exemption, fallback walking.
+  - Feature leaves: imported/procedural shared bus visuals, bus stops, stop numbers, route planner, passengers, fare exemption, fallback walking.
 - [TRANSPORT.Regional] Regional routes and off-map movement
   - Connects the town to generated external cities by land/river routes.
   - Feature leaves: regional map, built routes, route availability, merchant trucks, river ships.
@@ -134,7 +134,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 
 - [WORKERS.Identity] Worker identity and presentation
   - Stores names, visual race, cultural heritage, portraits, education, profession, visuals, and focus state.
-  - Feature leaves: generated names, stable race/heritage assignment, heritage HUD badge/catalog, race/gender texture-backed portrait UI with state-aware cartoon layered animation and procedural fallback, education label, citizen id, worker focus, driver/worker object.
+  - Feature leaves: generated names, stable race/heritage assignment, heritage HUD badge/catalog, race/gender texture-backed portrait UI with state-aware cartoon layered animation and procedural fallback, two stable procedural world-model variants per race, education label, citizen id, worker focus, driver/worker object.
 - [WORKERS.Personality] Character traits, weaknesses, and temporary affects
   - Separates stable worker traits from at most one steady weakness and temporary emotional states.
   - Feature leaves: 3 generated non-conflicting traits, optional weakness, legacy perk migration, affect lifetime/intensity/source/reason, affect-created thoughts, affect knowledge bias, Workers/F9 personality UI.

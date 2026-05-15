@@ -11,10 +11,10 @@ public partial class GameBootstrap
     {
         public Transform Transform;
         public Vector3 LocalPosition;
+        public Vector3 HiddenLocalPosition;
         public Vector3 LocalScale;
         public Quaternion LocalRotation;
         public float Delay;
-        public float Drop;
         public float WobbleDegrees;
     }
 
@@ -159,15 +159,16 @@ public partial class GameBootstrap
             float localY = root.InverseTransformPoint(renderer.bounds.center).y;
             float height01 = Mathf.InverseLerp(minY, maxY + 0.001f, localY);
             float delay = GetConstructionPartDelay(target, height01);
+            float drop = Mathf.Lerp(0.20f, 0.78f, height01);
             float wobbleSeed = target.localPosition.x * 17f + target.localPosition.y * 23f + target.localPosition.z * 31f;
             parts.Add(new ConstructionAnimationPart
             {
                 Transform = target,
                 LocalPosition = target.localPosition,
+                HiddenLocalPosition = GetConstructionHiddenLocalPosition(root, target, drop),
                 LocalScale = target.localScale,
                 LocalRotation = target.localRotation,
                 Delay = delay,
-                Drop = Mathf.Lerp(0.20f, 0.78f, height01),
                 WobbleDegrees = Mathf.Lerp(8f, 18f, Mathf.Abs(Mathf.Sin(wobbleSeed)))
             });
         }
@@ -182,6 +183,22 @@ public partial class GameBootstrap
                renderer.enabled &&
                renderer.gameObject.activeInHierarchy &&
                renderer.transform != null;
+    }
+
+    private static Vector3 GetConstructionHiddenLocalPosition(Transform root, Transform target, float drop)
+    {
+        if (target == null)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 worldDrop = root != null
+            ? root.TransformVector(Vector3.down * drop)
+            : Vector3.down * drop;
+        Vector3 localDrop = target.parent != null
+            ? target.parent.InverseTransformVector(worldDrop)
+            : worldDrop;
+        return target.localPosition + localDrop;
     }
 
     private static float GetConstructionPartDelay(Transform transform, float height01)
@@ -269,7 +286,7 @@ public partial class GameBootstrap
         float p = Mathf.Clamp01((elapsed - part.Delay) / LocationConstructionPartDuration);
         if (p <= 0f)
         {
-            part.Transform.localPosition = part.LocalPosition + Vector3.down * part.Drop;
+            part.Transform.localPosition = part.HiddenLocalPosition;
             part.Transform.localScale = Vector3.Scale(part.LocalScale, new Vector3(0.16f, 0.035f, 0.16f));
             part.Transform.localRotation = part.LocalRotation * Quaternion.Euler(0f, -part.WobbleDegrees, part.WobbleDegrees * 0.22f);
             return;
@@ -288,7 +305,7 @@ public partial class GameBootstrap
         float squash = 1f + Mathf.Sin(p * Mathf.PI) * 0.16f;
         float wobble = Mathf.Sin((1f - p) * Mathf.PI * 3.2f) * (1f - p) * part.WobbleDegrees;
 
-        part.Transform.localPosition = Vector3.Lerp(part.LocalPosition + Vector3.down * part.Drop, part.LocalPosition, rise);
+        part.Transform.localPosition = Vector3.Lerp(part.HiddenLocalPosition, part.LocalPosition, rise);
         part.Transform.localScale = new Vector3(
             part.LocalScale.x * pop,
             part.LocalScale.y * Mathf.Max(0.04f, pop * squash),

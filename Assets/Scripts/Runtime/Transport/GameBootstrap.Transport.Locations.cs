@@ -175,7 +175,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Warehouse)
         {
-            CreateWarehouseDecoration(root.transform, center, min, max, anchor);
+            CreateWarehouseDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.Motel)
         {
@@ -252,6 +252,12 @@ public partial class GameBootstrap
         else
         {
             CreateMotelDecoration(root.transform, center, min, max, anchor);
+        }
+
+        if (HasImportedBuildingModel(root.transform) &&
+            baseBlock.TryGetComponent(out Renderer importedBaseRenderer))
+        {
+            importedBaseRenderer.enabled = false;
         }
 
         CreateLocationTrashCans(type, root.transform, center, min, max, anchor);

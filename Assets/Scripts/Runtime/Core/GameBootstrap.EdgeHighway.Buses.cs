@@ -15,6 +15,46 @@ public partial class GameBootstrap : MonoBehaviour
         out Light leftLight,
         out Light rightLight)
     {
+        if (TryBuildImportedBusVisual(
+            parent,
+            bodyColor,
+            leftLightName,
+            rightLightName,
+            out headlightLeftRenderer,
+            out headlightRightRenderer,
+            out headlightLeftMaterial,
+            out headlightRightMaterial,
+            out leftLight,
+            out rightLight))
+        {
+            return;
+        }
+
+        BuildProceduralSharedBusVisual(
+            parent,
+            bodyColor,
+            leftLightName,
+            rightLightName,
+            out headlightLeftRenderer,
+            out headlightRightRenderer,
+            out headlightLeftMaterial,
+            out headlightRightMaterial,
+            out leftLight,
+            out rightLight);
+    }
+
+    private void BuildProceduralSharedBusVisual(
+        Transform parent,
+        Color bodyColor,
+        string leftLightName,
+        string rightLightName,
+        out Renderer headlightLeftRenderer,
+        out Renderer headlightRightRenderer,
+        out Material headlightLeftMaterial,
+        out Material headlightRightMaterial,
+        out Light leftLight,
+        out Light rightLight)
+    {
         Color roofColor = new(0.94f, 0.92f, 0.84f);
         Color windowColor = new(0.72f, 0.88f, 0.95f);
 
@@ -180,129 +220,22 @@ public partial class GameBootstrap : MonoBehaviour
         Color bodyColor = Random.value < 0.5f
             ? new Color(0.9f, 0.26f, 0.22f)
             : new Color(0.24f, 0.5f, 0.86f);
-        Color roofColor = new Color(0.94f, 0.92f, 0.84f);
-        Color windowColor = new Color(0.72f, 0.88f, 0.95f);
-
-        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        body.transform.SetParent(busRoot.transform, false);
-        body.transform.localPosition = new Vector3(0f, 0.26f, 0f);
-        body.transform.localScale = new Vector3(1.24f, 0.42f, 0.44f);
-        ApplyColor(body, bodyColor, VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(body, VisualSmoothnessVehicleMetal);
-
-        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        roof.transform.SetParent(busRoot.transform, false);
-        roof.transform.localPosition = new Vector3(-0.02f, 0.56f, 0f);
-        roof.transform.localScale = new Vector3(1.02f, 0.12f, 0.4f);
-        ApplyColor(roof, roofColor, VisualSmoothnessRoofMetal);
-        ConfigureShadowVisual(roof, VisualSmoothnessRoofMetal);
-
-        GameObject windowBand = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        windowBand.transform.SetParent(busRoot.transform, false);
-        windowBand.transform.localPosition = new Vector3(-0.02f, 0.38f, 0f);
-        windowBand.transform.localScale = new Vector3(0.94f, 0.18f, 0.46f);
-        ApplyColor(windowBand, windowColor, VisualSmoothnessGlass);
-        ConfigureShadowVisual(windowBand, VisualSmoothnessGlass);
-
-        GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        windshield.transform.SetParent(busRoot.transform, false);
-        windshield.transform.localPosition = new Vector3(0.56f, 0.41f, 0f);
-        windshield.transform.localScale = new Vector3(0.12f, 0.2f, 0.38f);
-        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f), VisualSmoothnessGlass);
-        ConfigureShadowVisual(windshield, VisualSmoothnessGlass);
-
-        GameObject rearWindow = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rearWindow.transform.SetParent(busRoot.transform, false);
-        rearWindow.transform.localPosition = new Vector3(-0.56f, 0.39f, 0f);
-        rearWindow.transform.localScale = new Vector3(0.08f, 0.17f, 0.34f);
-        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f), VisualSmoothnessGlass);
-        ConfigureShadowVisual(rearWindow, VisualSmoothnessGlass);
-
-        GameObject headlightLeftVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        headlightLeftVisual.transform.SetParent(busRoot.transform, false);
-        headlightLeftVisual.transform.localPosition = new Vector3(0.61f, 0.26f, -0.14f);
-        headlightLeftVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
-        ConfigureShadowVisual(headlightLeftVisual, VisualSmoothnessGlass);
-
-        GameObject headlightRightVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        headlightRightVisual.transform.SetParent(busRoot.transform, false);
-        headlightRightVisual.transform.localPosition = new Vector3(0.61f, 0.26f, 0.14f);
-        headlightRightVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
-        ConfigureShadowVisual(headlightRightVisual, VisualSmoothnessGlass);
-
-        GameObject sideStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        sideStripe.transform.SetParent(busRoot.transform, false);
-        sideStripe.transform.localPosition = new Vector3(0f, 0.23f, 0f);
-        sideStripe.transform.localScale = new Vector3(1.08f, 0.06f, 0.47f);
-        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(sideStripe, VisualSmoothnessVehicleMetal);
-
-        GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        door.transform.SetParent(busRoot.transform, false);
-        door.transform.localPosition = new Vector3(0.18f, 0.23f, -0.22f);
-        door.transform.localScale = new Vector3(0.24f, 0.32f, 0.05f);
-        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(door, VisualSmoothnessVehicleMetal);
-
-        float[] wheelX = { -0.38f, 0.38f };
-        float[] wheelZ = { -0.18f, 0.18f };
-        foreach (float wx in wheelX)
-        {
-            foreach (float wz in wheelZ)
-            {
-                GameObject wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                wheel.transform.SetParent(busRoot.transform, false);
-                wheel.transform.localPosition = new Vector3(wx, 0.1f, wz);
-                wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                wheel.transform.localScale = new Vector3(0.1f, 0.05f, 0.1f);
-                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f), VisualSmoothnessRubber);
-                ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
-            }
-        }
-
-        GameObject routePlate = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        routePlate.transform.SetParent(busRoot.transform, false);
-        routePlate.transform.localPosition = new Vector3(0.48f, 0.53f, 0f);
-        routePlate.transform.localScale = new Vector3(0.18f, 0.08f, 0.3f);
-        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(routePlate, VisualSmoothnessVehicleMetal);
-
-        GameObject leftLightObject = new("BusHeadlightLeft");
-        leftLightObject.transform.SetParent(busRoot.transform, false);
-        leftLightObject.transform.localPosition = new Vector3(0.64f, 0.28f, -0.14f);
-        leftLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
-        Light leftLight = leftLightObject.AddComponent<Light>();
-        leftLight.type = LightType.Spot;
-        leftLight.color = new Color(1f, 0.9f, 0.72f);
-        leftLight.range = 3.6f;
-        leftLight.spotAngle = 42f;
-        leftLight.innerSpotAngle = 22f;
-        leftLight.intensity = 0f;
-        leftLight.shadows = LightShadows.None;
-        leftLight.enabled = false;
-
-        GameObject rightLightObject = new("BusHeadlightRight");
-        rightLightObject.transform.SetParent(busRoot.transform, false);
-        rightLightObject.transform.localPosition = new Vector3(0.64f, 0.28f, 0.14f);
-        rightLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
-        Light rightLight = rightLightObject.AddComponent<Light>();
-        rightLight.type = LightType.Spot;
-        rightLight.color = new Color(1f, 0.9f, 0.72f);
-        rightLight.range = 3.6f;
-        rightLight.spotAngle = 42f;
-        rightLight.innerSpotAngle = 22f;
-        rightLight.intensity = 0f;
-        rightLight.shadows = LightShadows.None;
-        rightLight.enabled = false;
+        BuildSharedBusVisual(
+            busRoot.transform,
+            bodyColor,
+            "BusHeadlightLeft",
+            "BusHeadlightRight",
+            out Renderer headlightLeftRenderer,
+            out Renderer headlightRightRenderer,
+            out Material headlightLeftMaterial,
+            out Material headlightRightMaterial,
+            out Light leftLight,
+            out Light rightLight);
 
         float y = SampleTerrainHeight(spawnX, laneZ) + RoadHeight + EdgeHighwayBusLift;
         busRoot.transform.position = new Vector3(spawnX, y, laneZ);
         busRoot.transform.rotation = Quaternion.LookRotation(travelDirection > 0f ? Vector3.right : Vector3.left, Vector3.up);
 
-        Renderer headlightLeftRenderer = headlightLeftVisual.GetComponent<Renderer>();
-        Renderer headlightRightRenderer = headlightRightVisual.GetComponent<Renderer>();
         edgeHighwayBuses.Add(new EdgeHighwayBusData
         {
             RootTransform = busRoot.transform,
@@ -316,8 +249,8 @@ public partial class GameBootstrap : MonoBehaviour
             HasEnteredRoadStrip = false,
             HeadlightLeftRenderer = headlightLeftRenderer,
             HeadlightRightRenderer = headlightRightRenderer,
-            HeadlightLeftMaterial = headlightLeftRenderer != null ? headlightLeftRenderer.material : null,
-            HeadlightRightMaterial = headlightRightRenderer != null ? headlightRightRenderer.material : null,
+            HeadlightLeftMaterial = headlightLeftMaterial,
+            HeadlightRightMaterial = headlightRightMaterial,
             HeadlightLeft = leftLight,
             HeadlightRight = rightLight
         });
@@ -336,128 +269,23 @@ public partial class GameBootstrap : MonoBehaviour
         busRoot.transform.SetParent(edgeHighwayBusRoot, false);
 
         Color bodyColor = new(0.28f, 0.58f, 0.9f);
-        Color roofColor = new(0.94f, 0.92f, 0.84f);
-        Color windowColor = new(0.72f, 0.88f, 0.95f);
-
-        GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        body.transform.SetParent(busRoot.transform, false);
-        body.transform.localPosition = new Vector3(0f, 0.26f, 0f);
-        body.transform.localScale = new Vector3(1.24f, 0.42f, 0.44f);
-        ApplyColor(body, bodyColor, VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(body, VisualSmoothnessVehicleMetal);
-
-        GameObject roof = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        roof.transform.SetParent(busRoot.transform, false);
-        roof.transform.localPosition = new Vector3(-0.02f, 0.56f, 0f);
-        roof.transform.localScale = new Vector3(1.02f, 0.12f, 0.4f);
-        ApplyColor(roof, roofColor, VisualSmoothnessRoofMetal);
-        ConfigureShadowVisual(roof, VisualSmoothnessRoofMetal);
-
-        GameObject windowBand = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        windowBand.transform.SetParent(busRoot.transform, false);
-        windowBand.transform.localPosition = new Vector3(-0.02f, 0.38f, 0f);
-        windowBand.transform.localScale = new Vector3(0.94f, 0.18f, 0.46f);
-        ApplyColor(windowBand, windowColor, VisualSmoothnessGlass);
-        ConfigureShadowVisual(windowBand, VisualSmoothnessGlass);
-
-        GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        windshield.transform.SetParent(busRoot.transform, false);
-        windshield.transform.localPosition = new Vector3(0.56f, 0.41f, 0f);
-        windshield.transform.localScale = new Vector3(0.12f, 0.2f, 0.38f);
-        ApplyColor(windshield, new Color(0.66f, 0.86f, 0.94f), VisualSmoothnessGlass);
-        ConfigureShadowVisual(windshield, VisualSmoothnessGlass);
-
-        GameObject rearWindow = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        rearWindow.transform.SetParent(busRoot.transform, false);
-        rearWindow.transform.localPosition = new Vector3(-0.56f, 0.39f, 0f);
-        rearWindow.transform.localScale = new Vector3(0.08f, 0.17f, 0.34f);
-        ApplyColor(rearWindow, new Color(0.66f, 0.84f, 0.92f), VisualSmoothnessGlass);
-        ConfigureShadowVisual(rearWindow, VisualSmoothnessGlass);
-
-        GameObject headlightLeftVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        headlightLeftVisual.transform.SetParent(busRoot.transform, false);
-        headlightLeftVisual.transform.localPosition = new Vector3(0.61f, 0.26f, -0.14f);
-        headlightLeftVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightLeftVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
-        ConfigureShadowVisual(headlightLeftVisual, VisualSmoothnessGlass);
-
-        GameObject headlightRightVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        headlightRightVisual.transform.SetParent(busRoot.transform, false);
-        headlightRightVisual.transform.localPosition = new Vector3(0.61f, 0.26f, 0.14f);
-        headlightRightVisual.transform.localScale = new Vector3(0.04f, 0.06f, 0.08f);
-        ApplyColor(headlightRightVisual, new Color(0.34f, 0.3f, 0.22f), VisualSmoothnessGlass);
-        ConfigureShadowVisual(headlightRightVisual, VisualSmoothnessGlass);
-
-        GameObject sideStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        sideStripe.transform.SetParent(busRoot.transform, false);
-        sideStripe.transform.localPosition = new Vector3(0f, 0.23f, 0f);
-        sideStripe.transform.localScale = new Vector3(1.08f, 0.06f, 0.47f);
-        ApplyColor(sideStripe, new Color(0.98f, 0.86f, 0.2f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(sideStripe, VisualSmoothnessVehicleMetal);
-
-        GameObject door = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        door.transform.SetParent(busRoot.transform, false);
-        door.transform.localPosition = new Vector3(0.18f, 0.23f, -0.22f);
-        door.transform.localScale = new Vector3(0.24f, 0.32f, 0.05f);
-        ApplyColor(door, new Color(0.92f, 0.94f, 0.98f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(door, VisualSmoothnessVehicleMetal);
-
-        float[] wheelX = { -0.38f, 0.38f };
-        float[] wheelZ = { -0.18f, 0.18f };
-        foreach (float wx in wheelX)
-        {
-            foreach (float wz in wheelZ)
-            {
-                GameObject wheel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                wheel.transform.SetParent(busRoot.transform, false);
-                wheel.transform.localPosition = new Vector3(wx, 0.1f, wz);
-                wheel.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                wheel.transform.localScale = new Vector3(0.1f, 0.05f, 0.1f);
-                ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f), VisualSmoothnessRubber);
-                ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
-            }
-        }
-
-        GameObject routePlate = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        routePlate.transform.SetParent(busRoot.transform, false);
-        routePlate.transform.localPosition = new Vector3(0.48f, 0.53f, 0f);
-        routePlate.transform.localScale = new Vector3(0.18f, 0.08f, 0.3f);
-        ApplyColor(routePlate, new Color(0.98f, 0.84f, 0.14f), VisualSmoothnessVehicleMetal);
-        ConfigureShadowVisual(routePlate, VisualSmoothnessVehicleMetal);
-
-        GameObject leftLightObject = new("HiringBusHeadlightLeft");
-        leftLightObject.transform.SetParent(busRoot.transform, false);
-        leftLightObject.transform.localPosition = new Vector3(0.64f, 0.28f, -0.14f);
-        leftLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
-        Light leftLight = leftLightObject.AddComponent<Light>();
-        leftLight.type = LightType.Spot;
-        leftLight.color = new Color(1f, 0.9f, 0.72f);
-        leftLight.range = 3.6f;
-        leftLight.spotAngle = 42f;
-        leftLight.innerSpotAngle = 22f;
-        leftLight.intensity = 0f;
-        leftLight.shadows = LightShadows.None;
-        leftLight.enabled = false;
-
-        GameObject rightLightObject = new("HiringBusHeadlightRight");
-        rightLightObject.transform.SetParent(busRoot.transform, false);
-        rightLightObject.transform.localPosition = new Vector3(0.64f, 0.28f, 0.14f);
-        rightLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
-        Light rightLight = rightLightObject.AddComponent<Light>();
-        rightLight.type = LightType.Spot;
-        rightLight.color = new Color(1f, 0.9f, 0.72f);
-        rightLight.range = 3.6f;
-        rightLight.spotAngle = 42f;
-        rightLight.innerSpotAngle = 22f;
-        rightLight.intensity = 0f;
-        rightLight.shadows = LightShadows.None;
-        rightLight.enabled = false;
+        BuildSharedBusVisual(
+            busRoot.transform,
+            bodyColor,
+            "HiringBusHeadlightLeft",
+            "HiringBusHeadlightRight",
+            out Renderer headlightLeftRenderer,
+            out Renderer headlightRightRenderer,
+            out Material headlightLeftMaterial,
+            out Material headlightRightMaterial,
+            out Light leftLight,
+            out Light rightLight);
 
         hiringDriverArrival.BusRootTransform = busRoot.transform;
-        hiringDriverArrival.HeadlightLeftRenderer = headlightLeftVisual.GetComponent<Renderer>();
-        hiringDriverArrival.HeadlightRightRenderer = headlightRightVisual.GetComponent<Renderer>();
-        hiringDriverArrival.HeadlightLeftMaterial = hiringDriverArrival.HeadlightLeftRenderer != null ? hiringDriverArrival.HeadlightLeftRenderer.material : null;
-        hiringDriverArrival.HeadlightRightMaterial = hiringDriverArrival.HeadlightRightRenderer != null ? hiringDriverArrival.HeadlightRightRenderer.material : null;
+        hiringDriverArrival.HeadlightLeftRenderer = headlightLeftRenderer;
+        hiringDriverArrival.HeadlightRightRenderer = headlightRightRenderer;
+        hiringDriverArrival.HeadlightLeftMaterial = headlightLeftMaterial;
+        hiringDriverArrival.HeadlightRightMaterial = headlightRightMaterial;
         hiringDriverArrival.HeadlightLeft = leftLight;
         hiringDriverArrival.HeadlightRight = rightLight;
         hiringDriverArrival.BusWorldX = spawnX;
