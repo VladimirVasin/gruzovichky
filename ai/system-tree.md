@@ -190,8 +190,8 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
 ### [NOOSPHERE] Knowledge UI, City Memory, And Meaning Space
 
 - [NOOSPHERE.Screen] Noosphere HUD
-  - Shows citywide knowledge/memory events, social signal topic summaries, and summary panels.
-  - Feature leaves: event log rows, knowledge received/burned/canonized states, city experience summary, daily social signal topics, tone split, recurring reasons, tension sources.
+  - Shows citywide memory as switchable Overview, Knowledge, Signals, Journal, and Map layers.
+  - Feature leaves: compact overview cards, pinned/forming/contested knowledge state rows, social signal topic rows, event log rows, knowledge received/burned/canonized states, city experience summary, daily social signal topics, tone split, recurring reasons, tension sources.
 - [NOOSPHERE.Canon] Citywide knowledge canon
   - Promotes repeated resident knowledge into permanent city-level knowledge.
   - Feature leaves: canon threshold, permanent entry, source aggregation, Noosphere event.

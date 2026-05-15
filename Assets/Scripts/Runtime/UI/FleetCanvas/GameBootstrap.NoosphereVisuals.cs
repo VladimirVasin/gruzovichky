@@ -142,7 +142,10 @@ public partial class GameBootstrap
 
     private void UpdateNoosphereVisualsRuntime()
     {
-        if (!isNoospherePanelOpen || IsNoosphereDiveInputBlocking() || noosphereVisualUi?.Field == null)
+        if (!isNoospherePanelOpen ||
+            !IsNoosphereVisualTabVisible() ||
+            IsNoosphereDiveInputBlocking() ||
+            noosphereVisualUi?.Field == null)
         {
             return;
         }

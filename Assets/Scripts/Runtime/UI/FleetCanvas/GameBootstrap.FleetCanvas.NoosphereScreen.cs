@@ -10,6 +10,7 @@ public partial class GameBootstrap
 
     private bool isNoospherePanelOpen;
     private bool isNoosphereScreenDirty = true;
+    private NoosphereScreenTab activeNoosphereScreenTab = NoosphereScreenTab.Overview;
     private float noosphereTimerUiRefreshAccumulator;
     private readonly List<NoosphereKnowledgeLogEntry> noosphereKnowledgeLog = new();
     private NoosphereScreenUiRefs noosphereScreenUi;
@@ -20,6 +21,33 @@ public partial class GameBootstrap
         public RectTransform WindowRoot;
         public Text TitleText;
         public Text SummaryText;
+        public RectTransform TabRow;
+        public Button OverviewTabButton;
+        public Text OverviewTabText;
+        public Button KnowledgeTabButton;
+        public Text KnowledgeTabText;
+        public Button SignalsTabButton;
+        public Text SignalsTabText;
+        public Button JournalTabButton;
+        public Text JournalTabText;
+        public Button VisualTabButton;
+        public Text VisualTabText;
+        public RectTransform BodyRoot;
+        public RectTransform OverviewRoot;
+        public Text OverviewLeadText;
+        public readonly List<NoosphereTextRowUi> OverviewRows = new();
+        public RectTransform KnowledgeRoot;
+        public Text KnowledgeTitleText;
+        public Text KnowledgeEmptyText;
+        public ScrollRect KnowledgeScrollRect;
+        public readonly List<NoosphereTextRowUi> KnowledgeRows = new();
+        public RectTransform SignalsRoot;
+        public Text SignalsTitleText;
+        public Text SignalsEmptyText;
+        public ScrollRect SignalsScrollRect;
+        public readonly List<NoosphereTextRowUi> SignalsRows = new();
+        public RectTransform JournalRoot;
+        public Text JournalTitleText;
         public RectTransform VisualPanelRoot;
         public Text EmptyText;
         public ScrollRect ScrollRect;
@@ -229,68 +257,22 @@ public partial class GameBootstrap
             FleetSecondaryTextColor);
         noosphereScreenUi.SummaryText.horizontalOverflow = HorizontalWrapMode.Wrap;
         noosphereScreenUi.SummaryText.verticalOverflow = VerticalWrapMode.Truncate;
-        noosphereScreenUi.SummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 76f;
+        noosphereScreenUi.SummaryText.gameObject.AddComponent<LayoutElement>().preferredHeight = 40f;
 
-        RectTransform bodyRow = CreateUiObject("NoosphereBodyRow", window).GetComponent<RectTransform>();
-        LayoutElement bodyLayoutElement = bodyRow.gameObject.AddComponent<LayoutElement>();
+        noosphereScreenUi.TabRow = CreateTabRow("NoosphereTabRow", window, 38f, 8f);
+        SetupNoosphereScreenTabs(noosphereScreenUi.TabRow, font);
+
+        RectTransform bodyRoot = CreateUiObject("NoosphereBodyRoot", window).GetComponent<RectTransform>();
+        LayoutElement bodyLayoutElement = bodyRoot.gameObject.AddComponent<LayoutElement>();
         bodyLayoutElement.flexibleHeight = 1f;
         bodyLayoutElement.minHeight = 560f;
-        HorizontalLayoutGroup bodyLayout = bodyRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-        bodyLayout.spacing = 12f;
-        bodyLayout.childControlWidth = true;
-        bodyLayout.childControlHeight = true;
-        bodyLayout.childForceExpandWidth = false;
-        bodyLayout.childForceExpandHeight = true;
+        noosphereScreenUi.BodyRoot = bodyRoot;
 
-        RectTransform visualPanel = CreateStyledPanel("NoosphereVisualPanel", bodyRow, FleetInsetColor);
-        LayoutElement visualLayout = visualPanel.gameObject.AddComponent<LayoutElement>();
-        visualLayout.preferredWidth = 520f;
-        visualLayout.flexibleHeight = 1f;
-        noosphereScreenUi.VisualPanelRoot = visualPanel;
-        SetupNoosphereVisualPanelUi(visualPanel, font);
-
-        RectTransform listPanel = CreateStyledPanel("NoosphereListPanel", bodyRow, FleetInsetColor);
-        LayoutElement listPanelLayout = listPanel.gameObject.AddComponent<LayoutElement>();
-        listPanelLayout.flexibleWidth = 1f;
-        listPanelLayout.flexibleHeight = 1f;
-        VerticalLayoutGroup listLayout = listPanel.gameObject.AddComponent<VerticalLayoutGroup>();
-        listLayout.padding = new RectOffset(12, 12, 12, 12);
-        listLayout.spacing = 8f;
-        listLayout.childControlWidth = true;
-        listLayout.childControlHeight = true;
-        listLayout.childForceExpandWidth = true;
-        listLayout.childForceExpandHeight = false;
-
-        Text listTitle = CreateHeaderText("NoosphereListTitle", listPanel, font, string.Empty, 16, TextAnchor.MiddleLeft, Color.white);
-        listTitle.text = IsRussianLanguage() ? "\u0416\u0443\u0440\u043d\u0430\u043b \u0437\u043d\u0430\u043d\u0438\u0439" : "Knowledge log";
-        listTitle.gameObject.AddComponent<LayoutElement>().preferredHeight = 22f;
-
-        noosphereScreenUi.EmptyText = CreateBodyText(
-            "NoosphereEmpty",
-            listPanel,
-            font,
-            string.Empty,
-            13,
-            TextAnchor.MiddleLeft,
-            FleetMutedTextColor);
-        noosphereScreenUi.EmptyText.gameObject.AddComponent<LayoutElement>().preferredHeight = 38f;
-
-        FleetCanvasUiFactory.ScrollPanelRefs scroll = CreateVerticalScrollList(
-            "NoosphereScroll",
-            listPanel,
-            "NoosphereRows",
-            8f,
-            34f,
-            flexibleHeight: 1f);
-        Image scrollRaycast = scroll.Root.gameObject.AddComponent<Image>();
-        scrollRaycast.color = new Color(0f, 0f, 0f, 0f);
-        scrollRaycast.raycastTarget = true;
-        noosphereScreenUi.ScrollRect = scroll.ScrollRect;
-
-        for (int i = 0; i < NoosphereKnowledgeLogCap; i++)
-        {
-            noosphereScreenUi.Rows.Add(CreateNoosphereLogRow(scroll.Content, font, i));
-        }
+        SetupNoosphereOverviewTab(bodyRoot, font);
+        SetupNoosphereKnowledgeTab(bodyRoot, font);
+        SetupNoosphereSignalsTab(bodyRoot, font);
+        SetupNoosphereJournalTab(bodyRoot, font);
+        SetupNoosphereVisualTab(bodyRoot, font);
 
         AddOverlayCloseButton(window, font);
         noosphereScreenUi.CloseButton = FindNoosphereCloseButton(window);
@@ -414,10 +396,7 @@ public partial class GameBootstrap
             {
                 isNoosphereScreenDirty = true;
                 noosphereTimerUiRefreshAccumulator = 0f;
-                if (noosphereScreenUi.ScrollRect != null)
-                {
-                    noosphereScreenUi.ScrollRect.verticalNormalizedPosition = 1f;
-                }
+                ResetNoosphereActiveTabScroll();
             }
             else
             {
@@ -455,28 +434,13 @@ public partial class GameBootstrap
         int socialSignalCount = CountPublicNoosphereSocialSignals();
 
         noosphereScreenUi.TitleText.text = ru ? "\u041f\u0430\u043c\u044f\u0442\u044c \u0433\u043e\u0440\u043e\u0434\u0430" : "City Memory";
-        string knowledgeSummary = ru
-            ? $"\u0413\u043e\u0440\u043e\u0434\u0441\u043a\u043e\u0439 \u0441\u043b\u0435\u0434 \u0437\u043d\u0430\u043d\u0438\u0439: \u0430\u043a\u0442\u0438\u0432\u043d\u043e {activeKnowledgeCount}, \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u043e {receivedCount}, \u0437\u0430\u043a\u0440\u0435\u043f\u043b\u0435\u043d\u043e {canonizedCount}, \u0441\u0433\u043e\u0440\u0435\u043b\u043e {burnedCount}. \u0417\u0434\u0435\u0441\u044c \u0432\u0438\u0434\u043d\u043e, \u043a\u0442\u043e \u0447\u0442\u043e \u0443\u0437\u043d\u0430\u043b, \u043e\u0442 \u043a\u043e\u0433\u043e \u0438 \u043a\u0430\u043a\u0438\u0435 \u0437\u043d\u0430\u043d\u0438\u044f \u0441\u0442\u0430\u043b\u0438 \u0432\u0435\u0447\u043d\u044b\u043c\u0438."
-            : $"City knowledge trace: active {activeKnowledgeCount}, received {receivedCount}, canonized {canonizedCount}, burned {burnedCount}. This shows who learned what, from whom, and which knowledge became permanent.";
-        noosphereScreenUi.SummaryText.text = $"{knowledgeSummary}\n{FormatLatestCityDailyExperienceNoosphereSummary(ru)}\n{FormatLatestSocialSignalNoosphereSummary(ru)}";
+        noosphereScreenUi.SummaryText.text = ru
+            ? $"активно {activeKnowledgeCount} / получено {receivedCount} / закреплено {GetCityKnowledgeCanonMemoryCount()} / сгорело {burnedCount} / сигналы {socialSignalCount}"
+            : $"active {activeKnowledgeCount} / received {receivedCount} / pinned {GetCityKnowledgeCanonMemoryCount()} / burned {burnedCount} / signals {socialSignalCount}";
 
-        noosphereScreenUi.EmptyText.gameObject.SetActive(noosphereKnowledgeLog.Count == 0 && socialSignalCount == 0);
-        noosphereScreenUi.EmptyText.text = ru
-            ? "\u041f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0441\u043e\u0431\u044b\u0442\u0438\u0439. \u041d\u043e\u043e\u0441\u0444\u0435\u0440\u0430 \u043c\u043e\u043b\u0447\u0438\u0442, \u043a\u0430\u043a \u0430\u0440\u0445\u0438\u0432 \u0434\u043e \u043f\u0435\u0440\u0432\u043e\u0439 \u043f\u0430\u043f\u043a\u0438."
-            : "No knowledge events yet.";
-
-        for (int i = 0; i < noosphereScreenUi.Rows.Count; i++)
-        {
-            NoosphereLogRowUi row = noosphereScreenUi.Rows[i];
-            bool visible = i < noosphereKnowledgeLog.Count;
-            row.Root.gameObject.SetActive(visible);
-            if (!visible)
-            {
-                continue;
-            }
-
-            ApplyNoosphereLogRow(row, noosphereKnowledgeLog[i], ru);
-        }
+        ApplyNoosphereScreenTabVisuals(ru);
+        ApplyNoosphereScreenTabVisibility();
+        RebuildNoosphereActiveTab(ru, now, activeKnowledgeCount, receivedCount, burnedCount, canonizedCount, socialSignalCount);
 
         LayoutRebuilder.ForceRebuildLayoutImmediate(noosphereScreenUi.WindowRoot);
     }
@@ -832,6 +796,11 @@ public partial class GameBootstrap
 
         bool ok = noosphereScreenUi.CanvasRoot.GetComponent<GraphicRaycaster>() != null &&
                   IsButtonClickTargetReady(noosphereScreenUi.CloseButton) &&
+                  IsButtonClickTargetReady(noosphereScreenUi.OverviewTabButton) &&
+                  IsButtonClickTargetReady(noosphereScreenUi.KnowledgeTabButton) &&
+                  IsButtonClickTargetReady(noosphereScreenUi.SignalsTabButton) &&
+                  IsButtonClickTargetReady(noosphereScreenUi.JournalTabButton) &&
+                  IsButtonClickTargetReady(noosphereScreenUi.VisualTabButton) &&
                   noosphereScreenUi.ScrollRect != null &&
                   noosphereScreenUi.ScrollRect.content != null;
 
