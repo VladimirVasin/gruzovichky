@@ -186,6 +186,7 @@ public partial class GameBootstrap
             isTruckMoving = false;
             truckSegmentDuration = 0f;
             truckSegmentProgress = 0f;
+            TrySnapLoadedTruckToAssignedParkingSlot();
             UpdateTruckVisuals(0f, false);
             return;
         }
@@ -687,18 +688,6 @@ public partial class GameBootstrap
             return;
         }
 
-        float normalizedSpeed = Mathf.Clamp01(speed / TruckCruiseSpeed);
-        float idleServiceBob = isTruckInteracting ? Mathf.Sin(Time.time * 8f) * 0.02f : 0f;
-        float roadRattle = Mathf.Sin(Time.time * 17f + truckWheelSpinAngle * 0.018f) * 0.008f * normalizedSpeed;
-        float bob = moving
-            ? (Mathf.Sin(Time.time * 10f) * TruckSuspensionBobAmount + roadRattle) * normalizedSpeed
-            : idleServiceBob;
-        float pitch = moving
-            ? (-Mathf.Sin(Mathf.Clamp01(truckSegmentProgress) * Mathf.PI) * 3.0f + Mathf.Sin(Time.time * 7.3f) * 0.55f) * normalizedSpeed
-            : 0f;
-
-        truckVisualRoot.localPosition = new Vector3(0f, bob, 0f);
-
         float targetSteer = 0f;
         if (moving && activePath.Count > 1)
         {
@@ -708,20 +697,96 @@ public partial class GameBootstrap
         }
 
         truckSteerAngle = Mathf.Lerp(truckSteerAngle, targetSteer, 8f * Time.deltaTime);
-        float roll = moving
-            ? (-truckSteerAngle * 0.22f + Mathf.Sin(Time.time * 8.6f + truckWheelSpinAngle * 0.01f) * 0.45f) * normalizedSpeed
-            : 0f;
-        float yaw = moving ? truckSteerAngle * 0.045f * normalizedSpeed : 0f;
-
-        truckBodyTransform.localRotation = Quaternion.Euler(pitch, yaw, roll);
-        truckCabinTransform.localRotation = Quaternion.Euler(pitch * 0.72f, -yaw * 0.35f, roll * 0.48f);
         truckWheelSpinAngle += moving ? speed / Mathf.Max(TruckWheelRadius, 0.01f) * Mathf.Rad2Deg * Time.deltaTime : 0f;
+        TruckAgent loadedTruck = currentLoadedTruckAgent;
+        ApplyTruckCartoonVisualMotion(
+            truckVisualRoot,
+            truckBodyTransform,
+            truckCabinTransform,
+            loadedTruck?.TruckCargoVisualRoot,
+            loadedTruck?.TruckNumber ?? 0,
+            speed,
+            truckSteerAngle,
+            truckSegmentProgress,
+            truckWheelSpinAngle,
+            moving,
+            isTruckInteracting);
 
         foreach (Transform wheel in truckWheels)
         {
             bool isFrontWheel = truckFrontWheels.Contains(wheel);
             float steer = isFrontWheel ? truckSteerAngle : 0f;
             ApplyVehicleWheelSpin(wheel, truckWheelSpinAngle, steer);
+        }
+    }
+
+    private static void ApplyTruckCartoonVisualMotion(
+        Transform visualRoot,
+        Transform bodyTransform,
+        Transform cabinTransform,
+        Transform cargoTransform,
+        int truckNumber,
+        float speed,
+        float steerAngle,
+        float segmentProgress,
+        float wheelSpinAngle,
+        bool moving,
+        bool serviceIdle)
+    {
+        if (visualRoot == null)
+        {
+            return;
+        }
+
+        if (!moving)
+        {
+            float idleBob = serviceIdle ? Mathf.Sin(Time.time * 8f + truckNumber * 0.17f) * 0.02f : 0f;
+            visualRoot.localPosition = new Vector3(0f, idleBob, 0f);
+            if (bodyTransform != null)
+            {
+                bodyTransform.localRotation = Quaternion.identity;
+            }
+            if (cabinTransform != null && cabinTransform != bodyTransform)
+            {
+                cabinTransform.localRotation = Quaternion.identity;
+            }
+            if (cargoTransform != null && cargoTransform != bodyTransform && cargoTransform != cabinTransform)
+            {
+                cargoTransform.localRotation = Quaternion.identity;
+            }
+            return;
+        }
+
+        float normalizedSpeed = Mathf.Clamp01(speed / Mathf.Max(0.01f, TruckCruiseSpeed));
+        float phase = Time.time + truckNumber * 0.37f;
+        float wheelPhase = wheelSpinAngle * Mathf.Deg2Rad;
+        float suspensionBounce = Mathf.Sin(phase * 11.5f + wheelPhase * 0.35f);
+        float roadRattle = Mathf.Sin(phase * 24f + wheelPhase * 0.12f);
+        float heavyHop = Mathf.Max(0f, Mathf.Sin(phase * 5.2f + wheelPhase * 0.28f));
+        float turnDip = Mathf.Sin(Mathf.Clamp01(segmentProgress) * Mathf.PI);
+        float bob = (suspensionBounce * TruckSuspensionBobAmount + roadRattle * 0.012f + heavyHop * 0.018f) * normalizedSpeed;
+        float pitch = (-turnDip * 2.2f + suspensionBounce * 1.15f + roadRattle * 0.42f) * normalizedSpeed;
+        float roll = (-steerAngle * 0.22f + Mathf.Sin(phase * 9.4f + wheelPhase * 0.2f) * 1.05f + roadRattle * 0.36f) * normalizedSpeed;
+        float yaw = (steerAngle * 0.05f + Mathf.Sin(phase * 7.1f) * 0.38f) * normalizedSpeed;
+
+        visualRoot.localPosition = new Vector3(0f, bob, 0f);
+        if (bodyTransform != null)
+        {
+            bodyTransform.localRotation = Quaternion.Euler(pitch, yaw, roll);
+        }
+
+        if (cabinTransform != null && cabinTransform != bodyTransform)
+        {
+            float cabinPitch = pitch * 1.18f + Mathf.Sin(phase * 16.2f + wheelPhase * 0.18f) * 0.75f * normalizedSpeed;
+            float cabinRoll = roll * 0.86f + Mathf.Sin(phase * 18.7f + wheelPhase * 0.11f) * 0.65f * normalizedSpeed;
+            cabinTransform.localRotation = Quaternion.Euler(cabinPitch, -yaw * 0.7f, cabinRoll);
+        }
+
+        if (cargoTransform != null && cargoTransform != bodyTransform && cargoTransform != cabinTransform)
+        {
+            float cargoPitch = -pitch * 0.45f + Mathf.Sin(phase * 13.8f + wheelPhase * 0.14f) * 1.45f * normalizedSpeed;
+            float cargoRoll = -roll * 0.35f + Mathf.Sin(phase * 15.4f + wheelPhase * 0.21f) * 1.1f * normalizedSpeed;
+            cargoTransform.localRotation = Quaternion.Euler(cargoPitch, yaw * 0.3f, cargoRoll);
         }
     }
 

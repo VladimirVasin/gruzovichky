@@ -51,7 +51,27 @@ public partial class GameBootstrap
             });
         }
 
+        if (owner.Type == LocationType.Parking)
+        {
+            RegisterImportedTruckParkingSlotMarkers(runtime, modelRoot);
+        }
+
         owner.ImportedRuntime = runtime;
+    }
+
+    private static void RegisterImportedTruckParkingSlotMarkers(ImportedBuildingRuntime runtime, Transform modelRoot)
+    {
+        if (runtime == null || modelRoot == null)
+        {
+            return;
+        }
+
+        List<Transform> markers = FindImportedTransformsByPrefix(modelRoot, "P_TruckParkingBay_");
+        markers.RemoveAll(marker =>
+            marker == null ||
+            marker.name.IndexOf("_Center", System.StringComparison.OrdinalIgnoreCase) < 0);
+        markers.Sort((a, b) => string.CompareOrdinal(a?.name, b?.name));
+        runtime.TruckParkingSlotMarkers.AddRange(markers);
     }
 
     private void UpdateImportedBuildingInteractions(float deltaTime)

@@ -117,12 +117,13 @@ public partial class GameBootstrap
         }
 
         Vector3 parkedPosition = GetParkingSlotWorldPosition(truckAgent.ParkingSlotIndex);
+        Quaternion parkedRotation = GetParkingSlotWorldRotation(truckAgent.ParkingSlotIndex);
         truckAgent.TruckObject.transform.position = parkedPosition;
-        truckAgent.TruckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        truckAgent.TruckObject.transform.rotation = parkedRotation;
         truckAgent.TruckCell = parking.Anchor;
         truckAgent.TruckTargetWorld = parkedPosition;
         truckAgent.TruckSegmentStartWorld = parkedPosition;
-        truckAgent.TruckSmoothedForward = Vector3.forward;
+        truckAgent.TruckSmoothedForward = parkedRotation * Vector3.forward;
         truckAgent.IsTruckMoving = false;
         truckAgent.IsPurchaseArrivalActive = false;
         ApplyTruckArrivalVisualMotion(truckAgent, 0f, false);
@@ -175,19 +176,17 @@ public partial class GameBootstrap
             return;
         }
 
-        float normalizedSpeed = Mathf.Clamp01(speed / Mathf.Max(0.01f, TruckCruiseSpeed));
-        float bob = moving ? Mathf.Sin(Time.time * 10f + truckAgent.TruckNumber * 0.37f) * 0.038f * normalizedSpeed : 0f;
-        float pitch = moving ? Mathf.Sin(Time.time * 7.3f + truckAgent.TruckNumber * 0.19f) * 0.55f * normalizedSpeed : 0f;
-        float roll = moving ? Mathf.Sin(Time.time * 8.6f + truckAgent.TruckNumber * 0.31f) * 0.38f * normalizedSpeed : 0f;
-        truckAgent.TruckVisualRoot.localPosition = new Vector3(0f, bob, 0f);
-        if (truckAgent.TruckBodyTransform != null)
-        {
-            truckAgent.TruckBodyTransform.localRotation = Quaternion.Euler(pitch, 0f, roll);
-        }
-
-        if (truckAgent.TruckCabinTransform != null)
-        {
-            truckAgent.TruckCabinTransform.localRotation = Quaternion.Euler(pitch * 0.72f, 0f, roll * 0.48f);
-        }
+        ApplyTruckCartoonVisualMotion(
+            truckAgent.TruckVisualRoot,
+            truckAgent.TruckBodyTransform,
+            truckAgent.TruckCabinTransform,
+            truckAgent.TruckCargoVisualRoot,
+            truckAgent.TruckNumber,
+            speed,
+            truckAgent.TruckSteerAngle,
+            truckAgent.TruckSegmentProgress,
+            truckAgent.TruckWheelSpinAngle,
+            moving,
+            truckAgent.IsTruckInteracting);
     }
 }

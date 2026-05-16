@@ -3,6 +3,12 @@ using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private const string AmbientSquirrelModelResourcePath = "Misc/squirel";
+    private const string AmbientSquirrelModelResourcePathFallback = "Misc/squirrel";
+    private const float AmbientSquirrelImportedTargetWidth = 0.24f;
+    private const float AmbientSquirrelImportedTargetHeight = 0.28f;
+    private const float AmbientSquirrelImportedTargetLength = 0.38f;
+
     private void SetupAmbientSquirrels()
     {
         ambientSquirrels.Clear();
@@ -42,16 +48,204 @@ public partial class GameBootstrap
             return;
         }
 
-        Color bodyColor = new(0.72f, 0.42f, 0.14f);
-        Color headColor = new(0.80f, 0.50f, 0.20f);
-        Color tailColor = new(0.78f, 0.48f, 0.18f);
-        Color earColor  = new(0.68f, 0.38f, 0.12f);
-
         GameObject sqRoot = new($"AmbientSquirrel_{squirrelIndex + 1}");
         sqRoot.transform.SetParent(ambientSquirrelRoot, false);
 
+        bool usesImportedModel = TryCreateImportedAmbientSquirrelModel(
+            sqRoot.transform,
+            out Transform bodyTransform,
+            out Transform headTransform,
+            out Transform tailTransform,
+            out Vector3 bodyBaseScale,
+            out Quaternion headBaseRotation,
+            out Quaternion tailBaseRotation,
+            out Transform[] legTransforms,
+            out Quaternion[] legBaseRotations);
+
+        if (!usesImportedModel)
+        {
+            CreateProceduralAmbientSquirrelModel(
+                sqRoot.transform,
+                out bodyTransform,
+                out headTransform,
+                out tailTransform,
+                out bodyBaseScale,
+                out headBaseRotation,
+                out tailBaseRotation,
+                out legTransforms,
+                out legBaseRotations);
+        }
+
+        int step = Mathf.Max(1, ambientSquirrelRoamPoints.Count / totalCount);
+        int pointIndex = squirrelIndex * step % ambientSquirrelRoamPoints.Count;
+        Vector3 position = ambientSquirrelRoamPoints[pointIndex];
+        float yaw = Random.Range(0f, 360f);
+        sqRoot.transform.position = position;
+        sqRoot.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+        ambientSquirrels.Add(new AmbientSquirrelData
+        {
+            RootTransform    = sqRoot.transform,
+            BodyTransform    = bodyTransform,
+            HeadTransform    = headTransform,
+            TailTransform    = tailTransform,
+            UsesImportedModel = usesImportedModel,
+            BodyBaseScale    = bodyBaseScale,
+            HeadBaseRotation = headBaseRotation,
+            TailBaseRotation = tailBaseRotation,
+            LegTransforms    = legTransforms,
+            LegBaseRotations = legBaseRotations,
+            CurrentPosition  = position,
+            StartPosition    = position,
+            TargetPosition   = position,
+            CurrentPointIndex = pointIndex,
+            TargetPointIndex  = pointIndex,
+            StateTimer       = Random.Range(2f, 5f),
+            AnimationPhase   = Random.Range(0f, 10f),
+            TailPhase        = Random.Range(0f, 10f),
+            Yaw              = yaw,
+            State            = AmbientSquirrelState.Idle,
+            ClimbCooldown    = Random.Range(6f, 18f),
+        });
+    }
+
+    private bool TryCreateImportedAmbientSquirrelModel(
+        Transform squirrelRoot,
+        out Transform bodyTransform,
+        out Transform headTransform,
+        out Transform tailTransform,
+        out Vector3 bodyBaseScale,
+        out Quaternion headBaseRotation,
+        out Quaternion tailBaseRotation,
+        out Transform[] legTransforms,
+        out Quaternion[] legBaseRotations)
+    {
+        bodyTransform = null;
+        headTransform = null;
+        tailTransform = null;
+        bodyBaseScale = Vector3.one;
+        headBaseRotation = Quaternion.identity;
+        tailBaseRotation = Quaternion.identity;
+        legTransforms = System.Array.Empty<Transform>();
+        legBaseRotations = System.Array.Empty<Quaternion>();
+
+        GameObject prefab = Resources.Load<GameObject>(AmbientSquirrelModelResourcePath) ??
+            Resources.Load<GameObject>(AmbientSquirrelModelResourcePathFallback);
+        if (prefab == null)
+        {
+            return false;
+        }
+
+        GameObject model = Instantiate(prefab, squirrelRoot);
+        model.name = "AmbientSquirrelImportedModel";
+        model.transform.localPosition = Vector3.zero;
+        model.transform.localRotation = Quaternion.identity;
+        model.transform.localScale = Vector3.one;
+
+        Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
+        if (!TryGetLocalRendererBounds(squirrelRoot, renderers, out Bounds bounds))
+        {
+            Destroy(model);
+            return false;
+        }
+
+        float scale = Mathf.Min(
+            AmbientSquirrelImportedTargetWidth / Mathf.Max(bounds.size.x, 0.001f),
+            AmbientSquirrelImportedTargetHeight / Mathf.Max(bounds.size.y, 0.001f),
+            AmbientSquirrelImportedTargetLength / Mathf.Max(bounds.size.z, 0.001f));
+        model.transform.localScale = Vector3.one * scale;
+
+        if (TryGetLocalRendererBounds(squirrelRoot, renderers, out Bounds scaledBounds))
+        {
+            model.transform.localPosition = new Vector3(
+                -scaledBounds.center.x,
+                -scaledBounds.min.y,
+                -scaledBounds.center.z);
+        }
+
+        ConfigureImportedAmbientSquirrelModel(model, renderers);
+        BuildImportedSquirrelAnimationRig(
+            model.transform,
+            out Transform importedBodyRig,
+            out Transform importedHeadRig,
+            out Transform importedTailRig,
+            out legTransforms,
+            out legBaseRotations);
+
+        bodyTransform = importedBodyRig ?? model.transform;
+        headTransform = importedHeadRig;
+        tailTransform = importedTailRig;
+        bodyBaseScale = bodyTransform != null ? bodyTransform.localScale : Vector3.one;
+        headBaseRotation = headTransform != null ? headTransform.localRotation : Quaternion.identity;
+        tailBaseRotation = tailTransform != null ? tailTransform.localRotation : Quaternion.identity;
+        return true;
+    }
+
+    private void ConfigureImportedAmbientSquirrelModel(GameObject model, Renderer[] renderers)
+    {
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer == null || !renderer.enabled)
+            {
+                continue;
+            }
+
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = true;
+            ApplyMaterialSmoothness(renderer, VisualSmoothnessFabric);
+            NormalizeImportedBuildingMaterial(renderer);
+        }
+
+        Collider[] colliders = model.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            colliders[i].enabled = false;
+        }
+
+        Camera[] cameras = model.GetComponentsInChildren<Camera>(true);
+        for (int i = 0; i < cameras.Length; i++)
+        {
+            Destroy(cameras[i]);
+        }
+
+        Light[] lights = model.GetComponentsInChildren<Light>(true);
+        for (int i = 0; i < lights.Length; i++)
+        {
+            Destroy(lights[i]);
+        }
+
+        Animator[] animators = model.GetComponentsInChildren<Animator>(true);
+        for (int i = 0; i < animators.Length; i++)
+        {
+            Destroy(animators[i]);
+        }
+
+        Animation[] animations = model.GetComponentsInChildren<Animation>(true);
+        for (int i = 0; i < animations.Length; i++)
+        {
+            Destroy(animations[i]);
+        }
+    }
+
+    private void CreateProceduralAmbientSquirrelModel(
+        Transform squirrelRoot,
+        out Transform bodyTransform,
+        out Transform headTransform,
+        out Transform tailTransform,
+        out Vector3 bodyBaseScale,
+        out Quaternion headBaseRotation,
+        out Quaternion tailBaseRotation,
+        out Transform[] legTransforms,
+        out Quaternion[] legBaseRotations)
+    {
+        Color bodyColor = new(0.72f, 0.42f, 0.14f);
+        Color headColor = new(0.80f, 0.50f, 0.20f);
+        Color tailColor = new(0.78f, 0.48f, 0.18f);
+        Color earColor = new(0.68f, 0.38f, 0.12f);
+
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        body.transform.SetParent(sqRoot.transform, false);
+        body.transform.SetParent(squirrelRoot, false);
         body.transform.localPosition = new Vector3(0f, 0.10f, 0f);
         body.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
         body.transform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
@@ -60,7 +254,7 @@ public partial class GameBootstrap
         if (body.TryGetComponent(out Collider bodyCol)) bodyCol.enabled = false;
 
         GameObject head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        head.transform.SetParent(sqRoot.transform, false);
+        head.transform.SetParent(squirrelRoot, false);
         head.transform.localPosition = new Vector3(0f, 0.16f, 0.12f);
         head.transform.localScale = new Vector3(0.10f, 0.09f, 0.09f);
         ApplyColor(head, headColor, VisualSmoothnessFabric);
@@ -86,7 +280,7 @@ public partial class GameBootstrap
         if (rightEar.TryGetComponent(out Collider rEarCol)) rEarCol.enabled = false;
 
         GameObject tail = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        tail.transform.SetParent(sqRoot.transform, false);
+        tail.transform.SetParent(squirrelRoot, false);
         tail.transform.localPosition = new Vector3(0f, 0.18f, -0.12f);
         tail.transform.localRotation = Quaternion.Euler(-55f, 0f, 0f);
         tail.transform.localScale = new Vector3(0.06f, 0.16f, 0.06f);
@@ -94,31 +288,14 @@ public partial class GameBootstrap
         ConfigureStaticVisual(tail, VisualSmoothnessFabric);
         if (tail.TryGetComponent(out Collider tailCol)) tailCol.enabled = false;
 
-        int step = Mathf.Max(1, ambientSquirrelRoamPoints.Count / totalCount);
-        int pointIndex = squirrelIndex * step % ambientSquirrelRoamPoints.Count;
-        Vector3 position = ambientSquirrelRoamPoints[pointIndex];
-        float yaw = Random.Range(0f, 360f);
-        sqRoot.transform.position = position;
-        sqRoot.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
-
-        ambientSquirrels.Add(new AmbientSquirrelData
-        {
-            RootTransform    = sqRoot.transform,
-            BodyTransform    = body.transform,
-            HeadTransform    = head.transform,
-            TailTransform    = tail.transform,
-            CurrentPosition  = position,
-            StartPosition    = position,
-            TargetPosition   = position,
-            CurrentPointIndex = pointIndex,
-            TargetPointIndex  = pointIndex,
-            StateTimer       = Random.Range(2f, 5f),
-            AnimationPhase   = Random.Range(0f, 10f),
-            TailPhase        = Random.Range(0f, 10f),
-            Yaw              = yaw,
-            State            = AmbientSquirrelState.Idle,
-            ClimbCooldown    = Random.Range(6f, 18f),
-        });
+        bodyTransform = body.transform;
+        headTransform = head.transform;
+        tailTransform = tail.transform;
+        bodyBaseScale = body.transform.localScale;
+        headBaseRotation = head.transform.localRotation;
+        tailBaseRotation = tail.transform.localRotation;
+        legTransforms = System.Array.Empty<Transform>();
+        legBaseRotations = System.Array.Empty<Quaternion>();
     }
 
     private void UpdateAmbientSquirrels()
@@ -154,21 +331,36 @@ public partial class GameBootstrap
                         Quaternion.Euler(0f, sq.Yaw, 0f),
                         6f * Time.deltaTime);
 
+                    ApplySquirrelBodyScale(
+                        sq,
+                        new Vector3(0.14f, 0.10f, 0.20f),
+                        new Vector3(1f, 1f + Mathf.Sin(time * 1.8f + sq.AnimationPhase) * 0.025f, 1f));
+
                     if (sq.HeadTransform != null)
                     {
-                        sq.HeadTransform.localRotation = Quaternion.Euler(
-                            Mathf.Sin(time * 1.1f + sq.AnimationPhase) * 6f,
-                            Mathf.Sin(time * 0.7f + sq.AnimationPhase) * 12f,
-                            0f);
+                        ApplySquirrelHeadMotion(
+                            sq,
+                            Quaternion.Euler(
+                                Mathf.Sin(time * 1.1f + sq.AnimationPhase) * 6f,
+                                Mathf.Sin(time * 0.7f + sq.AnimationPhase) * 12f,
+                                0f));
                     }
 
                     if (sq.TailTransform != null)
                     {
-                        sq.TailTransform.localRotation = Quaternion.Euler(
-                            -55f + Mathf.Sin(time * 1.8f + sq.TailPhase) * 8f,
-                            Mathf.Sin(time * 1.4f + sq.TailPhase) * 10f,
-                            0f);
+                        ApplySquirrelTailMotion(
+                            sq,
+                            Quaternion.Euler(
+                                Mathf.Sin(time * 1.8f + sq.TailPhase) * 7f,
+                                Mathf.Sin(time * 1.4f + sq.TailPhase) * 14f,
+                                Mathf.Sin(time * 1.1f + sq.TailPhase) * 5f),
+                            Quaternion.Euler(
+                                -55f + Mathf.Sin(time * 1.8f + sq.TailPhase) * 8f,
+                                Mathf.Sin(time * 1.4f + sq.TailPhase) * 10f,
+                                0f));
                     }
+
+                    AnimateImportedSquirrelLegs(sq, time, 2.4f, 1.4f, -2f);
 
                     if (sq.StateTimer <= 0f)
                     {
@@ -241,17 +433,23 @@ public partial class GameBootstrap
 
                     float forageBob = Mathf.Abs(Mathf.Sin(time * 6f + sq.AnimationPhase)) * 0.06f;
                     sq.RootTransform.position = sq.CurrentPosition + new Vector3(0f, forageBob, 0f);
+                    ApplySquirrelBodyScale(sq, new Vector3(0.14f, 0.09f, 0.21f), new Vector3(1.05f, 0.92f, 1.08f));
 
                     if (sq.HeadTransform != null)
                     {
                         float nod = Mathf.Sin(time * 7f + sq.AnimationPhase) * 22f;
-                        sq.HeadTransform.localRotation = Quaternion.Euler(nod, 0f, 0f);
+                        ApplySquirrelHeadMotion(sq, Quaternion.Euler(nod, 0f, 0f));
                     }
 
                     if (sq.TailTransform != null)
                     {
-                        sq.TailTransform.localRotation = Quaternion.Euler(-72f, 0f, 0f);
+                        ApplySquirrelTailMotion(
+                            sq,
+                            Quaternion.Euler(-8f + Mathf.Sin(time * 5f + sq.TailPhase) * 5f, 0f, 10f),
+                            Quaternion.Euler(-72f, 0f, 0f));
                     }
+
+                    AnimateImportedSquirrelLegs(sq, time, 6f, 6f, -12f);
 
                     if (sq.StateTimer <= 0f)
                     {
@@ -280,15 +478,29 @@ public partial class GameBootstrap
 
                     if (sq.BodyTransform != null)
                     {
-                        sq.BodyTransform.localScale = new Vector3(0.14f, 0.09f, 0.20f);
+                        ApplySquirrelBodyScale(
+                            sq,
+                            new Vector3(0.14f, 0.09f, 0.20f),
+                            new Vector3(
+                                1.04f + Mathf.Sin(time * 13f + sq.AnimationPhase) * 0.025f,
+                                0.96f + Mathf.Abs(Mathf.Sin(time * 13f + sq.AnimationPhase)) * 0.06f,
+                                1.02f));
                     }
 
                     if (sq.TailTransform != null)
                     {
-                        sq.TailTransform.localRotation = Quaternion.Euler(
-                            -10f + Mathf.Sin(time * 10f + sq.TailPhase) * 8f,
-                            0f, 0f);
+                        ApplySquirrelTailMotion(
+                            sq,
+                            Quaternion.Euler(
+                                -12f + Mathf.Sin(time * 10f + sq.TailPhase) * 9f,
+                                Mathf.Sin(time * 7f + sq.TailPhase) * 18f,
+                                8f),
+                            Quaternion.Euler(
+                                -10f + Mathf.Sin(time * 10f + sq.TailPhase) * 8f,
+                                0f, 0f));
                     }
+
+                    AnimateImportedSquirrelLegs(sq, time, 14f, 30f, 0f);
 
                     if (runT >= 1f)
                     {
@@ -297,7 +509,7 @@ public partial class GameBootstrap
                         sq.Yaw               = sq.RootTransform.eulerAngles.y;
                         if (sq.BodyTransform != null)
                         {
-                            sq.BodyTransform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
+                            ApplySquirrelBodyScale(sq, new Vector3(0.14f, 0.10f, 0.20f), Vector3.one);
                         }
                         sq.State      = AmbientSquirrelState.Idle;
                         sq.StateTimer = Random.Range(1.5f, 3.5f);
@@ -316,19 +528,27 @@ public partial class GameBootstrap
                         10f * Time.deltaTime);
 
                     if (sq.BodyTransform != null)
-                        sq.BodyTransform.localScale = new Vector3(0.14f, 0.09f, 0.20f);
+                        ApplySquirrelBodyScale(sq, new Vector3(0.14f, 0.09f, 0.20f), new Vector3(1.02f, 0.94f, 1.06f));
 
                     if (sq.TailTransform != null)
-                        sq.TailTransform.localRotation = Quaternion.Euler(
-                            -10f + Mathf.Sin(time * 9f + sq.TailPhase) * 14f,
-                            Mathf.Sin(time * 6f + sq.TailPhase) * 10f, 0f);
+                        ApplySquirrelTailMotion(
+                            sq,
+                            Quaternion.Euler(
+                                -4f + Mathf.Sin(time * 9f + sq.TailPhase) * 12f,
+                                Mathf.Sin(time * 6f + sq.TailPhase) * 14f,
+                                10f),
+                            Quaternion.Euler(
+                                -10f + Mathf.Sin(time * 9f + sq.TailPhase) * 14f,
+                                Mathf.Sin(time * 6f + sq.TailPhase) * 10f, 0f));
+
+                    AnimateImportedSquirrelLegs(sq, time, 12f, 26f, 0f);
 
                     if (climbUpT >= 1f)
                     {
                         sq.IsAtTreeTop    = true;
                         sq.CurrentPosition = sq.TargetPosition;
                         if (sq.BodyTransform != null)
-                            sq.BodyTransform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
+                            ApplySquirrelBodyScale(sq, new Vector3(0.14f, 0.10f, 0.20f), Vector3.one);
                         sq.RootTransform.rotation = Quaternion.Euler(0f, sq.Yaw, 0f);
                         sq.State      = AmbientSquirrelState.Idle;
                         sq.StateTimer = Random.Range(2.5f, 6f);
@@ -347,19 +567,27 @@ public partial class GameBootstrap
                         10f * Time.deltaTime);
 
                     if (sq.BodyTransform != null)
-                        sq.BodyTransform.localScale = new Vector3(0.14f, 0.09f, 0.20f);
+                        ApplySquirrelBodyScale(sq, new Vector3(0.14f, 0.09f, 0.20f), new Vector3(1.02f, 0.94f, 1.06f));
 
                     if (sq.TailTransform != null)
-                        sq.TailTransform.localRotation = Quaternion.Euler(
-                            -10f + Mathf.Sin(time * 9f + sq.TailPhase) * 14f,
-                            Mathf.Sin(time * 6f + sq.TailPhase) * 10f, 0f);
+                        ApplySquirrelTailMotion(
+                            sq,
+                            Quaternion.Euler(
+                                -4f + Mathf.Sin(time * 9f + sq.TailPhase) * 12f,
+                                Mathf.Sin(time * 6f + sq.TailPhase) * 14f,
+                                -10f),
+                            Quaternion.Euler(
+                                -10f + Mathf.Sin(time * 9f + sq.TailPhase) * 14f,
+                                Mathf.Sin(time * 6f + sq.TailPhase) * 10f, 0f));
+
+                    AnimateImportedSquirrelLegs(sq, time, 12f, 26f, 0f);
 
                     if (climbDownT >= 1f)
                     {
                         sq.IsAtTreeTop     = false;
                         sq.CurrentPosition = sq.TargetPosition;
                         if (sq.BodyTransform != null)
-                            sq.BodyTransform.localScale = new Vector3(0.14f, 0.10f, 0.20f);
+                            ApplySquirrelBodyScale(sq, new Vector3(0.14f, 0.10f, 0.20f), Vector3.one);
                         sq.RootTransform.rotation = Quaternion.Euler(0f, sq.Yaw, 0f);
                         sq.ClimbCooldown  = Random.Range(12f, 28f);
                         sq.State          = AmbientSquirrelState.Idle;

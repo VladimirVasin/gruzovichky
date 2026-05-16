@@ -1,6 +1,6 @@
 # Work Log
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 Purpose: compact active memory for recent work. Older detailed history was intentionally collapsed on 2026-04-20, 2026-05-03, 2026-05-08, and 2026-05-09 to keep agent startup light. Use git history for exact old implementation details.
 
@@ -9,6 +9,20 @@ Purpose: compact active memory for recent work. Older detailed history was inten
 - No active queued memory items.
 
 ## Recent Work
+
+- 2026-05-17: Added walking leg motion for imported adult residents. Imported citizen FBX rigs now create left/right leg motion pivots from their existing `Leg_*`, `Boot_*`, and `Knee_*` parts, so the shared adult `ApplyDriverPose()` walk cycle animates legs for all race/gender imported models while preserving procedural resident leg animation and the imported hair/cloth/glow secondary motion. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
+
+- 2026-05-17: Hid technical imported-building ground marker meshes after they are used for grounding. `GroundBase` / `GroundPatch` renderers now still participate in imported model scale/height placement but are disabled for regular imported building visuals including Logging Camp, Sawmill, Gas Station, Canteen, Furniture Factory, Kiosk, schools, Labor Exchange, Cleaning Depot, and Personal Houses; surface-led models such as Parking, City Park, Docks, and Car Market are left visible. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
+
+- 2026-05-17: Enlarged truck visuals again and upgraded truck driving animation. Imported trucks now target `1.59 x 1.27 x 2.12` world units with matching procedural fallback proportions, larger wheel radius, and cabin/body/cargo motion pivots. Normal driving and purchased-truck arrival now share a cartoon suspension animation where the visual root bobs while body, cabin, headlights, and visible cargo shake independently. Tutorial scenario was checked; this is visual-only and does not alter flow. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
+
+- 2026-05-17: Fixed Parking truck bay placement. Imported Parking now registers `P_TruckParkingBay_XX_Center` markers from the FBX, truck spawn/purchase completion uses the slot marker position and orientation, and trucks that return to Parking snap from the drive anchor into their assigned bay instead of piling up on the shared Parking anchor. Fallback procedural slot placement now respects the building anchor orientation. Tutorial scenario was checked; Parking still provides vehicles automatically and no Tutorial flow/copy changes were needed. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`.
+
+- 2026-05-17: Fixed the `debug.log` performance/log-spam regression around active worker thoughts. Active thoughts that are still pending now refresh the existing pending entry in place instead of re-running the opinion-bias/influence formation pipeline every frame, `THOUGHT_BIAS` diagnostics are verbose-only, and the imported truck prefab is cached/preloaded during truck setup so first runtime truck provisioning no longer pays the `Resources.Load` cost in gameplay. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
+
+- 2026-05-17: Increased the imported Furniture Factory visual by 70%. `FurnitureFactoryImportedModelFootprintFill` moved from `2.35` to `4.00`; placement footprint, walk buffers, road access, staffing, production, and logistics are unchanged. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
+
+- 2026-05-17: Replaced procedural ambient squirrels with the imported `Assets/Resources/Misc/squirel.fbx` visual, keeping the procedural squirrel as fallback. The imported squirrel is fitted below cat size (`0.24 x 0.28 x 0.38` target versus the cat's larger target), has stable Unity model metadata, and now uses dedicated head/tail/leg rig pivots for idle, foraging, running, and climbing animations. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
 
 - 2026-05-17: Connected the imported City Park model. `Assets/Resources/Buildings/citypark.fbx` now loads through the shared imported-building fitting/material/night-light/interaction pipeline as `Resources.Load<GameObject>("Buildings/citypark")`, with a stable `.meta`; the previous procedural park remains as fallback only. Logical bench positions are still registered so City Park leisure/sitting behavior remains available with the imported visual. Verification: `dotnet build Assembly-CSharp.csproj -v:minimal`, `tools/check-line-count.ps1`, `git diff --check`, targeted mojibake scan.
 

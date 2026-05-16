@@ -30,6 +30,8 @@
 
 Heritage link: `ai/Design/worker-heritage-system.md` describes the cultural lens over thoughts, knowledge, social signals, and Noosphere visibility. Heritage does not create thoughts by itself and does not give work bonuses.
 
+Code sync note 2026-05-17: active thoughts that already exist as pending entries are refreshed in place. Opinion-bias and explicit influence formation logic runs when the pending thought is first created, not every frame while the active condition remains true.
+
 Каждая новая мысль должна иметь:
 
 - ветку дерева;
@@ -906,7 +908,7 @@ Leisure:
 - cap усиления intensity: `+15`;
 - minimum formation time: `0.12h`;
 - active thought refresh не пишет новый opinion и не должен самораскачиваться;
-- debug log: `THOUGHT_BIAS`.
+- verbose debug log: `THOUGHT_BIAS`.
 
 ## UI Поверхности
 

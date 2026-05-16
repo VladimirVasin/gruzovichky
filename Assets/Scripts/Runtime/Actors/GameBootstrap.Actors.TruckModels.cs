@@ -5,9 +5,11 @@ using UnityEngine.Rendering;
 public partial class GameBootstrap
 {
     private const string ImportedTruckResourcePath = "Vehicles/Trucks/Truck";
-    private static readonly Vector3 ImportedTruckTargetSize = new(1.38f, 1.10f, 1.84f);
+    private static readonly Vector3 ImportedTruckTargetSize = new(1.59f, 1.27f, 2.12f);
     private const float ImportedTruckBottomY = 0.02f;
     private static readonly Quaternion TruckProceduralWheelBaseRotation = Quaternion.Euler(0f, 0f, 90f);
+    private GameObject importedTruckPrefab;
+    private bool hasLoadedImportedTruckPrefab;
 
     private Transform BuildTruckVisualModel()
     {
@@ -22,7 +24,7 @@ public partial class GameBootstrap
     private bool TryBuildImportedTruckVisual(out Transform cargoVisualRoot)
     {
         cargoVisualRoot = null;
-        GameObject prefab = Resources.Load<GameObject>(ImportedTruckResourcePath);
+        GameObject prefab = GetImportedTruckPrefab();
         if (prefab == null)
         {
             return false;
@@ -30,7 +32,7 @@ public partial class GameBootstrap
 
         Transform bodyAnchor = CreateTruckVisualAnchor("TruckBodyImported", Vector3.zero);
         truckBodyTransform = bodyAnchor;
-        truckCabinTransform = CreateTruckVisualAnchor("TruckCabinImported", Vector3.zero);
+        truckCabinTransform = null;
 
         GameObject imported = Instantiate(prefab, bodyAnchor);
         imported.name = "ImportedTruckModel";
@@ -44,7 +46,6 @@ public partial class GameBootstrap
         {
             Destroy(imported);
             Destroy(bodyAnchor.gameObject);
-            Destroy(truckCabinTransform.gameObject);
             truckBodyTransform = null;
             truckCabinTransform = null;
             SessionDebugLogger.Log("TRUCK", $"Imported truck model from Resources/{ImportedTruckResourcePath} has no usable renderers; using procedural fallback.");
@@ -52,61 +53,86 @@ public partial class GameBootstrap
         }
 
         CreateImportedTruckWheelPivots(imported.transform);
+        CreateImportedTruckMotionPivots(imported.transform, bodyAnchor);
         CreateTruckShadowBlob();
-        CreateTruckHeadlightVisual(new Vector3(-0.29f, 0.59f, 0.73f), true);
-        CreateTruckHeadlightVisual(new Vector3(0.29f, 0.59f, 0.73f), false);
-        CreateTruckHeadlightBeam(new Vector3(-0.29f, 0.59f, 0.79f));
-        CreateTruckHeadlightBeam(new Vector3(0.29f, 0.59f, 0.79f));
+        CreateTruckHeadlightVisual(new Vector3(-0.34f, 0.68f, 0.84f), true);
+        CreateTruckHeadlightVisual(new Vector3(0.34f, 0.68f, 0.84f), false);
+        CreateTruckHeadlightBeam(new Vector3(-0.34f, 0.68f, 0.91f));
+        CreateTruckHeadlightBeam(new Vector3(0.34f, 0.68f, 0.91f));
 
-        cargoVisualRoot = CreateTruckCargoVisualRoot(new Vector3(0f, 0.71f, -0.38f));
-        SessionDebugLogger.Log("TRUCK", $"Loaded imported truck model from Resources/{ImportedTruckResourcePath}.");
+        cargoVisualRoot = CreateTruckCargoVisualRoot(new Vector3(0f, 0.82f, -0.44f));
+        SessionDebugLogger.Log("TRUCK", $"Instantiated imported truck model from Resources/{ImportedTruckResourcePath}.");
         return true;
+    }
+
+    private void PreloadImportedTruckPrefab()
+    {
+        _ = GetImportedTruckPrefab();
+    }
+
+    private GameObject GetImportedTruckPrefab()
+    {
+        if (hasLoadedImportedTruckPrefab)
+        {
+            return importedTruckPrefab;
+        }
+
+        importedTruckPrefab = Resources.Load<GameObject>(ImportedTruckResourcePath);
+        hasLoadedImportedTruckPrefab = true;
+        if (importedTruckPrefab != null)
+        {
+            SessionDebugLogger.Log("TRUCK", $"Preloaded imported truck model from Resources/{ImportedTruckResourcePath}.");
+        }
+
+        return importedTruckPrefab;
     }
 
     private Transform BuildProceduralTruckVisualModel()
     {
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
         body.transform.SetParent(truckVisualRoot, false);
-        body.transform.localPosition = new Vector3(0f, 0.25f, 0f);
-        body.transform.localScale = new Vector3(0.7f, 0.35f, 1f);
+        body.transform.localPosition = new Vector3(0f, 0.29f, 0f);
+        body.transform.localScale = new Vector3(0.81f, 0.40f, 1.15f);
         ApplyColor(body, new Color(0.85f, 0.2f, 0.18f), VisualSmoothnessVehicleMetal);
         ConfigureShadowVisual(body, VisualSmoothnessVehicleMetal);
         truckBodyTransform = body.transform;
 
         GameObject bodyStripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
         bodyStripe.transform.SetParent(truckVisualRoot, false);
-        bodyStripe.transform.localPosition = new Vector3(0f, 0.28f, 0f);
-        bodyStripe.transform.localScale = new Vector3(0.74f, 0.05f, 1.02f);
+        bodyStripe.transform.localPosition = new Vector3(0f, 0.32f, 0f);
+        bodyStripe.transform.localScale = new Vector3(0.85f, 0.06f, 1.17f);
         ApplyColor(bodyStripe, new Color(0.96f, 0.9f, 0.72f), VisualSmoothnessVehicleMetal);
         ConfigureShadowVisual(bodyStripe, VisualSmoothnessVehicleMetal);
+        bodyStripe.transform.SetParent(body.transform, true);
 
         GameObject cabin = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cabin.transform.SetParent(truckVisualRoot, false);
-        cabin.transform.localPosition = new Vector3(0f, 0.4f, 0.2f);
-        cabin.transform.localScale = new Vector3(0.55f, 0.4f, 0.45f);
+        cabin.transform.localPosition = new Vector3(0f, 0.46f, 0.23f);
+        cabin.transform.localScale = new Vector3(0.63f, 0.46f, 0.52f);
         ApplyColor(cabin, new Color(0.95f, 0.82f, 0.28f), VisualSmoothnessVehicleMetal);
         ConfigureShadowVisual(cabin, VisualSmoothnessVehicleMetal);
         truckCabinTransform = cabin.transform;
 
         GameObject windshield = GameObject.CreatePrimitive(PrimitiveType.Cube);
         windshield.transform.SetParent(truckVisualRoot, false);
-        windshield.transform.localPosition = new Vector3(0f, 0.43f, 0.42f);
-        windshield.transform.localScale = new Vector3(0.42f, 0.18f, 0.04f);
+        windshield.transform.localPosition = new Vector3(0f, 0.49f, 0.48f);
+        windshield.transform.localScale = new Vector3(0.48f, 0.21f, 0.05f);
         ApplyColor(windshield, new Color(0.68f, 0.86f, 0.94f), VisualSmoothnessGlass);
         ConfigureShadowVisual(windshield, VisualSmoothnessGlass);
+        windshield.transform.SetParent(cabin.transform, true);
 
         CreateTruckShadowBlob();
-        CreateTruckHeadlightVisual(new Vector3(-0.18f, 0.39f, 0.46f), true);
-        CreateTruckHeadlightVisual(new Vector3(0.18f, 0.39f, 0.46f), false);
-        CreateTruckHeadlightBeam(new Vector3(-0.18f, 0.39f, 0.5f));
-        CreateTruckHeadlightBeam(new Vector3(0.18f, 0.39f, 0.5f));
+        CreateTruckHeadlightVisual(new Vector3(-0.21f, 0.45f, 0.53f), true);
+        CreateTruckHeadlightVisual(new Vector3(0.21f, 0.45f, 0.53f), false);
+        CreateTruckHeadlightBeam(new Vector3(-0.21f, 0.45f, 0.58f));
+        CreateTruckHeadlightBeam(new Vector3(0.21f, 0.45f, 0.58f));
 
         Vector3[] wheelOffsets =
         {
-            new(-0.28f, 0.08f, 0.32f),
-            new(0.28f, 0.08f, 0.32f),
-            new(-0.28f, 0.08f, -0.32f),
-            new(0.28f, 0.08f, -0.32f)
+            new(-0.32f, 0.09f, 0.37f),
+            new(0.32f, 0.09f, 0.37f),
+            new(-0.32f, 0.09f, -0.37f),
+            new(0.32f, 0.09f, -0.37f)
         };
 
         for (int i = 0; i < wheelOffsets.Length; i++)
@@ -115,7 +141,7 @@ public partial class GameBootstrap
             wheel.transform.SetParent(truckVisualRoot, false);
             wheel.transform.localPosition = wheelOffsets[i];
             wheel.transform.localRotation = TruckProceduralWheelBaseRotation;
-            wheel.transform.localScale = new Vector3(0.12f, 0.05f, 0.12f);
+            wheel.transform.localScale = new Vector3(0.14f, 0.06f, 0.14f);
             ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f), VisualSmoothnessRubber);
             ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
             ConfigureVehicleWheelSpin(wheel.transform, Vector3.up);
@@ -126,7 +152,7 @@ public partial class GameBootstrap
             }
         }
 
-        return CreateTruckCargoVisualRoot(new Vector3(0f, 0.47f, -0.24f));
+        return CreateTruckCargoVisualRoot(new Vector3(0f, 0.54f, -0.28f));
     }
 
     private Transform CreateTruckVisualAnchor(string name, Vector3 localPosition)
@@ -154,7 +180,7 @@ public partial class GameBootstrap
         shadow.name = "TruckShadowBlob";
         shadow.transform.SetParent(truckVisualRoot, false);
         shadow.transform.localPosition = new Vector3(0f, -0.01f, 0f);
-        shadow.transform.localScale = new Vector3(1.38f, 0.01f, 1.82f);
+        shadow.transform.localScale = new Vector3(1.59f, 0.01f, 2.12f);
         Renderer renderer = shadow.GetComponent<Renderer>();
         renderer.material = CreateTransparentOverlayMaterial(new Color(0f, 0f, 0f, 0.14f));
         renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -262,6 +288,51 @@ public partial class GameBootstrap
                 truckFrontWheels.Add(pivot);
             }
         }
+    }
+
+    private void CreateImportedTruckMotionPivots(Transform importedRoot, Transform bodyAnchor)
+    {
+        Transform cargoPivot = CreateImportedTruckMotionPivot(
+            importedRoot,
+            IsImportedTruckCargoMotionPartName,
+            "ImportedTruckCargoMotionPivot");
+        if (cargoPivot != null)
+        {
+            truckBodyTransform = cargoPivot;
+        }
+        else
+        {
+            truckBodyTransform = bodyAnchor;
+        }
+
+        truckCabinTransform = CreateImportedTruckMotionPivot(
+            importedRoot,
+            IsImportedTruckCabinMotionPartName,
+            "ImportedTruckCabinMotionPivot");
+    }
+
+    private Transform CreateImportedTruckMotionPivot(
+        Transform importedRoot,
+        System.Predicate<string> matchName,
+        string pivotName)
+    {
+        List<Transform> parts = FindImportedVehicleParts(importedRoot, matchName);
+        if (parts.Count == 0 || !TryGetWorldRendererBounds(parts, out Bounds bounds))
+        {
+            return null;
+        }
+
+        Transform pivot = new GameObject(pivotName).transform;
+        pivot.SetParent(importedRoot, false);
+        pivot.position = bounds.center;
+        pivot.localRotation = Quaternion.identity;
+        pivot.localScale = Vector3.one;
+        for (int i = 0; i < parts.Count; i++)
+        {
+            parts[i].SetParent(pivot, true);
+        }
+
+        return pivot;
     }
 
     private Transform CreateImportedVehicleWheelPivot(Transform part, string name)
@@ -406,6 +477,41 @@ public partial class GameBootstrap
 
         string lower = name.ToLowerInvariant();
         return lower.Contains("front") || lower.Contains("wheel 1") || lower.Contains("wheel_1");
+    }
+
+    private static bool IsImportedTruckCabinMotionPartName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        string lower = name.ToLowerInvariant();
+        return lower.Contains("cabin") ||
+            lower.Contains("hood") ||
+            lower.Contains("windshield") ||
+            lower.Contains("side window") ||
+            lower.Contains("door") ||
+            lower.Contains("grille") ||
+            lower.Contains("headlight") ||
+            lower.Contains("front bumper") ||
+            lower.Contains("front license") ||
+            lower.Contains("front fender");
+    }
+
+    private static bool IsImportedTruckCargoMotionPartName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        string lower = name.ToLowerInvariant();
+        return lower.Contains("cargo") ||
+            lower.Contains("tailgate") ||
+            lower.Contains("rear bumper") ||
+            lower.Contains("tail light") ||
+            lower.Contains("rear license");
     }
 
     private bool FitImportedTruckModel(Transform boundsRoot, GameObject imported, Vector3 targetSize, float bottomY)

@@ -60,7 +60,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const float TruckSegmentStartLift = RoadHeight + 0.32f;
     private const float LocalBusRoadSurfaceLift = RoadHeight + 0.30f;
     private const float TruckSuspensionBobAmount = 0.045f;
-    private const float TruckWheelRadius = 0.12f;
+    private const float TruckWheelRadius = 0.14f;
     private const float TruckCargoInteractionDuration = 3f;
     private const float TruckFuelCapacity = 100f;
     private const float TruckFuelPerCell = 0.5f;

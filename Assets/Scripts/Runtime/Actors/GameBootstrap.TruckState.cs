@@ -140,25 +140,9 @@ public partial class GameBootstrap
 
     private Vector3 GetParkingSlotWorldPosition(int parkingSlotIndex)
     {
-        if (!locations.TryGetValue(LocationType.Parking, out LocationData parking))
-        {
-            return Vector3.zero;
-        }
-
-        Vector3 center = GetLocationCenter(LocationType.Parking);
-        float halfWidth = Mathf.Max(0.35f, ((parking.Max.x - parking.Min.x + 1) * 0.5f) - 0.45f);
-        float halfDepth = Mathf.Max(0.28f, ((parking.Max.y - parking.Min.y + 1) * 0.5f) - 0.38f);
-        Vector3[] parkingSlots =
-        {
-            center + new Vector3(0f, 0f, -halfDepth * 0.1f),
-            center + new Vector3(-halfWidth * 0.55f, 0f, -halfDepth * 0.72f),
-            center + new Vector3(0f, 0f, -halfDepth * 0.72f),
-            center + new Vector3(halfWidth * 0.55f, 0f, -halfDepth * 0.72f),
-            center + new Vector3(-halfWidth * 0.7f, 0f, halfDepth * 0.18f)
-        };
-
-        int slotIndex = Mathf.Clamp(parkingSlotIndex, 0, parkingSlots.Length - 1);
-        return WithRoadVehicleHeight(parkingSlots[slotIndex], TruckSegmentStartLift);
+        return TryGetTruckParkingSlotWorldPose(parkingSlotIndex, out Vector3 position, out _)
+            ? position
+            : Vector3.zero;
     }
 
     private void CancelLoadedTruckRuntimeOrder(string reason, bool stopMovement = true)

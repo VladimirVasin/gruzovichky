@@ -228,6 +228,25 @@ public partial class GameBootstrap
         return pivots.Count > 0 ? pivots.ToArray() : null;
     }
 
+    private static void CreateImportedDriverLegMotionPivots(DriverAgent driver, Transform rigRoot)
+    {
+        if (driver == null || rigRoot == null)
+        {
+            return;
+        }
+
+        driver.DriverLeftLegTransform = CreateImportedDriverRigPivot(
+            rigRoot,
+            "DriverImportedLeftLegMotionPivot",
+            FindImportedDriverParts(rigRoot, IsImportedDriverLeftLegPartName),
+            0.88f);
+        driver.DriverRightLegTransform = CreateImportedDriverRigPivot(
+            rigRoot,
+            "DriverImportedRightLegMotionPivot",
+            FindImportedDriverParts(rigRoot, IsImportedDriverRightLegPartName),
+            0.88f);
+    }
+
     private void ApplyImportedDriverPoseMotion(
         DriverAgent driver,
         ImportedDriverPoseKind pose,

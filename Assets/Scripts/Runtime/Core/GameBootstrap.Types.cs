@@ -632,6 +632,7 @@ public partial class GameBootstrap : MonoBehaviour
         public Transform TableLookAtMarker;
         public readonly List<ImportedBuildingDoor> Doors = new();
         public readonly List<ImportedBuildingSeat> Seats = new();
+        public readonly List<Transform> TruckParkingSlotMarkers = new();
     }
 
     private sealed class ImportedBuildingDoor

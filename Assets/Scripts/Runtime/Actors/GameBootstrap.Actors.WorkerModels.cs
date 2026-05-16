@@ -335,6 +335,7 @@ public partial class GameBootstrap
         driver.DriverRightArmTransform = null;
         driver.DriverLeftLegTransform = null;
         driver.DriverRightLegTransform = null;
+        CreateImportedDriverLegMotionPivots(driver, rigRoot);
         driver.DriverImportedHairFlowTransforms = CreateImportedDriverFlowPivots(
             rigRoot,
             rigRoot,

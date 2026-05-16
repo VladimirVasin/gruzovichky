@@ -100,7 +100,7 @@ public partial class GameBootstrap
             UpsertWorkerOpinionBiasPlaceholder(placeholders, relation);
         }
 
-        SessionDebugLogger.Log(
+        SessionDebugLogger.LogVerbose(
             "THOUGHT_BIAS",
             $"{worker.DriverName} / {thoughtKey} / {FormatWorkerOpinionBiasSubjectDebug(opinion, exactMatch)} / opinion={opinion.Score} conf={effectiveConfidence} / intensity {intensity - oldIntensity:+#;-#;0} / priority {oldPriority}->{priority} / tone {oldTone}->{tone} / formation {oldFormationHours:0.00}->{formationHours:0.00}h.");
     }

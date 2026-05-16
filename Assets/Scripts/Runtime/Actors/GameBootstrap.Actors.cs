@@ -94,6 +94,8 @@ public partial class GameBootstrap
 
     private void SetupTruck()
     {
+        PreloadImportedTruckPrefab();
+
         if (locations.ContainsKey(LocationType.Parking))
         {
             if (TryProvisionTruckFromParkingCapacity(out TruckAgent firstTruck, "initial Parking capacity"))
@@ -129,7 +131,8 @@ public partial class GameBootstrap
         truckCell = parking?.Anchor ?? Vector2Int.zero;
         truckTargetWorld = parking != null ? GetParkingSlotWorldPosition(parkingSlotIndex) : Vector3.zero;
         truckSegmentStartWorld = truckTargetWorld;
-        truckSmoothedForward = Vector3.forward;
+        Quaternion parkingSlotRotation = GetParkingSlotWorldRotation(parkingSlotIndex);
+        truckSmoothedForward = parkingSlotRotation * Vector3.forward;
         truckFuel = TruckFuelCapacity;
         truckCargoType = CargoType.None;
         truckCargoAmount = 0;
@@ -164,7 +167,7 @@ public partial class GameBootstrap
         Transform cargoVisualRoot = BuildTruckVisualModel();
 
         truckObject.transform.position = truckTargetWorld;
-        truckObject.transform.rotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+        truckObject.transform.rotation = parkingSlotRotation;
         truckInteractionTargetRotation = truckObject.transform.rotation;
         TruckAgent truckAgent = new()
         {
@@ -322,6 +325,7 @@ public partial class GameBootstrap
         headlight.transform.SetParent(truckVisualRoot, false);
         headlight.transform.localPosition = localPosition;
         headlight.transform.localScale = new Vector3(0.12f, 0.08f, 0.04f);
+        ParentTruckCabinAttachedVisual(headlight.transform);
         ApplyColor(headlight, new Color(1f, 0.68f, 0.34f));
 
         Renderer rendererComponent = headlight.GetComponent<Renderer>();
@@ -343,6 +347,7 @@ public partial class GameBootstrap
         lightObject.transform.SetParent(truckVisualRoot, false);
         lightObject.transform.localPosition = localPosition;
         lightObject.transform.localRotation = Quaternion.Euler(14f, 0f, 0f);
+        ParentTruckCabinAttachedVisual(lightObject.transform);
 
         Light headlight = lightObject.AddComponent<Light>();
         headlight.type = LightType.Spot;
@@ -354,6 +359,16 @@ public partial class GameBootstrap
         headlight.shadows = LightShadows.None;
         headlight.enabled = false;
         truckHeadlights.Add(headlight);
+    }
+
+    private void ParentTruckCabinAttachedVisual(Transform visual)
+    {
+        if (visual == null || truckCabinTransform == null || visual.parent == truckCabinTransform)
+        {
+            return;
+        }
+
+        visual.SetParent(truckCabinTransform, true);
     }
 
     private Light CreateDriverFlashlightHalo(Transform parent)

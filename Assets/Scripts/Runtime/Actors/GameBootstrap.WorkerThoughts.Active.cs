@@ -33,6 +33,26 @@ public partial class GameBootstrap
             return existing;
         }
 
+        PendingWorkerThought pending = FindPendingWorkerThought(worker, thoughtKey);
+        if (pending != null && pending.Active)
+        {
+            RefreshPendingActiveWorkerThought(
+                pending,
+                kind,
+                tone,
+                intensity,
+                templateKey,
+                placeholders,
+                priority,
+                opinionSubjectType,
+                opinionSubjectId,
+                opinionSubjectKey,
+                opinionFallbackLabel,
+                opinionDelta,
+                cooldownHours);
+            return null;
+        }
+
         AddOrKeepPendingWorkerThought(
             worker,
             thoughtKey,
@@ -53,6 +73,109 @@ public partial class GameBootstrap
             active: true,
             formationReason: "active condition");
         return null;
+    }
+
+    private void RefreshPendingActiveWorkerThought(
+        PendingWorkerThought pending,
+        WorkerThoughtKind kind,
+        WorkerThoughtTone tone,
+        int intensity,
+        string templateKey,
+        IReadOnlyList<WorkerThoughtPlaceholder> placeholders,
+        WorkerThoughtPriority priority,
+        WorkerThoughtSubjectType opinionSubjectType,
+        int opinionSubjectId,
+        string opinionSubjectKey,
+        string opinionFallbackLabel,
+        int opinionDelta,
+        float cooldownHours)
+    {
+        if (pending == null)
+        {
+            return;
+        }
+
+        List<WorkerThoughtPlaceholder> refreshedPlaceholders = CopyWorkerThoughtPlaceholders(placeholders);
+        PreservePendingActiveThoughtFormationPlaceholders(pending, refreshedPlaceholders);
+
+        pending.Kind = kind;
+        if (!HasPendingWorkerThoughtPlaceholder(pending, WorkerOpinionBiasPlaceholderKey))
+        {
+            pending.Tone = tone;
+        }
+
+        pending.Priority = HighestWorkerThoughtPriority(pending.Priority, priority);
+        pending.Intensity = Mathf.Max(pending.Intensity, Mathf.Clamp(intensity, 0, 100));
+        if (string.IsNullOrWhiteSpace(pending.TemplateKey))
+        {
+            pending.TemplateKey = templateKey;
+        }
+
+        pending.OpinionSubjectType = opinionSubjectType;
+        pending.OpinionSubjectId = opinionSubjectId;
+        pending.OpinionSubjectKey = opinionSubjectKey;
+        pending.OpinionFallbackLabel = opinionFallbackLabel;
+        if (!pending.HasThoughtInfluenceApplied && Mathf.Abs(opinionDelta) > Mathf.Abs(pending.OpinionDelta))
+        {
+            pending.OpinionDelta = opinionDelta;
+        }
+
+        pending.CooldownKey = $"active|{pending.ThoughtKey}";
+        pending.CooldownHours = cooldownHours;
+        pending.Active = true;
+        pending.LastRefreshedWorldHour = GetCurrentWorldHour();
+        pending.FormationReason = "active condition";
+        pending.Placeholders.Clear();
+        pending.Placeholders.AddRange(refreshedPlaceholders);
+        isDriversScreenDirty = true;
+    }
+
+    private static void PreservePendingActiveThoughtFormationPlaceholders(
+        PendingWorkerThought pending,
+        List<WorkerThoughtPlaceholder> placeholders)
+    {
+        if (pending == null || placeholders == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < pending.Placeholders.Count; i++)
+        {
+            WorkerThoughtPlaceholder placeholder = pending.Placeholders[i];
+            if (placeholder == null ||
+                (!string.Equals(placeholder.Key, WorkerOpinionBiasPlaceholderKey, System.StringComparison.Ordinal) &&
+                 !string.Equals(placeholder.Key, WorkerThoughtInfluencePlaceholderKey, System.StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            UpsertWorkerThoughtPlaceholder(placeholders, new WorkerThoughtPlaceholder
+            {
+                Key = placeholder.Key,
+                SubjectType = placeholder.SubjectType,
+                SubjectId = placeholder.SubjectId,
+                SubjectKey = placeholder.SubjectKey,
+                FallbackLabel = placeholder.FallbackLabel
+            });
+        }
+    }
+
+    private static bool HasPendingWorkerThoughtPlaceholder(PendingWorkerThought pending, string key)
+    {
+        if (pending == null || string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        for (int i = 0; i < pending.Placeholders.Count; i++)
+        {
+            if (string.Equals(pending.Placeholders[i]?.Key, key, System.StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private WorkerThought FindActiveWorkerThought(DriverAgent worker, string thoughtKey)

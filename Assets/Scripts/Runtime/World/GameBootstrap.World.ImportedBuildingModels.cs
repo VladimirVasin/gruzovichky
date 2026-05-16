@@ -249,6 +249,7 @@ public partial class GameBootstrap
                 targetDepth);
         }
 
+        HideImportedBuildingGroundMarkerRenderers(renderers, type);
         ConfigureImportedBuildingModel(model);
         RegisterImportedServiceInteractionMetadata(owner, model.transform);
         RegisterImportedBuildingNightLighting(owner, model.transform, WarmLightSourceColor(windowOnColor), WarmLightSourceColor(markerLightColor));
@@ -378,6 +379,40 @@ public partial class GameBootstrap
             }
         }
     }
+
+    private static void HideImportedBuildingGroundMarkerRenderers(Renderer[] renderers, LocationType type)
+    {
+        if (!ShouldHideImportedBuildingGroundMarkerVisuals(type))
+        {
+            return;
+        }
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer renderer = renderers[i];
+            if (renderer != null && IsLoggingCampImportedGroundingRenderer(renderer))
+            {
+                renderer.enabled = false;
+            }
+        }
+    }
+
+    private static bool ShouldHideImportedBuildingGroundMarkerVisuals(LocationType type) => type switch
+    {
+        LocationType.Forest           => true,
+        LocationType.Sawmill          => true,
+        LocationType.Canteen          => true,
+        LocationType.GasStation       => true,
+        LocationType.FurnitureFactory => true,
+        LocationType.Kiosk            => true,
+        LocationType.Kindergarten     => true,
+        LocationType.PrimarySchool    => true,
+        LocationType.SecondarySchool  => true,
+        LocationType.LaborExchange    => true,
+        LocationType.CleaningDepot    => true,
+        LocationType.PersonalHouse    => true,
+        _                             => false
+    };
 
     private static bool IsImportedBuildingPlatformRenderer(Renderer renderer, LocationType type)
     {

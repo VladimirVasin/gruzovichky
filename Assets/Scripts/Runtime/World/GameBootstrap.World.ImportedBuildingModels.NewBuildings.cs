@@ -20,7 +20,7 @@ public partial class GameBootstrap
     private const string PersonalHouseSplitLevelImportedModelResourcePath = "Buildings/personalhouse_splitlevel";
 
     private const float GasStationImportedModelFootprintFill = 3.83f;
-    private const float FurnitureFactoryImportedModelFootprintFill = 2.35f;
+    private const float FurnitureFactoryImportedModelFootprintFill = 4.00f;
     private const float KioskImportedModelFootprintFill = 1.46f;
     private const float KindergartenImportedModelFootprintFill = 2.55f;
     private const float PrimarySchoolImportedModelFootprintFill = 1.55f;
