@@ -62,7 +62,7 @@ public partial class GameBootstrap : MonoBehaviour
         return busRoot != null ? busRoot.Find(SharedBusVisualMotionRootName) : null;
     }
 
-    private static void ApplySharedBusMotionAnimation(Transform busRoot, float speed01, bool moving, float phase, float turnLean = 0f)
+    private void ApplySharedBusMotionAnimation(Transform busRoot, float speed01, bool moving, float phase, float turnLean = 0f)
     {
         Transform visualRoot = GetSharedBusVisualMotionRoot(busRoot);
         if (visualRoot == null)
@@ -88,7 +88,7 @@ public partial class GameBootstrap : MonoBehaviour
         SpinSharedBusWheels(visualRoot, speed, moving, phase);
     }
 
-    private static void SpinSharedBusWheels(Transform visualRoot, float speed01, bool moving, float phase)
+    private void SpinSharedBusWheels(Transform visualRoot, float speed01, bool moving, float phase)
     {
         Transform[] transforms = visualRoot.GetComponentsInChildren<Transform>(true);
         float spin = moving
@@ -104,13 +104,9 @@ public partial class GameBootstrap : MonoBehaviour
 
             bool imported = wheel.name.StartsWith("ImportedBusWheelPivot_", System.StringComparison.Ordinal);
             bool procedural = wheel.name.StartsWith("SharedBusWheel_", System.StringComparison.Ordinal);
-            if (imported)
+            if (imported || procedural)
             {
-                wheel.localRotation = Quaternion.AngleAxis(spin, Vector3.forward);
-            }
-            else if (procedural)
-            {
-                wheel.localRotation = SharedBusProceduralWheelBaseRotation * Quaternion.AngleAxis(spin, Vector3.up);
+                ApplyVehicleWheelSpin(wheel, spin);
             }
         }
     }
@@ -235,6 +231,7 @@ public partial class GameBootstrap : MonoBehaviour
                 wheel.transform.localScale = new Vector3(0.1f, 0.05f, 0.1f);
                 ApplyColor(wheel, new Color(0.12f, 0.12f, 0.12f), VisualSmoothnessRubber);
                 ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
+                ConfigureVehicleWheelSpin(wheel.transform, Vector3.up);
             }
         }
 

@@ -354,6 +354,7 @@ public partial class GameBootstrap
         cameraFocusPoint = noosphereVisionSavedCameraFocus;
         cameraOffset = noosphereVisionSavedCameraOffset;
         cameraTargetOffset = noosphereVisionSavedCameraTargetOffset;
+        isCameraWheelZoomSmoothing = false;
         isTruckCameraFocused = noosphereVisionSavedTruckCameraFocused;
         isCameraReturningToDiorama = noosphereVisionSavedCameraReturning;
         isCameraRotatingToTarget = noosphereVisionSavedCameraRotating;
@@ -423,6 +424,7 @@ public partial class GameBootstrap
         cameraFocusPoint = Vector3.Lerp(noosphereVisionSavedCameraFocus, targetFocus, progress);
         cameraOffset = Vector3.Lerp(noosphereVisionSavedCameraOffset, targetOffset, progress);
         cameraTargetOffset = cameraOffset;
+        isCameraWheelZoomSmoothing = false;
         mainCamera.transform.position = cameraFocusPoint + cameraOffset;
         mainCamera.transform.rotation = GetDioramaCameraRotation();
     }

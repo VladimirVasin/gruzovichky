@@ -39,6 +39,8 @@ public partial class GameBootstrap : MonoBehaviour
     private const float CameraMaxHeight = 120f;
     private const float CameraMinDistance = 5.2f;
     private const float CameraMaxDistance = 120f;
+    private const float CameraZoomOffsetLerp = 13.5f;
+    private const float CameraGroundPitchStartZoomT = 0.055f;
     private const float EdgeHighwayBusSpeed = 3.45f;
     private const float EdgeHighwayBusSpawnIntervalMin = 14f;
     private const float EdgeHighwayBusSpawnIntervalMax = 30f;
@@ -185,6 +187,8 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<Vector2Int> activePath = new();
     private readonly List<Transform> truckWheels = new();
     private readonly List<Transform> truckFrontWheels = new();
+    private readonly Dictionary<Transform, Quaternion> vehicleWheelBaseLocalRotations = new();
+    private readonly Dictionary<Transform, Vector3> vehicleWheelLocalSpinAxes = new();
     private readonly List<Light> truckHeadlights = new();
     private readonly List<Light> locationNightLights = new();
     private readonly List<Renderer> locationNightLightRenderers = new();
@@ -455,6 +459,7 @@ public partial class GameBootstrap : MonoBehaviour
     private bool isTruckDetailsOpen;
     private bool isLocalBusDetailsOpen;
     private bool isRightMouseDragging;
+    private bool isCameraWheelZoomSmoothing;
     private bool isCameraReturningToDiorama;
     private bool isCameraRotatingToTarget;
     private bool isTruckCameraFocused;

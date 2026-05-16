@@ -137,7 +137,8 @@ public partial class GameBootstrap
                 -scaledBounds.center.z);
         }
 
-        BuildImportedDriverAnimationRig(driver, model.transform, rootName, isFemale);
+        Transform poseRoot = CreateImportedDriverPoseRoot(driver.DriverVisualRoot, model.transform);
+        BuildImportedDriverAnimationRig(driver, model.transform, rootName, isFemale, poseRoot);
         return true;
     }
 
@@ -287,37 +288,49 @@ public partial class GameBootstrap
         return bestRotation;
     }
 
-    private void BuildImportedDriverAnimationRig(DriverAgent driver, Transform modelRoot, string rootName, bool isFemale)
+    private static Transform CreateImportedDriverPoseRoot(Transform visualRoot, Transform modelRoot)
+    {
+        if (visualRoot == null || modelRoot == null)
+        {
+            return modelRoot;
+        }
+
+        Transform poseRoot = new GameObject("ImportedDriverPoseRoot").transform;
+        poseRoot.SetParent(visualRoot, false);
+        poseRoot.localPosition = Vector3.zero;
+        poseRoot.localRotation = Quaternion.identity;
+        poseRoot.localScale = Vector3.one;
+        modelRoot.SetParent(poseRoot, false);
+        return poseRoot;
+    }
+
+    private void BuildImportedDriverAnimationRig(
+        DriverAgent driver,
+        Transform modelRoot,
+        string rootName,
+        bool isFemale,
+        Transform poseRoot)
     {
         Transform rigRoot = FindImportedTransform(modelRoot, rootName) ?? modelRoot;
-        List<Transform> bodyParts = FindImportedDriverParts(rigRoot, IsImportedDriverBodyPartName);
-        List<Transform> headParts = FindImportedDriverParts(rigRoot, IsImportedDriverHeadPartName);
-        List<Transform> leftArmParts = FindImportedDriverParts(rigRoot, IsImportedDriverLeftArmPartName);
-        List<Transform> rightArmParts = FindImportedDriverParts(rigRoot, IsImportedDriverRightArmPartName);
-        List<Transform> leftLegParts = FindImportedDriverParts(rigRoot, IsImportedDriverLeftLegPartName);
-        List<Transform> rightLegParts = FindImportedDriverParts(rigRoot, IsImportedDriverRightLegPartName);
-
-        Transform bodyPivot = CreateImportedDriverRigPivot(rigRoot, "DriverBody", bodyParts, 0.50f);
-        Transform headPivot = CreateImportedDriverRigPivot(rigRoot, "DriverHead", headParts, 0.28f);
-        driver.DriverBodyTransform = bodyPivot ?? modelRoot;
-        driver.DriverHeadTransform = headPivot;
+        driver.DriverBodyTransform = poseRoot ?? modelRoot;
+        driver.DriverHeadTransform = null;
         driver.DriverCapTransform = null;
-        driver.DriverLeftArmTransform = CreateImportedDriverRigPivot(rigRoot, "DriverLeftArm", leftArmParts, 0.92f);
-        driver.DriverRightArmTransform = CreateImportedDriverRigPivot(rigRoot, "DriverRightArm", rightArmParts, 0.92f);
-        driver.DriverLeftLegTransform = CreateImportedDriverRigPivot(rigRoot, "DriverLeftLeg", leftLegParts, 0.94f);
-        driver.DriverRightLegTransform = CreateImportedDriverRigPivot(rigRoot, "DriverRightLeg", rightLegParts, 0.94f);
+        driver.DriverLeftArmTransform = null;
+        driver.DriverRightArmTransform = null;
+        driver.DriverLeftLegTransform = null;
+        driver.DriverRightLegTransform = null;
         driver.DriverImportedHairFlowTransforms = CreateImportedDriverFlowPivots(
-            driver.DriverHeadTransform ?? rigRoot,
+            rigRoot,
             rigRoot,
             GetImportedDriverHairFlowPrefixes(driver.Race, isFemale),
             0.85f);
         driver.DriverImportedClothFlowTransforms = CreateImportedDriverFlowPivots(
-            driver.DriverBodyTransform ?? rigRoot,
+            rigRoot,
             rigRoot,
             GetImportedDriverClothFlowPrefixes(driver.Race, isFemale),
             0.90f);
         driver.DriverImportedGlowTransforms = CreateImportedDriverFlowPivots(
-            driver.DriverBodyTransform ?? rigRoot,
+            rigRoot,
             rigRoot,
             GetImportedDriverGlowPrefixes(driver.Race, isFemale),
             0.50f);

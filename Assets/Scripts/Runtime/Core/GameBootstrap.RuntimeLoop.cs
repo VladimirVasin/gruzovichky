@@ -658,6 +658,7 @@ public partial class GameBootstrap
         cameraFocusPoint = new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
         cameraOffset = DioramaCameraOffset;
         cameraTargetOffset = DioramaCameraOffset;
+        isCameraWheelZoomSmoothing = false;
     }
 
     private void SetupLighting()

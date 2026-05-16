@@ -52,6 +52,7 @@ public partial class GameBootstrap
         }
 
         cameraTargetOffset = cameraOffset;
+        isCameraWheelZoomSmoothing = false;
         isCameraReturningToDiorama = true;
         isCameraRotatingToTarget = false;
     }

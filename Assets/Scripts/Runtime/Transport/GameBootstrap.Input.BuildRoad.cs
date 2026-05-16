@@ -350,6 +350,7 @@ public partial class GameBootstrap
                 if (builtSameCell)
                 {
                     StartRoadConstructionWave(new[] { start }, CollectNewRoadCells(sameCellRoadsBeforeBuild));
+                    MoveStarterIdleWorkersToMotel(logWhenNoCandidates: false);
                 }
 
                 return builtSameCell;
@@ -449,6 +450,7 @@ public partial class GameBootstrap
                 refreshCells.AddRange(newRoadCells);
                 refreshCells.AddRange(turnFillCells);
                 RefreshRoadConnectivityAround(refreshCells);
+                MoveStarterIdleWorkersToMotel(logWhenNoCandidates: false);
             }
 
             SessionDebugLogger.Log(

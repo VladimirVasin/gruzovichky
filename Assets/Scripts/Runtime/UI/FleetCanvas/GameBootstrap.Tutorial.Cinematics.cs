@@ -33,6 +33,7 @@ public partial class GameBootstrap
         cameraFocusPoint = Vector3.Lerp(cameraFocusPoint, tutorialCameraFocusTarget, focusLerp);
         cameraOffset = Vector3.Lerp(cameraOffset, tutorialCameraFocusOffset, offsetLerp);
         cameraTargetOffset = cameraOffset;
+        isCameraWheelZoomSmoothing = false;
 
         mainCamera.transform.position = cameraFocusPoint + cameraOffset;
         mainCamera.transform.rotation = GetDioramaCameraRotation();
@@ -46,6 +47,7 @@ public partial class GameBootstrap
                 cameraFocusPoint = tutorialCameraFocusTarget;
                 cameraOffset = tutorialCameraFocusOffset;
                 cameraTargetOffset = tutorialCameraFocusOffset;
+                isCameraWheelZoomSmoothing = false;
                 mainCamera.transform.position = cameraFocusPoint + cameraOffset;
                 mainCamera.transform.rotation = GetDioramaCameraRotation();
                 isTutorialCameraFocusActive = false;

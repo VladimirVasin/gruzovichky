@@ -234,6 +234,7 @@ public partial class GameBootstrap
         cameraFocusPoint = new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
         cameraOffset = DioramaCameraOffset;
         cameraTargetOffset = TutorialForestZoomOffset;
+        isCameraWheelZoomSmoothing = false;
         mainCamera.transform.position = cameraFocusPoint + cameraOffset;
         mainCamera.transform.rotation = GetDioramaCameraRotation();
     }
@@ -261,6 +262,7 @@ public partial class GameBootstrap
         tutorialCameraFocusOffset = UserWelcomeCameraOffset;
         isTutorialCameraFocusActive = true;
         cameraTargetOffset = UserWelcomeCameraOffset;
+        isCameraWheelZoomSmoothing = false;
         SessionDebugLogger.Log("TUTORIAL", $"Started smooth User welcome camera focus on start stop at ({focus.x:F1},{focus.z:F1}).");
     }
 

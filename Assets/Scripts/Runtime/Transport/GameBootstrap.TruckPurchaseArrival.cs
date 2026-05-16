@@ -148,14 +148,14 @@ public partial class GameBootstrap
             0.28f);
     }
 
-    private static void SpinTruckArrivalWheels(TruckAgent truckAgent, float distance)
+    private void SpinTruckArrivalWheels(TruckAgent truckAgent, float distance)
     {
         if (truckAgent.TruckWheels.Count == 0)
         {
             return;
         }
 
-        float spin = distance * 260f;
+        truckAgent.TruckWheelSpinAngle += distance / Mathf.Max(TruckWheelRadius, 0.01f) * Mathf.Rad2Deg;
         for (int i = 0; i < truckAgent.TruckWheels.Count; i++)
         {
             Transform wheel = truckAgent.TruckWheels[i];
@@ -164,8 +164,7 @@ public partial class GameBootstrap
                 continue;
             }
 
-            bool importedWheel = wheel.name.StartsWith("ImportedTruckWheelPivot_", System.StringComparison.Ordinal);
-            wheel.Rotate(importedWheel ? Vector3.forward : Vector3.up, spin, Space.Self);
+            ApplyVehicleWheelSpin(wheel, truckAgent.TruckWheelSpinAngle);
         }
     }
 

@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 public partial class GameBootstrap
 {
     private const string ImportedTruckResourcePath = "Vehicles/Trucks/Truck";
-    private static readonly Vector3 ImportedTruckTargetSize = new(1.20f, 0.96f, 1.60f);
+    private static readonly Vector3 ImportedTruckTargetSize = new(1.38f, 1.10f, 1.84f);
     private const float ImportedTruckBottomY = 0.02f;
     private static readonly Quaternion TruckProceduralWheelBaseRotation = Quaternion.Euler(0f, 0f, 90f);
 
@@ -53,12 +53,12 @@ public partial class GameBootstrap
 
         CreateImportedTruckWheelPivots(imported.transform);
         CreateTruckShadowBlob();
-        CreateTruckHeadlightVisual(new Vector3(-0.25f, 0.51f, 0.64f), true);
-        CreateTruckHeadlightVisual(new Vector3(0.25f, 0.51f, 0.64f), false);
-        CreateTruckHeadlightBeam(new Vector3(-0.25f, 0.51f, 0.69f));
-        CreateTruckHeadlightBeam(new Vector3(0.25f, 0.51f, 0.69f));
+        CreateTruckHeadlightVisual(new Vector3(-0.29f, 0.59f, 0.73f), true);
+        CreateTruckHeadlightVisual(new Vector3(0.29f, 0.59f, 0.73f), false);
+        CreateTruckHeadlightBeam(new Vector3(-0.29f, 0.59f, 0.79f));
+        CreateTruckHeadlightBeam(new Vector3(0.29f, 0.59f, 0.79f));
 
-        cargoVisualRoot = CreateTruckCargoVisualRoot(new Vector3(0f, 0.62f, -0.33f));
+        cargoVisualRoot = CreateTruckCargoVisualRoot(new Vector3(0f, 0.71f, -0.38f));
         SessionDebugLogger.Log("TRUCK", $"Loaded imported truck model from Resources/{ImportedTruckResourcePath}.");
         return true;
     }
@@ -118,6 +118,7 @@ public partial class GameBootstrap
             wheel.transform.localScale = new Vector3(0.12f, 0.05f, 0.12f);
             ApplyColor(wheel, new Color(0.14f, 0.14f, 0.14f), VisualSmoothnessRubber);
             ConfigureShadowVisual(wheel, VisualSmoothnessRubber);
+            ConfigureVehicleWheelSpin(wheel.transform, Vector3.up);
             truckWheels.Add(wheel.transform);
             if (i < 2)
             {
@@ -153,7 +154,7 @@ public partial class GameBootstrap
         shadow.name = "TruckShadowBlob";
         shadow.transform.SetParent(truckVisualRoot, false);
         shadow.transform.localPosition = new Vector3(0f, -0.01f, 0f);
-        shadow.transform.localScale = new Vector3(1.20f, 0.01f, 1.58f);
+        shadow.transform.localScale = new Vector3(1.38f, 0.01f, 1.82f);
         Renderer renderer = shadow.GetComponent<Renderer>();
         renderer.material = CreateTransparentOverlayMaterial(new Color(0f, 0f, 0f, 0.14f));
         renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -263,21 +264,78 @@ public partial class GameBootstrap
         }
     }
 
-    private static Transform CreateImportedVehicleWheelPivot(Transform part, string name)
+    private Transform CreateImportedVehicleWheelPivot(Transform part, string name)
     {
         if (part == null || part.parent == null || !TryGetWorldRendererBounds(new List<Transform> { part }, out Bounds bounds))
         {
             return null;
         }
 
+        Vector3 worldSpinAxis = GetImportedVehicleWheelWorldSpinAxis(bounds);
         Transform originalParent = part.parent;
         Transform pivot = new GameObject(name).transform;
         pivot.SetParent(originalParent, false);
         pivot.position = bounds.center;
         pivot.localRotation = Quaternion.identity;
         pivot.localScale = Vector3.one;
+        ConfigureVehicleWheelSpin(pivot, pivot.InverseTransformDirection(worldSpinAxis));
         part.SetParent(pivot, true);
         return pivot;
+    }
+
+    private void ConfigureVehicleWheelSpin(Transform wheel, Vector3 localSpinAxis)
+    {
+        if (wheel == null)
+        {
+            return;
+        }
+
+        vehicleWheelBaseLocalRotations[wheel] = wheel.localRotation;
+        vehicleWheelLocalSpinAxes[wheel] = localSpinAxis.sqrMagnitude > 0.0001f
+            ? localSpinAxis.normalized
+            : Vector3.up;
+    }
+
+    private void ApplyVehicleWheelSpin(Transform wheel, float spin, float steer = 0f)
+    {
+        if (wheel == null)
+        {
+            return;
+        }
+
+        if (!vehicleWheelBaseLocalRotations.TryGetValue(wheel, out Quaternion baseRotation))
+        {
+            baseRotation = wheel.localRotation;
+            vehicleWheelBaseLocalRotations[wheel] = baseRotation;
+        }
+
+        if (!vehicleWheelLocalSpinAxes.TryGetValue(wheel, out Vector3 localSpinAxis) ||
+            localSpinAxis.sqrMagnitude <= 0.0001f)
+        {
+            localSpinAxis = Vector3.up;
+            vehicleWheelLocalSpinAxes[wheel] = localSpinAxis;
+        }
+
+        Quaternion steerRotation = Mathf.Abs(steer) > 0.001f
+            ? Quaternion.Euler(0f, steer, 0f)
+            : Quaternion.identity;
+        wheel.localRotation = steerRotation * baseRotation * Quaternion.AngleAxis(spin, localSpinAxis.normalized);
+    }
+
+    private static Vector3 GetImportedVehicleWheelWorldSpinAxis(Bounds bounds)
+    {
+        Vector3 size = bounds.size;
+        if (size.x <= size.y && size.x <= size.z)
+        {
+            return Vector3.right;
+        }
+
+        if (size.y <= size.x && size.y <= size.z)
+        {
+            return Vector3.up;
+        }
+
+        return Vector3.forward;
     }
 
     private static List<Transform> FindImportedVehicleParts(Transform root, System.Predicate<string> matchName)

@@ -721,10 +721,7 @@ public partial class GameBootstrap
         {
             bool isFrontWheel = truckFrontWheels.Contains(wheel);
             float steer = isFrontWheel ? truckSteerAngle : 0f;
-            bool importedWheel = wheel.name.StartsWith("ImportedTruckWheelPivot_", System.StringComparison.Ordinal);
-            wheel.localRotation = importedWheel
-                ? Quaternion.Euler(0f, steer, 0f) * Quaternion.AngleAxis(truckWheelSpinAngle, Vector3.forward)
-                : Quaternion.Euler(0f, steer, 0f) * TruckProceduralWheelBaseRotation * Quaternion.AngleAxis(truckWheelSpinAngle, Vector3.up);
+            ApplyVehicleWheelSpin(wheel, truckWheelSpinAngle, steer);
         }
     }
 

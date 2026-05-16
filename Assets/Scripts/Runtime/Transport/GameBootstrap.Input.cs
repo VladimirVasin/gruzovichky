@@ -608,16 +608,24 @@ public partial class GameBootstrap
                 isResourcesPanelOpen || isEconomyPanelOpen || isTradePanelOpen || isWorldMapPanelOpen || isStatesPanelOpen || isSocialGraphPanelOpen || isNoospherePanelOpen || IsNoosphereVisionInputBlocking();
             if (Mathf.Abs(scroll) > 0.01f && !blockingHudOpen && !IsPointerOverHud(mousePosition))
             {
-                float currentDistance = cameraOffset.magnitude;
+                Vector3 zoomBaseOffset = cameraTargetOffset.sqrMagnitude > 0.0001f
+                    ? cameraTargetOffset
+                    : cameraOffset;
+                if (zoomBaseOffset.sqrMagnitude < 0.0001f)
+                {
+                    zoomBaseOffset = DioramaCameraOffset;
+                }
+
+                float currentDistance = zoomBaseOffset.magnitude;
                 float zoomDistanceT = Mathf.InverseLerp(CameraMinDistance, CameraMaxDistance, currentDistance);
                 bool isZoomingOut = scroll < 0f;
                 float zoomSpeedScale = isZoomingOut
                     ? Mathf.Lerp(0.55f, 6.2f, Mathf.Pow(zoomDistanceT, 1.55f))
                     : Mathf.Lerp(0.45f, 2.35f, Mathf.SmoothStep(0f, 1f, zoomDistanceT));
                 // Normalize scroll to one step per wheel tick, then scale it by current camera distance.
-                float zoomStep = Mathf.Sign(scroll) * CameraZoomSpeed * 0.6f * zoomSpeedScale;
+                float zoomStep = Mathf.Sign(scroll) * CameraZoomSpeed * 0.48f * zoomSpeedScale;
                 float targetDistance = Mathf.Clamp(currentDistance - zoomStep, CameraMinDistance, CameraMaxDistance);
-                Vector3 nextOffset = cameraOffset.normalized * targetDistance;
+                Vector3 nextOffset = zoomBaseOffset.normalized * targetDistance;
                 float clampedHeight = Mathf.Clamp(cameraFocusPoint.y + nextOffset.y, CameraMinHeight, CameraMaxHeight);
                 if (Mathf.Abs(nextOffset.y) > 0.0001f)
                 {
@@ -625,17 +633,36 @@ public partial class GameBootstrap
                     nextOffset *= heightScale;
                 }
 
-                cameraOffset = nextOffset;
-                cameraTargetOffset = cameraOffset;
+                cameraTargetOffset = nextOffset;
+                isCameraWheelZoomSmoothing = true;
                 isCameraRotatingToTarget = false;
                 MarkTutorialGoalComplete(isZoomingOut ? TutorialGoalKind.CameraZoomOut : TutorialGoalKind.CameraZoomIn);
             }
+        }
+
+        if (isCameraWheelZoomSmoothing &&
+            cameraTargetOffset.sqrMagnitude > 0.0001f &&
+            (cameraOffset - cameraTargetOffset).sqrMagnitude > 0.000001f)
+        {
+            float zoomLerp = 1f - Mathf.Exp(-CameraZoomOffsetLerp * cameraDeltaTime);
+            cameraOffset = Vector3.Lerp(cameraOffset, cameraTargetOffset, zoomLerp);
+            if ((cameraOffset - cameraTargetOffset).sqrMagnitude < 0.0004f)
+            {
+                cameraOffset = cameraTargetOffset;
+                isCameraWheelZoomSmoothing = false;
+            }
+        }
+        else if (isCameraWheelZoomSmoothing)
+        {
+            isCameraWheelZoomSmoothing = false;
         }
 
         ClampCameraFocus();
         if (cameraOffset.sqrMagnitude < 0.0001f)
         {
             cameraOffset = new Vector3(-8f, 10f, -8f);
+            cameraTargetOffset = cameraOffset;
+            isCameraWheelZoomSmoothing = false;
         }
 
         mainCamera.transform.position = cameraFocusPoint + cameraOffset;
@@ -685,6 +712,7 @@ public partial class GameBootstrap
         isTruckCameraFocused = true;
         isCameraReturningToDiorama = false;
         isCameraRotatingToTarget = false;
+        isCameraWheelZoomSmoothing = false;
         PlayUiSound(uiPanelOpenClip, 0.82f);
     }
 
@@ -698,6 +726,7 @@ public partial class GameBootstrap
         isTruckCameraFocused = false;
         isCameraReturningToDiorama = true;
         isCameraRotatingToTarget = false;
+        isCameraWheelZoomSmoothing = false;
     }
 
     private void RotateDioramaCamera(int direction)
@@ -712,6 +741,7 @@ public partial class GameBootstrap
         cameraTargetOffset = new Vector3(horizontalOffset.x, cameraOffset.y, horizontalOffset.z);
         isCameraRotatingToTarget = true;
         isCameraReturningToDiorama = true;
+        isCameraWheelZoomSmoothing = false;
         PlayUiSound(uiSelectClip, 0.75f);
     }
 
@@ -725,9 +755,7 @@ public partial class GameBootstrap
 
         float yaw = Mathf.Atan2(lookDirection.x, lookDirection.z) * Mathf.Rad2Deg;
         float zoomT = Mathf.InverseLerp(CameraMinHeight, CameraMaxHeight, cameraOffset.y);
-        float pitchT = zoomT >= 0.2f
-            ? 1f
-            : Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, 0.2f, zoomT));
+        float pitchT = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0f, CameraGroundPitchStartZoomT, zoomT));
         float pitch = Mathf.Lerp(DioramaCameraMinPitch, DioramaCameraPitch, pitchT);
         return Quaternion.Euler(pitch, yaw, 0f);
     }
@@ -749,6 +777,7 @@ public partial class GameBootstrap
             cameraOffset = DioramaCameraOffset;
         }
         cameraTargetOffset = cameraOffset;
+        isCameraWheelZoomSmoothing = false;
         isFleetScreenDirty = true;
         RefreshSelectionVisuals();
         PlayUiSound(uiPanelCloseClip, 0.82f);

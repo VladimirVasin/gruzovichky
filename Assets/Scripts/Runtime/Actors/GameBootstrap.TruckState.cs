@@ -396,31 +396,116 @@ public partial class GameBootstrap
         return center;
     }
 
-    private void MoveStarterIdleWorkersToMotel()
+    private void MoveStarterIdleWorkersToMotel(bool logWhenNoCandidates = true)
     {
         if (!locations.ContainsKey(LocationType.Motel))
         {
             return;
         }
 
+        int moved = 0;
+        int deferred = 0;
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent driver = driverAgents[i];
-            if (driver?.DriverObject == null || driver.IsArrivingByBus || driver.IsOnActiveShift || IsDriverBusyWalkPhase(driver))
+            if (driver?.DriverObject == null ||
+                !driver.DriverObject.activeSelf ||
+                driver.IsArrivingByBus ||
+                driver.IsLeavingTown ||
+                driver.HasDepartedTown ||
+                driver.IsOnActiveShift ||
+                driver.RestPhase != DriverRestPhase.None ||
+                driver.IsInsideBuilding ||
+                driver.NeedsShiftEndReturn ||
+                driver.WaitingForShiftAtParking ||
+                driver.IsDrivingPersonalCar ||
+                IsDriverBusyWalkPhase(driver) ||
+                IsDriverMotelIdlePositionNearCurrentMotel(driver))
             {
                 continue;
             }
 
             Vector3 current = driver.DriverObject.transform.position;
-            driver.MotelIdlePosition = GetDriverIdleMotelPosition(i, driver);
-            driver.WalkTargetWorld = driver.MotelIdlePosition;
+            Vector3 previousMotelIdlePosition = driver.MotelIdlePosition;
+            Vector3 previousWalkTarget = driver.WalkTargetWorld;
+            DriverRescuePhase previousPhase = driver.WalkPhase;
+            float previousIdleActivityTimer = driver.IdleActivityTimer;
+            float previousIdleWanderPauseTimer = driver.IdleWanderPauseTimer;
+            float previousWalkAnimationTime = driver.WalkAnimationTime;
+            int previousIdleWanderPointIndex = driver.IdleWanderPointIndex;
+            int previousWalkWaypointIndex = driver.WalkWaypointIndex;
+            List<Vector3> previousWalkPath = new(driver.WalkPath);
+
+            Vector3 target = GetDriverIdleMotelPosition(i, driver);
+            driver.WalkTargetWorld = target;
             driver.WalkPhase = DriverRescuePhase.IdleWander;
             driver.IdleWanderPauseTimer = 0f;
             driver.IdleWanderPointIndex = -1;
-            BuildDriverWalkPath(driver, current, driver.MotelIdlePosition);
+            driver.WalkAnimationTime = 0f;
+            if (!BuildDriverWalkPath(driver, current, target))
+            {
+                driver.MotelIdlePosition = previousMotelIdlePosition;
+                driver.WalkTargetWorld = previousWalkTarget;
+                driver.WalkPhase = previousPhase;
+                driver.IdleActivityTimer = previousIdleActivityTimer;
+                driver.IdleWanderPauseTimer = previousIdleWanderPauseTimer;
+                driver.IdleWanderPointIndex = previousIdleWanderPointIndex;
+                driver.WalkAnimationTime = previousWalkAnimationTime;
+                driver.WalkPath.Clear();
+                driver.WalkPath.AddRange(previousWalkPath);
+                driver.WalkWaypointIndex = previousWalkPath.Count > 0
+                    ? Mathf.Clamp(previousWalkWaypointIndex, 0, previousWalkPath.Count - 1)
+                    : 0;
+                deferred++;
+                SessionDebugLogger.Log(
+                    "DRIVER",
+                    $"{driver.DriverName} deferred move from Intercity Stop fallback to Motel idle area: no safe path from ({WorldToCell(current).x},{WorldToCell(current).y}) to ({WorldToCell(target).x},{WorldToCell(target).y}).");
+                continue;
+            }
+
+            DriverRescuePhase interruptedPhase = previousPhase;
+            if (driver.IsInsideBuilding)
+            {
+                ExitWorkerServiceInterior(driver, interruptedPhase);
+            }
+
+            ReleaseBench(driver);
+            ReleaseCatInteraction(driver);
+            if (interruptedPhase == DriverRescuePhase.IdleSmoking)
+            {
+                StopDriverSmokingParticles(driver);
+            }
+
+            driver.MotelIdlePosition = target;
+            driver.IdleActivityTimer = 0f;
+            driver.IdleConversationTimer = 0f;
+            driver.IdleConversationPartnerId = -1;
+            driver.PendingVendorLocationInstanceId = 0;
+            driver.PendingVendorItemId = string.Empty;
+            moved++;
         }
 
-        SessionDebugLogger.Log("DRIVER", "Starter idle workers moved from Intercity Stop fallback to newly built Motel idle area.");
+        if (moved > 0 || deferred > 0 || logWhenNoCandidates)
+        {
+            SessionDebugLogger.Log(
+                "DRIVER",
+                $"Starter idle worker Motel relocation checked: moved={moved}, deferred={deferred}.");
+        }
+    }
+
+    private bool IsDriverMotelIdlePositionNearCurrentMotel(DriverAgent driver)
+    {
+        if (driver == null || !locations.TryGetValue(LocationType.Motel, out LocationData motel))
+        {
+            return false;
+        }
+
+        const int margin = 5;
+        Vector2Int cell = WorldToCell(driver.MotelIdlePosition);
+        return cell.x >= motel.Min.x - margin &&
+               cell.x <= motel.Max.x + margin &&
+               cell.y >= motel.Min.y - margin &&
+               cell.y <= motel.Max.y + margin;
     }
 
     private Vector3 GetDriverParkingWaitPosition(TruckAgent truckAgent)
