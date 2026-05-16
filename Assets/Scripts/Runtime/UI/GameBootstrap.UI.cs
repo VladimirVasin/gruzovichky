@@ -597,7 +597,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (cell == goal || IsAnchorCell(cell))
+        if (cell == goal || IsAnyLocationEntranceCell(cell))
         {
             return true;
         }

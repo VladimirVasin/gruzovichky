@@ -122,8 +122,13 @@ public partial class GameBootstrap
         EnhanceBarModel(parent, center, min, max, anchor);
     }
 
-    private void CreateCanteenDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateCanteenDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedCanteenModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         float scale = BuildingDecorScale;
         float width = max.x - min.x + 1;
         float depth = max.y - min.y + 1;

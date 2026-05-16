@@ -183,7 +183,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Sawmill)
         {
-            CreateSawmillDecoration(root.transform, center, min, max, anchor);
+            CreateSawmillDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.FurnitureFactory)
         {
@@ -203,7 +203,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Canteen)
         {
-            CreateCanteenDecoration(root.transform, center, min, max, anchor);
+            CreateCanteenDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.Kiosk)
         {
@@ -565,6 +565,16 @@ public partial class GameBootstrap
         forestWorkTargetTrees.Clear();
         forestTreeWobbles.Clear();
         Vector3 center = new Vector3((min.x + max.x + 1) * 0.5f, 0.02f, (min.y + max.y + 1) * 0.5f);
+        Vector3 importedCenter = new Vector3(center.x, 0.35f, center.z);
+        if (TryCreateImportedLoggingCampModel(forestLocation, parent, importedCenter, min, max, anchor))
+        {
+            Vector3 importedDepotPos = GetCellCenter(GetForestDepotCell(min, max, anchor)) + new Vector3(0f, 0.12f, 0f);
+            CreateForestStoredLogsVisuals(forestLocation, parent, importedDepotPos + new Vector3(0f, 0.08f, 0.58f));
+            RefreshForestStoredLogsVisual(forestLocation);
+            TryCreateSquirrelMemorialSign(parent, center + new Vector3(-1.05f, 0.06f, -1.26f), Quaternion.identity);
+            SessionDebugLogger.Log("WORLD", "Built imported Logging Camp decoration with runtime storage stack.");
+            return;
+        }
 
         GameObject yard = GameObject.CreatePrimitive(PrimitiveType.Cube);
         yard.transform.SetParent(parent, false);

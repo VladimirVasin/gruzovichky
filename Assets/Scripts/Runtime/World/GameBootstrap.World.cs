@@ -626,11 +626,15 @@ public partial class GameBootstrap
         BuildingPlacementService.FillFootprintCells(buildPreviewFootprintCells, min, max);
         if (showWalkBuffer)
         {
+            int bufferRadius = TryGetBuildToolLocationType(activeBuildTool, out LocationType previewType)
+                ? GetLocationBuildingWalkBufferRadius(previewType)
+                : 1;
             BuildingPlacementService.FillFootprintBufferCells(
                 buildPreviewWalkBufferCells,
                 min,
                 max,
-                walkOpeningCell ?? drivewayCell);
+                walkOpeningCell ?? drivewayCell,
+                bufferRadius);
         }
         else
         {

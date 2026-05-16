@@ -144,8 +144,13 @@ public partial class GameBootstrap
         EnhanceWarehouseModel(parent, center, min, max, anchor);
     }
 
-    private void CreateSawmillDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateSawmillDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedSawmillModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
         Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
 

@@ -266,7 +266,16 @@ public partial class GameBootstrap : MonoBehaviour
         driver.IdleConversationTimer = 0f;
         driver.IdleConversationPartnerId = -1;
         ApplyDriverPose(driver, 0f, 0f);
-        BuildDriverWalkPath(driver, dropoff, driver.MotelIdlePosition);
+        if (!BuildDriverWalkPath(driver, dropoff, driver.MotelIdlePosition))
+        {
+            CompleteDriverMotelRelocationWithoutWalkPath(
+                driver,
+                driver.MotelIdlePosition,
+                DriverRescuePhase.ToMotelFromBusStop,
+                "arrival bus dropoff could not reach Motel by safe walk path; Motel does not require road access");
+            return;
+        }
+
         SessionDebugLogger.Log("DRIVER", $"{driver.DriverName} exited the arrival bus and started walking to Motel.");
     }
 

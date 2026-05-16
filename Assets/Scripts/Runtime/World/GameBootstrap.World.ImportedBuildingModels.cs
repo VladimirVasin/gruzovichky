@@ -8,18 +8,30 @@ public partial class GameBootstrap
     private const string WarehouseImportedModelResourcePath = "Buildings/warehouse";
     private const string MotelImportedModelResourcePath = "Buildings/motel";
     private const string CityHallImportedModelResourcePath = "Buildings/cityhall";
+    private const string LoggingCampImportedModelResourcePath = "Buildings/loggingcamp";
+    private const string SawmillImportedModelResourcePath = "Buildings/sawmill";
+    private const string CanteenImportedModelResourcePath = "Buildings/canteen";
     private const float BarImportedModelFootprintFill = 2.45f;
     private const float GamblingHallImportedModelFootprintFill = 2.45f;
     private const float WarehouseImportedModelFootprintFill = 2.45f;
-    private const float MotelImportedModelFootprintFill = 2.95f;
+    private const float MotelImportedModelFootprintFill = 3.10f;
     private const float CityHallImportedModelFootprintFill = 2.45f;
+    private const float LoggingCampImportedModelFootprintFill = 1.85f;
+    private const float SawmillImportedModelFootprintFill = 2.20f;
+    private const float CanteenImportedModelFootprintFill = 2.35f;
     private const float ImportedBuildingModelGroundY = -0.20f;
     private const float WarehouseImportedModelGroundY = -0.35f;
     private const float MotelImportedModelGroundY = -0.35f;
     private const float CityHallImportedModelGroundY = -0.35f;
+    private const float LoggingCampImportedModelGroundY = -0.35f;
+    private const float SawmillImportedModelGroundY = -0.35f;
+    private const float CanteenImportedModelGroundY = -0.35f;
     private const float WarehouseImportedModelPitch = -90f;
     private const float MotelImportedModelPitch = 0f;
     private const float CityHallImportedModelPitch = 0f;
+    private const float LoggingCampImportedModelPitch = 0f;
+    private const float SawmillImportedModelPitch = 0f;
+    private const float CanteenImportedModelPitch = 0f;
 
     private bool TryCreateImportedBarModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
@@ -111,6 +123,60 @@ public partial class GameBootstrap
             new Color(1f, 0.78f, 0.32f));
     }
 
+    private bool TryCreateImportedLoggingCampModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        return TryCreateImportedServiceModel(
+            owner,
+            parent,
+            center,
+            min,
+            max,
+            anchor,
+            LocationType.Forest,
+            LoggingCampImportedModelResourcePath,
+            "LoggingCampImportedModelRoot",
+            "LoggingCampImportedModel",
+            LoggingCampImportedModelFootprintFill,
+            new Color(1f, 0.78f, 0.44f, 1f),
+            new Color(1f, 0.70f, 0.28f));
+    }
+
+    private bool TryCreateImportedSawmillModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        return TryCreateImportedServiceModel(
+            owner,
+            parent,
+            center,
+            min,
+            max,
+            anchor,
+            LocationType.Sawmill,
+            SawmillImportedModelResourcePath,
+            "SawmillImportedModelRoot",
+            "SawmillImportedModel",
+            SawmillImportedModelFootprintFill,
+            new Color(1f, 0.80f, 0.42f, 1f),
+            new Color(1f, 0.70f, 0.28f));
+    }
+
+    private bool TryCreateImportedCanteenModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        return TryCreateImportedServiceModel(
+            owner,
+            parent,
+            center,
+            min,
+            max,
+            anchor,
+            LocationType.Canteen,
+            CanteenImportedModelResourcePath,
+            "CanteenImportedModelRoot",
+            "CanteenImportedModel",
+            CanteenImportedModelFootprintFill,
+            new Color(1f, 0.90f, 0.58f, 1f),
+            new Color(1f, 0.72f, 0.30f));
+    }
+
     private bool TryCreateImportedServiceModel(
         LocationData owner,
         Transform parent,
@@ -184,6 +250,9 @@ public partial class GameBootstrap
             LocationType.Warehouse => WarehouseImportedModelGroundY,
             LocationType.Motel     => MotelImportedModelGroundY,
             LocationType.CityHall  => CityHallImportedModelGroundY,
+            LocationType.Forest    => LoggingCampImportedModelGroundY,
+            LocationType.Sawmill   => SawmillImportedModelGroundY,
+            LocationType.Canteen   => CanteenImportedModelGroundY,
             _                      => ImportedBuildingModelGroundY
         };
     }
@@ -195,6 +264,9 @@ public partial class GameBootstrap
             LocationType.Warehouse => Quaternion.Euler(WarehouseImportedModelPitch, 0f, 0f),
             LocationType.Motel     => Quaternion.Euler(MotelImportedModelPitch, 0f, 0f),
             LocationType.CityHall  => Quaternion.Euler(CityHallImportedModelPitch, 0f, 0f),
+            LocationType.Forest    => Quaternion.Euler(LoggingCampImportedModelPitch, 0f, 0f),
+            LocationType.Sawmill   => Quaternion.Euler(SawmillImportedModelPitch, 0f, 0f),
+            LocationType.Canteen   => Quaternion.Euler(CanteenImportedModelPitch, 0f, 0f),
             _                      => Quaternion.identity
         };
     }
@@ -204,6 +276,11 @@ public partial class GameBootstrap
         if (type == LocationType.Warehouse || type == LocationType.Motel || type == LocationType.CityHall)
         {
             return TryGetLocalRendererBounds(root, renderers, out bounds, IsFoundationImportedGroundingRenderer);
+        }
+
+        if (type == LocationType.Forest || type == LocationType.Sawmill || type == LocationType.Canteen)
+        {
+            return TryGetLocalRendererBounds(root, renderers, out bounds, IsLoggingCampImportedGroundingRenderer);
         }
 
         bounds = default;
@@ -217,7 +294,10 @@ public partial class GameBootstrap
              parent.Find("GamblingHallImportedModelRoot") != null ||
              parent.Find("WarehouseImportedModelRoot") != null ||
              parent.Find("MotelImportedModelRoot") != null ||
-             parent.Find("CityHallImportedModelRoot") != null);
+             parent.Find("CityHallImportedModelRoot") != null ||
+             parent.Find("LoggingCampImportedModelRoot") != null ||
+             parent.Find("SawmillImportedModelRoot") != null ||
+             parent.Find("CanteenImportedModelRoot") != null);
     }
 
     private static void HideImportedBuildingPlatformRenderers(Renderer[] renderers, LocationType type)
@@ -636,6 +716,24 @@ public partial class GameBootstrap
                 name.StartsWith("OfficeBlock_ConcreteBase", System.StringComparison.OrdinalIgnoreCase) ||
                 name.StartsWith("MainBuilding_Foundation", System.StringComparison.OrdinalIgnoreCase) ||
                 name.StartsWith("OfficeBlock_Foundation", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            transform = transform.parent;
+        }
+
+        return false;
+    }
+
+    private static bool IsLoggingCampImportedGroundingRenderer(Renderer renderer)
+    {
+        Transform transform = renderer != null ? renderer.transform : null;
+        while (transform != null)
+        {
+            string name = transform.name;
+            if (name.StartsWith("GroundBase", System.StringComparison.OrdinalIgnoreCase) ||
+                name.StartsWith("GroundPatch", System.StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }

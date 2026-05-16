@@ -49,17 +49,22 @@ public partial class GameBootstrap
     private bool IsLocationWalkBufferCell(LocationData location, Vector2Int cell)
     {
         if (location == null ||
-            !ShouldLocationHaveBuildingWalkBuffer(location.Type) ||
             location.Contains(cell) ||
             IsLocationEntranceCell(location, cell))
         {
             return false;
         }
 
-        return cell.x >= location.Min.x - 1 &&
-               cell.x <= location.Max.x + 1 &&
-               cell.y >= location.Min.y - 1 &&
-               cell.y <= location.Max.y + 1;
+        int bufferRadius = GetLocationBuildingWalkBufferRadius(location.Type);
+        if (bufferRadius <= 0)
+        {
+            return false;
+        }
+
+        return cell.x >= location.Min.x - bufferRadius &&
+               cell.x <= location.Max.x + bufferRadius &&
+               cell.y >= location.Min.y - bufferRadius &&
+               cell.y <= location.Max.y + bufferRadius;
     }
 
     private static bool ShouldLocationHaveBuildingWalkBuffer(LocationType type)
@@ -67,6 +72,21 @@ public partial class GameBootstrap
         return type != LocationType.CityPark &&
                type != LocationType.Stop &&
                type != LocationType.IntercityStop;
+    }
+
+    private static int GetLocationBuildingWalkBufferRadius(LocationType type)
+    {
+        if (!ShouldLocationHaveBuildingWalkBuffer(type))
+        {
+            return 0;
+        }
+
+        return type switch
+        {
+            LocationType.CityHall => 2,
+            LocationType.Motel    => 2,
+            _                     => 2
+        };
     }
 
     private bool IsLocationEntranceCell(LocationData location, Vector2Int cell)
@@ -214,12 +234,12 @@ public partial class GameBootstrap
         return false;
     }
 
-    private int ClearFootpathsInBuildingWalkBuffer(Vector2Int min, Vector2Int max, Vector2Int openingCell)
+    private int ClearFootpathsInBuildingWalkBuffer(Vector2Int min, Vector2Int max, Vector2Int openingCell, int bufferRadius)
     {
         int removed = 0;
-        for (int x = min.x - 1; x <= max.x + 1; x++)
+        for (int x = min.x - bufferRadius; x <= max.x + bufferRadius; x++)
         {
-            for (int y = min.y - 1; y <= max.y + 1; y++)
+            for (int y = min.y - bufferRadius; y <= max.y + bufferRadius; y++)
             {
                 Vector2Int cell = new(x, y);
                 if ((x >= min.x && x <= max.x && y >= min.y && y <= max.y) ||

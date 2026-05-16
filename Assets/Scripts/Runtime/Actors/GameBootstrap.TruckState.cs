@@ -293,7 +293,7 @@ public partial class GameBootstrap
             position.y = SampleTerrainHeight(position.x, position.z);
 
             Vector2Int cell = WorldToCell(position);
-            if (!IsInsideGrid(cell) || roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) || IsLocationCell(cell))
+            if (!IsDriverIdleStandCell(cell))
             {
                 continue;
             }
@@ -302,7 +302,27 @@ public partial class GameBootstrap
         }
 
         frontageBase.y = SampleTerrainHeight(frontageBase.x, frontageBase.z);
+        if (IsDriverIdleStandCell(WorldToCell(frontageBase)))
+        {
+            return frontageBase;
+        }
+
+        if (TryFindNearestDriverSafeWalkCell(WorldToCell(frontageBase), out Vector2Int safeCell))
+        {
+            return GetCellCenter(safeCell);
+        }
+
         return frontageBase;
+    }
+
+    private bool IsDriverIdleStandCell(Vector2Int cell)
+    {
+        return IsInsideGrid(cell) &&
+               !roadCells.Contains(cell) &&
+               !edgeHighwayCells.Contains(cell) &&
+               !IsLocationCell(cell) &&
+               !IsBuildingWalkBufferCell(cell) &&
+               !waterCells.Contains(cell);
     }
 
     private bool IsDriverIdlePositionReserved(DriverAgent driver, Vector3 candidate)
@@ -383,7 +403,7 @@ public partial class GameBootstrap
             Vector2 localPoint = localPoints[(baseIndex + attempt) % localPoints.Length];
             Vector3 position = center + new Vector3(localPoint.x, 0f, localPoint.y);
             Vector2Int cell = WorldToCell(position);
-            if (!IsInsideGrid(cell) || roadCells.Contains(cell) || edgeHighwayCells.Contains(cell) || IsLocationCell(cell))
+            if (!IsDriverIdleStandCell(cell))
             {
                 continue;
             }
@@ -404,7 +424,7 @@ public partial class GameBootstrap
         }
 
         int moved = 0;
-        int deferred = 0;
+        int movedWithoutPath = 0;
         for (int i = 0; i < driverAgents.Count; i++)
         {
             DriverAgent driver = driverAgents[i];
@@ -426,16 +446,7 @@ public partial class GameBootstrap
             }
 
             Vector3 current = driver.DriverObject.transform.position;
-            Vector3 previousMotelIdlePosition = driver.MotelIdlePosition;
-            Vector3 previousWalkTarget = driver.WalkTargetWorld;
-            DriverRescuePhase previousPhase = driver.WalkPhase;
-            float previousIdleActivityTimer = driver.IdleActivityTimer;
-            float previousIdleWanderPauseTimer = driver.IdleWanderPauseTimer;
-            float previousWalkAnimationTime = driver.WalkAnimationTime;
-            int previousIdleWanderPointIndex = driver.IdleWanderPointIndex;
-            int previousWalkWaypointIndex = driver.WalkWaypointIndex;
-            List<Vector3> previousWalkPath = new(driver.WalkPath);
-
+            DriverRescuePhase interruptedPhase = driver.WalkPhase;
             Vector3 target = GetDriverIdleMotelPosition(i, driver);
             driver.WalkTargetWorld = target;
             driver.WalkPhase = DriverRescuePhase.IdleWander;
@@ -444,26 +455,15 @@ public partial class GameBootstrap
             driver.WalkAnimationTime = 0f;
             if (!BuildDriverWalkPath(driver, current, target))
             {
-                driver.MotelIdlePosition = previousMotelIdlePosition;
-                driver.WalkTargetWorld = previousWalkTarget;
-                driver.WalkPhase = previousPhase;
-                driver.IdleActivityTimer = previousIdleActivityTimer;
-                driver.IdleWanderPauseTimer = previousIdleWanderPauseTimer;
-                driver.IdleWanderPointIndex = previousIdleWanderPointIndex;
-                driver.WalkAnimationTime = previousWalkAnimationTime;
-                driver.WalkPath.Clear();
-                driver.WalkPath.AddRange(previousWalkPath);
-                driver.WalkWaypointIndex = previousWalkPath.Count > 0
-                    ? Mathf.Clamp(previousWalkWaypointIndex, 0, previousWalkPath.Count - 1)
-                    : 0;
-                deferred++;
-                SessionDebugLogger.Log(
-                    "DRIVER",
-                    $"{driver.DriverName} deferred move from Intercity Stop fallback to Motel idle area: no safe path from ({WorldToCell(current).x},{WorldToCell(current).y}) to ({WorldToCell(target).x},{WorldToCell(target).y}).");
+                CompleteDriverMotelRelocationWithoutWalkPath(
+                    driver,
+                    target,
+                    interruptedPhase,
+                    "starter idle relocation after Motel construction; Motel does not require road access");
+                movedWithoutPath++;
                 continue;
             }
 
-            DriverRescuePhase interruptedPhase = previousPhase;
             if (driver.IsInsideBuilding)
             {
                 ExitWorkerServiceInterior(driver, interruptedPhase);
@@ -485,11 +485,11 @@ public partial class GameBootstrap
             moved++;
         }
 
-        if (moved > 0 || deferred > 0 || logWhenNoCandidates)
+        if (moved > 0 || movedWithoutPath > 0 || logWhenNoCandidates)
         {
             SessionDebugLogger.Log(
                 "DRIVER",
-                $"Starter idle worker Motel relocation checked: moved={moved}, deferred={deferred}.");
+                $"Starter idle worker Motel relocation checked: moved={moved}, movedWithoutPath={movedWithoutPath}.");
         }
     }
 

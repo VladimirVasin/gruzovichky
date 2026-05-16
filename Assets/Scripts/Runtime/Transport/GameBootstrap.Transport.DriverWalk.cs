@@ -832,17 +832,11 @@ public partial class GameBootstrap
             blockedPhase == DriverRescuePhase.ToMotelFromBusStop &&
             driver.IsArrivingByBus)
         {
-            driver.IsArrivingByBus = false;
-            driver.WalkTargetWorld = driver.DriverObject != null
-                ? driver.DriverObject.transform.position
-                : driver.MotelIdlePosition;
-            driver.IdleWanderPauseTimer = Random.Range(0.8f, 1.8f);
-            driver.IdleWanderPointIndex = -1;
-            LogWorkerDecision(
+            CompleteDriverMotelRelocationWithoutWalkPath(
                 driver,
-                "arrival-walk-halted",
-                "ToMotelFromBusStop: no valid path; arrival state completed",
-                true);
+                GetDriverIdleMotelPosition(driver.DriverId - 1, driver),
+                blockedPhase,
+                "arrival walk halted before reaching Motel; Motel does not require road access");
             return;
         }
 

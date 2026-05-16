@@ -7,11 +7,12 @@ public partial class GameBootstrap
         int removedMiscCount = ClearMiscObjectsInFootprint(min, max);
         int removedFootpathCount = ClearFootpathsInFootprint(min, max);
         int removedLitterCount = ClearStreetLitterInFootprint(min, max);
-        if (ShouldLocationHaveBuildingWalkBuffer(type))
+        int walkBufferRadius = GetLocationBuildingWalkBufferRadius(type);
+        if (walkBufferRadius > 0)
         {
-            removedMiscCount += ClearMiscObjectsAroundBuildingFootprint(min, max);
-            removedFootpathCount += ClearFootpathsInBuildingWalkBuffer(min, max, openingCell);
-            removedLitterCount += ClearStreetLitterInBuildingWalkBuffer(min, max, openingCell);
+            removedMiscCount += ClearMiscObjectsAroundBuildingFootprint(min, max, walkBufferRadius);
+            removedFootpathCount += ClearFootpathsInBuildingWalkBuffer(min, max, openingCell, walkBufferRadius);
+            removedLitterCount += ClearStreetLitterInBuildingWalkBuffer(min, max, openingCell, walkBufferRadius);
         }
 
         bool flattened = FlattenTerrainForBuildingFootprint(min, max, out float flatHeight);
@@ -40,12 +41,12 @@ public partial class GameBootstrap
         return removed;
     }
 
-    private int ClearMiscObjectsAroundBuildingFootprint(Vector2Int min, Vector2Int max)
+    private int ClearMiscObjectsAroundBuildingFootprint(Vector2Int min, Vector2Int max, int bufferRadius)
     {
         int removed = 0;
-        for (int x = min.x - 1; x <= max.x + 1; x++)
+        for (int x = min.x - bufferRadius; x <= max.x + bufferRadius; x++)
         {
-            for (int y = min.y - 1; y <= max.y + 1; y++)
+            for (int y = min.y - bufferRadius; y <= max.y + bufferRadius; y++)
             {
                 Vector2Int cell = new(x, y);
                 if (x >= min.x && x <= max.x && y >= min.y && y <= max.y)

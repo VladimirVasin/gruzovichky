@@ -98,7 +98,7 @@ public static class BuildingPlacementService
         }
     }
 
-    public static void FillFootprintBufferCells(List<Vector2Int> target, Vector2Int min, Vector2Int max, Vector2Int? openingCell)
+    public static void FillFootprintBufferCells(List<Vector2Int> target, Vector2Int min, Vector2Int max, Vector2Int? openingCell, int radius = 1)
     {
         if (target == null)
         {
@@ -106,9 +106,14 @@ public static class BuildingPlacementService
         }
 
         target.Clear();
-        for (int x = min.x - 1; x <= max.x + 1; x++)
+        if (radius <= 0)
         {
-            for (int y = min.y - 1; y <= max.y + 1; y++)
+            return;
+        }
+
+        for (int x = min.x - radius; x <= max.x + radius; x++)
+        {
+            for (int y = min.y - radius; y <= max.y + radius; y++)
             {
                 Vector2Int cell = new(x, y);
                 if (x >= min.x && x <= max.x && y >= min.y && y <= max.y)

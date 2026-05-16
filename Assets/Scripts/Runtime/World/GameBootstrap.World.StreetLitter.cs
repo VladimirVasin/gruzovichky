@@ -610,12 +610,12 @@ public partial class GameBootstrap
         return removed;
     }
 
-    private int ClearStreetLitterInBuildingWalkBuffer(Vector2Int min, Vector2Int max, Vector2Int openingCell)
+    private int ClearStreetLitterInBuildingWalkBuffer(Vector2Int min, Vector2Int max, Vector2Int openingCell, int bufferRadius)
     {
         int removed = 0;
-        for (int x = min.x - 1; x <= max.x + 1; x++)
+        for (int x = min.x - bufferRadius; x <= max.x + bufferRadius; x++)
         {
-            for (int y = min.y - 1; y <= max.y + 1; y++)
+            for (int y = min.y - bufferRadius; y <= max.y + bufferRadius; y++)
             {
                 Vector2Int cell = new(x, y);
                 if ((x >= min.x && x <= max.x && y >= min.y && y <= max.y) ||

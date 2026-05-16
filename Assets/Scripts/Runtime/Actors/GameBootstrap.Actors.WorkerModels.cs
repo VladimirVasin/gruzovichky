@@ -10,7 +10,8 @@ public partial class GameBootstrap
     private const string ZelenFemaleImportedDriverResourcePath = "Citizens/ZeleninFemale";
     private const string RovianMaleImportedDriverResourcePath = "Citizens/RovianMale";
     private const string RovianFemaleImportedDriverResourcePath = "Citizens/RovianFemale";
-    private const float ImportedDriverTargetHeight = 1.38f;
+    private const float ImportedDriverFemaleHeightOffset = 0.045f;
+    private const float ImportedDriverHeightJitter = 0.025f;
 
     private struct DriverVisualRecipe
     {
@@ -120,7 +121,8 @@ public partial class GameBootstrap
             return false;
         }
 
-        float scale = ImportedDriverTargetHeight / Mathf.Max(bounds.size.y, 0.01f);
+        float targetHeight = GetImportedDriverTargetHeight(driver);
+        float scale = targetHeight / Mathf.Max(bounds.size.y, 0.01f);
         if (scale <= 0f || float.IsNaN(scale) || float.IsInfinity(scale))
         {
             ResetImportedDriverVisualAnimationHooks(driver);
@@ -140,6 +142,19 @@ public partial class GameBootstrap
         Transform poseRoot = CreateImportedDriverPoseRoot(driver.DriverVisualRoot, model.transform);
         BuildImportedDriverAnimationRig(driver, model.transform, rootName, isFemale, poseRoot);
         return true;
+    }
+
+    private static float GetImportedDriverTargetHeight(DriverAgent driver)
+    {
+        float height = driver?.Race switch
+        {
+            WorkerRaceKind.Iskrian => 1.24f,
+            WorkerRaceKind.Zelen => 1.12f,
+            _ => 1.18f
+        };
+        if (driver != null && driver.Gender == WorkerGender.Female) height -= ImportedDriverFemaleHeightOffset;
+        uint seed = (uint)(StableDriverVisualHash(driver?.DriverName) ^ ((driver?.DriverId ?? 0) * 1103515245));
+        return height + (((seed % 1001u) / 500f) - 1f) * ImportedDriverHeightJitter;
     }
 
     private static bool TryGetImportedDriverVisualConfig(
