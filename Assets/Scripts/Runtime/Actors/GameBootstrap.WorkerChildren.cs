@@ -649,7 +649,7 @@ public partial class GameBootstrap
 
     private static float GetWorkerChildStageVisualScale(WorkerChildStage stage)
     {
-        return stage switch
+        float stageScale = stage switch
         {
             WorkerChildStage.Baby => 0.56f,
             WorkerChildStage.Toddler => 0.74f,
@@ -657,6 +657,7 @@ public partial class GameBootstrap
             WorkerChildStage.Teen => 1.12f,
             _ => 1f
         };
+        return stageScale * CharacterWorldVisualScale;
     }
 
     private static float GetWorkerChildStageYardDepth(WorkerChildStage stage)

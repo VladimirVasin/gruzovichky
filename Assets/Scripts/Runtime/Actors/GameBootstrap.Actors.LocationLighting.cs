@@ -4,6 +4,11 @@ public partial class GameBootstrap
 {
     private const float NightLightActivationDarkness = 0.64f;
     private const float NightLightFullDarkness = 0.94f;
+    private const int MaxActiveLocationUnityLights = 14;
+    private const int MaxActiveRoadLanternUnityLights = 18;
+    private const float LocationUnityLightFocusDistance = 26f;
+    private const float RoadLanternUnityLightFocusDistance = 18f;
+    private const float DriverFlashlightUnityLightFocusDistance = 18f;
 
     private void UpdateLocationNightLights(float stylizedDaylight)
     {
@@ -11,6 +16,7 @@ public partial class GameBootstrap
         bool lightsOn = darkness > NightLightActivationDarkness;
         float nightT = lightsOn ? Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(NightLightActivationDarkness, NightLightFullDarkness, darkness)) : 0f;
 
+        int activeLocationUnityLights = 0;
         for (int i = 0; i < locationNightLights.Count; i++)
         {
             Light lightComponent = locationNightLights[i];
@@ -22,7 +28,14 @@ public partial class GameBootstrap
             float maxIntensity = i < locationNightPointLightMaxIntensities.Count ? locationNightPointLightMaxIntensities[i] : 1.15f;
             float range = i < locationNightPointLightRanges.Count ? locationNightPointLightRanges[i] : 3.2f;
             Color onColor = WarmLightSourceColor(i < locationNightPointLightOnColors.Count ? locationNightPointLightOnColors[i] : new Color(1f, 0.9f, 0.72f));
-            bool realLightOn = lightsOn;
+            bool realLightOn = lightsOn &&
+                activeLocationUnityLights < MaxActiveLocationUnityLights &&
+                ShouldEnableNightUnityLight(lightComponent.transform.position, LocationUnityLightFocusDistance);
+            if (realLightOn)
+            {
+                activeLocationUnityLights++;
+            }
+
             lightComponent.enabled = realLightOn;
             lightComponent.intensity = realLightOn ? Mathf.Lerp(0.18f, maxIntensity, nightT) : 0f;
             lightComponent.color = onColor;
@@ -72,6 +85,19 @@ public partial class GameBootstrap
         }
     }
 
+    private bool ShouldEnableNightUnityLight(Vector3 worldPosition, float focusDistance)
+    {
+        if (isFarZoomVisualLodActive || focusDistance <= 0f)
+        {
+            return false;
+        }
+
+        Vector3 focus = cameraFocusPoint;
+        float dx = worldPosition.x - focus.x;
+        float dz = worldPosition.z - focus.z;
+        return dx * dx + dz * dz <= focusDistance * focusDistance;
+    }
+
     private bool IsLocationNightLightStaffed(int ownerInstanceId)
     {
         LocationData location = FindLocationByInstanceId(ownerInstanceId);
@@ -111,6 +137,8 @@ public partial class GameBootstrap
     private void UpdateRoadLanternLights(float darkness)
     {
         float time = Time.time;
+        int activeRoadLanternUnityLights = 0;
+        NightLightProfile lanternProfile = GetRoadLanternLightProfile();
         foreach (RoadLanternData roadLantern in roadLanterns)
         {
             if (roadLantern.Light == null || roadLantern.GlowMaterial == null)
@@ -152,7 +180,6 @@ public partial class GameBootstrap
                 flickerBlend = softPulse * randomPulse * blinkPulse;
             }
 
-            NightLightProfile lanternProfile = GetRoadLanternLightProfile();
             float lightIntensity = Mathf.Lerp(0.35f, lanternProfile.UnityIntensity, baseActivation) * flickerBlend;
             float glowStrength = Mathf.Lerp(0.18f, 1.18f, baseActivation) * Mathf.Lerp(0.92f, 1f, flickerBlend);
             Color lanternColor = Color.Lerp(
@@ -160,7 +187,14 @@ public partial class GameBootstrap
                 lanternProfile.Color,
                 Mathf.Clamp01(glowStrength));
 
-            bool realLightOn = lightsOn;
+            bool realLightOn = lightsOn &&
+                activeRoadLanternUnityLights < MaxActiveRoadLanternUnityLights &&
+                ShouldEnableNightUnityLight(roadLantern.Light.transform.position, RoadLanternUnityLightFocusDistance);
+            if (realLightOn)
+            {
+                activeRoadLanternUnityLights++;
+            }
+
             roadLantern.Light.enabled = realLightOn;
             roadLantern.Light.intensity = realLightOn ? lightIntensity : 0f;
             roadLantern.Light.color = lanternColor;

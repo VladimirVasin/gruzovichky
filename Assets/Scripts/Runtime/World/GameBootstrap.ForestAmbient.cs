@@ -250,6 +250,7 @@ public partial class GameBootstrap
 
         Transform visualRoot = new GameObject("VisualRoot").transform;
         visualRoot.SetParent(workerRoot.transform, false);
+        visualRoot.localScale = Vector3.one * CharacterWorldVisualScale;
 
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         body.transform.SetParent(visualRoot, false);

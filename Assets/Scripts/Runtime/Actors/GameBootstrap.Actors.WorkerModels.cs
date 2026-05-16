@@ -10,6 +10,7 @@ public partial class GameBootstrap
     private const string ZelenFemaleImportedDriverResourcePath = "Citizens/ZeleninFemale";
     private const string RovianMaleImportedDriverResourcePath = "Citizens/RovianMale";
     private const string RovianFemaleImportedDriverResourcePath = "Citizens/RovianFemale";
+    private const float CharacterWorldVisualScale = 0.88f;
     private const float ImportedDriverFemaleHeightOffset = 0.045f;
     private const float ImportedDriverHeightJitter = 0.025f;
 

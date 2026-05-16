@@ -1,74 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
-    private bool TryHandleTruckSelection(Ray ray)
-    {
-        if (!Physics.Raycast(ray, out RaycastHit hit, 200f))
-        {
-            return false;
-        }
-
-        if (hit.transform == null)
-        {
-            return false;
-        }
-
-        foreach (TruckAgent truckAgent in truckAgents)
-        {
-            if (truckAgent.TruckObject != null && hit.transform.IsChildOf(truckAgent.TruckObject.transform))
-            {
-                FocusTruck(truckAgent.TruckNumber);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private bool TryHandleLocalBusSelection(Ray ray)
-    {
-        if (!Physics.Raycast(ray, out RaycastHit hit, 200f))
-        {
-            return false;
-        }
-
-        if (hit.transform == null || localBusRoute?.RootTransform == null)
-        {
-            return false;
-        }
-
-        if (!hit.transform.IsChildOf(localBusRoute.RootTransform))
-        {
-            return false;
-        }
-
-        FocusLocalBus();
-        return true;
-    }
-
-    private bool TryHandleDriverSelection(Ray ray)
-    {
-        if (!Physics.Raycast(ray, out RaycastHit hit, 200f)) return false;
-        if (hit.transform == null) return false;
-
-        foreach (DriverAgent driver in driverAgents)
-        {
-            if (driver.DriverObject != null && driver.DriverObject.activeSelf &&
-                hit.transform.IsChildOf(driver.DriverObject.transform))
-            {
-                FocusDriver(driver.DriverId);
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     private void ProduceForestWood()
     {
         UpdateLumberyardSystem();

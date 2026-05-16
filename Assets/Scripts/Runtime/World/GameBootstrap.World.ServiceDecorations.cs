@@ -374,10 +374,16 @@ public partial class GameBootstrap
         EnhanceGamblingHallModel(parent, center, min, max, anchor);
     }
 
-    private void CreateCityParkDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateCityParkDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         cityParkBenchPositions.Clear();
         System.Array.Clear(cityParkBenchOccupied, 0, cityParkBenchOccupied.Length);
+
+        RegisterCityParkBenchPositions(center, -0.20f);
+        if (TryCreateImportedCityParkModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
 
         const float groundY    = -0.20f; // grass surface relative to center.y
         Color woodColor    = new Color(0.56f, 0.39f, 0.20f);
@@ -522,11 +528,6 @@ public partial class GameBootstrap
         foreach (var (bpos, rotY) in benchDefs)
         {
             Quaternion brot = Quaternion.Euler(0f, rotY, 0f);
-            if (cityParkBenchPositions.Count < cityParkBenchOccupied.Length)
-            {
-                Vector3 sitPos = new(bpos.x, center.y + groundY + 0.08f, bpos.z);
-                cityParkBenchPositions.Add(sitPos);
-            }
             // Seat
             GameObject seat = GameObject.CreatePrimitive(PrimitiveType.Cube);
             seat.name = "BenchSeat";
@@ -598,6 +599,22 @@ public partial class GameBootstrap
 
         TryCreateSquirrelMemorialSign(parent, center + new Vector3(-2.2f, groundY + 0.02f, -3.55f), Quaternion.identity);
         EnhanceCityParkModel(parent, center, min, max, anchor);
+    }
+
+    private void RegisterCityParkBenchPositions(Vector3 center, float groundY)
+    {
+        Vector3[] benchPositions =
+        {
+            center + new Vector3(-1.5f, groundY + 0.08f, 0f),
+            center + new Vector3( 1.5f, groundY + 0.08f, 0f),
+            center + new Vector3(0f, groundY + 0.08f, -1.5f),
+            center + new Vector3(0f, groundY + 0.08f,  1.5f)
+        };
+
+        for (int i = 0; i < benchPositions.Length && cityParkBenchPositions.Count < cityParkBenchOccupied.Length; i++)
+        {
+            cityParkBenchPositions.Add(benchPositions[i]);
+        }
     }
 
     private bool TryGetFurnitureFactoryPlacement(Vector2Int anchorCell, out Vector2Int min, out Vector2Int max)

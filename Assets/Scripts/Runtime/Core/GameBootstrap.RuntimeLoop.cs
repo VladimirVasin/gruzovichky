@@ -186,6 +186,10 @@ public partial class GameBootstrap
             ClearEventFeedEntries();
             return;
         }
+
+        float runtimeUpdateStartedRealtime = Time.realtimeSinceStartup;
+        TrackRuntimeFrameGap(runtimeUpdateStartedRealtime);
+
         UpdateTutorialUi();
         if (isTutorialOpen && ShouldPauseSimulationForTutorial())
         {
@@ -383,6 +387,7 @@ public partial class GameBootstrap
         UpdateBuildingQuickHud();
         UpdateCellQuickHud(); UpdateWorkerPortraitAnimationExpressions();
         UpdateRuntimeLocalizationTick();
+        TrackRuntimeUpdateDuration(runtimeUpdateStartedRealtime);
         SessionDebugLogger.FlushIfIntervalElapsed();
     }
 

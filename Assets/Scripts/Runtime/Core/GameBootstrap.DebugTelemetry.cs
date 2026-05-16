@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public partial class GameBootstrap
@@ -5,6 +6,151 @@ public partial class GameBootstrap
     private const float WorkerDecisionRepeatThrottleSeconds = 30f;
     private const float WorkerDecisionRepeatThrottleWorldHours = 1f;
     private const float LocalBusPassengerSkipRepeatThrottleSeconds = 20f;
+    private const float RuntimeFrameGapLogThresholdSeconds = 1f;
+    private const float RuntimeUpdateDurationLogThresholdSeconds = 0.25f;
+    private const float RuntimePerfLogCooldownSeconds = 2f;
+
+    private float lastRuntimeUpdateStartRealtime = -1f;
+    private float lastRuntimeFrameGapLogRealtime = -10f;
+    private float lastRuntimeUpdateDurationLogRealtime = -10f;
+
+    private void TrackRuntimeFrameGap(float updateStartedRealtime)
+    {
+        if (lastRuntimeUpdateStartRealtime >= 0f)
+        {
+            float gapSeconds = updateStartedRealtime - lastRuntimeUpdateStartRealtime;
+            if (gapSeconds >= RuntimeFrameGapLogThresholdSeconds &&
+                updateStartedRealtime - lastRuntimeFrameGapLogRealtime >= RuntimePerfLogCooldownSeconds)
+            {
+                lastRuntimeFrameGapLogRealtime = updateStartedRealtime;
+                SessionDebugLogger.Log(
+                    "PERF",
+                    $"Frame gap before Update: {gapSeconds:0.000}s; {FormatRuntimePerfSnapshot()}.");
+            }
+        }
+
+        lastRuntimeUpdateStartRealtime = updateStartedRealtime;
+    }
+
+    private void TrackRuntimeUpdateDuration(float updateStartedRealtime)
+    {
+        float now = Time.realtimeSinceStartup;
+        float durationSeconds = now - updateStartedRealtime;
+        if (durationSeconds < RuntimeUpdateDurationLogThresholdSeconds ||
+            now - lastRuntimeUpdateDurationLogRealtime < RuntimePerfLogCooldownSeconds)
+        {
+            return;
+        }
+
+        lastRuntimeUpdateDurationLogRealtime = now;
+        SessionDebugLogger.Log(
+            "PERF",
+            $"Slow Update duration: {durationSeconds:0.000}s; {FormatRuntimePerfSnapshot()}.");
+    }
+
+    private string FormatRuntimePerfSnapshot()
+    {
+        int driverFlashlightLights = CountActiveDriverFlashlightLights(out int driverHaloLights);
+        float cameraY = mainCamera != null ? mainCamera.transform.position.y : cameraOffset.y;
+        string hudState = $"fleet={isFleetPanelOpen}, build={isBuildPanelOpen}/{activeBuildTool}, noosphere={isNoospherePanelOpen}, citySocial={isCitySocialRequestSceneOpen}, barInterior={isBarInteriorSceneOpen}";
+        return
+            $"workers={driverAgents.Count}, trucks={truckAgents.Count}, buses={busAgents.Count}, locations={locations.Count}, " +
+            $"roadLanterns={roadLanterns.Count}, activeRoadLights={CountActiveRoadLanternLights()}, activeLocationLights={CountEnabledLights(locationNightLights)}, " +
+            $"driverFlashlights={driverFlashlightLights}, driverHalos={driverHaloLights}, truckHeadlights={CountActiveTruckHeadlights()}, busHeadlights={CountActiveBusHeadlights()}, " +
+            $"farLod={isFarZoomVisualLodActive}, cameraY={cameraY:0.0}, hud=[{hudState}]";
+    }
+
+    private static int CountEnabledLights(List<Light> lights)
+    {
+        if (lights == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        for (int i = 0; i < lights.Count; i++)
+        {
+            if (lights[i] != null && lights[i].enabled)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private int CountActiveRoadLanternLights()
+    {
+        int count = 0;
+        for (int i = 0; i < roadLanterns.Count; i++)
+        {
+            Light lightComponent = roadLanterns[i]?.Light;
+            if (lightComponent != null && lightComponent.enabled)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private int CountActiveDriverFlashlightLights(out int haloCount)
+    {
+        int beamCount = 0;
+        haloCount = 0;
+        for (int i = 0; i < driverAgents.Count; i++)
+        {
+            DriverAgent driver = driverAgents[i];
+            if (driver?.DriverFlashlightLight != null && driver.DriverFlashlightLight.enabled)
+            {
+                beamCount++;
+            }
+
+            if (driver?.DriverFlashlightHaloLight != null && driver.DriverFlashlightHaloLight.enabled)
+            {
+                haloCount++;
+            }
+        }
+
+        return beamCount;
+    }
+
+    private int CountActiveTruckHeadlights()
+    {
+        int count = 0;
+        for (int i = 0; i < truckAgents.Count; i++)
+        {
+            TruckAgent truck = truckAgents[i];
+            if (truck == null)
+            {
+                continue;
+            }
+
+            count += CountEnabledLights(truck.TruckHeadlights);
+        }
+
+        return count;
+    }
+
+    private int CountActiveBusHeadlights()
+    {
+        int count = 0;
+        for (int i = 0; i < busAgents.Count; i++)
+        {
+            BusAgent bus = busAgents[i];
+            if (bus?.HeadlightLeft != null && bus.HeadlightLeft.enabled)
+            {
+                count++;
+            }
+
+            if (bus?.HeadlightRight != null && bus.HeadlightRight.enabled)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
 
     private void LogWorkerDecision(
         DriverAgent driver,

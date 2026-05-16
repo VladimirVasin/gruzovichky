@@ -90,7 +90,7 @@ public partial class GameBootstrap
             return;
         }
 
-        if (TryHandleDriverSelection(ray))
+        if (TryHandleDriverSelection(ray, mousePosition))
         {
             ClearSelectedDebugCell();
             return;

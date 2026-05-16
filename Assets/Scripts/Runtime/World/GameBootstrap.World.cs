@@ -570,7 +570,12 @@ public partial class GameBootstrap
         previewPosition = GetCellCenter(anchorCell) + new Vector3(0f, RoadHeight + 0.03f, 0f);
         previewScale = new Vector3(0.98f, 0.04f, 0.98f);
         GetRotatedBuildingFootprint(anchorCell, 8, 8, out Vector2Int min, out Vector2Int max);
-        SetBuildFootprintPreviewCells(min, max, showWalkBuffer: false);
+        SetBuildFootprintPreviewCells(
+            min,
+            max,
+            GetBuildPreviewOuterExitCell(LocationType.CityPark, min, max, anchorCell),
+            anchorCell,
+            showWalkBuffer: false);
         bool canPlace = TryGetCityParkPlacement(anchorCell, out _, out _);
         float cx = (min.x + max.x + 1) * 0.5f;
         float cz = (min.y + max.y + 1) * 0.5f;
@@ -635,6 +640,7 @@ public partial class GameBootstrap
                 max,
                 walkOpeningCell ?? drivewayCell,
                 bufferRadius);
+            RemoveBuildPreviewWalkOpeningCorridor(walkOpeningCell ?? drivewayCell, drivewayCell);
         }
         else
         {
@@ -652,7 +658,7 @@ public partial class GameBootstrap
         SetBuildFootprintPreviewCells(
             previewMin,
             previewMax,
-            DoesLocationRequireRoadAccess(LocationType.Bar) ? anchorCell : null,
+            GetBuildPreviewOuterExitCell(LocationType.Bar, previewMin, previewMax, anchorCell),
             anchorCell);
         bool canPlace = TryGetBarPlacement(anchorCell, out Vector2Int min, out Vector2Int max);
         if (!canPlace) return false;
@@ -717,7 +723,7 @@ public partial class GameBootstrap
         SetBuildFootprintPreviewCells(
             previewMin,
             previewMax,
-            DoesLocationRequireRoadAccess(type) ? anchorCell : null,
+            GetBuildPreviewOuterExitCell(type, previewMin, previewMax, anchorCell),
             anchorCell);
         if (!TryGetRotatedBuildingPlacement(anchorCell, type, width, depth, out Vector2Int min, out Vector2Int max))
         {
@@ -729,6 +735,68 @@ public partial class GameBootstrap
         previewPosition = new Vector3(center.x, SampleTerrainHeight(center.x, center.y) + RoadHeight + 0.03f, center.y);
         previewScale = preview.Scale;
         return true;
+    }
+
+    private Vector2Int GetBuildPreviewOuterExitCell(LocationType type, Vector2Int min, Vector2Int max, Vector2Int innerExitCell)
+    {
+        int bufferRadius = GetLocationBuildingWalkBufferRadius(type);
+        if (bufferRadius <= 0)
+        {
+            return innerExitCell;
+        }
+
+        Vector2Int outward = GetFootprintOutwardDirection(min, max, innerExitCell);
+        if (outward == Vector2Int.zero)
+        {
+            return innerExitCell;
+        }
+
+        if (outward.x < 0) return new Vector2Int(min.x - bufferRadius, innerExitCell.y);
+        if (outward.x > 0) return new Vector2Int(max.x + bufferRadius, innerExitCell.y);
+        if (outward.y < 0) return new Vector2Int(innerExitCell.x, min.y - bufferRadius);
+        return new Vector2Int(innerExitCell.x, max.y + bufferRadius);
+    }
+
+    private static Vector2Int GetFootprintOutwardDirection(Vector2Int min, Vector2Int max, Vector2Int cell)
+    {
+        if (cell.x < min.x && cell.y >= min.y && cell.y <= max.y) return Vector2Int.left;
+        if (cell.x > max.x && cell.y >= min.y && cell.y <= max.y) return Vector2Int.right;
+        if (cell.y < min.y && cell.x >= min.x && cell.x <= max.x) return Vector2Int.down;
+        if (cell.y > max.y && cell.x >= min.x && cell.x <= max.x) return Vector2Int.up;
+        return Vector2Int.zero;
+    }
+
+    private void RemoveBuildPreviewWalkOpeningCorridor(Vector2Int? innerOpeningCell, Vector2Int? outerExitCell)
+    {
+        if (!innerOpeningCell.HasValue && !outerExitCell.HasValue)
+        {
+            return;
+        }
+
+        Vector2Int start = innerOpeningCell ?? outerExitCell.Value;
+        Vector2Int end = outerExitCell ?? innerOpeningCell.Value;
+        Vector2Int delta = end - start;
+        int steps = Mathf.Abs(delta.x) + Mathf.Abs(delta.y);
+        if (steps == 0)
+        {
+            buildPreviewWalkBufferCells.Remove(start);
+            return;
+        }
+
+        if (delta.x != 0 && delta.y != 0)
+        {
+            buildPreviewWalkBufferCells.Remove(start);
+            buildPreviewWalkBufferCells.Remove(end);
+            return;
+        }
+
+        Vector2Int step = new(
+            delta.x == 0 ? 0 : delta.x / Mathf.Abs(delta.x),
+            delta.y == 0 ? 0 : delta.y / Mathf.Abs(delta.y));
+        for (int i = 0; i <= steps; i++)
+        {
+            buildPreviewWalkBufferCells.Remove(start + step * i);
+        }
     }
 
 

@@ -13,11 +13,11 @@ public partial class GameBootstrap
     private const string CanteenImportedModelResourcePath = "Buildings/canteen";
     private const float BarImportedModelFootprintFill = 2.45f;
     private const float GamblingHallImportedModelFootprintFill = 2.45f;
-    private const float WarehouseImportedModelFootprintFill = 2.45f;
-    private const float MotelImportedModelFootprintFill = 3.10f;
-    private const float CityHallImportedModelFootprintFill = 2.45f;
-    private const float LoggingCampImportedModelFootprintFill = 1.85f;
-    private const float SawmillImportedModelFootprintFill = 2.20f;
+    private const float WarehouseImportedModelFootprintFill = 3.93f;
+    private const float MotelImportedModelFootprintFill = 3.70f;
+    private const float CityHallImportedModelFootprintFill = 2.30f;
+    private const float LoggingCampImportedModelFootprintFill = 2.25f;
+    private const float SawmillImportedModelFootprintFill = 3.10f;
     private const float CanteenImportedModelFootprintFill = 2.35f;
     private const float ImportedBuildingModelGroundY = -0.20f;
     private const float WarehouseImportedModelGroundY = -0.35f;
@@ -235,12 +235,50 @@ public partial class GameBootstrap
                 -scaledBounds.center.x,
                 groundY - groundingBounds.min.y,
                 -scaledBounds.center.z);
+
+            LogImportedBuildingScaleAudit(
+                type,
+                resourcePath,
+                footprintFill,
+                min,
+                max,
+                bounds,
+                scaledBounds,
+                scale,
+                targetWidth,
+                targetDepth);
         }
 
         ConfigureImportedBuildingModel(model);
         RegisterImportedServiceInteractionMetadata(owner, model.transform);
         RegisterImportedBuildingNightLighting(owner, model.transform, WarmLightSourceColor(windowOnColor), WarmLightSourceColor(markerLightColor));
         return true;
+    }
+
+    private static void LogImportedBuildingScaleAudit(
+        LocationType type,
+        string resourcePath,
+        float footprintFill,
+        Vector2Int min,
+        Vector2Int max,
+        Bounds unscaledBounds,
+        Bounds scaledBounds,
+        float scale,
+        float targetWidth,
+        float targetDepth)
+    {
+        int footprintWidth = Mathf.Max(1, max.x - min.x + 1);
+        int footprintDepth = Mathf.Max(1, max.y - min.y + 1);
+        SessionDebugLogger.Log(
+            "BUILD_MODEL_SCALE",
+            $"{type} model={resourcePath} footprint={footprintWidth}x{footprintDepth} fill={footprintFill:0.00} " +
+            $"target={targetWidth:0.00}x{targetDepth:0.00} scale={scale:0.000} " +
+            $"unscaled={FormatImportedBuildingBoundsSize(unscaledBounds.size)} scaled={FormatImportedBuildingBoundsSize(scaledBounds.size)}");
+    }
+
+    private static string FormatImportedBuildingBoundsSize(Vector3 size)
+    {
+        return $"{size.x:0.00}x{size.y:0.00}x{size.z:0.00}";
     }
 
     private static float GetImportedBuildingModelGroundY(LocationType type)
@@ -263,6 +301,7 @@ public partial class GameBootstrap
             LocationType.LaborExchange or
             LocationType.CleaningDepot or
             LocationType.Docks or
+            LocationType.CityPark or
             LocationType.PersonalHouse => ImportedTownBuildingModelGroundY,
             _                      => ImportedBuildingModelGroundY
         };
@@ -785,6 +824,7 @@ public partial class GameBootstrap
         LocationType.LaborExchange    => true,
         LocationType.CleaningDepot    => true,
         LocationType.Docks            => true,
+        LocationType.CityPark         => true,
         LocationType.PersonalHouse    => true,
         _                             => false
     };

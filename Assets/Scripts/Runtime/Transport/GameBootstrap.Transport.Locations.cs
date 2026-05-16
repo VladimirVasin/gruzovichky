@@ -221,7 +221,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.CityPark)
         {
-            CreateCityParkDecoration(root.transform, center, min, max, anchor);
+            CreateCityParkDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.PersonalHouse)
         {

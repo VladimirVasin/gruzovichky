@@ -12,23 +12,25 @@ public partial class GameBootstrap
     private const string LaborExchangeImportedModelResourcePath = "Buildings/laborexchange";
     private const string CleaningDepotImportedModelResourcePath = "Buildings/cleaningdepot";
     private const string DocksImportedModelResourcePath = "Buildings/docks";
+    private const string CityParkImportedModelResourcePath = "Buildings/citypark";
     private const string PersonalHouseRanchImportedModelResourcePath = "Buildings/personalhouse_ranch";
     private const string PersonalHouseCapeCodImportedModelResourcePath = "Buildings/personalhouse_capecod";
     private const string PersonalHouseColonialImportedModelResourcePath = "Buildings/personalhouse_colonial";
     private const string PersonalHouseCraftsmanImportedModelResourcePath = "Buildings/personalhouse_craftsman";
     private const string PersonalHouseSplitLevelImportedModelResourcePath = "Buildings/personalhouse_splitlevel";
 
-    private const float GasStationImportedModelFootprintFill = 1.10f;
-    private const float FurnitureFactoryImportedModelFootprintFill = 1.08f;
-    private const float KioskImportedModelFootprintFill = 1.12f;
-    private const float KindergartenImportedModelFootprintFill = 1.04f;
-    private const float PrimarySchoolImportedModelFootprintFill = 1.02f;
-    private const float SecondarySchoolImportedModelFootprintFill = 1.02f;
-    private const float CarMarketImportedModelFootprintFill = 0.98f;
-    private const float LaborExchangeImportedModelFootprintFill = 1.05f;
-    private const float CleaningDepotImportedModelFootprintFill = 1.08f;
-    private const float DocksImportedModelFootprintFill = 1.08f;
-    private const float PersonalHouseImportedModelFootprintFill = 0.98f;
+    private const float GasStationImportedModelFootprintFill = 3.83f;
+    private const float FurnitureFactoryImportedModelFootprintFill = 2.35f;
+    private const float KioskImportedModelFootprintFill = 1.46f;
+    private const float KindergartenImportedModelFootprintFill = 2.55f;
+    private const float PrimarySchoolImportedModelFootprintFill = 1.55f;
+    private const float SecondarySchoolImportedModelFootprintFill = 1.42f;
+    private const float CarMarketImportedModelFootprintFill = 1.45f;
+    private const float LaborExchangeImportedModelFootprintFill = 2.84f;
+    private const float CleaningDepotImportedModelFootprintFill = 2.65f;
+    private const float DocksImportedModelFootprintFill = 1.75f;
+    private const float CityParkImportedModelFootprintFill = 1.00f;
+    private const float PersonalHouseImportedModelFootprintFill = 1.47f;
     private const float ImportedTownBuildingModelGroundY = -0.35f;
 
     private static readonly string[] PersonalHouseImportedModelResourcePaths =
@@ -124,6 +126,14 @@ public partial class GameBootstrap
             owner, parent, center, min, max, anchor, LocationType.Docks,
             DocksImportedModelResourcePath, "DocksImportedModelRoot", "DocksImportedModel",
             DocksImportedModelFootprintFill, new Color(1f, 0.76f, 0.42f, 1f), new Color(1f, 0.68f, 0.28f));
+    }
+
+    private bool TryCreateImportedCityParkModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        return TryCreateImportedServiceModel(
+            owner, parent, center, min, max, anchor, LocationType.CityPark,
+            CityParkImportedModelResourcePath, "CityParkImportedModelRoot", "CityParkImportedModel",
+            CityParkImportedModelFootprintFill, new Color(0.82f, 1f, 0.62f, 1f), new Color(1f, 0.78f, 0.36f));
     }
 
     private bool TryCreateImportedPersonalHouseModel(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)

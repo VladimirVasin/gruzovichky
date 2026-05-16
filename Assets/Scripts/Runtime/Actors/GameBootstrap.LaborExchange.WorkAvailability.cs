@@ -1,7 +1,11 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 public partial class GameBootstrap
 {
+    private readonly List<LaborExchangeCandidate> laborExchangeWorkOpportunityCandidates = new();
+    private int laborExchangeWorkOpportunityCandidateFrame = -1;
+
     private bool HasAvailableWorkOpportunityForWorker(DriverAgent worker)
     {
         return HasAvailableWorkOpportunityForWorker(worker, requireImmediateAvailability: true);
@@ -83,9 +87,7 @@ public partial class GameBootstrap
 
     private bool HasAvailableOpenVacancyForWorker(DriverAgent worker, bool requireImmediateAvailability)
     {
-        List<LaborExchangeCandidate> candidates = new();
-        AddLaborExchangeShiftCandidates(candidates);
-        AddLaborExchangeBuildingCandidates(candidates);
+        List<LaborExchangeCandidate> candidates = GetLaborExchangeWorkOpportunityCandidates();
         for (int i = 0; i < candidates.Count; i++)
         {
             LaborExchangeCandidate candidate = candidates[i];
@@ -109,6 +111,21 @@ public partial class GameBootstrap
         }
 
         return false;
+    }
+
+    private List<LaborExchangeCandidate> GetLaborExchangeWorkOpportunityCandidates()
+    {
+        int frame = Time.frameCount;
+        if (laborExchangeWorkOpportunityCandidateFrame == frame)
+        {
+            return laborExchangeWorkOpportunityCandidates;
+        }
+
+        laborExchangeWorkOpportunityCandidateFrame = frame;
+        laborExchangeWorkOpportunityCandidates.Clear();
+        AddLaborExchangeShiftCandidates(laborExchangeWorkOpportunityCandidates);
+        AddLaborExchangeBuildingCandidates(laborExchangeWorkOpportunityCandidates);
+        return laborExchangeWorkOpportunityCandidates;
     }
 
     private bool CanWorkerFillWorkOpportunity(
