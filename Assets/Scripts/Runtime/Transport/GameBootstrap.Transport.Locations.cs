@@ -55,6 +55,12 @@ public partial class GameBootstrap
             baseBlock.transform.localScale = new Vector3(size.x * 0.98f, 0.12f, size.y * 0.98f);
             ApplyColor(baseBlock, new Color(0.42f, 0.3f, 0.18f), VisualSmoothnessWood);
         }
+        else if (type == LocationType.Parking)
+        {
+            baseBlock.transform.position = center + new Vector3(0f, -0.24f, 0f);
+            baseBlock.transform.localScale = new Vector3(size.x * 0.99f, 0.08f, size.y * 0.99f);
+            ApplyColor(baseBlock, new Color(0.16f, 0.17f, 0.19f), VisualSmoothnessAsphalt);
+        }
         else if (type == LocationType.Motel)
         {
             // Base block covers only the back half of the footprint (under the building).
@@ -148,7 +154,7 @@ public partial class GameBootstrap
             ApplyColor(baseBlock, baseColor, VisualSmoothnessBuildingWall);
         }
 
-        ConfigureShadowVisual(baseBlock, type == LocationType.CarMarket || type == LocationType.IntercityStop || type == LocationType.Stop
+        ConfigureShadowVisual(baseBlock, type == LocationType.Parking || type == LocationType.CarMarket || type == LocationType.IntercityStop || type == LocationType.Stop
             ? VisualSmoothnessAsphalt
             : type == LocationType.Forest
                 ? VisualSmoothnessWood
@@ -163,11 +169,11 @@ public partial class GameBootstrap
 
         if (type == LocationType.Parking)
         {
-            CreateParkingDecoration(root.transform, center, min, max, anchor);
+            CreateParkingDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.GasStation)
         {
-            CreateGasStationDecoration(root.transform, center, min, max, anchor);
+            CreateGasStationDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.Forest)
         {
@@ -187,7 +193,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.FurnitureFactory)
         {
-            CreateFurnitureFactoryDecoration(root.transform, center, min, max, anchor);
+            CreateFurnitureFactoryDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.IntercityStop)
         {
@@ -207,7 +213,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Kiosk)
         {
-            CreateVendorStandDecoration(root.transform, center, min, max, anchor, LocationType.Kiosk);
+            CreateVendorStandDecoration(data, root.transform, center, min, max, anchor, LocationType.Kiosk);
         }
         else if (type == LocationType.GamblingHall)
         {
@@ -219,27 +225,27 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.PersonalHouse)
         {
-            CreatePersonalHouseDecoration(root.transform, center, min, max, anchor);
+            CreatePersonalHouseDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.Kindergarten)
         {
-            CreateKindergartenDecoration(root.transform, center, min, max, anchor);
+            CreateKindergartenDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.PrimarySchool || type == LocationType.SecondarySchool)
         {
-            CreateSchoolDecoration(type, root.transform, center, min, max, anchor);
+            CreateSchoolDecoration(data, type, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.CarMarket)
         {
-            CreateCarMarketDecoration(root.transform, center, min, max, anchor);
+            CreateCarMarketDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.LaborExchange)
         {
-            CreateLaborExchangeDecoration(root.transform, center, min, max, anchor);
+            CreateLaborExchangeDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.CleaningDepot)
         {
-            CreateCleaningDepotDecoration(root.transform, center, min, max, anchor);
+            CreateCleaningDepotDecoration(data, root.transform, center, min, max, anchor);
         }
         else if (type == LocationType.CityHall)
         {
@@ -247,7 +253,7 @@ public partial class GameBootstrap
         }
         else if (type == LocationType.Docks)
         {
-            CreateDocksDecoration(root.transform, center, min, max, anchor);
+            CreateDocksDecoration(data, root.transform, center, min, max, anchor);
         }
         else
         {
@@ -471,31 +477,40 @@ public partial class GameBootstrap
         }
     }
 
-    private void CreateParkingDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateParkingDecoration(LocationData parkingLocation, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
-        Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
-        Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
+        if (TryCreateImportedParkingModel(parkingLocation, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
+        Vector2 localSize = GetAnchorLocalFootprintSize(min, max, anchor);
+        float canopyWidth = Mathf.Max(2.8f, localSize.x * 0.58f);
+        float canopyDepth = Mathf.Max(1.4f, localSize.y * 0.36f);
+        Transform root = CreateAnchorOrientedBuildingRoot(parent, "ParkingShelterRoot", center, min, max, anchor, BuildingDecorScale);
 
         GameObject canopy = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        canopy.transform.SetParent(parent, false);
-        canopy.transform.position = center + ScaleOffset(new Vector3(0f, 0.6f, -0.15f));
-        canopy.transform.localScale = ScaleSize(new Vector3(2.8f, 0.12f, 1.4f));
+        canopy.transform.SetParent(root, false);
+        canopy.transform.localPosition = new Vector3(0f, 0.6f, -localSize.y * 0.16f);
+        canopy.transform.localScale = new Vector3(canopyWidth, 0.12f, canopyDepth);
         ApplyColor(canopy, new Color(0.18f, 0.2f, 0.24f), VisualSmoothnessRoofMetal);
 
+        float postX = canopyWidth * 0.5f - 0.22f;
+        float postZ = canopyDepth * 0.5f - 0.20f;
         Vector3[] postOffsets =
         {
-            new(-1.15f, 0.28f, -0.55f),
-            new(1.15f, 0.28f, -0.55f),
-            new(-1.15f, 0.28f, 0.25f),
-            new(1.15f, 0.28f, 0.25f)
+            new(-postX, 0.28f, -postZ),
+            new(postX, 0.28f, -postZ),
+            new(-postX, 0.28f, postZ),
+            new(postX, 0.28f, postZ)
         };
 
         foreach (Vector3 offset in postOffsets)
         {
             GameObject post = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            post.transform.SetParent(parent, false);
-            post.transform.position = center + ScaleOffset(offset);
-            post.transform.localScale = ScaleSize(new Vector3(0.12f, 0.56f, 0.12f));
+            post.transform.SetParent(root, false);
+            post.transform.localPosition = offset + new Vector3(0f, 0f, -localSize.y * 0.16f);
+            post.transform.localScale = new Vector3(0.12f, 0.56f, 0.12f);
             ApplyColor(post, new Color(0.3f, 0.32f, 0.36f), VisualSmoothnessVehicleMetal);
         }
 

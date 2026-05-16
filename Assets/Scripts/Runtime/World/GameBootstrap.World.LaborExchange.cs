@@ -39,8 +39,13 @@ public partial class GameBootstrap
         return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.LaborExchange, 3, 2, out previewPosition, out previewScale);
     }
 
-    private void CreateLaborExchangeDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateLaborExchangeDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedLaborExchangeModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         Transform root = CreateAnchorOrientedBuildingRoot(parent, "LaborExchangeDetailRoot", center, min, max, anchor, BuildingDecorScale);
         Color wall = new(0.36f, 0.50f, 0.60f);
         Color stone = new(0.62f, 0.66f, 0.64f);

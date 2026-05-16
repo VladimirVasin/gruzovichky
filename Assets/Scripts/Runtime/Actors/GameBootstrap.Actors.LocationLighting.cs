@@ -21,7 +21,7 @@ public partial class GameBootstrap
 
             float maxIntensity = i < locationNightPointLightMaxIntensities.Count ? locationNightPointLightMaxIntensities[i] : 1.15f;
             float range = i < locationNightPointLightRanges.Count ? locationNightPointLightRanges[i] : 3.2f;
-            Color onColor = i < locationNightPointLightOnColors.Count ? locationNightPointLightOnColors[i] : new Color(1f, 0.9f, 0.72f);
+            Color onColor = WarmLightSourceColor(i < locationNightPointLightOnColors.Count ? locationNightPointLightOnColors[i] : new Color(1f, 0.9f, 0.72f));
             bool realLightOn = lightsOn;
             lightComponent.enabled = realLightOn;
             lightComponent.intensity = realLightOn ? Mathf.Lerp(0.18f, maxIntensity, nightT) : 0f;
@@ -37,8 +37,8 @@ public partial class GameBootstrap
                 continue;
             }
 
-            Color offColor = i < locationNightLightOffColors.Count ? locationNightLightOffColors[i] : new Color(0.28f, 0.24f, 0.18f);
-            Color onColor = i < locationNightLightOnColors.Count ? locationNightLightOnColors[i] : new Color(1f, 0.9f, 0.72f);
+            Color offColor = WarmLightOffColor(i < locationNightLightOffColors.Count ? locationNightLightOffColors[i] : new Color(0.28f, 0.24f, 0.18f));
+            Color onColor = WarmLightSourceColor(i < locationNightLightOnColors.Count ? locationNightLightOnColors[i] : new Color(1f, 0.9f, 0.72f));
             Color lampColor = Color.Lerp(offColor, onColor, nightT);
             SetLocationNightLightMaterialColor(material, lampColor);
         }
@@ -156,7 +156,7 @@ public partial class GameBootstrap
             float lightIntensity = Mathf.Lerp(0.35f, lanternProfile.UnityIntensity, baseActivation) * flickerBlend;
             float glowStrength = Mathf.Lerp(0.18f, 1.18f, baseActivation) * Mathf.Lerp(0.92f, 1f, flickerBlend);
             Color lanternColor = Color.Lerp(
-                new Color(0.26f, 0.16f, 0.08f),
+                new Color(0.34f, 0.18f, 0.07f),
                 lanternProfile.Color,
                 Mathf.Clamp01(glowStrength));
 

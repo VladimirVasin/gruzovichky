@@ -5,23 +5,29 @@ public partial class GameBootstrap
     private void EnhanceParkingModel(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         Transform root = CreateAnchorOrientedBuildingRoot(parent, "ParkingDetailRoot", center, min, max, anchor, BuildingDecorScale);
+        Vector2 localSize = GetAnchorLocalFootprintSize(min, max, anchor);
+        float yardWidth = Mathf.Max(2.75f, localSize.x * 0.92f);
+        float yardDepth = Mathf.Max(1.35f, localSize.y * 0.82f);
         Color asphalt = new(0.13f, 0.14f, 0.16f);
         Color line = new(0.92f, 0.9f, 0.74f);
-        CreateBuildingBox(root, "TruckYardAsphalt", new Vector3(0f, -0.31f, 0.22f), new Vector3(2.75f, 0.035f, 1.35f), asphalt, VisualSmoothnessAsphalt, true);
-        for (int i = 0; i < 4; i++)
+        CreateBuildingBox(root, "TruckYardAsphalt", new Vector3(0f, -0.31f, 0.12f), new Vector3(yardWidth, 0.035f, yardDepth), asphalt, VisualSmoothnessAsphalt, true);
+        int lineCount = Mathf.Clamp(Mathf.RoundToInt(localSize.x), 4, 7);
+        for (int i = 0; i < lineCount; i++)
         {
-            float x = -1.05f + i * 0.7f;
-            CreateBuildingBox(root, "ParkingLine", new Vector3(x, -0.27f, 0.34f), new Vector3(0.04f, 0.02f, 0.86f), line, VisualSmoothnessAsphalt, true);
+            float x = Mathf.Lerp(-yardWidth * 0.38f, yardWidth * 0.38f, lineCount == 1 ? 0.5f : i / (lineCount - 1f));
+            CreateBuildingBox(root, "ParkingLine", new Vector3(x, -0.27f, 0.34f), new Vector3(0.04f, 0.02f, yardDepth * 0.58f), line, VisualSmoothnessAsphalt, true);
         }
 
-        CreateBuildingBox(root, "DispatchOffice", new Vector3(-0.92f, 0.36f, -0.48f), new Vector3(0.76f, 0.52f, 0.62f), new Color(0.42f, 0.47f, 0.52f), VisualSmoothnessBuildingWall, true);
-        CreateBuildingBox(root, "DispatchRoof", new Vector3(-0.92f, 0.67f, -0.48f), new Vector3(0.86f, 0.08f, 0.72f), new Color(0.18f, 0.2f, 0.24f), VisualSmoothnessRoofMetal, true);
-        CreateBuildingWindowRow(root, new Vector3(-1.16f, 0.42f, -0.15f), new Vector3(0.24f, 0f, 0f), 3, new Vector3(0.16f, 0.18f, 0.03f), new Color(0.58f, 0.78f, 0.88f));
-        CreateBuildingBox(root, "SecurityGate", new Vector3(0.62f, 0.18f, 0.94f), new Vector3(1.2f, 0.05f, 0.06f), new Color(0.95f, 0.78f, 0.24f), VisualSmoothnessVehicleMetal, true);
-        CreateBuildingBox(root, "RepairLift", new Vector3(0.8f, -0.18f, -0.35f), new Vector3(0.74f, 0.08f, 0.42f), new Color(0.28f, 0.3f, 0.34f), VisualSmoothnessVehicleMetal, true);
+        float officeX = -yardWidth * 0.32f;
+        float backZ = -yardDepth * 0.34f;
+        CreateBuildingBox(root, "DispatchOffice", new Vector3(officeX, 0.36f, backZ), new Vector3(0.92f, 0.52f, 0.72f), new Color(0.42f, 0.47f, 0.52f), VisualSmoothnessBuildingWall, true);
+        CreateBuildingBox(root, "DispatchRoof", new Vector3(officeX, 0.67f, backZ), new Vector3(1.02f, 0.08f, 0.82f), new Color(0.18f, 0.2f, 0.24f), VisualSmoothnessRoofMetal, true);
+        CreateBuildingWindowRow(root, new Vector3(officeX - 0.24f, 0.42f, backZ + 0.34f), new Vector3(0.24f, 0f, 0f), 3, new Vector3(0.16f, 0.18f, 0.03f), new Color(0.58f, 0.78f, 0.88f));
+        CreateBuildingBox(root, "SecurityGate", new Vector3(yardWidth * 0.18f, 0.18f, yardDepth * 0.47f), new Vector3(Mathf.Min(2.2f, yardWidth * 0.42f), 0.05f, 0.06f), new Color(0.95f, 0.78f, 0.24f), VisualSmoothnessVehicleMetal, true);
+        CreateBuildingBox(root, "RepairLift", new Vector3(yardWidth * 0.24f, -0.18f, -yardDepth * 0.26f), new Vector3(0.92f, 0.08f, 0.48f), new Color(0.28f, 0.3f, 0.34f), VisualSmoothnessVehicleMetal, true);
         for (int side = -1; side <= 1; side += 2)
         {
-            CreateBuildingCylinder(root, "GatePost", new Vector3(side * 0.2f, 0.18f, 0.94f), new Vector3(0.05f, 0.22f, 0.05f), new Color(0.28f, 0.29f, 0.31f), VisualSmoothnessVehicleMetal, true);
+            CreateBuildingCylinder(root, "GatePost", new Vector3(side * yardWidth * 0.08f, 0.18f, yardDepth * 0.47f), new Vector3(0.05f, 0.22f, 0.05f), new Color(0.28f, 0.29f, 0.31f), VisualSmoothnessVehicleMetal, true);
         }
     }
 

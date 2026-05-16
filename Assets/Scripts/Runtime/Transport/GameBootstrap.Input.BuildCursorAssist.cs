@@ -54,7 +54,7 @@ public partial class GameBootstrap
         lightObject.transform.localPosition = new Vector3(0f, BuildCursorAssistLightHeight, 0f);
         buildCursorAssistLight = lightObject.AddComponent<Light>();
         buildCursorAssistLight.type = LightType.Point;
-        buildCursorAssistLight.color = new Color(1f, 0.78f, 0.46f);
+        buildCursorAssistLight.color = new Color(1f, 0.62f, 0.28f);
         buildCursorAssistLight.range = BuildCursorAssistLightMinRange;
         buildCursorAssistLight.intensity = 0f;
         buildCursorAssistLight.shadows = LightShadows.None;
@@ -149,7 +149,7 @@ public partial class GameBootstrap
         buildCursorAssistRoot.transform.position = position;
 
         buildCursorAssistLight.enabled = true;
-        buildCursorAssistLight.color = canBuild ? new Color(1f, 0.78f, 0.46f) : new Color(1f, 0.36f, 0.24f);
+        buildCursorAssistLight.color = canBuild ? new Color(1f, 0.62f, 0.28f) : new Color(1f, 0.34f, 0.18f);
         buildCursorAssistLight.range = Mathf.Clamp(
             radius * BuildCursorAssistLightRangeMultiplier,
             BuildCursorAssistLightMinRange,

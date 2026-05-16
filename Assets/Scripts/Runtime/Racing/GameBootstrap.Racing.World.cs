@@ -260,7 +260,7 @@ public partial class GameBootstrap : MonoBehaviour
         lightObj.transform.localPosition = new Vector3(0.26f, 1.02f, 0f);
         Light l = lightObj.AddComponent<Light>();
         l.type      = LightType.Point;
-        l.color     = new Color(1f, 0.9f, 0.72f);
+        l.color     = new Color(1f, 0.66f, 0.34f);
         l.range     = 14f;
         l.intensity = 0f;
         l.shadows   = LightShadows.None;

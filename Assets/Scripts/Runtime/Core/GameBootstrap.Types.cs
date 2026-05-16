@@ -684,6 +684,7 @@ public partial class GameBootstrap : MonoBehaviour
         public Transform AxeTransform;
         public Transform FlashlightTransform;
         public Light FlashlightLight;
+        public Light FlashlightHaloLight;
         public Renderer FlashlightRenderer;
         public Material FlashlightMaterial;
         public Vector3 TargetWorldPosition;

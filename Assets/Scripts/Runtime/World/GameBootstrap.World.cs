@@ -245,7 +245,7 @@ public partial class GameBootstrap
             return false;
         }
 
-        if (!TryGetRotatedBuildingPlacement(anchorCell, LocationType.Parking, 3, 2, out Vector2Int min, out Vector2Int max))
+        if (!TryGetRotatedBuildingPlacement(anchorCell, LocationType.Parking, WorldLayoutGenerator.ParkingFootprintWidth, WorldLayoutGenerator.ParkingFootprintHeight, out Vector2Int min, out Vector2Int max))
         {
             SessionDebugLogger.Log("BUILD", $"Parking placement rejected at anchor ({anchorCell.x},{anchorCell.y}).");
             return false;
@@ -671,7 +671,7 @@ public partial class GameBootstrap
 
     private bool GetParkingPlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)
     {
-        return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.Parking, 3, 2, out previewPosition, out previewScale);
+        return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.Parking, WorldLayoutGenerator.ParkingFootprintWidth, WorldLayoutGenerator.ParkingFootprintHeight, out previewPosition, out previewScale);
     }
 
     private bool GetWarehousePlacementPreview(Vector2Int anchorCell, out Vector3 previewPosition, out Vector3 previewScale)

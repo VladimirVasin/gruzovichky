@@ -239,7 +239,7 @@ public partial class GameBootstrap
 
         ConfigureImportedBuildingModel(model);
         RegisterImportedServiceInteractionMetadata(owner, model.transform);
-        RegisterImportedBuildingNightLighting(owner, model.transform, windowOnColor, markerLightColor);
+        RegisterImportedBuildingNightLighting(owner, model.transform, WarmLightSourceColor(windowOnColor), WarmLightSourceColor(markerLightColor));
         return true;
     }
 
@@ -253,6 +253,17 @@ public partial class GameBootstrap
             LocationType.Forest    => LoggingCampImportedModelGroundY,
             LocationType.Sawmill   => SawmillImportedModelGroundY,
             LocationType.Canteen   => CanteenImportedModelGroundY,
+            LocationType.GasStation or
+            LocationType.FurnitureFactory or
+            LocationType.Kiosk or
+            LocationType.Kindergarten or
+            LocationType.PrimarySchool or
+            LocationType.SecondarySchool or
+            LocationType.CarMarket or
+            LocationType.LaborExchange or
+            LocationType.CleaningDepot or
+            LocationType.Docks or
+            LocationType.PersonalHouse => ImportedTownBuildingModelGroundY,
             _                      => ImportedBuildingModelGroundY
         };
     }
@@ -278,9 +289,14 @@ public partial class GameBootstrap
             return TryGetLocalRendererBounds(root, renderers, out bounds, IsFoundationImportedGroundingRenderer);
         }
 
-        if (type == LocationType.Forest || type == LocationType.Sawmill || type == LocationType.Canteen)
+        if (type == LocationType.Forest || type == LocationType.Sawmill || type == LocationType.Canteen || type == LocationType.Parking)
         {
             return TryGetLocalRendererBounds(root, renderers, out bounds, IsLoggingCampImportedGroundingRenderer);
+        }
+
+        if (IsNewImportedTownBuildingType(type))
+        {
+            return TryGetLocalRendererBounds(root, renderers, out bounds, IsGeneralImportedGroundingRenderer);
         }
 
         bounds = default;
@@ -289,15 +305,22 @@ public partial class GameBootstrap
 
     private static bool HasImportedBuildingModel(Transform parent)
     {
-        return parent != null &&
-            (parent.Find("BarImportedModelRoot") != null ||
-             parent.Find("GamblingHallImportedModelRoot") != null ||
-             parent.Find("WarehouseImportedModelRoot") != null ||
-             parent.Find("MotelImportedModelRoot") != null ||
-             parent.Find("CityHallImportedModelRoot") != null ||
-             parent.Find("LoggingCampImportedModelRoot") != null ||
-             parent.Find("SawmillImportedModelRoot") != null ||
-             parent.Find("CanteenImportedModelRoot") != null);
+        if (parent == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < parent.childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+            if (child != null &&
+                child.name.EndsWith("ImportedModelRoot", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void HideImportedBuildingPlatformRenderers(Renderer[] renderers, LocationType type)
@@ -744,139 +767,26 @@ public partial class GameBootstrap
         return false;
     }
 
-    private void ConfigureImportedBuildingModel(GameObject model)
+    private static bool IsGeneralImportedGroundingRenderer(Renderer renderer)
     {
-        Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
-        for (int i = 0; i < renderers.Length; i++)
-        {
-            Renderer renderer = renderers[i];
-            if (renderer == null || !renderer.enabled)
-            {
-                continue;
-            }
-
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = true;
-            ApplyMaterialSmoothness(renderer, GuessVisualSmoothness(renderer.name, VisualSmoothnessBuildingWall));
-            NormalizeImportedBuildingMaterial(renderer);
-        }
-
-        Collider[] colliders = model.GetComponentsInChildren<Collider>(true);
-        for (int i = 0; i < colliders.Length; i++)
-        {
-            colliders[i].enabled = false;
-        }
+        return IsFoundationImportedGroundingRenderer(renderer) ||
+            IsLoggingCampImportedGroundingRenderer(renderer);
     }
 
-    private static void NormalizeImportedBuildingMaterial(Renderer renderer)
+    private static bool IsNewImportedTownBuildingType(LocationType type) => type switch
     {
-        if (renderer == null)
-        {
-            return;
-        }
+        LocationType.GasStation       => true,
+        LocationType.FurnitureFactory => true,
+        LocationType.Kiosk            => true,
+        LocationType.Kindergarten     => true,
+        LocationType.PrimarySchool    => true,
+        LocationType.SecondarySchool  => true,
+        LocationType.CarMarket        => true,
+        LocationType.LaborExchange    => true,
+        LocationType.CleaningDepot    => true,
+        LocationType.Docks            => true,
+        LocationType.PersonalHouse    => true,
+        _                             => false
+    };
 
-        bool translucentSurface = IsImportedWindowGlassRenderer(renderer);
-        Material material = renderer.material;
-        if (material == null)
-        {
-            return;
-        }
-
-        if (!translucentSurface)
-        {
-            ForceImportedMaterialAlpha(material, 1f);
-            ForceImportedMaterialOpaque(material);
-        }
-
-        ForceImportedMaterialDoubleSided(material);
-    }
-
-    private static void ForceImportedMaterialAlpha(Material material, float alpha)
-    {
-        if (material == null)
-        {
-            return;
-        }
-
-        Color color = material.color;
-        color.a = alpha;
-        material.color = color;
-        if (material.HasProperty("_BaseColor"))
-        {
-            Color baseColor = material.GetColor("_BaseColor");
-            baseColor.a = alpha;
-            material.SetColor("_BaseColor", baseColor);
-        }
-
-        if (material.HasProperty("_Color"))
-        {
-            Color legacyColor = material.GetColor("_Color");
-            legacyColor.a = alpha;
-            material.SetColor("_Color", legacyColor);
-        }
-    }
-
-    private static void ForceImportedMaterialOpaque(Material material)
-    {
-        if (material == null)
-        {
-            return;
-        }
-
-        material.SetOverrideTag("RenderType", "Opaque");
-        if (material.HasProperty("_Surface"))
-        {
-            material.SetFloat("_Surface", 0f);
-        }
-
-        if (material.HasProperty("_Blend"))
-        {
-            material.SetFloat("_Blend", 0f);
-        }
-
-        if (material.HasProperty("_SrcBlend"))
-        {
-            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
-        }
-
-        if (material.HasProperty("_DstBlend"))
-        {
-            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.Zero);
-        }
-
-        if (material.HasProperty("_ZWrite"))
-        {
-            material.SetFloat("_ZWrite", 1f);
-        }
-
-        if (material.HasProperty("_AlphaClip"))
-        {
-            material.SetFloat("_AlphaClip", 0f);
-        }
-
-        material.DisableKeyword("_ALPHATEST_ON");
-        material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
-        material.renderQueue = (int)RenderQueue.Geometry;
-    }
-
-    private static void ForceImportedMaterialDoubleSided(Material material)
-    {
-        if (material == null)
-        {
-            return;
-        }
-
-        if (material.HasProperty("_Cull"))
-        {
-            material.SetFloat("_Cull", (float)CullMode.Off);
-        }
-
-        if (material.HasProperty("_CullMode"))
-        {
-            material.SetFloat("_CullMode", (float)CullMode.Off);
-        }
-
-        material.doubleSidedGI = true;
-    }
 }

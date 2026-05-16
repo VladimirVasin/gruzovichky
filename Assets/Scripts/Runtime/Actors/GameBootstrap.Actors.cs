@@ -322,7 +322,7 @@ public partial class GameBootstrap
         headlight.transform.SetParent(truckVisualRoot, false);
         headlight.transform.localPosition = localPosition;
         headlight.transform.localScale = new Vector3(0.12f, 0.08f, 0.04f);
-        ApplyColor(headlight, new Color(1f, 0.82f, 0.52f));
+        ApplyColor(headlight, new Color(1f, 0.68f, 0.34f));
 
         Renderer rendererComponent = headlight.GetComponent<Renderer>();
         if (isLeft)
@@ -346,7 +346,7 @@ public partial class GameBootstrap
 
         Light headlight = lightObject.AddComponent<Light>();
         headlight.type = LightType.Spot;
-        headlight.color = new Color(1f, 0.72f, 0.42f);
+        headlight.color = new Color(1f, 0.62f, 0.30f);
         headlight.intensity = 0f;
         headlight.range = 5.4f;
         headlight.spotAngle = 44f;
@@ -356,14 +356,34 @@ public partial class GameBootstrap
         truckHeadlights.Add(headlight);
     }
 
+    private Light CreateDriverFlashlightHalo(Transform parent)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+
+        GameObject haloObject = new("DriverFlashlightHalo");
+        haloObject.transform.SetParent(parent, false);
+        haloObject.transform.localPosition = new Vector3(0f, 0.48f, 0f);
+        Light halo = haloObject.AddComponent<Light>();
+        halo.type = LightType.Point;
+        halo.color = new Color(1f, 0.64f, 0.30f);
+        halo.range = 2.6f;
+        halo.shadows = LightShadows.None;
+        halo.intensity = 0f;
+        halo.enabled = false;
+        return halo;
+    }
+
     private void UpdateTruckHeadlights(float stylizedDaylight, DriverAgent driver)
     {
         float darkness = 1f - stylizedDaylight;
         bool headlightsOn = darkness > 0.55f;
         float headlightIntensity = headlightsOn ? Mathf.Lerp(0.78f, 3.35f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color lampColor = Color.Lerp(
-            new Color(0.34f, 0.22f, 0.11f),
-            new Color(1f, 0.80f, 0.50f),
+            new Color(0.38f, 0.20f, 0.08f),
+            new Color(1f, 0.68f, 0.34f),
             Mathf.Clamp01(headlightIntensity / 3.35f));
 
         foreach (Light headlight in truckHeadlights)
@@ -392,22 +412,37 @@ public partial class GameBootstrap
 
     private void UpdateDriverFlashlight(DriverAgent driver, float stylizedDaylight)
     {
-        if (driver == null || driver.DriverFlashlightLight == null)
+        if (driver == null)
         {
             return;
         }
 
         float darkness = 1f - stylizedDaylight;
-        bool flashlightOn = IsDriverBusyWalkPhase(driver) && driver.DriverObject != null && driver.DriverObject.activeSelf && darkness > 0.55f;
-        float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.7f, 2.45f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+        bool walkingWithLight = IsDriverBusyWalkPhase(driver) || IsDriverIdleWanderPhase(driver);
+        bool flashlightOn = walkingWithLight && driver.DriverObject != null && driver.DriverObject.activeSelf && darkness > 0.55f;
+        float flashlightT = flashlightOn ? Mathf.InverseLerp(0.55f, 1f, darkness) : 0f;
+        float flashlightIntensity = flashlightOn ? Mathf.Lerp(1.05f, 3.6f, flashlightT) : 0f;
+        float flashlightHaloIntensity = flashlightOn ? Mathf.Lerp(0.24f, 1.05f, flashlightT) : 0f;
         Color flashlightColor = Color.Lerp(
-            new Color(0.28f, 0.18f, 0.10f),
-            new Color(1f, 0.82f, 0.50f),
-            Mathf.Clamp01(flashlightIntensity / 2.45f));
+            new Color(0.36f, 0.18f, 0.07f),
+            new Color(1f, 0.68f, 0.34f),
+            flashlightT);
 
-        driver.DriverFlashlightLight.enabled = flashlightOn;
-        driver.DriverFlashlightLight.intensity = flashlightIntensity;
-        driver.DriverFlashlightLight.color = flashlightColor;
+        if (driver.DriverFlashlightLight != null)
+        {
+            driver.DriverFlashlightLight.enabled = flashlightOn;
+            driver.DriverFlashlightLight.intensity = flashlightIntensity;
+            driver.DriverFlashlightLight.color = flashlightColor;
+            driver.DriverFlashlightLight.range = flashlightOn ? Mathf.Lerp(4.6f, 6.0f, flashlightT) : 5.2f;
+        }
+
+        if (driver.DriverFlashlightHaloLight != null)
+        {
+            driver.DriverFlashlightHaloLight.enabled = flashlightOn;
+            driver.DriverFlashlightHaloLight.intensity = flashlightHaloIntensity;
+            driver.DriverFlashlightHaloLight.color = WarmLightSourceColor(flashlightColor, 0.18f);
+            driver.DriverFlashlightHaloLight.range = flashlightOn ? Mathf.Lerp(1.6f, 2.8f, flashlightT) : 2.6f;
+        }
 
         if (driver.DriverFlashlightMaterial != null)
         {

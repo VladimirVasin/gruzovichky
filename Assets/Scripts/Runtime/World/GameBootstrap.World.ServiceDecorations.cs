@@ -213,8 +213,14 @@ public partial class GameBootstrap
         EnhanceCanteenModel(parent, center, min, max, anchor);
     }
 
-    private void CreateVendorStandDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor, LocationType type)
+    private void CreateVendorStandDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor, LocationType type)
     {
+        if (type == LocationType.Kiosk &&
+            TryCreateImportedKioskModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         float scale = BuildingDecorScale;
         float width = max.x - min.x + 1;
         Color wall = new(0.86f, 0.56f, 0.24f);
@@ -280,7 +286,7 @@ public partial class GameBootstrap
         lightObj.transform.position = GetCellCenter(anchor) + new Vector3(0f, 1.0f * scale, 0f);
         Light light = lightObj.AddComponent<Light>();
         light.type = LightType.Point;
-        light.color = new Color(1f, 0.84f, 0.42f);
+        light.color = new Color(1f, 0.62f, 0.28f);
         light.intensity = 0.55f;
         light.range = 4.0f;
         light.shadows = LightShadows.None;
@@ -599,8 +605,13 @@ public partial class GameBootstrap
         return TryGetRotatedBuildingPlacement(anchorCell, LocationType.FurnitureFactory, 3, 2, out min, out max);
     }
 
-    private void CreatePersonalHouseDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreatePersonalHouseDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedPersonalHouseModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         // Oriented root: local +Z toward anchor (road/front), -Z = back of house.
         Vector3 anchorWorld = new Vector3(anchor.x + 0.5f, center.y, anchor.y + 0.5f);
         Vector3 toAnchorRaw = anchorWorld - center;

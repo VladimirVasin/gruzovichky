@@ -101,7 +101,7 @@ public partial class GameBootstrap : MonoBehaviour
         Renderer lensR = lens.GetComponent<Renderer>();
         Shader unlitShader = ShaderRefs.Unlit ?? ShaderRefs.Sprites;
         Material lensMat = unlitShader != null ? new Material(unlitShader) : lensR.material;
-        lensMat.color = new Color(1f, 0.97f, 0.85f);
+        lensMat.color = new Color(1f, 0.78f, 0.46f);
         if (lensMat.HasProperty("_BaseColor")) lensMat.SetColor("_BaseColor", lensMat.color);
         lensR.material = lensMat;
         lensR.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -112,7 +112,7 @@ public partial class GameBootstrap : MonoBehaviour
         l.spotAngle = 55f;
         l.innerSpotAngle = 22f;
         l.range     = 32f;
-        l.color     = new Color(1f, 0.96f, 0.82f);
+        l.color     = new Color(1f, 0.66f, 0.32f);
         l.intensity = 1.2f;
         l.shadows   = LightShadows.Soft;
         l.enabled   = true;
@@ -267,7 +267,7 @@ public partial class GameBootstrap : MonoBehaviour
         racingDirectionalLight = dirObj.AddComponent<Light>();
         racingDirectionalLight.type      = LightType.Directional;
         racingDirectionalLight.intensity = 1.0f;
-        racingDirectionalLight.color     = new Color(1f, 0.95f, 0.82f);
+        racingDirectionalLight.color     = new Color(1f, 0.90f, 0.72f);
         racingDirectionalLight.shadows   = LightShadows.Soft;
 
         // Expand shadow distance so the whole visible road receives shadows
@@ -311,7 +311,7 @@ public partial class GameBootstrap : MonoBehaviour
         wl.type      = LightType.Point;
         wl.intensity = 2.2f;
         wl.range     = 1.4f;
-        wl.color     = new Color(1f, 0.92f, 0.78f); // warm dashboard glow
+        wl.color     = new Color(1f, 0.68f, 0.36f); // warm dashboard glow
 
         // Spinner: child of anchor вЂ” this is what rotates each frame
         racingSteeringWheelRoot = new("SteeringWheelRoot");
@@ -418,7 +418,7 @@ public partial class GameBootstrap : MonoBehaviour
         pl.type      = LightType.Point;
         pl.intensity = 1.8f;
         pl.range     = 1.2f;
-        pl.color     = new Color(1f, 0.92f, 0.78f);
+        pl.color     = new Color(1f, 0.68f, 0.36f);
 
         // Brake (left) вЂ” red tint
         racingPedalBrake = CreateSinglePedal("BrakePedal", anchor.transform,
@@ -496,7 +496,7 @@ public partial class GameBootstrap : MonoBehaviour
         gl.type      = LightType.Point;
         gl.intensity = 1.8f;
         gl.range     = 1.0f;
-        gl.color     = new Color(1f, 0.92f, 0.78f);
+        gl.color     = new Color(1f, 0.68f, 0.36f);
 
         // Gear shift root вЂ” this tilts forward/backward
         racingGearShift = new GameObject("GearShiftRoot").transform;

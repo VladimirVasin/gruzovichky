@@ -123,7 +123,7 @@ public partial class GameBootstrap
         lightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
         light = lightObject.AddComponent<Light>();
         light.type = LightType.Spot;
-        light.color = new Color(1f, 0.9f, 0.72f);
+        light.color = new Color(1f, 0.66f, 0.34f);
         light.range = 3.6f;
         light.spotAngle = 42f;
         light.innerSpotAngle = 22f;

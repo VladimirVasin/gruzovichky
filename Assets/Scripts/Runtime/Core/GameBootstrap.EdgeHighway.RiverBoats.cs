@@ -92,8 +92,8 @@ public partial class GameBootstrap : MonoBehaviour
                 ? Mathf.Lerp(0.3f, 1.2f, Mathf.InverseLerp(0.55f, 1f, darkness))
                 : 0f;
             Color lampColor = Color.Lerp(
-                new Color(0.34f, 0.30f, 0.22f),
-                new Color(1f, 0.88f, 0.62f),
+                new Color(0.36f, 0.20f, 0.08f),
+                new Color(1f, 0.66f, 0.32f),
                 Mathf.Clamp01(lanternIntensity / 1.2f));
 
             if (boat.LanternLight != null)
@@ -247,7 +247,7 @@ public partial class GameBootstrap : MonoBehaviour
         lanternLightObj.transform.localPosition = new Vector3(0f, 0.98f, 0.28f);
         Light lanternLight = lanternLightObj.AddComponent<Light>();
         lanternLight.type = LightType.Point;
-        lanternLight.color = new Color(1f, 0.88f, 0.62f);
+        lanternLight.color = new Color(1f, 0.66f, 0.32f);
         lanternLight.range = 2.8f;
         lanternLight.intensity = 0f;
         lanternLight.shadows = LightShadows.None;

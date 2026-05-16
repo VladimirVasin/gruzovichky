@@ -310,13 +310,24 @@ public partial class GameBootstrap
         flashlightBeamObject.transform.localRotation = Quaternion.Euler(10f, 0f, 0f);
         Light flashlightLight = flashlightBeamObject.AddComponent<Light>();
         flashlightLight.type = LightType.Spot;
-        flashlightLight.color = new Color(1f, 0.88f, 0.66f);
-        flashlightLight.range = 3.8f;
-        flashlightLight.spotAngle = 36f;
-        flashlightLight.innerSpotAngle = 16f;
+        flashlightLight.color = new Color(1f, 0.68f, 0.34f);
+        flashlightLight.range = 4.6f;
+        flashlightLight.spotAngle = 42f;
+        flashlightLight.innerSpotAngle = 20f;
         flashlightLight.shadows = LightShadows.None;
         flashlightLight.intensity = 0f;
         flashlightLight.enabled = false;
+
+        GameObject flashlightHaloObject = new("ForestWorkerFlashlightHalo");
+        flashlightHaloObject.transform.SetParent(visualRoot, false);
+        flashlightHaloObject.transform.localPosition = new Vector3(0f, 0.46f, 0f);
+        Light flashlightHaloLight = flashlightHaloObject.AddComponent<Light>();
+        flashlightHaloLight.type = LightType.Point;
+        flashlightHaloLight.color = new Color(1f, 0.62f, 0.28f);
+        flashlightHaloLight.range = 2.2f;
+        flashlightHaloLight.shadows = LightShadows.None;
+        flashlightHaloLight.intensity = 0f;
+        flashlightHaloLight.enabled = false;
 
         return new ForestWorkerAmbient
         {
@@ -333,6 +344,7 @@ public partial class GameBootstrap
             AxeTransform = axeRoot.transform,
             FlashlightTransform = flashlight.transform,
             FlashlightLight = flashlightLight,
+            FlashlightHaloLight = flashlightHaloLight,
             FlashlightRenderer = flashlightRenderer,
             FlashlightMaterial = flashlightRenderer != null ? flashlightRenderer.material : null,
             MoveSpeed = Random.Range(1.05f, 1.35f)
@@ -503,15 +515,26 @@ public partial class GameBootstrap
 
         float darkness = 1f - currentStylizedDaylight;
         bool flashlightOn = darkness > 0.55f;
-        float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.5f, 1.9f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
+        float flashlightT = flashlightOn ? Mathf.InverseLerp(0.55f, 1f, darkness) : 0f;
+        float flashlightIntensity = flashlightOn ? Mathf.Lerp(0.8f, 2.6f, flashlightT) : 0f;
+        float haloIntensity = flashlightOn ? Mathf.Lerp(0.18f, 0.82f, flashlightT) : 0f;
         Color flashlightColor = Color.Lerp(
-            new Color(0.28f, 0.18f, 0.1f),
-            new Color(1f, 0.8f, 0.48f),
-            Mathf.Clamp01(flashlightIntensity / 1.9f));
+            new Color(0.34f, 0.18f, 0.07f),
+            new Color(1f, 0.66f, 0.32f),
+            flashlightT);
 
         worker.FlashlightLight.enabled = flashlightOn;
         worker.FlashlightLight.intensity = flashlightIntensity;
         worker.FlashlightLight.color = flashlightColor;
+        worker.FlashlightLight.range = flashlightOn ? Mathf.Lerp(4.0f, 5.2f, flashlightT) : 4.6f;
+
+        if (worker.FlashlightHaloLight != null)
+        {
+            worker.FlashlightHaloLight.enabled = flashlightOn;
+            worker.FlashlightHaloLight.intensity = haloIntensity;
+            worker.FlashlightHaloLight.color = WarmLightSourceColor(flashlightColor, 0.18f);
+            worker.FlashlightHaloLight.range = flashlightOn ? Mathf.Lerp(1.4f, 2.4f, flashlightT) : 2.2f;
+        }
 
         if (worker.FlashlightMaterial != null)
         {

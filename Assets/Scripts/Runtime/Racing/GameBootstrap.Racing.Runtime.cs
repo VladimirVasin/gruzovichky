@@ -318,8 +318,8 @@ public partial class GameBootstrap : MonoBehaviour
             racingHeadlightL.intensity = headlightIntensity;
             racingHeadlightR.intensity = headlightIntensity;
             Color racingHeadlightColor = Color.Lerp(
-                new Color(0.42f, 0.24f, 0.12f),
-                new Color(1f, 0.82f, 0.48f),
+                new Color(0.42f, 0.20f, 0.08f),
+                new Color(1f, 0.66f, 0.32f),
                 Mathf.Clamp01(headlightIntensity / 4.5f));
             racingHeadlightL.color = racingHeadlightColor;
             racingHeadlightR.color = racingHeadlightColor;
@@ -336,7 +336,7 @@ public partial class GameBootstrap : MonoBehaviour
                 if (wl == null) continue;
                 wl.enabled    = wOn;
                 wl.intensity  = wIntensity;
-                wl.color      = Color.Lerp(new Color(0.34f, 0.20f, 0.10f), new Color(1f, 0.78f, 0.42f), Mathf.Clamp01(wIntensity / 1.2f));
+                wl.color      = Color.Lerp(new Color(0.36f, 0.18f, 0.07f), new Color(1f, 0.62f, 0.28f), Mathf.Clamp01(wIntensity / 1.2f));
             }
         }
 

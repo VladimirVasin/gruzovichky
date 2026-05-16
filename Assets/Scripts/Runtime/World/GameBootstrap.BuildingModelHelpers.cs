@@ -112,6 +112,14 @@ public partial class GameBootstrap
         return root.transform;
     }
 
+    private static Vector2 GetAnchorLocalFootprintSize(Vector2Int min, Vector2Int max, Vector2Int anchor)
+    {
+        float worldWidth = max.x - min.x + 1;
+        float worldDepth = max.y - min.y + 1;
+        bool anchorOnXSide = anchor.x < min.x || anchor.x > max.x;
+        return anchorOnXSide ? new Vector2(worldDepth, worldWidth) : new Vector2(worldWidth, worldDepth);
+    }
+
     private Vector3 GetAnchorFacingDirection(Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
         Vector3 anchorWorld = new(anchor.x + 0.5f, center.y, anchor.y + 0.5f);

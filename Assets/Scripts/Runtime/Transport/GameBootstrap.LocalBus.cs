@@ -692,8 +692,8 @@ public partial class GameBootstrap
         bool headlightsOn = darkness > 0.55f;
         float headlightIntensity = headlightsOn ? Mathf.Lerp(0.48f, 1.95f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color lampColor = Color.Lerp(
-            new Color(0.34f, 0.22f, 0.12f),
-            new Color(1f, 0.82f, 0.5f),
+            new Color(0.36f, 0.20f, 0.08f),
+            new Color(1f, 0.68f, 0.34f),
             Mathf.Clamp01(headlightIntensity / 1.95f));
 
         if (localBusRoute.HeadlightLeft != null)

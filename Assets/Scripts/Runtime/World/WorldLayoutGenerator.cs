@@ -3,6 +3,9 @@ using UnityEngine;
 
 public static class WorldLayoutGenerator
 {
+    public const int ParkingFootprintWidth = 5;
+    public const int ParkingFootprintHeight = 4;
+
     private const int PlacementPadding = 2;
     private const int FarFromParkingDistance = 8;
     private const int DecorativeBottomRoadOccupiedRows = 2;
@@ -127,7 +130,7 @@ public static class WorldLayoutGenerator
                 _ => new Vector2Int(Random.Range(gridWidth - 7, gridWidth - 2), Random.Range(gridHeight - 8, gridHeight - 3))
             };
 
-            if (!TryCreatePlacementFromAnchor(anchor, 3, 2, facing, gridWidth, gridHeight, out WorldLocationPlacement parking) ||
+            if (!TryCreatePlacementFromAnchor(anchor, ParkingFootprintWidth, ParkingFootprintHeight, facing, gridWidth, gridHeight, out WorldLocationPlacement parking) ||
                 !PlacementFits(parking, placements.Values, PlacementPadding, gridWidth, gridHeight, false, blockedCells))
             {
                 continue;
@@ -518,7 +521,7 @@ public static class WorldLayoutGenerator
 
         return new GeneratedWorldLayout
         {
-            Parking = CreateFallbackPlacement(new Vector2Int(8, 12), 3, 2, WorldPlacementFacing.North, gridWidth, gridHeight),
+            Parking = CreateFallbackPlacement(new Vector2Int(8, 12), ParkingFootprintWidth, ParkingFootprintHeight, WorldPlacementFacing.North, gridWidth, gridHeight),
             GasStation = CreateFallbackPlacement(new Vector2Int(17, 16), 2, 2, WorldPlacementFacing.North, gridWidth, gridHeight),
             Forest = CreateFallbackPlacement(new Vector2Int(48, 36), 3, 3, WorldPlacementFacing.South, gridWidth, gridHeight),
             Warehouse = CreateFallbackPlacement(new Vector2Int(44, 19), 2, 2, WorldPlacementFacing.South, gridWidth, gridHeight),

@@ -45,8 +45,13 @@ public partial class GameBootstrap
         return GetTwoByTwoBuildingPlacementPreview(anchorCell, LocationType.CleaningDepot, out previewPosition, out previewScale);
     }
 
-    private void CreateCleaningDepotDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateCleaningDepotDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedCleaningDepotModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         Transform root = CreateAnchorOrientedBuildingRoot(parent, "CleaningDepotDetailRoot", center, min, max, anchor, BuildingDecorScale);
         Color wall = new(0.28f, 0.58f, 0.48f);
         Color roof = new(0.16f, 0.22f, 0.24f);

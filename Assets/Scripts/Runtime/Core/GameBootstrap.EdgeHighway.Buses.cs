@@ -248,7 +248,7 @@ public partial class GameBootstrap : MonoBehaviour
         leftLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
         leftLight = leftLightObject.AddComponent<Light>();
         leftLight.type = LightType.Spot;
-        leftLight.color = new Color(1f, 0.9f, 0.72f);
+        leftLight.color = new Color(1f, 0.66f, 0.34f);
         leftLight.range = 3.6f;
         leftLight.spotAngle = 42f;
         leftLight.innerSpotAngle = 22f;
@@ -262,7 +262,7 @@ public partial class GameBootstrap : MonoBehaviour
         rightLightObject.transform.localRotation = Quaternion.Euler(8f, 90f, 0f);
         rightLight = rightLightObject.AddComponent<Light>();
         rightLight.type = LightType.Spot;
-        rightLight.color = new Color(1f, 0.9f, 0.72f);
+        rightLight.color = new Color(1f, 0.66f, 0.34f);
         rightLight.range = 3.6f;
         rightLight.spotAngle = 42f;
         rightLight.innerSpotAngle = 22f;
@@ -388,8 +388,8 @@ public partial class GameBootstrap : MonoBehaviour
         bool headlightsOn = darkness > 0.55f;
         float headlightIntensity = headlightsOn ? Mathf.Lerp(0.4f, 1.75f, Mathf.InverseLerp(0.55f, 1f, darkness)) : 0f;
         Color lampColor = Color.Lerp(
-            new Color(0.34f, 0.3f, 0.22f),
-            new Color(1f, 0.94f, 0.78f),
+            new Color(0.36f, 0.22f, 0.10f),
+            new Color(1f, 0.68f, 0.36f),
             Mathf.Clamp01(headlightIntensity / 1.75f));
 
         if (hiringDriverArrival.HeadlightLeft != null)

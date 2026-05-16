@@ -883,12 +883,13 @@ public partial class GameBootstrap
         flashlightBeamObject.transform.localRotation = Quaternion.Euler(10f, 0f, 0f);
         driver.DriverFlashlightLight = flashlightBeamObject.AddComponent<Light>();
         driver.DriverFlashlightLight.type = LightType.Spot;
-        driver.DriverFlashlightLight.color = new Color(1f, 0.88f, 0.66f);
-        driver.DriverFlashlightLight.range = 4.2f;
-        driver.DriverFlashlightLight.spotAngle = 40f;
-        driver.DriverFlashlightLight.innerSpotAngle = 18f;
+        driver.DriverFlashlightLight.color = new Color(1f, 0.72f, 0.38f);
+        driver.DriverFlashlightLight.range = 5.2f;
+        driver.DriverFlashlightLight.spotAngle = 46f;
+        driver.DriverFlashlightLight.innerSpotAngle = 22f;
         driver.DriverFlashlightLight.shadows = LightShadows.None;
         driver.DriverFlashlightLight.intensity = 0f;
         driver.DriverFlashlightLight.enabled = false;
+        driver.DriverFlashlightHaloLight = CreateDriverFlashlightHalo(driver.DriverVisualRoot);
     }
 }

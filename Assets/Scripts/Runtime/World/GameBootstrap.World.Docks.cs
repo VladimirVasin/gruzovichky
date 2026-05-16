@@ -231,8 +231,13 @@ public partial class GameBootstrap
         return new Vector2Int(x, GridHeight - WaterRiverWidth);
     }
 
-    private void CreateDocksDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateDocksDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedDocksModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         Color timber = new(0.42f, 0.27f, 0.13f);
         Color darkTimber = new(0.24f, 0.15f, 0.08f);
         Color roof = new(0.18f, 0.22f, 0.24f);

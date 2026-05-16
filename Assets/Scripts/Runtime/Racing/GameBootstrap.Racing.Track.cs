@@ -402,7 +402,7 @@ public partial class GameBootstrap : MonoBehaviour
         lightObj.transform.position = raceFinishPos + Vector3.up * 1.5f;
         Light fl = lightObj.AddComponent<Light>();
         fl.type = LightType.Point;
-        fl.color = new Color(1f, 0.90f, 0.45f);
+        fl.color = new Color(1f, 0.62f, 0.28f);
         fl.intensity = 0.55f;
         fl.range = 7f;
         fl.shadows = LightShadows.None;

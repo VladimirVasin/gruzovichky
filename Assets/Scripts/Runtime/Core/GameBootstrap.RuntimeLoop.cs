@@ -672,7 +672,7 @@ public partial class GameBootstrap
         mainDirectionalLight = keyLight;
         keyLight.type = LightType.Directional;
         keyLight.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-        keyLight.color = new Color(1f, 0.95f, 0.82f);
+        keyLight.color = new Color(1f, 0.90f, 0.72f);
         keyLight.intensity = 1.28f;
         keyLight.shadows = LightShadows.Soft;
         keyLight.shadowStrength = 0.92f;
@@ -732,7 +732,7 @@ public partial class GameBootstrap
             new Color(0.56f, 0.53f, 0.66f),
             Color.Lerp(
                 new Color(1f, 0.66f, 0.4f),
-                new Color(1f, 0.98f, 0.9f),
+                new Color(1f, 0.90f, 0.76f),
                 Mathf.SmoothStep(0f, 1f, sunArc)),
             stylizedDaylight);
         mainDirectionalLight.shadowStrength = Mathf.Lerp(0.82f, 0.97f, stylizedDaylight);

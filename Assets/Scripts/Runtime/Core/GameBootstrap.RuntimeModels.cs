@@ -344,6 +344,7 @@ public partial class GameBootstrap
         public Transform DriverFuelCanTransform;
         public Transform DriverFlashlightTransform;
         public Light DriverFlashlightLight;
+        public Light DriverFlashlightHaloLight;
         public Renderer DriverFlashlightRenderer;
         public Material DriverFlashlightMaterial;
         public DriverRestPhase RestPhase = DriverRestPhase.None;

@@ -32,8 +32,13 @@ public partial class GameBootstrap
         return GetRotatedBuildingPlacementPreview(anchorCell, LocationType.Kindergarten, 4, 3, out previewPosition, out previewScale);
     }
 
-    private void CreateKindergartenDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateKindergartenDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedKindergartenModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         Transform root = CreateAnchorOrientedBuildingRoot(parent, "KindergartenDetailRoot", center, min, max, anchor, BuildingDecorScale);
         Color wall = new(0.88f, 0.82f, 0.54f);
         Color roof = new(0.30f, 0.52f, 0.46f);

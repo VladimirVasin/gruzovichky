@@ -48,6 +48,22 @@ public partial class GameBootstrap
         MarkCellLightingDirty();
     }
 
+    private static Color WarmLightSourceColor(Color color, float warmth = 0.42f)
+    {
+        float alpha = color.a;
+        Color result = Color.Lerp(color, new Color(1f, 0.62f, 0.28f, alpha), Mathf.Clamp01(warmth));
+        result.a = alpha;
+        return result;
+    }
+
+    private static Color WarmLightOffColor(Color color, float warmth = 0.28f)
+    {
+        float alpha = color.a;
+        Color result = Color.Lerp(color, new Color(0.36f, 0.20f, 0.09f, alpha), Mathf.Clamp01(warmth));
+        result.a = alpha;
+        return result;
+    }
+
     private void EnsureCellLightingData()
     {
         for (int x = 0; x < GridWidth; x++)
@@ -153,7 +169,7 @@ public partial class GameBootstrap
                 }
             }
 
-            Color color = i < locationNightPointLightOnColors.Count ? locationNightPointLightOnColors[i] : new Color(1f, 0.86f, 0.58f);
+            Color color = WarmLightSourceColor(i < locationNightPointLightOnColors.Count ? locationNightPointLightOnColors[i] : new Color(1f, 0.86f, 0.58f));
             float unityRange = i < locationNightPointLightRanges.Count ? locationNightPointLightRanges[i] : 6.4f;
             float unityIntensity = i < locationNightPointLightMaxIntensities.Count ? locationNightPointLightMaxIntensities[i] : 1f;
             NightLightProfile profile = GetLocationCellLightProfile(type, color, unityRange, unityIntensity);
@@ -218,7 +234,7 @@ public partial class GameBootstrap
 
     private static NightLightProfile GetRoadLanternLightProfile()
     {
-        return new NightLightProfile(new Color(1f, 0.78f, 0.42f), 9.4f, 2.6f, 1.7f, 5.2f, 0.34f);
+        return new NightLightProfile(new Color(1f, 0.62f, 0.28f), 9.4f, 2.6f, 1.7f, 5.2f, 0.34f);
     }
 
     private static NightLightProfile GetLocationCellLightProfile(LocationType? type, Color color, float unityRange, float unityIntensity)

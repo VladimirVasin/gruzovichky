@@ -53,7 +53,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: rotated footprints, placement preview, non-walkable buffers, entrance exceptions, demolition.
 - [WORLD.Decor] Building and service visuals
   - Adds low-poly details and imported/fallback service-building visuals.
-  - Feature leaves: building boxes/cylinders, lighting profiles, imported Bar/Gambling Hall/Warehouse/Motel/City Hall visuals and interactions, construction pop-ins.
+  - Feature leaves: building boxes/cylinders, lighting profiles, imported/fallback models for major service/production/civic/school/residential/trade buildings, imported building interactions, construction pop-ins.
 - [WORLD.Footpaths] Pedestrian ground traces
   - Tracks visible footpath wear and preferred pedestrian walking surfaces.
   - Feature leaves: footpath cells, wear, clear-on-building, path preference.

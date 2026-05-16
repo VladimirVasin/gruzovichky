@@ -6,8 +6,13 @@ using UnityEngine.Rendering.Universal;
 
 public partial class GameBootstrap
 {
-    private void CreateGasStationDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateGasStationDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedGasStationModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
         Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
 
@@ -166,8 +171,13 @@ public partial class GameBootstrap
         EnhanceSawmillModel(parent, center, min, max, anchor);
     }
 
-    private void CreateCarMarketDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateCarMarketDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedCarMarketModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         GameObject asphalt = GameObject.CreatePrimitive(PrimitiveType.Cube);
         asphalt.transform.SetParent(parent, false);
         asphalt.transform.position = center + new Vector3(0f, -0.19f, 0f);
@@ -230,8 +240,13 @@ public partial class GameBootstrap
         EnhanceCarMarketModel(parent, center, min, max, anchor);
     }
 
-    private void CreateFurnitureFactoryDecoration(Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
+    private void CreateFurnitureFactoryDecoration(LocationData owner, Transform parent, Vector3 center, Vector2Int min, Vector2Int max, Vector2Int anchor)
     {
+        if (TryCreateImportedFurnitureFactoryModel(owner, parent, center, min, max, anchor))
+        {
+            return;
+        }
+
         Vector3 ScaleOffset(Vector3 offset) => offset * BuildingDecorScale;
         Vector3 ScaleSize(Vector3 size) => size * BuildingDecorScale;
 

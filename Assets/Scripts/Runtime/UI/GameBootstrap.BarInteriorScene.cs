@@ -394,7 +394,7 @@ public partial class GameBootstrap
         stageLightObject.transform.localRotation = Quaternion.Euler(65f, -18f, 0f);
         Light stageLight = stageLightObject.AddComponent<Light>();
         stageLight.type = LightType.Spot;
-        stageLight.color = new Color(0.62f, 0.76f, 1f);
+        stageLight.color = new Color(1f, 0.58f, 0.36f);
         stageLight.range = 7f;
         stageLight.spotAngle = 42f;
         stageLight.intensity = 1.35f;
