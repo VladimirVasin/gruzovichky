@@ -127,6 +127,7 @@ public partial class GameBootstrap : MonoBehaviour
     private const int AmbientAirHighwayDustParticleCount = 20;
     private const int MiscBirdCount = 10;
     private const int AmbientCatCount = 3;
+    private const int AmbientDogCount = 4;
     private const int AmbientSquirrelCount = 22;
     private const int NightStarCount = 120;
     private const int AmbientBeeCount = 8;
@@ -230,6 +231,8 @@ public partial class GameBootstrap : MonoBehaviour
     private readonly List<MiscBirdData> miscBirds = new();
     private readonly List<Vector3> ambientCatRoamPoints = new();
     private readonly List<AmbientCatData> ambientCats = new();
+    private readonly List<Vector3> ambientDogRoamPoints = new();
+    private readonly List<AmbientDogData> ambientDogs = new();
     private readonly List<Vector3> ambientSquirrelRoamPoints = new();
     private readonly List<float> ambientSquirrelPerchHeights = new();
     private readonly List<AmbientSquirrelData> ambientSquirrels = new();
@@ -317,6 +320,7 @@ public partial class GameBootstrap : MonoBehaviour
     private float furnitureFactorySmokeEmitTimer;
     private Transform miscBirdRoot;
     private Transform ambientCatRoot;
+    private Transform ambientDogRoot;
     private Transform ambientSquirrelRoot;
     private Transform nightSkyRoot;
     private Material moonMaterial;

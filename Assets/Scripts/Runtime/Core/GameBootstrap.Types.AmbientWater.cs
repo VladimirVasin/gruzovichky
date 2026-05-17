@@ -101,6 +101,17 @@ public partial class GameBootstrap : MonoBehaviour
         ClimbingDown,
     }
 
+    private enum AmbientDogState
+    {
+        Wandering,
+        Sniffing,
+        Sitting,
+        Lying,
+        Barking,
+        Scratching,
+        PlayHop
+    }
+
     private sealed class AmbientSquirrelData
     {
         public Transform RootTransform;
@@ -158,6 +169,32 @@ public partial class GameBootstrap : MonoBehaviour
         public AmbientCatState State;
         public float PettingTimer;
         public int PettedByDriverId = -1;
+    }
+
+    private sealed class AmbientDogData
+    {
+        public Transform RootTransform;
+        public Transform BodyTransform;
+        public Transform HeadTransform;
+        public Transform TailTransform;
+        public bool UsesImportedModel;
+        public Vector3 BodyBaseScale = Vector3.one;
+        public Quaternion HeadBaseRotation = Quaternion.identity;
+        public Quaternion TailBaseRotation = Quaternion.identity;
+        public Transform[] EarTransforms;
+        public Quaternion[] EarBaseRotations;
+        public Transform[] LegTransforms;
+        public Quaternion[] LegBaseRotations;
+        public readonly List<Vector3> WalkPath = new();
+        public Vector3 CurrentPosition;
+        public float StateTimer;
+        public float AnimationPhase;
+        public float TailPhase;
+        public float Yaw;
+        public int WalkWaypointIndex;
+        public int LastTargetPointIndex = -1;
+        public bool ScratchLeftSide;
+        public AmbientDogState State;
     }
 
     private sealed class AmbientBeeData

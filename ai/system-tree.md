@@ -41,7 +41,7 @@ Purpose: stable informational tree of the project systems, subsystems, feature l
   - Feature leaves: terrain height sampling, building pads, water cells, beaches, ground visual layers.
 - [WORLD.Nature] Natural zones and ambience
   - Owns forests, hills, lakes, misc vegetation, and ambient animals/particles.
-  - Feature leaves: generated/imported/fallback trees, berries, flowers, birds, imported/procedural cats, bees, frogs, moths, leaves, fireflies, river/lake fish.
+  - Feature leaves: generated/imported/fallback trees, berries, flowers, birds, imported/procedural cats, imported/procedural city dogs, bees, frogs, moths, leaves, fireflies, river/lake fish.
 - [WORLD.Weather] Atmosphere and weather
   - Controls sky, lighting feel, rain/night visuals, water visuals, and graphics-option presentation.
   - Feature leaves: night stars, rain, clouds, water LOD, post-processing, graphics settings, internal cell lighting map.

@@ -141,7 +141,7 @@ public partial class GameBootstrap
         RebuildRoadSigns();
 
         SetLoadingProgress(++step / (float)totalSteps, "Wildlife..."); yield return null;
-        SetupMiscBirds(); SetupAmbientCats(); SetupAmbientSquirrels(); SetupAmbientBees(); SetupAmbientLanternMoths(); SetupAmbientFallingLeaves(); SetupAmbientFireflies(); SetupAmbientFrogs(); SetupRiverFish(); SetupLakeFish(); SetupNightSky(); SetupWeatherSystem();
+        SetupMiscBirds(); SetupAmbientCats(); SetupAmbientDogs(); SetupAmbientSquirrels(); SetupAmbientBees(); SetupAmbientLanternMoths(); SetupAmbientFallingLeaves(); SetupAmbientFireflies(); SetupAmbientFrogs(); SetupRiverFish(); SetupLakeFish(); SetupNightSky(); SetupWeatherSystem();
 
         SetLoadingProgress(++step / (float)totalSteps, "Water effects..."); yield return null;
         waterVisualLodLevel = -1; UpdateWaterVisualLod();

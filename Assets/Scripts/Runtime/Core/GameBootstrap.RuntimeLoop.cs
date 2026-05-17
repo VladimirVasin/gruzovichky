@@ -239,6 +239,7 @@ public partial class GameBootstrap
             UpdateMiscTreeSways();
             UpdateMiscBirds();
             UpdateAmbientCats();
+            UpdateAmbientDogs();
             UpdateAmbientSquirrels();
             UpdateAmbientBees();
             UpdateAmbientLanternMoths();
@@ -472,6 +473,7 @@ public partial class GameBootstrap
         SetRootActive(ambientFallingLeafRoot, !active);
         SetRootActive(miscBirdRoot, !active);
         SetRootActive(ambientCatRoot, !active);
+        SetRootActive(ambientDogRoot, !active);
         SetRootActive(ambientSquirrelRoot, !active);
         SetRootActive(ambientBeeRoot, !active);
         SetRootActive(ambientLanternMothRoot, !active);
